@@ -325,12 +325,17 @@ const char* const OutOfMemoryError::m_class_name =
 
 const char* const IndexOutOfBoundsException::m_class_name =
   "java/lang/IndexOutOfBoundsException";
+IndexOutOfBoundsException::ClassImpl::~ClassImpl() {}
 
 const char* const IOException::m_class_name =
   "java/io/IOException";
 
 const char* const IllegalArgumentException::m_class_name =
   "java/lang/IllegalArgumentException";
+
+const char *const NoSuchElementException::m_class_name =
+  "java/util/NoSuchElementException";
+NoSuchElementException::ClassImpl::~ClassImpl() {}
 
 // Implementation of jni_stack.hpp
 

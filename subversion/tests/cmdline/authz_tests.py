@@ -45,6 +45,7 @@ XFail = svntest.testcase.XFail_deco
 Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
+SkipDumpLoadCrossCheck = svntest.testcase.SkipDumpLoadCrossCheck_deco
 
 ######################################################################
 # Tests
@@ -123,6 +124,7 @@ def authz_open_directory(sbox):
                                         wc_dir)
 
 @Skip(svntest.main.is_ra_type_file)
+@SkipDumpLoadCrossCheck()
 def broken_authz_file(sbox):
   "broken authz files cause errors"
 

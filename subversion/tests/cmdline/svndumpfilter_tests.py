@@ -34,8 +34,7 @@ import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 
 # Get some helper routines
-from svnadmin_tests import (load_and_verify_dumpstream, load_dumpstream,
-                            test_create)
+from svnadmin_tests import load_and_verify_dumpstream, load_dumpstream
 from svntest.main import run_svn, run_svnadmin
 
 # (abbreviation)
@@ -87,7 +86,7 @@ def reflect_dropped_renumbered_revs(sbox):
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2982. ##
 
   # Test svndumpfilter with include option
-  test_create(sbox)
+  sbox.build(empty=True)
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
@@ -113,7 +112,7 @@ def reflect_dropped_renumbered_revs(sbox):
 
 
   # Test svndumpfilter with exclude option
-  test_create(sbox)
+  sbox.build(empty=True)
   filtered_out, filtered_err = filter_and_return_output(
       dumpfile, 0, "exclude", "branch1",
       "--skip-missing-merge-sources",
@@ -137,7 +136,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3181. ##
 
-  test_create(sbox)
+  sbox.build(empty=True)
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
@@ -220,7 +219,7 @@ def dumpfilter_with_targets(sbox):
   "svndumpfilter --targets blah"
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2697. ##
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
@@ -243,7 +242,7 @@ def dumpfilter_with_targets(sbox):
 def dumpfilter_with_patterns(sbox):
   "svndumpfilter --pattern PATH_PREFIX"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
@@ -263,7 +262,7 @@ def dumpfilter_with_patterns(sbox):
 def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   "filter mergeinfo revs outside of dump stream"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Load a partial dump into an existing repository.
   #
@@ -366,7 +365,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #     Project-Z     (Added r5)
   #     docs/         (Added r6)
   #       README      (Added r6).
-  test_create(sbox)
+  sbox.build(empty=True)
   skeleton_dumpfile = open(os.path.join(os.path.dirname(sys.argv[0]),
                                         'svnadmin_tests_data',
                                         'skeleton_repos.dump')).read()
@@ -495,7 +494,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
 def dropped_but_not_renumbered_empty_revs(sbox):
   "mergeinfo maps correctly when dropping revs"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # The dump file mergeinfo_included_full.dump represents this repository:
   #
@@ -611,7 +610,7 @@ def match_empty_prefix(sbox):
       raise verify.UnexpectedStderr(filtered_err)
 
     # Load the filtered dump into a repo and check the result
-    test_create(sbox)
+    sbox.build(empty=True)
     load_dumpstream(sbox, filtered_output, '--ignore-uuid')
     svntest.actions.run_and_verify_update(sbox.wc_dir,
                                           expected_output,
@@ -645,7 +644,7 @@ def accepts_deltas(sbox):
   "accepts deltas in the input"
   # Accept format v3 (as created by 'svnadmin --deltas' or svnrdump).
 
-  test_create(sbox)
+  sbox.build(empty=True)
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'simple_v3.dump')
@@ -679,7 +678,7 @@ def dumpfilter_targets_expect_leading_slash_prefixes(sbox):
   "dumpfilter targets expect leading '/' in prefixes"
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=4234. ##
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',

@@ -1609,7 +1609,7 @@ change_dir_prop(void *dir_baton,
   prop = apr_palloc(dir->pool, sizeof(*prop));
 
   prop->name = apr_pstrdup(dir->pool, name);
-  prop->value = value ? svn_string_dup(value, dir->pool) : NULL;
+  prop->value = svn_string_dup(value, dir->pool);
 
   svn_hash_sets(dir->prop_changes, prop->name, prop);
 
@@ -1879,7 +1879,7 @@ change_file_prop(void *file_baton,
   prop = apr_palloc(file->pool, sizeof(*prop));
 
   prop->name = apr_pstrdup(file->pool, name);
-  prop->value = value ? svn_string_dup(value, file->pool) : NULL;
+  prop->value = svn_string_dup(value, file->pool);
 
   svn_hash_sets(file->prop_changes, prop->name, prop);
 

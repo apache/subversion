@@ -401,6 +401,7 @@ fi
 say "Adding users for lock authentication"
 $HTPASSWD -bc $HTTPD_USERS jrandom   rayjandom
 $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
+$HTPASSWD -b  $HTTPD_USERS __dumpster__ __loadster__
 
 touch $HTTPD_MIME_TYPES
 

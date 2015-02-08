@@ -87,7 +87,7 @@ svn_test__sandbox_create(svn_test__sandbox_t *sandbox,
           (svn_dirent_join((b)->wc_abspath, (path), (b)->pool))
 
 /* Create a file on disk at PATH, with TEXT as its content. */
-void
+svn_error_t *
 sbox_file_write(svn_test__sandbox_t *b, const char *path, const char *text);
 
 /* Schedule for addition the single node that exists on disk at PATH,

@@ -171,13 +171,21 @@ svn_test__sandbox_create(svn_test__sandbox_t *sandbox,
   return SVN_NO_ERROR;
 }
 
-void
+svn_error_t *
 sbox_file_write(svn_test__sandbox_t *b, const char *path, const char *text)
 {
-  FILE *f = fopen(sbox_wc_path(b, path), "w");
+  apr_file_t *f;
 
-  fputs(text, f);
-  fclose(f);
+  SVN_ERR(svn_io_file_open(&f, sbox_wc_path(b, path),
+                           (APR_WRITE | APR_CREATE | APR_TRUNCATE),
+                           APR_OS_DEFAULT,
+                           b->pool));
+
+  SVN_ERR(svn_io_file_write_full(f, text, strlen(text), NULL, b->pool));
+
+  SVN_ERR(svn_io_file_close(f, b->pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -540,7 +548,7 @@ sbox_add_and_commit_greek_tree(svn_test__sandbox_t *b)
     {
       if (node->contents)
         {
-          sbox_file_write(b, node->path, node->contents);
+          SVN_ERR(sbox_file_write(b, node->path, node->contents));
           SVN_ERR(sbox_wc_add(b, node->path));
         }
       else

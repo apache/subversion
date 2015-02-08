@@ -548,7 +548,8 @@ struct svn_fs_access_t
   const char *username;
 
   /* A collection of lock-tokens supplied by the fs caller.
-     Hash maps (const char *) UUID --> (void *) 1
+     Hash maps (const char *) UUID --> path where path can be the
+     magic value (void *) 1 if no path was specified.
      fs functions should really only be interested whether a UUID
      exists as a hash key at all;  the value is irrelevant. */
   apr_hash_t *lock_tokens;

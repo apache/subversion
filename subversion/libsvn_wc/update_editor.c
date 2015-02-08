@@ -2112,13 +2112,12 @@ add_directory(const char *path,
       if (tree_conflict)
         {
           svn_wc_conflict_reason_t reason;
+          const char *move_src_op_root_abspath;
           /* So this deletion wasn't just a deletion, it is actually a
              replacement. Let's install a better tree conflict. */
 
-          /* ### Should store the conflict in DB to allow reinstalling
-             ### with theoretically more data in close_directory() */
-
-          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL,
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+                                                     &move_src_op_root_abspath,
                                                       eb->db,
                                                       db->local_abspath,
                                                       tree_conflict,
@@ -2130,7 +2129,7 @@ add_directory(const char *path,
                                         tree_conflict,
                                         eb->db, db->local_abspath,
                                         reason, svn_wc_conflict_action_replace,
-                                        NULL,
+                                        move_src_op_root_abspath,
                                         db->pool, scratch_pool));
 
           /* And now stop checking for conflicts here and just perform
@@ -2489,7 +2488,7 @@ change_dir_prop(void *dir_baton,
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
-  propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
+  propchange->value = svn_string_dup(value, db->pool);
 
   if (!db->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_directory_edited(db, pool));
@@ -3287,13 +3286,12 @@ add_file(const char *path,
       if (tree_conflict)
         {
           svn_wc_conflict_reason_t reason;
+          const char *move_src_op_root_abspath;
           /* So this deletion wasn't just a deletion, it is actually a
              replacement. Let's install a better tree conflict. */
 
-          /* ### Should store the conflict in DB to allow reinstalling
-             ### with theoretically more data in close_directory() */
-
-          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL, NULL,
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
+                                                     &move_src_op_root_abspath,
                                                       eb->db,
                                                       fb->local_abspath,
                                                       tree_conflict,
@@ -3305,7 +3303,7 @@ add_file(const char *path,
                                         tree_conflict,
                                         eb->db, fb->local_abspath,
                                         reason, svn_wc_conflict_action_replace,
-                                        NULL,
+                                        move_src_op_root_abspath,
                                         fb->pool, fb->pool));
 
           /* And now stop checking for conflicts here and just perform
@@ -3805,7 +3803,7 @@ change_file_prop(void *file_baton,
   /* Push a new propchange to the file baton's array of propchanges */
   propchange = apr_array_push(fb->propchanges);
   propchange->name = apr_pstrdup(fb->pool, name);
-  propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
+  propchange->value = svn_string_dup(value, fb->pool);
 
   if (!fb->edited && svn_property_kind2(name) == svn_prop_regular_kind)
     SVN_ERR(mark_file_edited(fb, scratch_pool));

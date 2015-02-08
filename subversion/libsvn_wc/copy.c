@@ -42,6 +42,7 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
+/* #define RECORD_MIXED_MOVE */
 
 /*** Code. ***/
 
@@ -567,10 +568,10 @@ copy_versioned_dir(svn_wc__db_t *db,
  * The additional parameter IS_MOVE indicates whether this is a copy or
  * a move operation.
  *
- * If MOVE_DEGRADED_TO_COPY is not NULL and a move had to be degraded
- * to a copy, then set *MOVE_DEGRADED_TO_COPY. */
+ * If RECORD_MOVE_ON_DELETE is not NULL and a move had to be degraded
+ * to a copy, then set *RECORD_MOVE_ON_DELETE to FALSE. */
 static svn_error_t *
-copy_or_move(svn_boolean_t *move_degraded_to_copy,
+copy_or_move(svn_boolean_t *record_move_on_delete,
              svn_wc_context_t *wc_ctx,
              const char *src_abspath,
              const char *dst_abspath,
@@ -820,8 +821,8 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
   if (is_move
       && !within_one_wc)
     {
-      if (move_degraded_to_copy)
-        *move_degraded_to_copy = TRUE;
+      if (record_move_on_delete)
+        *record_move_on_delete = FALSE;
 
       is_move = FALSE;
     }
@@ -865,9 +866,11 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                                                 scratch_pool),
                                          min_rev, max_rev);
 
+#ifndef RECORD_MIXED_MOVE
               is_move = FALSE;
-              if (move_degraded_to_copy)
-                *move_degraded_to_copy = TRUE;
+              if (record_move_on_delete)
+                *record_move_on_delete = FALSE;
+#endif
             }
         }
 
@@ -1054,7 +1057,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
               apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  svn_boolean_t move_degraded_to_copy = FALSE;
+  svn_boolean_t record_on_delete = TRUE;
   svn_node_kind_t kind;
   svn_boolean_t conflicted;
 
@@ -1066,7 +1069,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
                               svn_dirent_dirname(dst_abspath, scratch_pool),
                               scratch_pool));
 
-  SVN_ERR(copy_or_move(&move_degraded_to_copy,
+  SVN_ERR(copy_or_move(&record_on_delete,
                        wc_ctx, src_abspath, dst_abspath,
                        TRUE /* metadata_only */,
                        TRUE /* is_move */,
@@ -1109,7 +1112,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
                                          scratch_pool));
 
   SVN_ERR(svn_wc__db_op_delete(db, src_abspath,
-                               move_degraded_to_copy ? NULL : dst_abspath,
+                               record_on_delete ? dst_abspath : NULL,
                                TRUE /* delete_dir_externals */,
                                NULL /* conflict */, NULL /* work_items */,
                                cancel_func, cancel_baton,
