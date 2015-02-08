@@ -1151,6 +1151,7 @@ tc_editor_alter_file(node_move_baton_t *nmb,
 static svn_error_t *
 tc_editor_delete(node_move_baton_t *nmb,
                  const char *relpath,
+                 svn_node_kind_t old_kind,
                  svn_node_kind_t new_kind,
                  apr_pool_t *scratch_pool)
 {
@@ -1158,9 +1159,7 @@ tc_editor_delete(node_move_baton_t *nmb,
   svn_sqlite__stmt_t *stmt;
   const char *move_dst_repos_relpath;
   svn_node_kind_t move_dst_kind;
-  svn_boolean_t must_delete_wc_nodes = FALSE;
   const char *local_abspath;
-  svn_boolean_t have_row;
   svn_boolean_t is_modified, is_all_deletes;
   svn_skel_t *work_items = NULL;
   svn_skel_t *conflict = NULL;
@@ -1197,26 +1196,19 @@ tc_editor_delete(node_move_baton_t *nmb,
     {
       svn_wc_conflict_reason_t reason;
 
-      if (!is_all_deletes)
-        {
-          /* No conflict means no NODES rows at the relpath op-depth
-             so it's easy to convert the modified tree into a copy.
+      /* No conflict means no NODES rows at the relpath op-depth
+         so it's easy to convert the modified tree into a copy.
 
-             Note the following assumptions for relpath:
-               * it is not shadowed
-               * it is not the/an op-root. (or we can't make us a copy)
-          */
+         Note the following assumptions for relpath:
+            * it is not shadowed
+            * it is not the/an op-root. (or we can't make us a copy)
+       */
 
-          SVN_ERR(svn_wc__db_op_make_copy_internal(b->wcroot, relpath,
-                                                   NULL, NULL, scratch_pool));
+      SVN_ERR(svn_wc__db_op_make_copy_internal(b->wcroot, relpath,
+                                               NULL, NULL, scratch_pool));
 
-          reason = svn_wc_conflict_reason_edited;
-        }
-      else
-        {
-          reason = svn_wc_conflict_reason_deleted;
-          must_delete_wc_nodes = TRUE;
-        }
+      reason = svn_wc_conflict_reason_edited;
+
       SVN_ERR(create_node_tree_conflict(&conflict, nmb, relpath,
                                         move_dst_kind, new_kind,
                                         move_dst_repos_relpath, reason,
@@ -1228,13 +1220,10 @@ tc_editor_delete(node_move_baton_t *nmb,
       nmb->skip = TRUE;
     }
   else
-    must_delete_wc_nodes = TRUE;
-
-  if (must_delete_wc_nodes)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      svn_node_kind_t del_kind;
       const char *del_abspath;
+      svn_boolean_t have_row;
 
       /* Get all descendants of the node in reverse order (so children are
          handled before their parents, but not strictly depth first) */
@@ -1247,6 +1236,7 @@ tc_editor_delete(node_move_baton_t *nmb,
         {
           svn_error_t *err;
           svn_skel_t *work_item;
+          svn_node_kind_t del_kind;
 
           svn_pool_clear(iterpool);
 
@@ -1272,12 +1262,7 @@ tc_editor_delete(node_move_baton_t *nmb,
         }
       SVN_ERR(svn_sqlite__reset(stmt));
 
-      SVN_ERR(svn_wc__db_depth_get_info(NULL, &del_kind, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, NULL,
-                                        b->wcroot, relpath, b->dst_op_depth,
-                                        iterpool, iterpool));
-      if (del_kind == svn_node_dir)
+      if (old_kind == svn_node_dir)
         SVN_ERR(svn_wc__wq_build_dir_remove(&work_items, b->db,
                                             b->wcroot->abspath, local_abspath,
                                             FALSE /* recursive */,
@@ -1287,7 +1272,7 @@ tc_editor_delete(node_move_baton_t *nmb,
                                              b->wcroot->abspath, local_abspath,
                                              scratch_pool, iterpool));
 
-        svn_pool_destroy(iterpool);
+      svn_pool_destroy(iterpool);
     }
 
   /* Only notify if add_file/add_dir is not going to notify */
@@ -1507,7 +1492,8 @@ update_moved_away_node(node_move_baton_t *nmb,
   if (src_kind == svn_node_none
       || (dst_kind != svn_node_none && src_kind != dst_kind))
     {
-      SVN_ERR(tc_editor_delete(nmb, dst_relpath, src_kind, scratch_pool));
+      SVN_ERR(tc_editor_delete(nmb, dst_relpath, dst_kind, src_kind,
+                               scratch_pool));
     }
 
   if (nmb->skip)
