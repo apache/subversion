@@ -389,6 +389,10 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
 {
   int i;
 
+  /* For added nodes, there is nothing to filter. */
+  if (apr_hash_count(pristine_props) == 0)
+    return;
+
   for (i = 0; i < changes->nelts; i++)
     {
       svn_prop_t *change = &APR_ARRAY_IDX(changes, i, svn_prop_t);
