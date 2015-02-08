@@ -52,6 +52,7 @@
 #include "ra_loader.h"
 #include "deprecated.h"
 
+#include "private/svn_auth_private.h"
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
 
@@ -263,22 +264,12 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
-  svn_config_t *servers = NULL;
-  const char *server_group = NULL;
   apr_uri_t repos_URI;
   apr_status_t apr_err;
   svn_error_t *err;
 #ifdef CHOOSABLE_DAV_MODULE
   const char *http_library = DEFAULT_HTTP_LIBRARY;
 #endif
-  /* Auth caching parameters. */
-  svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
-  svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
-  const char *store_plaintext_passwords
-    = SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS;
-  svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
-  const char *store_pp_plaintext
-    = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
 
   /* Initialize the return variable. */
   *session_p = NULL;
@@ -294,63 +285,20 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                              repos_URL);
 
   if (callbacks->auth_baton)
-    {
-      /* The 'store-passwords' and 'store-auth-creds' parameters used to
-       * live in SVN_CONFIG_CATEGORY_CONFIG. For backward compatibility,
-       * if values for these parameters have already been set by our
-       * callers, we use those values as defaults.
-       *
-       * Note that we can only catch the case where users explicitly set
-       * "store-passwords = no" or 'store-auth-creds = no".
-       *
-       * However, since the default value for both these options is
-       * currently (and has always been) "yes", users won't know
-       * the difference if they set "store-passwords = yes" or
-       * "store-auth-creds = yes" -- they'll get the expected behaviour.
-       */
+    SVN_ERR(svn_auth__apply_config_for_server(callbacks->auth_baton, config,
+                                              repos_URI.hostname, sesspool));
 
-      if (svn_auth_get_parameter(callbacks->auth_baton,
-                                 SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
-        store_passwords = FALSE;
-
-      if (svn_auth_get_parameter(callbacks->auth_baton,
-                                 SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
-        store_auth_creds = FALSE;
-    }
-
+#ifdef CHOOSABLE_DAV_MODULE
   if (config)
     {
+      svn_config_t *servers = NULL;
+      const char *server_group = NULL;
+
       /* Grab the 'servers' config. */
       servers = svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS);
       if (servers)
         {
           /* First, look in the global section. */
-
-          SVN_ERR(svn_config_get_bool
-            (servers, &store_passwords, SVN_CONFIG_SECTION_GLOBAL,
-             SVN_CONFIG_OPTION_STORE_PASSWORDS,
-             store_passwords));
-
-          SVN_ERR(svn_config_get_yes_no_ask
-            (servers, &store_plaintext_passwords, SVN_CONFIG_SECTION_GLOBAL,
-             SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
-             SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
-
-          SVN_ERR(svn_config_get_bool
-            (servers, &store_pp, SVN_CONFIG_SECTION_GLOBAL,
-             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
-             store_pp));
-
-          SVN_ERR(svn_config_get_yes_no_ask
-            (servers, &store_pp_plaintext,
-             SVN_CONFIG_SECTION_GLOBAL,
-             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
-             SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT));
-
-          SVN_ERR(svn_config_get_bool
-            (servers, &store_auth_creds, SVN_CONFIG_SECTION_GLOBAL,
-              SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-              store_auth_creds));
 
           /* Find out where we're about to connect to, and
            * try to pick a server group based on the destination. */
@@ -358,36 +306,6 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                                                SVN_CONFIG_SECTION_GROUPS,
                                                sesspool);
 
-          if (server_group)
-            {
-              /* Override global auth caching parameters with the ones
-               * for the server group, if any. */
-              SVN_ERR(svn_config_get_bool(servers, &store_auth_creds,
-                                          server_group,
-                                          SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-                                          store_auth_creds));
-
-              SVN_ERR(svn_config_get_bool(servers, &store_passwords,
-                                          server_group,
-                                          SVN_CONFIG_OPTION_STORE_PASSWORDS,
-                                          store_passwords));
-
-              SVN_ERR(svn_config_get_yes_no_ask
-                (servers, &store_plaintext_passwords, server_group,
-                 SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
-                 store_plaintext_passwords));
-
-              SVN_ERR(svn_config_get_bool
-                (servers, &store_pp,
-                 server_group, SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
-                 store_pp));
-
-              SVN_ERR(svn_config_get_yes_no_ask
-                (servers, &store_pp_plaintext, server_group,
-                 SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
-                 store_pp_plaintext));
-            }
-#ifdef CHOOSABLE_DAV_MODULE
           /* Now, which DAV-based RA method do we want to use today? */
           http_library
             = svn_config_get_server_setting(servers,
@@ -400,38 +318,9 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                                      _("Invalid config: unknown HTTP library "
                                        "'%s'"),
                                      http_library);
-#endif
         }
     }
-
-  if (callbacks->auth_baton)
-    {
-      /* Save auth caching parameters in the auth parameter hash. */
-      if (! store_passwords)
-        svn_auth_set_parameter(callbacks->auth_baton,
-                               SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
-
-      svn_auth_set_parameter(callbacks->auth_baton,
-                             SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
-                             store_plaintext_passwords);
-
-      if (! store_pp)
-        svn_auth_set_parameter(callbacks->auth_baton,
-                               SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP,
-                               "");
-
-      svn_auth_set_parameter(callbacks->auth_baton,
-                             SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
-                             store_pp_plaintext);
-
-      if (! store_auth_creds)
-        svn_auth_set_parameter(callbacks->auth_baton,
-                               SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
-
-      if (server_group)
-        svn_auth_set_parameter(callbacks->auth_baton,
-                               SVN_AUTH_PARAM_SERVER_GROUP, server_group);
-    }
+#endif
 
   /* Find the library. */
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
