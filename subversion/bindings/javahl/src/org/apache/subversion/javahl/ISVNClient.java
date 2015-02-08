@@ -378,6 +378,18 @@ public interface ISVNClient
      *                        as part of this operation.
      * @param pinExternals Whether or not to pin external definitions as part
      *                     of this operation.
+     * @param externalsToPin The set of externals to pin.
+     *            Keys are either local absolute paths (when the source of the
+     *            copy is the working copy) or URLs within the repository
+     *            (when the source is the repository) where an
+     *            <code>svn:externals</code> property is defined.
+     *            Values are lists of parsed {@link ExternalItem}
+     *            objects from each external definitions.
+     *            If <code>pinExternals</code> is <code>true</code>, only
+     *            the externals in this set will be pinned; if this parameter
+     *            is <code>null</code>, all externals will be pinned.
+     *            If <code>pinExternals</code> is <code>false</code>,
+     *            this parameter will be ignored.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
@@ -385,10 +397,12 @@ public interface ISVNClient
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the copy operation fails.
      * @throws NullPointerException if the <code>sources</code> list is empty.
+     * @since 1.9
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
               boolean ignoreExternals,  boolean pinExternals,
+              Map<String, List<ExternalItem>> externalsToPin,
               Map<String, String> revpropTable,
               CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
@@ -397,7 +411,8 @@ public interface ISVNClient
      * Copy versioned paths with the history preserved.
      * <p>
      * Behaves like the 1.9 version with
-     *     <code>pinExternals = false</code> and
+     *     <code>pinExternals<code> set to <code>false</code> and
+     *     <code>externalsToPin<code> set to <code>null</code>.
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,

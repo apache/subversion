@@ -559,8 +559,8 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobject jcopySources, jstring jdestPath,
  jboolean jcopyAsChild, jboolean jmakeParents, jboolean jignoreExternals,
- jboolean jpinExternals, jobject jrevpropTable, jobject jmessage,
- jobject jcallback)
+ jboolean jpinExternals, jobject jexternalsToPin,
+ jobject jrevpropTable, jobject jmessage, jobject jcallback)
 {
   JNIEntry(SVNClient, copy);
 
@@ -591,9 +591,9 @@ Java_org_apache_subversion_javahl_SVNClient_copy
     return;
 
   CommitCallback callback(jcallback);
-  cl->copy(copySources, destPath, &message, jcopyAsChild ? true : false,
-           jmakeParents ? true : false, jignoreExternals ? true : false,
-           jpinExternals ? true : false,
+  cl->copy(copySources, destPath, &message,
+           bool(jcopyAsChild), bool(jmakeParents),
+           bool(jignoreExternals), bool(jpinExternals), jexternalsToPin,
            revprops, jcallback ? &callback : NULL);
 }
 
