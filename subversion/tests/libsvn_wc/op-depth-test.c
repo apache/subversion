@@ -10493,7 +10493,7 @@ move_edit_obstruction(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(sbox_file_write(&b, "A/B/E/alpha", "Update alpha"));
   SVN_ERR(sbox_wc_propset(&b, "a", "b", "A/B/F"));
-  SVN_ERR(sbox_wc_commit(&b, "")); // r2
+  SVN_ERR(sbox_wc_commit(&b, "")); /* r2 */
 
   SVN_ERR(sbox_wc_update(&b, "", 1));
 
@@ -10547,6 +10547,28 @@ move_edit_obstruction(const svn_test_opts_t *opts, apr_pool_t *pool)
                           svn_wc_conflict_choose_mine_conflict));
 
   {
+    nodes_row_t nodes[] = {
+      {1, "A_mv",             "normal",       2, "A", MOVED_HERE},
+      {1, "A_mv/B",           "normal",       2, "A/B", MOVED_HERE},
+      {1, "A_mv/B/E",         "normal",       2, "A/B/E", MOVED_HERE},
+      {1, "A_mv/B/E/alpha",   "normal",       2, "A/B/E/alpha", MOVED_HERE},
+      {1, "A_mv/B/E/beta",    "normal",       2, "A/B/E/beta", MOVED_HERE},
+      {1, "A_mv/B/F",         "normal",       2, "A/B/F", MOVED_HERE, "a"},
+      {1, "A_mv/B/lambda",    "normal",       2, "A/B/lambda", MOVED_HERE},
+      {1, "A_mv/C",           "normal",       2, "A/C", MOVED_HERE},
+      {1, "A_mv/D",           "normal",       2, "A/D", MOVED_HERE},
+      {1, "A_mv/D/G",         "normal",       2, "A/D/G", MOVED_HERE},
+      {1, "A_mv/D/G/pi",      "normal",       2, "A/D/G/pi", MOVED_HERE},
+      {1, "A_mv/D/G/rho",     "normal",       2, "A/D/G/rho", MOVED_HERE},
+      {1, "A_mv/D/G/tau",     "normal",       2, "A/D/G/tau", MOVED_HERE},
+      {1, "A_mv/D/gamma",     "normal",       2, "A/D/gamma", MOVED_HERE},
+      {1, "A_mv/D/H",         "normal",       2, "A/D/H", MOVED_HERE},
+      {1, "A_mv/D/H/chi",     "normal",       2, "A/D/H/chi", MOVED_HERE},
+      {1, "A_mv/D/H/omega",   "normal",       2, "A/D/H/omega", MOVED_HERE},
+      {1, "A_mv/D/H/psi",     "normal",       2, "A/D/H/psi", MOVED_HERE},
+      {1, "A_mv/mu",          "normal",       2, "A/mu", MOVED_HERE},
+      {0}
+    };
     conflict_info_t conflicts[] = {
       { "A_mv/B/E/alpha", FALSE, FALSE, TRUE },
       { "A_mv/B/F", FALSE, FALSE, TRUE },
@@ -10554,6 +10576,7 @@ move_edit_obstruction(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0}
     };
 
+    SVN_ERR(check_db_rows(&b, "A_mv", nodes));
     SVN_ERR(check_db_conflicts(&b, "", conflicts));
   }
 
@@ -10765,7 +10788,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "nested move delete"),
     SVN_TEST_OPTS_XFAIL(move_within_mixed_move,
                         "move within mixed move"),
-    SVN_TEST_OPTS_XFAIL(move_edit_obstruction,
+    SVN_TEST_OPTS_PASS(move_edit_obstruction,
                        "move edit obstruction"),
     SVN_TEST_NULL
   };
