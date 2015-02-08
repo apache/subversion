@@ -60,9 +60,10 @@
 
 /* We don't use "words" longer than this in our protocol.  The longest word
  * we are currently using is only about 16 chars long but we leave room for
- * longer future capability and command names.
+ * longer future capability and command names.  See read_item() to understand
+ * why MAX_WORD_LENGTH - 1 should be a multiple of 8.
  */
-#define MAX_WORD_LENGTH 31
+#define MAX_WORD_LENGTH 25
 
 /* The generic parsers will use the following value to limit the recursion
  * depth to some reasonable value.  The current protocol implementation
@@ -1060,16 +1061,39 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       char *p = buffer + 1;
 
       buffer[0] = c;
-      while (1)
+      if (conn->read_ptr + MAX_WORD_LENGTH <= conn->read_end)
         {
-          SVN_ERR(readbuf_getchar(conn, pool, p));
-          if (!svn_ctype_isalnum(*p) && *p != '-')
-            break;
+          /* Fast path: we can simply take a chunk from the read
+           * buffer and inspect it with no overflow checks etc.
+           *
+           * Copying these 24 bytes unconditionally is also faster
+           * than a variable-sized memcpy.  Note that P is at BUFFER[1].
+           */
+          memcpy(p, conn->read_ptr, MAX_WORD_LENGTH - 1);
+          *end = 0;
 
-          if (++p == end)
-            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                    _("Word is too long"));
+          /* This will terminate at P == END because of *END == NUL. */
+          while (svn_ctype_isalnum(*p) || *p == '-')
+            ++p;
+
+          /* Only now do we mark data as actually read. */
+          conn->read_ptr += p - buffer;
         }
+      else
+        {
+          /* Slow path. Byte-by-byte copying and checking for
+           * input and output buffer boundaries. */
+          for (p = buffer + 1; p != end; ++p)
+            {
+              SVN_ERR(readbuf_getchar(conn, pool, p));
+              if (!svn_ctype_isalnum(*p) && *p != '-')
+                break;
+            }
+        }
+
+      if (p == end)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Word is too long"));
 
       c = *p;
       *p = '\0';
