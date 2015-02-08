@@ -69,10 +69,16 @@ typedef struct ra_svn_baton_t {
   const char *token;
 } ra_svn_baton_t;
 
+/* Forward declaration. */
+typedef struct ra_svn_token_entry_t ra_svn_token_entry_t;
+
 typedef struct ra_svn_driver_state_t {
   const svn_delta_editor_t *editor;
   void *edit_baton;
   apr_hash_t *tokens;
+
+  /* Entry for the last token seen.  May be NULL. */
+  ra_svn_token_entry_t *last_token;
   svn_boolean_t *aborted;
   svn_boolean_t done;
   apr_pool_t *pool;
@@ -90,13 +96,13 @@ typedef struct ra_svn_driver_state_t {
    field in this structure is vestigial for files, and we use it for a
    different purpose instead: at apply-textdelta time, we set it to a
    subpool of the file pool, which is destroyed in textdelta-end. */
-typedef struct ra_svn_token_entry_t {
+struct ra_svn_token_entry_t {
   svn_string_t *token;
   void *baton;
   svn_boolean_t is_file;
   svn_stream_t *dstream;  /* svndiff stream for apply_textdelta */
   apr_pool_t *pool;
-} ra_svn_token_entry_t;
+};
 
 /* --- CONSUMING AN EDITOR BY PASSING EDIT OPERATIONS OVER THE NET --- */
 
@@ -480,6 +486,7 @@ static ra_svn_token_entry_t *store_token(ra_svn_driver_state_t *ds,
   entry->pool = pool;
 
   apr_hash_set(ds->tokens, entry->token->data, entry->token->len, entry);
+  ds->last_token = entry;
 
   return entry;
 }
@@ -489,7 +496,16 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds,
                                  svn_boolean_t is_file,
                                  ra_svn_token_entry_t **entry)
 {
-  *entry = apr_hash_get(ds->tokens, token->data, token->len);
+  if (ds->last_token && svn_string_compare(ds->last_token->token, token))
+    {
+      *entry = ds->last_token;
+    }
+  else
+    {
+      *entry = apr_hash_get(ds->tokens, token->data, token->len);
+      ds->last_token = *entry;
+    }
+
   if (!*entry || (*entry)->is_file != is_file)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Invalid file or dir token during edit"));
