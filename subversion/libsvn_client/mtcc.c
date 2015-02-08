@@ -710,8 +710,7 @@ mtcc_prop_getter(const svn_string_t **mime_type,
 
               if (! strcmp(mod->name, SVN_PROP_MIME_TYPE))
                 {
-                  *mime_type = mod->value ? svn_string_dup(mod->value, pool)
-                                          : NULL;
+                  *mime_type = svn_string_dup(mod->value, pool);
                   mime_type = NULL;
                 }
             }

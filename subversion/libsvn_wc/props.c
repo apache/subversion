@@ -1272,7 +1272,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
       svn_pool_clear(iterpool);
 
-      to_val = to_val ? svn_string_dup(to_val, result_pool) : NULL;
+      to_val = svn_string_dup(to_val, result_pool);
 
       svn_hash_sets(their_props, propname, to_val);
 

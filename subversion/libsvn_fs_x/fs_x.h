@@ -69,15 +69,6 @@ svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
                                  svn_fs_t *fs,
                                  apr_pool_t *scratch_pool);
 
-/* Set *PROPLIST to be an apr_hash_t containing the property list of
-   revision REV as seen in filesystem FS.  Use POOL for temporary
-   allocations. */
-svn_error_t *
-svn_fs_x__revision_proplist(apr_hash_t **proplist,
-                            svn_fs_t *fs,
-                            svn_revnum_t rev,
-                            apr_pool_t *pool);
-
 /* Set *LENGTH to the be fulltext length of the node revision
    specified by NODEREV. */
 svn_error_t *
@@ -167,15 +158,16 @@ svn_fs_x__write_format(svn_fs_t *fs,
                        svn_boolean_t overwrite,
                        apr_pool_t *scratch_pool);
 
-/* Find the value of the property named PROPNAME in transaction TXN.
-   Return the contents in *VALUE_P.  The contents will be allocated
-   from POOL. */
+/* Find the value of the property named PROPNAME in transaction REV.
+   Return the contents in *VALUE_P, allocated from RESULT_POOL.
+   Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__revision_prop(svn_string_t **value_p,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
                         const char *propname,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /* Change, add, or delete a property on a revision REV in filesystem
    FS.  NAME gives the name of the property, and value, if non-NULL,

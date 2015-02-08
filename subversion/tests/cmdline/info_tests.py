@@ -208,7 +208,7 @@ def info_with_tree_conflicts(sbox):
 def info_on_added_file(sbox):
   """info on added file"""
 
-  svntest.actions.make_repo_and_wc(sbox)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # create new file
@@ -251,7 +251,7 @@ def info_on_added_file(sbox):
 
 def info_on_mkdir(sbox):
   """info on new dir with mkdir"""
-  svntest.actions.make_repo_and_wc(sbox)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # create a new directory using svn mkdir

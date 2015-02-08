@@ -685,3 +685,143 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_auth__apply_config_for_server(svn_auth_baton_t *auth_baton,
+                                  apr_hash_t *config,
+                                  const char *server_name,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
+  svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
+  const char *store_plaintext_passwords
+    = SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS;
+  svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
+  const char *store_pp_plaintext
+    = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
+  svn_config_t *servers = NULL;
+  const char *server_group = NULL;
+
+  /* The 'store-passwords' and 'store-auth-creds' parameters used to
+  * live in SVN_CONFIG_CATEGORY_CONFIG. For backward compatibility,
+  * if values for these parameters have already been set by our
+  * callers, we use those values as defaults.
+  *
+  * Note that we can only catch the case where users explicitly set
+  * "store-passwords = no" or 'store-auth-creds = no".
+  *
+  * However, since the default value for both these options is
+  * currently (and has always been) "yes", users won't know
+  * the difference if they set "store-passwords = yes" or
+  * "store-auth-creds = yes" -- they'll get the expected behaviour.
+  */
+
+  if (svn_auth_get_parameter(auth_baton,
+                              SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
+    store_passwords = FALSE;
+
+  if (svn_auth_get_parameter(auth_baton,
+                              SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
+    store_auth_creds = FALSE;
+
+  if (config)
+    {
+      /* Grab the 'servers' config. */
+      servers = svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS);
+      if (servers)
+        {
+          /* First, look in the global section. */
+
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_passwords, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_PASSWORDS,
+             store_passwords));
+
+          SVN_ERR(svn_config_get_yes_no_ask
+            (servers, &store_plaintext_passwords, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+             SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
+
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_pp, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
+             store_pp));
+
+          SVN_ERR(svn_config_get_yes_no_ask
+            (servers, &store_pp_plaintext,
+             SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+             SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT));
+
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_auth_creds, SVN_CONFIG_SECTION_GLOBAL,
+              SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+              store_auth_creds));
+
+          /* Find out where we're about to connect to, and
+           * try to pick a server group based on the destination. */
+          server_group = svn_config_find_group(servers, server_name,
+                                               SVN_CONFIG_SECTION_GROUPS,
+                                               scratch_pool);
+
+          if (server_group)
+            {
+              /* Override global auth caching parameters with the ones
+               * for the server group, if any. */
+              SVN_ERR(svn_config_get_bool(servers, &store_auth_creds,
+                                          server_group,
+                                          SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+                                          store_auth_creds));
+
+              SVN_ERR(svn_config_get_bool(servers, &store_passwords,
+                                          server_group,
+                                          SVN_CONFIG_OPTION_STORE_PASSWORDS,
+                                          store_passwords));
+
+              SVN_ERR(svn_config_get_yes_no_ask
+                (servers, &store_plaintext_passwords, server_group,
+                 SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+                 store_plaintext_passwords));
+
+              SVN_ERR(svn_config_get_bool
+                (servers, &store_pp,
+                 server_group, SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
+                 store_pp));
+
+              SVN_ERR(svn_config_get_yes_no_ask
+                (servers, &store_pp_plaintext, server_group,
+                 SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+                 store_pp_plaintext));
+            }
+        }
+    }
+
+  /* Save auth caching parameters in the auth parameter hash. */
+  if (! store_passwords)
+    svn_auth_set_parameter(auth_baton,
+                           SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+
+  svn_auth_set_parameter(auth_baton,
+                         SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         store_plaintext_passwords);
+
+  if (! store_pp)
+    svn_auth_set_parameter(auth_baton,
+                           SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP,
+                           "");
+
+  svn_auth_set_parameter(auth_baton,
+                         SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+                         store_pp_plaintext);
+
+  if (! store_auth_creds)
+    svn_auth_set_parameter(auth_baton,
+                            SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+
+  if (server_group)
+    svn_auth_set_parameter(auth_baton,
+                           SVN_AUTH_PARAM_SERVER_GROUP,
+                           apr_pstrdup(auth_baton->pool, server_group));
+
+  return SVN_NO_ERROR;
+}

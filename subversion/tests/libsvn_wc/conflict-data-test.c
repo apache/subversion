@@ -293,7 +293,7 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
   child2_abspath = svn_dirent_join(parent_abspath, "bar", pool);
   SVN_ERR(sbox_wc_mkdir(&sbox, "A"));
   SVN_ERR(sbox_wc_mkdir(&sbox, "A/bar"));
-  sbox_file_write(&sbox, "A/foo", "");
+  SVN_ERR(sbox_file_write(&sbox, "A/foo", ""));
 
   conflict1 = tree_conflict_create(child1_abspath, svn_node_file,
                                    svn_wc_operation_merge,
