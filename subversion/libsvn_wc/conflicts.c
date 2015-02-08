@@ -2845,12 +2845,12 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
           else if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
             {
               return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
-                                   NULL,
-                                   _("Tree conflict can only be "
-                                     "resolved to 'working' state; "
-                                     "'%s' is no longer moved"),
-                                   svn_dirent_local_style(local_abspath,
-                                                          scratch_pool));
+                                       NULL,
+                                       _("Tree conflict can only be "
+                                         "resolved to 'working' state; "
+                                         "'%s' is no longer moved"),
+                                       svn_dirent_local_style(local_abspath,
+                                                              scratch_pool));
             }
         }
     }
