@@ -192,7 +192,10 @@ make_external_description(const char **new_external_description,
     {
       case svn_wc__external_description_format_1:
         if (external_pegrev.kind == svn_opt_revision_unspecified)
-          rev_str = info->rev_str ? info->rev_str : "";
+          {
+            /* If info->rev_str is NULL, this yields an empty string. */
+            rev_str = apr_pstrcat(pool, info->rev_str, " ", SVN_VA_NULL);
+          }
         else if (info->rev_str && item->revision.kind != svn_opt_revision_head)
           rev_str = apr_psprintf(pool, "%s ", info->rev_str);
         else
@@ -209,7 +212,10 @@ make_external_description(const char **new_external_description,
 
       case svn_wc__external_description_format_2:
         if (external_pegrev.kind == svn_opt_revision_unspecified)
-          rev_str = info->rev_str ? info->rev_str : "";
+          {
+            /* If info->rev_str is NULL, this yields an empty string. */
+            rev_str = apr_pstrcat(pool, info->rev_str, " ", SVN_VA_NULL);
+          }
         else if (info->rev_str && item->revision.kind != svn_opt_revision_head)
           rev_str = apr_psprintf(pool, "%s ", info->rev_str);
         else
@@ -262,6 +268,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
   svn_stringbuf_t *buf;
   apr_array_header_t *external_items;
   apr_array_header_t *parser_infos;
+  apr_array_header_t *items_to_pin;
   int i;
   apr_pool_t *iterpool;
 
@@ -272,6 +279,12 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                               FALSE /* canonicalize_url */,
                                               scratch_pool));
 
+  if (externals_to_pin)
+    items_to_pin = svn_hash_gets((apr_hash_t *)externals_to_pin,
+                                 local_abspath_or_url);
+  else
+    items_to_pin = NULL;
+
   buf = svn_stringbuf_create_empty(scratch_pool);
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < external_items->nelts; i++)
@@ -280,47 +293,44 @@ pin_externals_prop(svn_string_t **pinned_externals,
       svn_wc__externals_parser_info_t *info;
       svn_opt_revision_t external_pegrev;
       const char *pinned_desc;
-      
+
       svn_pool_clear(iterpool);
 
       item = APR_ARRAY_IDX(external_items, i, svn_wc_external_item2_t *);
       info = APR_ARRAY_IDX(parser_infos, i, svn_wc__externals_parser_info_t *);
 
-      if (externals_to_pin)
+      if (items_to_pin)
         {
-          apr_array_header_t *items_to_pin;
+          int j;
+          svn_wc_external_item2_t *item_to_pin = NULL;
 
-          items_to_pin = svn_hash_gets((apr_hash_t *)externals_to_pin,
-                                       local_abspath_or_url);
-          if (items_to_pin)
+          for (j = 0; j < items_to_pin->nelts; j++)
             {
-              int j;
-              svn_wc_external_item2_t *item_to_pin = NULL;
+              svn_wc_external_item2_t *const current =
+                APR_ARRAY_IDX(items_to_pin, j, svn_wc_external_item2_t *);
 
-              for (j = 0; j < items_to_pin->nelts; j++)
+
+              if (current
+                  && 0 == strcmp(item->url, current->url)
+                  && 0 == strcmp(item->target_dir, current->target_dir))
                 {
-                  item_to_pin = APR_ARRAY_IDX(items_to_pin, j,
-                                              svn_wc_external_item2_t *);
-                  if (item_to_pin && strcmp(item->url, item_to_pin->url) == 0 &&
-                      strcmp(item->target_dir, item_to_pin->target_dir) == 0)
-                    break;
-                  else
-                    item_to_pin = NULL;
+                  item_to_pin = current;
+                  break;
                 }
+            }
 
-              /* If this item is not in our list of external items to pin then
-               * simply keep the external at its original value. */
-              if (item_to_pin == NULL)
-                {
-                  const char *desc;
+          /* If this item is not in our list of external items to pin then
+           * simply keep the external at its original value. */
+          if (!item_to_pin)
+            {
+              const char *desc;
 
-                  external_pegrev.kind = svn_opt_revision_unspecified;
-                  SVN_ERR(make_external_description(&desc, local_abspath_or_url,
-                                                    item, info, external_pegrev,
-                                                    iterpool));
-                  svn_stringbuf_appendcstr(buf, desc);
-                  continue;
-                }
+              external_pegrev.kind = svn_opt_revision_unspecified;
+              SVN_ERR(make_external_description(&desc, local_abspath_or_url,
+                                                item, info, external_pegrev,
+                                                iterpool));
+              svn_stringbuf_appendcstr(buf, desc);
+              continue;
             }
         }
 
@@ -544,7 +554,7 @@ resolve_pinned_externals(apr_hash_t **new_externals,
         SVN_ERR(svn_ra_reparent(ra_session, old_url, scratch_pool));
       return SVN_NO_ERROR;
     }
-  
+
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, externals_props);
        hi;
