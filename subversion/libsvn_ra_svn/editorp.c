@@ -1047,7 +1047,8 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
 
   state.editor = editor;
   state.edit_baton = edit_baton;
-  state.tokens = apr_hash_make(pool);
+  state.tokens = svn_hash__make(pool);
+  state.last_token = NULL;
   state.aborted = aborted;
   state.done = FALSE;
   state.pool = pool;
