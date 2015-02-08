@@ -231,7 +231,7 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
           svn_auth_set_parameter(
                          ab,
                          SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
-                         unlock_cb);
+                         (const void*)unlock_cb);
         svn_auth_set_parameter(
                          ab,
                          SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC,
