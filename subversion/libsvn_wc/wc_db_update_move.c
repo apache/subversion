@@ -650,12 +650,13 @@ tc_editor_add_directory(node_move_baton_t *nmb,
 
   /* Check for unversioned tree-conflict */
   local_abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
-  SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
 
-  switch (wc_kind)
+  SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
+  if (wc_kind == old_kind)
+    wc_kind = svn_node_none; /* Node will be gone once we install */
+
+  if (wc_kind != svn_node_none)
     {
-    case svn_node_file:
-    default:
       SVN_ERR(create_node_tree_conflict(&conflict, nmb, relpath,
                                         wc_kind, svn_node_dir,
                                         move_dst_repos_relpath,
@@ -663,14 +664,11 @@ tc_editor_add_directory(node_move_baton_t *nmb,
                                         svn_wc_conflict_action_add, NULL,
                                         scratch_pool, scratch_pool));
       nmb->skip = TRUE;
-      break;
-
-    case svn_node_none:
+    }
+  else
+    {
       SVN_ERR(svn_wc__wq_build_dir_install(&work_item, b->db, local_abspath,
                                            scratch_pool, scratch_pool));
-      /* Fall through */
-    case svn_node_dir:
-      break;
     }
 
   SVN_ERR(update_move_list_add(b->wcroot, relpath,
@@ -738,6 +736,9 @@ tc_editor_add_file(node_move_baton_t *nmb,
   /* Check for unversioned tree-conflict */
   local_abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
   SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
+
+  if (wc_kind == old_kind)
+    wc_kind = svn_node_none; /* Node will be gone once we install */
 
   if (wc_kind != svn_node_none)
     {
@@ -1249,7 +1250,7 @@ tc_editor_delete(node_move_baton_t *nmb,
       else
         SVN_ERR(svn_wc__wq_build_file_remove(&work_items, b->db,
                                              b->wcroot->abspath, local_abspath,
-                                             iterpool, iterpool));
+                                             scratch_pool, iterpool));
 
         svn_pool_destroy(iterpool);
     }
@@ -1262,6 +1263,9 @@ tc_editor_delete(node_move_baton_t *nmb,
                                  svn_wc_notify_state_inapplicable,
                                  svn_wc_notify_state_inapplicable,
                                  conflict, work_items, scratch_pool));
+  else if (work_items)
+    SVN_ERR(svn_wc__db_wq_add_internal(b->wcroot, work_items,
+                                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
