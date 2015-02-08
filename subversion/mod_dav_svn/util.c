@@ -116,51 +116,51 @@ dav_svn__convert_err(svn_error_t *serr,
                      const char *message,
                      apr_pool_t *pool)
 {
-    dav_error *derr;
+  dav_error *derr;
 
-    /* Remove the trace-only error chain links.  We need predictable
-       protocol behavior regardless of whether or not we're in a
-       debugging build. */
-    svn_error_t *purged_serr = svn_error_purge_tracing(serr);
+  /* Remove the trace-only error chain links.  We need predictable
+     protocol behavior regardless of whether or not we're in a
+     debugging build. */
+  svn_error_t *purged_serr = svn_error_purge_tracing(serr);
 
-    /* ### someday mod_dav_svn will send back 'rich' error tags, much
-       finer grained than plain old svn_error_t's.  But for now, all
-       svn_error_t's are marshalled to the client via the single
-       generic <svn:error/> tag nestled within a <D:error> block. */
+  /* ### someday mod_dav_svn will send back 'rich' error tags, much
+     finer grained than plain old svn_error_t's.  But for now, all
+     svn_error_t's are marshalled to the client via the single
+     generic <svn:error/> tag nestled within a <D:error> block. */
 
-    /* Examine the Subverion error code, and select the most
-       appropriate HTTP status code.  If no more appropriate HTTP
-       status code maps to the Subversion error code, use the one
-       suggested status provided by the caller. */
-    switch (purged_serr->apr_err)
-      {
-      case SVN_ERR_FS_NOT_FOUND:
-        status = HTTP_NOT_FOUND;
-        break;
-      case SVN_ERR_UNSUPPORTED_FEATURE:
-        status = HTTP_NOT_IMPLEMENTED;
-        break;
-      case SVN_ERR_FS_LOCK_OWNER_MISMATCH:
-      case SVN_ERR_FS_PATH_ALREADY_LOCKED:
-        status = HTTP_LOCKED;
-        break;
-      case SVN_ERR_FS_PROP_BASEVALUE_MISMATCH:
-        status = HTTP_PRECONDITION_FAILED;
-        break;
-        /* add other mappings here */
-      }
+  /* Examine the Subverion error code, and select the most
+     appropriate HTTP status code.  If no more appropriate HTTP
+     status code maps to the Subversion error code, use the one
+     suggested status provided by the caller. */
+  switch (purged_serr->apr_err)
+    {
+    case SVN_ERR_FS_NOT_FOUND:
+      status = HTTP_NOT_FOUND;
+      break;
+    case SVN_ERR_UNSUPPORTED_FEATURE:
+      status = HTTP_NOT_IMPLEMENTED;
+      break;
+    case SVN_ERR_FS_LOCK_OWNER_MISMATCH:
+    case SVN_ERR_FS_PATH_ALREADY_LOCKED:
+      status = HTTP_LOCKED;
+      break;
+    case SVN_ERR_FS_PROP_BASEVALUE_MISMATCH:
+      status = HTTP_PRECONDITION_FAILED;
+      break;
+      /* add other mappings here */
+    }
 
-    derr = build_error_chain(pool, purged_serr, status);
-    if (message != NULL
-        && !svn_error_find_cause(purged_serr, SVN_ERR_REPOS_HOOK_FAILURE))
-      /* Don't hide hook failures; we might hide the error text */
-      derr = dav_push_error(pool, status, purged_serr->apr_err,
-                            message, derr);
+  derr = build_error_chain(pool, purged_serr, status);
+  if (message != NULL
+      && !svn_error_find_cause(purged_serr, SVN_ERR_REPOS_HOOK_FAILURE))
+    /* Don't hide hook failures; we might hide the error text */
+    derr = dav_push_error(pool, status, purged_serr->apr_err,
+                          message, derr);
 
-    /* Now, destroy the Subversion error. */
-    svn_error_clear(serr);
+  /* Now, destroy the Subversion error. */
+  svn_error_clear(serr);
 
-    return derr;
+  return derr;
 }
 
 
