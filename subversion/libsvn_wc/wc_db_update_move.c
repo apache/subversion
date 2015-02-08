@@ -1455,30 +1455,6 @@ get_info(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
-/* Return TRUE if SRC_CHILDREN and DST_CHILDREN represent the same
-   children, FALSE otherwise.  SRC_CHILDREN and DST_CHILDREN are
-   sorted arrays of basenames of type 'const char *'. */
-static svn_boolean_t
-children_match(apr_array_header_t *src_children,
-               apr_array_header_t *dst_children) { int i;
-
-  if (src_children->nelts != dst_children->nelts)
-    return FALSE;
-
-  for(i = 0; i < src_children->nelts; ++i)
-    {
-      const char *src_child =
-        APR_ARRAY_IDX(src_children, i, const char *);
-      const char *dst_child =
-        APR_ARRAY_IDX(dst_children, i, const char *);
-
-      if (strcmp(src_child, dst_child))
-        return FALSE;
-    }
-
-  return TRUE;
-}
-
 /* Return TRUE if SRC_PROPS and DST_PROPS contain the same properties,
    FALSE otherwise. SRC_PROPS and DST_PROPS are standard property
    hashes. */
