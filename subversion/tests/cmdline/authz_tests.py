@@ -1622,6 +1622,38 @@ def authz_file_external_to_authz(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         None, None, expected_status)
 
+@XFail()
+@Skip(svntest.main.is_ra_type_file)
+def authz_log_censor_revprops(sbox):
+  "log censors revprops for partially visible revs"
+
+  sbox.build(create_wc = False)
+
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox, {"/" : "* = rw"})
+
+  # Add the revision property 's'.
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps', '--revprop',
+                                     '-r1', 's', 'secret', sbox.repo_url)
+
+  # With blanket access, both 'svn:author' and 's' are a part of the output.
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': svntest.main.wc_author, 's': 'secret'}],
+    args=['--with-revprop', 'svn:author', '--with-revprop', 's',
+          '-r1', sbox.repo_url])
+
+  # Make the revision partially visible, but ask for both 'svn:author' and
+  # 's'.  The second revision property should be censored out, as we only
+  # allow 'svn:author' and 'svn:date' for partially visible revisions.
+  # This used to fail around trunk@1658379.
+  write_authz_file(sbox, {"/" : "* = rw", "/A/B" : "* = "})
+
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': svntest.main.wc_author}],
+    args=['--with-revprop', 'svn:author', '--with-revprop', 's',
+          '-r1', sbox.repo_url])
+
 
 ########################################################################
 # Run the tests
@@ -1657,6 +1689,7 @@ test_list = [ None,
               authz_del_from_subdir,
               log_diff_dontdothat,
               authz_file_external_to_authz,
+              authz_log_censor_revprops,
              ]
 serial_only = True
 
