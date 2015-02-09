@@ -1,4 +1,4 @@
-/* fs.h : interface to Subversion filesystem, private to libsvn_fs
+/* fs.h : interface to Subversion filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

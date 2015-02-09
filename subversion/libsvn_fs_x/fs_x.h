@@ -1,4 +1,4 @@
-/* fs_x.h : interface to the native filesystem layer
+/* fs_x.h : interface to the FSX layer
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

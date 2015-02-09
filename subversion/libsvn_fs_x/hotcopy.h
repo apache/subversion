@@ -1,4 +1,4 @@
-/* hotcopy.h : interface to the native filesystem layer
+/* hotcopy.h : interface to the hot-copying functionality
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
