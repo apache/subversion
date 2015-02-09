@@ -53,6 +53,7 @@
 
 #include "fs.h"
 #include "dag.h"
+#include "dag_cache.h"
 #include "lock.h"
 #include "tree.h"
 #include "fs_x.h"
