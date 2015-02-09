@@ -96,6 +96,40 @@ typedef struct svn_fs_x__dag_path_t
 
 } svn_fs_x__dag_path_t;
 
+/* Open the node identified by PATH in ROOT, allocating in POOL.  Set
+   *DAG_PATH_P to a path from the node up to ROOT.  The resulting
+   **DAG_PATH_P value is guaranteed to contain at least one element,
+   for the root directory.  PATH must be in canonical form.
+
+   If resulting *PARENT_PATH_P will eventually be made mutable and
+   modified, or if copy ID inheritance information is otherwise needed,
+   IS_TXN_PATH must be set.  If IS_TXN_PATH is FALSE, no copy ID
+   inheritance information will be calculated for the *PARENT_PATH_P chain.
+
+   If FLAGS & open_path_last_optional is zero, return the error
+   SVN_ERR_FS_NOT_FOUND if the node PATH refers to does not exist.  If
+   non-zero, require all the parent directories to exist as normal,
+   but if the final path component doesn't exist, simply return a path
+   whose bottom `node' member is zero.  This option is useful for
+   callers that create new nodes --- we find the parent directory for
+   them, and tell them whether the entry exists already.
+
+   The remaining bits in FLAGS are hints that allow this function
+   to take shortcuts based on knowledge that the caller provides,
+   such as the caller is not actually being interested in PARENT_PATH_P,
+   but only in (*PARENT_PATH_P)->NODE.
+
+   NOTE: Public interfaces which only *read* from the filesystem
+   should not call this function directly, but should instead use
+   svn_fs_x__get_dag_node().
+*/
+svn_error_t *
+svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
+                       svn_fs_root_t *root,
+                       const char *path,
+                       int flags,
+                       svn_boolean_t is_txn_path,
+                       apr_pool_t *pool);
 
 /* Open the node identified by PATH in ROOT.  Set DAG_NODE_P to the
    node we find, allocated in POOL.  Return the error
