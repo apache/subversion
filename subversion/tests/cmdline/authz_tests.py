@@ -1587,7 +1587,6 @@ def authz_file_external_to_authz(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         None, None, expected_status)
 
-@XFail()
 @Skip(svntest.main.is_ra_type_file)
 def authz_log_censor_revprops(sbox):
   "log censors revprops for partially visible revs"
