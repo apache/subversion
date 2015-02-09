@@ -1311,10 +1311,12 @@ x_node_id(const svn_fs_id_t **id_p,
     }
   else
     {
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
       dag_node_t *node;
 
-      SVN_ERR(get_dag(&node, root, path, pool));
+      SVN_ERR(get_dag(&node, root, path, scratch_pool));
       noderev_id = *svn_fs_x__dag_get_id(node);
+      svn_pool_destroy(scratch_pool);
     }
 
   *id_p = svn_fs_x__id_create(svn_fs_x__id_create_context(root->fs, pool),
