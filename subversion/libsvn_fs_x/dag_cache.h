@@ -138,11 +138,23 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
                        svn_boolean_t is_txn_path,
                        apr_pool_t *pool);
 
+/* Make the node referred to by PARENT_PATH mutable, if it isn't already,
+   allocating from RESULT_POOL.  ROOT must be the root from which
+   PARENT_PATH descends.  Clone any parent directories as needed.
+   Adjust the dag nodes in PARENT_PATH to refer to the clones.  Use
+   ERROR_PATH in error messages.  Use SCRATCH_POOL for temporaries. */
+svn_error_t *
+svn_fs_x__make_path_mutable(svn_fs_root_t *root,
+                            svn_fs_x__dag_path_t *parent_path,
+                            const char *error_path,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /* Open the node identified by PATH in ROOT.  Set DAG_NODE_P to the
    node we find, allocated in POOL.  Return the error
    SVN_ERR_FS_NOT_FOUND if this node doesn't exist.
  */
-static svn_error_t *
+svn_error_t *
 svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
                        svn_fs_root_t *root,
                        const char *path,
