@@ -3448,14 +3448,14 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
 
 /* LOCAL_ABSPATH is moved to MOVE_DST_ABSPATH.  MOVE_SRC_ROOT_ABSPATH
  * is the root of the move to MOVE_DST_OP_ROOT_ABSPATH.
- * MOVE_SRC_OP_ROOT_ABSPATH is the op-root of the move; it's the same
+ * DELETE_ABSPATH is the op-root of the move; it's the same
  * as MOVE_SRC_ROOT_ABSPATH except for moves inside deletes when it is
  * the op-root of the delete. */
 svn_error_t *
 svn_wc__db_base_moved_to(const char **move_dst_abspath,
                          const char **move_dst_op_root_abspath,
                          const char **move_src_root_abspath,
-                         const char **move_src_op_root_abspath,
+                         const char **delete_abspath,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
