@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__VERIFY_H
-#define SVN_LIBSVN_FS__VERIFY_H
+#ifndef SVN_LIBSVN_FS_X_VERIFY_H
+#define SVN_LIBSVN_FS_X_VERIFY_H
 
 #include "fs.h"
 

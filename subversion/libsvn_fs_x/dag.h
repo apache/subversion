@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_DAG_H
-#define SVN_LIBSVN_FS_DAG_H
+#ifndef SVN_LIBSVN_FS_X_DAG_H
+#define SVN_LIBSVN_FS_X_DAG_H
 
 #include "svn_fs.h"
 #include "svn_delta.h"
@@ -577,4 +577,4 @@ svn_fs_x__dag_update_ancestry(dag_node_t *target,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_DAG_H */
+#endif /* SVN_LIBSVN_FS_X_DAG_H */

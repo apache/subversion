@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__REVPROPS_H
-#define SVN_LIBSVN_FS__REVPROPS_H
+#ifndef SVN_LIBSVN_FS_X_REVPROPS_H
+#define SVN_LIBSVN_FS_X_REVPROPS_H
 
 #include "svn_fs.h"
 
@@ -181,4 +181,4 @@ svn_fs_x__delete_revprops_shard(const char *shard_path,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS__REVPROPS_H */
+#endif /* SVN_LIBSVN_FS_X_REVPROPS_H */
