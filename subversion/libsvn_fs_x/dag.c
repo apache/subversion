@@ -855,6 +855,9 @@ svn_fs_x__dag_delete(dag_node_t *parent,
   /* Get a fresh NODE-REVISION for the parent node. */
   SVN_ERR(get_node_revision(&parent_noderev, parent));
 
+  /* We allocate a few potentially heavy temporary objects (file buffers
+     and directories).  Make sure we don't keep them around for longer
+     than necessary. */
   subpool = svn_pool_create(scratch_pool);
 
   /* Search this directory for a dirent with that NAME. */
@@ -871,13 +874,15 @@ svn_fs_x__dag_delete(dag_node_t *parent,
        "Delete failed--directory has no entry '%s'", name);
 
   /* If mutable, remove it and any mutable children from db. */
-  SVN_ERR(delete_if_mutable(parent->fs, &dirent->id, scratch_pool));
-  svn_pool_destroy(subpool);
+  SVN_ERR(delete_if_mutable(parent->fs, &dirent->id, subpool));
 
   /* Remove this entry from its parent's entries list. */
-  return svn_fs_x__set_entry(parent->fs, txn_id, parent_noderev, name,
-                             NULL, svn_node_unknown, parent->node_pool,
-                             scratch_pool);
+  SVN_ERR(svn_fs_x__set_entry(parent->fs, txn_id, parent_noderev, name,
+                              NULL, svn_node_unknown, parent->node_pool,
+                              subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 
