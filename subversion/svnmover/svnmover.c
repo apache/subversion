@@ -95,6 +95,9 @@ notify(const char *fmt,
     }
 }
 
+#define SVN_CL__LOG_SEP_STRING \
+  "------------------------------------------------------------------------\n"
+
 /* ====================================================================== */
 
 typedef struct mtcc_t
@@ -211,6 +214,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 typedef enum action_code_t {
   ACTION_DIFF,
   ACTION_DIFF_E,
+  ACTION_LOG,
   ACTION_LIST_BRANCHES,
   ACTION_LIST_BRANCHES_R,
   ACTION_BRANCH,
@@ -235,6 +239,7 @@ static const action_defn_t action_defn[] =
 {
   {ACTION_DIFF,             "diff", 2},
   {ACTION_DIFF_E,           "diff-e", 2},
+  {ACTION_LOG,              "log", 2},
   {ACTION_LIST_BRANCHES,    "ls-br", 0},
   {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0},
   {ACTION_BRANCH,           "branch", 2},
@@ -774,6 +779,7 @@ static svn_error_t *
 svn_branch_diff_e(svn_editor3_t *editor,
                   svn_branch_el_rev_id_t *left,
                   svn_branch_el_rev_id_t *right,
+                  const char *prefix,
                   apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff_yca_tgt;
@@ -825,7 +831,8 @@ svn_branch_diff_e(svn_editor3_t *editor,
             {
               status_mod = e0 ? 'D' : 'A';
             }
-          printf("%c%c%c e%d  %s%s%s\n",
+          printf("%s%c%c%c e%d  %s%s%s\n",
+                 prefix,
                  status_mod, status_reparent, status_rename,
                  eid,
                  e1 ? apr_psprintf(scratch_pool, "e%d/%s",
@@ -866,6 +873,7 @@ static svn_error_t *
 svn_branch_diff(svn_editor3_t *editor,
                 svn_branch_el_rev_id_t *left,
                 svn_branch_el_rev_id_t *right,
+                const char *prefix,
                 apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff_yca_tgt;
@@ -961,7 +969,8 @@ svn_branch_diff(svn_editor3_t *editor,
     {
       diff_item_t *item = APR_ARRAY_IDX(diff_changes, i, void *);
 
-      printf("%c%c%c %s%s\n",
+      printf("%s%c%c%c %s%s\n",
+             prefix,
              item->status_mod, item->status_reparent, item->status_rename,
              item->major_path,
              item->from);
@@ -971,6 +980,9 @@ svn_branch_diff(svn_editor3_t *editor,
 }
 
 /* Return a hash of (BID -> BRANCH) of the subbranches of BRANCH.
+ *
+ * ### Wrong, because BID is not a unique identifier
+ *
  * Return an empty hash if BRANCH is null.
  */
 static apr_hash_t *
@@ -1001,6 +1013,7 @@ typedef svn_error_t *
 svn_branch_diff_func_t(svn_editor3_t *editor,
                 svn_branch_el_rev_id_t *left,
                 svn_branch_el_rev_id_t *right,
+                const char *prefix,
                 apr_pool_t *scratch_pool);
 
 /* Display differences, referring to paths, recursing into sub-branches */
@@ -1009,6 +1022,7 @@ svn_branch_diff_r(svn_editor3_t *editor,
                   svn_branch_el_rev_id_t *left,
                   svn_branch_el_rev_id_t *right,
                   svn_branch_diff_func_t diff_func,
+                  const char *prefix,
                   apr_pool_t *scratch_pool)
 {
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
@@ -1035,7 +1049,7 @@ svn_branch_diff_r(svn_editor3_t *editor,
              right->branch->sibling_defn->family->fid,
              svn_branch_get_root_rrpath(left->branch, scratch_pool),
              svn_branch_get_root_rrpath(right->branch, scratch_pool));
-      SVN_ERR(diff_func(editor, left, right, scratch_pool));
+      SVN_ERR(diff_func(editor, left, right, prefix, scratch_pool));
     }
 
   subbranches_l = get_subbranches(left ? left->branch : NULL,
@@ -1069,7 +1083,8 @@ svn_branch_diff_r(svn_editor3_t *editor,
         }
 
       /* recurse */
-      svn_branch_diff_r(editor, sub_left, sub_right, diff_func, scratch_pool);
+      svn_branch_diff_r(editor, sub_left, sub_right, diff_func, prefix,
+                        scratch_pool);
     }
   return SVN_NO_ERROR;
 }
@@ -1158,6 +1173,130 @@ do_move(svn_editor3_t *editor,
                           to_parent_el_rev->branch,
                           to_parent_el_rev->eid, to_name,
                           old_node->content));
+
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_branch_instance_t *
+svn_branch_get_subbranch_at_eid(svn_branch_instance_t *branch,
+                                int eid,
+                                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *subbranches;
+  int i;
+
+  subbranches = svn_branch_get_all_sub_branches(branch,
+                                                scratch_pool, scratch_pool);
+  for (i = 0; i < subbranches->nelts; i++)
+    {
+      svn_branch_instance_t *subbranch = APR_ARRAY_IDX(subbranches, i, void *);
+
+      if (subbranch->outer_eid == eid)
+        {
+          return subbranch;
+        }
+    }
+
+  return NULL;
+}
+
+/*  */
+static svn_branch_instance_t *
+svn_branch_revision_root_find_branch_by_id(const svn_branch_revision_root_t *rev_root,
+                                           const char *branch_instance_id,
+                                           apr_pool_t *scratch_pool)
+{
+  svn_branch_instance_t *branch = rev_root->root_branch;
+  int pos = 1;
+
+  SVN_ERR_ASSERT_NO_RETURN(branch_instance_id[0] == '^');
+  while (branch_instance_id[pos])
+    {
+      int n, eid, bytes;
+      n = sscanf(branch_instance_id + pos, ".%d%n", &eid, &bytes);
+      SVN_ERR_ASSERT_NO_RETURN(n == 1);
+
+      branch = svn_branch_get_subbranch_at_eid(branch, eid, scratch_pool);
+      pos += bytes;
+    }
+  SVN_DBG(("branch found: f%db%de%d at '/%s'",
+           branch->sibling_defn->family->fid,
+           branch->sibling_defn->bid,
+           branch->sibling_defn->root_eid,
+           svn_branch_get_root_rrpath(branch, scratch_pool)));
+  return branch;
+}
+
+/*  */
+static const char *
+svn_branch_instance_get_id(svn_branch_instance_t *branch,
+                           apr_pool_t *result_pool)
+{
+  const char *id = "";
+
+  while (branch->outer_branch)
+    {
+      id = apr_psprintf(result_pool, ".%d%s",
+                        branch->outer_eid, id);
+      branch = branch->outer_branch;
+    }
+  id = apr_psprintf(result_pool, "^%s", id);
+  SVN_DBG(("branch full id: '%s'", id));
+  return id;
+}
+
+/*  */
+static svn_branch_el_rev_id_t *
+svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t *old_el_rev,
+                                   apr_pool_t *result_pool)
+{
+  const svn_branch_repos_t *repos = old_el_rev->branch->rev_root->repos;
+  const svn_branch_revision_root_t *rev_root;
+  const char *branch_id;
+  svn_branch_instance_t *branch;
+  svn_branch_el_rev_id_t *new_el_rev;
+
+  if (old_el_rev->rev <= 0)
+    return NULL;
+
+  branch_id = svn_branch_instance_get_id(old_el_rev->branch, result_pool);
+  rev_root = APR_ARRAY_IDX(repos->rev_roots, old_el_rev->rev - 1, void *);
+  branch = svn_branch_revision_root_find_branch_by_id(rev_root, branch_id,
+                                                      result_pool);
+
+  new_el_rev = svn_branch_el_rev_id_create(branch, old_el_rev->eid,
+                                           old_el_rev->rev - 1,
+                                           result_pool);
+  return new_el_rev;
+}
+
+/* Similar to 'svn log -v', this iterates over the revisions between
+ * LEFT and RIGHT (currently excluding LEFT), printing a single-rev diff
+ * for each.
+ */
+static svn_error_t *
+svn_branch_log(svn_editor3_t *editor,
+               svn_branch_el_rev_id_t *left,
+               svn_branch_el_rev_id_t *right,
+               apr_pool_t *scratch_pool)
+{
+  svn_revnum_t first_rev = left->rev, rev;
+
+  for (rev = right->rev; rev > first_rev; rev--)
+    {
+      svn_branch_el_rev_id_t *el_rev_left
+        = svn_branch_find_predecessor_el_rev(right, scratch_pool);
+
+      printf(SVN_CL__LOG_SEP_STRING "r%ld | ...\n",
+             rev);
+      printf("Changed elements:\n");
+      SVN_ERR(svn_branch_diff_r(editor,
+                                el_rev_left, right,
+                                svn_branch_diff, "   ",
+                                scratch_pool));
+      right = el_rev_left;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1277,7 +1416,7 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(svn_branch_diff_r(editor,
                                       el_rev[0] /*from*/,
                                       el_rev[1] /*to*/,
-                                      svn_branch_diff,
+                                      svn_branch_diff, "",
                                       iterpool));
           }
           break;
@@ -1288,8 +1427,18 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(svn_branch_diff_r(editor,
                                       el_rev[0] /*from*/,
                                       el_rev[1] /*to*/,
-                                      svn_branch_diff_e,
+                                      svn_branch_diff_e, "",
                                       iterpool));
+          }
+          break;
+        case ACTION_LOG:
+          VERIFY_EID_EXISTS("log", 0);
+          VERIFY_EID_EXISTS("log", 1);
+          {
+            SVN_ERR(svn_branch_log(editor,
+                                   el_rev[0] /*from*/,
+                                   el_rev[1] /*to*/,
+                                   iterpool));
           }
           break;
         case ACTION_LIST_BRANCHES:
