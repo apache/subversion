@@ -607,48 +607,10 @@ mutable_root_node(dag_node_t **node_p,
 
 /* Traversing directory paths.  */
 
-typedef enum copy_id_inherit_t
-{
-  copy_id_inherit_unknown = 0,
-  copy_id_inherit_self,
-  copy_id_inherit_parent,
-  copy_id_inherit_new
-
-} copy_id_inherit_t;
-
-/* A linked list representing the path from a node up to a root
-   directory.  We use this for cloning, and for operations that need
-   to deal with both a node and its parent directory.  For example, a
-   `delete' operation needs to know that the node actually exists, but
-   also needs to change the parent directory.  */
-typedef struct parent_path_t
-{
-
-  /* A node along the path.  This could be the final node, one of its
-     parents, or the root.  Every parent path ends with an element for
-     the root directory.  */
-  dag_node_t *node;
-
-  /* The name NODE has in its parent directory.  This is zero for the
-     root directory, which (obviously) has no name in its parent.  */
-  char *entry;
-
-  /* The parent of NODE, or zero if NODE is the root directory.  */
-  struct parent_path_t *parent;
-
-  /* The copy ID inheritance style. */
-  copy_id_inherit_t copy_inherit;
-
-  /* If copy ID inheritance style is copy_id_inherit_new, this is the
-     path which should be implicitly copied; otherwise, this is NULL. */
-  const char *copy_src_path;
-
-} parent_path_t;
-
 /* Return a text string describing the absolute path of parent_path
    PARENT_PATH.  It will be allocated in POOL. */
 static const char *
-parent_path_path(parent_path_t *parent_path,
+parent_path_path(svn_fs_x__dag_path_t *parent_path,
                  apr_pool_t *pool)
 {
   const char *path_so_far = "/";
@@ -663,12 +625,12 @@ parent_path_path(parent_path_t *parent_path,
 /* Return the FS path for the parent path chain object CHILD relative
    to its ANCESTOR in the same chain, allocated in POOL.  */
 static const char *
-parent_path_relpath(parent_path_t *child,
-                    parent_path_t *ancestor,
+parent_path_relpath(svn_fs_x__dag_path_t *child,
+                    svn_fs_x__dag_path_t *ancestor,
                     apr_pool_t *pool)
 {
   const char *path_so_far = "";
-  parent_path_t *this_node = child;
+  svn_fs_x__dag_path_t *this_node = child;
   while (this_node != ancestor)
     {
       assert(this_node != NULL);
@@ -687,10 +649,10 @@ parent_path_relpath(parent_path_t *child,
    for that path).  CHILD must have a parent (it cannot be the root
    node).  Allocations are taken from POOL. */
 static svn_error_t *
-get_copy_inheritance(copy_id_inherit_t *inherit_p,
+get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
                      const char **copy_src_path,
                      svn_fs_t *fs,
-                     parent_path_t *child,
+                     svn_fs_x__dag_path_t *child,
                      apr_pool_t *pool)
 {
   svn_fs_x__id_t child_copy_id, parent_copy_id;
@@ -710,14 +672,14 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   /* If this child is already mutable, we have nothing to do. */
   if (svn_fs_x__dag_check_mutable(child->node))
     {
-      *inherit_p = copy_id_inherit_self;
+      *inherit_p = svn_fs_x__copy_id_inherit_self;
       *copy_src_path = NULL;
       return SVN_NO_ERROR;
     }
 
   /* From this point on, we'll assume that the child will just take
      its copy ID from its parent. */
-  *inherit_p = copy_id_inherit_parent;
+  *inherit_p = svn_fs_x__copy_id_inherit_parent;
   *copy_src_path = NULL;
 
   /* Special case: if the child's copy ID is '0', use the parent's
@@ -754,32 +716,33 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   id_path = svn_fs_x__dag_get_created_path(child->node);
   if (strcmp(id_path, parent_path_path(child, pool)) == 0)
     {
-      *inherit_p = copy_id_inherit_self;
+      *inherit_p = svn_fs_x__copy_id_inherit_self;
       return SVN_NO_ERROR;
     }
 
   /* We are pretty sure that the child node is an unedited nested
      branched node.  When it needs to be made mutable, it should claim
      a new copy ID. */
-  *inherit_p = copy_id_inherit_new;
+  *inherit_p = svn_fs_x__copy_id_inherit_new;
   *copy_src_path = id_path;
   return SVN_NO_ERROR;
 }
 
-/* Allocate a new parent_path_t node from RESULT_POOL, referring to NODE,
-   ENTRY, PARENT, and COPY_ID.  */
-static parent_path_t *
+/* Allocate a new svn_fs_x__dag_path_t node from RESULT_POOL, referring to
+   NODE, ENTRY, PARENT, and COPY_ID.  */
+static svn_fs_x__dag_path_t *
 make_parent_path(dag_node_t *node,
                  char *entry,
-                 parent_path_t *parent,
+                 svn_fs_x__dag_path_t *parent,
                  apr_pool_t *result_pool)
 {
-  parent_path_t *parent_path = apr_pcalloc(result_pool, sizeof(*parent_path));
+  svn_fs_x__dag_path_t *parent_path
+    = apr_pcalloc(result_pool, sizeof(*parent_path));
   if (node)
     parent_path->node = svn_fs_x__dag_copy_into_pool(node, result_pool);
   parent_path->entry = entry;
   parent_path->parent = parent;
-  parent_path->copy_inherit = copy_id_inherit_unknown;
+  parent_path->copy_inherit = svn_fs_x__copy_id_inherit_unknown;
   parent_path->copy_src_path = NULL;
   return parent_path;
 }
@@ -886,7 +849,7 @@ try_match_last_node(dag_node_t **node_p,
    get_dag().
 */
 static svn_error_t *
-open_path(parent_path_t **parent_path_p,
+open_path(svn_fs_x__dag_path_t **parent_path_p,
           svn_fs_root_t *root,
           const char *path,
           int flags,
@@ -895,7 +858,7 @@ open_path(parent_path_t **parent_path_p,
 {
   svn_fs_t *fs = root->fs;
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
-  parent_path_t *parent_path; /* The path from HERE up to the root. */
+  svn_fs_x__dag_path_t *parent_path; /* The path from HERE up to the root. */
   const char *rest = NULL; /* The portion of PATH we haven't traversed yet. */
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -937,7 +900,7 @@ open_path(parent_path_t **parent_path_p,
               svn_pool_destroy(iterpool);
 
               parent_path = make_parent_path(node, 0, 0, pool);
-              parent_path->copy_inherit = copy_id_inherit_self;
+              parent_path->copy_inherit = svn_fs_x__copy_id_inherit_self;
               *parent_path_p = parent_path;
 
               return SVN_NO_ERROR;
@@ -973,7 +936,7 @@ open_path(parent_path_t **parent_path_p,
 
   path_so_far->data[path_so_far->len] = '\0';
   parent_path = make_parent_path(here, 0, 0, pool);
-  parent_path->copy_inherit = copy_id_inherit_self;
+  parent_path->copy_inherit = svn_fs_x__copy_id_inherit_self;
 
   /* Whenever we are at the top of this loop:
      - HERE is our current directory,
@@ -1007,7 +970,7 @@ open_path(parent_path_t **parent_path_p,
          process non-empty path segments. */
       if (*entry != '\0')
         {
-          copy_id_inherit_t inherit;
+          svn_fs_x__copy_id_inherit_t inherit;
           const char *copy_path = NULL;
           dag_node_t *cached_node = NULL;
 
@@ -1100,7 +1063,7 @@ open_path(parent_path_t **parent_path_p,
    ERROR_PATH in error messages.  Use SCRATCH_POOL for temporaries. */
 static svn_error_t *
 make_path_mutable(svn_fs_root_t *root,
-                  parent_path_t *parent_path,
+                  svn_fs_x__dag_path_t *parent_path,
                   const char *error_path,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
@@ -1117,7 +1080,7 @@ make_path_mutable(svn_fs_root_t *root,
     {
       svn_fs_x__id_t copy_id = { SVN_INVALID_REVNUM, 0 };
       svn_fs_x__id_t *copy_id_ptr = &copy_id;
-      copy_id_inherit_t inherit = parent_path->copy_inherit;
+      svn_fs_x__copy_id_inherit_t inherit = parent_path->copy_inherit;
       const char *clone_path, *copyroot_path;
       svn_revnum_t copyroot_rev;
       svn_boolean_t is_parent_copyroot = FALSE;
@@ -1137,21 +1100,21 @@ make_path_mutable(svn_fs_root_t *root,
       subpool = svn_pool_create(scratch_pool);
       switch (inherit)
         {
-        case copy_id_inherit_parent:
+        case svn_fs_x__copy_id_inherit_parent:
           SVN_ERR(svn_fs_x__dag_get_copy_id(&copy_id,
                                             parent_path->parent->node));
           break;
 
-        case copy_id_inherit_new:
+        case svn_fs_x__copy_id_inherit_new:
           SVN_ERR(svn_fs_x__reserve_copy_id(&copy_id, root->fs, txn_id,
                                             subpool));
           break;
 
-        case copy_id_inherit_self:
+        case svn_fs_x__copy_id_inherit_self:
           copy_id_ptr = NULL;
           break;
 
-        case copy_id_inherit_unknown:
+        case svn_fs_x__copy_id_inherit_unknown:
         default:
           SVN_ERR_MALFUNCTION(); /* uh-oh -- somebody didn't calculate copy-ID
                       inheritance data. */
@@ -1206,7 +1169,7 @@ svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
                        const char *path,
                        apr_pool_t *pool)
 {
-  parent_path_t *parent_path;
+  svn_fs_x__dag_path_t *parent_path;
   dag_node_t *node = NULL;
 
   /* First we look for the DAG in our cache
@@ -1499,7 +1462,7 @@ x_node_proplist(apr_hash_t **table_p,
 
 
 static svn_error_t *
-increment_mergeinfo_up_tree(parent_path_t *pp,
+increment_mergeinfo_up_tree(svn_fs_x__dag_path_t *pp,
                             apr_int64_t increment,
                             apr_pool_t *scratch_pool)
 {
@@ -1529,7 +1492,7 @@ x_change_node_prop(svn_fs_root_t *root,
                    const svn_string_t *value,
                    apr_pool_t *scratch_pool)
 {
-  parent_path_t *parent_path;
+  svn_fs_x__dag_path_t *parent_path;
   apr_hash_t *proplist;
   svn_fs_x__txn_id_t txn_id;
   svn_boolean_t mergeinfo_mod = FALSE;
@@ -2424,7 +2387,7 @@ x_make_dir(svn_fs_root_t *root,
            const char *path,
            apr_pool_t *scratch_pool)
 {
-  parent_path_t *parent_path;
+  svn_fs_x__dag_path_t *parent_path;
   dag_node_t *sub_dir;
   svn_fs_x__txn_id_t txn_id = root_txn_id(root);
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
@@ -2477,7 +2440,7 @@ x_delete_node(svn_fs_root_t *root,
               const char *path,
               apr_pool_t *scratch_pool)
 {
-  parent_path_t *parent_path;
+  svn_fs_x__dag_path_t *parent_path;
   svn_fs_x__txn_id_t txn_id;
   apr_int64_t mergeinfo_count = 0;
   svn_node_kind_t kind;
@@ -2558,7 +2521,7 @@ copy_helper(svn_fs_root_t *from_root,
             apr_pool_t *scratch_pool)
 {
   dag_node_t *from_node;
-  parent_path_t *to_parent_path;
+  svn_fs_x__dag_path_t *to_parent_path;
   svn_fs_x__txn_id_t txn_id = root_txn_id(to_root);
   svn_boolean_t same_p;
 
@@ -2767,7 +2730,7 @@ x_make_file(svn_fs_root_t *root,
             const char *path,
             apr_pool_t *scratch_pool)
 {
-  parent_path_t *parent_path;
+  svn_fs_x__dag_path_t *parent_path;
   dag_node_t *child;
   svn_fs_x__txn_id_t txn_id = root_txn_id(root);
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
@@ -2955,7 +2918,7 @@ apply_textdelta(void *baton,
                 apr_pool_t *scratch_pool)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  parent_path_t *parent_path;
+  svn_fs_x__dag_path_t *parent_path;
   svn_fs_x__txn_id_t txn_id = root_txn_id(tb->root);
 
   /* Call open_path with no flags, as we want this to return an error
@@ -3121,7 +3084,7 @@ apply_text(void *baton,
            apr_pool_t *scratch_pool)
 {
   text_baton_t *tb = baton;
-  parent_path_t *parent_path;
+  svn_fs_x__dag_path_t *parent_path;
   svn_fs_x__txn_id_t txn_id = root_txn_id(tb->root);
 
   /* Call open_path with no flags, as we want this to return an error
@@ -3413,7 +3376,7 @@ static svn_error_t *
 find_youngest_copyroot(svn_revnum_t *rev_p,
                        const char **path_p,
                        svn_fs_t *fs,
-                       parent_path_t *parent_path)
+                       svn_fs_x__dag_path_t *parent_path)
 {
   svn_revnum_t rev_mine;
   svn_revnum_t rev_parent = SVN_INVALID_REVNUM;
@@ -3455,7 +3418,7 @@ x_closest_copy(svn_fs_root_t **root_p,
                apr_pool_t *pool)
 {
   svn_fs_t *fs = root->fs;
-  parent_path_t *parent_path, *copy_dst_parent_path;
+  svn_fs_x__dag_path_t *parent_path, *copy_dst_parent_path;
   svn_revnum_t copy_dst_rev, created_rev;
   const char *copy_dst_path;
   svn_fs_root_t *copy_dst_root;
@@ -3570,7 +3533,7 @@ history_prev(svn_fs_history_t **prev_history,
   svn_revnum_t commit_rev, src_rev, dst_rev;
   svn_revnum_t revision = fhd->revision;
   svn_fs_t *fs = fhd->fs;
-  parent_path_t *parent_path;
+  svn_fs_x__dag_path_t *parent_path;
   dag_node_t *node;
   svn_fs_root_t *root;
   svn_boolean_t reported = fhd->is_interesting;
@@ -3948,7 +3911,7 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
-  parent_path_t *parent_path, *nearest_ancestor;
+  svn_fs_x__dag_path_t *parent_path, *nearest_ancestor;
   apr_hash_t *proplist;
   svn_string_t *mergeinfo_string;
 
