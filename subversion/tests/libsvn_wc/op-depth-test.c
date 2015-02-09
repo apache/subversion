@@ -9550,7 +9550,7 @@ move4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
         { 0, "A/A/A",     "normal",       2, "A/A/A", NOT_MOVED, "key" },
         { 1, "A/A/A",     "normal",       1, "B/A/A" },
         { 2, "A/A/A",     "normal",       1, "C/A/A" },
-        { 3, "A/A/A",     "normal",       1, "D/A/A" },
+        { 3, "A/A/A",     "normal",       1, "D/A/A", FALSE, "AAA_3"},
 
         { 0, "A/A/A/A",   "normal",       2, "A/A/A/A", NOT_MOVED, "key" },
         { 1, "A/A/A/A",   "normal",       1, "B/A/A/A" },
@@ -9559,7 +9559,8 @@ move4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
         { 0 },
       };
-        SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+
+      SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
     }
 
     return SVN_NO_ERROR;
