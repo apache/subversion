@@ -89,7 +89,7 @@ def mergeinfo(sbox):
   sbox.simple_update()
 
   # Dummy up some mergeinfo.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', SVN_PROP_MERGEINFO, '/A:3',
                                      sbox.ospath('A2'))
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
@@ -183,14 +183,14 @@ def mergeinfo_on_unknown_url(sbox):
 
   # remove a path from the repo and commit.
   iota_path = os.path.join(wc_dir, 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota_path)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, [], 'rm', iota_path)
+  svntest.actions.run_and_verify_svn(None, [],
                                      "ci", wc_dir, "-m", "log message")
 
   url = sbox.repo_url + "/iota"
   expected_err = adjust_error_for_server_version(".*File not found.*iota.*|"
                                                  ".*iota.*path not found.*")
-  svntest.actions.run_and_verify_svn("", None, expected_err,
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      "mergeinfo", "--show-revs", "eligible",
                                      url, wc_dir)
 
@@ -213,11 +213,10 @@ def non_inheritable_mergeinfo(sbox):
 
   # Update the WC, then merge r4 from A to A_COPY and r6 from A to A_COPY
   # at --depth empty and commit the merges as r7.
-  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(6), [], 'up',
+  svntest.actions.run_and_verify_svn(exp_noop_up_out(6), [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=6)
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[4]],
                           ['U    ' + rho_COPY_path + '\n',
                            ' U   ' + A_COPY_path + '\n',]),
@@ -225,7 +224,6 @@ def non_inheritable_mergeinfo(sbox):
     sbox.repo_url + '/A',
     A_COPY_path)
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[6]], ' G   ' + A_COPY_path + '\n'),
     [], 'merge', '-c6',
     sbox.repo_url + '/A',
@@ -239,7 +237,7 @@ def non_inheritable_mergeinfo(sbox):
                                         expected_status, None, wc_dir)
 
   # Update the WC a last time to ensure full inheritance.
-  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(7), [], 'up',
+  svntest.actions.run_and_verify_svn(exp_noop_up_out(7), [], 'up',
                                      wc_dir)
 
   # Despite being non-inheritable, r6 should still show as merged to A_COPY
@@ -296,26 +294,25 @@ def recursive_mergeinfo(sbox):
   nu2_path        = os.path.join(wc_dir, "A2", "C", "nu2")
 
   # Rename A to A2 in r7.
-  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(6), [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(exp_noop_up_out(6), [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ren', A_path, A2_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', wc_dir, '-m', 'rename A to A2')
 
   # Add the files A/B/F/nu and A/C/nu2 and commit them as r8.
   svntest.main.file_write(nu_path, "A new file.\n")
   svntest.main.file_write(nu2_path, "Another new file.\n")
   svntest.main.run_svn(None, "add", nu_path, nu2_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', wc_dir, '-m', 'Add 2 new files')
 
   # Do several merges to create varied subtree mergeinfo
 
   # Merge r4 from A2 to A_COPY at depth empty
-  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(8), [], 'up',
+  svntest.actions.run_and_verify_svn(exp_noop_up_out(8), [], 'up',
                                      wc_dir)
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[4]], ' U   ' + A_COPY_path + '\n'),
     [], 'merge', '-c4', '--depth', 'empty',
     sbox.repo_url + '/A2',
@@ -323,7 +320,6 @@ def recursive_mergeinfo(sbox):
 
   # Merge r6 from A2/D/H to A_COPY/D/H
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[6]],
                           ['U    ' + omega_COPY_path + '\n',
                            ' G   ' + H_COPY_path + '\n']),
@@ -333,7 +329,6 @@ def recursive_mergeinfo(sbox):
 
   # Merge r5 from A2 to A_COPY
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[5]],
                           ['U    ' + beta_COPY_path + '\n',
                            ' G   ' + A_COPY_path + '\n',
@@ -347,7 +342,6 @@ def recursive_mergeinfo(sbox):
   # Reverse merge -r5 from A2/C to A_COPY/C leaving empty mergeinfo on
   # A_COPY/C.
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[-5]],
                           ' G   ' + C_COPY_path + '\n'),
     [], 'merge', '-c-5',
@@ -355,7 +349,6 @@ def recursive_mergeinfo(sbox):
 
   # Merge r8 from A2/B/F to A_COPY/B/F
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[8]],
                           ['A    ' + nu_COPY_path + '\n',
                            ' G   ' + F_COPY_path + '\n']),
@@ -364,9 +357,9 @@ def recursive_mergeinfo(sbox):
     F_COPY_path)
 
   # Commit everything this far as r9
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', wc_dir, '-m', 'Many merges')
-  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(9), [], 'up',
+  svntest.actions.run_and_verify_svn(exp_noop_up_out(9), [], 'up',
                                      wc_dir)
 
   # Test svn mergeinfo -R / --depth infinity.
@@ -461,26 +454,24 @@ def mergeinfo_on_pegged_wc_path(sbox):
   #
   # r7 - Merge -c3,6 from A to A_COPY.
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[3],[6]],
                           ['U    ' + psi_COPY_path + '\n',
                            'U    ' + omega_COPY_path + '\n',
                            ' U   ' + A_COPY_path + '\n',
                            ' G   ' + A_COPY_path + '\n',]),
     [], 'merge', '-c3,6', sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', wc_dir,
                                      '-m', 'Merge r3 and r6')
 
   # r8 - Merge -c5 from A to A_COPY.
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[5]],
                           ['U    ' + beta_COPY_path + '\n',
                            ' U   ' + A_COPY_path + '\n']),
     [], 'merge', '-c5', '--allow-mixed-revisions',
     sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', wc_dir,
                                      '-m', 'Merge r5')
 
@@ -574,19 +565,19 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
   #   Properties on 'A_COPY':
   #     svn:mergeinfo
   #       /A:7
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A/D/G/rho',
                                      rho_COPY_path, '-c5')
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A',
                                      A_COPY_path, '-c7')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', '-m',
                                      'Cherrypicks to branch subtree and root',
                                      wc_dir)
 
   # Checkout a new wc rooted at ^/A_COPY/D.
   subtree_wc = sbox.add_wc_path('D_COPY')
-  svntest.actions.run_and_verify_svn(None, None, [], 'co',
+  svntest.actions.run_and_verify_svn(None, [], 'co',
                                      sbox.repo_url + '/A_COPY/D',
                                      subtree_wc)
 
@@ -622,10 +613,10 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
   # source.
   #
   # In r9 make a change that effects two branches:
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   svntest.main.file_write(gamma_2_path, "New content.\n")
   svntest.main.file_write(tau_path, "New content.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', '-m',
                                      'Make changes under both A and A_COPY_2',
                                      wc_dir)
 
@@ -640,10 +631,10 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
   #   Properties on 'A_COPY\D\G\rho':
   #     svn:mergeinfo
   #       /A/D/G/rho:5
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A_COPY_2',
                                      A_COPY_path, '-c9')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', '-m',
                                      'Merge r8 from A_COPY_2 to A_COPY',
                                      wc_dir)
 
@@ -673,8 +664,8 @@ def wc_target_inherits_mergeinfo_from_repos(sbox):
       '--show-revs', 'merged', '-R')
 
   # Test while the target is the full WC and then with the subtree WC:
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', subtree_wc)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', subtree_wc)
 
   test_svn_mergeinfo_4_way(D_COPY_path)
   test_svn_mergeinfo_4_way(subtree_wc)
@@ -697,27 +688,27 @@ def natural_history_is_not_eligible_nor_merged(sbox):
 
   # r7 - Add a new file A/C/nu
   svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, [], 'add', nu_path)
+  svntest.actions.run_and_verify_svn(None, [], 'ci',
                                      '-m', 'Add a file', wc_dir)
 
   # r8 - Sync merge ^/A to A_COPY
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, [], 'ci',
                                      '-m', 'Add a file', wc_dir)
 
   # r9 - Modify the file added in r7
   svntest.main.file_write(nu_path, "Modification to file 'nu'.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, [], 'ci',
                                      '-m', 'Modify added file', wc_dir)
 
   # r10 - Merge ^/A/C/nu to A_COPY/C/nu, creating subtree mergeinfo.
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A/C/nu', nu_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, [], 'ci',
                                      '-m', 'Add a file', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # We've effectively merged everything from ^/A to A_COPY, check
   # that svn mergeinfo -R agrees.
@@ -758,13 +749,13 @@ def noninheritable_mergeinfo_not_always_eligible(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # r4 - Merge r3 from ^/A to branch at depth=empty.
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A', branch_path,
                                      '-c3', '--depth=empty')
   # Forcibly set non-inheritable mergeinfo to replicate the pre-1.8 behavior,
   # where prior to the fix for issue #4057, non-inheritable mergeinfo was
   # unconditionally set for merges with shallow operational depths.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/A:3*\n', branch_path)
   svntest.main.run_svn(None, 'commit', '-m', 'shallow merge', wc_dir)
@@ -791,8 +782,7 @@ def mergeinfo_local_move(sbox):
   wc_dir = sbox.wc_dir
 
   sbox.simple_move('A', 'A2')
-  svntest.actions.run_and_verify_svn(None,
-                                     None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mergeinfo', sbox.repo_url + '/A',
                                      sbox.ospath('A2'))
 

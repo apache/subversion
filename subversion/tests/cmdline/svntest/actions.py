@@ -169,10 +169,9 @@ def guarantee_greek_repository(path, minor_version):
   main.chmod_tree(path, 0666, 0666)
 
   # give the repository a unique UUID
-  run_and_verify_svnadmin("could not set uuid", [], [], 'setuuid', path)
+  run_and_verify_svnadmin([], [], 'setuuid', path)
 
-def run_and_verify_atomic_ra_revprop_change(message,
-                                            expected_stdout,
+def run_and_verify_atomic_ra_revprop_change(expected_stdout,
                                             expected_stderr,
                                             expected_exit,
                                             url, revision, propname,
@@ -202,11 +201,11 @@ def run_and_verify_atomic_ra_revprop_change(message,
                                                           want_error)
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
-  verify.verify_exit_code(message, exit_code, expected_exit)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
 
-def run_and_verify_svnlook(message, expected_stdout,
+def run_and_verify_svnlook(expected_stdout,
                            expected_stderr, *varargs):
   """Like run_and_verify_svnlook2, but the expected exit code is
   assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
@@ -214,21 +213,21 @@ def run_and_verify_svnlook(message, expected_stdout,
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
-  return run_and_verify_svnlook2(message, expected_stdout, expected_stderr,
+  return run_and_verify_svnlook2(expected_stdout, expected_stderr,
                                  expected_exit, *varargs)
 
-def run_and_verify_svnlook2(message, expected_stdout, expected_stderr,
+def run_and_verify_svnlook2(expected_stdout, expected_stderr,
                             expected_exit, *varargs):
   """Run svnlook command and check its output and exit code."""
 
   exit_code, out, err = main.run_svnlook(*varargs)
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
-  verify.verify_exit_code(message, exit_code, expected_exit)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
 
-def run_and_verify_svnadmin(message, expected_stdout,
+def run_and_verify_svnadmin(expected_stdout,
                             expected_stderr, *varargs):
   """Like run_and_verify_svnadmin2, but the expected exit code is
   assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
@@ -236,21 +235,21 @@ def run_and_verify_svnadmin(message, expected_stdout,
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
-  return run_and_verify_svnadmin2(message, expected_stdout, expected_stderr,
+  return run_and_verify_svnadmin2(expected_stdout, expected_stderr,
                                   expected_exit, *varargs)
 
-def run_and_verify_svnadmin2(message, expected_stdout, expected_stderr,
+def run_and_verify_svnadmin2(expected_stdout, expected_stderr,
                              expected_exit, *varargs):
   """Run svnadmin command and check its output and exit code."""
 
   exit_code, out, err = main.run_svnadmin(*varargs)
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
-  verify.verify_exit_code(message, exit_code, expected_exit)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
 
-def run_and_verify_svnversion(message, wc_dir, trail_url,
+def run_and_verify_svnversion(wc_dir, trail_url,
                               expected_stdout, expected_stderr, *varargs):
   """like run_and_verify_svnversion2, but the expected exit code is
   assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
@@ -258,11 +257,11 @@ def run_and_verify_svnversion(message, wc_dir, trail_url,
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
-  return run_and_verify_svnversion2(message, wc_dir, trail_url,
+  return run_and_verify_svnversion2(wc_dir, trail_url,
                                     expected_stdout, expected_stderr,
                                     expected_exit, *varargs)
 
-def run_and_verify_svnversion2(message, wc_dir, trail_url,
+def run_and_verify_svnversion2(wc_dir, trail_url,
                                expected_stdout, expected_stderr,
                                expected_exit, *varargs):
   """Run svnversion command and check its output and exit code."""
@@ -274,10 +273,10 @@ def run_and_verify_svnversion2(message, wc_dir, trail_url,
 
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
-  verify.verify_exit_code(message, exit_code, expected_exit)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
-def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
+def run_and_verify_svn(expected_stdout, expected_stderr, *varargs):
   """like run_and_verify_svn2, but the expected exit code is assumed to
   be 0 if no output is expected on stderr, and 1 otherwise."""
 
@@ -288,10 +287,10 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
         expected_exit = 1
     elif expected_stderr != []:
       expected_exit = 1
-  return run_and_verify_svn2(message, expected_stdout, expected_stderr,
+  return run_and_verify_svn2(expected_stdout, expected_stderr,
                              expected_exit, *varargs)
 
-def run_and_verify_svn2(message, expected_stdout, expected_stderr,
+def run_and_verify_svn2(expected_stdout, expected_stderr,
                         expected_exit, *varargs):
   """Invoke main.run_svn() with *VARARGS. Return exit code as int; stdout,
   stderr as lists of lines (including line terminators).  For both
@@ -306,7 +305,7 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
      - If it is already an instance of ExpectedOutput
        (e.g. UnorderedOutput), leave it alone.
 
-  ...and invoke compare_and_display_lines() on MESSAGE, a label based
+  ...and invoke compare_and_display_lines() on a label based
   on the name of the stream being compared (e.g. STDOUT), the
   ExpectedOutput instance, and the actual output.
 
@@ -328,8 +327,9 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
     want_err = True
 
   exit_code, out, err = main.run_svn(want_err, *varargs)
-  verify.verify_outputs(message, out, err, expected_stdout, expected_stderr)
-  verify.verify_exit_code(message, exit_code, expected_exit)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
 def run_and_verify_load(repo_dir, dump_file_content,
@@ -352,7 +352,7 @@ def run_and_verify_dump(repo_dir, deltas=False):
   if deltas:
     args += ('--deltas',)
   exit_code, output, errput = run_and_verify_svnadmin(
-                                None, verify.AnyOutput, [],
+                                verify.AnyOutput, [],
                                 'dump', '--quiet', repo_dir, *args)
   return output
 
@@ -380,24 +380,24 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   return output
 
 
-def run_and_verify_svnmucc(message, expected_stdout, expected_stderr,
+def run_and_verify_svnmucc(expected_stdout, expected_stderr,
                            *varargs):
   """Run svnmucc command and check its output"""
 
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
-  return run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
+  return run_and_verify_svnmucc2(expected_stdout, expected_stderr,
                                  expected_exit, *varargs)
 
-def run_and_verify_svnmucc2(message, expected_stdout, expected_stderr,
+def run_and_verify_svnmucc2(expected_stdout, expected_stderr,
                             expected_exit, *varargs):
   """Run svnmucc command and check its output and exit code."""
 
   exit_code, out, err = main.run_svnmucc(*varargs)
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
-  verify.verify_exit_code(message, exit_code, expected_exit)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
 
@@ -443,7 +443,7 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None,
   # Load the mergetracking dumpfile into the repos, and check it out the repo
   run_and_verify_load(sbox.repo_dir, dump_str.splitlines(True),
                       bypass_prop_validation)
-  run_and_verify_svn(None, None, [], "co", sbox.repo_url, sbox.wc_dir)
+  run_and_verify_svn(None, [], "co", sbox.repo_url, sbox.wc_dir)
 
   return dump_str
 
@@ -455,7 +455,7 @@ def expected_noop_update_output(rev):
                                      % (rev),
                                      "no-op update")
 
-def run_and_verify_svnauthz(message, expected_stdout, expected_stderr,
+def run_and_verify_svnauthz(expected_stdout, expected_stderr,
                             expected_exit, compat_mode, *varargs):
   """Run svnauthz command and check its output and exit code.
      If COMPAT_MODE is True then run the command in pre-1.8
@@ -468,7 +468,7 @@ def run_and_verify_svnauthz(message, expected_stdout, expected_stderr,
 
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
-  verify.verify_exit_code(message, exit_code, expected_exit)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
 ######################################################################
@@ -717,14 +717,12 @@ class LogParser:
     self.entries[-1].changed_paths[self.use_cdata()] = [{'kind': self.kind,
                                                          'action': self.action}]
 
-def run_and_verify_log_xml(message=None, expected_log_attrs=None,
+def run_and_verify_log_xml(expected_log_attrs=None,
                            expected_paths=None, expected_revprops=None,
                            expected_stdout=None, expected_stderr=None,
                            args=[]):
   """Call run_and_verify_svn with log --xml and args (optional) as command
-  arguments, and pass along message, expected_stdout, and expected_stderr.
-
-  If message is None, pass the svn log command as message.
+  arguments, and pass along expected_stdout, and expected_stderr.
 
   expected_paths checking is not yet implemented.
 
@@ -740,8 +738,7 @@ def run_and_verify_log_xml(message=None, expected_log_attrs=None,
   expected_paths and expected_revprops are ignored if expected_stdout or
   expected_stderr is specified.
   """
-  if message == None:
-    message = ' '.join(args)
+  message = ' '.join(args)
 
   # We'll parse the output unless the caller specifies expected_stderr or
   # expected_stdout for run_and_verify_svn.
@@ -758,7 +755,7 @@ def run_and_verify_log_xml(message=None, expected_log_attrs=None,
     log_args.append('-v')
 
   (exit_code, stdout, stderr) = run_and_verify_svn(
-    message, expected_stdout, expected_stderr,
+    expected_stdout, expected_stderr,
     'log', '--xml', *log_args)
   if not parse:
     return
@@ -1597,7 +1594,7 @@ def run_and_verify_status_xml(expected_entries = [],
   EXPECTED_ENTRIES.
   """
 
-  exit_code, output, errput = run_and_verify_svn(None, None, [],
+  exit_code, output, errput = run_and_verify_svn(None, [],
                                                  'status', '--xml', *args)
 
   if len(errput) > 0:
@@ -1669,11 +1666,11 @@ def run_and_verify_inherited_prop_xml(path_or_url,
 
   if (propname):
     exit_code, output, errput = svntest.actions.run_and_verify_svn(
-      None, None, [], 'propget', propname, '--xml',
+      None, [], 'propget', propname, '--xml',
       '--show-inherited-props', path_or_url, *args)
   else:
     exit_code, output, errput = svntest.actions.run_and_verify_svn(
-      None, None, [], 'proplist', '-v', '--xml', '--show-inherited-props',
+      None, [], 'proplist', '-v', '--xml', '--show-inherited-props',
       path_or_url, *args)
 
   if len(errput) > 0:
@@ -1746,7 +1743,7 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
   EXPECTED_PROPS and EXPECTED_KINDS. Returns on success, raises
   on failure."""
 
-  exit_code, output, errput = run_and_verify_svn(None, None, error_re_string,
+  exit_code, output, errput = run_and_verify_svn(None, error_re_string,
                                                  'diff', '--summarize',
                                                  '--xml', *args)
 
@@ -1830,12 +1827,12 @@ def run_and_validate_lock(path, username):
   comment = "Locking path:%s." % path
 
   # lock the path
-  run_and_verify_svn(None, ".*locked by user", [], 'lock',
+  run_and_verify_svn(".*locked by user", [], 'lock',
                      '--username', username,
                      '-m', comment, path)
 
   # Run info and check that we get the lock fields.
-  exit_code, output, err = run_and_verify_svn(None, None, [],
+  exit_code, output, err = run_and_verify_svn(None, [],
                                               'info','-R',
                                               path)
 
@@ -1873,7 +1870,7 @@ def _run_and_verify_resolve(cmd, expected_paths, *args):
         expected_paths]),
     ],
     match_all=False)
-  run_and_verify_svn(None, expected_output, [],
+  run_and_verify_svn(expected_output, [],
                      cmd, *args)
 
 def run_and_verify_resolve(expected_paths, *args):
@@ -1897,7 +1894,7 @@ def run_and_verify_revert(expected_paths, *args):
   expected_output = verify.UnorderedOutput([
     "Reverted '" + path + "'\n" for path in
     expected_paths])
-  run_and_verify_svn(None, expected_output, [],
+  run_and_verify_svn(expected_output, [],
                      "revert", *args)
 
 
@@ -2293,6 +2290,6 @@ def build_greek_tree_conflicts(sbox):
   # Update, receiving the incoming changes on top of the local changes,
   # causing tree conflicts.  Don't check for any particular result: that is
   # the job of other tests.
-  run_and_verify_svn(None, verify.AnyOutput, [], 'update', wc_dir)
+  run_and_verify_svn(verify.AnyOutput, [], 'update', wc_dir)
 
 

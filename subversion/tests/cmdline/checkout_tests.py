@@ -462,14 +462,12 @@ def forced_checkout_with_versioned_obstruction(sbox):
   os.mkdir(other_wc_dir)
 
   # Checkout "A" from the first repos to a fresh dir.
-  svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                     svntest.verify.AnyOutput, [],
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      "co", repo_url + "/A",
                                      fresh_wc_dir_A)
 
   # Checkout "A" from the second repos to the other dir.
-  svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                     svntest.verify.AnyOutput, [],
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      "co", other_repo_url + "/A",
                                      other_wc_dir_A)
 
@@ -499,10 +497,10 @@ def forced_checkout_with_versioned_obstruction(sbox):
                                           '--force')
 
   #ensure that other_wc_dir_A is not affected by this forced checkout.
-  svntest.actions.run_and_verify_svn("empty status output", None,
+  svntest.actions.run_and_verify_svn(None,
                                      [], "st", other_wc_dir_A)
   exit_code, sout, serr = svntest.actions.run_and_verify_svn(
-    "it should still point to other_repo_url/A", None, [], "info",
+    None, [], "info",
     other_wc_dir_A)
 
   #TODO rename test_stderr to test_regex or something.
@@ -511,7 +509,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
   #ensure that other_wc_dir is in a consistent state though it may be
   #missing few items.
   exit_code, sout, serr = svntest.actions.run_and_verify_svn(
-    "it should still point to other_repo_url", None, [], "info",
+    None, [], "info",
     other_wc_dir)
   #TODO rename test_stderr to test_regex or something.
   test_stderr("URL: " + sbox.repo_url + '$', sout)
@@ -544,7 +542,7 @@ def import_and_checkout(sbox):
   # Import import_from_dir to the other repos
   expected_output = svntest.wc.State(sbox.wc_dir, {})
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+  svntest.actions.run_and_verify_svn(None, [], 'import',
                                      '-m', 'import', import_from_dir,
                                      other_repo_url)
 
@@ -633,7 +631,7 @@ def checkout_peg_rev(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, 'appended mu text')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@1 in another folder, this should create our initial
@@ -688,7 +686,7 @@ def checkout_peg_rev_date(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, 'appended mu text')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@peg_string in another folder, this should create our
@@ -911,7 +909,7 @@ def co_with_obstructing_local_adds(sbox):
   # URL to URL copy of A/D/G to A/D/M.
   G_URL = sbox.repo_url + '/A/D/G'
   M_URL = sbox.repo_url + '/A/D/M'
-  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', G_URL, M_URL, '-m', '')
 
   # WC to WC copy of A/D/H to A/D/M.  (M is now scheduled for addition
@@ -920,13 +918,13 @@ def co_with_obstructing_local_adds(sbox):
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   M_path = os.path.join(wc_dir, 'A', 'D', 'M')
 
-  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', H_path, M_path)
 
   # URL to URL copy of A/B/E/alpha to A/B/F/omicron.
   omega_URL = sbox.repo_url + '/A/B/E/alpha'
   omicron_URL = sbox.repo_url + '/A/B/F/omicron'
-  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', omega_URL, omicron_URL,
                                      '-m', '')
 
@@ -937,7 +935,7 @@ def co_with_obstructing_local_adds(sbox):
   omicron_path = os.path.join(wc_dir, 'A', 'B', 'F', 'omicron')
   chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
 
-  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', chi_path,
                                      omicron_path)
 

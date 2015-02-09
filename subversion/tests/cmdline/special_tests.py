@@ -92,14 +92,14 @@ def general_symlink(sbox):
   ## Now we should update to the previous version, verify that no
   ## symlink is present, then update back to HEAD and see if the symlink
   ## is regenerated properly.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '-r', '1', wc_dir)
 
   # Is the symlink gone?
   if os.path.isfile(newfile_path) or os.path.islink(newfile_path):
     raise svntest.Failure
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '-r', '2', wc_dir)
 
   # Is the symlink back?
@@ -118,7 +118,7 @@ def general_symlink(sbox):
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "M       newfile\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn([ "M       newfile\n" ], [], 'st')
 
   os.chdir(was_cwd)
 
@@ -152,7 +152,7 @@ def replace_file_with_symlink(sbox):
   # Does status show the obstruction?
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "~       iota\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn([ "~       iota\n" ], [], 'st')
 
   # And does a commit fail?
   os.chdir(was_cwd)
@@ -183,7 +183,7 @@ def import_export_symlink(sbox):
   # import this symlink into the repository
   url = sbox.repo_url + "/dirA/dirB/new_link"
   exit_code, output, errput = svntest.actions.run_and_verify_svn(
-    'Import a symlink', None, [], 'import',
+    None, [], 'import',
     '-m', 'log msg', new_path, url)
 
   regex = "(Committed|Imported) revision [0-9]+."
@@ -197,7 +197,7 @@ def import_export_symlink(sbox):
   os.remove(new_path)
 
   # run update and verify that the symlink is put back into place
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', wc_dir)
 
   # Is the symlink back?
@@ -213,7 +213,7 @@ def import_export_symlink(sbox):
   for export_src, dest_dir in [(sbox.wc_dir, 'export-wc'),
                                (sbox.repo_url, 'export-url')]:
     export_target = sbox.add_wc_path(dest_dir)
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, [],
                                        'export', export_src, export_target)
 
     # is the link at the correct place?
@@ -254,7 +254,7 @@ def copy_tree_with_symlink(sbox):
   # Copy H to H2
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', H_path, H2_path)
+  svntest.actions.run_and_verify_svn(None, [], 'cp', H_path, H2_path)
 
   # 'svn status' should show just "A/D/H2  A +".  Nothing broken.
   expected_status.add({
@@ -308,7 +308,7 @@ def replace_symlink_with_file(sbox):
   # Does status show the obstruction?
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "~       newfile\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn([ "~       newfile\n" ], [], 'st')
 
   # And does a commit fail?
   os.chdir(was_cwd)
@@ -353,7 +353,7 @@ def remove_symlink(sbox):
                                         expected_status, None, wc_dir)
 
   # Now remove it
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', newfile_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', newfile_path)
 
   # Commit and verify that it worked
   expected_output = svntest.wc.State(wc_dir, {
@@ -550,10 +550,10 @@ def diff_symlink_to_dir(sbox):
     "+*\n",
     "\\ No newline at end of property\n"
   ]
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+  svntest.actions.run_and_verify_svn(expected_output, [], 'diff',
                                      '.')
   # We should get the same output if we the diff the symlink itself.
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 'link')
+  svntest.actions.run_and_verify_svn(expected_output, [], 'diff', 'link')
 
 #----------------------------------------------------------------------
 # Issue 2692 (part of): Check that the client can check out a repository
@@ -595,7 +595,7 @@ def replace_symlink_with_dir(sbox):
   # Does status show the obstruction?
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "~       from\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn([ "~       from\n" ], [], 'st')
 
   # The commit shouldn't do anything.
   # I'd expect a failed commit here, but replacing a file locally with a
@@ -643,7 +643,6 @@ def warn_on_reserved_name(sbox):
   sbox.build()
   reserved_path = os.path.join(sbox.wc_dir, svntest.main.get_admin_name())
   svntest.actions.run_and_verify_svn(
-    "Locking a file with a reserved name failed to result in an error",
     None,
     ".*Skipping argument: E200025: '.+' ends in a reserved name.*",
     'lock', reserved_path)
@@ -666,7 +665,7 @@ def propvalue_normalized(sbox):
 
   # Property value should be SVN_PROP_BOOLEAN_TRUE
   expected_propval = ['*']
-  svntest.actions.run_and_verify_svn(None, expected_propval, [],
+  svntest.actions.run_and_verify_svn(expected_propval, [],
                                      'propget', '--strict', 'svn:special',
                                      iota2_path)
 
@@ -683,7 +682,7 @@ def propvalue_normalized(sbox):
                                         wc_dir)
 
   svntest.main.run_svn(None, 'update', wc_dir)
-  svntest.actions.run_and_verify_svn(None, expected_propval, [],
+  svntest.actions.run_and_verify_svn(expected_propval, [],
                                      'propget', '--strict', 'svn:special',
                                      iota2_path)
 
@@ -702,7 +701,7 @@ def unrelated_changed_special_status(sbox):
   os.unlink('psi')
   os.symlink('omega', 'psi') # omega is versioned!
   svntest.main.run_svn(None, 'changelist', 'chi cl', 'chi')
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+  svntest.actions.run_and_verify_svn(None, [], 'commit',
                                      '--changelist', 'chi cl',
                                      '-m', 'psi changed special status')
 
@@ -746,7 +745,7 @@ def symlink_destination_change(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Issue 3972, repeat revert produces no output
-  svntest.actions.run_and_verify_svn(None, [], [], 'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_svn([], [], 'revert', '-R', wc_dir)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now replace the symlink with a normal file and try to commit, we
@@ -850,8 +849,7 @@ def symlink_to_wc_svnversion(sbox):
   symlink_basename = os.path.basename(symlink_path)
 
   # Some basic tests
-  svntest.actions.run_and_verify_svnversion("Unmodified symlink to wc",
-                                            symlink_path, sbox.repo_url,
+  svntest.actions.run_and_verify_svnversion(symlink_path, sbox.repo_url,
                                             [ "1\n" ], [])
 
 #----------------------------------------------------------------------
@@ -1108,7 +1106,7 @@ def cat_added_symlink(sbox):
 
   kappa_path = sbox.ospath('kappa')
   sbox.simple_add_symlink('iota', 'kappa')
-  svntest.actions.run_and_verify_svn(None, "link iota", [],
+  svntest.actions.run_and_verify_svn("link iota", [],
                                      "cat", kappa_path)
 
 #----------------------------------------------------------------------
