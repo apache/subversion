@@ -44,6 +44,29 @@ typedef enum svn_fs_x__copy_id_inherit_t
 
 } svn_fs_x__copy_id_inherit_t;
 
+/* Flags for svn_fs_x__get_dag_path.  */
+typedef enum svn_fs_x__dag_path_flags_t {
+
+  /* The last component of the PATH need not exist.  (All parent
+     directories must exist, as usual.)  If the last component doesn't
+     exist, simply leave the `node' member of the bottom parent_path
+     component zero.  */
+  svn_fs_x__dag_path_last_optional = 1,
+
+  /* When this flag is set, don't bother to lookup the DAG node in
+     our caches because we already tried this.  Ignoring this flag
+     has no functional impact.  */
+  svn_fs_x__dag_path_uncached = 2,
+
+  /* The caller does not care about the parent node chain but only
+     the final DAG node. */
+  svn_fs_x__dag_path_node_only = 4,
+
+  /* The caller wants a NULL path object instead of an error if the
+     path cannot be found. */
+  svn_fs_x__dag_path_allow_null = 8
+} svn_fs_x__dag_path_flags_t;
+
 
 /* A linked list representing the path from a node up to a root
    directory.  We use this for cloning, and for operations that need
