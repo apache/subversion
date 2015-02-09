@@ -23,7 +23,7 @@
 #ifndef SVN_LIBSVN_FS_X_DAG_CACHE_H
 #define SVN_LIBSVN_FS_X_DAG_CACHE_H
 
-#include "svn_fs.h"
+#include "dag.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +32,16 @@ extern "C" {
 /* In RESULT_POOL, create an instance of a DAG node cache. */
 svn_fs_x__dag_cache_t*
 svn_fs_x__create_dag_cache(apr_pool_t *result_pool);
+
+/* Open the node identified by PATH in ROOT.  Set DAG_NODE_P to the
+   node we find, allocated in POOL.  Return the error
+   SVN_ERR_FS_NOT_FOUND if this node doesn't exist.
+ */
+static svn_error_t *
+svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
+                       svn_fs_root_t *root,
+                       const char *path,
+                       apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
