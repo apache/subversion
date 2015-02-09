@@ -9266,46 +9266,181 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   {
     nodes_row_t nodes[] = {
+      {0, "",                 "normal",       2, ""},
+      {0, "A",                "normal",       2, "A"},
+      {0, "A/A",              "normal",       2, "A/A"},
+      {0, "A/A/A",            "normal",       2, "A/A/A", NOT_MOVED, "key"},
+      {0, "A/A/A/A",          "normal",       2, "A/A/A/A", NOT_MOVED, "key"},
+      {0, "B",                "normal",       2, "B"},
+      {0, "B/A",              "normal",       2, "B/A"},
+      {0, "B/A/A",            "normal",       2, "B/A/A", NOT_MOVED, "key"},
+      {0, "B/A/A/A",          "normal",       2, "B/A/A/A", NOT_MOVED, "key"},
+      {0, "C",                "normal",       2, "C"},
+      {0, "C/A",              "normal",       2, "C/A"},
+      {0, "C/A/A",            "normal",       2, "C/A/A", NOT_MOVED, "key"},
+      {0, "C/A/A/A",          "normal",       2, "C/A/A/A", NOT_MOVED, "key"},
+      {0, "D",                "normal",       2, "D"},
+      {0, "D/A",              "normal",       2, "D/A"},
+      {0, "D/A/A",            "normal",       2, "D/A/A", NOT_MOVED, "key"},
+      {0, "D/A/A/A",          "normal",       2, "D/A/A/A", NOT_MOVED, "key"},
 
-      { 0, "A/A/A",     "normal",    2, "A/A/A", NOT_MOVED,            "key" },
-      { 1, "A/A/A",     "normal",    2, "B/A/A", FALSE, "AAA_1", TRUE, "key" },
-      { 2, "A/A/A",     "normal",    2, "C/A/A", FALSE, "AAA_2", TRUE, "key" },
-      { 3, "A/A/A",     "normal",    2, "D/A/A", FALSE, "AAA_3", TRUE, "key" },
+      {1, "A",                "normal",       2, "B", MOVED_HERE},
+      {1, "A/A",              "normal",       2, "B/A", MOVED_HERE},
+      {1, "A/A/A",            "normal",       2, "B/A/A", FALSE, "AAA_1", TRUE, "key"},
+      {1, "A/A/A/A",          "normal",       2, "B/A/A/A", FALSE, NULL, TRUE, "key"},
+      {1, "AAA_1",            "normal",       2, "A/A/A", MOVED_HERE, "key"},
+      {1, "AAA_1/A",          "normal",       2, "A/A/A/A", MOVED_HERE, "key"},
+      {1, "AAA_2",            "normal",       2, "B/A/A", MOVED_HERE, "key"},
+      {1, "AAA_2/A",          "normal",       2, "B/A/A/A", MOVED_HERE, "key"},
+      {1, "AAA_3",            "normal",       2, "C/A/A", MOVED_HERE, "key"},
+      {1, "AAA_3/A",          "normal",       2, "C/A/A/A", MOVED_HERE, "key"},
+      {1, "B",                "base-deleted", NO_COPY_FROM, "A"},
+      {1, "B/A",              "base-deleted", NO_COPY_FROM},
+      {1, "B/A/A",            "base-deleted", NO_COPY_FROM},
+      {1, "B/A/A/A",          "base-deleted", NO_COPY_FROM},
 
-      { 0, "A/A/A/A",   "normal",    2, "A/A/A/A", NOT_MOVED,          "key" },
-      { 1, "A/A/A/A",   "normal",    2, "B/A/A/A", FALSE, NULL, TRUE,  "key" },
-      { 2, "A/A/A/A",   "normal",    2, "C/A/A/A", FALSE, NULL, TRUE,  "key" },
-      { 3, "A/A/A/A",   "normal",    2, "D/A/A/A", FALSE, NULL, TRUE,  "key" },
+      {2, "A/A",              "normal",       2, "C/A", MOVED_HERE},
+      {2, "A/A/A",            "normal",       2, "C/A/A", FALSE, "AAA_2", TRUE, "key"},
+      {2, "A/A/A/A",          "normal",       2, "C/A/A/A", FALSE, NULL, TRUE,  "key"},
+      {2, "C/A",              "base-deleted", NO_COPY_FROM, "A/A"},
+      {2, "C/A/A",            "base-deleted", NO_COPY_FROM},
+      {2, "C/A/A/A",          "base-deleted", NO_COPY_FROM},
+
+      {3, "A/A/A",            "normal",       2, "D/A/A", FALSE, "AAA_3", TRUE, "key"},
+      {3, "A/A/A/A",          "normal",       2, "D/A/A/A", FALSE, NULL, TRUE,  "key"},
+      {3, "D/A/A",            "base-deleted", NO_COPY_FROM, "A/A/A"},
+      {3, "D/A/A/A",          "base-deleted", NO_COPY_FROM},
 
       { 0 },
     };
 
-    SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", NULL));
   }
 
   /* Go back to start position */
   SVN_ERR(sbox_wc_update(&b, "", 1));
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",                 "normal",       1, ""},
+      {0, "A",                "normal",       1, "A"},
+      {0, "A/A",              "normal",       1, "A/A"},
+      {0, "A/A/A",            "normal",       1, "A/A/A", NOT_MOVED},
+      {0, "A/A/A/A",          "normal",       1, "A/A/A/A", NOT_MOVED},
+      {0, "B",                "normal",       1, "B"},
+      {0, "B/A",              "normal",       1, "B/A"},
+      {0, "B/A/A",            "normal",       1, "B/A/A", NOT_MOVED},
+      {0, "B/A/A/A",          "normal",       1, "B/A/A/A", NOT_MOVED},
+      {0, "C",                "normal",       1, "C"},
+      {0, "C/A",              "normal",       1, "C/A"},
+      {0, "C/A/A",            "normal",       1, "C/A/A", NOT_MOVED},
+      {0, "C/A/A/A",          "normal",       1, "C/A/A/A", NOT_MOVED},
+      {0, "D",                "normal",       1, "D"},
+      {0, "D/A",              "normal",       1, "D/A"},
+      {0, "D/A/A",            "normal",       1, "D/A/A", NOT_MOVED},
+      {0, "D/A/A/A",          "normal",       1, "D/A/A/A", NOT_MOVED},
+
+      {1, "A",                "normal",       1, "B", MOVED_HERE},
+      {1, "A/A",              "normal",       1, "B/A", MOVED_HERE},
+      {1, "A/A/A",            "normal",       1, "B/A/A", FALSE, "AAA_1", TRUE},
+      {1, "A/A/A/A",          "normal",       1, "B/A/A/A", FALSE, NULL, TRUE},
+      {1, "AAA_1",            "normal",       1, "A/A/A", MOVED_HERE},
+      {1, "AAA_1/A",          "normal",       1, "A/A/A/A", MOVED_HERE},
+      {1, "AAA_2",            "normal",       1, "B/A/A", MOVED_HERE},
+      {1, "AAA_2/A",          "normal",       1, "B/A/A/A", MOVED_HERE},
+      {1, "AAA_3",            "normal",       1, "C/A/A", MOVED_HERE},
+      {1, "AAA_3/A",          "normal",       1, "C/A/A/A", MOVED_HERE},
+      {1, "B",                "base-deleted", NO_COPY_FROM, "A"},
+      {1, "B/A",              "base-deleted", NO_COPY_FROM},
+      {1, "B/A/A",            "base-deleted", NO_COPY_FROM},
+      {1, "B/A/A/A",          "base-deleted", NO_COPY_FROM},
+
+      {2, "A/A",              "normal",       1, "C/A", MOVED_HERE},
+      {2, "A/A/A",            "normal",       1, "C/A/A", FALSE, "AAA_2", TRUE},
+      {2, "A/A/A/A",          "normal",       1, "C/A/A/A", FALSE, NULL, TRUE},
+      {2, "C/A",              "base-deleted", NO_COPY_FROM, "A/A"},
+      {2, "C/A/A",            "base-deleted", NO_COPY_FROM},
+      {2, "C/A/A/A",          "base-deleted", NO_COPY_FROM},
+
+      {3, "A/A/A",            "normal",       1, "D/A/A", FALSE, "AAA_3", TRUE},
+      {3, "A/A/A/A",          "normal",       1, "D/A/A/A", FALSE, NULL, TRUE},
+      {3, "D/A/A",            "base-deleted", NO_COPY_FROM, "A/A/A"},
+      {3, "D/A/A/A",          "base-deleted", NO_COPY_FROM},
+
+      { 0 },
+    };
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", NULL));
+  }
+
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    conflict_info_t conflicts[] = {
+      {"A", FALSE, FALSE, TRUE},
+      {"B", FALSE, FALSE, TRUE},
+      {"C/A", FALSE, FALSE, TRUE},
+      {"D/A/A", FALSE, FALSE, TRUE},
+
+      {0},
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+  /* This breaks the move from D/A/A -> A/A/A */
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
   {
     nodes_row_t nodes[] = {
-
-      { 0, "A/A/A",     "normal",    2, "A/A/A", NOT_MOVED, "key" },
-      { 1, "A/A/A",     "normal",    1, "B/A/A", FALSE, "AAA_1" },
-      { 2, "A/A/A",     "normal",    1, "C/A/A", FALSE, "AAA_2" },
-      { 3, "A/A/A",     "normal",    1, "D/A/A", FALSE, "AAA_3" },
-
-      { 0, "A/A/A/A",   "normal",    2, "A/A/A/A", NOT_MOVED, "key" },
-      { 1, "A/A/A/A",   "normal",    1, "B/A/A/A" },
-      { 2, "A/A/A/A",   "normal",    1, "C/A/A/A" },
-      { 3, "A/A/A/A",   "normal",    1, "D/A/A/A" },
+      {0, "",          "normal",       2, ""},
+      {0, "A",         "normal",       2, "A"},
+      {0, "A/A",       "normal",       2, "A/A"},
+      {0, "A/A/A",     "normal",       2, "A/A/A", NOT_MOVED, "key"},
+      {0, "A/A/A/A",   "normal",       2, "A/A/A/A", NOT_MOVED, "key"},
+      {0, "B",         "normal",       2, "B"},
+      {0, "B/A",       "normal",       2, "B/A"},
+      {0, "B/A/A",     "normal",       2, "B/A/A", NOT_MOVED, "key"},
+      {0, "B/A/A/A",   "normal",       2, "B/A/A/A", NOT_MOVED, "key"},
+      {0, "C",         "normal",       2, "C"},
+      {0, "C/A",       "normal",       2, "C/A"},
+      {0, "C/A/A",     "normal",       2, "C/A/A", NOT_MOVED, "key"},
+      {0, "C/A/A/A",   "normal",       2, "C/A/A/A", NOT_MOVED, "key"},
+      {0, "D",         "normal",       2, "D"},
+      {0, "D/A",       "normal",       2, "D/A"},
+      {0, "D/A/A",     "normal",       2, "D/A/A", NOT_MOVED, "key"},
+      {0, "D/A/A/A",   "normal",       2, "D/A/A/A", NOT_MOVED, "key"},
+      {1, "A",         "normal",       1, "B"},
+      {1, "A/A",       "normal",       1, "B/A"},
+      {1, "A/A/A",     "normal",       1, "B/A/A", FALSE, "AAA_1"},
+      {1, "A/A/A/A",   "normal",       1, "B/A/A/A"},
+      {1, "AAA_1",     "normal",       1, "A/A/A", MOVED_HERE},
+      {1, "AAA_1/A",   "normal",       1, "A/A/A/A", MOVED_HERE},
+      {1, "AAA_2",     "normal",       1, "B/A/A"},
+      {1, "AAA_2/A",   "normal",       1, "B/A/A/A"},
+      {1, "AAA_3",     "normal",       1, "C/A/A", MOVED_HERE},
+      {1, "AAA_3/A",   "normal",       1, "C/A/A/A", MOVED_HERE},
+      {1, "B",         "base-deleted", NO_COPY_FROM},
+      {1, "B/A",       "base-deleted", NO_COPY_FROM},
+      {1, "B/A/A",     "base-deleted", NO_COPY_FROM},
+      {1, "B/A/A/A",   "base-deleted", NO_COPY_FROM},
+      {2, "A/A",       "normal",       1, "C/A"},
+      {2, "A/A/A",     "normal",       1, "C/A/A"},
+      {2, "A/A/A/A",   "normal",       1, "C/A/A/A"},
+      {2, "C/A",       "base-deleted", NO_COPY_FROM},
+      {2, "C/A/A",     "base-deleted", NO_COPY_FROM},
+      {2, "C/A/A/A",   "base-deleted", NO_COPY_FROM},
+      {3, "A/A/A",     "normal",       1, "D/A/A", FALSE, "AAA_3"},
+      {3, "A/A/A/A",   "normal",       1, "D/A/A/A"},
+      {3, "D/A/A",     "base-deleted", NO_COPY_FROM},
+      {3, "D/A/A/A",   "base-deleted", NO_COPY_FROM},
 
       { 0 },
     };
-      SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
 
