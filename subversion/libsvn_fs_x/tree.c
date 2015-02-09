@@ -1129,12 +1129,17 @@ make_path_mutable(svn_fs_root_t *root,
       svn_fs_root_t *copyroot_root;
       dag_node_t *copyroot_node;
       svn_boolean_t related;
+      apr_pool_t *subpool;
 
       /* We're trying to clone somebody's child.  Make sure our parent
          is mutable.  */
       SVN_ERR(make_path_mutable(root, parent_path->parent,
                                 error_path, result_pool, scratch_pool));
 
+      /* Allocate all temporaries in a sub-pool that we control locally.
+         That way, we keep only the data of one level of recursion around
+         at any time. */
+      subpool = svn_pool_create(scratch_pool);
       switch (inherit)
         {
         case copy_id_inherit_parent:
@@ -1144,7 +1149,7 @@ make_path_mutable(svn_fs_root_t *root,
 
         case copy_id_inherit_new:
           SVN_ERR(svn_fs_x__reserve_copy_id(&copy_id, root->fs, txn_id,
-                                            scratch_pool));
+                                            subpool));
           break;
 
         case copy_id_inherit_self:
@@ -1161,7 +1166,7 @@ make_path_mutable(svn_fs_root_t *root,
       SVN_ERR(svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path,
                                           parent_path->node));
       SVN_ERR(svn_fs_x__revision_root(&copyroot_root, root->fs,
-                                      copyroot_rev, scratch_pool));
+                                      copyroot_rev, subpool));
       SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path,
                       result_pool));
 
@@ -1171,7 +1176,7 @@ make_path_mutable(svn_fs_root_t *root,
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */
-      clone_path = parent_path_path(parent_path->parent, scratch_pool);
+      clone_path = parent_path_path(parent_path->parent, subpool);
       SVN_ERR(svn_fs_x__dag_clone_child(&clone,
                                         parent_path->parent->node,
                                         clone_path,
@@ -1179,12 +1184,12 @@ make_path_mutable(svn_fs_root_t *root,
                                         copy_id_ptr, txn_id,
                                         is_parent_copyroot,
                                         result_pool,
-                                        scratch_pool));
+                                        subpool));
 
       /* Update the path cache. */
-      SVN_ERR(dag_node_cache_set(root,
-                                 parent_path_path(parent_path, scratch_pool),
-                                 clone, scratch_pool));
+      SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, subpool),
+                                 clone, subpool));
+      svn_pool_destroy(subpool);
     }
   else
     {
