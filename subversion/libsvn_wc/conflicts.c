@@ -1846,6 +1846,18 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
   return SVN_NO_ERROR;
 }
 
+/* Forward definition */
+static svn_error_t *
+resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              svn_wc_conflict_choice_t conflict_choice,
+                              apr_hash_t *resolve_later,
+                              svn_wc_notify_func2_t notify_func,
+                              void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
@@ -2015,6 +2027,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
     {
       svn_wc_conflict_result_t *result;
       svn_wc_conflict_description2_t *desc;
+      svn_boolean_t resolved;
 
       SVN_ERR(read_tree_conflict_desc(&desc,
                                       db, local_abspath, conflict_skel,
@@ -2025,9 +2038,21 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
       SVN_ERR(resolver_func(&result, desc, resolver_baton, scratch_pool,
                             scratch_pool));
 
-      /* Ignore the result. We cannot apply it here since this code runs
-       * during an update or merge operation. Tree conflicts are always
-       * postponed and resolved after the operation has completed. */
+      if (result == NULL)
+        return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                _("Conflict callback violated API:"
+                                  " returned no results"));
+
+      /* Pass retry hash to avoid erroring out on cases where update
+         can continue safely. ### Need notify handling */
+      if (result->choice != svn_wc_conflict_choose_postpone)
+        SVN_ERR(resolve_tree_conflict_on_node(&resolved,
+                                              db, local_abspath,
+                                              result->choice,
+                                              apr_hash_make(scratch_pool),
+                                              NULL, NULL, /* ### notify */
+                                              cancel_func, cancel_baton,
+                                              scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2804,7 +2829,6 @@ conflict_status_walker(void *baton,
   int i;
   svn_boolean_t resolved = FALSE;
   svn_skel_t *conflict;
-  svn_boolean_t text_conflicted;
 
   if (!status->conflicted)
     return SVN_NO_ERROR;
@@ -2813,10 +2837,6 @@ conflict_status_walker(void *baton,
 
   SVN_ERR(svn_wc__db_read_conflict(&conflict, db, local_abspath,
                                    scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, &text_conflicted, NULL, NULL,
-                                     db, local_abspath, conflict,
-                                     scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath, TRUE,
                                  scratch_pool, iterpool));
