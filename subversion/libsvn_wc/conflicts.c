@@ -2553,7 +2553,9 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
               if (err)
                 {
                   const char *dup_abspath;
-                  if (err && err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
+
+                  if (!resolve_later
+                      || err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
                     return svn_error_trace(err);
 
                   svn_error_clear(err);
@@ -2594,7 +2596,9 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
               if (err)
                 {
                   const char *dup_abspath;
-                  if (err && err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
+
+                  if (!resolve_later
+                      || err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
                     return svn_error_trace(err);
 
                   svn_error_clear(err);
@@ -2755,6 +2759,35 @@ struct conflict_status_walker_baton
   apr_hash_t *resolve_later;
 };
 
+/* Implements svn_wc_notify_func2_t to collect new conflicts caused by
+   resolving a tree conflict. */
+static void
+tree_conflict_collector(void *baton,
+                        const svn_wc_notify_t *notify,
+                        apr_pool_t *pool)
+{
+  struct conflict_status_walker_baton *cswb = baton;
+
+  if (cswb->notify_func)
+    cswb->notify_func(cswb->notify_baton, notify, pool);
+
+  if (cswb->resolve_later
+      && (notify->action == svn_wc_notify_tree_conflict
+          || notify->prop_state == svn_wc_notify_state_conflicted
+          || notify->content_state == svn_wc_notify_state_conflicted))
+    {
+      if (!svn_hash_gets(cswb->resolve_later, notify->path))
+        {
+          const char *dup_path;
+
+          dup_path = apr_pstrdup(apr_hash_pool_get(cswb->resolve_later),
+                                 notify->path);
+
+          svn_hash_sets(cswb->resolve_later, dup_path, dup_path);
+        }
+    }
+}
+
 /* Implements svn_wc_status4_t to walk all conflicts to resolve.
  */
 static svn_error_t *
@@ -2827,8 +2860,8 @@ conflict_status_walker(void *baton,
                                                   local_abspath,
                                                   my_choice,
                                                   cswb->resolve_later,
-                                                  cswb->notify_func,
-                                                  cswb->notify_baton,
+                                                  tree_conflict_collector,
+                                                  cswb,
                                                   cswb->cancel_func,
                                                   cswb->cancel_baton,
                                                   iterpool));
@@ -2968,7 +3001,9 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   cswb.notify_func = notify_func;
   cswb.notify_baton = notify_baton;
 
-  cswb.resolve_later = apr_hash_make(scratch_pool);
+  cswb.resolve_later = (depth != svn_depth_empty)
+                          ? apr_hash_make(scratch_pool)
+                          : NULL;
 
   if (notify_func)
     notify_func(notify_baton,
@@ -2988,7 +3023,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                            cancel_func, cancel_baton,
                            scratch_pool);
 
-  while (!err && apr_hash_count(cswb.resolve_later))
+  while (!err && cswb.resolve_later && apr_hash_count(cswb.resolve_later))
     {
       apr_hash_index_t *hi;
       svn_boolean_t cleared_one = FALSE;
@@ -2999,17 +3034,19 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
       else
         iterpool = svn_pool_create(scratch_pool);
 
-      for (hi = apr_hash_first(scratch_pool, cswb.resolve_later);
-          hi && !err;
-          hi = apr_hash_next(hi))
+      hi = apr_hash_first(scratch_pool, cswb.resolve_later);
+      cswb.resolve_later = apr_hash_make(scratch_pool);
+
+      for (; hi && !err; hi = apr_hash_next(hi))
         {
           tc_abspath = apr_hash_this_key(hi);
           svn_pool_clear(iterpool);
 
-          svn_hash_sets(cswb.resolve_later, tc_abspath, NULL);
+          /* ### TODO: Check if tc_abspath falls within selected depth */
 
-          err = svn_wc_walk_status(wc_ctx, tc_abspath, depth, FALSE, FALSE,
-                                   TRUE, NULL, conflict_status_walker, &cswb,
+          err = svn_wc_walk_status(wc_ctx, tc_abspath, svn_depth_empty,
+                                   FALSE, FALSE, TRUE, NULL,
+                                   conflict_status_walker, &cswb,
                                    cancel_func, cancel_baton,
                                    iterpool);
 
