@@ -1,4 +1,4 @@
-/* dag.h : DAG-like interface filesystem, private to libsvn_fs
+/* dag.h : DAG-like interface filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
