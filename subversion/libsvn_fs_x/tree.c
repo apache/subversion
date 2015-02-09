@@ -747,30 +747,6 @@ make_parent_path(dag_node_t *node,
   return dag_path;
 }
 
-
-/* Flags for open_path.  */
-typedef enum open_path_flags_t {
-
-  /* The last component of the PATH need not exist.  (All parent
-     directories must exist, as usual.)  If the last component doesn't
-     exist, simply leave the `node' member of the bottom parent_path
-     component zero.  */
-  open_path_last_optional = 1,
-
-  /* When this flag is set, don't bother to lookup the DAG node in
-     our caches because we already tried this.  Ignoring this flag
-     has no functional impact.  */
-  open_path_uncached = 2,
-
-  /* The caller does not care about the parent node chain but only
-     the final DAG node. */
-  open_path_node_only = 4,
-
-  /* The caller wants a NULL path object instead of an error if the
-     path cannot be found. */
-  open_path_allow_null = 8
-} open_path_flags_t;
-
 /* Try a short-cut for the open_path() function using the last node accessed.
  * If that ROOT is that nodes's "created rev" and PATH of PATH_LEN chars is
  * its "created path", return the node in *NODE_P.  Set it to NULL otherwise.
@@ -875,7 +851,7 @@ open_path(svn_fs_x__dag_path_t **dag_path_p,
      the full parent chain. */
   assert(svn_fs__is_canonical_abspath(path));
   path_so_far->len = 0; /* "" */
-  if (flags & open_path_node_only)
+  if (flags & svn_fs_x__dag_path_node_only)
     {
       const char *directory;
 
@@ -979,7 +955,7 @@ open_path(svn_fs_x__dag_path_t **dag_path_p,
              layer.  Don't bother to contact the cache for the last
              element if we already know the lookup to fail for the
              complete path. */
-          if (next || !(flags & open_path_uncached))
+          if (next || !(flags & svn_fs_x__dag_path_uncached))
             SVN_ERR(dag_node_cache_get(&cached_node, root, path_so_far->data,
                                        pool));
           if (cached_node)
@@ -994,14 +970,14 @@ open_path(svn_fs_x__dag_path_t **dag_path_p,
                  said it was optional, then don't return an error;
                  just put a NULL node pointer in the path.  */
 
-              if ((flags & open_path_last_optional)
+              if ((flags & svn_fs_x__dag_path_last_optional)
                   && (! next || *next == '\0'))
                 {
                   dag_path = make_parent_path(NULL, entry, dag_path,
                                                  pool);
                   break;
                 }
-              else if (flags & open_path_allow_null)
+              else if (flags & svn_fs_x__dag_path_allow_null)
                 {
                   dag_path = NULL;
                   break;
@@ -1014,7 +990,7 @@ open_path(svn_fs_x__dag_path_t **dag_path_p,
                 }
             }
 
-          if (flags & open_path_node_only)
+          if (flags & svn_fs_x__dag_path_node_only)
             {
               /* Shortcut: the caller only wants the final DAG node. */
               dag_path->node = svn_fs_x__dag_copy_into_pool(child, pool);
@@ -1192,7 +1168,8 @@ svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
           /* Call open_path with no flags, as we want this to return an
            * error if the node for which we are searching doesn't exist. */
           SVN_ERR(open_path(&parent_path, root, path,
-                            open_path_uncached | open_path_node_only,
+                            svn_fs_x__dag_path_uncached
+                              | svn_fs_x__dag_path_node_only,
                             FALSE, pool));
           node = parent_path->node;
 
@@ -2393,7 +2370,7 @@ x_make_dir(svn_fs_root_t *root,
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   path = svn_fs__canonicalize_abspath(path, subpool);
-  SVN_ERR(open_path(&dag_path, root, path, open_path_last_optional,
+  SVN_ERR(open_path(&dag_path, root, path, svn_fs_x__dag_path_last_optional,
                     TRUE, subpool));
 
   /* Check (recursively) to see if some lock is 'reserving' a path at
@@ -2553,7 +2530,7 @@ copy_helper(svn_fs_root_t *from_root,
      component does not exist, it's not that big a deal.  We'll just
      make one there. */
   SVN_ERR(open_path(&to_dag_path, to_root, to_path,
-                    open_path_last_optional, TRUE, scratch_pool));
+                    svn_fs_x__dag_path_last_optional, TRUE, scratch_pool));
 
   /* Check to see if path (or any child thereof) is locked; if so,
      check that we can use the existing lock(s). */
@@ -2736,7 +2713,7 @@ x_make_file(svn_fs_root_t *root,
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   path = svn_fs__canonicalize_abspath(path, subpool);
-  SVN_ERR(open_path(&dag_path, root, path, open_path_last_optional,
+  SVN_ERR(open_path(&dag_path, root, path, svn_fs_x__dag_path_last_optional,
                     TRUE, subpool));
 
   /* If there's already a file by that name, complain.
@@ -3449,7 +3426,8 @@ x_closest_copy(svn_fs_root_t **root_p,
      exists as of COPY_DST_REV and is related to this node-rev. */
   SVN_ERR(svn_fs_x__revision_root(&copy_dst_root, fs, copy_dst_rev, pool));
   SVN_ERR(open_path(&copy_dst_dag_path, copy_dst_root, path,
-                    open_path_node_only | open_path_allow_null, FALSE,
+                    svn_fs_x__dag_path_node_only
+                      | svn_fs_x__dag_path_allow_null, FALSE,
                     scratch_pool));
   if (copy_dst_dag_path == NULL)
     {
