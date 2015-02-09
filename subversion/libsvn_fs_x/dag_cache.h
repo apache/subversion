@@ -160,6 +160,13 @@ svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
                        const char *path,
                        apr_pool_t *pool);
 
+/* Add the NODE for PATH to ROOT's node cache. */
+svn_error_t *
+svn_fs_x__set_dag_node(svn_fs_root_t *root,
+                       const char *path,
+                       dag_node_t *node,
+                       apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

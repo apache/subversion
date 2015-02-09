@@ -417,11 +417,11 @@ dag_node_cache_get(dag_node_t **node_p,
 
 
 /* Add the NODE for PATH to ROOT's node cache. */
-static svn_error_t *
-dag_node_cache_set(svn_fs_root_t *root,
-                   const char *path,
-                   dag_node_t *node,
-                   apr_pool_t *scratch_pool)
+svn_error_t *
+svn_fs_x__set_dag_node(svn_fs_root_t *root,
+                       const char *path,
+                       dag_node_t *node,
+                       apr_pool_t *scratch_pool)
 {
   svn_cache__t *cache;
   const char *key;
@@ -783,7 +783,7 @@ try_match_last_node(dag_node_t **node_p,
       if (revision == root->rev && strcmp(created_path, path) == 0)
         {
           /* Cache it under its full path@rev access path. */
-          SVN_ERR(dag_node_cache_set(root, path, node, scratch_pool));
+          SVN_ERR(svn_fs_x__set_dag_node(root, path, node, scratch_pool));
 
           *node_p = node;
           return SVN_NO_ERROR;
@@ -981,8 +981,8 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
 
           /* Cache the node we found (if it wasn't already cached). */
           if (! cached_node)
-            SVN_ERR(dag_node_cache_set(root, path_so_far->data, child,
-                                       iterpool));
+            SVN_ERR(svn_fs_x__set_dag_node(root, path_so_far->data, child,
+                                           iterpool));
         }
 
       /* Are we finished traversing the path?  */
@@ -1093,8 +1093,9 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
                                         subpool));
 
       /* Update the path cache. */
-      SVN_ERR(dag_node_cache_set(root, parent_path_path(parent_path, subpool),
-                                 clone, subpool));
+      SVN_ERR(svn_fs_x__set_dag_node(root,
+                                     parent_path_path(parent_path, subpool),
+                                     clone, subpool));
       svn_pool_destroy(subpool);
     }
   else
@@ -2371,8 +2372,8 @@ x_make_dir(svn_fs_root_t *root,
                                  subpool, subpool));
 
   /* Add this directory to the path cache. */
-  SVN_ERR(dag_node_cache_set(root, parent_path_path(dag_path, subpool),
-                             sub_dir, subpool));
+  SVN_ERR(svn_fs_x__set_dag_node(root, parent_path_path(dag_path, subpool),
+                                 sub_dir, subpool));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
@@ -2716,8 +2717,8 @@ x_make_file(svn_fs_root_t *root,
                                   subpool, subpool));
 
   /* Add this file to the path cache. */
-  SVN_ERR(dag_node_cache_set(root, parent_path_path(dag_path, subpool),
-                             child, subpool));
+  SVN_ERR(svn_fs_x__set_dag_node(root, parent_path_path(dag_path, subpool),
+                                 child, subpool));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
