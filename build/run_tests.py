@@ -130,7 +130,8 @@ class TestHarness:
                http_proxy=None, http_proxy_username=None,
                http_proxy_password=None, httpd_version=None,
                exclusive_wc_locks=None,
-               memcached_server=None, skip_c_tests=None):
+               memcached_server=None, skip_c_tests=None,
+               dump_load_cross_check=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -193,6 +194,7 @@ class TestHarness:
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
     self.skip_c_tests = (not not skip_c_tests)
+    self.dump_load_cross_check = (not not dump_load_cross_check)
 
     # Parse out the FSFS version number
     if self.fs_type is not None and self.fs_type.startswith('fsfs-v'):
@@ -207,15 +209,12 @@ class TestHarness:
     self._open_log('w')
     failed = 0
 
-    # Only run the C tests when testing ra_local
+    # If asked to skip C tests, remove non-Python tests from the list
     if self.skip_c_tests:
-      filtered_list = []
-      for cnt, prog in enumerate(list):
+      def is_py_test(prog):
         progpath, nums = self._split_nums(prog)
-        if not progpath.endswith('.py'):
-          continue
-        filtered_list.append(prog)
-      list = filtered_list
+        return progpath.endswith('.py')
+      list = filter(is_py_test, list)
 
     for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
@@ -388,6 +387,24 @@ class TestHarness:
     if self.config_file is not None:
       cmdline.append('--config-file=' + self.config_file)
 
+    if self.base_url is not None:
+      subdir = 'subversion/tests/cmdline/svn-test-work'
+
+      cmdline.append('--repos-url=%s' % self.base_url +
+                        '/svn-test-work/repositories')
+      cmdline.append('--repos-dir=%s'
+                     % os.path.abspath(
+                         os.path.join(self.builddir, subdir, 'repositories')))
+
+      # Enable access for http
+      if self.base_url.startswith('http'):
+        authzparent = os.path.join(self.builddir, subdir)
+        if not os.path.exists(authzparent):
+          os.makedirs(authzparent);
+        open(os.path.join(authzparent, 'authz'), 'w').write('[/]\n'
+                                                            '* = rw\n')
+
+    # ### Support --repos-template
     if self.verbose is not None:
       cmdline.append('--verbose')
     if self.cleanup is not None:
@@ -536,6 +553,8 @@ class TestHarness:
       svntest.main.options.exclusive_wc_locks = self.exclusive_wc_locks
     if self.memcached_server is not None:
       svntest.main.options.memcached_server = self.memcached_server
+    if self.dump_load_cross_check is not None:
+      svntest.main.options.dump_load_cross_check = self.dump_load_cross_check
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -699,6 +718,7 @@ def main():
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
                            ['url=', 'fs-type=', 'verbose', 'cleanup',
                             'skip-c-tests', 'skip-C-tests',
+                            'dump-load-cross-check',
                             'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel=', 'config-file=',
@@ -720,10 +740,10 @@ def main():
     parallel, config_file, log_to_stdout, list_tests, mode_filter, \
     milestone_filter, set_log_level, ssl_cert, http_proxy, \
     http_proxy_username, http_proxy_password, httpd_version, \
-    exclusive_wc_locks, memcached_server = \
+    exclusive_wc_locks, memcached_server, dump_load_cross_check = \
             None, None, None, None, None, None, None, None, None, None, \
             None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None,
+            None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -743,6 +763,8 @@ def main():
       cleanup = 1
     elif opt in ['--skip-c-tests', '--skip-C-tests']:
       skip_c_tests = 1
+    elif opt in ['--dump-load-cross-check']:
+      dump_load_cross_check = 1
     elif opt in ['--enable-sasl']:
       enable_sasl = 1
     elif opt in ['--parallel']:
@@ -795,7 +817,8 @@ def main():
                    httpd_version=httpd_version,
                    exclusive_wc_locks=exclusive_wc_locks,
                    memcached_server=memcached_server,
-                   skip_c_tests=skip_c_tests)
+                   skip_c_tests=skip_c_tests,
+                   dump_load_cross_check=dump_load_cross_check)
 
   failed = th.run(args[2:])
   if failed:

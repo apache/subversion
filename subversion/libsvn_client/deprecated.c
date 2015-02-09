@@ -2821,6 +2821,7 @@ svn_client_revert2(const apr_array_header_t *paths,
                                             depth,
                                             changelists,
                                             FALSE /* clear_changelists */,
+                                            FALSE /* metadata_only */,
                                             ctx,
                                             pool));
 }
@@ -2862,7 +2863,7 @@ svn_client_uuid_from_url(const char **uuid,
   /* destroy the RA session */
   svn_pool_destroy(subpool);
 
-  return svn_error_trace(err);;
+  return svn_error_trace(err);
 }
 
 svn_error_t *

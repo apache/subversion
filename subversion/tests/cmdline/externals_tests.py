@@ -3121,7 +3121,7 @@ def move_with_file_externals(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-@Issue(4185)
+@Issue(4185,4529)
 def pinned_externals(sbox):
   "pinned external"
 
@@ -3134,6 +3134,7 @@ def pinned_externals(sbox):
   sbox.simple_mkdir('Z')
   sbox.simple_commit('')
 
+  repo_X_C = repo_url + '/X/C'
   repo_X_mu = repo_url + '/X/mu'
 
   expected_output = verify.RegexOutput(
@@ -3153,20 +3154,18 @@ def pinned_externals(sbox):
                           'old-rev       -r 1  ' + repo_X_mu + '\n' +
                                     repo_X_mu + ' new-plain\n' +
                           '-r1  ' + repo_X_mu + ' new-rev\n' +
-                                    repo_X_mu + '@1 new-peg\n',
+                                    repo_X_mu + '@1 new-peg\n'
+                          '-r1  ' + repo_X_C + ' new-dir-rev\n',
                       'Z')
 
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D'               : Item(status=' U'),
-    'A/D/exdir_E/beta'  : Item(status='A '),
-    'A/D/exdir_E/alpha' : Item(status='A '),
-  })
   expected_error = "svn: E205011: Failure.*externals"
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     # The interesting values
     'Z/old-plain'       : Item(contents="This is the file 'mu'.\n"),
     'Z/new-plain'       : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-rev'         : Item(contents="This is the file 'mu'.\n"),
+    'Z/new-dir-rev'     : Item(),
 
     # And verifying X
     'X/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
@@ -3481,6 +3480,110 @@ def switch_relative_externals(sbox):
                                      'up', wc)
 
 
+def copy_file_external_to_repo(sbox):
+  "explicitly copy file external to repo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  change_external(sbox.ospath('A'), '^/A/mu ext')
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     '--message', 'external copy',
+                                     sbox.ospath('A/ext'),
+                                     sbox.repo_url + '/ext_copy')
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'ext_copy' : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/ext'    : Item('This is the file \'mu\'.\n'),
+      'ext_copy' : Item('This is the file \'mu\'.\n'),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk, None)
+
+@Issue(4550)
+def replace_tree_with_foreign_external(sbox):
+  "replace tree with foreign external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1)
+
+  sbox.simple_propset('svn:externals', other_repo_url + '/A/B X', 'A')
+  sbox.simple_commit()
+  sbox.simple_propdel('svn:externals', 'A')
+  sbox.simple_mkdir('A/X')
+  sbox.simple_mkdir('A/X/E')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/X'         : Item(status='D '),
+      'A'           : Item(status=' U'),
+      'A/X/lambda'  : Item(status='A '),
+      'A/X/E'       : Item(status='A '),
+      'A/X/E/alpha' : Item(status='A '),
+      'A/X/E/beta'  : Item(status='A '),
+      'A/X/F'       : Item(status='A '),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/X'         : Item(status='  ', wc_rev=1, prev_status='X '),
+    'A/X/E'       : Item(status='  ', wc_rev=1, prev_status='  '),
+    'A/X/E/alpha' : Item(status='  ', wc_rev=1),
+    'A/X/E/beta'  : Item(status='  ', wc_rev=1),
+    'A/X/F'       : Item(status='  ', wc_rev=1),
+    'A/X/lambda'  : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None, expected_status,
+                                        None, None, None, None, None, 1,
+                                        '-r', '2', wc_dir)
+
+def nested_notification(sbox):
+  "notification for nested externals"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  sbox.simple_mkdir('D1')
+  sbox.simple_mkdir('D2')
+  sbox.simple_mkdir('D3')
+  sbox.simple_mkdir('D4')
+  sbox.simple_propset('svn:externals', '^/D2 X', 'D1')
+  sbox.simple_propset('svn:externals', '^/D3 X', 'D2')
+  sbox.simple_propset('svn:externals', '^/D4 X', 'D3')
+  sbox.simple_commit()
+  expected_output = [
+    'Updating \'' + sbox.ospath('D1') + '\':\n',
+    '\n',
+    'Fetching external item into \'' + sbox.ospath('D1/X') + '\':\n',
+    ' U   ' + sbox.ospath('D1/X') + '\n',
+    '\n',
+    'Fetching external item into \'' + sbox.ospath('D1/X/X') + '\':\n',
+    ' U   ' + sbox.ospath('D1/X/X') + '\n',
+    '\n',
+    'Fetching external item into \'' + sbox.ospath('D1/X/X/X') + '\':\n',
+    'Updated external to revision 2.\n',
+    '\n',
+    'External at revision 2.\n',
+    '\n',
+    'External at revision 2.\n',
+    '\n',
+    'At revision 2.\n'
+    ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'update', sbox.ospath('D1'))
+
+
 ########################################################################
 # Run the tests
 
@@ -3539,6 +3642,9 @@ test_list = [ None,
               update_external_peg_rev,
               update_deletes_file_external,
               switch_relative_externals,
+              copy_file_external_to_repo,
+              replace_tree_with_foreign_external,
+              nested_notification,
              ]
 
 if __name__ == '__main__':

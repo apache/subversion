@@ -146,6 +146,7 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 switch_dir_external(const char *local_abspath,
                     const char *url,
+                    const char *url_from_externals_definition,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     const char *defining_abspath,
@@ -197,7 +198,16 @@ switch_dir_external(const char *local_abspath,
       SVN_ERR(svn_wc__get_wcroot(&defining_wcroot_abspath, ctx->wc_ctx,
                                  defining_abspath, pool, pool));
       if (strcmp(wcroot_abspath, defining_wcroot_abspath) == 0)
-        return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                 _("The external '%s' defined in %s at '%s' "
+                                   "cannot be checked out because '%s' is "
+                                   "already a versioned path."),
+                                   url_from_externals_definition,
+                                   SVN_PROP_EXTERNALS,
+                                   svn_dirent_local_style(defining_abspath,
+                                                          pool),
+                                   svn_dirent_local_style(local_abspath,
+                                                          pool));
     }
 
   /* If path is a directory, try to update/switch to the correct URL
@@ -379,14 +389,15 @@ switch_dir_external(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Try to update a file external at LOCAL_ABSPATH to URL at REVISION using a
-   access baton that has a write lock.  Use SCRATCH_POOL for temporary
+/* Try to update a file external at LOCAL_ABSPATH to SWITCH_LOC. This function
+   assumes caller has a write lock in CTX.  Use SCRATCH_POOL for temporary
    allocations, and use the client context CTX. */
 static svn_error_t *
 switch_file_external(const char *local_abspath,
-                     const char *url,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *revision,
+                     const svn_client__pathrev_t *switch_loc,
+                     const char *record_url,
+                     const svn_opt_revision_t *record_peg_revision,
+                     const svn_opt_revision_t *record_revision,
                      const char *def_dir_abspath,
                      svn_ra_session_t *ra_session,
                      svn_client_ctx_t *ctx,
@@ -463,7 +474,8 @@ switch_file_external(const char *local_abspath,
               SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
              _("The file external from '%s' cannot overwrite the existing "
                "versioned item at '%s'"),
-             url, svn_dirent_local_style(local_abspath, scratch_pool));
+             switch_loc->url,
+             svn_dirent_local_style(local_abspath, scratch_pool));
         }
     }
   else
@@ -485,25 +497,17 @@ switch_file_external(const char *local_abspath,
     void *report_baton;
     const svn_delta_editor_t *switch_editor;
     void *switch_baton;
-    svn_client__pathrev_t *switch_loc;
     svn_revnum_t revnum;
     apr_array_header_t *inherited_props;
-    const char *dir_abspath;
-    const char *target;
+    const char *target = svn_dirent_basename(local_abspath, scratch_pool);
 
-    svn_dirent_split(&dir_abspath, &target, local_abspath, scratch_pool);
-
-    /* Open an RA session to 'source' URL */
-    SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
-                                              url, dir_abspath,
-                                              peg_revision, revision,
-                                              ctx, scratch_pool));
     /* Get the external file's iprops. */
     SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props, "",
                                        switch_loc->rev,
                                        scratch_pool, scratch_pool));
 
-    SVN_ERR(svn_ra_reparent(ra_session, svn_uri_dirname(url, scratch_pool),
+    SVN_ERR(svn_ra_reparent(ra_session,
+                            svn_uri_dirname(switch_loc->url, scratch_pool),
                             scratch_pool));
 
     SVN_ERR(svn_wc__get_file_external_editor(&switch_editor, &switch_baton,
@@ -517,7 +521,9 @@ switch_file_external(const char *local_abspath,
                                              use_commit_times,
                                              diff3_cmd, preserved_exts,
                                              def_dir_abspath,
-                                             url, peg_revision, revision,
+                                             record_url,
+                                             record_peg_revision,
+                                             record_revision,
                                              ctx->cancel_func,
                                              ctx->cancel_baton,
                                              ctx->notify_func2,
@@ -528,7 +534,7 @@ switch_file_external(const char *local_abspath,
      invalid revnum, that means RA will use the latest revision. */
     SVN_ERR(svn_ra_do_switch3(ra_session, &reporter, &report_baton,
                               switch_loc->rev,
-                              target, svn_depth_unknown, url,
+                              target, svn_depth_unknown, switch_loc->url,
                               FALSE /* send_copyfrom */,
                               TRUE /* ignore_ancestry */,
                               switch_editor, switch_baton,
@@ -741,6 +747,8 @@ handle_external_item_change(svn_client_ctx_t *ctx,
                                                   &(new_item->peg_revision),
                                                   &(new_item->revision), ctx,
                                                   scratch_pool));
+
+          SVN_ERR(svn_ra_reparent(ra_session, new_loc->url, scratch_pool));
         }
     }
 
@@ -794,6 +802,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
     {
       case svn_node_dir:
         SVN_ERR(switch_dir_external(local_abspath, new_loc->url,
+                                    new_item->url,
                                     &(new_item->peg_revision),
                                     &(new_item->revision),
                                     parent_dir_abspath,
@@ -855,6 +864,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
           }
 
         SVN_ERR(switch_file_external(local_abspath,
+                                     new_loc,
                                      new_url,
                                      &new_item->peg_revision,
                                      &new_item->revision,
@@ -1186,6 +1196,17 @@ svn_client__export_externals(apr_hash_t *externals,
           SVN_ERR(svn_io_make_dir_recursively(svn_dirent_dirname(item_abspath,
                                                                  sub_iterpool),
                                               sub_iterpool));
+
+          /* First notify that we're about to handle an external. */
+          if (ctx->notify_func2)
+            {
+              ctx->notify_func2(
+                       ctx->notify_baton2,
+                       svn_wc_create_notify(item_abspath,
+                                            svn_wc_notify_update_external,
+                                            sub_iterpool),
+                       sub_iterpool);
+            }
 
           SVN_ERR(wrap_external_error(
                           ctx, item_abspath,

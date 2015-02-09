@@ -52,7 +52,10 @@ public:
       const char* const safe_key =
         apr_pstrmemdup(m_pool, key.c_str(), key.size() + 1);
       if (!value.get())
-        apr_hash_set(m_hash, safe_key, key.size(), m_default);
+        {
+          if (m_default != NULL)
+            apr_hash_set(m_hash, safe_key, key.size(), m_default);
+        }
       else
         {
           Java::ByteArray::Contents val(value);
@@ -70,20 +73,22 @@ private:
   apr_hash_t* const m_hash;
   const svn_string_t* const m_default;
 };
+
+typedef ::Java::ImmutableMap< ::Java::ByteArray, jbyteArray> ImmutableByteArrayMap;
 } // anonymous namespace
 
 apr_hash_t*
 make_keyword_hash(::Java::Env env, jobject jkeywords, apr_pool_t* pool)
 {
   const svn_string_t* const empty = svn_string_create_empty(pool);
-  const ::Java::Map< ::Java::ByteArray, jbyteArray> keywords(env, jkeywords);
+  const ImmutableByteArrayMap keywords(env, jkeywords);
   return keywords.for_each(MapToHashIteration(empty, pool)).get();
 }
 
 apr_hash_t*
 make_property_hash(::Java::Env env, jobject jproperties, apr_pool_t* pool)
 {
-  const ::Java::Map< ::Java::ByteArray, jbyteArray> props(env, jproperties);
+  const ImmutableByteArrayMap props(env, jproperties);
   return props.for_each(MapToHashIteration(NULL, pool)).get();
 }
 

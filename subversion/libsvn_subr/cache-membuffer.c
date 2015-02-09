@@ -31,6 +31,7 @@
 #include "cache.h"
 #include "svn_string.h"
 #include "svn_sorts.h"  /* get the MIN macro */
+#include "private/svn_atomic.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
 #include "private/svn_pseudo_md5.h"
@@ -122,7 +123,7 @@
  * Use a simple mutex on Windows.  Because there is one mutex per segment,
  * large machines should (and usually can) be configured with large caches
  * such that read contention is kept low.  This is basically the situation
- * we head before 1.8.
+ * we had before 1.8.
  */
 #ifdef WIN32
 #  define USE_SIMPLE_MUTEX 1
@@ -364,7 +365,7 @@ typedef struct entry_t
   /* Number of (read) hits for this entry. Will be reset upon write.
    * Only valid for used entries.
    */
-  apr_uint32_t hit_count;
+  svn_atomic_t hit_count;
 
   /* Reference to the next used entry in the order defined by offset.
    * NO_INDEX indicates the end of the list; this entry must be referenced
@@ -557,18 +558,13 @@ struct svn_membuffer_t
    */
   cache_level_t l2;
 
+
   /* Number of used dictionary entries, i.e. number of cached items.
-   * In conjunction with hit_count, this is used calculate the average
-   * hit count as part of the randomized LFU algorithm.
+   * Purely statistical information that may be used for profiling only.
+   * Updates are not synchronized and values may be nonsensicle on some
+   * platforms.
    */
   apr_uint32_t used_entries;
-
-  /* Sum of (read) hit counts of all used dictionary entries.
-   * In conjunction used_entries used_entries, this is used calculate
-   * the average hit count as part of the randomized LFU algorithm.
-   */
-  apr_uint64_t hit_count;
-
 
   /* Total number of calls to membuffer_cache_get.
    * Purely statistical information that may be used for profiling only.
@@ -591,16 +587,15 @@ struct svn_membuffer_t
    */
   apr_uint64_t total_hits;
 
-#if APR_HAS_THREADS
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   /* A lock for intra-process synchronization to the cache, or NULL if
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe.
    */
-#  if USE_SIMPLE_MUTEX
   svn_mutex__t *lock;
-#  else
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
+  /* Same for read-write lock. */
   apr_thread_rwlock_t *lock;
-#  endif
 
   /* If set, write access will wait until they get exclusive access.
    * Otherwise, they will become no-ops if the segment is currently
@@ -608,12 +603,6 @@ struct svn_membuffer_t
    */
   svn_boolean_t allow_blocking_writes;
 #endif
-
-  /* All counters that have consistency requirements on thems (currently,
-   * that's only the hit counters) must use this mutex to serialize their
-   * updates.
-   */
-  svn_mutex__t *counter_mutex;
 };
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
@@ -629,33 +618,32 @@ struct svn_membuffer_t
 static svn_error_t *
 read_lock_cache(svn_membuffer_t *cache)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-#  else
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
   {
     apr_status_t status = apr_thread_rwlock_rdlock(cache->lock);
     if (status)
       return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
   }
-#  endif
-#endif
+
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, acquire a write lock for it.
+ * Set *SUCCESS to FALSE, if we couldn't acquire the write lock;
+ * leave it untouched otherwise.
  */
 static svn_error_t *
 write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
     {
       apr_status_t status;
@@ -678,9 +666,10 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
                                   _("Can't write-lock cache mutex"));
     }
 
-#  endif
-#endif
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, acquire an unconditional write lock
@@ -689,36 +678,29 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
 static svn_error_t *
 force_write_lock_cache(svn_membuffer_t *cache)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   apr_status_t status = apr_thread_rwlock_wrlock(cache->lock);
   if (status)
     return svn_error_wrap_apr(status,
                               _("Can't write-lock cache mutex"));
 
-#  endif
-#endif
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, release the current lock
- * (read or write).
+ * (read or write).  Return ERR upon success.
  */
 static svn_error_t *
 unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
-  return svn_mutex__unlock(cache->lock, SVN_NO_ERROR);
-
-#  else
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
+  return svn_mutex__unlock(cache->lock, err);
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
   {
     apr_status_t status = apr_thread_rwlock_unlock(cache->lock);
@@ -729,13 +711,14 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
       return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
   }
 
-#  endif
-#endif
   return err;
+#else
+  return err;
+#endif
 }
 
-/* If supported, guard the execution of EXPR with a read lock to cache.
- * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+/* If supported, guard the execution of EXPR with a read lock to CACHE.
+ * The macro has been modeled after SVN_MUTEX__WITH_LOCK.
  */
 #define WITH_READ_LOCK(cache, expr)         \
 do {                                        \
@@ -743,8 +726,8 @@ do {                                        \
   SVN_ERR(unlock_cache(cache, (expr)));     \
 } while (0)
 
-/* If supported, guard the execution of EXPR with a write lock to cache.
- * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+/* If supported, guard the execution of EXPR with a write lock to CACHE.
+ * The macro has been modeled after SVN_MUTEX__WITH_LOCK.
  *
  * The write lock process is complicated if we don't allow to wait for
  * the lock: If we didn't get the lock, we may still need to remove an
@@ -1027,7 +1010,6 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   /* update global cache usage counters
    */
   cache->used_entries--;
-  cache->hit_count -= entry->hit_count;
   cache->data_used -= entry->size;
 
   /* extend the insertion window, if the entry happens to border it
@@ -1163,7 +1145,6 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 
   if (hits_removed)
     {
-      cache->hit_count -= hits_removed;
       entry->hit_count -= hits_removed;
     }
   else
@@ -1795,7 +1776,6 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].max_entry_size = max_entry_size;
 
       c[seg].used_entries = 0;
-      c[seg].hit_count = 0;
       c[seg].total_reads = 0;
       c[seg].total_writes = 0;
       c[seg].total_hits = 0;
@@ -1810,17 +1790,14 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           return svn_error_wrap_apr(APR_ENOMEM, "OOM");
         }
 
-#if APR_HAS_THREADS
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
       /* A lock for intra-process synchronization to the cache, or NULL if
        * the cache's creator doesn't feel the cache needs to be
        * thread-safe.
        */
-#  if USE_SIMPLE_MUTEX
-
       SVN_ERR(svn_mutex__init(&c[seg].lock, thread_safe, pool));
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
+      /* Same for read-write lock. */
       c[seg].lock = NULL;
       if (thread_safe)
         {
@@ -1830,17 +1807,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
             return svn_error_wrap_apr(status, _("Can't create cache mutex"));
         }
 
-#  endif
-
       /* Select the behavior of write operations.
        */
       c[seg].allow_blocking_writes = allow_blocking_writes;
 #endif
-
-      /* Since a simple mutex already guarantees fully serialized access,
-         we need this mutex only when we use multple-reader-1-writer locks. */
-      SVN_ERR(svn_mutex__init(&c[seg].counter_mutex,
-                              thread_safe && !USE_SIMPLE_MUTEX, pool));
     }
 
   /* done here
@@ -2067,21 +2037,17 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
 /* Count a hit in ENTRY within CACHE.
  */
-static svn_error_t *
+static void
 increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
 {
   /* To minimize the memory footprint of the cache index, we limit local
-   * hit counters to 32 bits.  These may overflow and we must make sure that
-   * the global sums are still the sum of all local counters. */
-  if (++entry->hit_count == 0)
-    cache->hit_count -= APR_UINT32_MAX;
-  else
-    cache->hit_count++;
+   * hit counters to 32 bits.  These may overflow but we don't really
+   * care because at worst, ENTRY will be dropped from cache once every
+   * few billion hits. */
+  svn_atomic_inc(&entry->hit_count);
 
   /* That one is for stats only. */
   cache->total_hits++;
-
-  return SVN_NO_ERROR;
 }
 
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
@@ -2140,8 +2106,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
   /* update hit statistics
    */
-  SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
-                       increment_hit_counters(cache, entry));
+  increment_hit_counters(cache, entry);
   *item_size = entry->size;
 
   return SVN_NO_ERROR;
@@ -2205,9 +2170,7 @@ membuffer_cache_has_key_internal(svn_membuffer_t *cache,
          again.  While items in L1 are well protected for a while, L2
          items may get evicted soon.  Thus, mark all them as "hit" to give
          them a higher chance of survival. */
-      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
-                           increment_hit_counters(cache, entry));
-
+      increment_hit_counters(cache, entry);
       *found = TRUE;
     }
   else
@@ -2276,9 +2239,7 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
   else
     {
       *found = TRUE;
-
-      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
-                           increment_hit_counters(cache, entry));
+      increment_hit_counters(cache, entry);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -2368,8 +2329,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
       char *orig_data = data;
       apr_size_t size = entry->size;
 
-      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
-                           increment_hit_counters(cache, entry));
+      increment_hit_counters(cache, entry);
       cache->total_writes++;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
@@ -2398,6 +2358,8 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
            * We better drop that.
            */
           drop_entry(cache, entry);
+
+          return err;
         }
       else
         {

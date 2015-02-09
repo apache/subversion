@@ -121,11 +121,11 @@ add_table(string_table_builder_t *builder)
 }
 
 string_table_builder_t *
-svn_fs_x__string_table_builder_create(apr_pool_t *pool)
+svn_fs_x__string_table_builder_create(apr_pool_t *result_pool)
 {
-  string_table_builder_t *result = apr_palloc(pool, sizeof(*result));
-  result->pool = pool;
-  result->tables = apr_array_make(pool, 1, sizeof(builder_table_t *));
+  string_table_builder_t *result = apr_palloc(result_pool, sizeof(*result));
+  result->pool = result_pool;
+  result->tables = apr_array_make(result_pool, 1, sizeof(builder_table_t *));
 
   add_table(result);
   
@@ -585,11 +585,11 @@ svn_fs_x__string_table_get(const string_table_t *table,
 svn_error_t *
 svn_fs_x__write_string_table(svn_stream_t *stream,
                              const string_table_t *table,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
   apr_size_t i, k;
 
-  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   svn_packed__int_stream_t *table_sizes
     = svn_packed__create_int_stream(root, FALSE, FALSE);
@@ -646,7 +646,7 @@ svn_fs_x__write_string_table(svn_stream_t *stream,
 
   /* write to target stream */
 
-  SVN_ERR(svn_packed__data_write(stream, root, pool));
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
 
   return SVN_NO_ERROR;
 }

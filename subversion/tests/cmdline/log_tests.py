@@ -227,12 +227,7 @@ def merge_history_repos(sbox):
   branch_c = os.path.join('branches', 'c')
 
   # Create an empty repository - r0
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.safe_rmtree(sbox.wc_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-
-  svntest.actions.run_and_verify_svn(None, None, [], "co", sbox.repo_url,
-                                     sbox.wc_dir)
+  sbox.build(empty=True)
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
@@ -751,8 +746,7 @@ def log_with_empty_repos(sbox):
   "'svn log' on an empty repository"
 
   # Create virgin repos
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
+  sbox.build(create_wc=False, empty=True)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'log',

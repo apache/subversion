@@ -866,14 +866,20 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
     {
       apr_array_header_t *entries;
       int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* Loop over directory entries */
       SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool));
       if (entries)
         for (i = 0; i < entries->nelts; ++i)
-          SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs,
-                        APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *)->id,
-                        pool));
+          {
+            svn_pool_clear(iterpool);
+            SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs,
+                          APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *)->id,
+                          iterpool));
+          }
+
+      svn_pool_destroy(iterpool);
     }
 
   /* ... then delete the node itself, after deleting any mutable

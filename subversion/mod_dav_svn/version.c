@@ -1381,20 +1381,10 @@ release_locks(apr_hash_t *locks,
               request_rec *r,
               apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *targets = apr_hash_make(subpool);
   svn_error_t *err;
 
-  for (hi = apr_hash_first(subpool, locks); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = apr_hash_this_key(hi);
-      const char *token = apr_hash_this_val(hi);
-
-      svn_hash_sets(targets, path, token);
-    }
-
-  err = svn_repos_fs_unlock_many(repos, targets, FALSE, unlock_many_cb, r,
+  err = svn_repos_fs_unlock_many(repos, locks, FALSE, unlock_many_cb, r,
                                  subpool, subpool);
 
   if (err) /* If we got an error, just log it and move along. */

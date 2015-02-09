@@ -465,13 +465,19 @@ typedef struct svn_client_commit_item3_t
 {
   /* IMPORTANT: If you extend this structure, add new fields to the end. */
 
-  /** absolute working-copy path of item */
+  /** absolute working-copy path of item. Always set during normal commits
+   * (and copies from a working copy) to the repository. Can only be NULL
+   * when stub commit items are created for operations that only involve
+   * direct repository operations. During WC->REPOS copy operations, this
+   * path is the WC source path of the operation. */
   const char *path;
 
   /** node kind (dir, file) */
   svn_node_kind_t kind;
 
-  /** commit URL for this item */
+  /** commit URL for this item. Points to the repository location of PATH
+   * during commits, or to the final URL of the item when copying from the
+   * working copy to the repository. */
   const char *url;
 
   /** revision of textbase */
@@ -1013,11 +1019,6 @@ typedef struct svn_client_ctx_t
    *
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
-
-  /** Total number of bytes transferred over network.
-   *
-   * @since New in 1.9. */
-  apr_off_t progress;
 
   /** Check-tunnel callback
    *
@@ -4288,6 +4289,10 @@ svn_client_relocate(const char *dir,
  * If @a clear_changelists is TRUE, then changelist information for the
  * paths is cleared while reverting.
  *
+ * If @a metadata_only is TRUE, the files and directories aren't changed
+ * by the operation. If there are conflict marker files attached to the
+ * targets these are removed.
+ *
  * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
  * the reverted item.
@@ -4303,11 +4308,12 @@ svn_client_revert3(const apr_array_header_t *paths,
                    svn_depth_t depth,
                    const apr_array_header_t *changelists,
                    svn_boolean_t clear_changelists,
+                   svn_boolean_t metadata_only,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /** Similar to svn_client_revert2, but with @a clear_changelists set to
- * FALSE.
+ * FALSE and @a metadata_only set to FALSE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.8 API.

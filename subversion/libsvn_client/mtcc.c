@@ -337,7 +337,6 @@ svn_client__mtcc_create(svn_client__mtcc_t **mtcc,
 
   *mtcc = apr_pcalloc(mtcc_pool, sizeof(**mtcc));
   (*mtcc)->pool = mtcc_pool;
-  (*mtcc)->base_revision = base_revision;
 
   (*mtcc)->root_op = mtcc_op_create(NULL, FALSE, TRUE, mtcc_pool);
 
@@ -350,9 +349,12 @@ svn_client__mtcc_create(svn_client__mtcc_t **mtcc,
   SVN_ERR(svn_ra_get_latest_revnum((*mtcc)->ra_session, &(*mtcc)->head_revision,
                                    scratch_pool));
 
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = (*mtcc)->head_revision;
-  else if (base_revision > (*mtcc)->head_revision)
+  if (SVN_IS_VALID_REVNUM(base_revision))
+    (*mtcc)->base_revision = base_revision;
+  else
+    (*mtcc)->base_revision = (*mtcc)->head_revision;
+
+  if ((*mtcc)->base_revision > (*mtcc)->head_revision)
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld (HEAD is %ld)"),
                              base_revision, (*mtcc)->head_revision);
@@ -461,8 +463,8 @@ mtcc_verify_create(svn_client__mtcc_t *mtcc,
         return SVN_NO_ERROR; /* Node is explicitly deleted. We can replace */
     }
 
-  /* mod_dav_svn allows overwriting existing directories. Let's hide that
-     for users of this api */
+  /* mod_dav_svn used to allow overwriting existing directories. Let's hide
+     that for users of this api */
   SVN_ERR(svn_client__mtcc_check_path(&kind, new_relpath, FALSE,
                                       mtcc, scratch_pool));
 
@@ -708,8 +710,7 @@ mtcc_prop_getter(const svn_string_t **mime_type,
 
               if (! strcmp(mod->name, SVN_PROP_MIME_TYPE))
                 {
-                  *mime_type = mod->value ? svn_string_dup(mod->value, pool)
-                                          : NULL;
+                  *mime_type = svn_string_dup(mod->value, pool);
                   mime_type = NULL;
                 }
             }

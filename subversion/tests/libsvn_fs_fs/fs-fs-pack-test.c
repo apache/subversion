@@ -25,8 +25,11 @@
 #include <apr_pools.h>
 
 #include "../svn_test.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "../../libsvn_fs_fs/fs.h"
 #include "../../libsvn_fs_fs/fs_fs.h"
+#include "../../libsvn_fs_fs/low_level.h"
+#include "../../libsvn_fs_fs/util.h"
 
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -1184,6 +1187,111 @@ id_parser_test(const svn_test_opts_t *opts,
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-plain_0_length"
+
+static apr_size_t
+stringbuf_find(svn_stringbuf_t *rev_contents,
+               const char *substring)
+{
+  apr_size_t i;
+  apr_size_t len = strlen(substring);
+
+  for (i = 0; i < rev_contents->len - len + 1; ++i)
+      if (!memcmp(rev_contents->data + i, substring, len))
+        return i;
+
+  return APR_SIZE_MAX;
+}
+
+static svn_error_t *
+plain_0_length(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  const char *rev_path;
+  svn_stringbuf_t *rev_contents;
+  apr_hash_t *fs_config;
+  svn_filesize_t file_length;
+  apr_size_t offset;
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Create a repo that does not deltify properties and does not share reps
+     on its own - makes it easier to do that later by hand. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  ffd = fs->fsap_data;
+  ffd->deltify_properties = FALSE;
+  ffd->rep_sharing_allowed = FALSE;
+
+  /* Create one file node with matching contents and property reps. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", "END\n", pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "foo", "x", NULL, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Redirect text rep to props rep. */
+  rev_path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
+  SVN_ERR(svn_stringbuf_from_file2(&rev_contents, rev_path, pool));
+
+  offset = stringbuf_find(rev_contents, "id: ");
+  if (offset != APR_SIZE_MAX)
+    {
+      node_revision_t *noderev;
+      svn_stringbuf_t *noderev_str;
+
+      /* Read the noderev. */
+      svn_stream_t *stream = svn_stream_from_stringbuf(rev_contents, pool);
+      SVN_ERR(svn_stream_skip(stream, offset));
+      SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool, pool));
+      SVN_ERR(svn_stream_close(stream));
+
+      /* Tweak the DATA_REP. */
+      noderev->data_rep->revision = noderev->prop_rep->revision;
+      noderev->data_rep->item_index = noderev->prop_rep->item_index;
+      noderev->data_rep->size = noderev->prop_rep->size;
+      noderev->data_rep->expanded_size = 0;
+
+      /* Serialize it back. */
+      noderev_str = svn_stringbuf_create_empty(pool);
+      stream = svn_stream_from_stringbuf(noderev_str, pool);
+      SVN_ERR(svn_fs_fs__write_noderev(stream, noderev, ffd->format,
+                                       svn_fs_fs__fs_supports_mergeinfo(fs),
+                                       pool));
+      SVN_ERR(svn_stream_close(stream));
+
+      /* Patch the revision contents */
+      memcpy(rev_contents->data + offset, noderev_str->data, noderev_str->len);
+    }
+
+  SVN_ERR(svn_io_write_atomic(rev_path, rev_contents->data,
+                              rev_contents->len, NULL, pool));
+
+  /* Create an independent FS instances with separate caches etc. */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, fs_config, pool, pool));
+
+  /* Now, check that we get the correct file length. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_file_length(&file_length, root, "foo", pool));
+
+  SVN_TEST_ASSERT(file_length == 4);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -1224,6 +1332,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "change revprops with enabled and disabled caching"),
     SVN_TEST_OPTS_PASS(id_parser_test,
                        "id parser test"),
+    SVN_TEST_OPTS_PASS(plain_0_length,
+                       "file with 0 expanded-length, issue #4554"),
     SVN_TEST_NULL
   };
 

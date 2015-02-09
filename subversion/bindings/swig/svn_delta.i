@@ -205,11 +205,11 @@ void _ops_get(int *num_ops, const svn_txdelta_op_t **ops)
 %include svn_delta_h.swg
 
 #ifdef SWIGPYTHON
-%pythoncode {
+%pythoncode %{
 # This function is for backwards compatibility only.
 # Use svn_txdelta_window_t.ops instead.
 svn_txdelta_window_t_ops_get = svn_txdelta_window_t._ops_get
-}
+%}
 #endif
 
 #ifdef SWIGRUBY

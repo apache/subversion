@@ -37,10 +37,11 @@ import svntest
 from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
 from svntest.verify import SVNExpectedStderr
 from svntest.main import write_restrictive_svnserve_conf
+from svntest.main import write_authz_file
 from svntest.main import server_has_partial_replay
 
 # Shared helpers
-from svnsync_tests import build_repos, run_init, run_sync, run_test
+from svnsync_tests import run_init, run_sync, run_test
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -61,22 +62,20 @@ def basic_authz(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
-  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
-  svntest.main.file_write(sbox.authz_file,
-                          "[%s:/]\n"
-                          "* = r\n"
-                          "\n"
-                          "[%s:/A/B]\n"
-                          "* = \n"
-                          "\n"
-                          "[%s:/]\n"
-                          "* = rw\n" % args)
+  src_authz = sbox.authz_name()
+  dst_authz = dest_sbox.authz_name()
+  write_authz_file(sbox, None,
+                   prefixed_rules = {
+                       src_authz + ':/':    '* = r',
+                       src_authz + ':/A/B': '* =',
+                       dst_authz + ':/':    '* = rw',
+                       })
 
   run_sync(dest_sbox.repo_url)
 
@@ -141,21 +140,18 @@ def copy_from_unreadable_dir(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
-  open(sbox.authz_file, 'w').write(
-             "[%s:/]\n"
-             "* = r\n"
-             "\n"
-             "[%s:/A/B]\n"
-             "* = \n"
-             "\n"
-             "[%s:/]\n"
-             "* = rw"
-             % args)
+  src_authz = sbox.authz_name()
+  dst_authz = dest_sbox.authz_name()
+  write_authz_file(sbox, None,
+                   prefixed_rules = {
+                       src_authz + ':/':    '* = r',
+                       src_authz + ':/A/B': '* =',
+                       dst_authz + ':/':    '* = rw',
+                       })
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -255,21 +251,18 @@ def copy_with_mod_from_unreadable_dir(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
-  open(sbox.authz_file, 'w').write(
-             "[%s:/]\n"
-             "* = r\n"
-             "\n"
-             "[%s:/A/B]\n"
-             "* = \n"
-             "\n"
-             "[%s:/]\n"
-             "* = rw"
-             % args)
+  src_authz = sbox.authz_name()
+  dst_authz = dest_sbox.authz_name()
+  write_authz_file(sbox, None,
+                   prefixed_rules = {
+                       src_authz + ':/':    '* = r',
+                       src_authz + ':/A/B': '* =',
+                       dst_authz + ':/':    '* = rw',
+                       })
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -347,21 +340,18 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  args = tuple(s.authz_name() for s in [sbox, sbox, dest_sbox])
-  open(sbox.authz_file, 'w').write(
-             "[%s:/]\n"
-             "* = r\n"
-             "\n"
-             "[%s:/A/B]\n"
-             "* = \n"
-             "\n"
-             "[%s:/]\n"
-             "* = rw"
-             % args)
+  src_authz = sbox.authz_name()
+  dst_authz = dest_sbox.authz_name()
+  write_authz_file(sbox, None,
+                   prefixed_rules = {
+                       src_authz + ':/':    '* = r',
+                       src_authz + ':/A/B': '* =',
+                       dst_authz + ':/':    '* = rw',
+                       })
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -426,7 +416,7 @@ def specific_deny_authz(sbox):
   sbox.build()
 
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
 
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
@@ -443,31 +433,24 @@ def specific_deny_authz(sbox):
   # For mod_dav_svn's parent path setup we need per-repos permissions in
   # the authz file...
   if sbox.repo_url.startswith('http'):
-    args = tuple(s.authz_name() for s in [sbox, sbox, sbox, dest_sbox])
-    svntest.main.file_write(sbox.authz_file,
-                            "[%s:/]\n"
-                            "* = r\n"
-                            "\n"
-                            "[%s:/A]\n"
-                            "* = \n"
-                            "\n"
-                            "[%s:/A_COPY/B/lambda]\n"
-                            "* = \n"
-                            "\n"
-                            "[%s:/]\n"
-                            "* = rw\n" % args)
+    src_authz = sbox.authz_name()
+    dst_authz = dest_sbox.authz_name()
+    write_authz_file(sbox, None,
+                   prefixed_rules = {
+                       src_authz + ':/':                '* = r',
+                       src_authz + ':/A':               '* =',
+                       src_authz + ':/A_COPY/B/lambda': '* =',
+                       dst_authz + ':/':                '* = rw',
+                       })
   # Otherwise we can just go with the permissions needed for the source
   # repository.
   else:
-    svntest.main.file_write(sbox.authz_file,
-                            "[/]\n"
-                            "* = r\n"
-                            "\n"
-                            "[/A]\n"
-                            "* = \n"
-                            "\n"
-                            "[/A_COPY/B/lambda]\n"
-                            "* = \n")
+    write_authz_file(sbox, None,
+                   prefixed_rules = {
+                       '/':                '* = r',
+                       '/A':               '* =',
+                       '/A_COPY/B/lambda': '* =',
+                       })
 
   run_sync(dest_sbox.repo_url)
 
@@ -494,18 +477,17 @@ def copy_delete_unreadable_child(sbox):
 
   # Create the destination.
   dest_sbox = sbox.clone_dependent()
-  build_repos(dest_sbox)
+  dest_sbox.build(create_wc=False, empty=True)
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   # Lock down the source.
-  authz = sbox.authz_name()
   write_restrictive_svnserve_conf(sbox.repo_dir, anon_access='read')
-  svntest.main.file_write(sbox.authz_file,
-      "[%s:/]\n"
-      "* = r\n"
-      "[%s:/A]\n"
-      "* =  \n"
-      % (authz, authz))
+  src_authz = sbox.authz_name()
+  write_authz_file(sbox, None,
+                   prefixed_rules = {
+                       src_authz + ':/':  '* = r',
+                       src_authz + ':/A': '* =',
+                       })
 
   dest_url = svntest.main.file_scheme_prefix \
                     + urllib.pathname2url(os.path.abspath(dest_sbox.repo_dir))

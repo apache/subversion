@@ -785,32 +785,6 @@ svn_ra_open(svn_ra_session_t **session_p,
             apr_hash_t *config,
             apr_pool_t *pool);
 
-/**
- * Open a new ra session @a *new_session to the same repository as an existing
- * ra session @a old_session, copying the callbacks, auth baton, etc. from the
- * old session. This essentially limits the lifetime of the new, duplicated
- * session to the lifetime of the old session. If the new session should
- * outlive the new session, creating a new session using svn_ra_open4() is
- * recommended.
- *
- * If @a session_url is not NULL, parent the new session at session_url. Note
- * that @a session_url MUST BE in the same repository as @a old_session or an
- * error will be returned. When @a session_url NULL the same session root
- * will be used.
- *
- * Allocate @a new_session in @a result_pool. Perform temporary allocations
- * in @a scratch_pool.
- *
- * @since New in 1.9.
- */
-svn_error_t *
-svn_ra_dup_session(svn_ra_session_t **new_session,
-                   svn_ra_session_t *old_session,
-                   const char *session_url,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool);
-
-
 /** Change the root URL of an open @a ra_session to point to a new path in the
  * same repository.  @a url is the new root URL.  Use @a pool for
  * temporary allocations.
@@ -1011,6 +985,10 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  *
  * @since New in 1.5.
+ *
+ * @note Like most commit editors, the returned editor requires that the
+ * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
+ * methods is a URL, not a relative path.
  */
 svn_error_t *
 svn_ra_get_commit_editor3(svn_ra_session_t *session,
@@ -1928,8 +1906,12 @@ svn_ra_unlock(svn_ra_session_t *session,
 
 /**
  * If @a path is locked, set @a *lock to an svn_lock_t which
- * represents the lock, allocated in @a pool.  If @a path is not
- * locked, set @a *lock to NULL.
+ * represents the lock, allocated in @a pool.
+ *
+ * If @a path is not locked or does not exist in HEAD, set @a *lock to NULL.
+ *
+ * @note Before 1.9, this function could return SVN_ERR_FS_NOT_FOUND
+ * when @a path didn't exist in HEAD on specific ra layers.
  *
  * @since New in 1.2.
  */

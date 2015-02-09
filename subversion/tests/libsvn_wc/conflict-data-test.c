@@ -293,7 +293,7 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
   child2_abspath = svn_dirent_join(parent_abspath, "bar", pool);
   SVN_ERR(sbox_wc_mkdir(&sbox, "A"));
   SVN_ERR(sbox_wc_mkdir(&sbox, "A/bar"));
-  sbox_file_write(&sbox, "A/foo", "");
+  SVN_ERR(sbox_file_write(&sbox, "A/foo", ""));
 
   conflict1 = tree_conflict_create(child1_abspath, svn_node_file,
                                    svn_wc_operation_merge,
@@ -621,8 +621,8 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
 
     SVN_TEST_ASSERT(reason == svn_wc_conflict_reason_moved_away);
     SVN_TEST_ASSERT(action == svn_wc_conflict_action_delete);
-    SVN_TEST_ASSERT(!strcmp(moved_away_op_root_abspath,
-                            sbox_wc_path(&sbox, "A/B")));
+    SVN_TEST_STRING_ASSERT(moved_away_op_root_abspath,
+                           sbox_wc_path(&sbox, "A/B"));
   }
 
   return SVN_NO_ERROR;

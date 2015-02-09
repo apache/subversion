@@ -287,7 +287,14 @@ typedef enum svn_repos_notify_warning_t
    *
    * @since New in 1.9.
    */
-  svn_repos_notify_warning_mergeinfo_collision
+  svn_repos_notify_warning_mergeinfo_collision,
+
+  /**
+   * Detected invalid mergeinfo.
+   *
+   * @since New in 1.9.
+   */
+  svn_repos_notify_warning_invalid_mergeinfo
 } svn_repos_notify_warning_t;
 
 /**
@@ -1491,10 +1498,9 @@ svn_repos_replay(svn_fs_root_t *root,
  * filesystem of @a repos, beginning at location 'rev:@a base_path',
  * where "rev" is the argument given to open_root().
  *
- * @a repos is a previously opened repository.  @a repos_url is the
+ * @a repos is a previously opened repository.  @a repos_url_decoded is the
  * decoded URL to the base of the repository, and is used to check
- * copyfrom paths.  copyfrom paths passed to the editor must be full,
- * URI-encoded, URLs.  @a txn is a filesystem transaction object to use
+ * copyfrom paths.  @a txn is a filesystem transaction object to use
  * during the commit, or @c NULL to indicate that this function should
  * create (and fully manage) a new transaction.
  *
@@ -1530,15 +1536,19 @@ svn_repos_replay(svn_fs_root_t *root,
  *
  * @since New in 1.5.
  *
- * @note Yes, @a repos_url is a <em>decoded</em> URL.  We realize
+ * @note Yes, @a repos_url_decoded is a <em>decoded</em> URL.  We realize
  * that's sorta wonky.  Sorry about that.
+ *
+ * @note Like most commit editors, the returned editor requires that the
+ * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
+ * methods is a full, URI-encoded URL, not a relative path.
  */
 svn_error_t *
 svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              svn_repos_t *repos,
                              svn_fs_txn_t *txn,
-                             const char *repos_url,
+                             const char *repos_url_decoded,
                              const char *base_path,
                              apr_hash_t *revprop_table,
                              svn_commit_callback2_t commit_callback,
@@ -3086,7 +3096,7 @@ svn_repos_load_fs5(svn_repos_t *repos,
 /** Similar to svn_repos_load_fs5(), but with @a ignore_dates
  * always passed as FALSE.
  *
- * @since New in 1.9.
+ * @since New in 1.8.
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 SVN_DEPRECATED
@@ -3333,20 +3343,65 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * @a end_rev).  They refer to dump stream revision numbers rather than
  * committed revision numbers.
  *
- * If @a use_history is set, then the parser will require relative
- * 'copyfrom' history to exist in the repository when it encounters
- * nodes that are added-with-history.
+ * If @a use_history is true, then when the parser encounters a node that
+ * is added-with-history, it will require 'copy-from' history to exist in
+ * the repository at the relative (adjusted) copy-from revision and path.
+ * It will perform a copy from that source location, and will fail if no
+ * suitable source exists there. If @a use_history is false, then it will
+ * instead convert every copy to a plain add.
+ *
+ * ### The 'use_history=FALSE' case is unused and untested in Subversion.
+ *     It seems to me it would not work with a deltas dumpfile (a driver
+ *     that calls the @c apply_textdelta method), as it would not have
+ *     access to the delta base text.
+ *
+ * If @a use_pre_commit_hook is set, call the repository's pre-commit
+ * hook before committing each loaded revision.
+ *
+ * If @a use_post_commit_hook is set, call the repository's
+ * post-commit hook after committing each loaded revision.
  *
  * If @a validate_props is set, then validate Subversion revision and
  * node properties (those in the svn: namespace) against established
  * rules for those things.
  *
+ * If @a ignore_dates is set, ignore any revision datestamps found in
+ * @a dumpstream, allowing the revisions created by the load process
+ * to be stamped as if they were newly created via the normal commit
+ * process.
+ *
  * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_revnum_t start_rev,
+                               svn_revnum_t end_rev,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_boolean_t use_pre_commit_hook,
+                               svn_boolean_t use_post_commit_hook,
+                               svn_boolean_t ignore_dates,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_fs_build_parser5(), but with the
+ * @c use_pre_commit_hook, @c use_post_commit_hook and @c ignore_dates
+ * arguments all false.
+ *
+ * @since New in 1.8.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **parser,
                                void **parse_baton,

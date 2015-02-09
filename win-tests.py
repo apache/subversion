@@ -866,6 +866,7 @@ elif test_swig == 'perl':
   perl_exe = 'perl.exe'
 
   print('-- Running Swig Perl tests --')
+  sys.stdout.flush()
   old_cwd = os.getcwd()
   try:
     os.chdir(pm_src)
@@ -884,7 +885,6 @@ elif test_swig == 'perl':
   if (r != 0):
     print('[Test runner reported failure]')
     failed = True
-  sys.exit(1)
 elif test_swig == 'python':
   failed = False
   swig_dir = os.path.join(abs_builddir, 'swig')
@@ -916,6 +916,7 @@ elif test_swig == 'python':
                         to_dir=swig_py_svn)
 
   print('-- Running Swig Python tests --')
+  sys.stdout.flush()
 
   pythonpath = swig_py_dir
   if 'PYTHONPATH' in os.environ:
@@ -954,6 +955,7 @@ elif test_swig == 'ruby':
       ]
 
     print('-- Running Swig Ruby tests --')
+    sys.stdout.flush()
     old_cwd = os.getcwd()
     try:
       os.chdir(ruby_subdir)

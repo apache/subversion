@@ -249,8 +249,8 @@ add_to_histogram(svn_fs_fs__histogram_t *histogram,
  */
 static void
 add_change(svn_fs_fs__stats_t *stats,
-           apr_int64_t rep_size,
-           apr_int64_t expanded_size,
+           apr_uint64_t rep_size,
+           apr_uint64_t expanded_size,
            svn_revnum_t revision,
            const char *path,
            rep_kind_t kind,
@@ -293,29 +293,25 @@ add_change(svn_fs_fs__stats_t *stats,
   /* specific histograms by type */
   switch (kind)
     {
-      case unused_rep:        add_to_histogram(&stats->unused_rep_histogram,
-                                               rep_size);
-                              break;
-      case dir_property_rep:  add_to_histogram(&stats->dir_prop_rep_histogram,
-                                               rep_size);
-                              add_to_histogram(&stats->dir_prop_histogram,
-                                              expanded_size);
-                              break;
-      case file_property_rep: add_to_histogram(&stats->file_prop_rep_histogram,
-                                               rep_size);
-                              add_to_histogram(&stats->file_prop_histogram,
-                                               expanded_size);
-                              break;
-      case dir_rep:           add_to_histogram(&stats->dir_rep_histogram,
-                                               rep_size);
-                              add_to_histogram(&stats->dir_histogram,
-                                               expanded_size);
-                              break;
-      case file_rep:          add_to_histogram(&stats->file_rep_histogram,
-                                               rep_size);
-                              add_to_histogram(&stats->file_histogram,
-                                               expanded_size);
-                              break;
+      case unused_rep:
+        add_to_histogram(&stats->unused_rep_histogram, rep_size);
+        break;
+      case dir_property_rep:
+        add_to_histogram(&stats->dir_prop_rep_histogram, rep_size);
+        add_to_histogram(&stats->dir_prop_histogram, expanded_size);
+        break;
+      case file_property_rep: 
+        add_to_histogram(&stats->file_prop_rep_histogram, rep_size);
+        add_to_histogram(&stats->file_prop_histogram, expanded_size);
+        break;
+      case dir_rep:
+        add_to_histogram(&stats->dir_rep_histogram, rep_size);
+        add_to_histogram(&stats->dir_histogram, expanded_size);
+        break;
+      case file_rep:
+        add_to_histogram(&stats->file_rep_histogram, rep_size);
+        add_to_histogram(&stats->file_histogram, expanded_size);
+        break;
     }
 
   /* by extension */
@@ -615,13 +611,12 @@ read_noderev(query_t *query,
 
   /* record largest changes */
   if (text && text->ref_count == 1)
-    add_change(query->stats, (apr_int64_t)text->size,
-               (apr_int64_t)text->expanded_size, text->revision,
+    add_change(query->stats, text->size, text->expanded_size, text->revision,
                noderev->created_path, text->kind, !noderev->predecessor_id);
   if (props && props->ref_count == 1)
-    add_change(query->stats, (apr_int64_t)props->size,
-               (apr_int64_t)props->expanded_size, props->revision,
-               noderev->created_path, props->kind, !noderev->predecessor_id);
+    add_change(query->stats, props->size, props->expanded_size,
+               props->revision, noderev->created_path, props->kind,
+               !noderev->predecessor_id);
 
   /* if this is a directory and has not been processed, yet, read and
    * process it recursively */
@@ -1033,7 +1028,7 @@ svn_fs_fs__get_stats(svn_fs_fs__stats_t **stats,
   query_t *query;
 
   *stats = create_stats(result_pool);
-  SVN_ERR(create_query(&query, fs, *stats, progress_func, progress_func,
+  SVN_ERR(create_query(&query, fs, *stats, progress_func, progress_baton,
                        cancel_func, cancel_baton, scratch_pool,
                        scratch_pool));
   SVN_ERR(read_revisions(query, scratch_pool, scratch_pool));

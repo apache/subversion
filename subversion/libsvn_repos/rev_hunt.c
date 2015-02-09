@@ -1386,7 +1386,7 @@ send_path_revision(struct path_revision *path_rev,
   /* Compute and send delta if client asked for it.
      Note that this was initialized to NULL, so if !contents_changed,
      no deltas will be computed. */
-  if (delta_handler)
+  if (delta_handler && delta_handler != svn_delta_noop_window_handler)
     {
       /* Get the content delta. */
       SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,

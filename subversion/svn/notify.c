@@ -52,7 +52,7 @@ struct notify_baton
   svn_boolean_t is_export;
   svn_boolean_t is_wc_to_repos_copy;
   svn_boolean_t sent_first_txdelta;
-  svn_boolean_t in_external;
+  int in_external;
   svn_boolean_t had_print_error; /* Used to not keep printing error messages
                                     when we've already had one print error. */
 
@@ -636,7 +636,7 @@ notify_body(struct notify_baton *nb,
 
     case svn_wc_notify_update_external:
       /* Remember that we're now "inside" an externals definition. */
-      nb->in_external = TRUE;
+      ++nb->in_external;
 
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
@@ -653,7 +653,7 @@ notify_body(struct notify_baton *nb,
       if (nb->in_external)
         {
           svn_handle_warning2(stderr, n->err, "svn: ");
-          nb->in_external = FALSE;
+          --nb->in_external;
           SVN_ERR(svn_cmdline_printf(pool, "\n"));
         }
       /* Otherwise, we'll just print two warnings.  Why?  Because
@@ -752,7 +752,7 @@ notify_body(struct notify_baton *nb,
 
       if (nb->in_external)
         {
-          nb->in_external = FALSE;
+          --nb->in_external;
           SVN_ERR(svn_cmdline_printf(pool, "\n"));
         }
       break;
@@ -1117,7 +1117,7 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->is_checkout = FALSE;
   nb->is_export = FALSE;
   nb->is_wc_to_repos_copy = FALSE;
-  nb->in_external = FALSE;
+  nb->in_external = 0;
   nb->had_print_error = FALSE;
   nb->conflict_stats = conflict_stats;
   SVN_ERR(svn_dirent_get_absolute(&nb->path_prefix, "", pool));

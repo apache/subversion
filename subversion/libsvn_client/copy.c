@@ -1058,8 +1058,13 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, pool));
       if (dst_kind != svn_node_none)
-        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                 _("Path '%s' already exists"), dst_rel);
+        {
+          const char *path = svn_uri_skip_ancestor(repos_root,
+                                                   pair->dst_abspath_or_url,
+                                                   pool);
+          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                   _("Path '/%s' already exists"), path);
+        }
 
       /* More info for our INFO structure.  */
       info->src_path = src_rel;
@@ -1088,6 +1093,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
               item = svn_client_commit_item3_create(pool);
               item->url = svn_path_url_add_component2(top_url, relpath, pool);
+              item->kind = svn_node_dir;
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1101,6 +1107,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           item = svn_client_commit_item3_create(pool);
           item->url = svn_path_url_add_component2(top_url, info->dst_path,
                                                   pool);
+          item->kind = info->src_kind;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD
                               | SVN_CLIENT_COMMIT_ITEM_IS_COPY;
           item->copyfrom_url = info->src_url;
@@ -1112,6 +1119,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
               item = svn_client_commit_item3_create(pool);
               item->url = svn_path_url_add_component2(top_url, info->src_path,
                                                       pool);
+              item->kind = info->src_kind;
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1342,52 +1350,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
     }
 
-  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
-    {
-      /* Produce a list of new paths to add, and provide it to the
-         mechanism used to acquire a log message. */
-      svn_client_commit_item3_t *item;
-      const char *tmp_file;
-      commit_items = apr_array_make(scratch_pool, copy_pairs->nelts,
-                                    sizeof(item));
-
-      /* Add any intermediate directories to the message */
-      if (make_parents)
-        {
-          for (i = 0; i < new_dirs->nelts; i++)
-            {
-              const char *url = APR_ARRAY_IDX(new_dirs, i, const char *);
-
-              item = svn_client_commit_item3_create(scratch_pool);
-              item->url = url;
-              item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-              APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
-            }
-        }
-
-      for (i = 0; i < copy_pairs->nelts; i++)
-        {
-          svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                            svn_client__copy_pair_t *);
-
-          item = svn_client_commit_item3_create(scratch_pool);
-          item->url = pair->dst_abspath_or_url;
-          item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-          APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
-        }
-
-      SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
-                                      ctx, scratch_pool));
-      if (! message)
-        {
-          svn_pool_destroy(iterpool);
-          svn_pool_destroy(session_pool);
-          return SVN_NO_ERROR;
-        }
-    }
-  else
-    message = "";
-
   cukb.session = ra_session;
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &cukb.repos_root_url, session_pool));
   cukb.should_reparent = FALSE;
@@ -1418,6 +1380,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
           item = svn_client_commit_item3_create(scratch_pool);
           item->url = url;
+          item->kind = svn_node_dir;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           item->incoming_prop_changes = apr_array_make(scratch_pool, 1,
                                                        sizeof(svn_prop_t *));
@@ -1445,8 +1408,6 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Set the mergeinfo for the destination to the combined merge
          info known to the WC and the repository. */
-      item->outgoing_prop_changes = apr_array_make(scratch_pool, 1,
-                                                   sizeof(svn_prop_t *));
       /* Repository mergeinfo (or NULL if it's locally added)... */
       if (src_origin)
         SVN_ERR(svn_client__get_repos_mergeinfo(
@@ -1463,18 +1424,24 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                      iterpool));
       else if (! mergeinfo)
         mergeinfo = wc_mergeinfo;
+
       if (mergeinfo)
         {
           /* Push a mergeinfo prop representing MERGEINFO onto the
            * OUTGOING_PROP_CHANGES array. */
 
           svn_prop_t *mergeinfo_prop
-            = apr_palloc(item->outgoing_prop_changes->pool,
-                         sizeof(svn_prop_t));
+                            = apr_palloc(scratch_pool, sizeof(*mergeinfo_prop));
           svn_string_t *prop_value;
 
           SVN_ERR(svn_mergeinfo_to_string(&prop_value, mergeinfo,
-                                          item->outgoing_prop_changes->pool));
+                                          scratch_pool));
+
+          if (!item->outgoing_prop_changes)
+            {
+              item->outgoing_prop_changes = apr_array_make(scratch_pool, 1,
+                                                           sizeof(svn_prop_t *));
+            }
 
           mergeinfo_prop->name = SVN_PROP_MERGEINFO;
           mergeinfo_prop->value = prop_value;
@@ -1482,6 +1449,22 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
             = mergeinfo_prop;
         }
     }
+
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
+    {
+      const char *tmp_file;
+
+      SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
+                                      ctx, scratch_pool));
+      if (! message)
+        {
+          svn_pool_destroy(iterpool);
+          svn_pool_destroy(session_pool);
+          return SVN_NO_ERROR;
+        }
+    }
+  else
+    message = "";
 
   /* Sort and condense our COMMIT_ITEMS. */
   SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
@@ -1997,7 +1980,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
         {
           svn_client_copy_source_t *source = APR_ARRAY_IDX(sources, i,
                                                svn_client_copy_source_t *);
-          svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
+          svn_client__copy_pair_t *pair = apr_pcalloc(pool, sizeof(*pair));
           const char *src_basename;
           svn_boolean_t src_is_url = svn_path_is_url(source->path);
 
@@ -2019,6 +2002,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
 
           pair->src_op_revision = *source->revision;
           pair->src_peg_revision = *source->peg_revision;
+          pair->src_kind = svn_node_unknown;
 
           SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
                                             &pair->src_op_revision,
@@ -2047,7 +2031,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
   else
     {
       /* Only one source path. */
-      svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
+      svn_client__copy_pair_t *pair = apr_pcalloc(pool, sizeof(*pair));
       svn_client_copy_source_t *source =
         APR_ARRAY_IDX(sources, 0, svn_client_copy_source_t *);
       svn_boolean_t src_is_url = svn_path_is_url(source->path);
@@ -2059,6 +2043,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
                                         source->path, pool));
       pair->src_op_revision = *source->revision;
       pair->src_peg_revision = *source->peg_revision;
+      pair->src_kind = svn_node_unknown;
 
       SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
                                         &pair->src_op_revision,

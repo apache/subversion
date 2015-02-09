@@ -81,7 +81,7 @@ svn_fs_x__unparse_footer(apr_off_t l2p_offset,
    into *REP_P.  TEXT will be invalidated by this call.  Allocate *REP_P in
    RESULT_POOL and use SCRATCH_POOL for temporaries. */
 svn_error_t *
-svn_fs_x__parse_representation(representation_t **rep_p,
+svn_fs_x__parse_representation(svn_fs_x__representation_t **rep_p,
                                svn_stringbuf_t *text,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
@@ -92,7 +92,7 @@ svn_fs_x__parse_representation(representation_t **rep_p,
  * If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
  * Allocate the result in RESULT_POOL and temporaries in SCRATCH_POOL. */
 svn_stringbuf_t *
-svn_fs_x__unparse_representation(representation_t *rep,
+svn_fs_x__unparse_representation(svn_fs_x__representation_t *rep,
                                  svn_boolean_t mutable_rep_truncated,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
@@ -100,7 +100,7 @@ svn_fs_x__unparse_representation(representation_t *rep,
 /* Read a node-revision from STREAM. Set *NODEREV to the new structure,
    allocated in RESULT_POOL. */
 svn_error_t *
-svn_fs_x__read_noderev(node_revision_t **noderev,
+svn_fs_x__read_noderev(svn_fs_x__noderev_t **noderev,
                        svn_stream_t *stream,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
@@ -109,7 +109,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev,
    Temporary allocations are from SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__write_noderev(svn_stream_t *outfile,
-                        node_revision_t *noderev,
+                        svn_fs_x__noderev_t *noderev,
                         apr_pool_t *scratch_pool);
 
 /* This type enumerates all forms of representations that we support. */
@@ -181,7 +181,7 @@ svn_fs_x__read_changes(apr_array_header_t **changes,
  */
 typedef svn_error_t *(*svn_fs_x__change_receiver_t)(
   void *baton,
-  change_t *change,
+  svn_fs_x__change_t *change,
   apr_pool_t *scratch_pool);
 
 /* Read all the changes from STREAM and invoke CHANGE_RECEIVER on each change.

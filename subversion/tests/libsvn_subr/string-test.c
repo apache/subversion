@@ -604,7 +604,19 @@ test_stringbuf_insert(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(a->data, "test hello, world");
 
   svn_stringbuf_insert(a, 1200, "!", 1);
-  return expect_stringbuf_equal(a, "test hello, world!", pool);
+  SVN_TEST_STRING_ASSERT(a->data, "test hello, world!");
+
+  svn_stringbuf_insert(a, 4, "\0-\0", 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test\0-\0 hello, world!",
+                                          21, pool)));
+
+  svn_stringbuf_insert(a, 14, a->data + 4, 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test\0-\0 hello,\0-\0 world!",
+                                          24, pool)));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -643,8 +655,24 @@ test_stringbuf_replace(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(a->data, "test hello, world!");
 
   svn_stringbuf_replace(a, 1200, 199, "!!", 2);
+  SVN_TEST_STRING_ASSERT(a->data, "test hello, world!!!");
 
-  return expect_stringbuf_equal(a, "test hello, world!!!", pool);
+  svn_stringbuf_replace(a, 10, 2, "\0-\0", 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test hello\0-\0world!!!",
+                                          21, pool)));
+
+  svn_stringbuf_replace(a, 10, 3, a->data + 10, 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test hello\0-\0world!!!",
+                                          21, pool)));
+
+  svn_stringbuf_replace(a, 19, 1, a->data + 10, 3);
+  SVN_TEST_ASSERT(svn_stringbuf_compare(a,
+                    svn_stringbuf_ncreate("test hello\0-\0world!\0-\0!",
+                                          23, pool)));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

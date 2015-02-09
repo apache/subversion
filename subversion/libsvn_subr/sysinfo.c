@@ -55,6 +55,10 @@
 
 #ifdef SVN_HAVE_MACOS_PLIST
 #include <CoreFoundation/CoreFoundation.h>
+#include <AvailabilityMacros.h>
+# ifndef MAC_OS_X_VERSION_10_6
+#  define MAC_OS_X_VERSION_10_6  1060
+# endif
 #endif
 
 #ifdef SVN_HAVE_MACHO_ITERATE
@@ -406,6 +410,63 @@ lsb_release(apr_pool_t *pool)
   return NULL;
 }
 
+/* Read /etc/os-release, as documented here:
+ * http://www.freedesktop.org/software/systemd/man/os-release.html
+ */
+static const char *
+systemd_release(apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_stream_t *stream;
+
+  /* Open the file. */
+  err = svn_stream_open_readonly(&stream, "/etc/os-release", pool, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      err = svn_stream_open_readonly(&stream, "/usr/lib/os-release", pool,
+                                     pool);
+    }
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
+
+  /* Look for the PRETTY_NAME line. */
+  while (TRUE)
+    {
+      svn_stringbuf_t *line;
+      svn_boolean_t eof;
+
+      err = svn_stream_readline(stream, &line, "\n", &eof, pool);
+      if (err)
+        {
+          svn_error_clear(err);
+          return NULL;
+        }
+
+      if (!strncmp(line->data, "PRETTY_NAME=", 12))
+        {
+          svn_stringbuf_t *release_name;
+          
+          /* The value may or may not be enclosed by double quotes.  We don't
+           * attempt to strip them. */
+          release_name = svn_stringbuf_create(line->data + 12, pool);
+          svn_error_clear(svn_stream_close(stream));
+          svn_stringbuf_strip_whitespace(release_name);
+          return release_name->data;
+        }
+
+      if (eof)
+        break;
+    }
+
+  /* The file did not contain a PRETTY_NAME line. */
+  svn_error_clear(svn_stream_close(stream));
+  return NULL;
+}
+
 /* Read the whole contents of a file. */
 static svn_stringbuf_t *
 read_file_contents(const char *filename, apr_pool_t *pool)
@@ -522,6 +583,10 @@ linux_release_name(apr_pool_t *pool)
   /* Try anything that has /usr/bin/lsb_release.
      Covers, for example, Debian, Ubuntu and SuSE.  */
   const char *release_name = lsb_release(pool);
+
+  /* Try the systemd way (covers Arch). */
+  if (!release_name)
+    release_name = systemd_release(pool);
 
   /* Try RHEL/Fedora/CentOS */
   if (!release_name)
@@ -927,7 +992,6 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
   svn_error_t *err;
   CFPropertyListRef plist = NULL;
   CFMutableDataRef resource = CFDataCreateMutable(kCFAllocatorDefault, 0);
-  CFStringRef errstr = NULL;
 
   /* failed getting the CFMutableDataRef, shouldn't happen */
   if (!resource)
@@ -940,6 +1004,7 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
       if (!APR_STATUS_IS_ENOENT(err->apr_err))
         {
           svn_error_clear(err);
+          CFRelease(resource);
           return NULL;
         }
       else
@@ -950,6 +1015,7 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
           if (err)
             {
               svn_error_clear(err);
+              CFRelease(resource);
               return NULL;
             }
 
@@ -972,16 +1038,23 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
       return NULL;
     }
 
-  /* ### CFPropertyListCreateFromXMLData is obsolete, but its
-         replacement CFPropertyListCreateWithData is only available
-         from Mac OS 10.6 onward. */
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_6
+  /* This function is only available from Mac OS 10.6 onward. */
+  plist = CFPropertyListCreateWithData(kCFAllocatorDefault, resource,
+                                       kCFPropertyListImmutable,
+                                       NULL, NULL);
+#else  /* Mac OS 10.5 or earlier */
+  /* This function obsolete and deprecated since Mac OS 10.10. */
   plist = CFPropertyListCreateFromXMLData(kCFAllocatorDefault, resource,
                                           kCFPropertyListImmutable,
-                                          &errstr);
+                                          NULL);
+#endif /* MAC_OS_X_VERSION_10_6 */
+
   if (resource)
     CFRelease(resource);
-  if (errstr)
-    CFRelease(errstr);
+
+  if (!plist)
+    return NULL;
 
   if (CFDictionaryGetTypeID() != CFGetTypeID(plist))
     {
