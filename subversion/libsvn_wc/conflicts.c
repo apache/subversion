@@ -1851,6 +1851,7 @@ static svn_error_t *
 resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                               svn_wc__db_t *db,
                               const char *local_abspath,
+                              const svn_skel_t *conflict,
                               svn_wc_conflict_choice_t conflict_choice,
                               apr_hash_t *resolve_later,
                               svn_wc_notify_func2_t notify_func,
@@ -2047,7 +2048,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
          can continue safely. ### Need notify handling */
       if (result->choice != svn_wc_conflict_choose_postpone)
         SVN_ERR(resolve_tree_conflict_on_node(&resolved,
-                                              db, local_abspath,
+                                              db, local_abspath, conflict_skel,
                                               result->choice,
                                               apr_hash_make(scratch_pool),
                                               NULL, NULL, /* ### notify */
@@ -2514,6 +2515,7 @@ static svn_error_t *
 resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                               svn_wc__db_t *db,
                               const char *local_abspath,
+                              const svn_skel_t *conflicts,
                               svn_wc_conflict_choice_t conflict_choice,
                               apr_hash_t *resolve_later,
                               svn_wc_notify_func2_t notify_func,
@@ -2524,17 +2526,11 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
 {
   svn_wc_conflict_reason_t reason;
   svn_wc_conflict_action_t action;
-  svn_skel_t *conflicts;
   svn_wc_operation_t operation;
   svn_boolean_t tree_conflicted;
   const char *src_op_root_abspath;
 
   *did_resolve = FALSE;
-
-  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
-                                   scratch_pool, scratch_pool));
-  if (!conflicts)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL,
                                      &tree_conflicted, db, local_abspath,
@@ -2884,7 +2880,7 @@ conflict_status_walker(void *baton,
               break;
             SVN_ERR(resolve_tree_conflict_on_node(&did_resolve,
                                                   db,
-                                                  local_abspath,
+                                                  local_abspath, conflict,
                                                   my_choice,
                                                   cswb->resolve_later,
                                                   tree_conflict_collector,
