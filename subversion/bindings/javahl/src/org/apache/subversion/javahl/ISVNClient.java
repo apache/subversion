@@ -261,12 +261,15 @@ public interface ISVNClient
      * @param changelists changelists to filter by
      * @param clearChangelists If set, will clear changelist association
      *                         from the reverted paths.
+     * @param metadataOnly Revert just the metadata (including conflict data)
+     *                     and not the working files/dirs
      * @throws ClientException
      * @since 1.9
      */
     void revert(Set<String> paths, Depth depth,
                 Collection<String> changelists,
-                boolean clearChangelists)
+                boolean clearChangelists,
+                boolean metadataOnly)
             throws ClientException;
 
     /**
@@ -1323,12 +1326,28 @@ public interface ISVNClient
      *                      information
      * @param callback      callback to receive the file content and the other
      *                      information
+     * @param options       additional options for controlling the output
      * @throws ClientException
+     * @since 1.9
      */
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,
-               BlameCallback callback) throws ClientException;
+               BlameCallback callback, DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * <p>
+     * Behaves like the 1.9 version with <code>options</code> set to
+     * their default values.
+     */
+    void blame(String path, Revision pegRevision, Revision revisionStart,
+               Revision revisionEnd, boolean ignoreMimeType,
+               boolean includeMergedRevisions,
+               BlameCallback callback)
+            throws ClientException;
 
     /**
      * Set directory for the configuration information, taking the

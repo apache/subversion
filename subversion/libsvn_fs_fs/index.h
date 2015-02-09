@@ -113,7 +113,7 @@ svn_fs_fs__p2l_proto_index_open(apr_file_t **proto_index,
  */
 svn_error_t *
 svn_fs_fs__p2l_proto_index_add_entry(apr_file_t *proto_index,
-                                     svn_fs_fs__p2l_entry_t *entry,
+                                     const svn_fs_fs__p2l_entry_t *entry,
                                      apr_pool_t *scratch_pool);
 
 /* Set *NEXT_OFFSET to the first offset behind the last entry in the

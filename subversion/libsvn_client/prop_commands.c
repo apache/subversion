@@ -206,6 +206,7 @@ propset_on_url(const char *propname,
 
       item = svn_client_commit_item3_create(pool);
       item->url = target;
+      item->kind = node_kind;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
@@ -528,9 +529,10 @@ svn_client_revprop_set2(const char *propname,
 
 /* Helper for the remote case of svn_client_propget.
  *
- * If PROPS is not null, then get the value of property PROPNAME in REVNUM,
-   using RA_LIB and SESSION.  Store the value ('svn_string_t *') in PROPS,
-   under the path key "TARGET_PREFIX/TARGET_RELATIVE" ('const char *').
+ * If PROPS is not null, then get the value of property PROPNAME in
+ * REVNUM, using RA_SESSION.  Store the value ('svn_string_t *') in
+ * PROPS, under the path key "TARGET_PREFIX/TARGET_RELATIVE"
+ * ('const char *').
  *
  * If INHERITED_PROPS is not null, then set *INHERITED_PROPS to a
  * depth-first ordered array of svn_prop_inherited_item_t * structures

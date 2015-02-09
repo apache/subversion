@@ -792,7 +792,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       else if (strcmp(opt->code, "df") == 0)
         {
           /* Re-check preconditions. */
-          if (! diff_allowed || desc->my_abspath)
+          if (! diff_allowed || ! desc->my_abspath)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                              _("Invalid option; there's no "

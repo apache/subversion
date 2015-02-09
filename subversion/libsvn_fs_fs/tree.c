@@ -373,10 +373,8 @@ locate_cache(svn_cache__t **cache,
     }
 }
 
-/* Return NODE for PATH from ROOT's node cache, or NULL if the node
-   isn't cached; read it from the FS. *NODE remains valid until either
-   POOL or the FS gets cleared or destroyed (whichever comes first).
- */
+/* In *NODE_P, return the DAG node for PATH from ROOT's node cache, or NULL
+   if the node isn't cached.  *NODE_P is allocated in POOL. */
 static svn_error_t *
 dag_node_cache_get(dag_node_t **node_p,
                    svn_fs_root_t *root,
@@ -402,19 +400,22 @@ dag_node_cache_get(dag_node_t **node_p,
       if (bucket->node == NULL)
         {
           locate_cache(&cache, &key, root, path, pool);
-          SVN_ERR(svn_cache__get((void **)&node, &found, cache, key,
-                                 ffd->dag_node_cache->pool));
+          SVN_ERR(svn_cache__get((void **)&node, &found, cache, key, pool));
           if (found && node)
             {
               /* Patch up the FS, since this might have come from an old FS
-              * object. */
+               * object. */
               svn_fs_fs__dag_set_fs(node, root->fs);
-              bucket->node = node;
+
+              /* Retain the DAG node in L1 cache. */
+              bucket->node = svn_fs_fs__dag_dup(node,
+                                                ffd->dag_node_cache->pool);
             }
         }
       else
         {
-          node = bucket->node;
+          /* Copy the node from L1 cache into the passed-in POOL. */
+          node = svn_fs_fs__dag_dup(bucket->node, pool);
         }
     }
   else
@@ -427,7 +428,7 @@ dag_node_cache_get(dag_node_t **node_p,
       if (found && node)
         {
           /* Patch up the FS, since this might have come from an old FS
-          * object. */
+           * object. */
           svn_fs_fs__dag_set_fs(node, root->fs);
         }
     }
@@ -450,11 +451,7 @@ dag_node_cache_set(svn_fs_root_t *root,
 
   SVN_ERR_ASSERT(*path == '/');
 
-  /* Do *not* attempt to dup and put the node into L1.
-   * dup() is twice as expensive as an L2 lookup (which will set also L1).
-   */
   locate_cache(&cache, &key, root, path, pool);
-
   return svn_cache__set(cache, key, node, pool);
 }
 
@@ -798,8 +795,7 @@ make_parent_path(dag_node_t *node,
                  apr_pool_t *pool)
 {
   parent_path_t *parent_path = apr_pcalloc(pool, sizeof(*parent_path));
-  if (node)
-    parent_path->node = svn_fs_fs__dag_copy_into_pool(node, pool);
+  parent_path->node = node;
   parent_path->entry = entry;
   parent_path->parent = parent;
   parent_path->copy_inherit = copy_id_inherit_unknown;
@@ -1020,12 +1016,15 @@ open_path(parent_path_t **parent_path_p,
       path_so_far->len += strlen(entry) + 1;
       path_so_far->data[path_so_far->len] = '\0';
 
-      /* Given the behavior of svn_fs__next_entry_name(), ENTRY may be an
-         empty string when the path either starts or ends with a slash.
-         In either case, we stay put: the current directory stays the
-         same, and we add nothing to the parent path.  We only need to
-         process non-empty path segments. */
-      if (*entry != '\0')
+      if (*entry == '\0')
+        {
+          /* Given the behavior of svn_fs__next_entry_name(), this
+             happens when the path either starts or ends with a slash.
+             In either case, we stay put: the current directory stays
+             the same, and we add nothing to the parent path. */
+          child = here;
+        }
+      else
         {
           copy_id_inherit_t inherit;
           const char *copy_path = NULL;
@@ -1074,7 +1073,7 @@ open_path(parent_path_t **parent_path_p,
           if (flags & open_path_node_only)
             {
               /* Shortcut: the caller only wants the final DAG node. */
-              parent_path->node = svn_fs_fs__dag_copy_into_pool(child, pool);
+              parent_path->node = child;
             }
           else
             {
@@ -1105,10 +1104,7 @@ open_path(parent_path_t **parent_path_p,
                   apr_psprintf(iterpool, _("Failure opening '%s'"), path));
 
       rest = next;
-
-      /* The NODE in PARENT_PATH equals CHILD but lives in POOL, i.e.
-       * it will survive the cleanup of ITERPOOL.*/
-      here = parent_path->node;
+      here = child;
     }
 
   svn_pool_destroy(iterpool);
@@ -1217,8 +1213,7 @@ make_path_mutable(svn_fs_root_t *root,
 
 /* Open the node identified by PATH in ROOT.  Set DAG_NODE_P to the
    node we find, allocated in POOL.  Return the error
-   SVN_ERR_FS_NOT_FOUND if this node doesn't exist.
- */
+   SVN_ERR_FS_NOT_FOUND if this node doesn't exist. */
 static svn_error_t *
 get_dag(dag_node_t **dag_node_p,
         svn_fs_root_t *root,
@@ -1256,7 +1251,7 @@ get_dag(dag_node_t **dag_node_p,
         }
     }
 
-  *dag_node_p = svn_fs_fs__dag_copy_into_pool(node, pool);
+  *dag_node_p = node;
   return SVN_NO_ERROR;
 }
 
@@ -1374,7 +1369,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   rev_item_a = *svn_fs_fs__id_rev_item(id);
   node_id_a = *svn_fs_fs__id_node_id(id);
 
-  SVN_ERR(get_dag(&node, root_b, path_b,  pool));
+  SVN_ERR(get_dag(&node, root_b, path_b, pool));
   id = svn_fs_fs__dag_get_id(node);
   rev_item_b = *svn_fs_fs__id_rev_item(id);
   node_id_b = *svn_fs_fs__id_node_id(id);
@@ -1476,7 +1471,7 @@ fs_node_prop(svn_string_t **value_p,
   dag_node_t *node;
   apr_hash_t *proplist;
 
-  SVN_ERR(get_dag(&node, root, path,  pool));
+  SVN_ERR(get_dag(&node, root, path, pool));
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, node, pool));
   *value_p = NULL;
   if (proplist)

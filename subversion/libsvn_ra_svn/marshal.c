@@ -1433,7 +1433,7 @@ svn_ra_svn__parse_proplist(const apr_array_header_t *list,
                            apr_pool_t *pool,
                            apr_hash_t **props)
 {
-  char *name;
+  svn_string_t *name;
   svn_string_t *value;
   svn_ra_svn_item_t *elt;
   int i;
@@ -1445,9 +1445,9 @@ svn_ra_svn__parse_proplist(const apr_array_header_t *list,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "cs",
+      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "ss",
                                       &name, &value));
-      svn_hash_sets(*props, name, value);
+      apr_hash_set(*props, name->data, name->len, value);
     }
 
   return SVN_NO_ERROR;

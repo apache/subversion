@@ -79,7 +79,7 @@ def import_executable(sbox):
   # import new files into repository
   url = sbox.repo_url
   exit_code, output, errput =   svntest.actions.run_and_verify_svn(
-    None, None, [], 'import',
+    None, [], 'import',
     '-m', 'Log message for new import', xt_path, url)
 
   lastline = output.pop().strip()
@@ -158,7 +158,7 @@ def import_ignores(sbox):
   url = sbox.repo_url + '/dir'
 
   exit_code, output, errput = svntest.actions.run_and_verify_svn(
-    None, None, [], 'import',
+    None, [], 'import',
     '-m', 'Log message for new import',
     dir_path, url)
 
@@ -225,7 +225,7 @@ def import_no_ignores(sbox):
   url = sbox.repo_url + '/dir'
 
   exit_code, output, errput = svntest.actions.run_and_verify_svn(
-    None, None, [], 'import',
+    None, [], 'import',
     '-m', 'Log message for new import', '--no-ignore',
     dir_path, url)
 
@@ -286,15 +286,14 @@ def import_avoid_empty_revision(sbox):
   os.makedirs(empty_dir)
 
   url = sbox.repo_url
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+  svntest.actions.run_and_verify_svn(None, [], 'import',
                                      '-m', 'Log message for new import',
                                      empty_dir, url)
 
   svntest.main.safe_rmtree(empty_dir)
 
   # Verify that an empty revision has not been created
-  svntest.actions.run_and_verify_svn(None,
-                                     exp_noop_up_out(1),
+  svntest.actions.run_and_verify_svn(exp_noop_up_out(1),
                                      [], "update",
                                      empty_dir)
 #----------------------------------------------------------------------
@@ -333,7 +332,7 @@ enable-auto-props = yes
   os.mkdir(imp_dir_path, 0755)
   svntest.main.file_write(imp_file_path, "This is file test.dsp.\n")
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+  svntest.actions.run_and_verify_svn(None, [], 'import',
                                      '-m', 'Log message for new import',
                                      imp_dir_path,
                                      sbox.repo_url,
@@ -371,7 +370,7 @@ enable-auto-props = yes
   "+Extra line" + crlf
   ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff',
                                      file_path,
                                      '--config-dir', config_dir)
@@ -389,7 +388,7 @@ enable-auto-props = yes
                                   "The third line.\r")
 
   # The import should succeed and not error out
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+  svntest.actions.run_and_verify_svn(None, [], 'import',
                                      '-m', 'Log message for new import',
                                      imp_dir_path,
                                      sbox.repo_url,
@@ -407,7 +406,7 @@ def import_into_foreign_repo(sbox):
   svntest.main.safe_rmtree(other_repo_dir, 1)
   svntest.main.create_repos(other_repo_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+  svntest.actions.run_and_verify_svn(None, [], 'import',
                                      '-m', 'Log message for new import',
                                      sbox.ospath('A/mu'), other_repo_url + '/f')
 
@@ -478,7 +477,7 @@ def import_inherited_ignores(sbox):
   # global-ignores config. Lastly, ^/A/B/E should not get any *.foo paths
   # because of the svn:ignore property on ^/A/B/E, but non-immediate children
   # of ^/A/B/E are permitted *.foo paths.
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+  svntest.actions.run_and_verify_svn(None, [], 'import',
                                      '--config-dir', config_dir,
                                      import_tree_dir,
                                      sbox.repo_url + '/A/B/E',
@@ -493,13 +492,13 @@ def import_inherited_ignores(sbox):
      'A    ' + os.path.join(E_path, dir7_path)  + '\n',
      'A    ' + os.path.join(E_path, file7_path) + '\n',
      'Updated to revision 3.\n'])
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(expected_output, [], 'up', wc_dir)
 
   # Import the tree to ^/A/B/E/Z.  The only difference from above is that
   # DIR3.foo and its child file2.txt are also imported.  Why? Because now
   # we are creating a new directory in ^/A/B/E, so the svn:ignore property
   # set on ^/A/B/E doesn't apply.
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+  svntest.actions.run_and_verify_svn(None, [], 'import',
                                      '--config-dir', config_dir,
                                      import_tree_dir,
                                      sbox.repo_url + '/A/B/E/Z',
@@ -517,12 +516,12 @@ def import_inherited_ignores(sbox):
      'A    ' + os.path.join(Z_path, dir3_path)  + '\n',
      'A    ' + os.path.join(Z_path, file2_path) + '\n',
      'Updated to revision 4.\n'])
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(expected_output, [], 'up', wc_dir)
 
   # Import the tree to ^/A/B/F with the --no-ignore option.
   # No ignores should be considered and the whole tree should
   # be imported.
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
+  svntest.actions.run_and_verify_svn(None, [], 'import',
                                      '--config-dir', config_dir,
                                      '--no-ignore', import_tree_dir,
                                      sbox.repo_url + '/A/B/F',
@@ -546,12 +545,12 @@ def import_inherited_ignores(sbox):
      'A    ' + os.path.join(F_path, file7_path) + '\n',
      'A    ' + os.path.join(F_path, dir8_path)  + '\n',
      'Updated to revision 5.\n'])
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(expected_output, [], 'up', wc_dir)
 
   # Try importing a single file into a directory which has svn:ignore set
   # on it with a matching pattern of the imported file.  The import should
   # be a no-op.
-  svntest.actions.run_and_verify_svn(None, [], [], 'import',
+  svntest.actions.run_and_verify_svn([], [], 'import',
                                      '--config-dir', config_dir,
                                      os.path.join(import_tree_dir,
                                                   'DIR6', 'file6.foo'),
@@ -560,7 +559,7 @@ def import_inherited_ignores(sbox):
 
   # Try the above, but this time with --no-ignore, this time the import
   # should succeed.
-  svntest.actions.run_and_verify_svn(None, None, [], 'import', '--no-ignore',
+  svntest.actions.run_and_verify_svn(None, [], 'import', '--no-ignore',
                                      '--config-dir', config_dir,
                                      os.path.join(import_tree_dir,
                                                   'DIR6', 'file6.foo'),
@@ -570,7 +569,7 @@ def import_inherited_ignores(sbox):
     ["Updating '" + wc_dir + "':\n",
      'A    ' + os.path.join(E_path, 'file6.foo') + '\n',
      'Updated to revision 6.\n'])
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(expected_output, [], 'up', wc_dir)
 
 #----------------------------------------------------------------------
 

@@ -232,8 +232,9 @@ class SVNTests extends TestCase
         greekDump = new File(localTmp, "greek_dump");
         admin.create(greekRepos.getAbsolutePath(), true,false, null,
                      this.fsType);
-        addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
-                              NodeKind.none, CommitItemStateFlags.Add);
+        addExpectedCommitItem(greekFiles.getAbsolutePath(),
+                              makeReposUrl(greekRepos).toString(), null,
+                              NodeKind.dir, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(), makeReposUrl(greekRepos),
                         null, true );
         admin.dump(greekRepos.getAbsolutePath(), new FileOutputer(greekDump),
