@@ -2831,6 +2831,13 @@ conflict_status_walker(void *baton,
 
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
+      if ((cd->kind == svn_wc_conflict_kind_property && !cswb->resolve_prop)
+          || (cd->kind == svn_wc_conflict_kind_text && !cswb->resolve_text)
+          || (cd->kind == svn_wc_conflict_kind_tree && !cswb->resolve_tree))
+        {
+          continue; /* Easy out. Don't call resolver func and ignore result */
+        }
+
       svn_pool_clear(iterpool);
 
       if (my_choice == svn_wc_conflict_choose_unspecified)
