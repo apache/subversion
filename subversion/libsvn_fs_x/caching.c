@@ -24,7 +24,7 @@
 #include "fs_x.h"
 #include "id.h"
 #include "dag.h"
-#include "tree.h"
+#include "dag_cache.h"
 #include "index.h"
 #include "changes.h"
 #include "noderevs.h"
