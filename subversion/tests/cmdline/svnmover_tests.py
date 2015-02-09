@@ -38,14 +38,14 @@ _log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
 _err_re = re.compile('^svnmover: (.*)$')
 
 def sbox_build_svnmover(sbox):
-  """Create a sandbox (without a WC), similar to 'sbox.build(create_wc=False)'
-     but currently without the Greek tree.
+  """Create a sandbox repo containing one revision, with a directory 'A' and
+     a file 'iota'.
 
      Use svnmover for every commit so as to get the branching/moving
      metadata. This will no longer be necessary if we make 'svnmover'
      fill in missing metadata automatically.
   """
-  svntest.main.create_repos(sbox.repo_dir)
+  sbox.build(create_wc=False, empty=True)
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   # commit something in place of a greek tree for revision 1
