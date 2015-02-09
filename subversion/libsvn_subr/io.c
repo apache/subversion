@@ -352,6 +352,25 @@ file_open(apr_file_t **f,
 
   if (retry_on_failure)
     {
+#ifdef WIN32
+      if (status == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED))
+        {
+          if ((flag & (APR_CREATE | APR_EXCL)) == (APR_CREATE | APR_EXCL))
+            return status; /* Can't create if there is something */
+
+          if (flag & (APR_WRITE | APR_CREATE))
+            {
+              apr_finfo_t finfo;
+
+              if (!apr_stat(&finfo, fname_apr, SVN__APR_FINFO_READONLY, pool))
+                {
+                  if (finfo.protection & APR_FREADONLY)
+                    return status; /* Retrying won't fix this */
+                }
+            }
+        }
+#endif
+
       WIN32_RETRY_LOOP(status, apr_file_open(f, fname_apr, flag, perm, pool));
     }
   return status;
@@ -1590,7 +1609,8 @@ io_set_file_perms(const char *path,
   status = apr_stat(&finfo, path_apr, APR_FINFO_PROT | APR_FINFO_LINK, pool);
   if (status)
     {
-      if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
+      if (ignore_enoent && (APR_STATUS_IS_ENOENT(status)
+                            || SVN__APR_STATUS_IS_ENOTDIR(status)))
         return SVN_NO_ERROR;
       else if (status != APR_ENOTIMPL)
         return svn_error_wrap_apr(status,
@@ -1951,7 +1971,8 @@ svn_io_set_file_read_only(const char *path,
                               pool);
 
   if (status && status != APR_ENOTIMPL)
-    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
+    if (!(ignore_enoent && (APR_STATUS_IS_ENOENT(status)
+                            || SVN__APR_STATUS_IS_ENOTDIR(status))))
       return svn_error_wrap_apr(status,
                                 _("Can't set file '%s' read-only"),
                                 svn_dirent_local_style(path, pool));
@@ -2454,11 +2475,6 @@ svn_io_remove_file2(const char *path,
   SVN_ERR(cstring_from_utf8(&path_apr, path, scratch_pool));
 
   apr_err = apr_file_remove(path_apr, scratch_pool);
-  if (!apr_err
-      || (ignore_enoent
-          && (APR_STATUS_IS_ENOENT(apr_err)
-              || SVN__APR_STATUS_IS_ENOTDIR(apr_err))))
-    return SVN_NO_ERROR;
 
 #ifdef WIN32
   /* If the target is read only NTFS reports EACCESS and FAT/FAT32
@@ -2474,30 +2490,36 @@ svn_io_remove_file2(const char *path,
         return SVN_NO_ERROR;
     }
 
+  /* Check to make sure we aren't trying to delete a directory */
+  if (apr_err == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED)
+      || apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
     {
-      apr_status_t os_err = APR_TO_OS_ERROR(apr_err);
-      /* Check to make sure we aren't trying to delete a directory */
-      if (os_err == ERROR_ACCESS_DENIED || os_err == ERROR_SHARING_VIOLATION)
+      apr_finfo_t finfo;
+
+      if (!apr_stat(&finfo, path_apr, APR_FINFO_TYPE, scratch_pool)
+          && finfo.filetype == APR_REG)
         {
-          apr_finfo_t finfo;
-
-          if (!apr_stat(&finfo, path_apr, APR_FINFO_TYPE, scratch_pool)
-              && finfo.filetype == APR_REG)
-            {
-              WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr,
-                                                        scratch_pool));
-            }
+          WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr, scratch_pool));
         }
-
-      /* Just return the delete error */
     }
+
+  /* Just return the delete error */
 #endif
 
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
-                              svn_dirent_local_style(path, scratch_pool));
-
-  return SVN_NO_ERROR;
+  if (!apr_err)
+    {
+      return SVN_NO_ERROR;
+    }
+  else if (ignore_enoent && (APR_STATUS_IS_ENOENT(apr_err)
+                             || SVN__APR_STATUS_IS_ENOTDIR(apr_err)))
+    {
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
+                                svn_dirent_local_style(path, scratch_pool));
+    }
 }
 
 
@@ -2552,7 +2574,8 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   if (err)
     {
       /* if the directory doesn't exist, our mission is accomplished */
-      if (ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
+      if (ignore_enoent && (APR_STATUS_IS_ENOENT(err->apr_err)
+                            || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
         {
           svn_error_clear(err);
           return SVN_NO_ERROR;

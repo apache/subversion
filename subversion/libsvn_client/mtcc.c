@@ -463,8 +463,8 @@ mtcc_verify_create(svn_client__mtcc_t *mtcc,
         return SVN_NO_ERROR; /* Node is explicitly deleted. We can replace */
     }
 
-  /* mod_dav_svn allows overwriting existing directories. Let's hide that
-     for users of this api */
+  /* mod_dav_svn used to allow overwriting existing directories. Let's hide
+     that for users of this api */
   SVN_ERR(svn_client__mtcc_check_path(&kind, new_relpath, FALSE,
                                       mtcc, scratch_pool));
 
@@ -710,8 +710,7 @@ mtcc_prop_getter(const svn_string_t **mime_type,
 
               if (! strcmp(mod->name, SVN_PROP_MIME_TYPE))
                 {
-                  *mime_type = mod->value ? svn_string_dup(mod->value, pool)
-                                          : NULL;
+                  *mime_type = svn_string_dup(mod->value, pool);
                   mime_type = NULL;
                 }
             }

@@ -205,6 +205,42 @@ def redirected_externals(sbox):
   verify_url(sbox.ospath('A/C/dirX'), sbox.repo_url + '/A/B/F')
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+def redirected_copy(sbox):
+  "redirected copy"
+
+  sbox.build(create_wc=False)
+
+  # E170011 = SVN_ERR_RA_SESSION_URL_MISMATCH
+  expected_error = "svn: E170011: Repository moved permanently"
+
+  # This tests the actual copy handling
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url() + '/A',
+                                     sbox.redirected_root_url() + '/A_copied')
+
+  # This tests the cmdline handling of '^/copy-of-A'
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url() + '/A',
+                                     '^/copy-of-A')
+
+  # E170011 = SVN_ERR_RA_SESSION_URL_MISMATCH
+  expected_error = "svn: E170011: Repository moved temporarily"
+
+  # This tests the actual copy handling
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url(temporary=True) + '/A',
+                                     sbox.redirected_root_url(temporary=True) + '/A_copied')
+
+  # This tests the cmdline handling of '^/copy-of-A'
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url(temporary=True) + '/A',
+                                     '^/copy-of-A')
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -216,6 +252,7 @@ test_list = [ None,
               redirected_update,
               redirected_nonroot_update,
               redirected_externals,
+              redirected_copy,
              ]
 
 if __name__ == '__main__':

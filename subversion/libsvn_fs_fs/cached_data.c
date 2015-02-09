@@ -2460,7 +2460,7 @@ get_dir_contents(apr_array_header_t **entries,
          changes we've made in this transaction. */
       SVN_ERR(svn_stream_open_readonly(&contents, filename, scratch_pool,
                                        scratch_pool));
-      SVN_ERR(read_dir_entries(*entries, contents, TRUE,  noderev->id,
+      SVN_ERR(read_dir_entries(*entries, contents, TRUE, noderev->id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
@@ -2524,7 +2524,7 @@ locate_dir_cache(svn_fs_t *fs,
              A NULL key causes a cache miss. */
           *key = NULL;
         }
-      
+
       return ffd->dir_cache;
     }
 }

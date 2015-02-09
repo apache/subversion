@@ -339,7 +339,8 @@ void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
 
 void SVNClient::revert(StringArray &paths, svn_depth_t depth,
                        StringArray &changelists,
-                       bool clear_changelists)
+                       bool clear_changelists,
+                       bool metadata_only)
 {
     SVN::Pool subPool(pool);
 
@@ -352,6 +353,7 @@ void SVNClient::revert(StringArray &paths, svn_depth_t depth,
     SVN_JNI_ERR(svn_client_revert3(targets.array(subPool), depth,
                                    changelists.array(subPool),
                                    clear_changelists,
+                                   metadata_only,
                                    ctx, subPool.getPool()), );
 }
 
@@ -1184,7 +1186,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
 void SVNClient::blame(const char *path, Revision &pegRevision,
                       Revision &revisionStart, Revision &revisionEnd,
                       bool ignoreMimeType, bool includeMergedRevisions,
-                      BlameCallback *callback)
+                      BlameCallback *callback, DiffOptions const& options)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1198,7 +1200,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     SVN_JNI_ERR(svn_client_blame5(
           intPath.c_str(), pegRevision.revision(), revisionStart.revision(),
           revisionEnd.revision(),
-          svn_diff_file_options_create(subPool.getPool()), ignoreMimeType,
+          options.fileOptions(subPool), ignoreMimeType,
           includeMergedRevisions, BlameCallback::callback, callback, ctx,
           subPool.getPool()),
         );

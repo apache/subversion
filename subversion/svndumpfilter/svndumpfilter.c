@@ -278,7 +278,7 @@ struct node_baton_t
   svn_filesize_t tcl;
 
   /* Pointers to dumpfile data. */
-  svn_stringbuf_t *header;
+  apr_array_header_t *headers;
   svn_stringbuf_t *props;
 
   /* Expect deltas? */
@@ -287,6 +287,8 @@ struct node_baton_t
 
   /* We might need the node path in a parse error message. */
   char *node_path;
+
+  apr_pool_t *node_pool;
 };
 
 
@@ -499,6 +501,7 @@ new_node_record(void **node_baton,
   *node_baton = apr_palloc(pool, sizeof(struct node_baton_t));
   nb          = *node_baton;
   nb->rb      = rev_baton;
+  nb->node_pool = pool;
   pb          = nb->rb->pb;
 
   node_path = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_PATH);
@@ -570,7 +573,7 @@ new_node_record(void **node_baton,
       nb->has_text_delta = FALSE;
       nb->writing_begun = FALSE;
       nb->tcl = tcl ? svn__atoui64(tcl) : 0;
-      nb->header = svn_stringbuf_create_empty(pool);
+      nb->headers = svn_repos__dumpfile_headers_create(pool);
       nb->props = svn_stringbuf_create_empty(pool);
       nb->node_path = apr_pstrdup(pool, node_path);
 
@@ -582,23 +585,20 @@ new_node_record(void **node_baton,
 
       /* A node record is required to begin with 'Node-path', skip the
          leading '/' to match the form used by 'svnadmin dump'. */
-      SVN_ERR(svn_stream_printf(nb->rb->pb->out_stream,
-                                pool, "%s: %s\n",
-                                SVN_REPOS_DUMPFILE_NODE_PATH, node_path + 1));
+      svn_repos__dumpfile_header_push(
+        nb->headers, SVN_REPOS_DUMPFILE_NODE_PATH, node_path + 1);
 
       /* Node-kind is next and is optional. */
       kind = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_KIND);
       if (kind)
-        SVN_ERR(svn_stream_printf(nb->rb->pb->out_stream,
-                                  pool, "%s: %s\n",
-                                  SVN_REPOS_DUMPFILE_NODE_KIND, kind));
+        svn_repos__dumpfile_header_push(
+          nb->headers, SVN_REPOS_DUMPFILE_NODE_KIND, kind);
 
       /* Node-action is next and required. */
       action = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_ACTION);
       if (action)
-        SVN_ERR(svn_stream_printf(nb->rb->pb->out_stream,
-                                  pool, "%s: %s\n",
-                                  SVN_REPOS_DUMPFILE_NODE_ACTION, action));
+        svn_repos__dumpfile_header_push(
+          nb->headers, SVN_REPOS_DUMPFILE_NODE_ACTION, action);
       else
         return svn_error_createf(SVN_ERR_INCOMPLETE_DATA, 0,
                                  _("Missing Node-action for path '%s'"),
@@ -645,79 +645,16 @@ new_node_record(void **node_baton,
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                    _("No valid copyfrom revision in filtered stream"));
-              SVN_ERR(svn_stream_printf
-                      (nb->rb->pb->out_stream, pool,
-                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV ": %ld\n",
-                       cf_renum_val->rev));
+              svn_repos__dumpfile_header_pushf(
+                nb->headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
+                "%ld", cf_renum_val->rev);
               continue;
             }
 
           /* passthru: put header straight to output */
-
-          SVN_ERR(svn_stream_printf(nb->rb->pb->out_stream,
-                                    pool, "%s: %s\n",
-                                    key, val));
+          svn_repos__dumpfile_header_push(nb->headers, key, val);
         }
     }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Output node header and props to dumpstream
-   This will be called by set_fulltext() after setting nb->has_text to TRUE,
-   if the node has any text, or by close_node() otherwise. This must only
-   be called if nb->writing_begun is FALSE. */
-static svn_error_t *
-output_node(struct node_baton_t *nb)
-{
-  int bytes_used;
-  char buf[SVN_KEYLINE_MAXLEN];
-
-  nb->writing_begun = TRUE;
-
-  /* when there are no props nb->props->len would be zero and won't mess up
-     Content-Length. */
-  if (nb->has_props)
-    svn_stringbuf_appendcstr(nb->props, "PROPS-END\n");
-
-  /* 1. recalculate & check text-md5 if present. Passed through right now. */
-
-  /* 2. recalculate and add content-lengths */
-
-  if (nb->has_props)
-    {
-      svn_stringbuf_appendcstr(nb->header,
-                               SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT,
-                                nb->props->len);
-      svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
-      svn_stringbuf_appendbyte(nb->header, '\n');
-    }
-  if (nb->has_text)
-    {
-      svn_stringbuf_appendcstr(nb->header,
-                               SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH);
-      bytes_used = apr_snprintf(buf, sizeof(buf), ": %" SVN_FILESIZE_T_FMT,
-                                nb->tcl);
-      svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
-      svn_stringbuf_appendbyte(nb->header, '\n');
-    }
-  svn_stringbuf_appendcstr(nb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  bytes_used = apr_snprintf(buf, sizeof(buf), ": %" SVN_FILESIZE_T_FMT,
-                            (svn_filesize_t) (nb->props->len + nb->tcl));
-  svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
-  svn_stringbuf_appendbyte(nb->header, '\n');
-
-  /* put an end to headers */
-  svn_stringbuf_appendbyte(nb->header, '\n');
-
-  /* 3. output all the stuff */
-
-  SVN_ERR(svn_stream_write(nb->rb->pb->out_stream,
-                           nb->header->data , &(nb->header->len)));
-  SVN_ERR(svn_stream_write(nb->rb->pb->out_stream,
-                           nb->props->data , &(nb->props->len)));
 
   return SVN_NO_ERROR;
 }
@@ -921,7 +858,20 @@ set_fulltext(svn_stream_t **stream, void *node_baton)
     {
       nb->has_text = TRUE;
       if (! nb->writing_begun)
-        SVN_ERR(output_node(nb));
+        {
+          nb->writing_begun = TRUE;
+          if (nb->has_props)
+            {
+              svn_stringbuf_appendcstr(nb->props, "PROPS-END\n");
+            }
+          SVN_ERR(svn_repos__dump_node_record(nb->rb->pb->out_stream,
+                                              nb->headers,
+                                              nb->has_props ? nb->props : NULL,
+                                              nb->has_text,
+                                              nb->tcl,
+                                              TRUE /*content_length_always*/,
+                                              nb->node_pool));
+        }
       *stream = nb->rb->pb->out_stream;
     }
 
@@ -942,7 +892,20 @@ close_node(void *node_baton)
 
   /* If the node was not flushed already to output its text, do it now. */
   if (! nb->writing_begun)
-    SVN_ERR(output_node(nb));
+    {
+      nb->writing_begun = TRUE;
+      if (nb->has_props)
+        {
+          svn_stringbuf_appendcstr(nb->props, "PROPS-END\n");
+        }
+      SVN_ERR(svn_repos__dump_node_record(nb->rb->pb->out_stream,
+                                          nb->headers,
+                                          nb->has_props ? nb->props : NULL,
+                                          nb->has_text,
+                                          nb->tcl,
+                                          TRUE /*content_length_always*/,
+                                          nb->node_pool));
+    }
 
   /* put an end to node. */
   SVN_ERR(svn_stream_write(nb->rb->pb->out_stream, "\n\n", &len));

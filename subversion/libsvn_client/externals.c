@@ -146,6 +146,7 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 switch_dir_external(const char *local_abspath,
                     const char *url,
+                    const char *url_from_externals_definition,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     const char *defining_abspath,
@@ -197,7 +198,16 @@ switch_dir_external(const char *local_abspath,
       SVN_ERR(svn_wc__get_wcroot(&defining_wcroot_abspath, ctx->wc_ctx,
                                  defining_abspath, pool, pool));
       if (strcmp(wcroot_abspath, defining_wcroot_abspath) == 0)
-        return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                 _("The external '%s' defined in %s at '%s' "
+                                   "cannot be checked out because '%s' is "
+                                   "already a versioned path."),
+                                   url_from_externals_definition,
+                                   SVN_PROP_EXTERNALS,
+                                   svn_dirent_local_style(defining_abspath,
+                                                          pool),
+                                   svn_dirent_local_style(local_abspath,
+                                                          pool));
     }
 
   /* If path is a directory, try to update/switch to the correct URL
@@ -792,6 +802,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
     {
       case svn_node_dir:
         SVN_ERR(switch_dir_external(local_abspath, new_loc->url,
+                                    new_item->url,
                                     &(new_item->peg_revision),
                                     &(new_item->revision),
                                     parent_dir_abspath,
@@ -1185,6 +1196,17 @@ svn_client__export_externals(apr_hash_t *externals,
           SVN_ERR(svn_io_make_dir_recursively(svn_dirent_dirname(item_abspath,
                                                                  sub_iterpool),
                                               sub_iterpool));
+
+          /* First notify that we're about to handle an external. */
+          if (ctx->notify_func2)
+            {
+              ctx->notify_func2(
+                       ctx->notify_baton2,
+                       svn_wc_create_notify(item_abspath,
+                                            svn_wc_notify_update_external,
+                                            sub_iterpool),
+                       sub_iterpool);
+            }
 
           SVN_ERR(wrap_external_error(
                           ctx, item_abspath,

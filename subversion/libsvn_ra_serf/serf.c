@@ -776,6 +776,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
                                new_sess);
 
   new_sess->num_conns = 1;
+  new_sess->cur_conn = 0;
 
   new_session->priv = new_sess;
 
@@ -801,7 +802,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
   if (!session->repos_root_str)
     {
       const char *vcc_url;
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
     }
 
   if (!svn_uri__is_ancestor(session->repos_root_str, url))
@@ -871,6 +872,7 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
   const char *propfind_path;
+  svn_ra_serf__handler_t *handler;
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
@@ -886,17 +888,23 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
   else
     {
       /* Use the VCC as the propfind target path. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session, NULL,
+      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session,
                                         scratch_pool));
     }
 
-  /* ### fix: fetch hash of *just* the PATH@REV props. no nested hash.  */
-  SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
-                                      propfind_path, rev, "0", fetch_props,
-                                      result_pool, scratch_pool));
+  props = apr_hash_make(result_pool);
+  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session,
+                                               propfind_path, rev, "0",
+                                               fetch_props,
+                                               svn_ra_serf__deliver_svn_props,
+                                               props,
+                                               scratch_pool));
 
-  SVN_ERR(svn_ra_serf__select_revprops(ret_props, propfind_path, rev, props,
-                                       result_pool, scratch_pool));
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+
+  svn_ra_serf__keep_only_regular_props(props, scratch_pool);
+
+  *ret_props = props;
 
   return SVN_NO_ERROR;
 }
@@ -967,7 +975,7 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
   if (!session->repos_root_str)
     {
       const char *vcc_url;
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
     }
 
   *url = session->repos_root_str;
@@ -1003,7 +1011,7 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
       /* We're not interested in vcc_url and relative_url, but this call also
          stores the repository's uuid in the session. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
       if (!session->uuid)
         {
           return svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,

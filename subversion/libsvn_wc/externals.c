@@ -602,7 +602,7 @@ change_file_prop(void *file_baton,
 
   propchange = apr_array_push(eb->propchanges);
   propchange->name = apr_pstrdup(eb->pool, name);
-  propchange->value = value ? svn_string_dup(value, eb->pool) : NULL;
+  propchange->value = svn_string_dup(value, eb->pool);
 
   return SVN_NO_ERROR;
 }

@@ -194,21 +194,22 @@ public class SVNClient implements ISVNClient
 
     public native void revert(Set<String> paths, Depth depth,
                               Collection<String> changelists,
-                              boolean clearChangelists)
+                              boolean clearChangelists,
+                              boolean metadataOnly)
             throws ClientException;
 
     public void revert(Set<String> paths, Depth depth,
                        Collection<String> changelists)
             throws ClientException
     {
-        revert(paths, depth, changelists, false);
+        revert(paths, depth, changelists, false, false);
     }
 
     public void revert(String path, Depth depth,
                        Collection<String> changelists)
             throws ClientException
     {
-        revert(Collections.singleton(path), depth, changelists, false);
+        revert(Collections.singleton(path), depth, changelists, false, false);
     }
 
     public native void add(String path, Depth depth, boolean force,
@@ -651,11 +652,23 @@ public class SVNClient implements ISVNClient
                                 boolean ignoreExternals)
             throws ClientException;
 
+    public void blame(String path, Revision pegRevision,
+                      Revision revisionStart,
+                      Revision revisionEnd, boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback callback)
+            throws ClientException
+    {
+        blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
+              includeMergedRevisions, callback, null);
+    }
+
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
                              boolean includeMergedRevisions,
-                             BlameCallback callback)
+                             BlameCallback callback,
+                             DiffOptions options)
             throws ClientException;
 
     public native void setConfigDirectory(String configDir)

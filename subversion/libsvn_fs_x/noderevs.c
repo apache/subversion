@@ -49,28 +49,6 @@
 /* the noderev has copy-root path and revision */
 #define NODEREV_HAS_CPATH    0x00040
 
-/* Our internal representation of an representation.
- */
-typedef struct binary_representation_t
-{
-  /* Checksums digests for the contents produced by this representation.
-     If has_sha1 is FALSE, sha1_digest is not being used. */
-  svn_boolean_t has_sha1;
-  unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
-  unsigned char md5_digest[APR_MD5_DIGESTSIZE];
-
-  /* Location of this representation. */
-  svn_fs_x__id_t id;
-
-  /* The size of the representation in bytes as seen in the revision
-     file. */
-  svn_filesize_t size;
-
-  /* The size of the fulltext of the representation. If this is 0,
-   * the fulltext size is equal to representation size in the rev file, */
-  svn_filesize_t expanded_size;
-} binary_representation_t;
-
 /* Our internal representation of a svn_fs_x__noderev_t.
  * 
  * We will store path strings in a string container and reference them
@@ -181,7 +159,7 @@ svn_fs_x__noderevs_create(int initial_count,
     = apr_array_make(result_pool, 2 * initial_count, sizeof(svn_fs_x__id_t));
   noderevs->reps
     = apr_array_make(result_pool, 2 * initial_count,
-                     sizeof(binary_representation_t));
+                     sizeof(svn_fs_x__representation_t));
   noderevs->noderevs
     = apr_array_make(result_pool, initial_count, sizeof(binary_noderev_t));
 
@@ -223,25 +201,17 @@ store_representation(apr_array_header_t *reps,
                      apr_hash_t *dict,
                      const svn_fs_x__representation_t *rep)
 {
-  binary_representation_t binary_rep = { 0 };
   int idx;
   void *idx_void;
 
   if (rep == NULL)
     return 0;
 
-  binary_rep.has_sha1 = rep->has_sha1;
-  memcpy(binary_rep.sha1_digest, rep->sha1_digest, sizeof(rep->sha1_digest));
-  memcpy(binary_rep.md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
-  binary_rep.id = rep->id;
-  binary_rep.size = rep->size;
-  binary_rep.expanded_size = rep->expanded_size;
-
-  idx_void = apr_hash_get(dict, &binary_rep, sizeof(binary_rep));
+  idx_void = apr_hash_get(dict, rep, sizeof(*rep));
   idx = (int)(apr_uintptr_t)idx_void;
   if (idx == 0)
     {
-      APR_ARRAY_PUSH(reps, binary_representation_t) = binary_rep;
+      APR_ARRAY_PUSH(reps, svn_fs_x__representation_t) = *rep;
       idx = reps->nelts;
       apr_hash_set(dict, reps->elts + (idx-1) * reps->elt_size,
                    reps->elt_size, (void*)(apr_uintptr_t)idx);
@@ -365,8 +335,6 @@ get_representation(svn_fs_x__representation_t **rep,
                    int idx,
                    apr_pool_t *pool)
 {
-  binary_representation_t *binary_rep;
-
   /* handle NULL representations  */
   if (idx == 0)
     {
@@ -382,17 +350,9 @@ get_representation(svn_fs_x__representation_t **rep,
                              idx, reps->nelts);
 
   /* no translation required. Just duplicate the info */
-  binary_rep = &APR_ARRAY_IDX(reps, idx - 1, binary_representation_t);
-
-  *rep = apr_pcalloc(pool, sizeof(**rep));
-  (*rep)->has_sha1 = binary_rep->has_sha1;
-  memcpy((*rep)->sha1_digest, binary_rep->sha1_digest,
-         sizeof((*rep)->sha1_digest));
-  memcpy((*rep)->md5_digest, binary_rep->md5_digest,
-         sizeof((*rep)->md5_digest));
-  (*rep)->id = binary_rep->id;
-  (*rep)->size = binary_rep->size;
-  (*rep)->expanded_size = binary_rep->expanded_size;
+  *rep = apr_pmemdup(pool,
+                     &APR_ARRAY_IDX(reps, idx - 1, svn_fs_x__representation_t),
+                     sizeof(**rep));
 
   return SVN_NO_ERROR;
 }
@@ -517,8 +477,8 @@ write_reps(svn_packed__int_stream_t *rep_stream,
   int i;
   for (i = 0; i < reps->nelts; ++i)
     {
-      binary_representation_t *rep
-        = &APR_ARRAY_IDX(reps, i, binary_representation_t);
+      svn_fs_x__representation_t *rep
+        = &APR_ARRAY_IDX(reps, i, svn_fs_x__representation_t);
 
       svn_packed__add_uint(rep_stream, rep->has_sha1);
 
@@ -635,11 +595,11 @@ read_reps(apr_array_header_t **reps_p,
   apr_size_t count
     = svn_packed__int_count(svn_packed__first_int_substream(rep_stream));
   apr_array_header_t *reps
-    = apr_array_make(pool, (int)count, sizeof(binary_representation_t));
+    = apr_array_make(pool, (int)count, sizeof(svn_fs_x__representation_t));
 
   for (i = 0; i < count; ++i)
     {
-      binary_representation_t rep;
+      svn_fs_x__representation_t rep;
 
       rep.has_sha1 = (svn_boolean_t)svn_packed__get_uint(rep_stream);
 
@@ -674,7 +634,7 @@ read_reps(apr_array_header_t **reps_p,
           memcpy(rep.sha1_digest, bytes, sizeof(rep.sha1_digest));
         }
 
-      APR_ARRAY_PUSH(reps, binary_representation_t) = rep;
+      APR_ARRAY_PUSH(reps, svn_fs_x__representation_t) = rep;
     }
 
   *reps_p = reps;

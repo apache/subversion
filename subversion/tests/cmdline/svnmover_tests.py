@@ -313,14 +313,14 @@ def nested_replaces(sbox):
 
   sbox_build_svnmover(sbox)
   repo_url = sbox.repo_url
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url, '-m', 'r2: create tree',
                            'rm', 'A',
                            'rm', 'iota',
                            'mkdir', 'A', 'mkdir', 'A/B', 'mkdir', 'A/B/C',
                            'mkdir', 'M', 'mkdir', 'M/N', 'mkdir', 'M/N/O',
                            'mkdir', 'X', 'mkdir', 'X/Y', 'mkdir', 'X/Y/Z')
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url, '-m', 'r3: nested replaces',
                            *("""
 rm A rm M rm X
@@ -346,7 +346,7 @@ rm A/B/C/Y
   ]) + [
     '^-', '^r3', '^-', '^Changed paths:',
   ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr3', repo_url)
 
 def merges(sbox):
@@ -356,7 +356,7 @@ def merges(sbox):
 
   # make a 'trunk' branch and a 'branches' directory
   # (r2)
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
                            'mkbranch', 'trunk',
                            'mkdir', 'branches')
@@ -365,7 +365,7 @@ def merges(sbox):
   # The name 'rm_no', for example, means we are going to 'rm' this node on
   # trunk and make 'no' change on the branch.
   # (r3)
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
                            'mkdir', 'trunk/no_no',
                            'mkdir', 'trunk/rm_no',
@@ -376,12 +376,12 @@ def merges(sbox):
                            'mkdir', 'trunk/mv_rm')
 
   # branch (r4)
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
                            'branch', 'trunk', 'branches/br1')
 
   # modify (r5, r6)
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url + '/trunk',
                            'mkdir', 'add_no',
                            'rm', 'rm_no',
@@ -389,7 +389,7 @@ def merges(sbox):
                            'mkdir', 'D1',
                            'mv', 'mv_no', 'D1/mv_no',
                            'mv', 'mv_rm', 'mv_rm_D1')
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url + '/branches/br1',
                            'mkdir', 'no_add',
                            'rm', 'no_rm',
@@ -399,17 +399,17 @@ def merges(sbox):
                            'mv', 'rm_mv', 'D2/rm_mv_B')
 
   # a merge that makes no changes
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
                            'merge', 'trunk', 'branches/br1', 'trunk@5')
 
   # a merge that makes changes with no conflict
-  svntest.actions.run_and_verify_svnmover(None, None, [],
+  svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
                            'merge', 'branches/br1', 'trunk', 'trunk@5')
 
   # a merge that makes changes, with conflicts
-  svntest.actions.run_and_verify_svnmover(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svnmover(None, svntest.verify.AnyOutput,
                            '-U', repo_url,
                            'merge', 'trunk@6', 'branches/br1', 'trunk@3')
 

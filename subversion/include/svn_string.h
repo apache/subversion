@@ -170,7 +170,11 @@ svn_string_createv(apr_pool_t *pool, const char *fmt, va_list ap)
 svn_boolean_t
 svn_string_isempty(const svn_string_t *str);
 
-/** Return a duplicate of @a original_string. */
+/** Return a duplicate of @a original_string.
+ *
+ * @since Since 1.9, @a original_string can be NULL in which case NULL will
+ * be returned.
+ */
 svn_string_t *
 svn_string_dup(const svn_string_t *original_string, apr_pool_t *pool);
 

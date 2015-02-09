@@ -122,7 +122,7 @@ def check_mergeinfo_recursively(root_path, subpaths_mergeinfo):
   expected = verify.UnorderedOutput(
     [path + ' - ' + subpaths_mergeinfo[path] + '\n'
      for path in subpaths_mergeinfo])
-  actions.run_and_verify_svn(None, expected, [],
+  actions.run_and_verify_svn(expected, [],
                                      'propget', '-R', SVN_PROP_MERGEINFO,
                                      root_path)
 
@@ -146,7 +146,7 @@ def set_up_dir_replace(sbox):
   new_file2 = os.path.join(foo_path, "new file 2")
 
   # Make directory foo in F, and add some files within it.
-  actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+  actions.run_and_verify_svn(None, [], 'mkdir', foo_path)
   main.file_append(new_file, "Initial text in new file.\n")
   main.file_append(new_file2, "Initial text in new file 2.\n")
   main.run_svn(None, "add", new_file)
@@ -223,7 +223,7 @@ def set_up_dir_replace(sbox):
                                         None, wc_dir)
 
   # Delete foo on F, creating r4.
-  actions.run_and_verify_svn(None, None, [], 'rm', foo_path)
+  actions.run_and_verify_svn(None, [], 'rm', foo_path)
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo'   : Item(verb='Deleting'),
     })
@@ -327,7 +327,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
       })
 
     # Make a branch A_COPY to merge into.
-    actions.run_and_verify_svn(None, expected, [], 'copy',
+    actions.run_and_verify_svn(expected, [], 'copy',
                                        sbox.repo_url + "/A",
                                        os.path.join(wc_dir,
                                                     dest_name))
@@ -400,22 +400,22 @@ def svn_mkfile(path):
   dirname, filename = os.path.split(path)
   main.file_write(path, "This is the file '" + filename + "'.\n" +
                                 "Last changed in '$Revision$'.\n")
-  actions.run_and_verify_svn(None, None, [], 'add', path)
-  actions.run_and_verify_svn(None, None, [], 'propset',
+  actions.run_and_verify_svn(None, [], 'add', path)
+  actions.run_and_verify_svn(None, [], 'propset',
                                      'svn:keywords', 'Revision', path)
 
 def svn_modfile(path):
   "Make text and property mods to a WC file."
   path = local_path(path)
   main.file_append(path, "An extra line.\n")
-  actions.run_and_verify_svn(None, None, [], 'propset',
+  actions.run_and_verify_svn(None, [], 'propset',
                                      'newprop', 'v', path)
 
 def svn_copy(s_rev, path1, path2):
   "Copy a WC path locally."
   path1 = local_path(path1)
   path2 = local_path(path2)
-  actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
+  actions.run_and_verify_svn(None, [], 'copy', '--parents',
                                      '-r', s_rev, path1, path2)
 
 def svn_merge(rev_range, source, target, lines=None, elides=[],
@@ -462,7 +462,7 @@ def svn_merge(rev_range, source, target, lines=None, elides=[],
                                   text_resolved=text_resolved,
                                   prop_resolved=prop_resolved,
                                   tree_resolved=tree_resolved)
-  actions.run_and_verify_svn(None, exp_out, [],
+  actions.run_and_verify_svn(exp_out, [],
                                      'merge', rev_arg, source, target, *args)
 
 #----------------------------------------------------------------------

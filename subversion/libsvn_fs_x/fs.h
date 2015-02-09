@@ -517,9 +517,6 @@ typedef struct svn_fs_x__noderev_t
   /* path at which this node first came into existence.  */
   const char *created_path;
 
-  /* is this the unmodified root of a transaction? */
-  svn_boolean_t is_fresh_txn_root;
-
   /* Does this node itself have svn:mergeinfo? */
   svn_boolean_t has_mergeinfo;
 

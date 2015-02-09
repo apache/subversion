@@ -34,7 +34,6 @@ from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
 from svntest.verify import SVNExpectedStderr
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import server_has_partial_replay
-from svnadmin_tests import test_create
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -61,15 +60,6 @@ mismatched_headers_re = re.compile(
 ######################################################################
 # Helper routines
 
-def build_repos(sbox):
-  """Build an empty sandbox repository"""
-
-  # Cleanup after the last run by removing any left-over repository.
-  svntest.main.safe_rmtree(sbox.repo_dir)
-
-  # Create an empty repository.
-  svntest.main.create_repos(sbox.repo_dir)
-
 def compare_repos_dumps(sbox, other_dumpfile,
                         bypass_prop_validation=False):
   """Compare two dumpfiles, one created from SBOX, and other given
@@ -83,8 +73,7 @@ def compare_repos_dumps(sbox, other_dumpfile,
 
   # Load and dump the other dumpfile (using svnadmin)
   other_sbox = sbox.clone_dependent()
-  svntest.main.safe_rmtree(other_sbox.repo_dir)
-  svntest.main.create_repos(other_sbox.repo_dir)
+  other_sbox.build(create_wc=False, empty=True)
   svntest.actions.run_and_verify_load(other_sbox.repo_dir, other_dumpfile,
                                       bypass_prop_validation)
   other_dumpfile = svntest.actions.run_and_verify_dump(other_sbox.repo_dir)
@@ -104,7 +93,7 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
   array of optional additional options to pass to 'svnrdump dump'."""
 
   # Create an empty sandbox repository
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # This directory contains all the dump files
   svnrdump_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
@@ -159,7 +148,7 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
   dump' and check that the same dumpfile is produced"""
 
   # Create an empty sandbox repository
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -177,7 +166,7 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
   # Set the UUID of the sbox repository to the UUID specified in the
   # dumpfile ### RA layer doesn't have a set_uuid functionality
   uuid = original_dumpfile[2].split(' ')[1][:-1]
-  svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
+  svntest.actions.run_and_verify_svnadmin2(None, None, 0,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
 
@@ -412,7 +401,7 @@ def reflect_dropped_renumbered_revs(sbox):
   "svnrdump renumbers dropped revs in mergeinfo"
 
   # Create an empty sandbox repository
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -433,7 +422,7 @@ def reflect_dropped_renumbered_revs(sbox):
 
   # Create the 'toplevel' directory in repository and then load the same
   # dumpfile into that subtree.
-  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                             'Committed revision 10.\n'],
                                     [], "mkdir", sbox.repo_url + "/toplevel",
                                      "-m", "Create toplevel dir to load into")
@@ -447,7 +436,7 @@ def reflect_dropped_renumbered_revs(sbox):
     url + "/trunk - /branch1:4-8\n",
     url + "/toplevel/trunk - /toplevel/branch1:14-18\n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -476,7 +465,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   "don't drop mergeinfo revs in incremental svnrdump"
 
   # Create an empty repos.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -545,7 +534,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
     url + "B2 - /trunk:9\n",
     url + "B1/B/E - /branches/B2/B/E:11-12\n",
     "/trunk/B/E:5-6,8-9\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -582,7 +571,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.close()
 
   # Blow away the current repos and create an empty one in its place.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -607,7 +596,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
   # repos in one shot.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -617,7 +606,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 3: Load a full dump to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -671,14 +660,14 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
     url + "B2 - /Projects/Project-X/trunk:15\n",
     url + "B1/B/E - /Projects/Project-X/branches/B2/B/E:17-18\n",
     "/Projects/Project-X/trunk/B/E:11-12,14-15\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
   # PART 4: Load a a series of incremental dumps to an non-empty repository.
   #
   # Reset our sandbox.
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
@@ -713,7 +702,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
   # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -723,14 +712,14 @@ def svnrdump_load_partial_incremental_dump(sbox):
   "svnrdump load partial incremental dump"
 
   # Create an empty sandbox repository
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
 
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   # Create the 'A' directory in repository and then load the partial
   # incremental dump into the root of the repository.
-  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                             'Committed revision 1.\n'],
                                     [], "mkdir", sbox.repo_url + "/A",
                                      "-m", "Create toplevel dir to load into")
@@ -795,7 +784,7 @@ def load_prop_change_in_non_deltas_dump(sbox):
   dump = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
 
   # Try to load that dump.
-  build_repos(sbox)
+  sbox.build(create_wc=False, empty=True)
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svnrdump(dump,
                                           [], [], 0,
@@ -825,60 +814,78 @@ def load_mergeinfo_contains_r0(sbox):
 # Regression test for issue 4551 "svnrdump load commits wrong properties,
 # or fails, on a non-deltas dumpfile". In this test, the copy source does
 # not exist and the failure mode is to error out.
-@XFail()
 @Issue(4551)
 def load_non_deltas_copy_with_props(sbox):
   "load non-deltas copy with props"
   sbox.build()
 
-  # Set props on a file and on a dir and on a child of the dir to be copied
+  # Case (1): Copies that do not replace anything: the copy target path
+  # at (new rev - 1) does not exist
+
+  # Set properties on each node to be copied
   sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_propset('q', 'v', 'A/mu', 'A/B', 'A/B/E')
   sbox.simple_commit()
   sbox.simple_update()  # avoid mixed-rev
 
-  # Case (1): Copy file/dir, not replacing anything; the copy target path
-  # at (new rev - 1) does not exist
+  # Do the copies
   sbox.simple_copy('A/mu@2', 'A/mu_COPY')
   sbox.simple_copy('A/B@2', 'A/B_COPY')
-  # On the copy, delete a prop
-  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E')
+  # Also add new nodes inside the copied dir, to test more code paths
+  sbox.simple_copy('A/B/E@2', 'A/B_COPY/copied')
+  sbox.simple_mkdir('A/B_COPY/added')
+  sbox.simple_copy('A/B/E@2', 'A/B_COPY/added/copied')
+  # On each copied node, delete a prop
+  sbox.simple_propdel('p', 'A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E',
+                           'A/B_COPY/copied', 'A/B_COPY/added/copied')
 
   sbox.simple_commit()
 
   # Dump with 'svnadmin' (non-deltas mode)
   dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
 
-  # Load with 'svnrdump'
+  # Load with 'svnrdump'. This used to throw an error:
+  # svnrdump: E160013: File not found: revision 2, path '/A/B_COPY'
   new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
   svntest.main.create_repos(new_repo_dir)
   svntest.actions.enable_revprop_changes(new_repo_dir)
   svntest.actions.run_and_verify_svnrdump(dumpfile,
                                           svntest.verify.AnyOutput,
                                           [], 0, 'load', new_repo_url)
-  # For regression test purposes, all we require is that the 'load'
-  # doesn't throw an error
+
+  # Check that property 'p' really was deleted on each copied node
+  for tgt_path in ['A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E',
+                   'A/B_COPY/copied', 'A/B_COPY/added/copied']:
+    tgt_url = new_repo_url + '/' + tgt_path
+    _, out, _ = svntest.main.run_svn(None, 'proplist', tgt_url)
+    expected = ["Properties on '%s':" % (tgt_url,),
+                'q']
+    actual = map(str.strip, out)
+    svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
 
 # Regression test for issue 4551 "svnrdump load commits wrong properties,
 # or fails, on a non-deltas dumpfile". In this test, the copy source does
 # exist and the failure mode is to fail to delete a property.
-@XFail()
 @Issue(4551)
 def load_non_deltas_replace_copy_with_props(sbox):
   "load non-deltas replace&copy with props"
   sbox.build()
 
-  # Set props on a file and on a dir
-  sbox.simple_propset('p', 'v', 'A/mu', 'A/B')
+  # Case (2): Copies that replace something: the copy target path
+  # at (new rev - 1) exists and has no property named 'p'
+
+  # Set props on the copy source nodes (a file, a dir, a child of the dir)
+  sbox.simple_propset('p', 'v', 'A/mu', 'A/B', 'A/B/E')
+  sbox.simple_propset('q', 'v', 'A/mu', 'A/B', 'A/B/E')
   sbox.simple_commit()
   sbox.simple_update()  # avoid mixed-rev
 
-  # Case (2): Copy file/dir, replacing something; the copy target path
-  # at (new rev - 1) exists and has no property named 'p'
+  # Do the copies, replacing something
   sbox.simple_rm('A/D/gamma', 'A/C')
   sbox.simple_copy('A/mu@2', 'A/D/gamma')
   sbox.simple_copy('A/B@2', 'A/C')
-  # On the copy, delete a prop that isn't present on the replaced node
-  sbox.simple_propdel('p', 'A/D/gamma', 'A/C')
+  # On the copy, delete a prop that wasn't present on the node that it replaced
+  sbox.simple_propdel('p', 'A/D/gamma', 'A/C', 'A/C/E')
 
   sbox.simple_commit()
 
@@ -894,11 +901,13 @@ def load_non_deltas_replace_copy_with_props(sbox):
                                           [], 0, 'load', new_repo_url)
 
   # Check that property 'p' really was deleted on each copied node
-  for tgt_path in ['A/D/gamma', 'A/C']:
-    _, out, _ = svntest.main.run_svn(None, 'proplist',
-                                     new_repo_url + '/' + tgt_path)
-    expected = []
-    actual = out[1:]
+  # This used to fail, finding that property 'p' was still present
+  for tgt_path in ['A/D/gamma', 'A/C', 'A/C/E']:
+    tgt_url = new_repo_url + '/' + tgt_path
+    _, out, _ = svntest.main.run_svn(None, 'proplist', tgt_url)
+    expected = ["Properties on '%s':" % (tgt_url,),
+                'q']
+    actual = map(str.strip, out)
     svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
 
 # Regression test for issue #4552 "svnrdump writes duplicate headers for a
@@ -924,6 +933,51 @@ def dump_replace_with_copy(sbox):
   # Check the 'delete' record headers: expect this parse to fail if headers
   # are duplicated
   svntest.verify.DumpParser(dumpfile).parse()
+
+# Regression test for issue 4551 "svnrdump load commits wrong properties,
+# or fails, on a non-deltas dumpfile". In this test, a node's props are
+# modified, and the failure mode is that RA-serf would end up deleting
+# properties that should remain on the node.
+@Issue(4551)
+def load_non_deltas_with_props(sbox):
+  "load non-deltas with props"
+  sbox.build()
+
+  # Case (3): A node's props are modified, and at least one of its previous
+  # props remains after the modification. svnrdump made two prop mod method
+  # calls for the same property (delete, then set). RA-serf's commit editor
+  # didn't expect this and performed the deletes after the non-deletes, and
+  # so ended up deleting a property that should not be deleted.
+
+  # Set properties on each node to be modified
+  sbox.simple_propset('p', 'v', 'A/mu')
+  sbox.simple_propset('q', 'v', 'A/mu', 'A/B')
+  sbox.simple_commit()
+
+  # Do the modifications: a different kind of mod on each node
+  sbox.simple_propdel('p', 'A/mu')
+  sbox.simple_propset('q', 'v2', 'A/B')
+  sbox.simple_commit()
+
+  # Dump with 'svnadmin' (non-deltas mode)
+  dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, deltas=False)
+
+  # Load with 'svnrdump'
+  new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
+  svntest.main.create_repos(new_repo_dir)
+  svntest.actions.enable_revprop_changes(new_repo_dir)
+  svntest.actions.run_and_verify_svnrdump(dumpfile,
+                                          svntest.verify.AnyOutput,
+                                          [], 0, 'load', new_repo_url)
+
+  # Check that property 'q' remains on each modified node
+  for tgt_path in ['A/mu', 'A/B']:
+    tgt_url = new_repo_url + '/' + tgt_path
+    _, out, _ = svntest.main.run_svn(None, 'proplist', tgt_url)
+    expected = ["Properties on '%s':" % (tgt_url,),
+                'q']
+    actual = map(str.strip, out)
+    svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
 
 ########################################################################
 # Run the tests
@@ -985,6 +1039,7 @@ test_list = [ None,
               load_non_deltas_copy_with_props,
               load_non_deltas_replace_copy_with_props,
               dump_replace_with_copy,
+              load_non_deltas_with_props,
              ]
 
 if __name__ == '__main__':
