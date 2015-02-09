@@ -235,6 +235,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1658417
+   Don't ask a resolver if we should resolve if we only take no as answer
+   Justification:
+     Presenting conflicts to the conflict resolver only makes sense if the
+     result of the function is potentially applied. I'm surprised that
+     nobody noticed this problem in svn_wc_resolved_conflict5().
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
