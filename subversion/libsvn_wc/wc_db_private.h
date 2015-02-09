@@ -383,17 +383,6 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
 #define SVN_WC__DB_WITH_TXN4(expr1, expr2, expr3, expr4, wcroot) \
   SVN_SQLITE__WITH_LOCK4(expr1, expr2, expr3, expr4, (wcroot)->sdb)
 
-
-/* Return CHILDREN mapping const char * names to svn_node_kind_t * for the
-   children of LOCAL_RELPATH at OP_DEPTH. */
-svn_error_t *
-svn_wc__db_get_children_op_depth(apr_hash_t **children,
-                                 svn_wc__db_wcroot_t *wcroot,
-                                 const char *local_relpath,
-                                 int op_depth,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
 /* Update the single op-depth layer in the move destination subtree
    rooted at DST_RELPATH to make it match the move source subtree
    rooted at SRC_RELPATH. */
@@ -415,48 +404,43 @@ svn_wc__db_op_make_copy_internal(svn_wc__db_wcroot_t *wcroot,
                                  apr_pool_t *scratch_pool);
 
 
-/* Extract the moved-to information for LOCAL_RELPATH at OP-DEPTH by
-   examining the lowest working node above OP_DEPTH.  The output paths
-   are NULL if there is no move, otherwise:
+/* Extract the moved-to information for LOCAL_RELPATH as it existed
+   at OP-DEPTH.  The output paths are optional and set to NULL
+   if there is no move, otherwise:
 
-   *MOVE_DST_RELPATH: the moved-to destination of LOCAL_RELPATH.
+   *MOVE_SRC_RELPATH: the path that was moved (LOCAL_RELPATH or one
+                      of its ancestors)
 
-   *MOVE_DST_OP_ROOT_RELPATH: the moved-to destination of the root of
-   the move of LOCAL_RELPATH. This may be equal to *MOVE_DST_RELPATH
-   if LOCAL_RELPATH is the root of the move.
+   *MOVE_DST_RELPATH: The path *MOVE_SRC_RELPATH was moved to.
 
-   *MOVE_SRC_ROOT_RELPATH: the root of the move source.  For moves
-   inside a delete this will be different from *MOVE_SRC_OP_ROOT_RELPATH.
+   *DELETE_RELPATH: The path at which LOCAL_RELPATH was removed (
+                    *MOVE_SRC_RELPATH or one of its ancestors)
 
-   *MOVE_SRC_OP_ROOT_RELPATH: the root of the source layer that
-   contains the move.  For moves inside deletes this is the root of
-   the delete, for other moves this is the root of the move.
+   Given a path A/B/C with A/B moved to X and A deleted then for A/B/C:
 
-   Given a path A/B/C with A/B moved to X then for A/B/C
+     MOVE_SRC_RELPATH is A/B
+     MOVE_DST_RELPATH is X
+     DELETE_RELPATH is A
 
-     MOVE_DST_RELPATH is X/C
-     MOVE_DST_OP_ROOT_RELPATH is X
-     MOVE_SRC_ROOT_RELPATH is A/B
-     MOVE_SRC_OP_ROOT_RELPATH is A/B
+     X/C can be calculated if necessesary, like with the other
+     scan functions.
 
-   If A is then deleted the MOVE_DST_RELPATH, MOVE_DST_OP_ROOT_RELPATH
-   and MOVE_SRC_ROOT_RELPATH remain the same but MOVE_SRC_OP_ROOT_RELPATH
-   changes to A.
+   This function returns SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_RELPATH didn't
+   exist at OP_DEPTH, or when it is not shadowed.
 
    ### Think about combining with scan_deletion?  Also with
    ### scan_addition to get moved-to for replaces?  Do we need to
    ### return the op-root of the move source, i.e. A/B in the example
    ### above?  */
 svn_error_t *
-svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
-                             const char **move_dst_op_root_relpath,
-                             const char **move_src_root_relpath,
-                             const char **move_src_op_root_relpath,
-                             int op_depth,
-                             svn_wc__db_wcroot_t *wcroot,
-                             const char *local_relpath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
+svn_wc__db_scan_moved_to_internal(const char **move_src_relpath,
+                                  const char **move_dst_relpath,
+                                  const char **delete_relpath,
+                                  svn_wc__db_wcroot_t *wcroot,
+                                  const char *local_relpath,
+                                  int op_depth,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Like svn_wc__db_op_set_props, but updates ACTUAL_NODE directly without
    comparing with the pristine properties, etc.

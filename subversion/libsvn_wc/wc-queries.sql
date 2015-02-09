@@ -99,7 +99,7 @@ LIMIT 1
 -- STMT_SELECT_DEPTH_NODE
 SELECT repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties
+  symlink_target, properties, moved_to, moved_here
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
@@ -332,6 +332,15 @@ WHERE wc_id = ?1
   AND op_depth = ?3
   AND presence != MAP_BASE_DELETED
   AND file_external is NULL
+ORDER BY local_relpath
+
+-- STMT_SELECT_OP_DEPTH_CHILDREN_EXISTS
+SELECT local_relpath, kind FROM nodes
+WHERE wc_id = ?1 
+  AND parent_relpath = ?2
+  AND op_depth = ?3
+  AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)
+ORDER BY local_relpath
 
 /* Used by non-recursive revert to detect higher level children, and
    actual-only rows that would be left orphans, if the revert
@@ -479,7 +488,8 @@ SELECT op_depth, moved_to
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3
   AND EXISTS(SELECT * from nodes
-             WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3)
+             WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+             AND presence IN (MAP_NORMAL, MAP_INCOMPLETE))
 ORDER BY op_depth ASC
 LIMIT 1
 
