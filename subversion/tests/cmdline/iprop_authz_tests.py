@@ -110,7 +110,7 @@ def iprops_authz(sbox):
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
   svntest.actions.run_and_verify_svn(
-    None, None, expected_err, 'proplist', '-v',
+    None, expected_err, 'proplist', '-v',
     '--show-inherited-props', sbox.repo_url + '/A/D/H/psi')
 
 ########################################################################

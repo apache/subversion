@@ -182,8 +182,7 @@ def move_file_test(sbox, source, dest, move_func, test):
         resolve['disk'] = None
       if 'revert_paths' in resolve:
         revert_paths = resolve['revert_paths']
-      svntest.actions.run_and_verify_svn('Resolve modification to source of move',
-                                          resolve['output'], resolve['error'],
+      svntest.actions.run_and_verify_svn(resolve['output'], resolve['error'],
                                           'resolve', '--accept', resolve_accept,
                                           '-R', wc_dir)
 
@@ -904,7 +903,7 @@ def build_simple_file_move_func(sbox, source, dest):
   # Setup the move function
   def move_func(rev):
     # execute the move
-    svntest.actions.run_and_verify_svn(None, None, [], "move",
+    svntest.actions.run_and_verify_svn(None, [], "move",
                                        source_path, dest_path)
     if move_func.extra_mv_tests:
       mv_status = svntest.actions.get_virginal_state(wc_dir, rev)
@@ -1098,7 +1097,7 @@ def property_merge(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   sbox.simple_update()
-  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'resolve',
                                      '--accept=mine-conflict',
                                      sbox.ospath('A/C'))
@@ -1209,7 +1208,7 @@ def move_missing(sbox):
 
   # This move currently fails halfway between adding the dest and
   # deleting the source
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'mv', sbox.ospath('A/D/G'),
                                            sbox.ospath('R'))
 
@@ -1247,7 +1246,7 @@ def nested_replaces(sbox):
   ospath = sbox.ospath
 
   ## r1: setup
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                            '-U', repo_url,
                            '-m', 'r1: create tree',
                            'mkdir', 'A', 'mkdir', 'A/B', 'mkdir', 'A/B/C',
@@ -1335,7 +1334,7 @@ def nested_replaces(sbox):
   ]) + [
     '^-', '^r2', '^-', '^Changed paths:',
   ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr2', repo_url)
 
   ## Test updating to r1.
@@ -1417,7 +1416,7 @@ def move_many_update_delete(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # And now create a tree conflict
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', sbox.repo_url + '/B',
                                      '-m', '')
 
@@ -1450,7 +1449,7 @@ def move_many_update_add(sbox):
   #svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # And now create a tree conflict
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', sbox.repo_url + '/B/A/A/BB',
                                      '-m', '')
 
@@ -1481,7 +1480,7 @@ def move_many_update_add(sbox):
                                         wc_dir, '--accept', 'mine-conflict')
 
   # And another one
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', sbox.repo_url + '/C/A/A/BB',
                                      '-m', '')
 
@@ -1564,17 +1563,17 @@ def move_to_from_external(sbox):
   sbox.simple_propset('svn:externals', '^/A/D/G GG', '')
   sbox.simple_update()
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'move',
                                      sbox.ospath('GG/tau'),
                                      sbox.ospath('tau'))
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'move',
                                      sbox.ospath('iota'),
                                      sbox.ospath('GG/tau'))
                                      
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'Commit both',
                                      sbox.ospath(''),
                                      sbox.ospath('GG'))

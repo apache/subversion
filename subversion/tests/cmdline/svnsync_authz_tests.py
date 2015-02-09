@@ -83,13 +83,11 @@ def basic_authz(sbox):
   iota_url = dest_sbox.repo_url + '/iota'
 
   # this file should have been blocked by authz
-  svntest.actions.run_and_verify_svn(None,
-                                     [], svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn([], svntest.verify.AnyOutput,
                                      'cat',
                                      lambda_url)
   # this file should have been synced
-  svntest.actions.run_and_verify_svn(None,
-                                     svntest.verify.AnyOutput, [],
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      'cat',
                                      iota_url)
 
@@ -106,7 +104,6 @@ def copy_from_unreadable_dir(sbox):
   # Set a property on the directory we're going to copy, and a file in it, to
   # confirm that they're transmitted when we later sync the copied directory
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'pset',
                                      'foo',
@@ -114,7 +111,6 @@ def copy_from_unreadable_dir(sbox):
                                      sbox.wc_dir + '/A/B/lambda')
 
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'pset',
                                      'baz',
@@ -122,7 +118,6 @@ def copy_from_unreadable_dir(sbox):
                                      sbox.wc_dir + '/A/B')
 
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'ci',
                                      sbox.wc_dir + '/A/B',
@@ -130,7 +125,6 @@ def copy_from_unreadable_dir(sbox):
 
   # Now copy that directory so we'll see it in our synced copy
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'cp',
                                      B_url,
@@ -183,15 +177,13 @@ def copy_from_unreadable_dir(sbox):
                                            expected_out,
                                            out[2:11])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ['bar\n'],
+  svntest.actions.run_and_verify_svn(['bar\n'],
                                      [],
                                      'pget',
                                      'foo',
                                      dest_sbox.repo_url + '/A/P/lambda')
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ['zot\n'],
+  svntest.actions.run_and_verify_svn(['zot\n'],
                                      [],
                                      'pget',
                                      'baz',
@@ -207,7 +199,6 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   # Make a copy of the B directory.
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'cp',
                                      sbox.wc_dir + '/A/B',
@@ -215,7 +206,6 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   # Set a property inside the copied directory.
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'pset',
                                      'foo',
@@ -224,7 +214,6 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   # Add a new directory and file inside the copied directory.
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'mkdir',
                                      sbox.wc_dir + '/A/P/NEW-DIR')
@@ -234,14 +223,12 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   # Delete a file inside the copied directory.
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'rm',
                                      sbox.wc_dir + '/A/P/E/beta')
 
   # Commit the copy-with-modification.
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'ci',
                                      sbox.wc_dir,
@@ -295,8 +282,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
                                            expected_out,
                                            out[2:12])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ['bar\n'],
+  svntest.actions.run_and_verify_svn(['bar\n'],
                                      [],
                                      'pget',
                                      'foo',
@@ -312,7 +298,6 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
 
   # Make a copy of the B directory.
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'cp',
                                      sbox.wc_dir + '/A/B',
@@ -321,7 +306,6 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
 
   # Copy a (readable) file into the copied directory.
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'cp',
                                      sbox.wc_dir + '/A/D/gamma',
@@ -330,7 +314,6 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
 
   # Commit the copy-with-modification.
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'ci',
                                      sbox.wc_dir,
@@ -457,8 +440,7 @@ def specific_deny_authz(sbox):
   lambda_url = dest_sbox.repo_url + '/A_COPY/B/lambda'
 
   # this file should have been blocked by authz
-  svntest.actions.run_and_verify_svn(None,
-                                     [], svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn([], svntest.verify.AnyOutput,
                                      'cat',
                                      lambda_url)
 
@@ -469,7 +451,7 @@ def copy_delete_unreadable_child(sbox):
 
   # Prepare the source: Greek tree (r1), cp+rm (r2).
   sbox.build(create_wc = False)
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                                          '-m', 'r2',
                                          '-U', sbox.repo_url,
                                          'cp', 'HEAD', '/', 'branch',
@@ -495,8 +477,7 @@ def copy_delete_unreadable_child(sbox):
   run_sync(dest_url)
 
   # sanity check
-  svntest.actions.run_and_verify_svn(None,
-                                     ["iota\n"], [],
+  svntest.actions.run_and_verify_svn(["iota\n"], [],
                                      'ls', dest_url+'/branch@2')
 
 

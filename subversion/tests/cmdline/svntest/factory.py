@@ -500,7 +500,7 @@ class TestFactory:
       else:
         py = "expected_stdout = verify.UnorderedOutput(" + pylist + ")\n\n"
       py += pychdir
-      py += "actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0"
+      py += "actions.run_and_verify_svn2(expected_stdout, [], 0"
     else:
       # write a test that expects failure
       pylist = self.strlist2py(err)
@@ -509,8 +509,7 @@ class TestFactory:
       else:
         py = "expected_stderr = verify.UnorderedOutput(" + pylist + ")\n\n"
       py += pychdir
-      py += ("actions.run_and_verify_svn2('OUTPUT', " +
-             "[], expected_stderr, " + str(code))
+      py += ("actions.run_and_verify_svn2([], expected_stderr, " + str(code))
 
     if len(pyargs) > 0:
       py += ", " + ", ".join(pyargs)
@@ -775,8 +774,7 @@ class TestFactory:
       else:
         py += "expected_stderr = verify.UnorderedOutput(" + pylist + ")\n\n"
       py += pychdir
-      py += ("actions.run_and_verify_svn2('OUTPUT', " +
-             "[], expected_stderr, " + str(code) +
+      py += ("actions.run_and_verify_svn2([], expected_stderr, " + str(code) +
              ", " + url_arg.pyarg + ", " + wc_arg.pyarg)
 
     # Append the remaining args
