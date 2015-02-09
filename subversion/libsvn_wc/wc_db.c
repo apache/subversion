@@ -6794,10 +6794,9 @@ op_revert_txn(void *baton,
 
   if (moved_to)
     {
-      SVN_ERR(svn_wc__db_resolve_break_moved_away_internal(wcroot,
-                                                           local_relpath,
-                                                           op_depth,
-                                                           scratch_pool));
+      SVN_ERR(svn_wc__db_op_break_move_internal(wcroot,
+                                                local_relpath, op_depth,
+                                                moved_to, scratch_pool));
     }
   else
     {
@@ -6973,14 +6972,14 @@ op_revert_recursive_txn(void *baton,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
-      const char *move_src_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *src_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *dst_relpath = svn_sqlite__column_text(stmt, 1, NULL);
       int move_op_depth = svn_sqlite__column_int(stmt, 2);
       svn_error_t *err;
 
-      err = svn_wc__db_resolve_break_moved_away_internal(wcroot,
-                                                         move_src_relpath,
-                                                         move_op_depth,
-                                                         scratch_pool);
+      err = svn_wc__db_op_break_move_internal(wcroot,
+                                              src_relpath, move_op_depth,
+                                              dst_relpath, scratch_pool);
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
@@ -11319,7 +11318,7 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
                  && *repos_relpath != '\0');
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_MOVED_DESCENDANTS));
+                                    STMT_SELECT_MOVED_DESCENDANTS_SRC));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
                                          local_relpath,
                                          op_depth));
@@ -11330,12 +11329,12 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
 
   children = apr_hash_make(scratch_pool);
 
-  /* First, obtain all moved children */
+  /* First, obtain all moved descendants */
   /* To keep error handling simple, first cache them in a hashtable */
   while (have_row)
     {
-      const char *src_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
-      const char *to_relpath = svn_sqlite__column_text(stmt, 1, scratch_pool);
+      const char *src_relpath = svn_sqlite__column_text(stmt, 1, scratch_pool);
+      const char *to_relpath = svn_sqlite__column_text(stmt, 4, scratch_pool);
 
       svn_hash_sets(children, src_relpath, to_relpath);
 
