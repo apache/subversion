@@ -1735,10 +1735,10 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
                               apr_hash_t *dav_cache,
-                              const svn_skel_t *conflict,
                               svn_boolean_t update_actual_props,
                               apr_hash_t *new_actual_props,
                               apr_array_header_t *new_iprops,
+                              const svn_skel_t *conflict,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool)
 {
@@ -2173,6 +2173,36 @@ clear_moved_here(svn_wc__db_wcroot_t *wcroot,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__db_op_break_move_internal(svn_wc__db_wcroot_t *wcroot,
+                                  const char *src_relpath,
+                                  int src_op_depth,
+                                  const char *dst_relpath,
+                                  const svn_skel_t *work_items,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  int affected;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_CLEAR_MOVED_TO_RELPATH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, src_relpath,
+                            src_op_depth));
+  SVN_ERR(svn_sqlite__update(&affected, stmt));
+
+  if (affected != 1)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Path '%s' is not moved"),
+                             path_for_error_message(wcroot, src_relpath,
+                                                    scratch_pool));
+
+  SVN_ERR(clear_moved_here(wcroot, dst_relpath, scratch_pool));
+
+  SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 
 /* The body of svn_wc__db_base_remove().
  */
@@ -6760,7 +6790,7 @@ op_revert_txn(void *baton,
     {
       SVN_ERR(svn_wc__db_op_break_move_internal(wcroot,
                                                 local_relpath, op_depth,
-                                                moved_to, scratch_pool));
+                                                moved_to, NULL, scratch_pool));
     }
   else
     {
@@ -6943,7 +6973,7 @@ op_revert_recursive_txn(void *baton,
 
       err = svn_wc__db_op_break_move_internal(wcroot,
                                               src_relpath, move_op_depth,
-                                              dst_relpath, scratch_pool);
+                                              dst_relpath, NULL, scratch_pool);
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 

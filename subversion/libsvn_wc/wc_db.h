@@ -412,9 +412,6 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
    If DAV_CACHE is not NULL, sets LOCAL_ABSPATH's dav cache to the specified
    data.
 
-   If CONFLICT is not NULL, then it describes a conflict for this node. The
-   node will be record as conflicted (in ACTUAL).
-
    If UPDATE_ACTUAL_PROPS is TRUE, set the properties store NEW_ACTUAL_PROPS
    as the new set of properties in ACTUAL. If NEW_ACTUAL_PROPS is NULL or
    when the value of NEW_ACTUAL_PROPS matches NEW_PROPS, store NULL in
@@ -423,6 +420,9 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
    If NEW_IPROPS is not NULL, then it is a depth-first ordered array of
    svn_prop_inherited_item_t * structures that is set as the base node's
    inherited_properties.
+
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
 
    Any work items that are necessary as part of this node construction may
    be passed in WORK_ITEMS.
@@ -444,10 +444,10 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const apr_array_header_t *children,
                               svn_depth_t depth,
                               apr_hash_t *dav_cache,
-                              const svn_skel_t *conflict,
                               svn_boolean_t update_actual_props,
                               apr_hash_t *new_actual_props,
                               apr_array_header_t *new_iprops,
+                              const svn_skel_t *conflict,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
 

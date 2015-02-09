@@ -487,6 +487,7 @@ svn_wc__db_op_break_move_internal(svn_wc__db_wcroot_t *wcroot,
                                   const char *src_relpath,
                                   int src_op_depth,
                                   const char *dst_relpath,
+                                  const svn_skel_t *work_items,
                                   apr_pool_t *scratch_pool);
 
 svn_error_t *
