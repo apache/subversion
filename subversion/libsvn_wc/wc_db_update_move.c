@@ -2456,39 +2456,6 @@ svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__db_op_break_move_internal(svn_wc__db_wcroot_t *wcroot,
-                                  const char *src_relpath,
-                                  int src_op_depth,
-                                  const char *dst_relpath,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  int affected;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CLEAR_MOVED_TO_RELPATH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, src_relpath,
-                            src_op_depth));
-  SVN_ERR(svn_sqlite__update(&affected, stmt));
-
-  if (affected != 1)
-    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                             _("Path '%s' is not moved"),
-                             path_for_error_message(wcroot, src_relpath,
-                                                    scratch_pool));
-
-  /* The destination is always an op-root, so we can calculate the depth
-     from there. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CLEAR_MOVED_HERE_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
-                            dst_relpath, relpath_depth(dst_relpath)));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 break_moved_away(svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
@@ -2514,7 +2481,7 @@ break_moved_away(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_wc__db_op_break_move_internal(wcroot, local_relpath,
                                             relpath_depth(delete_relpath),
-                                            dst_relpath,
+                                            dst_relpath, NULL,
                                             scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2550,7 +2517,7 @@ break_moved_away_children(svn_wc__db_wcroot_t *wcroot,
 
       err = svn_wc__db_op_break_move_internal(wcroot,
                                               src_relpath, src_op_depth,
-                                              dst_relpath, iterpool);
+                                              dst_relpath, NULL, iterpool);
 
       if (! err)
         {
