@@ -464,12 +464,10 @@ find_descendants_in_cache(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Invalidate cache entries for PATH and any of its children.  This
-   should *only* be called on a transaction root! */
-static svn_error_t *
-dag_node_cache_invalidate(svn_fs_root_t *root,
-                          const char *path,
-                          apr_pool_t *scratch_pool)
+svn_error_t *
+svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
+                               const char *path,
+                               apr_pool_t *scratch_pool)
 {
   fdic_baton_t b;
   svn_cache__t *cache;
@@ -2426,9 +2424,9 @@ x_delete_node(svn_fs_root_t *root,
                                txn_id, subpool));
 
   /* Remove this node and any children from the path cache. */
-  SVN_ERR(dag_node_cache_invalidate(root, parent_path_path(dag_path,
-                                                           subpool),
-                                    subpool));
+  SVN_ERR(svn_fs_x__invalidate_dag_cache(root,
+                                         parent_path_path(dag_path, subpool),
+                                         subpool));
 
   /* Update mergeinfo counts for parents */
   if (mergeinfo_count > 0)
@@ -2562,10 +2560,10 @@ copy_helper(svn_fs_root_t *from_root,
                                  txn_id, scratch_pool));
 
       if (kind != svn_fs_path_change_add)
-        SVN_ERR(dag_node_cache_invalidate(to_root,
-                                          parent_path_path(to_dag_path,
-                                                           scratch_pool),
-                                          scratch_pool));
+        SVN_ERR(svn_fs_x__invalidate_dag_cache(to_root,
+                                               parent_path_path(to_dag_path,
+                                                                scratch_pool),
+                                               scratch_pool));
 
       if (mergeinfo_start != mergeinfo_end)
         SVN_ERR(increment_mergeinfo_up_tree(to_dag_path->parent,

@@ -33,6 +33,13 @@ extern "C" {
 svn_fs_x__dag_cache_t*
 svn_fs_x__create_dag_cache(apr_pool_t *result_pool);
 
+/* Invalidate cache entries for PATH and any of its children.  This
+   should *only* be called on a transaction root! */
+svn_error_t *
+svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
+                               const char *path,
+                               apr_pool_t *scratch_pool);
+
 /* Flag type used in svn_fs_x__dag_path_t to determine where the
    respective node got its copy ID from. */
 typedef enum svn_fs_x__copy_id_inherit_t
