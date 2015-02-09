@@ -12866,7 +12866,6 @@ svn_wc__db_scan_moved_to_internal(const char **move_src_relpath,
 
   if (!have_row)
     {
-      SVN_DBG(("Failed: %s at depth %d", local_relpath, op_depth));
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
                                svn_sqlite__reset(stmt),
                                _("Node '%s' is not shadowed"),
