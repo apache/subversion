@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__INDEX_H
-#define SVN_LIBSVN_FS__INDEX_H
+#ifndef SVN_LIBSVN_FS_X_INDEX_H
+#define SVN_LIBSVN_FS_X_INDEX_H
 
 #include "fs.h"
 #include "rev_file.h"

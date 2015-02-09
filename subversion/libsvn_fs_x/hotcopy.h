@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__HOTCOPY_H
-#define SVN_LIBSVN_FS__HOTCOPY_H
+#ifndef SVN_LIBSVN_FS_X_HOTCOPY_H
+#define SVN_LIBSVN_FS_X_HOTCOPY_H
 
 #include "fs.h"
 

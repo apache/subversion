@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__CACHED_DATA_H
-#define SVN_LIBSVN_FS__CACHED_DATA_H
+#ifndef SVN_LIBSVN_FS_X_CACHED_DATA_H
+#define SVN_LIBSVN_FS_X_CACHED_DATA_H
 
 #include "svn_pools.h"
 #include "svn_fs.h"

@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_X_H
-#define SVN_LIBSVN_FS_X_H
+#ifndef SVN_LIBSVN_FS_X_FS_H
+#define SVN_LIBSVN_FS_X_FS_H
 
 #include <apr_pools.h>
 #include <apr_hash.h>
@@ -571,4 +571,4 @@ typedef struct svn_fs_x__change_t
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_X_H */
+#endif /* SVN_LIBSVN_FS_X_FS_H */

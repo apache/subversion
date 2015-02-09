@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__PACK_H
-#define SVN_LIBSVN_FS__PACK_H
+#ifndef SVN_LIBSVN_FS_X_PACK_H
+#define SVN_LIBSVN_FS_X_PACK_H
 
 #include "fs.h"
 

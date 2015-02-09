@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_TREE_H
-#define SVN_LIBSVN_FS_TREE_H
+#ifndef SVN_LIBSVN_FS_X_TREE_H
+#define SVN_LIBSVN_FS_X_TREE_H
 
 #include "fs.h"
 
@@ -109,4 +109,4 @@ svn_fs_x__info_config_files(apr_array_header_t **files,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_TREE_H */
+#endif /* SVN_LIBSVN_FS_X_TREE_H */

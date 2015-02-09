@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__NODEREVS_H
-#define SVN_LIBSVN_FS__NODEREVS_H
+#ifndef SVN_LIBSVN_FS_X_NODEREVS_H
+#define SVN_LIBSVN_FS_X_NODEREVS_H
 
 #include "svn_io.h"
 #include "fs.h"

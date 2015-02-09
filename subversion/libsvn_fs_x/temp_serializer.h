@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__TEMP_SERIALIZER_H
-#define SVN_LIBSVN_FS__TEMP_SERIALIZER_H
+#ifndef SVN_LIBSVN_FS_X_TEMP_SERIALIZER_H
+#define SVN_LIBSVN_FS_X_TEMP_SERIALIZER_H
 
 #include "private/svn_temp_serializer.h"
 #include "fs.h"
