@@ -559,7 +559,6 @@ static svn_error_t *
 locks_walker(void *baton,
              const char *fs_path,
              const char *digest_path,
-             apr_hash_t *children,
              svn_lock_t *lock,
              svn_boolean_t have_write_lock,
              apr_pool_t *pool)
@@ -589,17 +588,16 @@ locks_walker(void *baton,
 
 /* Callback type for walk_digest_files().
  *
- * CHILDREN and LOCK come from a read_digest_file(digest_path) call.
+ * LOCK come from a read_digest_file(digest_path) call.
  */
 typedef svn_error_t *(*walk_digests_callback_t)(void *baton,
                                                 const char *fs_path,
                                                 const char *digest_path,
-                                                apr_hash_t *children,
                                                 svn_lock_t *lock,
                                                 svn_boolean_t have_write_lock,
                                                 apr_pool_t *pool);
 
-/* A recursive function that calls WALK_DIGESTS_FUNC/WALK_DIGESTS_BATON for
+/* A function that calls WALK_DIGESTS_FUNC/WALK_DIGESTS_BATON for
    all lock digest files in and under PATH in FS.
    HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
    has the FS write lock. */
@@ -619,11 +617,10 @@ walk_digest_files(const char *fs_path,
   /* First, send up any locks in the current digest file. */
   SVN_ERR(read_digest_file(&children, &lock, fs_path, digest_path, pool));
 
-  SVN_ERR(walk_digests_func(walk_digests_baton, fs_path, digest_path,
-                            children, lock,
+  SVN_ERR(walk_digests_func(walk_digests_baton, fs_path, digest_path, lock,
                             have_write_lock, pool));
 
-  /* Now, recurse on this thing's child entries (if any; bail otherwise). */
+  /* Now, report all the child entries (if any; bail otherwise). */
   if (! apr_hash_count(children))
     return SVN_NO_ERROR;
   subpool = svn_pool_create(pool);
@@ -631,15 +628,19 @@ walk_digest_files(const char *fs_path,
     {
       const char *digest = apr_hash_this_key(hi);
       svn_pool_clear(subpool);
-      SVN_ERR(walk_digest_files
-              (fs_path, digest_path_from_digest(fs_path, digest, subpool),
-               walk_digests_func, walk_digests_baton, have_write_lock, subpool));
+
+      SVN_ERR(read_digest_file
+              (NULL, &lock, fs_path,
+               digest_path_from_digest(fs_path, digest, subpool), subpool));
+
+      SVN_ERR(walk_digests_func(walk_digests_baton, fs_path, digest_path, lock,
+                                have_write_lock, subpool));
     }
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
-/* A recursive function that calls GET_LOCKS_FUNC/GET_LOCKS_BATON for
+/* A function that calls GET_LOCKS_FUNC/GET_LOCKS_BATON for
    all locks in and under PATH in FS.
    HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
    has the FS write lock. */
