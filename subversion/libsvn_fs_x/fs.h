@@ -281,12 +281,8 @@ typedef struct svn_fs_x__data_t
      e.g. memcached may be ignored as caching is an optional feature. */
   svn_boolean_t fail_stop;
 
-  /* Caches native dag_node_t* instances and acts as a 1st level cache */
+  /* Caches native dag_node_t* instances */
   svn_fs_x__dag_cache_t *dag_node_cache;
-
-  /* DAG node cache for immutable nodes.  Maps (revision, fspath)
-     to (dag_node_t *). This is the 2nd level cache for DAG nodes. */
-  svn_cache__t *rev_node_cache;
 
   /* A cache of the contents of immutable directories; maps from
      unparsed FS ID to a apr_hash_t * mapping (const char *) dirent
