@@ -53,6 +53,10 @@
 
 #include "../svn_test.h"
 
+#include "wc-test-queries.h"
+
+WC_TEST_QUERIES_SQL_DECLARE_STATEMENTS(op_depth_statements);
+
 /* Compare strings, like strcmp but either or both may be NULL which
  * compares equal to NULL and not equal to any non-NULL string. */
 static int
@@ -73,14 +77,13 @@ strcmp_null(const char *s1, const char *s2)
 static svn_error_t *
 open_wc_db(svn_sqlite__db_t **sdb,
            const char *wc_root_abspath,
-           const char *const *my_statements,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_wc__db_util_open_db(sdb, wc_root_abspath, "wc.db",
                                   svn_sqlite__mode_readwrite,
                                   FALSE /* exclusive */, 0 /* timeout */,
-                                  my_statements,
+                                  op_depth_statements,
                                   result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -264,17 +267,6 @@ check_db_rows(svn_test__sandbox_t *b,
   svn_sqlite__db_t *sdb;
   int i;
   svn_sqlite__stmt_t *stmt;
-  static const char *const statements[] = {
-    "SELECT op_depth, nodes.presence, nodes.local_relpath, revision,"
-    "       repos_path, file_external, def_local_relpath, moved_to, moved_here,"
-    "       properties"
-    " FROM nodes "
-    " LEFT OUTER JOIN externals"
-    "             ON nodes.wc_id = externals.wc_id "
-    "                AND nodes.local_relpath = externals.local_relpath"
-    " WHERE nodes.local_relpath = ?1 OR nodes.local_relpath LIKE ?2",
-    NULL };
-#define STMT_SELECT_NODES_INFO 0
 
   svn_boolean_t have_row;
   apr_hash_t *found_hash = apr_hash_make(b->pool);
@@ -287,7 +279,7 @@ check_db_rows(svn_test__sandbox_t *b,
   comparison_baton.errors = NULL;
 
   /* Fill ACTUAL_HASH with data from the WC DB. */
-  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODES_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
                             (base_relpath[0]
@@ -399,13 +391,6 @@ check_db_conflicts(svn_test__sandbox_t *b,
   svn_sqlite__db_t *sdb;
   int i;
   svn_sqlite__stmt_t *stmt;
-  static const char *const statements[] = {
-    "SELECT local_relpath"
-    " FROM actual_node "
-    " WHERE conflict_data is NOT NULL "
-    "   AND local_relpath = ?1 OR local_relpath LIKE ?2",
-    NULL };
-#define STMT_SELECT_ACTUAL_INFO 0
 
   svn_boolean_t have_row;
   apr_hash_t *found_hash = apr_hash_make(b->pool);
@@ -420,7 +405,7 @@ check_db_conflicts(svn_test__sandbox_t *b,
   comparison_baton.errors = NULL;
 
   /* Fill ACTUAL_HASH with data from the WC DB. */
-  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
                             (base_relpath[0]
@@ -1166,27 +1151,17 @@ insert_dirs(svn_test__sandbox_t *b,
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  static const char * const statements[] = {
-    "DELETE FROM nodes;",
-    "INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,"
-    "                   revision, wc_id, repos_id, kind, depth)"
-    "           VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 'dir', 'infinity');",
-    "INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,"
-    "                   revision, parent_relpath, wc_id, repos_id, kind, depth)"
-    "           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, 1, 'dir', 'infinity');",
-    NULL,
-  };
 
-  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_NODES));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   while(nodes->local_relpath)
     {
       if (nodes->local_relpath[0])
         {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 2));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
           SVN_ERR(svn_sqlite__bindf(stmt, "sdssrs",
                                     nodes->local_relpath,
                                     nodes->op_depth,
@@ -1198,7 +1173,7 @@ insert_dirs(svn_test__sandbox_t *b,
         }
       else
         {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 1));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE_ROOT));
           SVN_ERR(svn_sqlite__bindf(stmt, "sdssr",
                                     nodes->local_relpath,
                                     nodes->op_depth,
@@ -1963,29 +1938,20 @@ insert_actual(svn_test__sandbox_t *b,
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  static const char * const statements[] = {
-    "DELETE FROM actual_node;",
-    "INSERT INTO actual_node (local_relpath, changelist, wc_id)"
-    "                 VALUES (?1, ?2, 1)",
-    "INSERT INTO actual_node (local_relpath, parent_relpath, changelist, wc_id)"
-    "                VALUES (?1, ?2, ?3, 1)",
-    "UPDATE nodes SET kind = 'file' WHERE wc_id = 1 and local_relpath = ?1",
-    NULL,
-  };
 
   if (!actual)
     return SVN_NO_ERROR;
 
-  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   while(actual->local_relpath)
     {
       if (actual->local_relpath[0])
         {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 2));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL));
           SVN_ERR(svn_sqlite__bindf(stmt, "sss",
                                     actual->local_relpath,
                                     svn_relpath_dirname(actual->local_relpath,
@@ -1994,7 +1960,7 @@ insert_actual(svn_test__sandbox_t *b,
         }
       else
         {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 1));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL_ROOT));
           SVN_ERR(svn_sqlite__bindf(stmt, "ss",
                                     actual->local_relpath,
                                     actual->changelist));
@@ -2002,7 +1968,7 @@ insert_actual(svn_test__sandbox_t *b,
       SVN_ERR(svn_sqlite__step_done(stmt));
       if (actual->changelist)
         {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 3));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_NODES_SET_FILE));
           SVN_ERR(svn_sqlite__bindf(stmt, "s", actual->local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
@@ -2018,10 +1984,6 @@ check_db_actual(svn_test__sandbox_t* b, actual_row_t *rows)
 {
   svn_sqlite__db_t *sdb;
   svn_sqlite__stmt_t *stmt;
-  static const char * const statements[] = {
-    "SELECT local_relpath FROM actual_node WHERE wc_id = 1;",
-    NULL,
-  };
   svn_boolean_t have_row;
   apr_hash_t *path_hash = apr_hash_make(b->pool);
 
@@ -2035,9 +1997,9 @@ check_db_actual(svn_test__sandbox_t* b, actual_row_t *rows)
       ++rows;
     }
 
-  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ALL_ACTUAL));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
