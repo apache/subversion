@@ -6313,8 +6313,13 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0}
     };
     conflict_info_t conflicts[] = {
+      /* ### The src_op_root path (=delete root) is currently A/B,
+             but A/B is no longer modified after the revert.
+
+             This tree conflict should report A/B/C, as that is the
+             deleted ancestor*/
       {"A/B/C", FALSE, FALSE, {svn_wc_conflict_action_edit,
-                               svn_wc_conflict_reason_moved_away, "A/B"}},
+                               svn_wc_conflict_reason_moved_away, "A/B/C"}},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -10928,7 +10933,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "move_update_delete_mods"),
     SVN_TEST_OPTS_PASS(nested_moves2,
                        "nested_moves2"),
-    SVN_TEST_OPTS_PASS(move_in_delete,
+    SVN_TEST_OPTS_XFAIL(move_in_delete,
                        "move_in_delete (issue 4303)"),
     SVN_TEST_OPTS_PASS(switch_move,
                        "switch_move"),
