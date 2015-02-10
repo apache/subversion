@@ -109,8 +109,8 @@ typedef struct cache_entry_t
      Used to short-circuit failed lookups. */
   apr_uint32_t hash_value;
 
-  /* revision to which the NODE belongs */
-  svn_revnum_t revision;
+  /* change set to which the NODE belongs */
+  svn_fs_x__change_set_t change_set;
 
   /* path of the NODE */
   char *path;
@@ -185,18 +185,18 @@ auto_clear_dag_cache(svn_fs_x__dag_cache_t* cache)
     }
 }
 
-/* For the given REVISION and PATH, return the respective entry in CACHE.
+/* For the given CHANGE_SET and PATH, return the respective entry in CACHE.
    If the entry is empty, its NODE member will be NULL and the caller
    may then set it to the corresponding DAG node allocated in CACHE->POOL.
  */
 static cache_entry_t *
-cache_lookup( svn_fs_x__dag_cache_t *cache
-            , svn_revnum_t revision
-            , const char *path)
+cache_lookup(svn_fs_x__dag_cache_t *cache,
+             svn_fs_x__change_set_t change_set,
+             const char *path)
 {
   apr_size_t i, bucket_index;
   apr_size_t path_len = strlen(path);
-  apr_uint32_t hash_value = (apr_uint32_t)revision;
+  apr_uint32_t hash_value = (apr_uint32_t)(apr_uint64_t)change_set;
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
   /* "randomizing" / distributing factor used in our hash function */
@@ -205,7 +205,7 @@ cache_lookup( svn_fs_x__dag_cache_t *cache
 
   /* optimistic lookup: hit the same bucket again? */
   cache_entry_t *result = &cache->buckets[cache->last_hit];
-  if (   (result->revision == revision)
+  if (   (result->change_set == change_set)
       && (result->path_len == path_len)
       && !memcmp(result->path, path, path_len))
     {
@@ -248,12 +248,12 @@ cache_lookup( svn_fs_x__dag_cache_t *cache
   /* if it is *NOT* a match,  clear the bucket, expect the caller to fill
      in the node and count it as an insertion */
   if (   (result->hash_value != hash_value)
-      || (result->revision != revision)
+      || (result->change_set != change_set)
       || (result->path_len != path_len)
       || memcmp(result->path, path, path_len))
     {
       result->hash_value = hash_value;
-      result->revision = revision;
+      result->change_set = change_set;
       if (result->path_len < path_len)
         result->path = apr_palloc(cache->pool, path_len + 1);
       result->path_len = path_len;
@@ -354,7 +354,8 @@ dag_node_cache_get(dag_node_t **node_p,
       cache_entry_t *bucket;
 
       auto_clear_dag_cache(ffd->dag_node_cache);
-      bucket = cache_lookup(ffd->dag_node_cache, root->rev, path);
+      bucket = cache_lookup(ffd->dag_node_cache, 
+                            svn_fs_x__change_set_by_rev(root->rev), path);
       if (bucket->node == NULL)
         {
           locate_cache(&cache, &key, root, path, pool);
