@@ -1159,29 +1159,17 @@ insert_dirs(svn_test__sandbox_t *b,
 
   while(nodes->local_relpath)
     {
-      if (nodes->local_relpath[0])
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sdssrs",
-                                    nodes->local_relpath,
-                                    nodes->op_depth,
-                                    nodes->presence,
-                                    nodes->repo_relpath,
-                                    nodes->repo_revnum,
-                                    svn_relpath_dirname(nodes->local_relpath,
-                                                        b->pool)));
-        }
-      else
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE_ROOT));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sdssr",
-                                    nodes->local_relpath,
-                                    nodes->op_depth,
-                                    nodes->presence,
-                                    nodes->repo_relpath,
-                                    nodes->repo_revnum));
-        }
-
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "sdssrs",
+                                nodes->local_relpath,
+                                nodes->op_depth,
+                                nodes->presence,
+                                nodes->repo_relpath,
+                                nodes->repo_revnum,
+                                nodes->local_relpath[0]
+                                  ? svn_relpath_dirname(nodes->local_relpath,
+                                                        b->pool)
+                                  : NULL));
       SVN_ERR(svn_sqlite__step_done(stmt));
       ++nodes;
     }
@@ -1949,22 +1937,14 @@ insert_actual(svn_test__sandbox_t *b,
 
   while(actual->local_relpath)
     {
-      if (actual->local_relpath[0])
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sss",
-                                    actual->local_relpath,
-                                    svn_relpath_dirname(actual->local_relpath,
-                                                        b->pool),
-                                    actual->changelist));
-        }
-      else
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL_ROOT));
-          SVN_ERR(svn_sqlite__bindf(stmt, "ss",
-                                    actual->local_relpath,
-                                    actual->changelist));
-        }
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL));
+      SVN_ERR(svn_sqlite__bindf(stmt, "sss",
+                                actual->local_relpath,
+                                actual->local_relpath[0]
+                                  ? svn_relpath_dirname(actual->local_relpath,
+                                                        b->pool)
+                                  : NULL,
+                                actual->changelist));
       SVN_ERR(svn_sqlite__step_done(stmt));
       if (actual->changelist)
         {
