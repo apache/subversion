@@ -72,41 +72,15 @@
 
 
 
-/* The root structures.
-
-   Why do they contain different data?  Well, transactions are mutable
-   enough that it isn't safe to cache the DAG node for the root
-   directory or the hash of copyfrom data: somebody else might modify
-   them concurrently on disk!  (Why is the DAG node cache safer than
-   the root DAG node?  When cloning transaction DAG nodes in and out
-   of the cache, all of the possibly-mutable data from the
-   svn_fs_x__noderev_t inside the dag_node_t is dropped.)  Additionally,
-   revisions are immutable enough that their DAG node cache can be
-   kept in the FS object and shared among multiple revision root
-   objects.
-*/
-typedef struct fs_txn_root_data_t
-{
-  /* TXN_ID value from the main struct but as a struct instead of a string */
-  svn_fs_x__txn_id_t txn_id;
-} fs_txn_root_data_t;
-
-/* Return the transaction ID to a given transaction ROOT. */
-static svn_fs_x__txn_id_t
-root_txn_id(svn_fs_root_t *root)
-{
-  fs_txn_root_data_t *frd = root->fsap_data;
-  assert(root->is_txn_root);
-
-  return frd->txn_id;
-}
 
 /* Return the change set to a given ROOT. */
 static svn_fs_x__change_set_t
 root_change_set(svn_fs_root_t *root)
 {
-  return (root->is_txn_root ? svn_fs_x__change_set_by_txn(root_txn_id(root))
-                            : svn_fs_x__change_set_by_rev(root->rev) );
+  if (root->is_txn_root)
+    return svn_fs_x__change_set_by_txn(svn_fs_x__root_txn_id(root));
+
+  return svn_fs_x__change_set_by_rev(root->rev);
 }
 
 
@@ -363,31 +337,6 @@ svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
 
 /* Getting dag nodes for roots.  */
 
-/* Set *NODE_P to a freshly opened dag node referring to the root
-   directory of ROOT, allocating from RESULT_POOL.  Use SCRATCH_POOL
-   for temporary allocations.  */
-static svn_error_t *
-root_node(dag_node_t **node_p,
-          svn_fs_root_t *root,
-          apr_pool_t *result_pool,
-          apr_pool_t *scratch_pool)
-{
-  if (root->is_txn_root)
-    {
-      /* It's a transaction root.  Open a fresh copy.  */
-      return svn_fs_x__dag_txn_root(node_p, root->fs, root_txn_id(root),
-                                    result_pool, scratch_pool);
-    }
-  else
-    {
-      /* It's a revision root, so we already have its root directory
-         opened.  */
-      return svn_fs_x__dag_revision_root(node_p, root->fs, root->rev,
-                                         result_pool, scratch_pool);
-    }
-}
-
-
 /* Set *NODE_P to a mutable root directory for ROOT, cloning if
    necessary, allocating in RESULT_POOL.  ROOT must be a transaction root.
    Use ERROR_PATH in error messages.  Use SCRATCH_POOL for temporaries.*/
@@ -401,7 +350,8 @@ mutable_root_node(dag_node_t **node_p,
   if (root->is_txn_root)
     {
       /* It's a transaction root.  Open a fresh copy.  */
-      return svn_fs_x__dag_txn_root(node_p, root->fs, root_txn_id(root),
+      return svn_fs_x__dag_txn_root(node_p, root->fs,
+                                    svn_fs_x__root_txn_id(root),
                                     result_pool, scratch_pool);
     }
   else
@@ -665,7 +615,7 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
     {
       /* Make a parent_path item for the root node, using its own current
          copy id.  */
-      SVN_ERR(root_node(&here, root, pool, iterpool));
+      SVN_ERR(svn_fs_x__root_node(&here, root, pool, iterpool));
       rest = path + 1; /* skip the leading '/', it saves in iteration */
     }
 
@@ -797,7 +747,7 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
                             apr_pool_t *scratch_pool)
 {
   dag_node_t *clone;
-  svn_fs_x__txn_id_t txn_id = root_txn_id(root);
+  svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(root);
 
   /* Is the node mutable already?  */
   if (svn_fs_x__dag_check_mutable(parent_path->node))
