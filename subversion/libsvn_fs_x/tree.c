@@ -91,10 +91,6 @@ typedef struct fs_txn_root_data_t
 {
   /* TXN_ID value from the main struct but as a struct instead of a string */
   svn_fs_x__txn_id_t txn_id;
-
-  /* Cache of txn DAG nodes (without their nested noderevs, because
-   * it's mutable). Same keys/values as ffd->rev_node_cache. */
-  svn_cache__t *txn_node_cache;
 } fs_txn_root_data_t;
 
 static svn_fs_root_t *
@@ -3287,20 +3283,6 @@ make_txn_root(svn_fs_root_t **root_p,
   root->txn = svn_fs_x__txn_name(txn_id, root->pool);
   root->txn_flags = flags;
   root->rev = base_rev;
-
-  /* Because this cache actually tries to invalidate elements, keep
-     the number of elements per page down.
-
-     Note that since dag_node_cache_invalidate uses svn_cache__iter,
-     this *cannot* be a memcache-based cache.  */
-  SVN_ERR(svn_cache__create_inprocess(&(frd->txn_node_cache),
-                                      svn_fs_x__dag_serialize,
-                                      svn_fs_x__dag_deserialize,
-                                      APR_HASH_KEY_STRING,
-                                      32, 20, FALSE,
-                                      root->txn,
-                                      root->pool));
-
   root->fsap_data = frd;
 
   *root_p = root;

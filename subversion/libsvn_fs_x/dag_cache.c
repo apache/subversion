@@ -89,10 +89,6 @@ typedef struct fs_txn_root_data_t
 {
   /* TXN_ID value from the main struct but as a struct instead of a string */
   svn_fs_x__txn_id_t txn_id;
-
-  /* Cache of txn DAG nodes (without their nested noderevs, because
-   * it's mutable). Same keys/values as ffd->rev_node_cache. */
-  svn_cache__t *txn_node_cache;
 } fs_txn_root_data_t;
 
 /* Return the transaction ID to a given transaction ROOT. */
