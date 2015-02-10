@@ -95,6 +95,25 @@ typedef struct fs_txn_root_data_t
   svn_cache__t *txn_node_cache;
 } fs_txn_root_data_t;
 
+/* Return the transaction ID to a given transaction ROOT. */
+static svn_fs_x__txn_id_t
+root_txn_id(svn_fs_root_t *root)
+{
+  fs_txn_root_data_t *frd = root->fsap_data;
+  assert(root->is_txn_root);
+
+  return frd->txn_id;
+}
+
+/* Return the change set to a given ROOT. */
+static svn_fs_x__change_set_t
+root_change_set(svn_fs_root_t *root)
+{
+  return (root->is_txn_root ? svn_fs_x__change_set_by_txn(root_txn_id(root))
+                            : svn_fs_x__change_set_by_rev(root->rev) );
+}
+
+
 
 /*** Node Caching ***/
 
@@ -308,25 +327,14 @@ locate_cache(svn_cache__t **cache,
              const char *path,
              apr_pool_t *result_pool)
 {
-  if (root->is_txn_root)
-    {
-      fs_txn_root_data_t *frd = root->fsap_data;
+  svn_fs_x__data_t *ffd = root->fs->fsap_data;
+  assert(!root->is_txn_root);
 
-      if (cache)
-        *cache = frd->txn_node_cache;
-      if (key && path)
-        *key = path;
-    }
-  else
-    {
-      svn_fs_x__data_t *ffd = root->fs->fsap_data;
-
-      if (cache)
-        *cache = ffd->rev_node_cache;
-      if (key && path)
-        *key = svn_fs_x__combine_number_and_string(root->rev, path,
-                                                   result_pool);
-    }
+  if (cache)
+    *cache = ffd->rev_node_cache;
+  if (key && path)
+    *key = svn_fs_x__combine_number_and_string(root->rev, path,
+                                               result_pool);
 }
 
 /* Return NODE for PATH from ROOT's node cache, or NULL if the node
@@ -343,50 +351,29 @@ dag_node_cache_get(dag_node_t **node_p,
   dag_node_t *node = NULL;
   svn_cache__t *cache;
   const char *key;
+  svn_fs_x__data_t *ffd = root->fs->fsap_data;
+  cache_entry_t *bucket;
 
   SVN_ERR_ASSERT(*path == '/');
 
-  if (!root->is_txn_root)
+  auto_clear_dag_cache(ffd->dag_node_cache);
+  bucket = cache_lookup(ffd->dag_node_cache, root_change_set(root), path);
+  if (bucket->node == NULL && !root->is_txn_root)
     {
-      /* immutable DAG node. use the global caches for it */
-
-      svn_fs_x__data_t *ffd = root->fs->fsap_data;
-      cache_entry_t *bucket;
-
-      auto_clear_dag_cache(ffd->dag_node_cache);
-      bucket = cache_lookup(ffd->dag_node_cache, 
-                            svn_fs_x__change_set_by_rev(root->rev), path);
-      if (bucket->node == NULL)
+      locate_cache(&cache, &key, root, path, pool);
+      SVN_ERR(svn_cache__get((void **)&node, &found, cache, key,
+                             ffd->dag_node_cache->pool));
+      if (found && node)
         {
-          locate_cache(&cache, &key, root, path, pool);
-          SVN_ERR(svn_cache__get((void **)&node, &found, cache, key,
-                                 ffd->dag_node_cache->pool));
-          if (found && node)
-            {
-              /* Patch up the FS, since this might have come from an old FS
-              * object. */
-              svn_fs_x__dag_set_fs(node, root->fs);
-              bucket->node = node;
-            }
-        }
-      else
-        {
-          node = bucket->node;
+          /* Patch up the FS, since this might have come from an old FS
+           * object. */
+          svn_fs_x__dag_set_fs(node, root->fs);
+          bucket->node = node;
         }
     }
   else
     {
-      /* DAG is mutable / may become invalid. Use the TXN-local cache */
-
-      locate_cache(&cache, &key, root, path, pool);
-
-      SVN_ERR(svn_cache__get((void **) &node, &found, cache, key, pool));
-      if (found && node)
-        {
-          /* Patch up the FS, since this might have come from an old FS
-          * object. */
-          svn_fs_x__dag_set_fs(node, root->fs);
-        }
+      node = bucket->node;
     }
 
   *node_p = node;
@@ -402,43 +389,30 @@ svn_fs_x__set_dag_node(svn_fs_root_t *root,
                        dag_node_t *node,
                        apr_pool_t *scratch_pool)
 {
-  svn_cache__t *cache;
-  const char *key;
+  if (root->is_txn_root)
+    {
+      svn_fs_x__data_t *ffd = root->fs->fsap_data;
+      cache_entry_t *bucket;
+      svn_fs_x__dag_cache_t *cache = ffd->dag_node_cache;
 
-  SVN_ERR_ASSERT(*path == '/');
+      auto_clear_dag_cache(cache);
+      bucket = cache_lookup(cache, root_change_set(root), path);
+      bucket->node = svn_fs_x__dag_copy_into_pool(node, cache->pool);
+    }
+  else
+    {
+      svn_cache__t *cache;
+      const char *key;
 
-  /* Do *not* attempt to dup and put the node into L1.
-   * dup() is twice as expensive as an L2 lookup (which will set also L1).
-   */
-  locate_cache(&cache, &key, root, path, scratch_pool);
+      SVN_ERR_ASSERT(*path == '/');
 
-  return svn_cache__set(cache, key, node, scratch_pool);
-}
+      /* Do *not* attempt to dup and put the node into L1.
+       * dup() is twice as expensive as an L2 lookup (which will set also L1).
+       */
+      locate_cache(&cache, &key, root, path, scratch_pool);
 
-
-/* Baton for find_descendants_in_cache. */
-typedef struct fdic_baton_t
-{
-  const char *path;
-  apr_array_header_t *list;
-  apr_pool_t *pool;
-} fdic_baton_t;
-
-/* If the given item is a descendant of BATON->PATH, push
- * it onto BATON->LIST (copying into BATON->POOL).  Implements
- * the svn_iter_apr_hash_cb_t prototype. */
-static svn_error_t *
-find_descendants_in_cache(void *baton,
-                          const void *key,
-                          apr_ssize_t klen,
-                          void *val,
-                          apr_pool_t *pool)
-{
-  fdic_baton_t *b = baton;
-  const char *item_path = key;
-
-  if (svn_fspath__skip_ancestor(b->path, item_path))
-    APR_ARRAY_PUSH(b->list, const char *) = apr_pstrdup(b->pool, item_path);
+      SVN_ERR(svn_cache__set(cache, key, node, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -448,48 +422,25 @@ svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
                                const char *path,
                                apr_pool_t *scratch_pool)
 {
-  fdic_baton_t b;
-  svn_cache__t *cache;
-  apr_pool_t *iterpool;
-  int i;
+  svn_fs_x__data_t *ffd = root->fs->fsap_data;
+  svn_fs_x__dag_cache_t *cache = ffd->dag_node_cache;
+  svn_fs_x__change_set_t change_set = root_change_set(root);
 
-  b.path = path;
-  b.pool = svn_pool_create(scratch_pool);
-  b.list = apr_array_make(b.pool, 1, sizeof(const char *));
-
-  SVN_ERR_ASSERT(root->is_txn_root);
-  locate_cache(&cache, NULL, root, NULL, b.pool);
-
-
-  SVN_ERR(svn_cache__iter(NULL, cache, find_descendants_in_cache,
-                          &b, b.pool));
-
-  iterpool = svn_pool_create(b.pool);
-
-  for (i = 0; i < b.list->nelts; i++)
+  apr_size_t i;
+  for (i = 0; i < BUCKET_COUNT; ++i)
     {
-      const char *descendant = APR_ARRAY_IDX(b.list, i, const char *);
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_cache__set(cache, descendant, NULL, iterpool));
+      cache_entry_t *bucket = &cache->buckets[i];
+      if (   bucket->change_set == change_set
+          && bucket->node
+          && svn_relpath_skip_ancestor(path + 1, bucket->path + 1))
+        bucket->node = NULL;
     }
 
-  svn_pool_destroy(iterpool);
-  svn_pool_destroy(b.pool);
   return SVN_NO_ERROR;
 }
 
 
 /* Getting dag nodes for roots.  */
-
-/* Return the transaction ID to a given transaction ROOT. */
-static svn_fs_x__txn_id_t
-root_txn_id(svn_fs_root_t *root)
-{
-  fs_txn_root_data_t *frd = root->fsap_data;
-  assert(root->is_txn_root);
-
-  return frd->txn_id;
-}
 
 /* Set *NODE_P to a freshly opened dag node referring to the root
    directory of ROOT, allocating from RESULT_POOL.  Use SCRATCH_POOL
