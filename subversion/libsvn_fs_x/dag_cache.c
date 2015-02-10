@@ -310,29 +310,6 @@ cache_lookup_last_path(svn_fs_x__dag_cache_t *cache,
   return NULL;
 }
 
-/* 2nd level cache */
-
-/* Find and return the DAG node cache for ROOT and the key that
-   should be used for PATH.
-
-   RESULT_POOL will only be used for allocating a new keys if necessary. */
-static void
-locate_cache(svn_cache__t **cache,
-             const char **key,
-             svn_fs_root_t *root,
-             const char *path,
-             apr_pool_t *result_pool)
-{
-  svn_fs_x__data_t *ffd = root->fs->fsap_data;
-  assert(!root->is_txn_root);
-
-  if (cache)
-    *cache = ffd->rev_node_cache;
-  if (key && path)
-    *key = svn_fs_x__combine_number_and_string(root->rev, path,
-                                               result_pool);
-}
-
 /* Return NODE for PATH from ROOT's node cache, or NULL if the node
    isn't cached; read it from the FS. *NODE remains valid until either
    POOL or the FS gets cleared or destroyed (whichever comes first).
@@ -343,10 +320,6 @@ dag_node_cache_get(dag_node_t **node_p,
                    const char *path,
                    apr_pool_t *pool)
 {
-  svn_boolean_t found;
-  dag_node_t *node = NULL;
-  svn_cache__t *cache;
-  const char *key;
   svn_fs_x__data_t *ffd = root->fs->fsap_data;
   cache_entry_t *bucket;
 
@@ -354,25 +327,7 @@ dag_node_cache_get(dag_node_t **node_p,
 
   auto_clear_dag_cache(ffd->dag_node_cache);
   bucket = cache_lookup(ffd->dag_node_cache, root_change_set(root), path);
-  if (bucket->node == NULL && !root->is_txn_root)
-    {
-      locate_cache(&cache, &key, root, path, pool);
-      SVN_ERR(svn_cache__get((void **)&node, &found, cache, key,
-                             ffd->dag_node_cache->pool));
-      if (found && node)
-        {
-          /* Patch up the FS, since this might have come from an old FS
-           * object. */
-          svn_fs_x__dag_set_fs(node, root->fs);
-          bucket->node = node;
-        }
-    }
-  else
-    {
-      node = bucket->node;
-    }
-
-  *node_p = node;
+  *node_p = bucket->node;
 
   return SVN_NO_ERROR;
 }
@@ -385,30 +340,13 @@ svn_fs_x__set_dag_node(svn_fs_root_t *root,
                        dag_node_t *node,
                        apr_pool_t *scratch_pool)
 {
-  if (root->is_txn_root)
-    {
-      svn_fs_x__data_t *ffd = root->fs->fsap_data;
-      cache_entry_t *bucket;
-      svn_fs_x__dag_cache_t *cache = ffd->dag_node_cache;
+  svn_fs_x__data_t *ffd = root->fs->fsap_data;
+  cache_entry_t *bucket;
+  svn_fs_x__dag_cache_t *cache = ffd->dag_node_cache;
 
-      auto_clear_dag_cache(cache);
-      bucket = cache_lookup(cache, root_change_set(root), path);
-      bucket->node = svn_fs_x__dag_copy_into_pool(node, cache->pool);
-    }
-  else
-    {
-      svn_cache__t *cache;
-      const char *key;
-
-      SVN_ERR_ASSERT(*path == '/');
-
-      /* Do *not* attempt to dup and put the node into L1.
-       * dup() is twice as expensive as an L2 lookup (which will set also L1).
-       */
-      locate_cache(&cache, &key, root, path, scratch_pool);
-
-      SVN_ERR(svn_cache__set(cache, key, node, scratch_pool));
-    }
+  auto_clear_dag_cache(cache);
+  bucket = cache_lookup(cache, root_change_set(root), path);
+  bucket->node = svn_fs_x__dag_copy_into_pool(node, cache->pool);
 
   return SVN_NO_ERROR;
 }

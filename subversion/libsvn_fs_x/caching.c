@@ -23,7 +23,6 @@
 #include "fs.h"
 #include "fs_x.h"
 #include "id.h"
-#include "dag.h"
 #include "dag_cache.h"
 #include "index.h"
 #include "changes.h"
@@ -406,21 +405,6 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                               dump_global_cache_statistics,
                               apr_pool_cleanup_null);
 #endif
-
-  /* Rough estimate: revision DAG nodes have size around 320 bytes, so
-   * let's put 16 on a page. */
-  SVN_ERR(create_cache(&(ffd->rev_node_cache),
-                       NULL,
-                       membuffer,
-                       1024, 16,
-                       svn_fs_x__dag_serialize,
-                       svn_fs_x__dag_deserialize,
-                       APR_HASH_KEY_STRING,
-                       apr_pstrcat(scratch_pool, prefix, "DAG", SVN_VA_NULL),
-                       SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
-                       fs,
-                       no_handler,
-                       fs->pool, scratch_pool));
 
   /* 1st level DAG node cache */
   ffd->dag_node_cache = svn_fs_x__create_dag_cache(fs->pool);
