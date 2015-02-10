@@ -1097,10 +1097,10 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
 
   /* Configure some externals on ^/A */
   propval = svn_string_create("^/A/D/gamma B/gamma\n"
-                              "^/A/D/G C/exdir_G\n"
+                              "-r1 ^/A/D/G C/exdir_G\n"
                               "^/A/D/H@1 C/exdir_H\n"
                               "^/A/D/H C/exdir_H2\n"
-                              "^/A/B D/z/y/z/blah\n",
+                              "-r1 ^/A/B D/z/y/z/blah\n",
                               pool);
   A_url = apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL);
   SVN_ERR(svn_client_propset_remote(SVN_PROP_EXTERNALS, propval,
@@ -1160,7 +1160,8 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
         {
           SVN_TEST_STRING_ASSERT(item->target_dir, "C/exdir_G");
           /* Not pinned. */
-          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_head);
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->revision.value.number == 1);
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_head);
         }
       else if (strcmp(item->url, "^/A/D/H") == 0)
@@ -1191,7 +1192,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           SVN_TEST_STRING_ASSERT(item->target_dir, "D/z/y/z/blah");
           /* Pinned to r2. */
           SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
-          SVN_TEST_ASSERT(item->revision.value.number == 2);
+          SVN_TEST_ASSERT(item->revision.value.number == 1);
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
         }
