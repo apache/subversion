@@ -724,6 +724,14 @@ svn_auth__apply_config_for_server(svn_auth_baton_t *auth_baton,
                               SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
     store_auth_creds = FALSE;
 
+  /* All the svn_auth_set_parameter() calls below this not only affect the
+     to be created ra session, but also all the ra sessions that are already
+     use this auth baton!
+
+     Please try to key things based on the realm string instead of this
+     construct.
+ */
+
   if (config)
     {
       /* Grab the 'servers' config. */
@@ -818,6 +826,22 @@ svn_auth__apply_config_for_server(svn_auth_baton_t *auth_baton,
     svn_auth_set_parameter(auth_baton,
                             SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
+  /* ### This setting may have huge side-effects when the auth baton is shared
+     ### between different ra sessions, as it will change which server settings
+     ### will be used for all future auth requests.
+     ###
+     ### E.g. when you connect using a ssl client cert that is specified in the
+     ### config file, you might have it when you first connect... but if you
+     ### then connect to another repository, you might not see the same
+     ### settings when the SSL connection is built up again later on.
+     ###
+     ### Most current usages should probably have been keyed on the realm
+     ### string instead of this magic flag that changes when multiple repositories
+     ### are used.
+     ###
+     ### This especially affects long living ra sessions, such as those on the
+     ### reuse-ra-session branch.
+   */
   if (server_group)
     svn_auth_set_parameter(auth_baton,
                            SVN_AUTH_PARAM_SERVER_GROUP,

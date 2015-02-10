@@ -160,7 +160,7 @@ def iprops_basic_working(sbox):
     psi_path, expected_iprops, expected_explicit_props)
 
   # Proplist file target with only explicit props.
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'revert', wc_dir)
   expected_iprops = {}
   expected_explicit_props = {'FileProp1' : 'File-Prop-Val1'}
   svntest.actions.run_and_verify_inherited_prop_xml(
@@ -184,7 +184,7 @@ def iprops_basic_repos(sbox):
   svntest.main.run_svn(None, 'commit', '-m', 'Add some file properties',
                        wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   sbox.simple_propset('RootProp1', 'Root-Prop-Val1', '.')
   sbox.simple_propset('RootProp2', 'Root-Prop-Val2', '.')
   sbox.simple_propset('DirProp2', 'Dir-Prop-Val-Root', '.')
@@ -317,7 +317,7 @@ def iprops_switched_subtrees(sbox):
                        sbox.repo_url + '/branch2', '-m', 'Make branch2')
 
   # Create a root property and two branch properties
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   sbox.simple_propset('Root-Prop-1', 'Root-Prop-Val1', '.')
   sbox.simple_propset('Branch-Name', 'Feature #1', 'branch1')
   sbox.simple_propset('Branch-Name', 'Feature #2', 'branch2')
@@ -348,7 +348,7 @@ def iprops_switched_subtrees(sbox):
   # which does inherit properties from ^/branch1 and ^/.  The inherited
   # properties cache should be updated to reflect this when asking what
   # properties branch2/B/lambda inherits.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   expected_iprops = {
     sbox.repo_url              : {'Root-Prop-1' : 'Root-Prop-Val1'},
     sbox.repo_url + '/branch1' : {'Branch-Name' : 'Feature #1'}}
@@ -359,20 +359,20 @@ def iprops_switched_subtrees(sbox):
   # Now update the WC back to r3, where there are no properties.  The
   # inheritable properties cache for the WC-root at branch2/B should be
   # cleared and no inheritable properties found for branch2/B/lambda.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r3', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', '-r3', wc_dir)
   expected_iprops = {}
   expected_explicit_props = {}
   svntest.actions.run_and_verify_inherited_prop_xml(
     branch2_lambda_path, expected_iprops, expected_explicit_props)
   # Update back to HEAD=r4 before continuing.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # Now unswitch branch2/B and check branch2/B/lambda's inherited props.
   # Now no iprop cache for branch2/B should exist and branch2/B/lambda
   # should inherit from branch2 and '.'.
   svntest.main.run_svn(None, 'switch', sbox.repo_url + '/branch2/B',
                        branch2_B_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   expected_iprops = {
     ### Working copy parents! ###
     wc_dir       : {'Root-Prop-1' : 'Root-Prop-Val1'},
@@ -893,8 +893,8 @@ def iprops_pegged_wc_targets(sbox):
   # Inherited props should always come from the repository parent of
   # ^/A/B/E/alpha and so should not include the property (working or
   # otherwise) on A/D.
-  svntest.actions.run_and_verify_svn(None, None, [], 'delete', G_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+  svntest.actions.run_and_verify_svn(None, [], 'delete', G_path)
+  svntest.actions.run_and_verify_svn(None, [], 'copy',
                                     sbox.repo_url + '/A/B', G_path)
 
   # Operation | Target | Peg Revision | Operative Revision
@@ -1138,11 +1138,11 @@ def iprops_pegged_wc_targets(sbox):
   # Revert the replacement with history of A/D/G and once again
   # replace A/D/G, but this time without history (using and export
   # of A/B.
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', G_path, '-R')
-  svntest.actions.run_and_verify_svn(None, None, [], 'delete', G_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'export',
+  svntest.actions.run_and_verify_svn(None, [], 'revert', G_path, '-R')
+  svntest.actions.run_and_verify_svn(None, [], 'delete', G_path)
+  svntest.actions.run_and_verify_svn(None, [], 'export',
                                      sbox.repo_url + '/A/B', G_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', G_path)
+  svntest.actions.run_and_verify_svn(None, [], 'add', G_path)
   # Set a working prop on a file within the replaced tree, we should *never*
   # see this property if asking about the
   # file@[HEAD | PREV | COMMITTED | BASE]
@@ -1156,21 +1156,21 @@ def iprops_pegged_wc_targets(sbox):
   #
   # proplist/propget WC-PATH@HEAD
   svntest.actions.run_and_verify_svn(
-    None, None,
+    None,
     ".*Unknown node kind for '" + sbox.repo_url + "/A/D/G/E/alpha'\n",
     'pl', '-v', '--show-inherited-props', replaced_alpha_path + '@HEAD')
   svntest.actions.run_and_verify_svn(
-    None, None,
+    None,
     ".*'" + sbox.repo_url + "/A/D/G/E/alpha' does not exist in revision 3\n",
     'pg', 'RootProp1', '-v', '--show-inherited-props',
     replaced_alpha_path + '@HEAD')
   # proplist/propget WC-PATH@PREV
   svntest.actions.run_and_verify_svn(
-    None, None,
+    None,
     ".*Path '.*alpha' has no committed revision\n",
     'pl', '-v', '--show-inherited-props', replaced_alpha_path + '@PREV')
   svntest.actions.run_and_verify_svn(
-    None, None,
+    None,
     ".*Path '.*alpha' has no committed revision\n",
     'pg', 'RootProp1', '-v', '--show-inherited-props', replaced_alpha_path + '@PREV')
   # proplist/propget WC-PATH@COMMITTED
@@ -1421,7 +1421,7 @@ def iprops_shallow_operative_depths(sbox):
   # r2 - Create a branch..
   svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
                        sbox.repo_url + '/branch1', '-m', 'Make branch1')
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # r3 - Create a root property and some branch properties
   sbox.simple_propset('Root-Prop-1', 'Root-Prop-Val1', '.')
@@ -1437,7 +1437,7 @@ def iprops_shallow_operative_depths(sbox):
   svntest.main.run_svn(None, 'commit', '-m', 'Change some properties',
                        wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # Switch the WC to ^/branch1:
   svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
@@ -1449,7 +1449,7 @@ def iprops_shallow_operative_depths(sbox):
   svntest.main.run_svn(None, 'switch', sbox.repo_url + '/A/mu',
                        sbox.ospath('mu'))
   # Update the whole WC back to r3.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r3', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', '-r3', wc_dir)
 
   # Check the inherited props on B/E within the switched subtree
   # and the switched file mu.  The props should all be inherited
@@ -1467,7 +1467,7 @@ def iprops_shallow_operative_depths(sbox):
   # Again check the inherited props on B/E.  This shouldn't affect the
   # switched subtree at all, the props it inherits should still reflect
   # the values at r3.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--depth=empty', wc_dir)
   svntest.actions.run_and_verify_inherited_prop_xml(
     sbox.ospath('B/E'), expected_iprops, expected_explicit_props)
@@ -1476,7 +1476,7 @@ def iprops_shallow_operative_depths(sbox):
 
   # Update the root of the WC (to HEAD=r4) at depth=files.  B/E should
   # still inherit vales from r3, but mu should now inherit props from r4.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--depth=files', wc_dir)
   svntest.actions.run_and_verify_inherited_prop_xml(
     sbox.ospath('B/E'), expected_iprops, expected_explicit_props)
@@ -1489,7 +1489,7 @@ def iprops_shallow_operative_depths(sbox):
 
   # Update the root of the WC (to HEAD=r4) at depth=immediates.  Now both B/E
   # and mu inherit props from r4.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--depth=immediates', wc_dir)
   svntest.actions.run_and_verify_inherited_prop_xml(
     sbox.ospath('B/E'), expected_iprops, expected_explicit_props)
@@ -1509,7 +1509,7 @@ def iprops_with_directory_externals(sbox):
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
   other_wc_dir = sbox.add_wc_path("other")
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
-  svntest.actions.run_and_verify_svn(None, None, [], 'co', other_repo_url,
+  svntest.actions.run_and_verify_svn(None, [], 'co', other_repo_url,
                                      other_wc_dir)
 
   # Create a root property on the first WC.
@@ -1518,7 +1518,7 @@ def iprops_with_directory_externals(sbox):
                        wc_dir)
 
   # Create a root property on the "other" WC.
-  svntest.actions.run_and_verify_svn(None, None, [], 'ps', 'Other-Root-Prop',
+  svntest.actions.run_and_verify_svn(None, [], 'ps', 'Other-Root-Prop',
                                      'Root-Prop-Val-from-other', other_wc_dir)
   svntest.main.run_svn(None, 'commit', '-m', 'Add a root property',
                        other_wc_dir)
@@ -1533,20 +1533,20 @@ def iprops_with_directory_externals(sbox):
   sbox.simple_propset('svn:externals',
                       other_repo_url + '/A/D/G X-Other-Repos',
                       'E')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, [], 'ci',
                                      '-m', 'Add external point to other WC',
                                      wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # Create an external in the first WC that points to a location in the
   # same WC.
   sbox.simple_propset('svn:externals',
                       sbox.repo_url + '/A/D/H X-Same-Repos',
                       'F')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', '-m',
                                      'Add external pointing to same repos',
                                      wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # Check the properties inherited by the external from the same repository.
   # It should inherit the props from the root of the same repository.
@@ -1590,9 +1590,9 @@ def iprops_with_file_externals(sbox):
   sbox.simple_propset('svn:externals',
                       sbox.repo_url + '/A/D/H/psi@4 file-external-pegged',
                       'A/B/F')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', '-m',
                                      'Add a file external', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # Check the properties inherited by the external files.  Both should
   # inherit the properties from ^/ and ^/A/D.
@@ -1622,7 +1622,7 @@ def iprops_with_file_externals(sbox):
     expected_explicit_props)
 
   # ...We update the external:
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   # The pegged file external's iprops should remain unchanged.
   svntest.actions.run_and_verify_inherited_prop_xml(
     sbox.ospath('A/B/F/file-external-pegged'), expected_iprops,

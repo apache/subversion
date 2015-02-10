@@ -180,7 +180,7 @@ def info_with_tree_conflicts(sbox):
     svntest.actions.run_and_verify_info([expected_info], path)
 
     # check XML info
-    exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+    exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                   [], 'info',
                                                                   path,
                                                                   '--xml')
@@ -233,7 +233,7 @@ def info_on_added_file(sbox):
   svntest.actions.run_and_verify_info([expected], new_file)
 
   # check XML info
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                 [], 'info',
                                                                 new_file,
                                                                 '--xml')
@@ -273,7 +273,7 @@ def info_on_mkdir(sbox):
   svntest.actions.run_and_verify_info([expected], new_dir)
 
   # check XML info
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                 [], 'info',
                                                                 new_dir,
                                                                 '--xml')
@@ -351,7 +351,7 @@ def info_multiple_targets(sbox):
     non_existent_path = os.path.join(wc_dir, 'non-existent')
 
     # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
+    svntest.actions.run_and_verify_svn2(None, [],
                                         0, 'info', alpha, beta)
 
     # One non-existing target
@@ -374,7 +374,7 @@ def info_multiple_targets(sbox):
     non_existent_url = sbox.repo_url +  '/non-existent'
 
     # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
+    svntest.actions.run_and_verify_svn2(None, [],
                                         0, 'info', alpha, beta)
 
     # One non-existing target
@@ -483,12 +483,12 @@ def info_show_exclude(sbox):
   expected_error = 'svn: E200009: Could not display info for all targets.*'
 
   # Expect error on iota (status = not-present)
-  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
+  svntest.actions.run_and_verify_svn([], expected_error, 'info', iota)
 
   sbox.simple_update()
 
   # Expect error on iota (unversioned)
-  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
+  svntest.actions.run_and_verify_svn([], expected_error, 'info', iota)
 
 @Issue(3998)
 def binary_tree_conflict(sbox):
@@ -558,7 +558,7 @@ def relpath_escaping(sbox):
 
   # Also test the local path (to help resolving the relative path) and an
   # unescaped path which the client should automatically encode
-  svntest.actions.run_and_verify_svn(None, None, [], 'info',
+  svntest.actions.run_and_verify_svn(None, [], 'info',
                                      info[0]['Relative URL'],
                                      info[0]['URL'],
                                      testpath,

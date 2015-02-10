@@ -132,7 +132,7 @@ def status_with_inaccessible_wc_db(sbox):
   sbox.build(read_only = True)
   os.chmod(sbox.ospath(".svn/wc.db"), 0)
   svntest.actions.run_and_verify_svn(
-    "Status when wc.db is not accessible", None,
+    None,
     r"[^ ]+ E155016: The working copy database at '.*' is corrupt",
     "st", sbox.wc_dir)
 
@@ -144,7 +144,7 @@ def status_with_corrupt_wc_db(sbox):
   with open(sbox.ospath(".svn/wc.db"), 'wb') as fd:
     fd.write('\0' * 17)
   svntest.actions.run_and_verify_svn(
-    "Status when wc.db is corrupt", None,
+    None,
     r"[^ ]+ E155016: The working copy database at '.*' is corrupt",
     "st", sbox.wc_dir)
 
@@ -155,7 +155,7 @@ def status_with_zero_length_wc_db(sbox):
   sbox.build(read_only = True)
   os.close(os.open(sbox.ospath(".svn/wc.db"), os.O_RDWR | os.O_TRUNC))
   svntest.actions.run_and_verify_svn(
-    "Status when wc.db has zero length", None,
+    None,
     r"[^ ]+ E200030:",                    # SVN_ERR_SQLITE_ERROR
     "st", sbox.wc_dir)
 
@@ -166,7 +166,7 @@ def status_without_wc_db(sbox):
   sbox.build(read_only = True)
   os.remove(sbox.ospath(".svn/wc.db"))
   svntest.actions.run_and_verify_svn(
-    "Status when wc.db is missing", None,
+    None,
     r"[^ ]+ E155016: The working copy database at '.*' is missing",
     "st", sbox.wc_dir)
 
@@ -179,7 +179,7 @@ def status_without_wc_db_and_entries(sbox):
   os.remove(sbox.ospath(".svn/wc.db"))
   os.remove(sbox.ospath(".svn/entries"))
   svntest.actions.run_and_verify_svn2(
-    "Status when wc.db and entries are missing", None,
+    None,
     r"[^ ]+ warning: W155007: '.*' is not a working copy",
     0, "st", sbox.wc_dir)
 
@@ -192,7 +192,7 @@ def status_with_missing_wc_db_and_maybe_valid_entries(sbox):
     fd.write('something\n')
     os.remove(sbox.ospath(".svn/wc.db"))
   svntest.actions.run_and_verify_svn(
-    "Status when wc.db is missing and .svn/entries might be valid", None,
+    None,
     r"[^ ]+ E155036:",                    # SVN_ERR_WC_UPGRADE_REQUIRED
     "st", sbox.wc_dir)
 
@@ -203,7 +203,7 @@ def cleanup_below_wc_root(sbox):
 
   sbox.build(read_only = True)
   svntest.actions.lock_admin_dir(sbox.ospath(""), True)
-  svntest.actions.run_and_verify_svn("Cleanup below wc root", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      "cleanup", sbox.ospath("A"))
 
 @SkipUnless(svntest.main.is_posix_os)
@@ -256,21 +256,21 @@ def cleanup_unversioned_items(sbox):
         '?       dir1\n',
         '?       dir2\n',
   ]
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status')
   expected_output += [
         'I       dir_foo\n',
         'I       file_foo\n',
         'I       foo.o\n',
   ]
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status', '--no-ignore')
 
   expected_output = [
         'D         dir1\n',
         'D         dir2\n',
   ]
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'cleanup', '--remove-unversioned')
   expected_output = [
         ' M      .\n',
@@ -278,7 +278,7 @@ def cleanup_unversioned_items(sbox):
         'I       file_foo\n',
         'I       foo.o\n',
   ]
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status', '--no-ignore')
 
   # remove ignored items, with an empty global-ignores list
@@ -286,7 +286,7 @@ def cleanup_unversioned_items(sbox):
         'D         dir_foo\n',
         'D         file_foo\n',
   ]
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'cleanup', '--remove-ignored',
                                      '--config-option',
                                      'config:miscellany:global-ignores=')
@@ -296,7 +296,7 @@ def cleanup_unversioned_items(sbox):
         ' M      .\n',
         'I       foo.o\n',
   ]
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status', '--no-ignore')
 
   # un-ignore the file matching global ignores, making it unversioned,
@@ -304,14 +304,14 @@ def cleanup_unversioned_items(sbox):
   expected_output = [
         'D         foo.o\n',
   ]
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'cleanup', '--remove-unversioned',
                                      '--config-option',
                                      'config:miscellany:global-ignores=')
   expected_output = [
         ' M      .\n',
   ]
-  svntest.actions.run_and_verify_svn(None, expected_output,
+  svntest.actions.run_and_verify_svn(expected_output,
                                      [], 'status', '--no-ignore')
 
 def cleanup_unversioned_items_in_locked_wc(sbox):
@@ -324,7 +324,7 @@ def cleanup_unversioned_items_in_locked_wc(sbox):
 
   svntest.actions.lock_admin_dir(sbox.ospath(""), True)
   for option in ['--remove-unversioned', '--remove-ignored']:
-    svntest.actions.run_and_verify_svn(None, None,
+    svntest.actions.run_and_verify_svn(None,
                                        "svn: E155004: Working copy locked;.*",
                                        "cleanup", option,
                                        sbox.ospath(""))
@@ -339,7 +339,7 @@ def cleanup_dir_external(sbox):
   sbox.simple_update()
 
   svntest.actions.lock_admin_dir(sbox.ospath("A_ext"), True)
-  svntest.actions.run_and_verify_svn(None, ["Performing cleanup on external " +
+  svntest.actions.run_and_verify_svn(["Performing cleanup on external " +
                                      "item at '%s'.\n" % sbox.ospath("A_ext")],
                                      [], "cleanup", '--include-externals',
                                      sbox.ospath(""))
@@ -357,7 +357,7 @@ def checkout_within_locked_wc(sbox):
   "A    %s\n" % sbox.ospath("nested-wc/beta"),
   "Checked out revision 1.\n"
   ]
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], "checkout", sbox.repo_url + '/A/B/E',
                                      sbox.ospath("nested-wc"))
 
