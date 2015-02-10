@@ -3555,7 +3555,7 @@ def verify_pinned_externals(sbox, external_url_for, base_path_or_url,
     target = base_path_or_url + '/A_copy/B'
   else:
     target = sbox.ospath('A_copy/B')
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:externals',
                                      target)
   expected_output = [
@@ -3568,7 +3568,7 @@ def verify_pinned_externals(sbox, external_url_for, base_path_or_url,
     target = base_path_or_url + '/A_copy/C'
   else:
     target = sbox.ospath('A_copy/C')
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:externals',
                                      target)
   expected_output = [
@@ -3585,7 +3585,7 @@ def verify_pinned_externals(sbox, external_url_for, base_path_or_url,
     target = base_path_or_url + '/A_copy/D'
   else:
     target = sbox.ospath('A_copy/D')
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:externals',
                                      target)
 
@@ -3603,7 +3603,7 @@ def copy_pin_externals_repos_repos(sbox):
   other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
 
   # Perform a repos->repos copy, pinning externals
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy',
                                      repo_url + '/A',
                                      repo_url + '/A_copy',
@@ -3627,13 +3627,13 @@ def copy_pin_externals_repos_wc(sbox):
   other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
   # Perform a repos->wc copy, pinning externals
   external_youngest_rev = svntest.main.youngest(repo_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy',
                                      repo_url + '/A',
                                      os.path.join(wc_dir, 'A_copy'),
@@ -3656,12 +3656,12 @@ def copy_pin_externals_wc_repos(sbox):
   other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
   # Perform a wc->repos copy, pinning externals
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
                                      repo_url + '/A_copy',
@@ -3685,12 +3685,12 @@ def copy_pin_externals_wc_wc(sbox):
   other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
   # Perform a wc->wc copy, pinning externals
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
                                      os.path.join(wc_dir, 'A_copy'),
@@ -3713,7 +3713,7 @@ def copy_pin_externals_moved_external(sbox):
   other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
@@ -3724,7 +3724,7 @@ def copy_pin_externals_moved_external(sbox):
   change_external(sbox.ospath('A/B'), '^/A/D/gamma-moved gamma', commit=True)
   sbox.simple_update()
   external_youngest_rev = svntest.main.youngest(repo_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
                                      os.path.join(wc_dir, 'A_copy'),
@@ -3746,19 +3746,19 @@ def copy_pin_externals_removed_in_head(sbox):
   other_repo_dir = repo_dir + ".other"
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
   # Test an already pinned external which was removed in HEAD.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm',
                                      other_repo_url + '/A/D/H',
                                      '-m', 'remove A/D/H')
   sbox.simple_update()
   external_youngest_rev = svntest.main.youngest(repo_dir)
   other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
                                      os.path.join(wc_dir, 'A_copy'),
@@ -3779,7 +3779,7 @@ def copy_pin_externals_from_old_rev(sbox):
   other_repo_dir = repo_dir + ".other"
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
   # Create a couple of revisions affecting 'A'.
@@ -3791,7 +3791,7 @@ def copy_pin_externals_from_old_rev(sbox):
   # Test a copy from an old revision with pinning.
   external_youngest_rev = svntest.main.youngest(repo_dir)
   other_external_youngest_rev = svntest.main.youngest(other_repo_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy',
                                      os.path.join(wc_dir, 'A@6'),
                                      os.path.join(wc_dir, 'A_copy'),
@@ -3810,14 +3810,14 @@ def copy_pin_externals_wc_local_mods(sbox):
   repo_url       = sbox.repo_url
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
   svntest.main.file_append(sbox.ospath('A/C/exdir_G/pi'), 'this file changed')
   expected_stderr = verify.RegexOutput(".*Cannot pin.*local modifications.*",
                                        match_all=False)
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  svntest.actions.run_and_verify_svn(None, expected_stderr,
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
                                      os.path.join(wc_dir, 'A_copy'),
@@ -3833,16 +3833,16 @@ def copy_pin_externals_wc_switched_subtrees(sbox):
   repo_url       = sbox.repo_url
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'switch', '--ignore-ancestry', '^/A/B',
                                      sbox.ospath('A/D/exdir_A/C'))
   expected_stderr = verify.RegexOutput(".*Cannot pin.*switched subtree.*",
                                        match_all=False)
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  svntest.actions.run_and_verify_svn(None, expected_stderr,
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
                                      os.path.join(wc_dir, 'A_copy'),
@@ -3858,16 +3858,16 @@ def copy_pin_externals_wc_mixed_revisions(sbox):
   repo_url       = sbox.repo_url
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'update', '-r1',
                                      sbox.ospath('A/D/exdir_A/mu'))
   expected_stderr = verify.RegexOutput(".*Cannot pin.*mixed-revision.*",
                                        match_all=False)
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  svntest.actions.run_and_verify_svn(None, expected_stderr,
                                      'copy',
                                      os.path.join(wc_dir, 'A'),
                                      os.path.join(wc_dir, 'A_copy'),
