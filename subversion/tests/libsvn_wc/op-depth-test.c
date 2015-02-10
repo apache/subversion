@@ -263,7 +263,6 @@ check_db_rows(svn_test__sandbox_t *b,
               const char *root_path,
               const nodes_row_t *expected_rows)
 {
-  const char *base_relpath = root_path;
   svn_sqlite__db_t *sdb;
   int i;
   svn_sqlite__stmt_t *stmt;
@@ -281,10 +280,8 @@ check_db_rows(svn_test__sandbox_t *b,
   /* Fill ACTUAL_HASH with data from the WC DB. */
   SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODES_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
-                            (base_relpath[0]
-                             ? apr_psprintf(b->pool, "%s/%%", base_relpath)
-                             : "_%")));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t)1 /* wc_id */,
+                                        root_path));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
@@ -387,7 +384,6 @@ check_db_conflicts(svn_test__sandbox_t *b,
                    const char *root_path,
                    const conflict_info_t *expected_conflicts)
 {
-  const char *base_relpath = root_path;
   svn_sqlite__db_t *sdb;
   int i;
   svn_sqlite__stmt_t *stmt;
@@ -407,10 +403,8 @@ check_db_conflicts(svn_test__sandbox_t *b,
   /* Fill ACTUAL_HASH with data from the WC DB. */
   SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
-                            (base_relpath[0]
-                             ? apr_psprintf(b->pool, "%s/%%", base_relpath)
-                             : "_%")));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t)1 /* wc_id */,
+                                        root_path));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
