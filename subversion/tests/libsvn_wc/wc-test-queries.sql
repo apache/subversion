@@ -39,11 +39,6 @@ WHERE conflict_data is NOT NULL AND local_relpath = ?1 OR local_relpath LIKE ?2
 -- STMT_DELETE_NODES
 DELETE FROM nodes;
 
--- STMT_INSERT_NODE_ROOT
-INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,
-                   revision, wc_id, repos_id, kind, depth)
-           VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 'dir', 'infinity');
-
 -- STMT_INSERT_NODE
 INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,
                    revision, parent_relpath, wc_id, repos_id, kind, depth)
@@ -51,10 +46,6 @@ INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,
 
 -- STMT_DELETE_ACTUAL
 DELETE FROM actual_node;
-
--- STMT_INSERT_ACTUAL_ROOT
-INSERT INTO actual_node (local_relpath, changelist, wc_id)
-                 VALUES (?1, ?2, 1)
 
 -- STMT_INSERT_ACTUAL
 INSERT INTO actual_node (local_relpath, parent_relpath, changelist, wc_id)
