@@ -135,7 +135,18 @@ verify_write_lock(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
+/* In our merge conflicts we record the move_op_src path, which is essentially
+   the depth at which what was moved is marked deleted. The problem is that
+   this depth is not guaranteed to be stable, because somebody might just
+   remove another ancestor, or revert one.
+
+   To work around this problem we locate the layer below this path, and use
+   that to pinpoint whatever is moved.
+
+   For a path SRC_RELPATH that was deleted by an operation rooted at
+   DELETE_OP_DEPTH find the op-depth at which the node was originally added.
+   */
+static svn_error_t *
 find_src_op_depth(int *src_op_depth,
                   svn_wc__db_wcroot_t *wcroot,
                   const char *src_relpath,
