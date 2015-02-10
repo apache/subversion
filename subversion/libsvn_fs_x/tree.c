@@ -159,8 +159,8 @@ svn_fs_x__revision_root(svn_fs_root_t **root_p,
 /* Getting dag nodes for roots.  */
 
 /* Return the transaction ID to a given transaction ROOT. */
-static svn_fs_x__txn_id_t
-root_txn_id(svn_fs_root_t *root)
+svn_fs_x__txn_id_t
+svn_fs_x__root_txn_id(svn_fs_root_t *root)
 {
   fs_txn_root_data_t *frd = root->fsap_data;
   assert(root->is_txn_root);
@@ -171,16 +171,17 @@ root_txn_id(svn_fs_root_t *root)
 /* Set *NODE_P to a freshly opened dag node referring to the root
    directory of ROOT, allocating from RESULT_POOL.  Use SCRATCH_POOL
    for temporary allocations.  */
-static svn_error_t *
-root_node(dag_node_t **node_p,
-          svn_fs_root_t *root,
-          apr_pool_t *result_pool,
-          apr_pool_t *scratch_pool)
+svn_error_t *
+svn_fs_x__root_node(dag_node_t **node_p,
+                    svn_fs_root_t *root,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   if (root->is_txn_root)
     {
       /* It's a transaction root.  Open a fresh copy.  */
-      return svn_fs_x__dag_txn_root(node_p, root->fs, root_txn_id(root),
+      return svn_fs_x__dag_txn_root(node_p, root->fs,
+                                    svn_fs_x__root_txn_id(root),
                                     result_pool, scratch_pool);
     }
   else
@@ -527,7 +528,7 @@ x_change_node_prop(svn_fs_root_t *root,
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
-  txn_id = root_txn_id(root);
+  txn_id = svn_fs_x__root_txn_id(root);
 
   path = svn_fs__canonicalize_abspath(path, subpool);
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool));
@@ -1417,7 +1418,7 @@ x_make_dir(svn_fs_root_t *root,
 {
   svn_fs_x__dag_path_t *dag_path;
   dag_node_t *sub_dir;
-  svn_fs_x__txn_id_t txn_id = root_txn_id(root);
+  svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(root);
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   path = svn_fs__canonicalize_abspath(path, subpool);
@@ -1477,7 +1478,7 @@ x_delete_node(svn_fs_root_t *root,
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
 
-  txn_id = root_txn_id(root);
+  txn_id = svn_fs_x__root_txn_id(root);
   path = svn_fs__canonicalize_abspath(path, subpool);
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool));
   kind = svn_fs_x__dag_node_kind(dag_path->node);
@@ -1548,7 +1549,7 @@ copy_helper(svn_fs_root_t *from_root,
 {
   dag_node_t *from_node;
   svn_fs_x__dag_path_t *to_dag_path;
-  svn_fs_x__txn_id_t txn_id = root_txn_id(to_root);
+  svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(to_root);
   svn_boolean_t same_p;
 
   /* Use an error check, not an assert, because even the caller cannot
@@ -1759,7 +1760,7 @@ x_make_file(svn_fs_root_t *root,
 {
   svn_fs_x__dag_path_t *dag_path;
   dag_node_t *child;
-  svn_fs_x__txn_id_t txn_id = root_txn_id(root);
+  svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(root);
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   path = svn_fs__canonicalize_abspath(path, subpool);
@@ -1946,7 +1947,7 @@ apply_textdelta(void *baton,
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
   svn_fs_x__dag_path_t *dag_path;
-  svn_fs_x__txn_id_t txn_id = root_txn_id(tb->root);
+  svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(tb->root);
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
@@ -2113,7 +2114,7 @@ apply_text(void *baton,
 {
   text_baton_t *tb = baton;
   svn_fs_x__dag_path_t *dag_path;
-  svn_fs_x__txn_id_t txn_id = root_txn_id(tb->root);
+  svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(tb->root);
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
@@ -2305,7 +2306,8 @@ x_paths_changed(apr_hash_t **changed_paths_p,
     {
       apr_hash_index_t *hi;
       SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, root->fs,
-                                          root_txn_id(root), pool));
+                                          svn_fs_x__root_txn_id(root),
+                                          pool));
       for (hi = apr_hash_first(pool, changed_paths);
            hi;
            hi = apr_hash_next(hi))
@@ -3446,7 +3448,7 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
      When this code is called in the library, we want to ensure we
      use the on-disk data --- rather than some data that was read
      in the possibly-distance past and cached since. */
-  SVN_ERR(root_node(&root_dir, root, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__root_node(&root_dir, root, scratch_pool, scratch_pool));
 
   /* Recursively verify ROOT_DIR. */
   parent_nodes = apr_array_make(scratch_pool, 16, sizeof(dag_node_t *));

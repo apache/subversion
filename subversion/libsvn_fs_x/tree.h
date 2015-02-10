@@ -24,12 +24,26 @@
 #define SVN_LIBSVN_FS_X_TREE_H
 
 #include "fs.h"
+#include "dag.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
+
+/* Return the transaction ID to a given transaction ROOT. */
+svn_fs_x__txn_id_t
+svn_fs_x__root_txn_id(svn_fs_root_t *root);
+
+/* Set *NODE_P to a freshly opened dag node referring to the root
+   directory of ROOT, allocating from RESULT_POOL.  Use SCRATCH_POOL
+   for temporary allocations.  */
+svn_error_t *
+svn_fs_x__root_node(dag_node_t **node_p,
+                    svn_fs_root_t *root,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
 
 /* Set *ROOT_P to the root directory of revision REV in filesystem FS.
    Allocate the structure in POOL. */
