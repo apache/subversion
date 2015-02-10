@@ -695,13 +695,27 @@ svn_error_t *
 svn_test__init_auth_baton(svn_auth_baton_t **ab,
                           apr_pool_t *result_pool)
 {
+  svn_config_t *cfg_config;
+
+  SVN_ERR(svn_config_create2(&cfg_config, FALSE, FALSE, result_pool));
+
+  /* Disable the crypto backends that might not be entirely
+     threadsafe and/or compatible with running headless.
+
+     The windows system is just our own files, but then with user-key
+     encrypted data inside. */
+  svn_config_set(cfg_config,
+                 SVN_CONFIG_SECTION_AUTH,
+                 SVN_CONFIG_OPTION_PASSWORD_STORES,
+                 "windows-cryptoapi");
+
   SVN_ERR(svn_cmdline_create_auth_baton(ab,
                                         TRUE  /* non_interactive */,
                                         "jrandom", "rayjandom",
                                         NULL,
                                         TRUE  /* no_auth_cache */,
                                         FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, result_pool));
+                                        cfg_config, NULL, NULL, result_pool));
 
   return SVN_NO_ERROR;
 }

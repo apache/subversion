@@ -837,7 +837,7 @@ $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
 
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
-	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
+	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL PREFIX=$(prefix)
 
 # There is a "readlink -f" command on some systems for the same purpose,
 # but it's not as portable (e.g. Mac OS X doesn't have it).  These should

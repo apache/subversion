@@ -217,7 +217,7 @@ def blame_in_xml(sbox):
 
   # Retrieve last changed date from svn info
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [],
+    None, [],
     'log', file_path, '--xml', '-r1:2')
 
   date1 = None
@@ -257,7 +257,7 @@ def blame_in_xml(sbox):
               '</blame>\n']
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [],
+    None, [],
     'blame', file_path, '--xml')
 
   for i in range(0, len(output)):
@@ -287,14 +287,14 @@ def blame_on_unknown_revision(sbox):
                                           None, None, wc_dir)
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [],
+    None, [],
     'blame', file_path, '-rHEAD:HEAD')
 
   if output[0].find(" - This is the file 'iota'.") == -1:
     raise svntest.Failure
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [],
+    None, [],
     'blame', file_path, '--verbose', '-rHEAD:HEAD')
 
   if output[0].find(" - This is the file 'iota'.") == -1:
@@ -325,12 +325,12 @@ def blame_peg_rev(sbox):
 
   # Check that we get a blame of r1 when we specify a peg revision of r1
   # and no explicit revision.
-  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+  svntest.actions.run_and_verify_svn(expected_output_r1, [],
                                      'blame', 'iota@1')
 
   # Check that an explicit revision overrides the default provided by
   # the peg revision.
-  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+  svntest.actions.run_and_verify_svn(expected_output_r1, [],
                                      'blame', 'iota@2', '-r1')
 
 def blame_eol_styles(sbox):
@@ -364,7 +364,7 @@ def blame_eol_styles(sbox):
                                           None, None, wc_dir)
 
     exit_code, output, error = svntest.actions.run_and_verify_svn(
-      None, None, [],
+      None, [],
       'blame', file_path, '-r1:HEAD')
 
     # output is a list of lines, there should be 3 lines
@@ -412,7 +412,7 @@ def blame_ignore_whitespace(sbox):
     ]
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, expected_output, [],
+    expected_output, [],
     'blame', '-x', '-w', file_path)
 
   # commit some changes
@@ -434,7 +434,7 @@ def blame_ignore_whitespace(sbox):
     "     2    jrandom     C    c    \n",
     ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-x', '-w', file_path)
 
 def blame_ignore_eolstyle(sbox):
@@ -474,7 +474,7 @@ def blame_ignore_eolstyle(sbox):
     ]
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, expected_output, [],
+    expected_output, [],
     'blame', '-x', '--ignore-eol-style', file_path)
 
 
@@ -490,7 +490,7 @@ def blame_merge_info(sbox):
   mu_path = os.path.join(wc_dir, 'trunk', 'A', 'mu')
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [], 'blame', '-g', iota_path)
+    None, [], 'blame', '-g', iota_path)
 
   expected_blame = [
       { 'revision' : 2,
@@ -507,7 +507,7 @@ def blame_merge_info(sbox):
   parse_and_verify_blame(output, expected_blame, 1)
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [], 'blame', '-g', '-r10:11', iota_path)
+    None, [], 'blame', '-g', '-r10:11', iota_path)
 
   expected_blame = [
       { 'revision' : None,
@@ -524,7 +524,7 @@ def blame_merge_info(sbox):
   parse_and_verify_blame(output, expected_blame, 1)
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [], 'blame', '-g', '-r16:17', mu_path)
+    None, [], 'blame', '-g', '-r16:17', mu_path)
 
   expected_blame = [
       { 'revision' : None,
@@ -557,7 +557,7 @@ def blame_merge_out_of_range(sbox):
   upsilon_path = os.path.join(wc_dir, 'trunk', 'A', 'upsilon')
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [],
+    None, [],
     'blame', '-g', upsilon_path)
 
   expected_blame = [
@@ -599,12 +599,12 @@ def blame_peg_rev_file_not_in_head(sbox):
 
   # Check that we get a blame of r1 when we specify a peg revision of r1
   # and no explicit revision.
-  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+  svntest.actions.run_and_verify_svn(expected_output_r1, [],
                                      'blame', 'iota@1')
 
   # Check that an explicit revision overrides the default provided by
   # the peg revision.
-  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+  svntest.actions.run_and_verify_svn(expected_output_r1, [],
                                      'blame', 'iota@2', '-r1')
 
 def blame_file_not_in_head(sbox):
@@ -616,7 +616,7 @@ def blame_file_not_in_head(sbox):
   # Check that a correct error message is printed when blaming a target that
   # doesn't exist (in HEAD).
   expected_err = ".*notexisting' (is not a file.*|path not found|does not exist)"
-  svntest.actions.run_and_verify_svn(None, [], expected_err,
+  svntest.actions.run_and_verify_svn([], expected_err,
                                      'blame', notexisting_url)
 
 @SkipUnless(server_has_mergeinfo)
@@ -631,7 +631,7 @@ def blame_output_after_merge(sbox):
   A_url = sbox.repo_url + '/A'
 
   # r2: mv greek tree in trunk.
-  svntest.actions.run_and_verify_svn(None, ["Committing transaction...\n",
+  svntest.actions.run_and_verify_svn(["Committing transaction...\n",
                                             "Committed revision 2.\n"], [],
                                      'mv', "--parents", A_url, trunk_A_url,
                                      "-m", "move greek tree to trunk")
@@ -656,7 +656,7 @@ def blame_output_after_merge(sbox):
 
   # r4: create branches/br from trunk
   branches_br_url = sbox.repo_url + "/branches/br"
-  svntest.actions.run_and_verify_svn(None, ["Committing transaction...\n",
+  svntest.actions.run_and_verify_svn(["Committing transaction...\n",
                                             "Committed revision 4.\n"], [],
                                     'cp', '--parents',
                                      trunk_url, branches_br_url,
@@ -698,7 +698,7 @@ def blame_output_after_merge(sbox):
 
   # r7: merge branches/br back to trunk
   trunk_path = os.path.join(wc_dir, "trunk")
-  svntest.actions.run_and_verify_svn(wc_dir, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      '-r', '4:HEAD',
                                      branches_br_url, trunk_path)
   expected_output = svntest.wc.State(wc_dir, {
@@ -717,7 +717,7 @@ def blame_output_after_merge(sbox):
                       "     3    jrandom 5th line in file 'mu'.\n",
                       "     3    jrandom 6th line in file 'mu'.\n"]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'blame',  mu_path)
 
   # Next test with the -g option
@@ -730,7 +730,7 @@ def blame_output_after_merge(sbox):
                       "       3    jrandom 5th line in file 'mu'.\n",
                       "       3    jrandom 6th line in file 'mu'.\n"]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'blame', '-g', mu_path)
 
   # Now test with -rN:M
@@ -742,7 +742,7 @@ def blame_output_after_merge(sbox):
                       "     -          - 5th line in file 'mu'.\n",
                       "     -          - 6th line in file 'mu'.\n"]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'blame',  '-r', '4:head', mu_path)
 
   # Next test with the -g option with -rN:M
@@ -754,7 +754,7 @@ def blame_output_after_merge(sbox):
                       "       -          - 5th line in file 'mu'.\n",
                       "       -          - 6th line in file 'mu'.\n"]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'blame', '-g', '-r', '6:head', mu_path)
 
 #----------------------------------------------------------------------
@@ -810,7 +810,7 @@ def merge_sensitive_blame_and_empty_mergeinfo(sbox):
       "       1    jrandom This is the file 'psi'.\n",
       "G      3    jrandom trunk edit in revision three.\n",
       "G      5    jrandom trunk edit in revision five.\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'blame', '-g', psi_COPY_path)
 
 def blame_multiple_targets(sbox):
@@ -832,7 +832,7 @@ def blame_multiple_targets(sbox):
   # that performs a property check before the actual blame.
 
   non_existent = os.path.join(sbox.wc_dir, 'non-existent')
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      ".*W155010: The node.*non-existent'.*",
                                      'blame', non_existent, iota,
                                      '--force')
@@ -841,7 +841,7 @@ def blame_multiple_targets(sbox):
   non_existent_url = sbox.repo_url + '/non-existent'
 
   # SVN_ERR_FS_NOT_FILE | SVN_ERR_FS_NOT_FOUND
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      ".*W1600(13|17): '.*non-existent' .*not",
                                      'blame', non_existent_url, iota_url,
                                      '--force')
@@ -903,10 +903,10 @@ def blame_eol_handling(sbox):
         '     %d    jrandom line 5 \n' % rev,
     ]
 
-    svntest.actions.run_and_verify_svn(f1 + '-base', expected_output, [],
+    svntest.actions.run_and_verify_svn(expected_output, [],
                                        'blame', f1)
 
-    svntest.actions.run_and_verify_svn(f2 + '-base', expected_output, [],
+    svntest.actions.run_and_verify_svn(expected_output, [],
                                        'blame', f2)
 
     file_data = 'line 1 ' + eol + \
@@ -932,10 +932,10 @@ def blame_eol_handling(sbox):
         '     %d    jrandom line 5 \n' % rev,
     ]
 
-    svntest.actions.run_and_verify_svn(f1 + '-modified', expected_output, [],
+    svntest.actions.run_and_verify_svn(expected_output, [],
                                        'blame', f1)
 
-    svntest.actions.run_and_verify_svn(f2 + '-modified', expected_output, [],
+    svntest.actions.run_and_verify_svn(expected_output, [],
                                        'blame', f2)
 
 
@@ -964,7 +964,7 @@ def blame_youngest_to_oldest(sbox):
   expected_output = [
         '     %d    jrandom %s\n' % (3, orig_line[:-1]),
   ]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-r4:1', iota_moved)
 
 ########################################################################
