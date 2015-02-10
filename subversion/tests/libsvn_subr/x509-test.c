@@ -500,6 +500,98 @@ static struct x509_test cert_tests[] = {
     NULL,
     "99302ca2824f585a117bb41302a388daa0519765"
   },
+  /* certificate with subject that includes an attribute that has an
+   * object id that has leading zeros.  This isn't technically legal
+   * but a simplistic parser might parser it the same as an object
+   * id that doesn't have a leading zero.  In this case the object id
+   * with a leading zero could parse to the same object id as the
+   * Common Name.  Make sure we don't treat it as such. */
+  { "MIIDDjCCAfYCAQEwDQYJKoZIhvcNAQEFBQAwRTELMAkGA1UEBhMCQVUxEzARBgNV"
+    "BAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0"
+    "ZDAeFw0xNTAxMjcwNzQ5MDhaFw0xNjAxMjcwNzQ5MDhaMFUxCzAJBgNVBAYTAlVT"
+    "MRMwEQYDVQQIEwpXYXNoaW5ndG9uMRMwEQYDVQQHEwpOb3J0aCBCZW5kMRwwGgYE"
+    "VQSAAxMSbm90YWNuLmV4YW1wbGUuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A"
+    "MIIBCgKCAQEAvXCJv0gr9d3GNYiukPrbse0FdXmuBx2mPf665WyZVHk9JiPnDcb2"
+    "ng8gHLgJe8izou6I0vN2iJgy91rUPvX9zA3qVhml+cboVY2jHCPWo/v5PQsXAgLV"
+    "5gVjp2POn3N0O1xcS1yNe249LkP0Di3kAMp5gkzdprm3fD3JDW1Q+ocQylnbjzG0"
+    "FtNQSUJLITvPXjR7ny46Fci2mv8scHOvlEXTK5/2RoBaoK2jWQimqGfFj1sr1vqZ"
+    "Wcb6NAdZso64Xg1V6CWX8zymlA7gAhTQWveq+ovUWcXpmR8aj9pYNuy0aZW3BANz"
+    "N6L0G7OZiVUvvzpfnn0V3Z/sR/iQs7q3nQIDAQABMA0GCSqGSIb3DQEBBQUAA4IB"
+    "AQACZwruCiesCRkT08AtHl0WQnQui58e9/7En+iqxNQO6+fx84SfWGcUFYZtvzdO"
+    "KkHNTs06km+471OjLSDcotRkdqO1JxQCkNxbrPat7T6FrO9n2JFivx6eijRqK/jB"
+    "cBYW92dK4BfXU4+FyeB2OIpyPjuqLU2j7S5p7qNU50i/1J7Qt669nXeaPINIfZdW"
+    "sDjjWkFR1VOgXS/zeu/GOxlQFmmcde+X/qkFI+L352VX7Ktf95j4ms4vG2yZgNfe"
+    "jbNb9a7LMcqlop/PlX5WBGv8GGKUNZO0LvukFYOULf1oL8VQsN0x/gRHGC7m9kVM"
+    "3hojWZDXAY4mYqdBCRX7/gkt",
+    "C=US, ST=Washington, L=North Bend, 2.5.4.03=notacn.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.03",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
+    "2015-01-27T07:49:08.000000Z",
+    "2016-01-27T07:49:08.000000Z",
+    NULL,
+    "6f24b834ba00fb4ef863df63b8fbeddab25e4838"
+  },
+  /* certificate with subject that includes an attribute that has an
+   * object id that has an overflow such that it calculates to
+   * the same object id as the Common Name (2.5.4.3).  OpenSSL
+   * with its bignum support shows this as 2.5.4.2361183241434822606851.
+   * It would be wrong to display this as a Common Name to the user. */
+  { "MIIDGTCCAgECAQEwDQYJKoZIhvcNAQEFBQAwRTELMAkGA1UEBhMCQVUxEzARBgNV"
+    "BAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0"
+    "ZDAeFw0xNTAxMjcwODMxNDNaFw0xNjAxMjcwODMxNDNaMGAxCzAJBgNVBAYTAlVT"
+    "MRMwEQYDVQQIEwpXYXNoaW5ndG9uMRMwEQYDVQQHEwpOb3J0aCBCZW5kMScwJQYN"
+    "VQSCgICAgICAgICAAxMUb3ZlcmZsb3cuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3"
+    "DQEBAQUAA4IBDwAwggEKAoIBAQDHL1e8zSPyRND3tI42Vqca2FoCiWn881Czv2ct"
+    "tGFwyjUM8R1yHXEP+doS9KN9L29xRWZRxyCQ18S+QbjNQCh6Ay22qnkBu0uPdVB6"
+    "iIVKiW9RzU8dZSFMnveUZYLloG12kK++ooJGIstTJwkI8Naw1X1D29gZaY9oSKAc"
+    "Gs5c92po61RoetB744dUfUbAXi8eEd4ShdsdnCoswpEI4WTLdYLZ/cH/sU1a5Djm"
+    "cAfEBzZSOseEQSG7Fa/HvHyW+jDNnKG2r73M45TDcXAunSFcAYl1ioBaRwwdcTbK"
+    "SMGORThIX5UwpJDZI5sTVmTTRuCjbMxXXki/g9fTYD6mlaavAgMBAAEwDQYJKoZI"
+    "hvcNAQEFBQADggEBABvZSzFniMK4lqJcubzzk410NqZQEDBxdNZTNGrQYIDV8fDU"
+    "LLoQ2/2Y6kOQbx8r3RNcaJ6JtJeVqAq05It9oR5lMJFA2r0YMl4eB2V6o35+eaKY"
+    "FXrJzwx0rki2mX+iKsgRbJTv6mFb4I7vny404WKHNgYIfB8Z5jgbwWgrXH9M6BMb"
+    "FL9gZHMmU+6uqvCPYeIIZaAjT4J4E9322gpcumI9KGVApmbQhi5lC1hBh+eUprG7"
+    "4Brl9GeCLSTnTTf4GHIpqaUsKMtJ1sN/KJGwEB7Z4aszr80P5/sjHXOyqJ78tx46"
+    "pwH7/Fx0pM7nZjJVGvcxGBBOMeKy/o2QUVvEYPU=",
+    "C=US, ST=Washington, L=North Bend, \?\?=overflow.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 \?\?",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
+    "2015-01-27T08:31:43.000000Z",
+    "2016-01-27T08:31:43.000000Z",
+    NULL,
+    "c1f063daf23e402fe58bab1a3fa2ba05c1106158"
+  },
+  /* certificate with multiple common names, make sure this behaves
+   * the same way as serf. */
+  { "MIIDJjCCAg4CAQEwDQYJKoZIhvcNAQEFBQAwRTELMAkGA1UEBhMCQVUxEzARBgNV"
+    "BAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0"
+    "ZDAeFw0xNTAxMjExNzUwMDZaFw0xNjAxMjExNzUwMDZaMG0xCzAJBgNVBAYTAlVT"
+    "MRMwEQYDVQQIEwpXYXNoaW5ndG9uMRMwEQYDVQQHEwpOb3J0aCBCZW5kMRkwFwYD"
+    "VQQDExBnb29kLmV4YW1wbGUuY29tMRkwFwYDVQQDExBldmlsLmV4YW1wbGUuY29t"
+    "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5pfrXkiiDGCWSYhMQNHJ"
+    "gNBLEBNcFzsGpW8i6rMKVephwG7p4VqIvc0pSsmpD9IYuIxxq/2E2cziaTWyqCBp"
+    "hKKipqt8eMcu6u45LduHGiCcnN7rHORbQZTdvwzTmiVN1eI1oCVejB4zgHNkHUko"
+    "DyaALCHGRz8l7Qq6hSbiOnhH1qlscIIEsgQEyDlMZpbsWVTQKPxluhtgqVEn7wPN"
+    "qScrf2evq050NuNYYFzCmuqOGKq2gKbD/BlUqCNmEM2JPg/bdcAQxFCf0HcvDiS9"
+    "e29suMKWZAzJkbzrWhlDMG1Xt5c7dd82PcGwnL//Q7muE57luCw38Gp2vQQ3/Uki"
+    "vQIDAQABMA0GCSqGSIb3DQEBBQUAA4IBAQBry9wfxYia/dCSKvDXOBKUgWFQtI8j"
+    "7vYHuouTvIb5m6b62kiUdtuaVKi3jnUbHUFohOi/6o+HIwbXSgz5CbiLjgUvONBU"
+    "BLekaguIYX9tTmg+vhWchcmVMHufj6HdQkzWtyojSQD9GjHGInNDG102KlN1cdL8"
+    "jGTrru4vnef+xA24EvYPdcS2+H2yYH0THL3JPKo1GtO4NCEGWQbS6Ygwcy+BQpbU"
+    "TBIWhlbleuCalB8qhWyijcHeszT7mFR0CarEaSLeZj6FaQpZB636iHuELmxcgiFw"
+    "j3r3QZyAMEGvPPBPKYSTgmol31pX9LYvuFGA9ADQ2in/n9WdMfYzFzOn",
+    "C=US, ST=Washington, L=North Bend, "
+    "CN=good.example.com, CN=evil.example.com",
+    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.3 2.5.4.3",
+    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
+    "2.5.4.6 2.5.4.8 2.5.4.10",
+    "2015-01-21T17:50:06.000000Z",
+    "2016-01-21T17:50:06.000000Z",
+    "good.example.com",
+    "9693f17e59205f41ca2e14450d151b945651b2d7"
+  },
   { NULL }
 };
 
@@ -593,10 +685,16 @@ compare_oids(const char *expected,
   buf = svn_stringbuf_create_empty(pool);
   for (i = 0; i < actual->nelts; ++i)
     {
-      const char *oid = APR_ARRAY_IDX(actual, i, const char*);
+      apr_size_t len;
+      const svn_x509_name_attr_t *attr = APR_ARRAY_IDX(actual, i, const svn_x509_name_attr_t *);
+      const void *oid = svn_x509_name_attr_get_oid(attr, &len);
+      const char *oid_string = svn_x509_oid_to_string(oid, len, pool, pool);
       if (i > 0)
         svn_stringbuf_appendbyte(buf, ' ');
-      svn_stringbuf_appendcstr(buf, oid);
+      if (oid_string)
+        svn_stringbuf_appendcstr(buf, oid_string);
+      else
+        svn_stringbuf_appendcstr(buf, "??");
     }
 
   if (strcmp(expected, buf->data))
@@ -626,7 +724,7 @@ compare_results(struct x509_test *xt,
                              "expected '%s', got '%s'", xt->subject,
                              xt->subject, v);
 
-  SVN_ERR(compare_oids(xt->subject_oids, svn_x509_certinfo_get_subject_oids(certinfo),
+  SVN_ERR(compare_oids(xt->subject_oids, svn_x509_certinfo_get_subject_attrs(certinfo),
                        xt->subject, pool));
 
   v = svn_x509_certinfo_get_issuer(certinfo, pool);
@@ -639,7 +737,7 @@ compare_results(struct x509_test *xt,
                              "expected '%s', got '%s'", xt->subject,
                              xt->issuer, v);
 
-  SVN_ERR(compare_oids(xt->issuer_oids, svn_x509_certinfo_get_issuer_oids(certinfo),
+  SVN_ERR(compare_oids(xt->issuer_oids, svn_x509_certinfo_get_issuer_attrs(certinfo),
                        xt->subject, pool));
 
   SVN_ERR(compare_dates(xt->valid_from,
@@ -700,39 +798,9 @@ test_x509_parse_cert(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+#if 0
 static struct x509_test broken_cert_tests[] = {
-  /* certificate with subject that includes an attribute that has a
-   * object id that has and overflow such that it calculates to
-   * the same object id as the Common Name (2.5.4.3).  OpenSSL
-   * with its bignum support shows this as 2.5.4.2361183241434822606851.
-   * It would be wrong to display this as a Common Name to the user. */
-  { "MIIDGTCCAgECAQEwDQYJKoZIhvcNAQEFBQAwRTELMAkGA1UEBhMCQVUxEzARBgNV"
-    "BAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0"
-    "ZDAeFw0xNTAxMjcwODMxNDNaFw0xNjAxMjcwODMxNDNaMGAxCzAJBgNVBAYTAlVT"
-    "MRMwEQYDVQQIEwpXYXNoaW5ndG9uMRMwEQYDVQQHEwpOb3J0aCBCZW5kMScwJQYN"
-    "VQSCgICAgICAgICAAxMUb3ZlcmZsb3cuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3"
-    "DQEBAQUAA4IBDwAwggEKAoIBAQDHL1e8zSPyRND3tI42Vqca2FoCiWn881Czv2ct"
-    "tGFwyjUM8R1yHXEP+doS9KN9L29xRWZRxyCQ18S+QbjNQCh6Ay22qnkBu0uPdVB6"
-    "iIVKiW9RzU8dZSFMnveUZYLloG12kK++ooJGIstTJwkI8Naw1X1D29gZaY9oSKAc"
-    "Gs5c92po61RoetB744dUfUbAXi8eEd4ShdsdnCoswpEI4WTLdYLZ/cH/sU1a5Djm"
-    "cAfEBzZSOseEQSG7Fa/HvHyW+jDNnKG2r73M45TDcXAunSFcAYl1ioBaRwwdcTbK"
-    "SMGORThIX5UwpJDZI5sTVmTTRuCjbMxXXki/g9fTYD6mlaavAgMBAAEwDQYJKoZI"
-    "hvcNAQEFBQADggEBABvZSzFniMK4lqJcubzzk410NqZQEDBxdNZTNGrQYIDV8fDU"
-    "LLoQ2/2Y6kOQbx8r3RNcaJ6JtJeVqAq05It9oR5lMJFA2r0YMl4eB2V6o35+eaKY"
-    "FXrJzwx0rki2mX+iKsgRbJTv6mFb4I7vny404WKHNgYIfB8Z5jgbwWgrXH9M6BMb"
-    "FL9gZHMmU+6uqvCPYeIIZaAjT4J4E9322gpcumI9KGVApmbQhi5lC1hBh+eUprG7"
-    "4Brl9GeCLSTnTTf4GHIpqaUsKMtJ1sN/KJGwEB7Z4aszr80P5/sjHXOyqJ78tx46"
-    "pwH7/Fx0pM7nZjJVGvcxGBBOMeKy/o2QUVvEYPU=",
-    "C=US, ST=Washington, L=North Bend, \?\?=overflow.example.com",
-    "2.5.4.6 2.5.4.8 2.5.4.7 2.5.4.3",
-    "C=AU, ST=Some-State, O=Internet Widgits Pty Ltd",
-    "2.5.4.6 2.5.4.8 2.5.4.10",
-    "2015-01-27T08:31:43.000000Z",
-    "2016-01-27T08:31:43.000000Z",
-    NULL,
-    "c1f063daf23e402fe58bab1a3fa2ba05c1106158"
-  },
-  { NULL }
+ { NULL }
 };
 
 static svn_error_t *
@@ -761,6 +829,7 @@ test_x509_parse_cert_broken(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+#endif
 
 /* The test table.  */
 
@@ -771,8 +840,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_x509_parse_cert,
                    "test svn_x509_parse_cert"),
-    SVN_TEST_XFAIL2(test_x509_parse_cert_broken,
-                    "test broken certs"),
+/*    SVN_TEST_XFAIL2(test_x509_parse_cert_broken,
+                    "test broken certs"), */
     SVN_TEST_NULL
   };
 
