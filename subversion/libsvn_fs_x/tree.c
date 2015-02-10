@@ -1449,8 +1449,7 @@ x_make_dir(svn_fs_root_t *root,
                                  subpool, subpool));
 
   /* Add this directory to the path cache. */
-  SVN_ERR(svn_fs_x__set_dag_node(root, parent_path_path(dag_path, subpool),
-                                 sub_dir, subpool));
+  svn_fs_x__set_dag_node(root, parent_path_path(dag_path, subpool), sub_dir);
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
@@ -1504,9 +1503,7 @@ x_delete_node(svn_fs_root_t *root,
                                txn_id, subpool));
 
   /* Remove this node and any children from the path cache. */
-  SVN_ERR(svn_fs_x__invalidate_dag_cache(root,
-                                         parent_path_path(dag_path, subpool),
-                                         subpool));
+  svn_fs_x__invalidate_dag_cache(root, parent_path_path(dag_path, subpool));
 
   /* Update mergeinfo counts for parents */
   if (mergeinfo_count > 0)
@@ -1641,10 +1638,9 @@ copy_helper(svn_fs_root_t *from_root,
                                  txn_id, scratch_pool));
 
       if (kind != svn_fs_path_change_add)
-        SVN_ERR(svn_fs_x__invalidate_dag_cache(to_root,
-                                               parent_path_path(to_dag_path,
-                                                                scratch_pool),
-                                               scratch_pool));
+        svn_fs_x__invalidate_dag_cache(to_root,
+                                       parent_path_path(to_dag_path,
+                                                        scratch_pool));
 
       if (mergeinfo_start != mergeinfo_end)
         SVN_ERR(increment_mergeinfo_up_tree(to_dag_path->parent,
@@ -1794,8 +1790,7 @@ x_make_file(svn_fs_root_t *root,
                                   subpool, subpool));
 
   /* Add this file to the path cache. */
-  SVN_ERR(svn_fs_x__set_dag_node(root, parent_path_path(dag_path, subpool),
-                                 child, subpool));
+  svn_fs_x__set_dag_node(root, parent_path_path(dag_path, subpool), child);
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
