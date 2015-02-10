@@ -6165,6 +6165,33 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 3));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       3, ""},
+      {0, "A",         "normal",       3, "A"},
+      {0, "A/B",       "normal",       3, "A/B"},
+      {0, "A/B/C",     "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",   "normal",       3, "A/B/C/D"},
+      {0, "A/B/C/D/E", "normal",       3, "A/B/C/D/E"},
+
+      {1, "C2",        "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "C2/D",      "normal",       2, "A/B/C/D", MOVED_HERE},
+
+      {2, "A/B",              "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C",            "base-deleted", NO_COPY_FROM, "C2"},
+      {2, "A/B/C/D",          "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D/E",        "base-deleted", NO_COPY_FROM},
+
+      {0}
+    };
+    conflict_info_t conflicts[] = {
+      {"A/B", FALSE, FALSE, TRUE},
+      {0}
+    };
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_revert(&b, "A/B", svn_depth_empty));
   {
     nodes_row_t nodes[] = {
@@ -6181,7 +6208,13 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "C2/D",      "normal",       2, "A/B/C/D", MOVED_HERE},
       {0}
     };
+    conflict_info_t conflicts[] = {
+      {"A/B/C", FALSE, FALSE, TRUE},
+      {0}
+    };
     SVN_ERR(check_db_rows(&b, "", nodes));
+    /* Where did this conflict come from? */
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
   }
 
   /* Revert should have left a tree-conflict (or broken the move). */
