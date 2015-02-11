@@ -108,15 +108,19 @@ typedef struct _x509_cert {
 } x509_cert;
 
 
+struct svn_x509_name_attr_t {
+  unsigned char *oid;
+  apr_size_t oid_len;
+  const char *utf8_value;
+};
+
 /*
  * Certificate info, returned from the parser
  */
 struct svn_x509_certinfo_t
 {
-  apr_array_header_t *issuer_oids;
-  apr_hash_t *issuer;
-  apr_array_header_t *subject_oids;
-  apr_hash_t *subject;
+  apr_array_header_t *issuer;
+  apr_array_header_t *subject;
   apr_time_t valid_from;
   apr_time_t valid_to;
   svn_checksum_t *digest;

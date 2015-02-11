@@ -1233,12 +1233,12 @@ alter_file_cb(void *baton,
   if (contents)
     {
       /* We may need to re-checksum these contents */
-      if (!(checksum && checksum->kind == svn_checksum_md5))
+      if (checksum && checksum->kind == svn_checksum_md5)
+        md5_checksum = (svn_checksum_t *)checksum;
+      else
         contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
                                            svn_checksum_md5, TRUE,
                                            scratch_pool);
-      else
-        md5_checksum = (svn_checksum_t *)checksum;
 
       /* Spool the contents to a tempfile, and provide that to the driver. */
       SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,
