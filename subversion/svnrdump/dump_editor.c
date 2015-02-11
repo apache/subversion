@@ -58,7 +58,7 @@ struct dir_baton
   svn_revnum_t copyfrom_rev;
 
   /* Headers accumulated so far for this directory */
-  apr_array_header_t *headers;
+  svn_repos__dumpfile_headers_t *headers;
 
   /* Properties which were modified during change_dir_prop. */
   apr_hash_t *props;
@@ -222,7 +222,7 @@ make_file_baton(const char *path,
  * content section, to represent the property delta of PROPS/DELETED_PROPS.
  */
 static svn_error_t *
-get_props_content(apr_array_header_t *headers,
+get_props_content(svn_repos__dumpfile_headers_t *headers,
                   svn_stringbuf_t **content,
                   apr_hash_t *props,
                   apr_hash_t *deleted_props,
@@ -261,7 +261,8 @@ dump_node_delete(svn_stream_t *stream,
                  const char *node_relpath,
                  apr_pool_t *pool)
 {
-  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+  svn_repos__dumpfile_headers_t *headers
+    = svn_repos__dumpfile_headers_create(pool);
 
   assert(svn_relpath_is_canonical(node_relpath));
 
@@ -297,7 +298,7 @@ dump_node_delete(svn_stream_t *stream,
  * header block.)
  */
 static svn_error_t *
-dump_node(apr_array_header_t **headers_p,
+dump_node(svn_repos__dumpfile_headers_t **headers_p,
           struct dump_edit_baton *eb,
           const char *repos_relpath,
           struct dir_baton *db,
@@ -309,7 +310,8 @@ dump_node(apr_array_header_t **headers_p,
           apr_pool_t *pool)
 {
   const char *node_relpath = repos_relpath;
-  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+  svn_repos__dumpfile_headers_t *headers
+    = svn_repos__dumpfile_headers_create(pool);
 
   assert(svn_relpath_is_canonical(repos_relpath));
   assert(!copyfrom_path || svn_relpath_is_canonical(copyfrom_path));
@@ -436,7 +438,8 @@ dump_mkdir(struct dump_edit_baton *eb,
            apr_pool_t *pool)
 {
   svn_stringbuf_t *prop_content;
-  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+  svn_repos__dumpfile_headers_t *headers
+    = svn_repos__dumpfile_headers_create(pool);
 
   /* Node-path: ... */
   svn_repos__dumpfile_header_push(
@@ -878,7 +881,7 @@ close_file(void *file_baton,
   struct dump_edit_baton *eb = fb->eb;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
   svn_stringbuf_t *propstring = NULL;
-  apr_array_header_t *headers;
+  svn_repos__dumpfile_headers_t *headers;
 
   SVN_ERR(dump_pending_dir(eb, pool));
 
