@@ -138,8 +138,9 @@ svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
    Use authentication baton cached in CTX to authenticate against the
    repository.
 
-   The *RA_SESSION_P will be automatically returned to session cache
-   on POOL cleanup or by explicit svn_client__ra_session_release() call
+   The caller may return *RA_SESSION_P to RA session cache by explicit
+   svn_client__ra_session_release() call. Otherwise RA session will be
+   closed on pool cleanup and will not be reused.
 
    Use POOL for all allocations. */
 svn_error_t *
