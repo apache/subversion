@@ -1776,7 +1776,7 @@ update_moved_away_conflict_victim(svn_revnum_t *old_rev,
 
   SVN_ERR(svn_wc__db_fetch_repos_info(&new_version.repos_url,
                                       &new_version.repos_uuid,
-                                      wcroot->sdb, repos_id,
+                                      wcroot, repos_id,
                                       scratch_pool));
 
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &old_version.node_kind,
@@ -1789,7 +1789,7 @@ update_moved_away_conflict_victim(svn_revnum_t *old_rev,
 
   SVN_ERR(svn_wc__db_fetch_repos_info(&old_version.repos_url,
                                       &old_version.repos_uuid,
-                                      wcroot->sdb, repos_id,
+                                      wcroot, repos_id,
                                       scratch_pool));
   *old_rev = old_version.peg_rev;
   *new_rev = new_version.peg_rev;
@@ -1976,7 +1976,7 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                                             wcroot, move_src_op_root_relpath,
                                             scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
-                                      wcroot->sdb, repos_id, scratch_pool));
+                                      wcroot, repos_id, scratch_pool));
 
   /* Read old (pre-update) information from the move destination node.
 

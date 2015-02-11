@@ -418,7 +418,7 @@ lock_from_columns(svn_sqlite__stmt_t *stmt,
 svn_error_t *
 svn_wc__db_fetch_repos_info(const char **repos_root_url,
                             const char **repos_uuid,
-                            svn_sqlite__db_t *sdb,
+                            svn_wc__db_wcroot_t *wcroot,
                             apr_int64_t repos_id,
                             apr_pool_t *result_pool)
 {
@@ -437,7 +437,7 @@ svn_wc__db_fetch_repos_info(const char **repos_root_url,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_REPOSITORY_BY_ID));
   SVN_ERR(svn_sqlite__bindf(stmt, "i", repos_id));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -2689,7 +2689,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                                             wcroot, local_relpath,
                                             result_pool, scratch_pool),
           svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid,
-                                      wcroot->sdb, repos_id, result_pool),
+                                      wcroot, repos_id, result_pool),
           SVN_NO_ERROR,
           SVN_NO_ERROR,
           wcroot);
@@ -2750,7 +2750,7 @@ base_get_children_info(apr_hash_t **nodes,
           svn_error_t *err;
 
           err = svn_wc__db_fetch_repos_info(&last_repos_root_url, NULL,
-                                            wcroot->sdb, repos_id,
+                                            wcroot, repos_id,
                                             result_pool);
 
           if (err)
@@ -3625,7 +3625,7 @@ svn_wc__db_external_read(svn_wc__db_status_t *status,
           err = svn_error_compose_create(
                         err,
                         svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid,
-                                                    wcroot->sdb, repos_id,
+                                                    wcroot, repos_id,
                                                     result_pool));
         }
 
@@ -4346,7 +4346,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
          working copies in a single db)! */
 
       SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
-                                          src_wcroot->sdb, *copyfrom_id,
+                                          src_wcroot, *copyfrom_id,
                                           scratch_pool));
 
       SVN_ERR(create_repos_id(copyfrom_id, repos_root_url, repos_uuid,
@@ -5305,7 +5305,7 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
           const char *repos_uuid;
 
           SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
-                                              src_wcroot->sdb, node_repos_id,
+                                              src_wcroot, node_repos_id,
                                               scratch_pool));
 
           SVN_ERR(create_repos_id(&node_repos_id, repos_root_url, repos_uuid,
@@ -9115,9 +9115,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                     have_base, have_more_work, have_work,
                     wcroot, local_relpath, result_pool, scratch_pool),
           svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid,
-                                      wcroot->sdb, repos_id, result_pool),
+                                      wcroot, repos_id, result_pool),
           svn_wc__db_fetch_repos_info(original_root_url, original_uuid,
-                                      wcroot->sdb, original_repos_id,
+                                      wcroot, original_repos_id,
                                       result_pool),
         SVN_NO_ERROR,
         wcroot);
@@ -9230,7 +9230,7 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
                   last_repos_root_url = repos_root_url;
                   err = svn_wc__db_fetch_repos_info(&repos_root_url,
                                                     &repos_uuid,
-                                                    wcroot->sdb, repos_id,
+                                                    wcroot, repos_id,
                                                     result_pool);
                   if (err)
                     SVN_ERR(svn_error_compose_create(err,
@@ -9613,7 +9613,7 @@ read_single_info(const struct svn_wc__db_info_t **info,
   mtb->copied = (original_repos_relpath != NULL);
 
   SVN_ERR(svn_wc__db_fetch_repos_info(&mtb->repos_root_url, &mtb->repos_uuid,
-                                      wcroot->sdb, repos_id, result_pool));
+                                      wcroot, repos_id, result_pool));
 
   if (!base_tree_only && mtb->kind == svn_node_dir)
     SVN_ERR(is_wclocked(&mtb->locked, wcroot, local_relpath, scratch_pool));
@@ -10056,7 +10056,7 @@ read_url_txn(const char **url,
         }
     }
 
-  SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, NULL, wcroot->sdb,
+  SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, NULL, wcroot,
                                       repos_id, scratch_pool));
 
   SVN_ERR_ASSERT(repos_root_url != NULL && repos_relpath != NULL);
@@ -11206,7 +11206,7 @@ relocate_txn(svn_wc__db_wcroot_t *wcroot,
                                                   scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(svn_wc__db_fetch_repos_info(NULL, &repos_uuid, wcroot->sdb,
+  SVN_ERR(svn_wc__db_fetch_repos_info(NULL, &repos_uuid, wcroot,
                                       old_repos_id, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid);  /* This function affects all the children of the given local_relpath,
      but the way that it does this is through the repos inheritance mechanism.
@@ -12677,7 +12677,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_WC__DB_WITH_TXN(
+  SVN_WC__DB_WITH_TXN4(
           scan_addition(status,
                         op_root_abspath
                                 ? &op_root_relpath
@@ -12687,6 +12687,12 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                         original_revision,
                         NULL, NULL, NULL,
                         wcroot, local_relpath, result_pool, scratch_pool),
+          svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid, wcroot,
+                                      repos_id, result_pool),
+          svn_wc__db_fetch_repos_info(original_root_url, original_uuid,
+                                      wcroot, original_repos_id,
+                                      result_pool),
+          SVN_NO_ERROR,
           wcroot);
 
   if (op_root_abspath)
@@ -12694,12 +12700,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                        result_pool);
   /* REPOS_ID must be valid if requested; ORIGINAL_REPOS_ID need not be. */
   SVN_ERR_ASSERT(repos_id_p == NULL || repos_id != INVALID_REPOS_ID);
-
-  SVN_ERR(svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid, wcroot->sdb,
-                                      repos_id, result_pool));
-  SVN_ERR(svn_wc__db_fetch_repos_info(original_root_url, original_uuid,
-                                      wcroot->sdb, original_repos_id,
-                                      result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -15293,7 +15293,7 @@ has_switched_subtrees(svn_boolean_t *is_switched,
          does not match the given trailing URL then the whole working
          copy is switched. */
 
-      SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, NULL, wcroot->sdb,
+      SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, NULL, wcroot,
                                           repos_id, scratch_pool));
       url = svn_path_url_add_component2(repos_root_url, repos_relpath,
                                         scratch_pool);
@@ -15682,7 +15682,7 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
       if (child_repos_id != last_repos_id)
         {
           svn_error_t *err = svn_wc__db_fetch_repos_info(&last_repos_root_url,
-                                                         NULL, wcroot->sdb,
+                                                         NULL, wcroot,
                                                          child_repos_id,
                                                          scratch_pool);
 
