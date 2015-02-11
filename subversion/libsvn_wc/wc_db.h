@@ -3435,15 +3435,19 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Update a moved-away tree conflict victim at VICTIM_ABSPATH with changes
- * brought in by the update operation which flagged the tree conflict. */
+/* Update a moved-away tree conflict victim LOCAL_ABSPATH, deleted in
+   DELETE_OP_ABSPATH with changes from the original location. */
 svn_error_t *
 svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
-                                             const char *victim_abspath,
-                                             svn_wc_notify_func2_t notify_func,
-                                             void *notify_baton,
+                                             const char *local_abspath,
+                                             const char *delete_op_abspath,
+                                             svn_wc_operation_t operation,
+                                             svn_wc_conflict_action_t action,
+                                             svn_wc_conflict_reason_t reason,
                                              svn_cancel_func_t cancel_func,
                                              void *cancel_baton,
+                                             svn_wc_notify_func2_t notify_func,
+                                             void *notify_baton,
                                              apr_pool_t *scratch_pool);
 
 /* LOCAL_ABSPATH is moved to MOVE_DST_ABSPATH.  MOVE_SRC_ROOT_ABSPATH
