@@ -2609,9 +2609,10 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
           if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
             {
               err = svn_wc__db_update_moved_away_conflict_victim(
-                        db, local_abspath,
-                        notify_func, notify_baton,
+                        db, local_abspath, src_op_root_abspath,
+                        operation, action, reason,
                         cancel_func, cancel_baton,
+                        notify_func, notify_baton,
                         scratch_pool);
 
               if (err)
