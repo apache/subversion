@@ -6738,6 +6738,8 @@ op_revert_txn(void *baton,
   svn_boolean_t moved_here;
   int affected_rows;
   const char *moved_to;
+  int op_depth_increased = 0;
+  svn_skel_t *conflict;
 
   /* ### Similar structure to op_revert_recursive_txn, should they be
          combined? */
@@ -6794,44 +6796,11 @@ op_revert_txn(void *baton,
     }
   else
     {
-      svn_skel_t *conflict;
-
       SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, wcroot,
                                                 local_relpath,
                                                 scratch_pool, scratch_pool));
-      if (conflict)
-        {
-          svn_wc_operation_t operation;
-          svn_boolean_t tree_conflicted;
-
-          SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL,
-                                             &tree_conflicted,
-                                             db, wcroot->abspath,
-                                             conflict,
-                                             scratch_pool, scratch_pool));
-          if (tree_conflicted
-              && (operation == svn_wc_operation_update
-                  || operation == svn_wc_operation_switch))
-            {
-              svn_wc_conflict_reason_t reason;
-              svn_wc_conflict_action_t action;
-
-              SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
-                                                          NULL,
-                                                          db, wcroot->abspath,
-                                                          conflict,
-                                                          scratch_pool,
-                                                          scratch_pool));
-
-              if (reason == svn_wc_conflict_reason_deleted)
-                SVN_ERR(svn_wc__db_resolve_delete_raise_moved_away(
-                          db, svn_dirent_join(wcroot->abspath, local_relpath,
-                                              scratch_pool),
-                          NULL, NULL /* ### How do we notify this? */,
-                          scratch_pool));
-            }
-        }
     }
+
 
   if (op_depth > 0 && op_depth == relpath_depth(local_relpath))
     {
@@ -6857,7 +6826,7 @@ op_revert_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
                                 local_relpath,
                                 op_depth));
-      SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__update(&op_depth_increased, stmt));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_WORKING_NODE));
@@ -6873,6 +6842,54 @@ op_revert_txn(void *baton,
       /* If this node was moved-here, clear moved-to at the move source. */
       if (moved_here)
         SVN_ERR(clear_moved_to(wcroot, local_relpath, scratch_pool));
+    }
+
+  if (op_depth_increased && conflict)
+    {
+      svn_wc_operation_t operation;
+      svn_boolean_t tree_conflicted;
+      const apr_array_header_t *locations;
+
+      SVN_ERR(svn_wc__conflict_read_info(&operation, &locations, NULL, NULL,
+                                          &tree_conflicted,
+                                          db, wcroot->abspath,
+                                          conflict,
+                                          scratch_pool, scratch_pool));
+      if (tree_conflicted
+          && (operation == svn_wc_operation_update
+              || operation == svn_wc_operation_switch))
+        {
+          svn_wc_conflict_reason_t reason;
+          svn_wc_conflict_action_t action;
+
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
+                                                      NULL,
+                                                      db, wcroot->abspath,
+                                                      conflict,
+                                                      scratch_pool,
+                                                      scratch_pool));
+
+          if (reason == svn_wc_conflict_reason_deleted
+              || reason == svn_wc_conflict_reason_replaced)
+            {
+              SVN_ERR(svn_wc__db_op_raise_moved_away_internal(
+                          wcroot, local_relpath, op_depth+1, db,
+                          operation, action,
+                          (locations && locations->nelts > 0)
+                            ? APR_ARRAY_IDX(locations, 0,
+                                            const svn_wc_conflict_version_t *)
+                            : NULL,
+                          (locations && locations->nelts > 1)
+                            ? APR_ARRAY_IDX(locations, 1,
+                                            const svn_wc_conflict_version_t *)
+                            : NULL,
+                          scratch_pool));
+
+              /* Transform the move information into revert information */
+              SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                                  STMT_MOVE_NOTIFY_TO_REVERT));
+            }
+        }
     }
 
   if (rvb->clear_changelists)
@@ -7306,16 +7323,39 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
   while (have_row)
     {
       const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      svn_wc_notify_t *notify;
 
       svn_pool_clear(iterpool);
 
-      notify_func(notify_baton,
-                  svn_wc_create_notify(svn_dirent_join(wcroot->abspath,
-                                                       notify_relpath,
-                                                       iterpool),
-                                       svn_wc_notify_revert,
-                                       iterpool),
-                  iterpool);
+      notify = svn_wc_create_notify(svn_dirent_join(wcroot->abspath,
+                                                    notify_relpath,
+                                                    iterpool),
+                                    svn_wc_notify_revert,
+                                    iterpool);
+
+      if (!svn_sqlite__column_is_null(stmt, 1))
+        notify->kind = svn_sqlite__column_token(stmt, 1, kind_map);
+      else
+        {
+          if (!svn_sqlite__column_is_null(stmt, 3))
+            notify->kind = svn_sqlite__column_token(stmt, 3, kind_map_none);
+
+          switch (svn_sqlite__column_int(stmt, 2))
+            {
+              case 0:
+                continue;
+              case 1:
+                /* standard revert */
+                break;
+              case 2:
+                notify->action = svn_wc_notify_tree_conflict;
+                break;
+              default:
+                SVN_ERR_MALFUNCTION();
+            }
+        }
+
+      notify_func(notify_baton, notify, iterpool);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
