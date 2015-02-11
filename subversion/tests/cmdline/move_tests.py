@@ -245,11 +245,6 @@ def build_simple_file_move_tests(sbox, source, dest):
                                copied='+', wc_rev='-')})
   mc['disk'] = test['up_disk'].copy()
   mc['disk'].tweak(dest, contents="This is the file 'lambda'.\nmodified\n")
-  # theirs-conflict doesn't work
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   # working breaks the move
   working = {}
   working['output'] = svntest.verify.ExpectedOutput(
@@ -262,7 +257,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].tweak(source, status='D ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -285,15 +280,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   test['up_status'].tweak(source, status='! ', treeconflict='C', wc_rev=None)
   test['up_status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doen't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't say it broke the move it should.
   working['output'] = svntest.verify.ExpectedOutput(
@@ -305,7 +296,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].remove(source)
   working['disk'] = test['up_disk']
   working['revert_paths'] = [dest_path]
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [dest_path, source_path]
   tests.append(test)
@@ -330,15 +321,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   # XXX: Is entry_status='  ' really right here?
   test['up_status'].tweak(source, status='! ', treeconflict='C', entry_status='  ')
   test['up_status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   # XXX: Broke the move but doesn't notify that it does.
   working['output'] = svntest.verify.ExpectedOutput(
@@ -349,7 +336,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].tweak(source, status='! ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -373,15 +360,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].tweak(source, status='D ', moved_to=dest)
   test['up_status'].add({dest: Item(status='R ', copied='+', treeconflict='C',
                                     wc_rev='-', moved_from=source)})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't say what it did.
   working['output'] = svntest.verify.ExpectedOutput(
@@ -393,7 +376,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -418,15 +401,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].tweak(source, status='D ', moved_to=dest)
   test['up_status'].add({dest: Item(status='R ', copied='+', treeconflict='C',
                                     wc_rev='-', moved_from=source)})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   working['accept'] = 'working'
   # XXX: Doesn't say what it did.
@@ -439,7 +418,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -487,15 +466,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].tweak(source, status='D ', moved_to=dest)
   test['up_status'].add({dest: Item(status='R ', copied='+', treeconflict='C',
                                     wc_rev='-', moved_from=source)})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't say what it did.
   working['output'] = svntest.verify.ExpectedOutput(
@@ -507,7 +482,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -531,15 +506,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].tweak(source, status='D ', moved_to=dest)
   test['up_status'].add({dest: Item(status='R ', copied='+', treeconflict='C',
                                     wc_rev='-', moved_from=source)})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't say what it did.
   working['output'] = svntest.verify.ExpectedOutput(
@@ -551,7 +522,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -575,15 +546,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].tweak(source, status='D ', moved_to=dest)
   test['up_status'].add({dest: Item(status='R ', copied='+', treeconflict='C',
                                     wc_rev='-', moved_from=source)})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   # XXX: Didn't tell us what it did.
   working['output'] = svntest.verify.ExpectedOutput(
@@ -595,7 +562,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -619,15 +586,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].tweak(source, status='D ', moved_to=dest)
   test['up_status'].add({dest: Item(status='R ', copied='+', treeconflict='C',
                                     wc_rev='-', moved_from=source)})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't tell you what it did.
   working['output'] = svntest.verify.ExpectedOutput(
@@ -639,7 +602,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -663,15 +626,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].tweak(source, status='D ', moved_to=dest)
   test['up_status'].add({dest: Item(status='R ', copied='+', treeconflict='C',
                                     wc_rev='-', moved_from=source)})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't tell you what it did.
   working['output'] = svntest.verify.ExpectedOutput(
@@ -683,7 +642,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].add({dest: Item(status='R ', moved_from=source,
                                     copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -719,11 +678,6 @@ def build_simple_file_move_tests(sbox, source, dest):
                                copied='+', wc_rev='-')})
   mc['disk'] = test['up_disk'].copy()
   mc['disk'].tweak(dest, props={u'foo': u'bar'})
-  # theirs-conflict doesn't work
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   working['output'] = svntest.verify.ExpectedOutput(
     [
@@ -736,7 +690,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].tweak(source, status='D ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -772,11 +726,6 @@ def build_simple_file_move_tests(sbox, source, dest):
                                copied='+', wc_rev='-')})
   mc['disk'] = test['up_disk'].copy()
   mc['disk'].tweak(dest, props={u'foo': u'baz'})
-  # theirs-conflict doesn't work
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   working['output'] = svntest.verify.ExpectedOutput(
     [
@@ -789,7 +738,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].tweak(source, status='D ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -825,11 +774,6 @@ def build_simple_file_move_tests(sbox, source, dest):
                                copied='+', wc_rev='-')})
   mc['disk'] = test['up_disk'].copy()
   mc['disk'].tweak(dest, props={})
-  # theirs-conflict doesn't work
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   working['output'] = svntest.verify.ExpectedOutput(
     [
@@ -842,7 +786,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].tweak(source, status='D ')
   working['status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   working['disk'] = test['up_disk']
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [source_path, dest_path]
   tests.append(test)
@@ -869,15 +813,11 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].tweak(source, status='! ', treeconflict='C', wc_rev=None)
   test['up_status'].add({dest: Item(status='R ', copied='+', wc_rev='-',
                                     treeconflict='C')})
-  # mine-conflict and theirs-conflict don't work.
+  # mine-conflict doesn't work.
   mc = {}
   mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
-  tc = {}
-  tc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
-  tc['status'] = test['up_status']
-  tc['disk'] = test['up_disk']
   working = {}
   working['output'] = svntest.verify.ExpectedOutput(
     "Resolved conflicted state of '%s'\n" % source_path, match_all=False
@@ -888,7 +828,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['status'].remove(source)
   working['disk'] = test['up_disk']
   working['revert_paths'] = [dest_path]
-  test['resolves'] = {'mine-conflict': mc, 'theirs-conflict': tc,
+  test['resolves'] = {'mine-conflict': mc,
                       'working': working}
   test['revert_paths'] = [dest_path, source_path]
   tests.append(test)
@@ -1577,7 +1517,55 @@ def move_to_from_external(sbox):
                                      'ci', '-m', 'Commit both',
                                      sbox.ospath(''),
                                      sbox.ospath('GG'))
-  
+
+def revert_del_root_of_move(sbox):
+    "revert delete root of move"
+
+    sbox.build()
+    wc_dir = sbox.wc_dir
+    sbox.simple_copy('A/mu', 'A/B/E/mu')
+    sbox.simple_copy('A/mu', 'A/B/F/mu')
+    sbox.simple_commit()
+    sbox.simple_update('', 1)
+    sbox.simple_move('A/B/E', 'E')
+    sbox.simple_rm('A/B')
+
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/B'        : Item(status='  ', treeconflict='C'),
+      'A/B/E'      : Item(status='  ', treeconflict='U'),
+      'A/B/E/mu'   : Item(status='  ', treeconflict='A'),
+      'A/B/F'      : Item(status='  ', treeconflict='U'),
+      'A/B/F/mu'   : Item(status='  ', treeconflict='A'),
+    })
+
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+    expected_status.tweak('A/B', status='D ', treeconflict='C')
+    expected_status.tweak('A/B/E', status='D ', moved_to='E')
+    expected_status.tweak('A/B/F', 'A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
+                          status='D ')
+    expected_status.add({
+      'A/B/F/mu'   : Item(status='D ', wc_rev='2'),
+      'A/B/E/mu'   : Item(status='D ', wc_rev='2'),
+      'E'          : Item(status='A ', copied='+', moved_from='A/B/E', wc_rev='-'),
+      'E/beta'     : Item(status='  ', copied='+', wc_rev='-'),
+      'E/alpha'    : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+    svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                          expected_status)
+
+    expected_output = [
+      "Reverted '%s'\n" % sbox.ospath('A/B'),      # Reverted
+      "   C %s\n"       % sbox.ospath('A/B/E')     # New tree conflict
+    ]
+    svntest.actions.run_and_verify_svn(expected_output, [],
+                                       'revert', sbox.ospath('A/B'),
+                                       '--depth', 'empty')
+
+    expected_status.tweak('A/B', status='  ', treeconflict=None)
+    expected_status.tweak('A/B/E', treeconflict='C')
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 #######################################################################
 # Run the tests
@@ -1596,6 +1584,7 @@ test_list = [ None,
               move_del_moved,
               copy_move_commit,
               move_to_from_external,
+              revert_del_root_of_move,
             ]
 
 if __name__ == '__main__':

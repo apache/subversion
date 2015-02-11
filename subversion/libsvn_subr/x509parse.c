@@ -903,90 +903,27 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
   return nul_escape(utf8_string, result_pool);
 }
 
-/* Given an OID return a null-terminated C string representation in *RESULT.
- * For example an OID with the bytes "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x01"
- * would be converted to the string "1.2.840.113549.1.9.1". */
 static svn_error_t *
-asn1_oid_to_string(const char **result, const x509_buf *oid,
-                   apr_pool_t *scratch_pool, apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *out = svn_stringbuf_create_empty(result_pool);
-  const unsigned char *p = oid->p;
-  const unsigned char *end = p + oid->len;
-  const char *temp;
-
-  *result = NULL;
-
-  if (oid->tag != ASN1_OID)
-    return svn_error_create(SVN_ERR_ASN1_UNEXPECTED_TAG, NULL, NULL);
-
-  if (oid->len <= 0)
-    return svn_error_create(SVN_ERR_ASN1_OUT_OF_DATA, NULL, NULL);
-
-  while (p != end) {
-    if (p == oid->p)
-      {
-        /* Handle decoding the first two values of the OID.  These values
-         * are encoded by taking the first value and adding 40 to it and
-         * adding the result to the second value, then placing this single
-         * value in the first byte of the output.  This is unambiguous since
-         * the first value is apparently limited to 0, 1 or 2 and the second
-         * is limited to 0 to 39. */
-        temp = apr_psprintf(scratch_pool, "%d.%d", *p / 40, *p % 40);
-        p++;
-      }
-    else if (*p < 128)
-      {
-        /* The remaining values if they're less than 128 are just 
-         * the number one to one encoded */
-        temp = apr_psprintf(scratch_pool, ".%d", *p);
-        p++;
-      }
-    else
-      {
-        /* Values greater than 128 are encoded as a series of 7 bit values
-         * with the left most bit set to indicate this encoding with the
-         * last octet missing the left most bit to finish out the series.. */
-        int collector = 0;
-
-        do {
-          collector = collector << 7 | (*(p++) & 0x7f);
-        } while (p != end && *p > 127);
-        collector = collector << 7 | *(p++);
-        temp = apr_psprintf(scratch_pool, ".%d", collector);
-      }
-    svn_stringbuf_appendcstr(out, temp);
-  }
-
-  *result = out->data;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-x509_name_to_certinfo(apr_array_header_t **oids,
-                      apr_hash_t **hash,
+x509_name_to_certinfo(apr_array_header_t **result,
                       const x509_name *dn,
                       apr_pool_t *scratch_pool,
                       apr_pool_t *result_pool)
 {
   const x509_name *name = dn;
 
-  *oids = apr_array_make(result_pool, 6, sizeof(const char *));
-  *hash = apr_hash_make(result_pool);
+  *result = apr_array_make(result_pool, 6, sizeof(svn_x509_name_attr_t *));
 
   while (name != NULL) {
-    const char *oid_string;
-    const char *utf8_value;
+    svn_x509_name_attr_t *attr = apr_palloc(result_pool, sizeof(svn_x509_name_attr_t));
 
-    SVN_ERR(asn1_oid_to_string(&oid_string, &name->oid,
-                               scratch_pool, result_pool));
-    APR_ARRAY_PUSH(*oids, const char *) = oid_string;
-    utf8_value = x509name_to_utf8_string(name, result_pool);
-    if (utf8_value)
-      svn_hash_sets(*hash, oid_string, utf8_value);
-    else
+    attr->oid_len = name->oid.len;
+    attr->oid = apr_palloc(result_pool, attr->oid_len);
+    memcpy(attr->oid, name->oid.p, attr->oid_len);
+    attr->utf8_value = x509name_to_utf8_string(name, result_pool);
+    if (!attr->utf8_value)
       /* this should never happen */
-      svn_hash_sets(*hash, oid_string, "??");
+      attr->utf8_value = apr_pstrdup(result_pool, "??");
+    APR_ARRAY_PUSH(*result, const svn_x509_name_attr_t *) = attr;
 
     name = name->next;
   }
@@ -1028,6 +965,23 @@ is_hostname(const char *str)
   return TRUE;
 }
 
+static const char *
+x509parse_get_cn(apr_array_header_t *subject)
+{
+  int i;
+
+  for (i = 0; i < subject->nelts; ++i)
+    {
+      const svn_x509_name_attr_t *attr = APR_ARRAY_IDX(subject, i, const svn_x509_name_attr_t *);
+      if (equal(attr->oid, attr->oid_len,
+                SVN_X509_OID_COMMON_NAME, sizeof(SVN_X509_OID_COMMON_NAME) - 1))
+        return attr->utf8_value;
+    }
+
+  return NULL;
+}
+
+
 static void
 x509parse_get_hostnames(svn_x509_certinfo_t *ci, x509_cert *crt,
                         apr_pool_t *result_pool, apr_pool_t *scratch_pool)
@@ -1058,8 +1012,7 @@ x509parse_get_hostnames(svn_x509_certinfo_t *ci, x509_cert *crt,
       /* no SAN then get the hostname from the CommonName on the cert */
       const char *utf8_value;
 
-      utf8_value = svn_x509_certinfo_get_subject_attr(ci,
-                      SVN_X509_OID_COMMON_NAME);
+      utf8_value = x509parse_get_cn(ci->subject);
 
       if (utf8_value && is_hostname(utf8_value))
         {
@@ -1220,11 +1173,11 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
   ci = apr_pcalloc(result_pool, sizeof(*ci));
 
   /* Get the subject name */
-  SVN_ERR(x509_name_to_certinfo(&ci->subject_oids, &ci->subject, &crt->subject,
+  SVN_ERR(x509_name_to_certinfo(&ci->subject, &crt->subject,
                                 scratch_pool, result_pool));
 
   /* Get the issuer name */
-  SVN_ERR(x509_name_to_certinfo(&ci->issuer_oids, &ci->issuer, &crt->issuer,
+  SVN_ERR(x509_name_to_certinfo(&ci->issuer, &crt->issuer,
                                 scratch_pool, result_pool));
 
   /* Copy the validity range */
