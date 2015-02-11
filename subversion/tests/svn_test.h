@@ -27,6 +27,8 @@
 #define SVN_DEPRECATED
 #endif /* ! SVN_ENABLE_DEPRECATION_WARNINGS_IN_TESTS */
 
+#include <stdio.h>
+
 #include <apr_pools.h>
 
 #include "svn_delta.h"
@@ -52,6 +54,23 @@ extern "C" {
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,         \
                                "assertion '%s' failed at %s:%d",  \
                                #expr, __FILE__, __LINE__);        \
+  } while (0)
+
+/**
+ * Macro for testing assumptions when the context does not allow
+ * returning an svn_error_t*.
+ *
+ * Will write to stderr and cause a segfault if EXPR is false.
+ */
+#define SVN_TEST_ASSERT_NO_RETURN(expr)                           \
+  do {                                                            \
+    if (!(expr))                                                  \
+      {                                                           \
+        unsigned int z_e_r_o_p_a_g_e__;                           \
+        fprintf(stderr, "TEST ASSERTION FAILED: %s\n", #expr);    \
+        z_e_r_o_p_a_g_e__ = *(volatile unsigned int*)0;           \
+        *(volatile unsigned int*)0 = z_e_r_o_p_a_g_e__;           \
+      }                                                           \
   } while (0)
 
 /** Handy macro for testing an expected svn_error_t return value.

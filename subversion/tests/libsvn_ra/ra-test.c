@@ -240,7 +240,21 @@ close_tunnel(void *tunnel_context, void *tunnel_baton)
   if (b->magic != CLOSE_MAGIC)
     abort();
   if (--b->tb->open_count == 0)
-    apr_proc_kill(b->proc, SIGTERM);
+    {
+      apr_status_t child_exit_status;
+      int child_exit_code;
+      apr_exit_why_e child_exit_why;
+
+      SVN_TEST_ASSERT_NO_RETURN(0 == apr_file_close(b->proc->in));
+      SVN_TEST_ASSERT_NO_RETURN(0 == apr_file_close(b->proc->out));
+
+      child_exit_status =
+        apr_proc_wait(b->proc, &child_exit_code, &child_exit_why, APR_WAIT);
+
+      SVN_TEST_ASSERT_NO_RETURN(child_exit_status == APR_CHILD_DONE);
+      SVN_TEST_ASSERT_NO_RETURN(child_exit_code == 0);
+      SVN_TEST_ASSERT_NO_RETURN(child_exit_why == APR_PROC_EXIT);
+    }
 }
 
 
