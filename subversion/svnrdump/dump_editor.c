@@ -273,7 +273,9 @@ dump_node_delete(svn_stream_t *stream,
   svn_repos__dumpfile_header_push(
     headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
 
-  SVN_ERR(svn_repos__dump_headers(stream, headers, TRUE, pool));
+  SVN_ERR(svn_repos__dump_node_record(stream, headers,
+                                      NULL, FALSE, 0,  /* props & text */
+                                      FALSE /*content_length_always*/, pool));
   return SVN_NO_ERROR;
 }
 
