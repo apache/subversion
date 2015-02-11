@@ -244,6 +244,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1659013
+   Fix a race in the DSO initialisation code.
+   Justification:
+     Fixes occasional SEGV when multiple threads load DSOs in parallel.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
