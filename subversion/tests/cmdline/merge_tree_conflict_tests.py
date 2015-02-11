@@ -61,7 +61,7 @@ def delete_file_and_dir(sbox):
   B2_path = os.path.join(wc_dir, 'A', 'B2')
   B_url = sbox.repo_url + '/A/B'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy', B_path, B2_path)
 
   expected_output = wc.State(wc_dir, {
@@ -85,7 +85,7 @@ def delete_file_and_dir(sbox):
   # Rev 3 delete E and lambda from B
   E_path = os.path.join(B_path, 'E')
   lambda_path = os.path.join(B_path, 'lambda')
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'delete', E_path, lambda_path)
 
   expected_output = wc.State(wc_dir, {
@@ -106,7 +106,7 @@ def delete_file_and_dir(sbox):
     # Local mods in B2
     B2_E_path = os.path.join(B2_path, 'E')
     B2_lambda_path = os.path.join(B2_path, 'lambda')
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, [],
                                        'propset', 'foo', 'foo_val',
                                        B2_E_path, B2_lambda_path)
     expected_status.tweak(
@@ -180,10 +180,10 @@ def merge_catches_nonexistent_target(sbox):
   Q_url = sbox.repo_url + '/A/D/Q'
 
   # Copy dir A/D/G to A/D/Q
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', G_path, Q_path)
+  svntest.actions.run_and_verify_svn(None, [], 'cp', G_path, Q_path)
 
   svntest.main.file_append(newfile_path, 'This is newfile.\n')
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', newfile_path)
+  svntest.actions.run_and_verify_svn(None, [], 'add', newfile_path)
 
   # Add newfile to dir G, creating r2.
   expected_output = wc.State(wc_dir, {
@@ -284,21 +284,21 @@ def merge_tree_deleted_in_target(sbox):
 
 
   # Copy B to I, creating r1.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', B_url, I_url, '-m', 'rev 2')
 
   # Change some files, creating r2.
   svntest.main.file_append(alpha_path, 'A change to alpha.\n')
   svntest.main.file_append(os.path.join(B_path, 'lambda'), 'change lambda.\n')
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'rev 3', B_path)
 
   # Remove E, creating r3.
   E_url = sbox.repo_url + '/A/I/E'
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', E_url, '-m', 'rev 4')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', os.path.join(wc_dir,'A'))
 
   expected_output = wc.State(I_path, {
@@ -354,7 +354,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # Create a branch of A, creating revision 2.
   A_url = sbox.repo_url + "/A"
   branch_A_url = sbox.repo_url + "/copy-of-A"
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      "cp",
                                      A_url, branch_A_url,
                                      "-m", "Creating copy-of-A")
@@ -447,16 +447,16 @@ def merge_added_dir_to_deleted_in_target(sbox):
   I_path = os.path.join(wc_dir, 'A', 'I')
 
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', B_url, I_url, '-m', 'rev 2')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', F_url, '-m', 'rev 3')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', '-m', 'rev 4', J_url)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                       'up', os.path.join(wc_dir,'A'))
 
   expected_output = wc.State(I_path, {
@@ -583,7 +583,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
                                         wc_status, None, wc_dir)
 
   # Delete A_COPY/B/E
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+  svntest.actions.run_and_verify_svn(None, [], 'rm',
                                      A_COPY_B_E_path)
 
   # Merge /A to /A_COPY ie., r1 to r4
@@ -673,7 +673,7 @@ def del_differing_file(sbox):
   target = 'A/D/G2'
   svn_copy(s_rev_orig, source, target)
   svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+  svntest.actions.run_and_verify_svn(None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
 
   dir_D = os.path.join('A','D')
@@ -693,7 +693,7 @@ def del_differing_file(sbox):
   target = 'A/D/G3'
   svn_copy(s_rev_orig, source, target)
   svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+  svntest.actions.run_and_verify_svn(None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
   sbox.simple_commit(target)
 
@@ -728,18 +728,18 @@ def tree_conflicts_and_obstructions(sbox):
   br_alpha_moved = os.path.join(branch_path, 'alpha-moved')
 
   # Create a branch
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+  svntest.actions.run_and_verify_svn(None, [], 'cp',
                                      trunk_url,
                                      sbox.repo_url + '/branch',
                                      '-m', "Creating the Branch")
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+  svntest.actions.run_and_verify_svn(None, [], 'mv',
                                      trunk_url + '/alpha',
                                      trunk_url + '/alpha-moved',
                                      '-m', "Move alpha to alpha-moved")
 
   # Update to revision 2.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'update', wc_dir)
 
   svntest.main.file_write(br_alpha_moved, "I am blocking myself from trunk\n")
@@ -1461,7 +1461,7 @@ def merge_replace_setup(sbox):
     'Committed revision 2.\n',
   ]
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp', url_A,
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'cp', url_A,
     url_branch, '-m', 'copy log')
 
   # svn up
@@ -1551,7 +1551,7 @@ def merge_replace_setup(sbox):
     'D         ' + branch_D_H + '\n',
   ])
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'delete',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'delete',
     branch_mu, branch_B_E, branch_D_G_pi, branch_D_H)
 
   # svn ci
@@ -1589,33 +1589,33 @@ def merge_replace_setup(sbox):
   # svn add branch/mu
   expected_stdout = ['A         ' + branch_mu + '\n']
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'add',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'add',
     branch_mu)
 
   # dir-with-dir
   # svn mkdir branch/B/E
   expected_stdout = ['A         ' + branch_B_E + '\n']
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'mkdir',
     branch_B_E)
 
   # svn ps propname propval branch/B/E
   expected_stdout = ["property 'propname' set on '" + branch_B_E + "'\n"]
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'ps',
     'propname', 'propval', branch_B_E)
 
   # file-with-dir
   # svn mkdir branch/D/G/pi
   expected_stdout = ['A         ' + branch_D_G_pi + '\n']
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'mkdir',
     branch_D_G_pi)
 
   # svn ps propname propval branch/D/G/pi
   expected_stdout = ["property 'propname' set on '" + branch_D_G_pi + "'\n"]
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'ps',
     'propname', 'propval', branch_D_G_pi)
 
   # dir-with-file
@@ -1625,7 +1625,7 @@ def merge_replace_setup(sbox):
   # svn add branch/D/H
   expected_stdout = ['A         ' + branch_D_H + '\n']
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'add',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'add',
     branch_D_H)
 
   # svn ci
@@ -1686,7 +1686,7 @@ def merge_replace_causes_tree_conflict(sbox):
   # svn ps propname otherpropval A/B/E
   expected_stdout = ["property 'propname' set on '" + A_B_E + "'\n"]
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'ps',
     'propname', 'otherpropval', A_B_E)
 
   # echo modified > A/D/G/pi
@@ -1695,7 +1695,7 @@ def merge_replace_causes_tree_conflict(sbox):
   # svn ps propname propval A/D/H
   expected_stdout = ["property 'propname' set on '" + A_D_H + "'\n"]
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'ps',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'ps',
     'propname', 'propval', A_D_H)
 
   # svn merge $URL/A $URL/branch A
@@ -1709,7 +1709,7 @@ def merge_replace_causes_tree_conflict(sbox):
     ' U   ' + A + '\n',
   ], target=A, two_url=True, tree_conflicts=4)
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
     url_A, url_branch, A)
 
   # svn st
@@ -1775,7 +1775,7 @@ def merge_replace_causes_tree_conflict2(sbox):
     'D         ' + os.path.join(A_D_H, 'psi') + '\n',
     'D         ' + A_D_H + '\n',
   ])
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'delete',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'delete',
     A_mu, A_B_E, A_D_G_pi, A_D_H)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/D/G/pi',
                         'A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi',
@@ -1795,7 +1795,7 @@ def merge_replace_causes_tree_conflict2(sbox):
     " U   " + A_mu + "\n",  # mergeinfo -> 'RM' status
   ], target=A, two_url=True, tree_conflicts=1)
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
     url_A, url_branch, A, '--depth=files')
   # New mergeinfo describing the merge.
   expected_status.tweak('A', status=' M')
@@ -1815,7 +1815,7 @@ def merge_replace_causes_tree_conflict2(sbox):
     " U   " + A_B + "\n",     # mergeinfo
   ], target=A_B, two_url=True, tree_conflicts=1)
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
     url_A_B, url_branch_B, A_B)
   # New mergeinfo describing the merge.
   expected_status.tweak('A/B', status=' M')
@@ -1835,7 +1835,7 @@ def merge_replace_causes_tree_conflict2(sbox):
     " U   " + A_D + "\n",     # mergeinfo
   ], target=A_D, two_url=True, tree_conflicts=1)
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
     '--depth=immediates', url_A_D, url_branch_D, A_D)
   # New mergeinfo describing the merge.
   expected_status.tweak('A/D', 'A/D/G', status=' M')
@@ -1855,7 +1855,7 @@ def merge_replace_causes_tree_conflict2(sbox):
     " U   " + A_D_G + "\n",     # mergeinfo
   ], target=A_D_G, two_url=True, tree_conflicts=1)
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
     url_A_D_G, url_branch_D_G, A_D_G)
   # New mergeinfo describing the merge.
   expected_status.tweak('A/D/G', status=' M')
@@ -1876,7 +1876,7 @@ def merge_replace_causes_tree_conflict2(sbox):
                     '|(      \>.*)'
   tree_conflicted_path = [A_B_E, A_mu, A_D_G_pi, A_D_H]
   for path in tree_conflicted_path:
-    actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'st',
+    actions.run_and_verify_svn2(expected_stdout, [], 0, 'st',
                               '--depth=empty', path)
 
 #----------------------------------------------------------------------
@@ -1894,25 +1894,25 @@ def merge_replace_on_del_fails(sbox):
   C_branch_path = os.path.join(wc_dir, 'branch', 'C')
 
   # r2 - Copy ^/A to ^/branch
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+  svntest.actions.run_and_verify_svn(None, [], 'copy',
                                      sbox.repo_url + '/A',
                                      sbox.repo_url + '/branch',
                                      '-m', 'Create a branch')
 
   # r3 - Replace A/C
-  svntest.actions.run_and_verify_svn(None, None, [], 'del', C_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', C_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, [], 'del', C_path)
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir', C_path)
+  svntest.actions.run_and_verify_svn(None, [], 'ci',
                                      '-m', 'Replace A/C', wc_dir)
 
   # r4 - Delete branch/C
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'del', C_branch_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'del', C_branch_path)
+  svntest.actions.run_and_verify_svn(None, [], 'ci',
                                      '-m', 'Delete branch/C', wc_dir)
 
   # Sync merge ^/A to branch
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   expected_stdout = expected_merge_output([[2,4]], [
     '   C ' + C_branch_path + '\n',  # merge
     ' U   ' + branch_path + '\n',    # mergeinfo
@@ -1946,7 +1946,7 @@ def merge_replace_on_del_fails(sbox):
   #   svn: E155010: The node 'C:\SVN\src-trunk\Debug\subversion\tests\
   #     cmdline\svn-test-work\working_copies\merge_tree_conflict_tests-24\
   #     branch\C' was not found.
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
     sbox.repo_url + '/A', branch_path)
 
 ########################################################################

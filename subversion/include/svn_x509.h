@@ -38,13 +38,13 @@
 extern "C" {
 #endif
 
-#define SVN_X509_OID_COMMON_NAME  "2.5.4.3"
-#define SVN_X509_OID_COUNTRY      "2.5.4.6"
-#define SVN_X509_OID_LOCALITY     "2.5.4.7"
-#define SVN_X509_OID_STATE        "2.5.4.8"
-#define SVN_X509_OID_ORGANIZATION "2.5.4.10"
-#define SVN_X509_OID_ORG_UNIT     "2.5.4.11"
-#define SVN_X509_OID_EMAIL        "1.2.840.113549.1.9.1"
+#define SVN_X509_OID_COMMON_NAME  "\x55\x04\x03"
+#define SVN_X509_OID_COUNTRY      "\x55\x04\x06"
+#define SVN_X509_OID_LOCALITY     "\x55\x04\x07"
+#define SVN_X509_OID_STATE        "\x55\x04\x08"
+#define SVN_X509_OID_ORGANIZATION "\x55\x04\x0A"
+#define SVN_X509_OID_ORG_UNIT     "\x55\x04\x0B"
+#define SVN_X509_OID_EMAIL        "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x01"
 
 /**
  * Representation of parsed certificate info.
@@ -52,6 +52,13 @@ extern "C" {
  * @since New in 1.9.
  */
 typedef struct svn_x509_certinfo_t svn_x509_certinfo_t;
+
+/**
+ * Representation of an atttribute in an X.509 name (e.g. Subject or Issuer)
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_x509_name_attr_t svn_x509_name_attr_t;
 
 /**
  * Parse x509 @a der certificate data from @a buf with length @a
@@ -77,6 +84,32 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
                     apr_pool_t *scratch_pool);
 
 /**
+ * Returns a deep copy of the @a attr, allocated in @a result_pool.
+ * May use @a scratch_pool for temporary allocations.
+ * @since New in 1.9.
+ */
+svn_x509_name_attr_t *
+svn_x509_name_attr_dup(const svn_x509_name_attr_t *attr,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+/**
+ * Returns the OID of @a attr as encoded in the certificate.  The
+ * length of the OID will be set in @a len.
+ * @since New in 1.9.
+ */
+const unsigned char *
+svn_x509_name_attr_get_oid(const svn_x509_name_attr_t *attr, apr_size_t *len);
+
+/**
+ * Returns the value of @a attr as a UTF-8 C string.
+ * @since New in 1.9.
+ */
+const char *
+svn_x509_name_attr_get_value(const svn_x509_name_attr_t *attr);
+
+
+/**
  * Returns a deep copy of @a certinfo, allocated in @a result_pool.
  * May use @a scratch_pool for temporary allocations.
  * @since New in 1.9.
@@ -95,25 +128,13 @@ svn_x509_certinfo_get_subject(const svn_x509_certinfo_t *certinfo,
                               apr_pool_t *result_pool);
 
 /**
- * Returns a list of the the object IDs of the attributes available
- * for the subject in the @a certinfo.  The oids in the list are C
- * strings with dot separated integers.
+ * Returns a list of the attributes for the subject in the @a certinfo.
+ * Each member of the list is of type svn_x509_name_attr_t.
  *
  * @since New in 1.9.
  */
 const apr_array_header_t *
-svn_x509_certinfo_get_subject_oids(const svn_x509_certinfo_t *certinfo);
-
-/**
- * Returns the value of the attribute with the object ID specified in
- * @a oid of the subject from @a certinfo.  @a oid is a string of dot
- * separated integers.
- *
- * @since New in 1.9.
- */
-const char *
-svn_x509_certinfo_get_subject_attr(const svn_x509_certinfo_t *certinfo,
-                                   const char *oid);
+svn_x509_certinfo_get_subject_attrs(const svn_x509_certinfo_t *certinfo);
 
 /**
  * Returns the cerficiate issuer DN from @a certinfo.
@@ -124,25 +145,13 @@ svn_x509_certinfo_get_issuer(const svn_x509_certinfo_t *certinfo,
                              apr_pool_t *result_pool);
 
 /**
- * Returns a list of the the object IDs of the attributes available
- * for the issuer in the @a certinfo.  The oids in the list are C
- * strings with dot separated integers.
+ * Returns a list of the attributes for the issuer in the @a certinfo.
+ * Each member of the list is of type svn_x509_name_attr_t.
  *
  * @since New in 1.9.
  */
 const apr_array_header_t *
-svn_x509_certinfo_get_issuer_oids(const svn_x509_certinfo_t *certinfo);
-
-/**
- * Returns the value of the attribute with the object ID specified in
- * @a oid of the issuer from @a certinfo.  @a oid is a string of dot
- * separated integers.
- *
- * @since New in 1.9.
- */
-const char *
-svn_x509_certinfo_get_issuer_attr(const svn_x509_certinfo_t *certinfo,
-                                  const char *oid);
+svn_x509_certinfo_get_issuer_attrs(const svn_x509_certinfo_t *certinfo);
 
 /**
  * Returns the start of the certificate validity period from @a certinfo.
@@ -174,6 +183,17 @@ svn_x509_certinfo_get_digest(const svn_x509_certinfo_t *certinfo);
  */
 const apr_array_header_t *
 svn_x509_certinfo_get_hostnames(const svn_x509_certinfo_t *certinfo);
+
+/**
+ * Given an @a oid return a null-terminated C string representation.
+ * For example an OID with the bytes "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x01"
+ * would be converted to the string "1.2.840.113549.1.9.1".  Returns
+ * NULL if the @oid can't be represented as a string.
+ *
+ * @since New in 1.9. */
+const char *
+svn_x509_oid_to_string(const unsigned char *oid, apr_size_t oid_len,
+                       apr_pool_t *scratch_pool, apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

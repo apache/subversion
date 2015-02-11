@@ -242,7 +242,7 @@ AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
     svn_x509_certinfo_get_hostnames(certinfo);
   if (hostnames)
     {
-      ::Java::MutableList< ::Java::String> hn(env, hostnames->nelts);
+      ::Java::List< ::Java::String> hn(env, hostnames->nelts);
       for (int i = 0; i < hostnames->nelts; ++i)
         hn.add(::Java::String(env, APR_ARRAY_IDX(hostnames, i, const char*)));
       jhostnames = hn.get();

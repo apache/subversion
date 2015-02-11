@@ -53,7 +53,7 @@ def relocate_deleted_missing_copied(sbox):
 
   # Delete A/mu to create a deleted entry for mu in A/.svn/entries
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', mu_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/mu')
   expected_output = svntest.wc.State(wc_dir, {
@@ -70,11 +70,11 @@ def relocate_deleted_missing_copied(sbox):
   # Copy A/D to A/D2
   D_path = os.path.join(wc_dir, 'A', 'D')
   D2_path = os.path.join(wc_dir, 'A', 'D2')
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+  svntest.actions.run_and_verify_svn(None, [], 'copy',
                                      D_path, D2_path)
   # Delete within the copy
   D2G_path = os.path.join(wc_dir, 'A', 'D2', 'G')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', D2G_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', D2G_path)
 
   expected_status.add({
     'A/D2'         : Item(status='A ', wc_rev='-', copied='+'),
@@ -97,7 +97,7 @@ def relocate_deleted_missing_copied(sbox):
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
   svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
 
   # Deleted and missing entries should be preserved, so update should
@@ -163,26 +163,26 @@ def relocate_beyond_repos_root(sbox):
   other_B_url = other_repo_url + "/B"
 
   svntest.main.safe_rmtree(wc_dir, 1)
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
                                      repo_url + '/A', wc_dir)
 
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
 
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      ".*Invalid relocation destination.*",
                                      'relocate',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
   # repository root.
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      ".*is not the root.*",
                                      'relocate',
                                      repo_url, other_B_url, A_wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'relocate',
                                      A_url, other_A_url, A_wc_dir)
 
@@ -217,8 +217,7 @@ def relocate_and_propset(sbox):
 
   # checkout
   svntest.main.safe_rmtree(wc_dir, 1)
-  svntest.actions.run_and_verify_svn(None,
-                                     None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
@@ -226,7 +225,7 @@ def relocate_and_propset(sbox):
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
                                      repo_url, other_repo_url, wc_dir)
 
   # Remove gamma from the working copy.
@@ -281,8 +280,7 @@ def single_file_relocate(sbox):
 
   # checkout
   svntest.main.safe_rmtree(wc_dir, 1)
-  svntest.actions.run_and_verify_svn(None,
-                                     None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
@@ -291,7 +289,7 @@ def single_file_relocate(sbox):
   other_iota_url = other_repo_url + '/iota'
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      ".*Cannot relocate.*",
                                      'relocate',
                                      iota_url, other_iota_url, iota_path)
@@ -314,7 +312,7 @@ def relocate_with_switched_children(sbox):
   svntest.main.safe_rmtree(repo_dir, 1)
 
   # Do the switch and check the results in three ways.
-  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
                                      repo_url, other_repo_url, wc_dir)
 
   # Attempt to commit changes and examine results
@@ -361,7 +359,7 @@ def relocate_with_relative_externals(sbox):
   # Add a relative external.
   change_external(os.path.join(wc_dir, 'A', 'B'),
                   "^/A/D/G G-ext\n../D/H H-ext", commit=True)
-  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'update', wc_dir)
 
   # Move our repository to another location.
   repo_dir = sbox.repo_dir
@@ -371,7 +369,7 @@ def relocate_with_relative_externals(sbox):
   svntest.main.safe_rmtree(repo_dir, 1)
 
   # Now relocate our working copy.
-  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
                                      repo_url, other_repo_url, wc_dir)
 
   # Check the URLs of the externals -- were they updated to point to the

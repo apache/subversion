@@ -351,13 +351,11 @@ def delete_subdir(sbox):
   A2_url = sbox.repo_url + '/A2'
   A2_B_F_url = sbox.repo_url + '/A2/B/F'
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                       'Committed revision 2.\n'], [],
                                      'cp', '-m', 'make copy', A_url, A2_url)
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                       'Committed revision 3.\n'], [],
                                      'rm', '-m', 'delete subdir', A2_B_F_url)
 
@@ -392,7 +390,7 @@ def file_dir_file(sbox):
   file_url = sbox.repo_url + '/iota'
   dir_url = sbox.repo_url + '/A/C'
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+  svntest.actions.run_and_verify_svn(None, [], 'switch',
                                      '--ignore-ancestry', dir_url, file_path)
   if not os.path.isdir(file_path):
     raise svntest.Failure
@@ -402,7 +400,7 @@ def file_dir_file(sbox):
   # In this specific case the switch editor is designed to be rooted on the node
   # itself instead of its ancestor. If you would use sbox.ospath('A') for
   # file_path the switch works both ways.
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+  svntest.actions.run_and_verify_svn(None, [], 'switch',
                                      '--ignore-ancestry', file_url, file_path)
   if not os.path.isfile(file_path):
     raise svntest.Failure
@@ -447,7 +445,7 @@ def nonrecursive_switching(sbox):
   sbox.simple_commit()
 
   # Try to switch "wc2" to the branch (non-recursively)
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '-N',
+  svntest.actions.run_and_verify_svn(None, [], 'switch', '-N',
                                      '--ignore-ancestry', version1_url, wc2_dir)
 
   # Check the URLs of the (not switched) directories.
@@ -483,8 +481,7 @@ def failed_anchor_is_target(sbox):
   # Make a directory 'G/psi' in the repository.
   G_url = sbox.repo_url + '/A/D/G'
   G_psi_url = G_url + '/psi'
-  svntest.actions.run_and_verify_svn(None,
-                                     ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                       'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg', G_psi_url)
 
@@ -494,7 +491,7 @@ def failed_anchor_is_target(sbox):
   svntest.main.file_append(psi_path, "more text")
 
   # This switch raises a tree conflict on 'psi', because of the local mods.
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      'switch', '--ignore-ancestry',
                                      G_url, H_path)
 
@@ -545,8 +542,7 @@ def bad_intermediate_urls(sbox):
 
   # First, make an extra subdirectory in C to match one in the root, plus
   # another one inside of that.
-  svntest.actions.run_and_verify_svn(None,
-                                     ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                       'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg',
                                      url_A_C_A, url_A_C_A_Z)
@@ -651,13 +647,13 @@ def obstructed_switch(sbox):
     'Committed revision 2.\n',
   ]
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'cp', '-m',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'cp', '-m',
     'msgcopy', url_A_B_E, url_A_B_Esave)
 
   # svn rm A/B/E/alpha
   expected_stdout = ['D         ' + A_B_E_alpha + '\n']
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'rm',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'rm',
     A_B_E_alpha)
 
   # svn commit
@@ -706,7 +702,7 @@ def obstructed_switch(sbox):
   expected_stdout = verify.RegexOutput(
                       ".*local file unversioned, incoming file add upon switch",
                       match_all=False)
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'info',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'info',
     A_B_E_alpha)
 
 
@@ -751,7 +747,7 @@ def commit_mods_below_switch(sbox):
                                         False, '--ignore-ancestry')
 
   D_path = sbox.ospath('A/D')
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'x', 'x', C_path, D_path)
 
   expected_status.tweak('A/C', 'A/D', status=' M')
@@ -786,8 +782,7 @@ def refresh_read_only_attribute(sbox):
   # Create a branch.
   url = sbox.repo_url + '/A'
   branch_url = sbox.repo_url + '/A-branch'
-  svntest.actions.run_and_verify_svn(None,
-                                     ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                       'Committed revision 2.\n'], [],
                                      'cp', '-m', 'svn:needs-lock not set',
                                      url, branch_url)
@@ -795,7 +790,7 @@ def refresh_read_only_attribute(sbox):
   # Set the svn:needs-lock property on a file from the "trunk".
   A_path = sbox.ospath('A')
   mu_path = os.path.join(A_path, 'mu')
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'svn:needs-lock', '1', mu_path)
 
   # Commit the propset of svn:needs-lock.
@@ -857,7 +852,7 @@ def switch_change_repos_root(sbox):
   # Test 1: A switch that changes to a non-existing repo shouldn't work.
   expected_err = ".*Unable to open repository.*|.*Could not open.*|"\
                  ".*Could not find.*|.*No repository found.*"
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      expected_err,
                                      'switch', '--ignore-ancestry',
                                      other_A_url, A_wc_dir)
@@ -867,7 +862,7 @@ def switch_change_repos_root(sbox):
   other_A_url = other_repo_url +  "/A"
 
   svntest.main.create_repos(other_repo_dir)
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      ".*UUID.*",
                                      'switch', '--ignore-ancestry',
                                      other_A_url, A_wc_dir)
@@ -1102,7 +1097,7 @@ def forced_switch_failures(sbox):
     'Tree conflict: local dir unversioned, incoming file add upon switch\n',
     match_all=False)
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'info',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'info',
     A_B_F_pi)
 
 
@@ -1115,7 +1110,7 @@ def forced_switch_failures(sbox):
     'Committed revision 2.\n',
   ])
 
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'mkdir',
+  actions.run_and_verify_svn2(expected_stdout, [], 0, 'mkdir',
     '-m', 'Log message', url_A_D_H_I)
 
   # Make A/D/G/I and co A/D/H/I into it.
@@ -1130,7 +1125,6 @@ def forced_switch_failures(sbox):
   })
 
   exit_code, so, se = svntest.actions.run_and_verify_svn(
-    "Unexpected error during co",
     ['Checked out revision 2.\n'], [],
     "co", url_A_D_H_I, A_D_G_I)
 
@@ -1242,7 +1236,7 @@ def switch_with_obstructing_local_adds(sbox):
                           "This is the unversioned file 'upsilon'.\n")
 
   # Add the above obstructions.
-  svntest.actions.run_and_verify_svn("Add error:", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'add', G_path, I_path,
                                      gamma_copy_path)
 
@@ -1316,15 +1310,15 @@ def switch_scheduled_add(sbox):
   nodo_path = sbox.ospath('nodo')
 
   svntest.main.file_append(file_path, "")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'add', file_path)
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      "svn: E200007: Cannot switch '.*file' " +
                                      "because it is not in the repository yet",
                                      'switch', '--ignore-ancestry',
                                      switch_url, file_path)
 
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      "svn: E155010: The node '.*nodo' was not",
                                      'switch', '--ignore-ancestry',
                                      switch_url, nodo_path)
@@ -1360,7 +1354,7 @@ def mergeinfo_switch_elision(sbox):
      "Checked out revision 1.\n",
      "A         " + B_COPY_1_path + "\n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'copy',
+  svntest.actions.run_and_verify_svn(expected_stdout, [], 'copy',
                                      sbox.repo_url + "/A/B", B_COPY_1_path)
 
   expected_stdout = verify.UnorderedOutput([
@@ -1372,7 +1366,7 @@ def mergeinfo_switch_elision(sbox):
      "Checked out revision 1.\n",
      "A         " + B_COPY_2_path + "\n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'copy',
+  svntest.actions.run_and_verify_svn(expected_stdout, [], 'copy',
                                      sbox.repo_url + "/A/B", B_COPY_2_path)
 
   expected_output = svntest.wc.State(wc_dir, {
@@ -1580,8 +1574,7 @@ def mergeinfo_switch_elision(sbox):
                                         None, None, None, None, None, True,
                                         '--ignore-ancestry')
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ["property '" + SVN_PROP_MERGEINFO +
+  svntest.actions.run_and_verify_svn(["property '" + SVN_PROP_MERGEINFO +
                                       "' set on '" + lambda_path + "'" +
                                       "\n"], [], 'ps', SVN_PROP_MERGEINFO,
                                      '/A/B/lambda:3-4', lambda_path)
@@ -2043,8 +2036,7 @@ def tolerate_local_mods(sbox):
   A_url = sbox.repo_url + '/A'
   A2_url = sbox.repo_url + '/A2'
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                       'Committed revision 2.\n'], [],
                                      'cp', '-m', 'make copy', A_url, A2_url)
 
@@ -2582,7 +2574,7 @@ def copy_with_switched_subdir(sbox):
   svntest.actions.run_and_verify_status(wc_dir, state)
 
   # Switch A/D/G
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+  svntest.actions.run_and_verify_svn(None, [], 'switch',
                                      '--ignore-ancestry', E_url, G)
 
   state.tweak('A/D/G', switched='S')
@@ -2594,7 +2586,7 @@ def copy_with_switched_subdir(sbox):
   svntest.actions.run_and_verify_status(wc_dir, state)
 
   # And now copy A/D and everything below it to R
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', D, R)
+  svntest.actions.run_and_verify_svn(None, [], 'cp', D, R)
 
   state.add({
     'R'         : Item(status='A ', copied='+', wc_rev='-'),
@@ -2619,13 +2611,12 @@ def copy_with_switched_subdir(sbox):
 
   # Checkout working copy to verify result
   svntest.main.safe_rmtree(wc_dir, 1)
-  svntest.actions.run_and_verify_svn(None,
-                                     None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      sbox.repo_url, wc_dir)
 
   # Switch A/D/G again to recreate state
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+  svntest.actions.run_and_verify_svn(None, [], 'switch',
                                      '--ignore-ancestry', E_url, G)
 
   # Clear the statuses
@@ -2649,15 +2640,15 @@ def up_to_old_rev_with_subtree_switched_to_root(sbox):
   # Starting with a vanilla greek tree, create a branch of A, switch
   # that branch to the root of the repository, then update the WC to
   # r1.
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_path,
+  svntest.actions.run_and_verify_svn(None, [], 'copy', A_path,
                                      branch_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir,
                                      '-m', 'Create a branch')
-  svntest.actions.run_and_verify_svn(None, None, [], 'sw', sbox.repo_url,
+  svntest.actions.run_and_verify_svn(None, [], 'sw', sbox.repo_url,
                                      branch_path, '--ignore-ancestry')
 
   # Now update the WC to r1.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', '-r1', wc_dir)
 
 def different_node_kind(sbox):
   "switch to a different node kind"
@@ -2682,7 +2673,7 @@ def different_node_kind(sbox):
                                           None, expected_disk, expected_status,
                                           None, None, None, None, None, False,
                                           '--ignore-ancestry')
-    svntest.actions.run_and_verify_svn(None, None, [], 'info', full_path)
+    svntest.actions.run_and_verify_svn(None, [], 'info', full_path)
     if not os.path.isdir(full_path):
       raise svntest.Failure
 
@@ -2698,7 +2689,7 @@ def different_node_kind(sbox):
                                           None, expected_disk, expected_status,
                                           None, None, None, None, None, False,
                                           '--ignore-ancestry')
-    svntest.actions.run_and_verify_svn(None, None, [], 'info', full_path)
+    svntest.actions.run_and_verify_svn(None, [], 'info', full_path)
     if not os.path.isfile(full_path):
       raise svntest.Failure
 
@@ -2718,12 +2709,12 @@ def switch_to_spaces(sbox):
   repo_url = sbox.repo_url
 
   # Paths are normalized in the command processing, so %20 is equivalent to ' '
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', repo_url + '/A',
                                            repo_url + '/A%20with space',
                                      '-m', '')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mv', repo_url + '/A%20with space',
                                            repo_url + '/A with%20more spaces',
                                      '-m', '')
@@ -2871,7 +2862,7 @@ def switch_moves(sbox):
 
   branch_url = sbox.repo_url + '/branch'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', sbox.wc_dir, branch_url,
                                      '-m', '')
 

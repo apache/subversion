@@ -215,13 +215,13 @@ def redirected_copy(sbox):
   expected_error = "svn: E170011: Repository moved permanently"
 
   # This tests the actual copy handling
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  svntest.actions.run_and_verify_svn(None, expected_error,
                                      'cp', '-m', 'failed copy',
                                      sbox.redirected_root_url() + '/A',
                                      sbox.redirected_root_url() + '/A_copied')
 
   # This tests the cmdline handling of '^/copy-of-A'
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  svntest.actions.run_and_verify_svn(None, expected_error,
                                      'cp', '-m', 'failed copy',
                                      sbox.redirected_root_url() + '/A',
                                      '^/copy-of-A')
@@ -230,13 +230,13 @@ def redirected_copy(sbox):
   expected_error = "svn: E170011: Repository moved temporarily"
 
   # This tests the actual copy handling
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  svntest.actions.run_and_verify_svn(None, expected_error,
                                      'cp', '-m', 'failed copy',
                                      sbox.redirected_root_url(temporary=True) + '/A',
                                      sbox.redirected_root_url(temporary=True) + '/A_copied')
 
   # This tests the cmdline handling of '^/copy-of-A'
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  svntest.actions.run_and_verify_svn(None, expected_error,
                                      'cp', '-m', 'failed copy',
                                      sbox.redirected_root_url(temporary=True) + '/A',
                                      '^/copy-of-A')

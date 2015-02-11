@@ -52,7 +52,7 @@ def run_and_verify_svn_in_wc(sbox, expected_stderr, *varargs):
   old_dir = os.getcwd()
   try:
     os.chdir(wc_dir)
-    svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+    svntest.actions.run_and_verify_svn([], expected_stderr,
                                        *varargs)
   finally:
     os.chdir(old_dir)
@@ -279,18 +279,18 @@ def delete_repos_root(sbox):
   # Delete the wcroot (which happens to be the repository root)
   expected_error = 'svn: E155035: \'.*\' is the root of a working copy ' + \
                    'and cannot be deleted'
-  svntest.actions.run_and_verify_svn('Delete root', [], expected_error,
+  svntest.actions.run_and_verify_svn([], expected_error,
                                      'rm', wc_dir)
 
   # This should produce some error, because we can never commit this
   expected_error = '.*repository root.*'
-  svntest.actions.run_and_verify_svn('Move root', None, expected_error,
+  svntest.actions.run_and_verify_svn(None, expected_error,
                                      'mv', sbox.ospath('A/D/G'),
                                      sbox.ospath('Z'))
 
   # And this currently fails with another nasty error about a wc-lock
   expected_error = '.*repository root.*'
-  svntest.actions.run_and_verify_svn('Delete root', [], expected_error,
+  svntest.actions.run_and_verify_svn([], expected_error,
                                      'rm', sbox.ospath('A/B/F'))
 
 ########################################################################

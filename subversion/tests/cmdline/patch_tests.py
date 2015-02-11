@@ -1079,9 +1079,9 @@ def patch_remove_empty_dirs(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   F_path = sbox.ospath('A/B/F')
-  svntest.actions.run_and_verify_svn("Deleting F failed", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', F_path)
-  svntest.actions.run_and_verify_svn("Update failed", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', wc_dir)
 
   # We should be able to handle one path beeing missing.
@@ -1673,7 +1673,7 @@ def patch_no_svn_eol_style(sbox):
                                            1) # dry-run
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
 
 def patch_with_svn_eol_style(sbox):
   "patch target with svn:eol-style"
@@ -1788,7 +1788,7 @@ def patch_with_svn_eol_style(sbox):
                                            1) # dry-run
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
 
 def patch_with_svn_eol_style_uncommitted(sbox):
   "patch target with uncommitted svn:eol-style"
@@ -1897,7 +1897,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
                                            1) # dry-run
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
 
 def patch_with_ignore_whitespace(sbox):
   "ignore whitespace when patching"
@@ -4229,7 +4229,7 @@ def patch_change_symlink_target(sbox):
     'U         %s\n' % sbox.ospath('link'),
   ]
 
-  svntest.actions.run_and_verify_svn(None, patch_output, [],
+  svntest.actions.run_and_verify_svn(patch_output, [],
                                      'patch', patch_file_path, wc_dir)
 
   # r3 - Store result
@@ -4248,7 +4248,7 @@ def patch_change_symlink_target(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         None, None, wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, patch_output, [],
+  svntest.actions.run_and_verify_svn(patch_output, [],
                                      'patch', patch_file_path, wc_dir)
 
   # TODO: when it passes, verify that the on-disk 'link' is correct ---
@@ -4357,7 +4357,7 @@ def patch_replace_dir_with_file_and_vv(sbox):
     'A         %s\n' % sbox.ospath('iota'),
   ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'patch', patch_file_path, sbox.wc_dir)
 
 @Issue(4297)
@@ -4391,7 +4391,7 @@ def single_line_mismatch(sbox):
     '>         rejected hunk @@ -1,1 +1,1 @@\n',
   ] + svntest.main.summary_of_conflicts(text_conflicts=1)
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'patch', patch_file_path, wc_dir)
 
 @Issue(3644)
@@ -4442,7 +4442,7 @@ def patch_empty_file(sbox):
   ]
 
   # Current result: lf.txt patched ok, new created, empty succeeds with offset.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'patch', patch_file_path, wc_dir)
 
   expected_disk = svntest.main.greek_state.copy()
@@ -4556,7 +4556,7 @@ def patch_apply_no_fuz(sbox):
   ]
 
   # Current result: lf.txt patched ok, new created, empty succeeds with offset.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'patch', patch_path, wc_dir)
 
   if not filecmp.cmp(sbox.ospath('test.txt'), sbox.ospath('test_v2.txt')):
