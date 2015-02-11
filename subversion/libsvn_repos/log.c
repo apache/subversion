@@ -1144,7 +1144,16 @@ fill_log_entry(svn_log_entry_t *log_entry,
           int i;
 
           /* Requested only some revprops... */
-          
+
+          /* Make "svn:author" and "svn:date" available as svn_string_t
+             for efficient comparison via svn_string_compare().  Note that
+             we want static initialization here and must therefore emulate
+             strlen(x) by sizeof(x)-1. */
+          static const svn_string_t svn_prop_revision_author
+            = {SVN_PROP_REVISION_AUTHOR, sizeof(SVN_PROP_REVISION_AUTHOR)-1};
+          static const svn_string_t svn_prop_revision_date
+            = {SVN_PROP_REVISION_DATE, sizeof(SVN_PROP_REVISION_DATE)-1};
+
           /* often only the standard revprops got requested and delivered.
              In that case, we can simply pass the hash on. */
           if (revprops->nelts == apr_hash_count(r_props) && !censor_revprops)
@@ -1172,10 +1181,8 @@ fill_log_entry(svn_log_entry_t *log_entry,
                 svn_string_t *value
                   = apr_hash_get(r_props, name->data, name->len);
                 if (censor_revprops
-                    && !(strncmp(name->data, SVN_PROP_REVISION_AUTHOR,
-                                 name->len) == 0
-                         || strncmp(name->data, SVN_PROP_REVISION_DATE,
-                                    name->len) == 0))
+                    && !svn_string_compare(name, &svn_prop_revision_author)
+                    && !svn_string_compare(name, &svn_prop_revision_date))
                   /* ... but we can only return author/date. */
                   continue;
                 if (log_entry->revprops == NULL)

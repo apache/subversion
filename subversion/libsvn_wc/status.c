@@ -36,7 +36,6 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
-#include "svn_path.h"
 #include "svn_io.h"
 #include "svn_config.h"
 #include "svn_time.h"
@@ -47,9 +46,6 @@
 
 #include "wc.h"
 #include "props.h"
-#include "entries.h"
-#include "translate.h"
-#include "tree_conflicts.h"
 
 #include "private/svn_sorts_private.h"
 #include "private/svn_wc_private.h"

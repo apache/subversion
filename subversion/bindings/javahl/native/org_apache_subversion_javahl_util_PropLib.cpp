@@ -291,7 +291,7 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
                              pool.getPool()));
       }
 
-      Java::MutableList<JavaHL::ExternalItem> items(env, externals->nelts);
+      Java::List<JavaHL::ExternalItem> items(env, externals->nelts);
       for (jint i = 0; i < externals->nelts; ++i)
         {
           // References to the newly created external items are stored
@@ -323,7 +323,7 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
     {
       const Java::Env env(jenv);
 
-      const Java::List<JavaHL::ExternalItem> items(env, jitems);
+      const Java::ImmutableList<JavaHL::ExternalItem> items(env, jitems);
       const Java::String parent_dir(env, jparent_dir);
 
       // Using a "global" iteration pool since we don't keep a context

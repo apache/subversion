@@ -59,7 +59,7 @@ def cat_local_directory(sbox):
                  re.escape(os.path.abspath(A_path)) + \
                  "' refers to a directory"
 
-  svntest.actions.run_and_verify_svn2(None, None, expected_err,
+  svntest.actions.run_and_verify_svn2(None, expected_err,
                                       1, 'cat', A_path)
 
 def cat_remote_directory(sbox):
@@ -70,7 +70,7 @@ def cat_remote_directory(sbox):
   expected_err = "svn: warning: W195007: URL '" + A_url + \
       "' refers to a directory\n.*"
 
-  svntest.actions.run_and_verify_svn2(None, None, expected_err,
+  svntest.actions.run_and_verify_svn2(None, expected_err,
                                       1, 'cat', A_url)
 
 def cat_base(sbox):
@@ -101,7 +101,7 @@ def cat_nonexistent_file(sbox):
                  re.escape(os.path.abspath(bogus_path)) + \
                  "' is not under version control"
 
-  svntest.actions.run_and_verify_svn2(None, None, expected_err, 1,
+  svntest.actions.run_and_verify_svn2(None, expected_err, 1,
                                       'cat', bogus_path)
 
 def cat_skip_uncattable(sbox):
@@ -128,18 +128,17 @@ def cat_skip_uncattable(sbox):
       expected_err = "svn: warning: W200005: '" + \
                      re.escape(os.path.abspath(item_to_cat)) + \
                      "' is not under version control"
-      svntest.actions.run_and_verify_svn2(None, None, expected_err, 1,
+      svntest.actions.run_and_verify_svn2(None, expected_err, 1,
                                            'cat', item_to_cat)
 
     elif os.path.isdir(item_to_cat):
       expected_err = "svn: warning: W195007: '" + \
                      re.escape(os.path.abspath(item_to_cat)) + \
                      "' refers to a directory"
-      svntest.actions.run_and_verify_svn2(None, None, expected_err, 1,
+      svntest.actions.run_and_verify_svn2(None, expected_err, 1,
                                            'cat', item_to_cat)
     else:
-      svntest.actions.run_and_verify_svn(None,
-                                         ["This is the file '"+file+"'.\n"],
+      svntest.actions.run_and_verify_svn(["This is the file '"+file+"'.\n"],
                                          [], 'cat', item_to_cat)
 
   G_path = os.path.join(dir_path, 'G')
@@ -149,13 +148,13 @@ def cat_skip_uncattable(sbox):
   expected_err1 = "svn: warning: W195007: '" + \
                   re.escape(os.path.abspath(G_path)) + \
                   "' refers to a directory\n"
-  svntest.actions.run_and_verify_svn2(None, expected_out, expected_err1, 1,
+  svntest.actions.run_and_verify_svn2(expected_out, expected_err1, 1,
                                        'cat', rho_path, G_path)
 
   expected_err2 = "svn: warning: W200005: '" + \
                   re.escape(os.path.abspath(new_file_path)) + \
                   "' is not under version control\n"
-  svntest.actions.run_and_verify_svn2(None, expected_out, expected_err2, 1,
+  svntest.actions.run_and_verify_svn2(expected_out, expected_err2, 1,
                                        'cat', rho_path, new_file_path)
 
   expected_err3 = expected_err1 + expected_err2 + \
@@ -186,9 +185,9 @@ def cat_unversioned_file(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
 
   # Delete a file an commit the deletion.
-  svntest.actions.run_and_verify_svn2(None, None, [], 0,
+  svntest.actions.run_and_verify_svn2(None, [], 0,
                                       'delete', iota_path)
-  svntest.actions.run_and_verify_svn2(None, None, [], 0,
+  svntest.actions.run_and_verify_svn2(None, [], 0,
                                       'commit', '-m', 'delete a file',
                                       iota_path)
 
@@ -196,13 +195,13 @@ def cat_unversioned_file(sbox):
   expected_error = "svn: warning: W200005: '" + \
                    re.escape(os.path.abspath(iota_path)) + \
                    "' is not under version control"
-  svntest.actions.run_and_verify_svn2(None, [], expected_error, 1,
+  svntest.actions.run_and_verify_svn2([], expected_error, 1,
                                        'cat', iota_path)
 
   # Put an unversioned file at 'iota' and try to cat it again, the result
   # should still be the same.
   svntest.main.file_write(iota_path, "This the unversioned file 'iota'.\n")
-  svntest.actions.run_and_verify_svn2(None, [], expected_error, 1,
+  svntest.actions.run_and_verify_svn2([], expected_error, 1,
                                       'cat', iota_path)
 
 def cat_keywords(sbox):
@@ -211,20 +210,18 @@ def cat_keywords(sbox):
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'iota')
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ["This is the file 'iota'.\n"],
+  svntest.actions.run_and_verify_svn(["This is the file 'iota'.\n"],
                                      [], 'cat', iota_path)
 
   svntest.main.file_append(iota_path, "$Revision$\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:keywords', 'Revision',
                                      iota_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'r2', wc_dir)
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ["This is the file 'iota'.\n", "$Revision: 2 $\n"],
+  svntest.actions.run_and_verify_svn(["This is the file 'iota'.\n", "$Revision: 2 $\n"],
                                      [], 'cat', iota_path)
 
 def cat_url_special_characters(sbox):
@@ -239,7 +236,7 @@ def cat_url_special_characters(sbox):
       "' refers to a directory\n.*"
 
   for url in special_urls:
-    svntest.actions.run_and_verify_svn2(None, None, expected_err, 1,
+    svntest.actions.run_and_verify_svn2(None, expected_err, 1,
                                          'cat', url)
 
 def cat_non_existing_remote_file(sbox):
@@ -251,7 +248,7 @@ def cat_non_existing_remote_file(sbox):
       non_existing_path.split('/')[1]
 
   # cat operation on non-existing remote path should return 1
-  svntest.actions.run_and_verify_svn2(None, None, expected_err, 1,
+  svntest.actions.run_and_verify_svn2(None, expected_err, 1,
                                       'cat', non_existing_path)
 
 ########################################################################

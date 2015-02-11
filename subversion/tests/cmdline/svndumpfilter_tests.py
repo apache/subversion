@@ -106,7 +106,7 @@ def reflect_dropped_renumbered_revs(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/trunk - /branch1:4-5\n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -125,7 +125,7 @@ def reflect_dropped_renumbered_revs(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/trunk - \n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -152,7 +152,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/trunk - /branch1:4-8\n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -351,7 +351,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
     url + "/B2 - /trunk:4\n",
     url + "/B1/B/E - /branches/B2/B/E:6-7\n",
     "/trunk/B/E:3-4\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -478,7 +478,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/B1 - /Projects/Project-X/trunk:9\n",
     url + "/B1/B/E - /Projects/Project-X/trunk/B/E:8-9\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -584,7 +584,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/B1 - /trunk:6,8\n",
     url + "/B1/B/E - /trunk/B/E:5-8\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
