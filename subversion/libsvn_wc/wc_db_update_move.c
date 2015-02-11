@@ -197,6 +197,9 @@ typedef struct update_move_baton_t {
   svn_wc_operation_t operation;
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
+
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 } update_move_baton_t;
 
 /* Per node flags for tree conflict collection */
@@ -1140,7 +1143,7 @@ tc_editor_alter_file(node_move_baton_t *nmb,
                                          NULL, /* diff3-cmd */
                                          NULL, /* merge options */
                                          propchanges,
-                                         NULL, NULL, /* cancel_func + baton */
+                                         b->cancel_func, b->cancel_baton,
                                          scratch_pool, scratch_pool));
 
           work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
@@ -1525,8 +1528,8 @@ update_moved_away_node(node_move_baton_t *nmb,
   apr_hash_t *src_props, *dst_props;
   apr_array_header_t *src_children, *dst_children;
 
-  SVN_ERR(verify_write_lock(wcroot, src_relpath, scratch_pool));
-  SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
+  if (b->cancel_func)
+    SVN_ERR(b->cancel_func(b->cancel_baton));
 
   SVN_ERR(get_info(&src_props, &src_checksum, &src_children, &src_kind,
                    src_relpath, b->src_op_depth,
@@ -1652,53 +1655,6 @@ update_moved_away_node(node_move_baton_t *nmb,
   return SVN_NO_ERROR;
 }
 
-/* Transfer changes from the move source to the move destination.
- *
- * Drive the editor with the difference between DST_RELPATH
- * (at its own op-depth) and SRC_RELPATH (at op-depth zero).
- *
- * Then update the single op-depth layer in the move destination subtree
- * rooted at DST_RELPATH to make it match the move source subtree
- * rooted at SRC_RELPATH.
- *
- * ### And the other params?
- */
-static svn_error_t *
-drive_tree_conflict_editor(update_move_baton_t *b,
-                           const char *src_relpath,
-                           const char *dst_relpath,
-                           svn_wc_conflict_version_t *old_version,
-                           svn_wc_conflict_version_t *new_version,
-                           svn_wc__db_wcroot_t *wcroot,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
-                           apr_pool_t *scratch_pool)
-{
-  node_move_baton_t nmb = { 0 };
-  SVN_ERR(verify_write_lock(wcroot, src_relpath, scratch_pool));
-  SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
-
-  nmb.umb = b;
-  nmb.src_relpath = src_relpath;
-  nmb.dst_relpath = dst_relpath;
-  /* nmb.shadowed = FALSE; */
-  /* nmb.edited = FALSE; */
-  /* nmb.skip_children = FALSE; */
-
-  /* We walk the move source (i.e. the post-update tree), comparing each node
-   * with the equivalent node at the move destination and applying the update
-   * to nodes at the move destination. */
-  SVN_ERR(update_moved_away_node(&nmb, wcroot, src_relpath, dst_relpath,
-                                 scratch_pool));
-
-  SVN_ERR(svn_wc__db_op_copy_layer_internal(wcroot, src_relpath,
-                                            b->src_op_depth,
-                                            dst_relpath, NULL, NULL,
-                                            scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 suitable_for_move(svn_wc__db_wcroot_t *wcroot,
                   const char *local_relpath,
@@ -1783,6 +1739,7 @@ update_moved_away_conflict_victim(svn_revnum_t *old_rev,
   svn_wc_conflict_version_t old_version;
   svn_wc_conflict_version_t new_version;
   apr_int64_t repos_id;
+  node_move_baton_t nmb = { 0 };
 
   SVN_ERR_ASSERT(svn_relpath_skip_ancestor(delete_relpath, local_relpath));
 
@@ -1834,13 +1791,16 @@ update_moved_away_conflict_victim(svn_revnum_t *old_rev,
                                       &old_version.repos_uuid,
                                       wcroot->sdb, repos_id,
                                       scratch_pool));
-                                     
+  *old_rev = old_version.peg_rev;
+  *new_rev = new_version.peg_rev;
 
   umb.operation = operation;
   umb.old_version= &old_version;
   umb.new_version= &new_version;
   umb.db = db;
   umb.wcroot = wcroot;
+  umb.cancel_func = cancel_func;
+  umb.cancel_baton = cancel_baton;
 
   if (umb.src_op_depth == 0)
     SVN_ERR(suitable_for_move(wcroot, src_relpath, scratch_pool));
@@ -1848,20 +1808,26 @@ update_moved_away_conflict_victim(svn_revnum_t *old_rev,
   /* Create a new, and empty, list for notification information. */
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_UPDATE_MOVE_LIST));
-  /* Create the editor... */
 
-  /* ... and drive it. */
-  SVN_ERR(drive_tree_conflict_editor(&umb,
-                                     src_relpath,
-                                     dst_relpath,
-                                     umb.old_version,
-                                     umb.new_version,
-                                     wcroot,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
+  /* Drive the editor... */
 
-  *old_rev = old_version.peg_rev;
-  *new_rev = new_version.peg_rev;
+  nmb.umb = &umb;
+  nmb.src_relpath = src_relpath;
+  nmb.dst_relpath = dst_relpath;
+  /* nmb.shadowed = FALSE; */
+  /* nmb.edited = FALSE; */
+  /* nmb.skip_children = FALSE; */
+
+  /* We walk the move source (i.e. the post-update tree), comparing each node
+    * with the equivalent node at the move destination and applying the update
+    * to nodes at the move destination. */
+  SVN_ERR(update_moved_away_node(&nmb, wcroot, src_relpath, dst_relpath,
+                                 scratch_pool));
+
+  SVN_ERR(svn_wc__db_op_copy_layer_internal(wcroot, src_relpath,
+                                            umb.src_op_depth,
+                                            dst_relpath, NULL, NULL,
+                                            scratch_pool));
 
   return SVN_NO_ERROR;
 }
