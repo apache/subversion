@@ -165,6 +165,11 @@ typedef svn_error_t* (*svn_test_driver2_t)(apr_pool_t *pool);
 typedef svn_error_t* (*svn_test_driver_opts_t)(const svn_test_opts_t *opts,
                                                apr_pool_t *pool);
 
+/* Prototype for test predicate functions. */
+typedef svn_boolean_t (*svn_test_predicate_func_t)(const svn_test_opts_t *opts,
+                                                   const char *predicate_value,
+                                                   apr_pool_t *pool);
+
 /* Test modes. */
 enum svn_test_mode_t
   {
@@ -173,6 +178,23 @@ enum svn_test_mode_t
     svn_test_skip,
     svn_test_all
   };
+
+/* Structure for runtime test predicates. */
+struct svn_test_predicate_t
+{
+  /* The predicate function. */
+  svn_test_predicate_func_t func;
+
+  /* The value that the predicate function tests. */
+  const char *value;
+
+  /* The test mode that's used if the predicate matches. */
+  enum svn_test_mode_t alternate_mode;
+
+  /* Description for the test log */
+  const char *description;
+};
+
 
 /* Each test gets a test descriptor, holding the function and other
  * associated data.
@@ -193,6 +215,9 @@ struct svn_test_descriptor_t
 
   /* An optional description of a work-in-progress test. */
   const char *wip;
+
+  /* An optional runtiume predicate. */
+  struct svn_test_predicate_t predicate;
 };
 
 /* All Subversion test programs include an array of svn_test_descriptor_t's
@@ -236,6 +261,8 @@ int svn_test_main(int argc, const char *argv[], int max_threads,
 #define SVN_TEST_OPTS_XFAIL(func, msg) {svn_test_xfail, NULL, func, msg}
 #define SVN_TEST_OPTS_XFAIL_COND(func, p, msg) \
   {(p) ? svn_test_xfail : svn_test_pass, NULL, func, msg}
+#define SVN_TEST_OPTS_XFAIL_OTOH(func, msg, predicate) \
+  {svn_test_xfail, NULL, func, msg, NULL, predicate}
 #define SVN_TEST_OPTS_SKIP(func, p, msg) \
   {(p) ? svn_test_skip : svn_test_pass, NULL, func, msg}
 
@@ -301,6 +328,33 @@ svn_test_get_srcdir(const char **srcdir,
 svn_error_t *
 svn_test__init_auth_baton(svn_auth_baton_t **baton,
                           apr_pool_t *result_pool);
+
+
+/*
+ * Test predicates
+ */
+
+#define SVN_TEST_PASS_IF_FS_TYPE_IS(fs_type) \
+  { svn_test__fs_type_is, fs_type, svn_test_pass, \
+    "PASS if fs-type = " fs_type }
+
+#define SVN_TEST_PASS_IF_FS_TYPE_IS_NOT(fs_type) \
+  { svn_test__fs_type_not, fs_type, svn_test_pass, \
+    "PASS if fs-type != " fs_type }
+
+/* Return TRUE if the fs-type in OPTS matches PREDICATE_VALUE. */
+svn_boolean_t
+svn_test__fs_type_is(const svn_test_opts_t *opts,
+                     const char *predicate_value,
+                     apr_pool_t *pool);
+
+
+/* Return TRUE if the fs-type in OPTS does not matches PREDICATE_VALUE. */
+svn_boolean_t
+svn_test__fs_type_not(const svn_test_opts_t *opts,
+                      const char *predicate_value,
+                      apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
