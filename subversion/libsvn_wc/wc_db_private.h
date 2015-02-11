@@ -491,6 +491,18 @@ svn_wc__db_op_break_move_internal(svn_wc__db_wcroot_t *wcroot,
                                   apr_pool_t *scratch_pool);
 
 svn_error_t *
+svn_wc__db_op_raise_moved_away_internal(
+                        svn_wc__db_wcroot_t *wcroot,
+                        const char *local_relpath,
+                        int delete_op_depth,
+                        svn_wc__db_t *db,
+                        svn_wc_operation_t operation,
+                        svn_wc_conflict_action_t action,
+                        const svn_wc_conflict_version_t *old_version,
+                        const svn_wc_conflict_version_t *new_version,
+                        apr_pool_t *scratch_pool);
+
+svn_error_t *
 svn_wc__db_update_move_list_notify(svn_wc__db_wcroot_t *wcroot,
                                    svn_revnum_t old_revision,
                                    svn_revnum_t new_revision,

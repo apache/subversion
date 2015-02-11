@@ -1517,7 +1517,55 @@ def move_to_from_external(sbox):
                                      'ci', '-m', 'Commit both',
                                      sbox.ospath(''),
                                      sbox.ospath('GG'))
-  
+
+def revert_del_root_of_move(sbox):
+    "revert delete root of move"
+
+    sbox.build()
+    wc_dir = sbox.wc_dir
+    sbox.simple_copy('A/mu', 'A/B/E/mu')
+    sbox.simple_copy('A/mu', 'A/B/F/mu')
+    sbox.simple_commit()
+    sbox.simple_update('', 1)
+    sbox.simple_move('A/B/E', 'E')
+    sbox.simple_rm('A/B')
+
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/B'        : Item(status='  ', treeconflict='C'),
+      'A/B/E'      : Item(status='  ', treeconflict='U'),
+      'A/B/E/mu'   : Item(status='  ', treeconflict='A'),
+      'A/B/F'      : Item(status='  ', treeconflict='U'),
+      'A/B/F/mu'   : Item(status='  ', treeconflict='A'),
+    })
+
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+    expected_status.tweak('A/B', status='D ', treeconflict='C')
+    expected_status.tweak('A/B/E', status='D ', moved_to='E')
+    expected_status.tweak('A/B/F', 'A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
+                          status='D ')
+    expected_status.add({
+      'A/B/F/mu'   : Item(status='D ', wc_rev='2'),
+      'A/B/E/mu'   : Item(status='D ', wc_rev='2'),
+      'E'          : Item(status='A ', copied='+', moved_from='A/B/E', wc_rev='-'),
+      'E/beta'     : Item(status='  ', copied='+', wc_rev='-'),
+      'E/alpha'    : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+    svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                          expected_status)
+
+    expected_output = [
+      "Reverted '%s'\n" % sbox.ospath('A/B'),      # Reverted
+      "   C %s\n"       % sbox.ospath('A/B/E')     # New tree conflict
+    ]
+    svntest.actions.run_and_verify_svn(expected_output, [],
+                                       'revert', sbox.ospath('A/B'),
+                                       '--depth', 'empty')
+
+    expected_status.tweak('A/B', status='  ', treeconflict=None)
+    expected_status.tweak('A/B/E', treeconflict='C')
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 #######################################################################
 # Run the tests
@@ -1536,6 +1584,7 @@ test_list = [ None,
               move_del_moved,
               copy_move_commit,
               move_to_from_external,
+              revert_del_root_of_move,
             ]
 
 if __name__ == '__main__':
