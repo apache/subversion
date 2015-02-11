@@ -291,8 +291,8 @@ create_locks(svn_repos_t *repos, apr_pool_t *pool)
   "# For similar reasons, you should also add a trailing @ to URLs which"  NL \
   "# are passed to SVN commands accepting URLs with peg revisions."        NL
 
-/* Return template text for a hook script named SCRIPT_NAME, including
- * descriptive text DESCRIPTION and the actual script template SCRIPT.
+/* Return template text for a hook script named SCRIPT_NAME. Include
+ * DESCRIPTION and SCRIPT in the template text.
  */
 static const char *
 hook_template_text(const char *script_name,
@@ -332,10 +332,35 @@ PREWRITTEN_HOOKS_TEXT
                      SVN_VA_NULL);
 }
 
+/* Write a template file for a hook script named SCRIPT_NAME (appending
+ * '.tmpl' to that name) in REPOS. Include DESCRIPTION and SCRIPT in the
+ * template text.
+ */
+static svn_error_t *
+write_hook_template_file(svn_repos_t *repos, const char *script_name,
+                         const char *description,
+                         const char *script,
+                         apr_pool_t *pool)
+{
+  const char *template_path
+    = svn_dirent_join(repos->hook_path,
+                      apr_psprintf(pool, "%s%s",
+                                   script_name, SVN_REPOS__HOOK_DESC_EXT),
+                      pool);
+  const char *contents
+    = hook_template_text(script_name, description, script, pool);
+
+  SVN_ERR(svn_io_file_create(template_path, contents, pool));
+  SVN_ERR(svn_io_set_file_executable(template_path, TRUE, FALSE, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Write the hook template files in REPOS.
+ */
 static svn_error_t *
 create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 {
-  const char *this_path, *contents;
+  const char *description, *script;
 
   /* Create the hook directory. */
   SVN_ERR_W(create_repos_dir(repos->hook_path, pool),
@@ -344,14 +369,9 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
   /*** Write a default template for each standard hook file. */
 
   /* Start-commit hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_start_commit_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_START_COMMIT
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# START-COMMIT HOOK"                                                        NL
 "#"                                                                          NL
 "# The start-commit hook is invoked immediately after a Subversion txn is"   NL
@@ -384,8 +404,8 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "#"                                                                          NL
 "# If the hook program exits with success, the commit continues; but"        NL
 "# if it exits with failure (non-zero), the commit is stopped before"        NL
-"# a Subversion txn is created, and STDERR is returned to the client."       NL
-      ,
+"# a Subversion txn is created, and STDERR is returned to the client."       NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "USER=\"$2\""                                                                NL
 ""                                                                           NL
@@ -393,26 +413,19 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "special-auth-check.py --user \"$USER\" --auth-level 3 || exit 1"            NL
 ""                                                                           NL
 "# All checks passed, so allow the commit."                                  NL
-"exit 0"                                                                     NL,
-      pool);
+"exit 0"                                                                     NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating start-commit hook"));
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating start-commit hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end start-commit hook */
 
   /* Pre-commit hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_commit_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_COMMIT
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# PRE-COMMIT HOOK"                                                          NL
 "#"                                                                          NL
 "# The pre-commit hook is invoked before a Subversion txn is"                NL
@@ -447,8 +460,8 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "#   hooks should not modify the versioned data in txns, or else come"       NL
 "#   up with a mechanism to make it safe to do so (by informing the"         NL
 "#   committing client of the changes).  However, right now neither"         NL
-"#   mechanism is implemented, so hook writers just have to be careful."     NL
-      ,
+"#   mechanism is implemented, so hook writers just have to be careful."     NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "TXN=\"$2\""                                                                 NL
 ""                                                                           NL
@@ -463,27 +476,19 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
                                                                              NL
 ""                                                                           NL
 "# All checks passed, so allow the commit."                                  NL
-"exit 0"                                                                     NL,
-      pool);
+"exit 0"                                                                     NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating pre-commit hook"));
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating pre-commit hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end pre-commit hook */
-
 
   /* Pre-revprop-change hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_revprop_change_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_REVPROP_CHANGE
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# PRE-REVPROP-CHANGE HOOK"                                                  NL
 "#"                                                                          NL
 "# The pre-revprop-change hook is invoked before a revision property"        NL
@@ -511,8 +516,8 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# will behave as if the hook were present, but failed.  The reason"         NL
 "# for this is that revision properties are UNVERSIONED, meaning that"       NL
 "# a successful propchange is destructive;  the old value is gone"           NL
-"# forever.  We recommend the hook back up the old value somewhere."         NL
-      ,
+"# forever.  We recommend the hook back up the old value somewhere."         NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
 "USER=\"$3\""                                                                NL
@@ -522,27 +527,19 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "if [ \"$ACTION\" = \"M\" -a \"$PROPNAME\" = \"svn:log\" ]; then exit 0; fi" NL
 ""                                                                           NL
 "echo \"Changing revision properties other than svn:log is prohibited\" >&2" NL
-"exit 1"                                                                     NL,
-      pool);
+"exit 1"                                                                     NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating pre-revprop-change hook"));
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating pre-revprop-change hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end pre-revprop-change hook */
-
 
   /* Pre-lock hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_lock_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_LOCK
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# PRE-LOCK HOOK"                                                            NL
 "#"                                                                          NL
 "# The pre-lock hook is invoked before an exclusive lock is"                 NL
@@ -563,8 +560,8 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "#"                                                                          NL
 "# If the hook program exits with success, the lock is created; but"         NL
 "# if it exits with failure (non-zero), the lock action is aborted"          NL
-"# and STDERR is returned to the client."                                    NL
-      ,
+"# and STDERR is returned to the client."                                    NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "PATH=\"$2\""                                                                NL
 "USER=\"$3\""                                                                NL
@@ -596,27 +593,19 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 ""                                                                           NL
 "# Otherwise, we've got an owner mismatch, so return failure:"               NL
 "echo \"Error: $PATH already locked by ${LOCK_OWNER}.\" 1>&2"                NL
-"exit 1"                                                                     NL,
-      pool);
+"exit 1"                                                                     NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating pre-lock hook"));
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              "Creating pre-lock hook");
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end pre-lock hook */
-
 
   /* Pre-unlock hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_unlock_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_UNLOCK
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# PRE-UNLOCK HOOK"                                                          NL
 "#"                                                                          NL
 "# The pre-unlock hook is invoked before an exclusive lock is"               NL
@@ -632,8 +621,8 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "#"                                                                          NL
 "# If the hook program exits with success, the lock is destroyed; but"       NL
 "# if it exits with failure (non-zero), the unlock action is aborted"        NL
-"# and STDERR is returned to the client."                                    NL
-      ,
+"# and STDERR is returned to the client."                                    NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "PATH=\"$2\""                                                                NL
 "USER=\"$3\""                                                                NL
@@ -662,28 +651,19 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 ""                                                                           NL
 "# Otherwise, we've got an owner mismatch, so return failure:"               NL
 "echo \"Error: $PATH locked by ${LOCK_OWNER}.\" 1>&2"                        NL
-"exit 1"                                                                     NL,
-      pool);
+"exit 1"                                                                     NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating pre-unlock hook"));
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              "Creating pre-unlock hook");
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end pre-unlock hook */
-
-
 
   /* Post-commit hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_commit_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_COMMIT
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# POST-COMMIT HOOK"                                                         NL
 "#"                                                                          NL
 "# The post-commit hook is invoked after a commit.  Subversion runs"         NL
@@ -698,33 +678,25 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# Because the commit has already completed and cannot be undone,"           NL
 "# the exit code of the hook program is ignored.  The hook program"          NL
 "# can use the 'svnlook' utility to help it examine the"                     NL
-"# newly-committed tree."                                                    NL
-      ,
+"# newly-committed tree."                                                    NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
 "TXN_NAME=\"$3\""                                                            NL
                                                                              NL
-"mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL,
-      pool);
+"mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating post-commit hook"));
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating post-commit hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  } /* end post-commit hook */
-
 
   /* Post-lock hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_lock_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_LOCK
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# POST-LOCK HOOK"                                                           NL
 "#"                                                                          NL
 "# The post-lock hook is run after a path is locked.  Subversion runs"       NL
@@ -741,33 +713,25 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# the exit code of the hook program is ignored.  The hook program"          NL
 "# can use the 'svnlook' utility to examine the paths in the repository"     NL
 "# but since the hook is invoked asyncronously the newly-created locks"      NL
-"# may no longer be present."                                                NL
-      ,
+"# may no longer be present."                                                NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "USER=\"$2\""                                                                NL
 ""                                                                           NL
 "# Send email to interested parties, let them know a lock was created:"      NL
-"mailer.py lock \"$REPOS\" \"$USER\" /path/to/mailer.conf"                   NL,
-      pool);
+"mailer.py lock \"$REPOS\" \"$USER\" /path/to/mailer.conf"                   NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating post-lock hook"));
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              "Creating post-lock hook");
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  } /* end post-lock hook */
-
 
   /* Post-unlock hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_unlock_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_UNLOCK
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# POST-UNLOCK HOOK"                                                         NL
 "#"                                                                          NL
 "# The post-unlock hook runs after a path is unlocked.  Subversion runs"     NL
@@ -781,33 +745,25 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# The paths that were just unlocked are passed to the hook via STDIN."      NL
 "#"                                                                          NL
 "# Because the lock has already been destroyed and cannot be undone,"        NL
-"# the exit code of the hook program is ignored."                            NL
-      ,
+"# the exit code of the hook program is ignored."                            NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "USER=\"$2\""                                                                NL
 ""                                                                           NL
 "# Send email to interested parties, let them know a lock was removed:"      NL
-"mailer.py unlock \"$REPOS\" \"$USER\" /path/to/mailer.conf"                 NL,
-      pool);
+"mailer.py unlock \"$REPOS\" \"$USER\" /path/to/mailer.conf"                 NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating post-unlock hook"));
 
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              "Creating post-unlock hook");
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  } /* end post-unlock hook */
-
 
   /* Post-revprop-change hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_revprop_change_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_REVPROP_CHANGE
 
-    contents = hook_template_text(SCRIPT_NAME,
+  description =
 "# POST-REVPROP-CHANGE HOOK"                                                 NL
 "#"                                                                          NL
 "# The post-revprop-change hook is invoked after a revision property"        NL
@@ -827,8 +783,8 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# Because the propchange has already completed and cannot be undone,"       NL
 "# the exit code of the hook program is ignored.  The hook program"          NL
 "# can use the 'svnlook' utility to help it examine the"                     NL
-"# new property value."                                                      NL
-      ,
+"# new property value."                                                      NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
 "USER=\"$3\""                                                                NL
@@ -836,16 +792,13 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "ACTION=\"$5\""                                                              NL
 ""                                                                           NL
 "mailer.py propchange2 \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
-"\"$ACTION\" /path/to/mailer.conf"                                           NL,
-      pool);
+"\"$ACTION\" /path/to/mailer.conf"                                           NL;
+
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating post-revprop-change hook"));
 
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating post-revprop-change hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  } /* end post-revprop-change hook */
 
   return SVN_NO_ERROR;
 }
