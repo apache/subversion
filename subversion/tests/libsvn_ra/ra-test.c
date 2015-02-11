@@ -151,6 +151,7 @@ typedef struct close_baton_t
 {
   int magic;
   tunnel_baton_t *tb;
+  apr_proc_t *proc;
 } close_baton_t;
 
 #define CLOSE_MAGIC 0x1BADBAD1
@@ -212,11 +213,7 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
                              args, NULL, attr, pool);
   if (status != APR_SUCCESS)
     return svn_error_wrap_apr(status, "Could not run svnserve");
-#ifdef WIN32
   apr_pool_note_subprocess(pool, proc, APR_KILL_NEVER);
-#else
-  apr_pool_note_subprocess(pool, proc, APR_KILL_ONLY_ONCE);
-#endif
 
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes
@@ -227,6 +224,7 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
   cb = apr_pcalloc(pool, sizeof(*cb));
   cb->magic = CLOSE_MAGIC;
   cb->tb = b;
+  cb->proc = proc;
 
   *request = svn_stream_from_aprfile2(proc->in, FALSE, pool);
   *response = svn_stream_from_aprfile2(proc->out, FALSE, pool);
@@ -243,7 +241,8 @@ close_tunnel(void *tunnel_context, void *tunnel_baton)
 
   if (b->magic != CLOSE_MAGIC)
     abort();
-  --b->tb->open_count;
+  if (--b->tb->open_count == 0)
+    apr_proc_kill(b->proc, SIGTERM);
 }
 
 
