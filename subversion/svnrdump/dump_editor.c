@@ -72,9 +72,8 @@ struct dir_baton
      us, although they're all really within this directory. */
   apr_hash_t *deleted_entries;
 
-  /* Flags to trigger dumping props and record termination newlines. */
+  /* Flag to trigger dumping props. */
   svn_boolean_t dump_props;
-  svn_boolean_t dump_newlines;
 };
 
 /* A file baton used by all file-related callback functions in the dump
@@ -394,16 +393,6 @@ dump_node(apr_array_header_t **headers_p,
             headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV, "%ld", copyfrom_rev);
           svn_repos__dumpfile_header_push(
             headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH, copyfrom_path);
-
-          /* Ugly hack: If a directory was copied from a previous
-             revision, nothing like close_file() will be called to write two
-             blank lines. If change_dir_prop() is called, props are dumped
-             (along with the necessary PROPS-END\n\n and we're good. So
-             set DUMP_NEWLINES here to print the newlines unless
-             change_dir_prop() is called next otherwise the `svnadmin load`
-             parser will fail.  */
-          if (db)
-            db->dump_newlines = TRUE;
         }
       else
         {
@@ -496,23 +485,16 @@ dump_pending_dir(struct dump_edit_baton *eb,
                                       FALSE, 0, FALSE /*content_length_always*/,
                                       scratch_pool));
 
+  /* No text is going to be dumped. Write a couple of newlines and
+       wait for the next node/ revision. */
+  SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
+
   if (db->dump_props)
     {
-      /* No text is going to be dumped. Write a couple of newlines and
-         wait for the next node/ revision. */
-      SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
-
       /* Cleanup so that data is never dumped twice. */
       apr_hash_clear(db->props);
       apr_hash_clear(db->deleted_props);
       db->dump_props = FALSE;
-    }
-
-  /* Some pending newlines to dump? */
-  if (db->dump_newlines)
-    {
-      SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
-      db->dump_newlines = FALSE;
     }
 
   /* Anything that was pending is pending no longer. */
@@ -828,9 +810,7 @@ change_dir_prop(void *parent_baton,
   else
     svn_hash_sets(db->deleted_props, apr_pstrdup(db->pool, name), "");
 
-  /* Make sure we eventually output the props, and disable printing
-     a couple of extra newlines */
-  db->dump_newlines = FALSE;
+  /* Make sure we eventually output the props */
   db->dump_props = TRUE;
 
   return SVN_NO_ERROR;
