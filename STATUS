@@ -249,7 +249,7 @@ Candidate changes:
    Justification:
      Fixes occasional SEGV when multiple threads load DSOs in parallel.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
