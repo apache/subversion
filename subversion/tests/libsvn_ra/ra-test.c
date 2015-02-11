@@ -41,8 +41,6 @@
 #include "../svn_test_fs.h"
 #include "../../libsvn_ra_local/ra_local.h"
 
-static const char tunnel_repos_name[] = "test-repo-tunnel";
-
 /*-------------------------------------------------------------------*/
 
 /** Helper routines. **/
@@ -348,14 +346,18 @@ tunnel_callback_test(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   tunnel_baton_t b = { TUNNEL_MAGIC };
-  apr_pool_t *connection_pool;
-  svn_repos_t *repos;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
   const char *url;
   svn_ra_callbacks2_t *cbtable;
   svn_ra_session_t *session;
   svn_error_t *err;
+  const char tunnel_repos_name[] = "test-repo-tunnel";
 
-  SVN_ERR(svn_test__create_repos(&repos, tunnel_repos_name, opts, pool));
+  SVN_ERR(svn_test__create_repos(NULL, tunnel_repos_name, opts, scratch_pool));
+
+  /* Immediately close the repository to avoid race condition with svnserve
+     (and then the cleanup code) with BDB when our pool is cleared. */
+  svn_pool_clear(scratch_pool);
 
   url = apr_pstrcat(pool, "svn+test://localhost/", tunnel_repos_name,
                     SVN_VA_NULL);
@@ -372,9 +374,8 @@ tunnel_callback_test(const svn_test_opts_t *opts,
                                         NULL, NULL, NULL, pool));
 
   b.last_check = FALSE;
-  connection_pool = svn_pool_create(pool);
   err = svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
-                     connection_pool);
+                     scratch_pool);
   if (err && err->apr_err == SVN_ERR_TEST_FAILED)
     {
       svn_handle_error2(err, stderr, FALSE, "svn_tests: ");
@@ -384,7 +385,7 @@ tunnel_callback_test(const svn_test_opts_t *opts,
   SVN_ERR(err);
   SVN_TEST_ASSERT(b.last_check);
   SVN_TEST_ASSERT(b.open_count > 0);
-  svn_pool_destroy(connection_pool);
+  svn_pool_destroy(scratch_pool);
   SVN_TEST_ASSERT(b.open_count == 0);
   return SVN_NO_ERROR;
 }
