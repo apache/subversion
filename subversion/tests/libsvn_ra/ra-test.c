@@ -136,18 +136,35 @@ commit_tree(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t last_tunnel_check;
-static int tunnel_open_count;
-static void *check_tunnel_baton;
-static void *open_tunnel_context;
+/* Baton for opening tunnels */
+typedef struct tunnel_baton_t
+{
+  int magic; /* TUNNEL_MAGIC */
+  int open_count;
+  svn_boolean_t last_check;
+} tunnel_baton_t;
+
+#define TUNNEL_MAGIC 0xF00DF00F
+
+/* Baton for closing a specific tunnel */
+typedef struct close_baton_t
+{
+  int magic;
+  tunnel_baton_t *tb;
+} close_baton_t;
+
+#define CLOSE_MAGIC 0x1BADBAD1
 
 static svn_boolean_t
 check_tunnel(void *tunnel_baton, const char *tunnel_name)
 {
-  if (tunnel_baton != check_tunnel_baton)
+  tunnel_baton_t *b = tunnel_baton;
+
+  if (b->magic != TUNNEL_MAGIC)
     abort();
-  last_tunnel_check = (0 == strcmp(tunnel_name, "test"));
-  return last_tunnel_check;
+
+  b->last_check = (0 == strcmp(tunnel_name, "test"));
+  return b->last_check;
 }
 
 static void
@@ -168,8 +185,10 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
   apr_status_t status;
   const char *args[] = { "svnserve", "-t", "-r", ".", NULL };
   const char *svnserve;
+  tunnel_baton_t *b = tunnel_baton;
+  close_baton_t *cb;
 
-  SVN_TEST_ASSERT(tunnel_baton == check_tunnel_baton);
+  SVN_TEST_ASSERT(b->magic == TUNNEL_MAGIC);
 
   SVN_ERR(svn_dirent_get_absolute(&svnserve, "../../svnserve/svnserve", pool));
 #ifdef WIN32
@@ -205,20 +224,26 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
   apr_file_inherit_unset(proc->in);
   apr_file_inherit_unset(proc->out);
 
+  cb = apr_pcalloc(pool, sizeof(*cb));
+  cb->magic = CLOSE_MAGIC;
+  cb->tb = b;
+
   *request = svn_stream_from_aprfile2(proc->in, FALSE, pool);
   *response = svn_stream_from_aprfile2(proc->out, FALSE, pool);
   *close_func = close_tunnel;
-  open_tunnel_context = *close_baton = &last_tunnel_check;
-  ++tunnel_open_count;
+  *close_baton = cb;
+  ++b->open_count;
   return SVN_NO_ERROR;
 }
 
 static void
 close_tunnel(void *tunnel_context, void *tunnel_baton)
 {
-  assert(tunnel_context == open_tunnel_context);
-  assert(tunnel_baton == check_tunnel_baton);
-  --tunnel_open_count;
+  close_baton_t *b = tunnel_context;
+
+  if (b->magic != CLOSE_MAGIC)
+    abort();
+  --b->tb->open_count;
 }
 
 
@@ -293,6 +318,7 @@ static svn_error_t *
 check_tunnel_callback_test(const svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
+  tunnel_baton_t b = { TUNNEL_MAGIC };
   svn_ra_callbacks2_t *cbtable;
   svn_ra_session_t *session;
   svn_error_t *err;
@@ -300,7 +326,7 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
-  cbtable->tunnel_baton = check_tunnel_baton = &cbtable;
+  cbtable->tunnel_baton = &b;
   SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
                                         TRUE  /* non_interactive */,
                                         "jrandom", "rayjandom",
@@ -309,13 +335,12 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
                                         FALSE /* trust_server_cert */,
                                         NULL, NULL, NULL, pool));
 
-  last_tunnel_check = TRUE;
-  open_tunnel_context = NULL;
+  b.last_check = TRUE;
   err = svn_ra_open4(&session, NULL, "svn+foo://localhost/no-repo",
                      NULL, cbtable, NULL, NULL, pool);
   svn_error_clear(err);
   SVN_TEST_ASSERT(err);
-  SVN_TEST_ASSERT(!last_tunnel_check);
+  SVN_TEST_ASSERT(!b.last_check);
   return SVN_NO_ERROR;
 }
 
@@ -323,6 +348,7 @@ static svn_error_t *
 tunnel_callback_test(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
+  tunnel_baton_t b = { TUNNEL_MAGIC };
   apr_pool_t *connection_pool;
   svn_repos_t *repos;
   const char *url;
@@ -337,7 +363,7 @@ tunnel_callback_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
-  cbtable->tunnel_baton = check_tunnel_baton = &cbtable;
+  cbtable->tunnel_baton = &b;
   SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
                                         TRUE  /* non_interactive */,
                                         "jrandom", "rayjandom",
@@ -346,9 +372,7 @@ tunnel_callback_test(const svn_test_opts_t *opts,
                                         FALSE /* trust_server_cert */,
                                         NULL, NULL, NULL, pool));
 
-  last_tunnel_check = FALSE;
-  open_tunnel_context = NULL;
-  tunnel_open_count = 0;
+  b.last_check = FALSE;
   connection_pool = svn_pool_create(pool);
   err = svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
                      connection_pool);
@@ -359,10 +383,10 @@ tunnel_callback_test(const svn_test_opts_t *opts,
       return SVN_NO_ERROR;
     }
   SVN_ERR(err);
-  SVN_TEST_ASSERT(last_tunnel_check);
-  SVN_TEST_ASSERT(tunnel_open_count > 0);
+  SVN_TEST_ASSERT(b.last_check);
+  SVN_TEST_ASSERT(b.open_count > 0);
   svn_pool_destroy(connection_pool);
-  SVN_TEST_ASSERT(tunnel_open_count == 0);
+  SVN_TEST_ASSERT(b.open_count == 0);
   return SVN_NO_ERROR;
 }
 
