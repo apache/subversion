@@ -246,7 +246,6 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
               continue;
             }
 
-          /* RA_CACHE TODO: release RA session */
           if (rb->ra_session == NULL)
             SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
                                                 rb->ra_session_url, NULL,
@@ -273,7 +272,6 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
     }
   else
     {
-      /* RA_CACHE TODO: release RA session */
       if (rb->ra_session == NULL)
         SVN_ERR(svn_client_open_ra_session2(&rb->ra_session,
                                             rb->ra_session_url, NULL,
@@ -835,6 +833,9 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
         }
     }
   svn_pool_destroy(iterpool);
+
+  if (rb.ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, rb.ra_session));
 
   return SVN_NO_ERROR;
 }
