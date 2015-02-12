@@ -85,6 +85,47 @@ root_change_set(svn_fs_root_t *root)
 
 
 
+/*** Path handling ***/
+
+/* DAG caching uses "normalized" paths - which are a relaxed form of
+   canonical relpaths.  They omit the leading '/' of the abspath and trim
+   any trailing '/'.  Any sequences of '//' will be kept as the path walker
+   simply skips over them.
+
+   Non-canonical sections of the path will therefore only impact efficiency
+   (extra walker iterations and possibly duplicated entries in the cache)
+   but not correctness.
+
+   Another optimization is that we don't NUL-terminate the path but strictly
+   use its length info.  That way, it can be traversed easily without
+   chopping it up and patching it together again.
+ */
+
+/* Set *RESULT to a normalized version of PATH without actually copying any
+   string contents.
+
+   For convenience, return the RESULT pointer as the function value too. */
+static svn_string_t *
+normalize_path(svn_string_t *result,
+               const char *path)
+{
+  apr_size_t len;
+
+  if (path[0] == '/')
+    ++path;
+
+  len = strlen(path);
+  while (len && path[len-1] == '/')
+    --len;
+
+  result->data = path;
+  result->len = len;
+
+  return result;
+}
+
+
+
 /*** Node Caching ***/
 
 /* 1st level cache */
@@ -181,10 +222,10 @@ auto_clear_dag_cache(svn_fs_x__dag_cache_t* cache)
 static cache_entry_t *
 cache_lookup(svn_fs_x__dag_cache_t *cache,
              svn_fs_x__change_set_t change_set,
-             const char *path)
+             const svn_string_t *path)
 {
   apr_size_t i, bucket_index;
-  apr_size_t path_len = strlen(path);
+  apr_size_t path_len = path->len;
   apr_uint32_t hash_value = (apr_uint32_t)(apr_uint64_t)change_set;
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
@@ -196,7 +237,7 @@ cache_lookup(svn_fs_x__dag_cache_t *cache,
   cache_entry_t *result = &cache->buckets[cache->last_hit];
   if (   (result->change_set == change_set)
       && (result->path_len == path_len)
-      && !memcmp(result->path, path, path_len))
+      && !memcmp(result->path, path->data, path_len))
     {
       /* Remember the position of the last node we found in this cache. */
       if (result->node)
@@ -216,8 +257,8 @@ cache_lookup(svn_fs_x__dag_cache_t *cache,
    */
   for (; i + 8 <= path_len; i += 8)
     hash_value = hash_value * factor * factor
-               + (  *(const apr_uint32_t*)(path + i) * factor
-                  + *(const apr_uint32_t*)(path + i + 4));
+               + (  *(const apr_uint32_t*)(path->data + i) * factor
+                  + *(const apr_uint32_t*)(path->data + i + 4));
 #endif
 
   for (; i < path_len; ++i)
@@ -225,7 +266,7 @@ cache_lookup(svn_fs_x__dag_cache_t *cache,
        MUL 33 of the naive implementation: h = h * 33 + path[i].  This
        shortens the dependency chain from 1 shift + 2 ADDs to 1 shift + 1 ADD.
      */
-    hash_value = hash_value * 32 + (hash_value + (unsigned char)path[i]);
+    hash_value = hash_value * 32 + (hash_value + (apr_byte_t)path->data[i]);
 
   bucket_index = hash_value + (hash_value >> 16);
   bucket_index = (bucket_index + (bucket_index >> 8)) % BUCKET_COUNT;
@@ -239,14 +280,17 @@ cache_lookup(svn_fs_x__dag_cache_t *cache,
   if (   (result->hash_value != hash_value)
       || (result->change_set != change_set)
       || (result->path_len != path_len)
-      || memcmp(result->path, path, path_len))
+      || memcmp(result->path, path->data, path_len))
     {
       result->hash_value = hash_value;
       result->change_set = change_set;
-      if (result->path_len < path_len)
+
+      if (result->path_len < path_len || result->path_len == 0)
         result->path = apr_palloc(cache->pool, path_len + 1);
       result->path_len = path_len;
-      memcpy(result->path, path, path_len + 1);
+
+      memcpy(result->path, path->data, path_len);
+      result->path[path_len] = 0;
 
       result->node = NULL;
 
@@ -264,19 +308,16 @@ cache_lookup(svn_fs_x__dag_cache_t *cache,
 
 /* Optimistic lookup using the last seen non-empty location in CACHE.
    Return the node of that entry, if it is still in use and matches PATH.
-   Return NULL otherwise.  Since the caller usually already knows the path
-   length, provide it in PATH_LEN. */
+   Return NULL otherwise. */
 static dag_node_t *
 cache_lookup_last_path(svn_fs_x__dag_cache_t *cache,
-                       const char *path,
-                       apr_size_t path_len)
+                       const svn_string_t *path)
 {
   cache_entry_t *result = &cache->buckets[cache->last_non_empty];
-  assert(strlen(path) == path_len);
 
   if (   result->node
-      && (result->path_len == path_len)
-      && !memcmp(result->path, path, path_len))
+      && (result->path_len == path->len)
+      && !memcmp(result->path, path->data, path->len))
     {
       return result->node;
     }
@@ -293,9 +334,11 @@ dag_node_cache_get(svn_fs_root_t *root,
 {
   svn_fs_x__data_t *ffd = root->fs->fsap_data;
   cache_entry_t *bucket;
+  svn_string_t normalized;
 
   auto_clear_dag_cache(ffd->dag_node_cache);
-  bucket = cache_lookup(ffd->dag_node_cache, root_change_set(root), path);
+  bucket = cache_lookup(ffd->dag_node_cache, root_change_set(root),
+                        normalize_path(&normalized, path));
   return bucket->node;
 }
 
@@ -309,9 +352,11 @@ svn_fs_x__set_dag_node(svn_fs_root_t *root,
   svn_fs_x__data_t *ffd = root->fs->fsap_data;
   cache_entry_t *bucket;
   svn_fs_x__dag_cache_t *cache = ffd->dag_node_cache;
+  svn_string_t normalized;
 
   auto_clear_dag_cache(cache);
-  bucket = cache_lookup(cache, root_change_set(root), path);
+  bucket = cache_lookup(cache, root_change_set(root),
+                        normalize_path(&normalized, path));
   bucket->node = svn_fs_x__dag_copy_into_pool(node, cache->pool);
 }
 
@@ -327,10 +372,17 @@ svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
   for (i = 0; i < BUCKET_COUNT; ++i)
     {
       cache_entry_t *bucket = &cache->buckets[i];
-      if (   bucket->change_set == change_set
-          && bucket->node
-          && svn_relpath_skip_ancestor(path + 1, bucket->path + 1))
-        bucket->node = NULL;
+      if (bucket->change_set == change_set && bucket->node)
+        {
+          /* The call to svn_relpath_skip_ancestor() will require both
+             parameters to be canonical.  Since we allow for non-canonical
+             paths in our cache (unlikely to actually happen), we drop all
+             such entries.
+           */
+          if (!svn_relpath_is_canonical(bucket->path)
+              || svn_relpath_skip_ancestor(path + 1, bucket->path))
+            bucket->node = NULL;
+        }
     }
 }
 
@@ -504,8 +556,9 @@ try_match_last_node(dag_node_t **node_p,
 
   /* Optimistic lookup: if the last node returned from the cache applied to
      the same PATH, return it in NODE. */
-  dag_node_t *node
-    = cache_lookup_last_path(ffd->dag_node_cache, path, path_len);
+  svn_string_t normalized;
+  dag_node_t *node = cache_lookup_last_path(ffd->dag_node_cache,
+                                            normalize_path(&normalized, path));
 
   /* Did we get a bucket with a committed node? */
   if (node && !svn_fs_x__dag_check_mutable(node))
