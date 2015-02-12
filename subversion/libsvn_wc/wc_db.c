@@ -4870,14 +4870,11 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
     {
       const char *src_relpath;
       const char *dst_relpath;
-      svn_boolean_t exists;
 
       svn_pool_clear(iterpool);
 
       src_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
       dst_relpath = svn_sqlite__column_text(stmt, 2, iterpool);
-
-      exists = !svn_sqlite__column_is_null(stmt, 3);
 
       err = svn_sqlite__bindf(stmt2, "isdsds", wcroot->wc_id,
                               src_relpath, src_op_depth,
@@ -4895,6 +4892,8 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
          an existing shadowing is only interesting 2 levels deep. */
       if (relpath_depth(dst_relpath) > (dst_op_depth+1))
         {
+          svn_boolean_t exists = !svn_sqlite__column_is_null(stmt, 3);
+
           if (exists)
             {
               svn_wc__db_status_t presence;
