@@ -262,15 +262,12 @@ The op_root must exist (or there is no layer to replace) and an op-root
    always has presence 'normal' */
 -- STMT_SELECT_LAYER_FOR_REPLACE
 SELECT s.local_relpath, s.kind,
-  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, 'normal', 0
+  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, 'normal'
 FROM nodes s
 WHERE s.wc_id = ?1 AND s.local_relpath = ?2 AND s.op_depth = ?3
 UNION ALL
 SELECT s.local_relpath, s.kind,
-  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, d.presence,
-  EXISTS(SELECT * FROM nodes sh
-         WHERE sh.wc_id = ?1 AND sh.op_depth > ?5
-           AND sh.local_relpath = d.local_relpath) shadowed
+  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, d.presence
 FROM nodes s
 LEFT OUTER JOIN nodes d ON d.wc_id= ?1 AND d.op_depth = ?5
      AND d.local_relpath = drp
