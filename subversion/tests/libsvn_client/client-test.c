@@ -1078,6 +1078,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   apr_array_header_t *pinned_externals_descs;
   apr_array_header_t *pinned_externals;
   int i;
+  int num_tested_externals;
   svn_stringbuf_t *externals_test_prop;
   struct pin_externals_test_data {
     const char *src_external_desc;
@@ -1182,6 +1183,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
                                               propval->data, TRUE, pool));
 
   /* For completeness, test the parsed representation, too */
+  num_tested_externals = 0;
   for (i = 0; i < pinned_externals->nelts; i++)
     {
       svn_wc_external_item2_t *item;
@@ -1195,6 +1197,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           SVN_TEST_ASSERT(item->revision.value.number == 2);
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+          num_tested_externals++;
         }
       else if (strcmp(item->url, "^/A/D/G") == 0)
         {
@@ -1203,6 +1206,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->revision.value.number == 1);
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_head);
+          num_tested_externals++;
         }
       else if (strcmp(item->url, "^/A/D/H") == 0)
         {
@@ -1214,6 +1218,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
               SVN_TEST_ASSERT(item->peg_revision.kind ==
                               svn_opt_revision_number);
               SVN_TEST_ASSERT(item->peg_revision.value.number == 1);
+              num_tested_externals++;
             }
           else if (strcmp(item->target_dir, "C/exdir_H2") == 0)
             {
@@ -1223,6 +1228,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
               SVN_TEST_ASSERT(item->peg_revision.kind ==
                               svn_opt_revision_number);
               SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+              num_tested_externals++;
             }
           else
             SVN_TEST_ASSERT(FALSE); /* unknown external */
@@ -1235,6 +1241,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           SVN_TEST_ASSERT(item->revision.value.number == 1);
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+          num_tested_externals++;
         }
       else if (strcmp(item->url, "^/A/D") == 0)
         {
@@ -1244,6 +1251,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           SVN_TEST_ASSERT(item->revision.value.number == 1);
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+          num_tested_externals++;
         }
       else if (strcmp(item->url, "^/A/C") == 0)
         {
@@ -1253,6 +1261,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           /* Don't bother testing the exact date value here. */
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+          num_tested_externals++;
         }
       else if (strcmp(item->url, "^/svn") == 0)
         {
@@ -1261,10 +1270,16 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_date);
           /* Don't bother testing the exact date value here. */
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_head);
+          num_tested_externals++;
         }
       else
         SVN_TEST_ASSERT(FALSE); /* unknown URL */
     }
+
+  /* Ensure all test cases were tested. */
+  SVN_TEST_ASSERT(num_tested_externals == (sizeof(pin_externals_test_data) /
+                                           sizeof(pin_externals_test_data[0])
+                                          - 1));
 
   return SVN_NO_ERROR;
 }
