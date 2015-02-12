@@ -853,13 +853,13 @@ def build_simple_file_move_func(sbox, source, dest):
       mv_info_src = [
         {
           'Path'       : re.escape(source_path),
-          'Moved To'   : re.escape(dest),
+          'Moved To'   : re.escape(sbox.ospath(dest)),
         }
       ]
       mv_info_dst = [
         {
           'Path'       : re.escape(dest_path),
-          'Moved From' : re.escape(source),
+          'Moved From' : re.escape(sbox.ospath(source)),
         }
       ]
 
@@ -1517,7 +1517,198 @@ def move_to_from_external(sbox):
                                      'ci', '-m', 'Commit both',
                                      sbox.ospath(''),
                                      sbox.ospath('GG'))
-  
+
+def revert_del_root_of_move(sbox):
+    "revert delete root of move"
+
+    sbox.build()
+    wc_dir = sbox.wc_dir
+    sbox.simple_copy('A/mu', 'A/B/E/mu')
+    sbox.simple_copy('A/mu', 'A/B/F/mu')
+    sbox.simple_commit()
+    sbox.simple_update('', 1)
+    sbox.simple_move('A/B/E', 'E')
+    sbox.simple_rm('A/B')
+
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/B'        : Item(status='  ', treeconflict='C'),
+      'A/B/E'      : Item(status='  ', treeconflict='U'),
+      'A/B/E/mu'   : Item(status='  ', treeconflict='A'),
+      'A/B/F'      : Item(status='  ', treeconflict='U'),
+      'A/B/F/mu'   : Item(status='  ', treeconflict='A'),
+    })
+
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+    expected_status.tweak('A/B', status='D ', treeconflict='C')
+    expected_status.tweak('A/B/E', status='D ', moved_to='E')
+    expected_status.tweak('A/B/F', 'A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
+                          status='D ')
+    expected_status.add({
+      'A/B/F/mu'   : Item(status='D ', wc_rev='2'),
+      'A/B/E/mu'   : Item(status='D ', wc_rev='2'),
+      'E'          : Item(status='A ', copied='+', moved_from='A/B/E', wc_rev='-'),
+      'E/beta'     : Item(status='  ', copied='+', wc_rev='-'),
+      'E/alpha'    : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+    svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                          expected_status)
+
+    expected_output = [
+      "Reverted '%s'\n" % sbox.ospath('A/B'),      # Reverted
+      "   C %s\n"       % sbox.ospath('A/B/E')     # New tree conflict
+    ]
+    svntest.actions.run_and_verify_svn(expected_output, [],
+                                       'revert', sbox.ospath('A/B'),
+                                       '--depth', 'empty')
+
+    expected_status.tweak('A/B', status='  ', treeconflict=None)
+    expected_status.tweak('A/B/E', treeconflict='C')
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+def move_conflict_details(sbox):
+  "move conflict details"
+
+  sbox.build()
+
+  sbox.simple_append('A/B/E/new', 'new\n')
+  sbox.simple_add('A/B/E/new')
+  sbox.simple_append('A/B/E/alpha', '\nextra\nlines\n')
+  sbox.simple_rm('A/B/E/beta', 'A/B/F')
+  sbox.simple_propset('key', 'VAL', 'A/B/E', 'A/B')
+  sbox.simple_mkdir('A/B/E/new-dir1')
+  sbox.simple_mkdir('A/B/E/new-dir2')
+  sbox.simple_mkdir('A/B/E/new-dir3')
+  sbox.simple_rm('A/B/lambda')
+  sbox.simple_mkdir('A/B/lambda')
+  sbox.simple_commit()
+
+  sbox.simple_update('', 1)
+
+  sbox.simple_move('A/B', 'B')
+
+  sbox.simple_update('', 2)
+
+  expected_info = [
+    {
+      "Moved To": re.escape(sbox.ospath("B")),
+      "Tree conflict": re.escape(
+              'local dir moved away, incoming dir edit upon update' +
+              ' Source  left: (dir) ^/A/B@1' +
+              ' Source right: (dir) ^/A/B@2')
+    }
+  ]
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B'))
+
+  sbox.simple_propset('key', 'vAl', 'B')
+  sbox.simple_move('B/E/beta', 'beta')
+  sbox.simple_propset('a', 'b', 'B/F', 'B/lambda')
+  sbox.simple_append('B/E/alpha', 'other\nnew\nlines')
+  sbox.simple_mkdir('B/E/new')
+  sbox.simple_mkdir('B/E/new-dir1')
+  sbox.simple_append('B/E/new-dir2', 'something')
+  sbox.simple_append('B/E/new-dir3', 'something')
+  sbox.simple_add('B/E/new-dir3')
+
+
+  expected_output = [
+    " C   %s\n" % sbox.ospath('B'),         # Property conflicted
+    " U   %s\n" % sbox.ospath('B/E'),       # Just updated
+    "C    %s\n" % sbox.ospath('B/E/alpha'), # Text conflicted
+    "   C %s\n" % sbox.ospath('B/E/beta'),
+    "   C %s\n" % sbox.ospath('B/E/new'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir1'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir2'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir3'),
+    "   C %s\n" % sbox.ospath('B/F'),
+    "   C %s\n" % sbox.ospath('B/lambda'),
+    "Updated to revision 2.\n",
+    "Resolved conflicted state of '%s'\n" % sbox.ospath('A/B')
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'resolve', sbox.ospath('A/B'),
+                                     '--depth', 'empty',
+                                     '--accept', 'mine-conflict')
+
+  expected_info = [
+    {
+      "Path" : re.escape(sbox.ospath('B')),
+      
+      "Conflict Properties File" :
+            re.escape(os.path.abspath(sbox.ospath('B/dir_conflicts.prej'))) +
+            '.*',
+      "Conflict Details": re.escape(
+            'incoming dir edit upon update' +
+            ' Source  left: (dir) ^/A/B@1' +
+            ' Source right: (dir) ^/A/B@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E')),
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/alpha')),
+      "Conflict Previous Base File" : '.*alpha.*',
+      "Conflict Previous Working File" : '.*alpha.*',
+      "Conflict Current Base File": '.*alpha.*',
+      "Conflict Details": re.escape(
+          'incoming file edit upon update' +
+          ' Source  left: (file) ^/A/B/E/alpha@1' +
+          ' Source right: (file) ^/A/B/E/alpha@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/beta')),
+      "Tree conflict": re.escape(
+          'local file moved away, incoming file delete or move upon update' +
+          ' Source  left: (file) ^/A/B/E/beta@1' +
+          ' Source right: (none) ^/A/B/E/beta@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming file add upon update' +
+          ' Source  left: (none) ^/A/B/E/new@1' +
+          ' Source right: (file) ^/A/B/E/new@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir1')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir1@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir1@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir2')),
+      "Tree conflict": re.escape(
+          'local file unversioned, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir2@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir2@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir3')),
+      "Tree conflict": re.escape(
+          'local file add, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir3@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir3@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/F')),
+      "Tree conflict": re.escape(
+          'local dir edit, incoming dir delete or move upon update' +
+          ' Source  left: (dir) ^/A/B/F@1' +
+          ' Source right: (none) ^/A/B/F@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/lambda')),
+      "Tree conflict": re.escape(
+          'local file edit, incoming replace with dir upon update' +
+          ' Source  left: (file) ^/A/B/lambda@1' +
+          ' Source right: (dir) ^/A/B/lambda@2')
+    },
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('B'),
+                                      '--depth', 'infinity')
+
 
 #######################################################################
 # Run the tests
@@ -1536,6 +1727,8 @@ test_list = [ None,
               move_del_moved,
               copy_move_commit,
               move_to_from_external,
+              revert_del_root_of_move,
+              move_conflict_details,
             ]
 
 if __name__ == '__main__':

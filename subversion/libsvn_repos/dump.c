@@ -445,17 +445,24 @@ write_revision_headers(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-apr_array_header_t *
+/* A header entry: the element type of the apr_array_header_t which is
+ * the real type of svn_repos__dumpfile_headers_t.
+ */
+typedef struct svn_repos__dumpfile_header_entry_t {
+  const char *key, *val;
+} svn_repos__dumpfile_header_entry_t;
+
+svn_repos__dumpfile_headers_t *
 svn_repos__dumpfile_headers_create(apr_pool_t *pool)
 {
-  apr_array_header_t *headers
+  svn_repos__dumpfile_headers_t *headers
     = apr_array_make(pool, 5, sizeof(svn_repos__dumpfile_header_entry_t));
 
   return headers;
 }
 
 void
-svn_repos__dumpfile_header_push(apr_array_header_t *headers,
+svn_repos__dumpfile_header_push(svn_repos__dumpfile_headers_t *headers,
                                 const char *key,
                                 const char *val)
 {
@@ -467,7 +474,7 @@ svn_repos__dumpfile_header_push(apr_array_header_t *headers,
 }
 
 void
-svn_repos__dumpfile_header_pushf(apr_array_header_t *headers,
+svn_repos__dumpfile_header_pushf(svn_repos__dumpfile_headers_t *headers,
                                  const char *key,
                                  const char *val_fmt,
                                  ...)
@@ -484,8 +491,7 @@ svn_repos__dumpfile_header_pushf(apr_array_header_t *headers,
 
 svn_error_t *
 svn_repos__dump_headers(svn_stream_t *stream,
-                        apr_array_header_t *headers,
-                        svn_boolean_t terminate,
+                        svn_repos__dumpfile_headers_t *headers,
                         apr_pool_t *scratch_pool)
 {
   int i;
@@ -500,8 +506,7 @@ svn_repos__dump_headers(svn_stream_t *stream,
     }
 
   /* End of headers */
-  if (terminate)
-    SVN_ERR(svn_stream_puts(stream, "\n"));
+  SVN_ERR(svn_stream_puts(stream, "\n"));
 
   return SVN_NO_ERROR;
 }
@@ -565,7 +570,7 @@ svn_repos__dump_revision_record(svn_stream_t *dump_stream,
 
 svn_error_t *
 svn_repos__dump_node_record(svn_stream_t *dump_stream,
-                            apr_array_header_t *headers,
+                            svn_repos__dumpfile_headers_t *headers,
                             svn_stringbuf_t *props_str,
                             svn_boolean_t has_text,
                             svn_filesize_t text_content_length,
@@ -597,7 +602,7 @@ svn_repos__dump_node_record(svn_stream_t *dump_stream,
     }
 
   /* write the headers */
-  SVN_ERR(svn_repos__dump_headers(dump_stream, headers, TRUE, scratch_pool));
+  SVN_ERR(svn_repos__dump_headers(dump_stream, headers, scratch_pool));
 
   /* write the props */
   if (props_str)
@@ -1048,7 +1053,8 @@ dump_node_delete(svn_stream_t *stream,
                  const char *node_relpath,
                  apr_pool_t *pool)
 {
-  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+  svn_repos__dumpfile_headers_t *headers
+    = svn_repos__dumpfile_headers_create(pool);
 
   /* Node-path: ... */
   svn_repos__dumpfile_header_push(
@@ -1058,7 +1064,7 @@ dump_node_delete(svn_stream_t *stream,
   svn_repos__dumpfile_header_push(
     headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
 
-  SVN_ERR(svn_repos__dump_headers(stream, headers, TRUE, pool));
+  SVN_ERR(svn_repos__dump_headers(stream, headers, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1091,7 +1097,8 @@ dump_node(struct edit_baton *eb,
   svn_revnum_t compare_rev = eb->current_rev - 1;
   svn_fs_root_t *compare_root = NULL;
   apr_file_t *delta_file = NULL;
-  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+  svn_repos__dumpfile_headers_t *headers
+    = svn_repos__dumpfile_headers_create(pool);
   svn_filesize_t textlen;
 
   /* Maybe validate the path. */
@@ -1324,7 +1331,7 @@ dump_node(struct edit_baton *eb,
          then our dumpstream format demands that at a *minimum*, we
          see a lone "PROPS-END" as a divider between text and props
          content within the content-block. */
-      SVN_ERR(svn_repos__dump_headers(eb->stream, headers, TRUE, pool));
+      SVN_ERR(svn_repos__dump_headers(eb->stream, headers, pool));
       len = 1;
       return svn_stream_write(eb->stream, "\n", &len); /* ### needed? */
     }

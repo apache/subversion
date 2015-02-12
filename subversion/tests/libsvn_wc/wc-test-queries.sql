@@ -22,27 +22,25 @@
  */
 
 -- STMT_SELECT_NODES_INFO
-SELECT op_depth, nodes.presence, nodes.local_relpath, revision,
+SELECT op_depth, n.presence, n.local_relpath, revision,
        repos_path, file_external, def_local_relpath, moved_to, moved_here,
        properties
-FROM nodes
-LEFT OUTER JOIN externals
-            ON nodes.wc_id = externals.wc_id
-                AND nodes.local_relpath = externals.local_relpath
-WHERE nodes.local_relpath = ?1 OR nodes.local_relpath LIKE ?2
+FROM nodes n
+LEFT OUTER JOIN externals e
+            ON n.wc_id = e.wc_id
+                AND n.local_relpath = e.local_relpath
+WHERE n.wc_id = ?1
+  AND (n.local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2))
 
 -- STMT_SELECT_ACTUAL_INFO
 SELECT local_relpath
 FROM actual_node
-WHERE conflict_data is NOT NULL AND local_relpath = ?1 OR local_relpath LIKE ?2
+WHERE wc_id = ?1
+  AND conflict_data is NOT NULL
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_DELETE_NODES
 DELETE FROM nodes;
-
--- STMT_INSERT_NODE_ROOT
-INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,
-                   revision, wc_id, repos_id, kind, depth)
-           VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 'dir', 'infinity');
 
 -- STMT_INSERT_NODE
 INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,
@@ -51,10 +49,6 @@ INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,
 
 -- STMT_DELETE_ACTUAL
 DELETE FROM actual_node;
-
--- STMT_INSERT_ACTUAL_ROOT
-INSERT INTO actual_node (local_relpath, changelist, wc_id)
-                 VALUES (?1, ?2, 1)
 
 -- STMT_INSERT_ACTUAL
 INSERT INTO actual_node (local_relpath, parent_relpath, changelist, wc_id)

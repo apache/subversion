@@ -389,30 +389,18 @@ print_info(void *baton,
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From Rev: %ld\n"),
                                    info->wc_info->copyfrom_rev));
       if (info->wc_info->moved_from_abspath)
-        {
-          const char *relpath;
-
-          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
-                                             info->wc_info->moved_from_abspath);
-          if (relpath && relpath[0] != '\0')
-            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"), relpath));
-          else
-            SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"),
-                                       info->wc_info->moved_from_abspath));
-        }
+        SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"),
+                                   svn_cl__local_style_skip_ancestor(
+                                      path_prefix, 
+                                      info->wc_info->moved_from_abspath,
+                                      pool)));
 
       if (info->wc_info->moved_to_abspath)
-        {
-          const char *relpath;
-
-          relpath = svn_dirent_skip_ancestor(info->wc_info->wcroot_abspath,
-                                             info->wc_info->moved_to_abspath);
-          if (relpath && relpath[0] != '\0')
-            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"), relpath));
-          else
-            SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"),
-                                       info->wc_info->moved_to_abspath));
-        }
+        SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"),
+                                   svn_cl__local_style_skip_ancestor(
+                                      path_prefix, 
+                                      info->wc_info->moved_to_abspath,
+                                      pool)));
     }
 
   if (info->last_changed_author)
@@ -441,6 +429,7 @@ print_info(void *baton,
       if (info->wc_info->conflicts)
         {
           svn_boolean_t printed_prop_conflict_file = FALSE;
+          svn_boolean_t printed_tc = FALSE;
           int i;
 
           for (i = 0; i < info->wc_info->conflicts->nelts; i++)
@@ -479,12 +468,15 @@ print_info(void *baton,
                     if (! printed_prop_conflict_file)
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Properties File: %s\n"),
-                                svn_dirent_local_style(conflict->their_abspath,
-                                                       pool)));
+                                svn_cl__local_style_skip_ancestor(
+                                        path_prefix,
+                                        conflict->prop_reject_abspath,
+                                        pool)));
                     printed_prop_conflict_file = TRUE;
                   break;
 
                   case svn_wc_conflict_kind_tree:
+                    printed_tc = TRUE;
                     SVN_ERR(
                         svn_cl__get_human_readable_tree_conflict_description(
                                                     &desc, conflict, pool));
@@ -505,6 +497,19 @@ print_info(void *baton,
             const svn_wc_conflict_description2_t *conflict =
                   APR_ARRAY_IDX(info->wc_info->conflicts, 0,
                                 const svn_wc_conflict_description2_t *);
+
+            if (!printed_tc)
+              {
+                const char *desc;
+
+                SVN_ERR(svn_cl__get_human_readable_action_description(&desc,
+                                        svn_wc_conflict_action_edit,
+                                        conflict->operation,
+                                        conflict->node_kind, pool));
+
+                SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
+                                               _("Conflict Details"), desc));
+              }
 
             src_left_version =
                         svn_cl__node_description(conflict->src_left_version,
