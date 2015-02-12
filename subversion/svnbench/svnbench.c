@@ -1,5 +1,5 @@
 /*
- * svn-bench.c:  Subversion benchmark client.
+ * svnbench.c:  Subversion benchmark client.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
