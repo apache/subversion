@@ -513,7 +513,7 @@ print_info(void *baton,
                 const char *desc;
 
                 SVN_ERR(svn_cl__get_human_readable_action_description(&desc,
-                                        svn_wc_conflict_reason_edited,
+                                        svn_wc_conflict_action_edit,
                                         conflict->operation,
                                         conflict->node_kind, pool));
 
