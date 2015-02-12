@@ -900,14 +900,17 @@ lock_body(void *baton, apr_pool_t *pool)
         {
           info->lock = svn_lock_create(lb->result_pool);
           if (target->token)
-            info->lock->token = target->token;
+            info->lock->token = apr_pstrdup(lb->result_pool, target->token);
           else
             SVN_ERR(svn_fs_fs__generate_lock_token(&(info->lock->token), lb->fs,
                                                    lb->result_pool));
 
+          /* The INFO->PATH is already allocated in LB->RESULT_POOL as a result
+             of svn_fspath__canonicalize() (see svn_fs_fs__lock()). */
           info->lock->path = info->path;
-          info->lock->owner = lb->fs->access_ctx->username;
-          info->lock->comment = lb->comment;
+          info->lock->owner = apr_pstrdup(lb->result_pool,
+                                          lb->fs->access_ctx->username);
+          info->lock->comment = apr_pstrdup(lb->result_pool, lb->comment);
           info->lock->is_dav_comment = lb->is_dav_comment;
           info->lock->creation_date = apr_time_now();
           info->lock->expiration_date = lb->expiration_date;
