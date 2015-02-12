@@ -2126,8 +2126,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__db_base_get_props(&base_props, db, local_abspath,
-                                    result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_props(&base_props, db, local_abspath,
+                                         result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, conflicted_props);
        hi;
