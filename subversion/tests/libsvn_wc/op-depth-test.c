@@ -105,12 +105,22 @@ typedef struct nodes_row_t {
     const char *props;  /* comma-separated list of prop names */
 } nodes_row_t;
 
+/* Tree conflict details */
+typedef struct tree_conflict_info
+{
+  svn_wc_conflict_action_t action;
+  svn_wc_conflict_reason_t reason;
+  const char *delete_path;
+  svn_boolean_t conflicted_fb; /* fallback for reason, action and path 0 */
+} tree_conflict_info;
+
 /* What conflicts are on a path. */
 typedef struct conflict_info_t {
     const char *local_relpath;
     svn_boolean_t text_conflicted;
     svn_boolean_t prop_conflicted;
-    svn_boolean_t tree_conflicted;
+
+    tree_conflict_info tc;
 } conflict_info_t;
 
 /* Macro for filling in the REPO_* fields of a non-base NODES_ROW_T
@@ -263,7 +273,6 @@ check_db_rows(svn_test__sandbox_t *b,
               const char *root_path,
               const nodes_row_t *expected_rows)
 {
-  const char *base_relpath = root_path;
   svn_sqlite__db_t *sdb;
   int i;
   svn_sqlite__stmt_t *stmt;
@@ -281,10 +290,8 @@ check_db_rows(svn_test__sandbox_t *b,
   /* Fill ACTUAL_HASH with data from the WC DB. */
   SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODES_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
-                            (base_relpath[0]
-                             ? apr_psprintf(b->pool, "%s/%%", base_relpath)
-                             : "_%")));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t)1 /* wc_id */,
+                                        root_path));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
@@ -332,16 +339,84 @@ check_db_rows(svn_test__sandbox_t *b,
   return comparison_baton.errors;
 }
 
-
+#define EDIT_EDIT_TC {svn_wc_conflict_reason_edited, \
+                      svn_wc_conflict_action_edit, \
+                      NULL, TRUE}
+#define NO_TC { 0 }
 static const char *
 print_conflict(const conflict_info_t *row,
                apr_pool_t *result_pool)
 {
+  const char *tc_text;
+
+  if (!row->tc.reason && !row->tc.action && !row->tc.delete_path)
+    {
+      if (row->tc.conflicted_fb)
+        tc_text = "EDIT_EDIT_TC";
+      else
+        tc_text = "NO_TC";
+    }
+  else
+    {
+      const char *action;
+      const char *reason;
+      const char *path;
+
+#define CASE_ENUM_STRVAL(x, y) case y: x = #y; break
+      switch(row->tc.action)
+        {
+          CASE_ENUM_STRVAL(action, svn_wc_conflict_action_edit);
+          CASE_ENUM_STRVAL(action, svn_wc_conflict_action_add);
+          CASE_ENUM_STRVAL(action, svn_wc_conflict_action_delete);
+          CASE_ENUM_STRVAL(action, svn_wc_conflict_action_replace);
+          default:
+            SVN_ERR_MALFUNCTION_NO_RETURN();
+        }
+      switch(row->tc.reason)
+        {
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_edited);
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_obstructed);
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_deleted);
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_missing);
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_unversioned);
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_added);
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_replaced);
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_moved_away);
+          CASE_ENUM_STRVAL(reason, svn_wc_conflict_reason_moved_here);
+          default:
+            SVN_ERR_MALFUNCTION_NO_RETURN();
+        }
+
+      if (row->tc.delete_path)
+        path = apr_psprintf(result_pool, ", \"%s\"", row->tc.delete_path);
+      else
+        path = "";
+
+      tc_text = apr_psprintf(result_pool, "{%s, %s%s}", action,
+                             reason, path);
+    }
+
   return apr_psprintf(result_pool, "\"%s\", %s, %s, %s",
                       row->local_relpath,
                       row->text_conflicted ? "TRUE" : "FALSE",
                       row->prop_conflicted ? "TRUE" : "FALSE",
-                      row->tree_conflicted ? "TRUE" : "FALSE");
+                      tc_text);
+}
+
+static svn_boolean_t
+tree_conflicts_match(const tree_conflict_info *expected,
+                     const tree_conflict_info *actual)
+{
+    if (expected->action != actual->action)
+      return FALSE;
+    else if (expected->reason != actual->reason)
+      return FALSE;
+    else if (strcmp_null(expected->delete_path, actual->delete_path) != 0)
+      return FALSE;
+    else if (expected->conflicted_fb != actual->conflicted_fb)
+      return FALSE;
+
+    return TRUE;
 }
 
 static svn_error_t *
@@ -369,7 +444,7 @@ compare_conflict_info(const void *key, apr_ssize_t klen,
     }
   else if (expected->text_conflicted != found->text_conflicted
            || expected->prop_conflicted != found->prop_conflicted
-           || expected->tree_conflicted != found->tree_conflicted)
+           || !tree_conflicts_match(&expected->tc, &found->tc))
     {
       b->errors = svn_error_createf(
                     SVN_ERR_TEST_FAILED, b->errors,
@@ -387,7 +462,6 @@ check_db_conflicts(svn_test__sandbox_t *b,
                    const char *root_path,
                    const conflict_info_t *expected_conflicts)
 {
-  const char *base_relpath = root_path;
   svn_sqlite__db_t *sdb;
   int i;
   svn_sqlite__stmt_t *stmt;
@@ -407,14 +481,12 @@ check_db_conflicts(svn_test__sandbox_t *b,
   /* Fill ACTUAL_HASH with data from the WC DB. */
   SVN_ERR(open_wc_db(&sdb, b->wc_abspath, b->pool, b->pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
-                            (base_relpath[0]
-                             ? apr_psprintf(b->pool, "%s/%%", base_relpath)
-                             : "_%")));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t)1 /* wc_id */,
+                                        root_path));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
-      conflict_info_t *row = apr_palloc(b->pool, sizeof(*row));
+      conflict_info_t *row = apr_pcalloc(b->pool, sizeof(*row));
 
       row->local_relpath = svn_sqlite__column_text(stmt, 0, b->pool);
 
@@ -430,6 +502,7 @@ check_db_conflicts(svn_test__sandbox_t *b,
       svn_skel_t *conflict;
       conflict_info_t *info = apr_hash_this_val(hi);
       const char *local_abspath;
+      svn_boolean_t tree_conflicted;
 
       svn_pool_clear(iterpool);
 
@@ -444,10 +517,33 @@ check_db_conflicts(svn_test__sandbox_t *b,
       SVN_ERR(svn_wc__conflict_read_info(NULL, NULL,
                                          &info->text_conflicted,
                                          &info->prop_conflicted,
-                                         &info->tree_conflicted,
+                                         &tree_conflicted,
                                          b->wc_ctx->db, local_abspath,
                                          conflict,
                                          iterpool, iterpool));
+
+      if (tree_conflicted)
+        {
+          const char *move_src_abspath;
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&info->tc.reason,
+                                                      &info->tc.action,
+                                                      &move_src_abspath,
+                                                      b->wc_ctx->db,
+                                                      local_abspath,
+                                                      conflict,
+                                                      b->pool, iterpool));
+
+          if (move_src_abspath)
+            info->tc.delete_path =
+                svn_dirent_skip_ancestor(b->wc_abspath, move_src_abspath);
+
+          if (!info->tc.reason
+              && !info->tc.action
+              && !info->tc.delete_path)
+            {
+              info->tc.conflicted_fb = TRUE;
+            }
+        }
     }
 
   /* Fill EXPECTED_HASH with data from EXPECTED_ROWS. */
@@ -1159,29 +1255,17 @@ insert_dirs(svn_test__sandbox_t *b,
 
   while(nodes->local_relpath)
     {
-      if (nodes->local_relpath[0])
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sdssrs",
-                                    nodes->local_relpath,
-                                    nodes->op_depth,
-                                    nodes->presence,
-                                    nodes->repo_relpath,
-                                    nodes->repo_revnum,
-                                    svn_relpath_dirname(nodes->local_relpath,
-                                                        b->pool)));
-        }
-      else
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE_ROOT));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sdssr",
-                                    nodes->local_relpath,
-                                    nodes->op_depth,
-                                    nodes->presence,
-                                    nodes->repo_relpath,
-                                    nodes->repo_revnum));
-        }
-
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "sdssrs",
+                                nodes->local_relpath,
+                                nodes->op_depth,
+                                nodes->presence,
+                                nodes->repo_relpath,
+                                nodes->repo_revnum,
+                                nodes->local_relpath[0]
+                                  ? svn_relpath_dirname(nodes->local_relpath,
+                                                        b->pool)
+                                  : NULL));
       SVN_ERR(svn_sqlite__step_done(stmt));
       ++nodes;
     }
@@ -1949,22 +2033,14 @@ insert_actual(svn_test__sandbox_t *b,
 
   while(actual->local_relpath)
     {
-      if (actual->local_relpath[0])
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sss",
-                                    actual->local_relpath,
-                                    svn_relpath_dirname(actual->local_relpath,
-                                                        b->pool),
-                                    actual->changelist));
-        }
-      else
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL_ROOT));
-          SVN_ERR(svn_sqlite__bindf(stmt, "ss",
-                                    actual->local_relpath,
-                                    actual->changelist));
-        }
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_ACTUAL));
+      SVN_ERR(svn_sqlite__bindf(stmt, "sss",
+                                actual->local_relpath,
+                                actual->local_relpath[0]
+                                  ? svn_relpath_dirname(actual->local_relpath,
+                                                        b->pool)
+                                  : NULL,
+                                actual->changelist));
       SVN_ERR(svn_sqlite__step_done(stmt));
       if (actual->changelist)
         {
@@ -5315,7 +5391,7 @@ mixed_rev_move(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   {
     conflict_info_t conflicts[] = {
-      { "X/D", FALSE, FALSE, TRUE },
+      { "X/D", FALSE, FALSE, {0 /* ### Needs fixing */} },
       {0}
     };
 
@@ -5421,7 +5497,8 @@ update_prop_mod_into_moved(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   {
     conflict_info_t conflicts[] = {
-      { "A", FALSE, FALSE, TRUE },
+      { "A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                            svn_wc_conflict_reason_moved_away, "A"}},
       {0}
     };
 
@@ -6191,6 +6268,34 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(sbox_wc_update(&b, "", 3));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",          "normal",       3, ""},
+      {0, "A",         "normal",       3, "A"},
+      {0, "A/B",       "normal",       3, "A/B"},
+      {0, "A/B/C",     "normal",       3, "A/B/C"},
+      {0, "A/B/C/D",   "normal",       3, "A/B/C/D"},
+      {0, "A/B/C/D/E", "normal",       3, "A/B/C/D/E"},
+
+      {1, "C2",        "normal",       2, "A/B/C", MOVED_HERE},
+      {1, "C2/D",      "normal",       2, "A/B/C/D", MOVED_HERE},
+
+      {2, "A/B",              "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C",            "base-deleted", NO_COPY_FROM, "C2"},
+      {2, "A/B/C/D",          "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C/D/E",        "base-deleted", NO_COPY_FROM},
+
+      {0}
+    };
+    conflict_info_t conflicts[] = {
+      {"A/B", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                             svn_wc_conflict_reason_deleted}},
+      {0}
+    };
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_revert(&b, "A/B", svn_depth_empty));
   {
     nodes_row_t nodes[] = {
@@ -6207,7 +6312,14 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "C2/D",      "normal",       2, "A/B/C/D", MOVED_HERE},
       {0}
     };
+    conflict_info_t conflicts[] = {
+      {"A/B/C", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "A/B/C"}},
+      {0}
+    };
     SVN_ERR(check_db_rows(&b, "", nodes));
+    /* Where did this conflict come from? */
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
   }
 
   /* Revert should have left a tree-conflict (or broken the move). */
@@ -6230,6 +6342,7 @@ move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", NULL));
   }
 
   return SVN_NO_ERROR;
@@ -6889,8 +7002,10 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update_depth(&b, "P/Q", 2, svn_depth_files, FALSE));
   {
     conflict_info_t conflicts[] = {
-      {"A/B", FALSE, FALSE, TRUE},
-      {"P/Q", FALSE, FALSE, TRUE},
+      {"A/B", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                             svn_wc_conflict_reason_moved_away, "A/B"}},
+      {"P/Q", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                             svn_wc_conflict_reason_moved_away, "P/Q"}},
       {0}
     };
     SVN_ERR(check_db_conflicts(&b, "", conflicts));
@@ -6936,8 +7051,10 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update_depth(&b, "P", 2, svn_depth_immediates, FALSE));
   {
     conflict_info_t conflicts[] = {
-      {"A/B", FALSE, FALSE, TRUE},
-      {"P", FALSE, FALSE, TRUE},
+      {"A/B", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                             svn_wc_conflict_reason_moved_away, "A/B"}},
+      {"P",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                             svn_wc_conflict_reason_moved_away, "P"}},
       {0}
     };
     SVN_ERR(check_db_conflicts(&b, "", conflicts));
@@ -6981,8 +7098,11 @@ finite_move_update_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update_depth(&b, "P/Q", 2, svn_depth_empty, FALSE));
   {
     conflict_info_t conflicts[] = {
-      {"A/B/C", FALSE, FALSE, TRUE},
-      {"P/Q", FALSE, FALSE, TRUE},
+      {"A/B/C", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "A/B/C"}},
+      {"P/Q",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "P/Q"}},
+
       {0}
     };
     SVN_ERR(check_db_conflicts(&b, "", conflicts));
@@ -9342,11 +9462,14 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 2));
   {
     conflict_info_t conflicts[] = {
-      {"A", FALSE, FALSE, TRUE},
-      {"B", FALSE, FALSE, TRUE},
-      {"C/A", FALSE, FALSE, TRUE},
-      {"D/A/A", FALSE, FALSE, TRUE},
-
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
       {0},
     };
 
@@ -9481,10 +9604,14 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   {
     conflict_info_t conflicts[] = {
-      {"A", FALSE, FALSE, TRUE},
-      {"B", FALSE, FALSE, TRUE},
-      {"C/A", FALSE, FALSE, TRUE},
-      {"D/A/A", FALSE, FALSE, TRUE},
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_delete,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
       {0}
     };
 
@@ -9534,11 +9661,14 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
   {
     conflict_info_t conflicts[] = {
       /* Not resolved yet */
-      {"D/A/A", FALSE, FALSE, TRUE},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_delete,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
 
       /* New */
-      {"A/A", FALSE, FALSE, TRUE},
-      {"A/A/A", FALSE, FALSE, TRUE},
+      {"A/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_deleted}},
+      {"A/A/A", FALSE, FALSE, {svn_wc_conflict_action_delete,
+                               svn_wc_conflict_reason_moved_away, "A/A/A"}},
 
       {0}
     };
@@ -9556,7 +9686,40 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Go back to start position */
   SVN_ERR(sbox_wc_update(&b, "", 1));
-  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
+  {
+    conflict_info_t conflicts[] = {
+      {"A", FALSE, FALSE,   { svn_wc_conflict_action_edit,
+                              svn_wc_conflict_reason_replaced}},
+      {"B", FALSE, FALSE,   { svn_wc_conflict_action_edit,
+                              svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A", FALSE, FALSE, { svn_wc_conflict_action_edit,
+                              svn_wc_conflict_reason_moved_away, "C/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    conflict_info_t conflicts[] = {
+      {"A/A",  FALSE, FALSE,  { svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_deleted}},
+      {"A/A/A", FALSE, FALSE, { svn_wc_conflict_action_add,
+                                svn_wc_conflict_reason_added}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+  SVN_ERR(sbox_wc_resolve(&b, "A/A/A", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity,
+                          svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
@@ -9859,14 +10022,46 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
         { 0 },
       };
-        SVN_ERR(check_db_rows(&b, "", nodes));
-    }
-    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
-    /* Update and resolve via their strategy */
-    SVN_ERR(sbox_wc_update(&b, "", 2));
-    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
-    return SVN_NO_ERROR;
+      conflict_info_t conflicts[] = {
+        {"A", FALSE, FALSE,   { svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_moved_away, "A"}},
+        {"B", FALSE, FALSE,   { svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_moved_away, "B"}},
+        {"C/A", FALSE, FALSE, { svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_moved_away, "C/A"}},
+        {0}
+      };
+
+      SVN_ERR(check_db_rows(&b, "", nodes));
+      SVN_ERR(check_db_conflicts(&b, "", conflicts));
+    }
+
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  {
+    conflict_info_t conflicts[] = {
+      {"A/A",  FALSE, FALSE,  { svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_moved_away, "A/A"}},
+      {"A/A/A", FALSE, FALSE, { svn_wc_conflict_action_add,
+                                svn_wc_conflict_reason_added}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+  SVN_ERR(sbox_wc_resolve(&b, "A/A/A", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
+  /* Update and resolve via their strategy */
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -10061,8 +10256,35 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_mkdir(&b, "Z/E2"));
 
   SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    conflict_info_t conflicts[] = {
+      {"A",    FALSE, FALSE, {svn_wc_conflict_action_edit,
+                              svn_wc_conflict_reason_moved_away, "A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
+  {
+    conflict_info_t conflicts[] = {
+      {"Z/B1", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                              svn_wc_conflict_reason_deleted}},
+      {"Z/B2", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                              svn_wc_conflict_reason_moved_away, "Z/B2"}},
+      {"Z/C1", FALSE, FALSE, {svn_wc_conflict_action_delete,
+                              svn_wc_conflict_reason_deleted}},
+      {"Z/C2", FALSE, FALSE, {svn_wc_conflict_action_delete,
+                              svn_wc_conflict_reason_moved_away, "Z/C2"}},
+      {"Z/E2", FALSE, FALSE, {svn_wc_conflict_action_add,
+                              svn_wc_conflict_reason_added}},
+
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "Z/B1", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
   SVN_ERR(sbox_wc_resolve(&b, "Z/B2", svn_depth_empty,
@@ -10073,8 +10295,10 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_resolve(&b, "Z/C2", svn_depth_empty,
                           svn_wc_conflict_choose_merged));
 
-  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity,
-                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "Z/E2", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+
+  SVN_ERR(check_db_conflicts(&b, "", NULL));
   {
     nodes_row_t nodes[] = {
 
@@ -10129,6 +10353,8 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0 },
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
+
+    SVN_ERR(check_db_conflicts(&b, "", NULL));
   }
 
   return SVN_NO_ERROR;
@@ -10255,11 +10481,13 @@ break_move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0}
     };
     conflict_info_t conflicts1[] = {
-      {"X", FALSE, FALSE, TRUE},
+      {"X",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_deleted}},
       {0}
     };
     conflict_info_t conflicts2[] = {
-      {"X/Y/Z", FALSE, FALSE, TRUE},
+      {"X/Y/Z", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "X"}},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
@@ -10286,6 +10514,7 @@ break_move_in_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", NULL));
   }
 
   return SVN_NO_ERROR;
@@ -10668,9 +10897,10 @@ move_edit_obstruction(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0}
     };
     conflict_info_t conflicts[] = {
-      { "A_mv/B/E/alpha", FALSE, FALSE, TRUE },
-      { "A_mv/B/F", FALSE, FALSE, TRUE },
-
+      {"A_mv/B/E/alpha", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                                        svn_wc_conflict_reason_obstructed}},
+      {"A_mv/B/F",       FALSE, FALSE, {svn_wc_conflict_action_edit,
+                                        svn_wc_conflict_reason_obstructed}},
       {0}
     };
 

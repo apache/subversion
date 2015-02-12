@@ -1817,7 +1817,9 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
            operation == svn_wc_operation_switch)
     {
       /* For updates, the left version corresponds to the pre-update state. */
-      if (left_version)
+      if (left_version
+          && reason != svn_wc_conflict_reason_added
+          && reason != svn_wc_conflict_reason_replaced)
         local_kind = left_version->node_kind;
       else
         {
@@ -2126,8 +2128,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__db_base_get_props(&base_props, db, local_abspath,
-                                    result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_props(&base_props, db, local_abspath,
+                                         result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, conflicted_props);
        hi;
@@ -2609,9 +2611,10 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
           if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
             {
               err = svn_wc__db_update_moved_away_conflict_victim(
-                        db, local_abspath,
-                        notify_func, notify_baton,
+                        db, local_abspath, src_op_root_abspath,
+                        operation, action, reason,
                         cancel_func, cancel_baton,
+                        notify_func, notify_baton,
                         scratch_pool);
 
               if (err)

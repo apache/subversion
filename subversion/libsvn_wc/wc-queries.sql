@@ -1388,8 +1388,9 @@ BEGIN
                             WHERE n.wc_id = OLD.wc_id
                               AND n.local_relpath = OLD.local_relpath)
             THEN 1
-            ELSE NULL
-          END;
+          END notify
+   WHERE OLD.conflict_data IS NOT NULL
+      OR notify IS NOT NULL;
 END;
 DROP TRIGGER IF EXISTS   trigger_revert_list_actual_update;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_update
@@ -1405,8 +1406,9 @@ BEGIN
                             WHERE n.wc_id = OLD.wc_id
                               AND n.local_relpath = OLD.local_relpath)
             THEN 1
-            ELSE NULL
-          END;
+          END notify
+   WHERE OLD.conflict_data IS NOT NULL
+      OR notify IS NOT NULL;
 END
 
 -- STMT_DROP_REVERT_LIST_TRIGGERS
@@ -1432,12 +1434,15 @@ ORDER BY local_relpath
 DELETE FROM revert_list WHERE local_relpath = ?1
 
 -- STMT_SELECT_REVERT_LIST_RECURSIVE
-SELECT DISTINCT local_relpath
-FROM revert_list
-WHERE (local_relpath = ?1
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?1))
-  AND (notify OR actual = 0)
-ORDER BY local_relpath
+SELECT p.local_relpath, n.kind, a.notify, a.kind
+FROM (SELECT DISTINCT local_relpath
+      FROM revert_list
+      WHERE (local_relpath = ?1
+        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?1))) p
+
+LEFT JOIN revert_list n ON n.local_relpath=p.local_relpath AND n.actual=0
+LEFT JOIN revert_list a ON a.local_relpath=p.local_relpath AND a.actual=1
+ORDER BY p.local_relpath
 
 -- STMT_DELETE_REVERT_LIST_RECURSIVE
 DELETE FROM revert_list
@@ -1486,7 +1491,7 @@ CREATE TEMPORARY TABLE update_move_list (
    ### working copies. queries, etc will need to be adjusted.  */
   local_relpath TEXT PRIMARY KEY NOT NULL UNIQUE,
   action INTEGER NOT NULL,
-  kind  INTEGER NOT NULL,
+  kind TEXT NOT NULL,
   content_state INTEGER NOT NULL,
   prop_state  INTEGER NOT NULL
   )
@@ -1503,6 +1508,11 @@ ORDER BY local_relpath
 
 -- STMT_FINALIZE_UPDATE_MOVE
 DROP TABLE IF EXISTS update_move_list
+
+-- STMT_MOVE_NOTIFY_TO_REVERT
+INSERT INTO revert_list (local_relpath, notify, kind, actual)
+       SELECT local_relpath, 2, kind, 1 FROM update_move_list;
+DROP TABLE update_move_list
 
 /* ------------------------------------------------------------------------- */
 
