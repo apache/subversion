@@ -293,19 +293,13 @@ svn_repos__adjust_mergeinfo_property(svn_string_t **new_value_p,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* A header entry.
- *
- * (The headers are currently declared here to be of type apr_array_header_t
- * with svn_repos__dumpfile_header_entry_t entries, but the types could
- * instead be made opaque.)
+/* A (nearly) opaque representation of an ordered list of header lines.
  */
-typedef struct svn_repos__dumpfile_header_entry_t {
-  const char *key, *val;
-} svn_repos__dumpfile_header_entry_t;
+typedef struct apr_array_header_t svn_repos__dumpfile_headers_t;
 
 /* Create an empty set of headers.
  */
-apr_array_header_t *
+svn_repos__dumpfile_headers_t *
 svn_repos__dumpfile_headers_create(apr_pool_t *pool);
 
 /* Push the header (KEY, VAL) onto HEADERS.
@@ -313,7 +307,7 @@ svn_repos__dumpfile_headers_create(apr_pool_t *pool);
  * Duplicate the key and value into HEADERS's pool.
  */
 void
-svn_repos__dumpfile_header_push(apr_array_header_t *headers,
+svn_repos__dumpfile_header_push(svn_repos__dumpfile_headers_t *headers,
                                 const char *key,
                                 const char *val);
 
@@ -322,20 +316,17 @@ svn_repos__dumpfile_header_push(apr_array_header_t *headers,
  * Duplicate the key and value into HEADERS's pool.
  */
 void
-svn_repos__dumpfile_header_pushf(apr_array_header_t *headers,
+svn_repos__dumpfile_header_pushf(svn_repos__dumpfile_headers_t *headers,
                                  const char *key,
                                  const char *val_fmt,
                                  ...)
         __attribute__((format(printf, 3, 4)));
 
 /* Write to STREAM the headers in HEADERS followed by a blank line.
- *
- * HEADERS is an array of struct {const char *key, *val;}.
  */
 svn_error_t *
 svn_repos__dump_headers(svn_stream_t *stream,
-                        apr_array_header_t *headers,
-                        svn_boolean_t terminate,
+                        svn_repos__dumpfile_headers_t *headers,
                         apr_pool_t *scratch_pool);
 
 /* Write a revision record to DUMP_STREAM for revision REVISION with revision
@@ -384,7 +375,7 @@ svn_repos__dump_revision_record(svn_stream_t *dump_stream,
  */
 svn_error_t *
 svn_repos__dump_node_record(svn_stream_t *dump_stream,
-                            apr_array_header_t *headers,
+                            svn_repos__dumpfile_headers_t *headers,
                             svn_stringbuf_t *props_str,
                             svn_boolean_t has_text,
                             svn_filesize_t text_content_length,

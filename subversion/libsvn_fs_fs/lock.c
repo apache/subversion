@@ -451,6 +451,12 @@ unlock_single(svn_fs_t *fs,
               svn_lock_t *lock,
               apr_pool_t *pool);
 
+/* Check if LOCK has been already expired. */
+static svn_boolean_t lock_expired(const svn_lock_t *lock)
+{
+  return lock->expiration_date && (apr_time_now() > lock->expiration_date);
+}
+
 /* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
    TRUE if the caller (or one of its callers) has taken out the
    repository-wide write lock, FALSE otherwise.  If MUST_EXIST is
@@ -480,7 +486,7 @@ get_lock(svn_lock_t **lock_p,
     return must_exist ? SVN_FS__ERR_NO_SUCH_LOCK(fs, path) : SVN_NO_ERROR;
 
   /* Don't return an expired lock. */
-  if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
+  if (lock_expired(lock))
     {
       /* Only remove the lock if we have the write lock.
          Read operations shouldn't change the filesystem. */
@@ -527,99 +533,7 @@ get_lock_helper(svn_fs_t *fs,
 }
 
 
-/* Baton for locks_walker(). */
-struct walk_locks_baton {
-  svn_fs_get_locks_callback_t get_locks_func;
-  void *get_locks_baton;
-  svn_fs_t *fs;
-};
-
-/* Implements walk_digests_callback_t. */
-static svn_error_t *
-locks_walker(void *baton,
-             const char *fs_path,
-             const char *digest_path,
-             apr_hash_t *children,
-             svn_lock_t *lock,
-             svn_boolean_t have_write_lock,
-             apr_pool_t *pool)
-{
-  struct walk_locks_baton *wlb = baton;
-
-  if (lock)
-    {
-      /* Don't report an expired lock. */
-      if (lock->expiration_date == 0
-          || (apr_time_now() <= lock->expiration_date))
-        {
-          if (wlb->get_locks_func)
-            SVN_ERR(wlb->get_locks_func(wlb->get_locks_baton, lock, pool));
-        }
-      else
-        {
-          /* Only remove the lock if we have the write lock.
-             Read operations shouldn't change the filesystem. */
-          if (have_write_lock)
-            SVN_ERR(unlock_single(wlb->fs, lock, pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Callback type for walk_digest_files().
- *
- * CHILDREN and LOCK come from a read_digest_file(digest_path) call.
- */
-typedef svn_error_t *(*walk_digests_callback_t)(void *baton,
-                                                const char *fs_path,
-                                                const char *digest_path,
-                                                apr_hash_t *children,
-                                                svn_lock_t *lock,
-                                                svn_boolean_t have_write_lock,
-                                                apr_pool_t *pool);
-
-/* A recursive function that calls WALK_DIGESTS_FUNC/WALK_DIGESTS_BATON for
-   all lock digest files in and under PATH in FS.
-   HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
-   has the FS write lock. */
-static svn_error_t *
-walk_digest_files(const char *fs_path,
-                  const char *digest_path,
-                  walk_digests_callback_t walk_digests_func,
-                  void *walk_digests_baton,
-                  svn_boolean_t have_write_lock,
-                  apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_hash_t *children;
-  apr_pool_t *subpool;
-  svn_lock_t *lock;
-
-  /* First, send up any locks in the current digest file. */
-  SVN_ERR(read_digest_file(&children, &lock, fs_path, digest_path, pool));
-
-  SVN_ERR(walk_digests_func(walk_digests_baton, fs_path, digest_path,
-                            children, lock,
-                            have_write_lock, pool));
-
-  /* Now, recurse on this thing's child entries (if any; bail otherwise). */
-  if (! apr_hash_count(children))
-    return SVN_NO_ERROR;
-  subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
-    {
-      const char *digest = apr_hash_this_key(hi);
-      svn_pool_clear(subpool);
-      SVN_ERR(walk_digest_files
-              (fs_path, digest_path_from_digest(fs_path, digest, subpool),
-               walk_digests_func, walk_digests_baton, have_write_lock, subpool));
-    }
-  svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
-}
-
-/* A recursive function that calls GET_LOCKS_FUNC/GET_LOCKS_BATON for
+/* A function that calls GET_LOCKS_FUNC/GET_LOCKS_BATON for
    all locks in and under PATH in FS.
    HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
    has the FS write lock. */
@@ -631,13 +545,52 @@ walk_locks(svn_fs_t *fs,
            svn_boolean_t have_write_lock,
            apr_pool_t *pool)
 {
-  struct walk_locks_baton wlb;
+  apr_hash_index_t *hi;
+  apr_hash_t *children;
+  apr_pool_t *subpool;
+  svn_lock_t *lock;
 
-  wlb.get_locks_func = get_locks_func;
-  wlb.get_locks_baton = get_locks_baton;
-  wlb.fs = fs;
-  SVN_ERR(walk_digest_files(fs->path, digest_path, locks_walker, &wlb,
-                            have_write_lock, pool));
+  /* First, send up any locks in the current digest file. */
+  SVN_ERR(read_digest_file(&children, &lock, fs->path, digest_path, pool));
+
+  if (lock && lock_expired(lock))
+    {
+      /* Only remove the lock if we have the write lock.
+         Read operations shouldn't change the filesystem. */
+      if (have_write_lock)
+        SVN_ERR(unlock_single(fs, lock, pool));
+    }
+  else if (lock)
+    {
+      SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+    }
+
+  /* Now, report all the child entries (if any; bail otherwise). */
+  if (! apr_hash_count(children))
+    return SVN_NO_ERROR;
+  subpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
+    {
+      const char *digest = apr_hash_this_key(hi);
+      svn_pool_clear(subpool);
+
+      SVN_ERR(read_digest_file
+              (NULL, &lock, fs->path,
+               digest_path_from_digest(fs->path, digest, subpool), subpool));
+
+      if (lock && lock_expired(lock))
+        {
+          /* Only remove the lock if we have the write lock.
+             Read operations shouldn't change the filesystem. */
+          if (have_write_lock)
+            SVN_ERR(unlock_single(fs, lock, pool));
+        }
+      else if (lock)
+        {
+          SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+        }
+    }
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -713,6 +666,35 @@ svn_fs_fs__allow_locked_operation(const char *path,
         SVN_ERR(verify_lock(fs, lock, pool));
     }
   return SVN_NO_ERROR;
+}
+
+/* Helper function called from the lock and unlock code.
+   UPDATES is a map from "const char *" parent paths to "apr_array_header_t *"
+   arrays of child paths.  For all of the parent paths of PATH this function
+   adds PATH to the corresponding array of child paths. */
+static void
+schedule_index_update(apr_hash_t *updates,
+                      const char *path,
+                      apr_pool_t *scratch_pool)
+{
+  apr_pool_t *hashpool = apr_hash_pool_get(updates);
+  const char *parent_path = path;
+
+  while (! svn_fspath__is_root(parent_path, strlen(parent_path)))
+    {
+      apr_array_header_t *children;
+
+      parent_path = svn_fspath__dirname(parent_path, scratch_pool);
+      children = svn_hash_gets(updates, parent_path);
+
+      if (! children)
+        {
+          children = apr_array_make(hashpool, 8, sizeof(const char *));
+          svn_hash_sets(updates, apr_pstrdup(hashpool, parent_path), children);
+        }
+
+      APR_ARRAY_PUSH(children, const char *) = path;
+    }
 }
 
 /* The effective arguments for lock_body() below. */
@@ -827,7 +809,6 @@ check_lock(svn_error_t **fs_err,
 
 struct lock_info_t {
   const char *path;
-  const char *component;
   svn_lock_t *lock;
   svn_error_t *fs_err;
 };
@@ -850,7 +831,9 @@ lock_body(void *baton, apr_pool_t *pool)
   svn_fs_root_t *root;
   svn_revnum_t youngest;
   const char *rev_0_path;
-  int i, outstanding = 0;
+  int i;
+  apr_hash_t *index_updates = apr_hash_make(pool);
+  apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Until we implement directory locks someday, we only allow locks
@@ -864,34 +847,28 @@ lock_body(void *baton, apr_pool_t *pool)
     {
       const svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i,
                                                     svn_sort__item_t);
-      const svn_fs_lock_target_t *target = item->value;
       struct lock_info_t info;
 
       svn_pool_clear(iterpool);
 
       info.path = item->key;
-      SVN_ERR(check_lock(&info.fs_err, info.path, target, lb, root, iterpool));
       info.lock = NULL;
-      info.component = NULL;
-      APR_ARRAY_PUSH(lb->infos, struct lock_info_t) = info;
+      info.fs_err = SVN_NO_ERROR;
+
+      SVN_ERR(check_lock(&info.fs_err, info.path, item->value, lb, root,
+                         iterpool));
+
+      /* If no error occurred while pre-checking, schedule the index updates for
+         this path. */
       if (!info.fs_err)
-        ++outstanding;
+        schedule_index_update(index_updates, info.path, iterpool);
+
+      APR_ARRAY_PUSH(lb->infos, struct lock_info_t) = info;
     }
 
   rev_0_path = svn_fs_fs__path_rev_absolute(lb->fs, 0, pool);
 
-  /* Given the paths:
-
-       /foo/bar/f
-       /foo/bar/g
-       /zig/x
-
-     we loop through repeatedly.  The first pass sees '/' on all paths
-     and writes the '/' index.  The second pass sees '/foo' twice and
-     writes that index followed by '/zig' and that index. The third
-     pass sees '/foo/bar' twice and writes that index, and then writes
-     the lock for '/zig/x'.  The fourth pass writes the locks for
-     '/foo/bar/f' and '/foo/bar/g'.
+  /* We apply the scheduled index updates before writing the actual locks.
 
      Writing indices before locks is correct: if interrupted it leaves
      indices without locks rather than locks without indices.  An
@@ -900,92 +877,47 @@ lock_body(void *baton, apr_pool_t *pool)
      index is inconsistent, svn_fs_fs__allow_locked_operation will
      show locked on the file but unlocked on the parent. */
 
-    
-  while (outstanding)
+  for (hi = apr_hash_first(pool, index_updates); hi; hi = apr_hash_next(hi))
     {
-      const char *last_path = NULL;
-      apr_array_header_t *paths;
+      const char *path = apr_hash_this_key(hi);
+      apr_array_header_t *children = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
-      paths = apr_array_make(iterpool, 1, sizeof(const char *));
+      SVN_ERR(add_to_digest(lb->fs->path, children, path, rev_0_path,
+                            iterpool));
+    }
 
-      for (i = 0; i < lb->infos->nelts; ++i)
+  for (i = 0; i < lb->infos->nelts; ++i)
+    {
+      struct lock_info_t *info = &APR_ARRAY_IDX(lb->infos, i,
+                                                struct lock_info_t);
+      svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i, svn_sort__item_t);
+      svn_fs_lock_target_t *target = item->value;
+
+      svn_pool_clear(iterpool);
+
+      if (! info->fs_err)
         {
-          struct lock_info_t *info = &APR_ARRAY_IDX(lb->infos, i,
-                                                    struct lock_info_t);
-          const svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i,
-                                                        svn_sort__item_t);
-          const svn_fs_lock_target_t *target = item->value;
+          info->lock = svn_lock_create(lb->result_pool);
+          if (target->token)
+            info->lock->token = target->token;
+          else
+            SVN_ERR(svn_fs_fs__generate_lock_token(&(info->lock->token), lb->fs,
+                                                   lb->result_pool));
 
-          if (!info->fs_err && !info->lock)
-            {
-              if (!info->component)
-                {
-                  info->component = info->path;
-                  APR_ARRAY_PUSH(paths, const char *) = info->path;
-                  last_path = "/";
-                }
-              else
-                {
-                  info->component = strchr(info->component + 1, '/');
-                  if (!info->component)
-                    {
-                      /* The component is a path to lock, this cannot
-                         match a previous path that need to be indexed. */
-                      if (paths->nelts)
-                        {
-                          SVN_ERR(add_to_digest(lb->fs->path, paths, last_path,
-                                                rev_0_path, iterpool));
-                          apr_array_clear(paths);
-                          last_path = NULL;
-                        }
+          info->lock->path = info->path;
+          info->lock->owner = lb->fs->access_ctx->username;
+          info->lock->comment = lb->comment;
+          info->lock->is_dav_comment = lb->is_dav_comment;
+          info->lock->creation_date = apr_time_now();
+          info->lock->expiration_date = lb->expiration_date;
 
-                      info->lock = svn_lock_create(lb->result_pool);
-                      if (target->token)
-                        info->lock->token = target->token;
-                      else
-                        SVN_ERR(svn_fs_fs__generate_lock_token(
-                                  &(info->lock->token), lb->fs,
-                                  lb->result_pool));
-                      info->lock->path = info->path;
-                      info->lock->owner = lb->fs->access_ctx->username;
-                      info->lock->comment = lb->comment;
-                      info->lock->is_dav_comment = lb->is_dav_comment;
-                      info->lock->creation_date = apr_time_now();
-                      info->lock->expiration_date = lb->expiration_date;
-
-                      info->fs_err = set_lock(lb->fs->path, info->lock,
-                                              rev_0_path, iterpool);
-                      --outstanding;
-                    }
-                  else
-                    {
-                      /* The component is a path to an index. */
-                      apr_size_t len = info->component - info->path;
-
-                      if (last_path
-                          && (strncmp(last_path, info->path, len)
-                              || strlen(last_path) != len))
-                        {
-                          /* No match to the previous paths to index. */
-                          SVN_ERR(add_to_digest(lb->fs->path, paths, last_path,
-                                                rev_0_path, iterpool));
-                          apr_array_clear(paths);
-                          last_path = NULL;
-                        }
-                      APR_ARRAY_PUSH(paths, const char *) = info->path;
-                      if (!last_path)
-                        last_path = apr_pstrndup(iterpool, info->path, len);
-                    }
-                }
-            }
-
-          if (last_path && i == lb->infos->nelts - 1)
-            SVN_ERR(add_to_digest(lb->fs->path, paths, last_path,
-                                  rev_0_path, iterpool));
+          info->fs_err = set_lock(lb->fs->path, info->lock, rev_0_path,
+                                  iterpool);
         }
     }
-      
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -1026,10 +958,8 @@ check_unlock(svn_error_t **fs_err,
 
 struct unlock_info_t {
   const char *path;
-  const char *component;
   svn_error_t *fs_err;
   svn_boolean_t done;
-  int components;
 };
 
 /* The body of svn_fs_fs__unlock(), which see.
@@ -1050,7 +980,9 @@ unlock_body(void *baton, apr_pool_t *pool)
   svn_fs_root_t *root;
   svn_revnum_t youngest;
   const char *rev_0_path;
-  int i, max_components = 0, outstanding = 0;
+  int i;
+  apr_hash_t *indices_updates = apr_hash_make(pool);
+  apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   SVN_ERR(ub->fs->vtable->youngest_rev(&youngest, ub->fs, pool));
@@ -1061,96 +993,56 @@ unlock_body(void *baton, apr_pool_t *pool)
       const svn_sort__item_t *item = &APR_ARRAY_IDX(ub->targets, i,
                                                     svn_sort__item_t);
       const char *token = item->value;
-      struct unlock_info_t info = { 0 };
+      struct unlock_info_t info;
 
       svn_pool_clear(iterpool);
 
       info.path = item->key;
+      info.fs_err = SVN_NO_ERROR;
+      info.done = FALSE;
+
       if (!ub->skip_check)
         SVN_ERR(check_unlock(&info.fs_err, info.path, token, ub, root,
                              iterpool));
+
+      /* If no error occurred while pre-checking, schedule the index updates for
+         this path. */
       if (!info.fs_err)
-        {
-          const char *s;
+        schedule_index_update(indices_updates, info.path, iterpool);
 
-          info.components = 1;
-          info.component = info.path;
-          while((s = strchr(info.component + 1, '/')))
-            {
-              info.component = s;
-              ++info.components;
-            }
-
-          if (info.components > max_components)
-            max_components = info.components;
-
-          ++outstanding;
-        }
       APR_ARRAY_PUSH(ub->infos, struct unlock_info_t) = info;
     }
 
   rev_0_path = svn_fs_fs__path_rev_absolute(ub->fs, 0, pool);
 
-  for (i = max_components; i >= 0; --i)
+  /* Unlike the lock_body(), we need to delete locks *before* we start to
+     update indices. */
+
+  for (i = 0; i < ub->infos->nelts; ++i)
     {
-      const char *last_path = NULL;
-      apr_array_header_t *paths;
-      int j;
+      struct unlock_info_t *info = &APR_ARRAY_IDX(ub->infos, i,
+                                                  struct unlock_info_t);
 
       svn_pool_clear(iterpool);
-      paths = apr_array_make(pool, 1, sizeof(const char *));
 
-      for (j = 0; j < ub->infos->nelts; ++j)
+      if (! info->fs_err)
         {
-          struct unlock_info_t *info = &APR_ARRAY_IDX(ub->infos, j,
-                                                      struct unlock_info_t);
-
-          if (!info->fs_err && info->path)
-            {
-
-              if (info->components == i)
-                {
-                  SVN_ERR(delete_lock(ub->fs->path, info->path, iterpool));
-                  info->done = TRUE;
-                }
-              else if (info->components > i)
-                {
-                  apr_size_t len = info->component - info->path;
-
-                  if (last_path
-                      && strcmp(last_path, "/")
-                      && (strncmp(last_path, info->path, len)
-                          || strlen(last_path) != len))
-                    {
-                      SVN_ERR(delete_from_digest(ub->fs->path, paths, last_path,
-                                                 rev_0_path, iterpool));
-                      apr_array_clear(paths);
-                      last_path = NULL;
-                    }
-                  APR_ARRAY_PUSH(paths, const char *) = info->path;
-                  if (!last_path)
-                    {
-                      if (info->component > info->path)
-                        last_path = apr_pstrndup(pool, info->path, len);
-                      else
-                        last_path = "/";
-                    }
-
-                  if (info->component > info->path)
-                    {
-                      --info->component;
-                      while(info->component[0] != '/')
-                        --info->component;
-                    }
-                }
-            }
-
-          if (last_path && j == ub->infos->nelts - 1)
-            SVN_ERR(delete_from_digest(ub->fs->path, paths, last_path,
-                                       rev_0_path, iterpool));
+          SVN_ERR(delete_lock(ub->fs->path, info->path, iterpool));
+          info->done = TRUE;
         }
     }
 
+  for (hi = apr_hash_first(pool, indices_updates); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      apr_array_header_t *children = apr_hash_this_val(hi);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(delete_from_digest(ub->fs->path, children, path, rev_0_path,
+                                 iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

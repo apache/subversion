@@ -328,14 +328,18 @@ log_results(const char *progname,
 
   if (msg_only)
     {
+      const svn_boolean_t otoh = !!desc->predicate.description;
+
       if (run_this_test)
-        printf(" %3d    %-5s  %s%s%s%s\n",
+        printf(" %3d    %-5s  %s%s%s%s%s%s\n",
                test_num,
                (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
                msg ? msg : "(test did not provide name)",
                (wimp && verbose_mode) ? " [[" : "",
                (wimp && verbose_mode) ? desc->wip : "",
-               (wimp && verbose_mode) ? "]]" : "");
+               (wimp && verbose_mode) ? "]]" : "",
+               (otoh ? " / " : ""),
+               (otoh ? desc->predicate.description : ""));
     }
   else if (run_this_test && ((! quiet_mode) || test_failed))
     {
@@ -388,6 +392,7 @@ do_test_num(const char *progname,
   const struct svn_test_descriptor_t *desc;
   const int array_size = get_array_size(test_funcs);
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
+  enum svn_test_mode_t test_mode;
 
   /* Check our array bounds! */
   if (test_num < 0)
@@ -402,11 +407,18 @@ do_test_num(const char *progname,
     }
 
   desc = &test_funcs[test_num];
-  skip = desc->mode == svn_test_skip;
-  xfail = desc->mode == svn_test_xfail;
+  /* Check the test predicate. */
+  if (desc->predicate.func
+      && desc->predicate.func(opts, desc->predicate.value, pool))
+    test_mode = desc->predicate.alternate_mode;
+  else
+    test_mode = desc->mode;
+
+  skip = test_mode == svn_test_skip;
+  xfail = test_mode == svn_test_xfail;
   wimp = xfail && desc->wip;
   msg = desc->msg;
-  run_this_test = mode_filter == svn_test_all || mode_filter == desc->mode;
+  run_this_test = mode_filter == svn_test_all || mode_filter == test_mode;
 
   if (run_this_test && header_msg && *header_msg)
     {
@@ -488,6 +500,7 @@ test_thread(apr_thread_t *thread, void *data)
   svn_error_t *err;
   const struct svn_test_descriptor_t *desc;
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
+  enum svn_test_mode_t test_mode;
   test_params_t *params = data;
   svn_atomic_t test_num;
   apr_pool_t *pool;
@@ -510,11 +523,18 @@ test_thread(apr_thread_t *thread, void *data)
 #endif
 
       desc = &params->test_funcs[test_num];
-      skip = desc->mode == svn_test_skip;
-      xfail = desc->mode == svn_test_xfail;
+      /* Check the test predicate. */
+      if (desc->predicate.func
+          && desc->predicate.func(params->opts, desc->predicate.value, pool))
+        test_mode = desc->predicate.alternate_mode;
+      else
+        test_mode = desc->mode;
+
+      skip = test_mode == svn_test_skip;
+      xfail = test_mode == svn_test_xfail;
       wimp = xfail && desc->wip;
       run_this_test = mode_filter == svn_test_all
-                   || mode_filter == desc->mode;
+                   || mode_filter == test_mode;
 
       /* Do test */
       if (skip || !run_this_test)
@@ -695,13 +715,27 @@ svn_error_t *
 svn_test__init_auth_baton(svn_auth_baton_t **ab,
                           apr_pool_t *result_pool)
 {
+  svn_config_t *cfg_config;
+
+  SVN_ERR(svn_config_create2(&cfg_config, FALSE, FALSE, result_pool));
+
+  /* Disable the crypto backends that might not be entirely
+     threadsafe and/or compatible with running headless.
+
+     The windows system is just our own files, but then with user-key
+     encrypted data inside. */
+  svn_config_set(cfg_config,
+                 SVN_CONFIG_SECTION_AUTH,
+                 SVN_CONFIG_OPTION_PASSWORD_STORES,
+                 "windows-cryptoapi");
+
   SVN_ERR(svn_cmdline_create_auth_baton(ab,
                                         TRUE  /* non_interactive */,
                                         "jrandom", "rayjandom",
                                         NULL,
                                         TRUE  /* no_auth_cache */,
                                         FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, result_pool));
+                                        cfg_config, NULL, NULL, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1009,4 +1043,21 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   apr_terminate();
 
   return got_error;
+}
+
+
+svn_boolean_t
+svn_test__fs_type_is(const svn_test_opts_t *opts,
+                     const char *predicate_value,
+                     apr_pool_t *pool)
+{
+  return (0 == strcmp(predicate_value, opts->fs_type));
+}
+
+svn_boolean_t
+svn_test__fs_type_not(const svn_test_opts_t *opts,
+                      const char *predicate_value,
+                      apr_pool_t *pool)
+{
+  return (0 != strcmp(predicate_value, opts->fs_type));
 }

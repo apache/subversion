@@ -40,7 +40,7 @@ def make_mirror(sbox, source_prop_encoding=None):
   dest_sbox = sbox.clone_dependent()
   dest_sbox.build(create_wc=False, empty=True)
   exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
-  svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
+  svntest.actions.run_and_verify_svnadmin2(None, None, 0,
                                            'setuuid', dest_sbox.repo_dir,
                                            output[0][:-1])
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
@@ -70,7 +70,7 @@ def verify_mirror(repo_url, repo_dir, expected_dumpfile):
   for prop_name in ("svn:sync-from-url", "svn:sync-from-uuid",
                     "svn:sync-last-merged-rev"):
     svntest.actions.run_and_verify_svn(
-      None, None, [], "propdel", "--revprop", "-r", "0",
+      None, [], "propdel", "--revprop", "-r", "0",
       prop_name, repo_url)
   # Create a dump file from the mirror repository.
   dumpfile_s_n = svntest.actions.run_and_verify_dump(repo_dir)
@@ -435,7 +435,7 @@ class Sandbox:
 
   def youngest(self):
     _, output, _ = svntest.actions.run_and_verify_svnlook(
-                     None, svntest.verify.AnyOutput, [],
+                     svntest.verify.AnyOutput, [],
                      'youngest', self.repo_dir)
     youngest = int(output[0])
     return youngest

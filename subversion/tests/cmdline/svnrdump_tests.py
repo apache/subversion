@@ -166,7 +166,7 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
   # Set the UUID of the sbox repository to the UUID specified in the
   # dumpfile ### RA layer doesn't have a set_uuid functionality
   uuid = original_dumpfile[2].split(' ')[1][:-1]
-  svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
+  svntest.actions.run_and_verify_svnadmin2(None, None, 0,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
 
@@ -422,7 +422,7 @@ def reflect_dropped_renumbered_revs(sbox):
 
   # Create the 'toplevel' directory in repository and then load the same
   # dumpfile into that subtree.
-  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                             'Committed revision 10.\n'],
                                     [], "mkdir", sbox.repo_url + "/toplevel",
                                      "-m", "Create toplevel dir to load into")
@@ -436,7 +436,7 @@ def reflect_dropped_renumbered_revs(sbox):
     url + "/trunk - /branch1:4-8\n",
     url + "/toplevel/trunk - /toplevel/branch1:14-18\n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -534,7 +534,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
     url + "B2 - /trunk:9\n",
     url + "B1/B/E - /branches/B2/B/E:11-12\n",
     "/trunk/B/E:5-6,8-9\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -596,7 +596,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
   # repos in one shot.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -660,7 +660,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
     url + "B2 - /Projects/Project-X/trunk:15\n",
     url + "B1/B/E - /Projects/Project-X/branches/B2/B/E:17-18\n",
     "/Projects/Project-X/trunk/B/E:11-12,14-15\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -702,7 +702,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
   # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -719,7 +719,7 @@ def svnrdump_load_partial_incremental_dump(sbox):
 
   # Create the 'A' directory in repository and then load the partial
   # incremental dump into the root of the repository.
-  svntest.actions.run_and_verify_svn(None, ['Committing transaction...\n',
+  svntest.actions.run_and_verify_svn(['Committing transaction...\n',
                                             'Committed revision 1.\n'],
                                     [], "mkdir", sbox.repo_url + "/A",
                                      "-m", "Create toplevel dir to load into")
