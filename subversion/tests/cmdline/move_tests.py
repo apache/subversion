@@ -853,13 +853,13 @@ def build_simple_file_move_func(sbox, source, dest):
       mv_info_src = [
         {
           'Path'       : re.escape(source_path),
-          'Moved To'   : re.escape(dest),
+          'Moved To'   : re.escape(sbox.ospath(dest)),
         }
       ]
       mv_info_dst = [
         {
           'Path'       : re.escape(dest_path),
-          'Moved From' : re.escape(source),
+          'Moved From' : re.escape(sbox.ospath(source)),
         }
       ]
 
@@ -1591,7 +1591,7 @@ def move_conflict_details(sbox):
 
   expected_info = [
     {
-      "Moved To": "B", # Just 'B'?? Not the full/relative path or something?
+      "Moved To": re.escape(sbox.ospath("B")),
       "Tree conflict": re.escape(
               'local dir moved away, incoming dir edit upon update' +
               ' Source  left: (dir) ^/A/B@1' +
