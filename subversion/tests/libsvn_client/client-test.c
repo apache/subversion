@@ -1093,7 +1093,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
     { "-r1 ^/A/B D/z/y/z/blah", "-r1 ^/A/B@2 D/z/y/z/blah" } ,
     /* Dated revision should retain their date string exactly. */
     { "-r{1970-01-01T00:00} ^/A/C 70s", "-r{1970-01-01T00:00} ^/A/C@2 70s"}, 
-    { "-r{2004-02-23T} ^/svn 1.0", "-r{2004-02-23} ^/svn 1.0"}, 
+    { "-r{2004-02-23} ^/svn 1.0", "-r{2004-02-23} ^/svn 1.0"}, 
     { NULL },
   };
 
@@ -1121,6 +1121,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
                           pin_externals_test_data[3].src_external_desc, "\n",
                           pin_externals_test_data[4].src_external_desc, "\n",
                           pin_externals_test_data[5].src_external_desc, "\n",
+                          pin_externals_test_data[6].src_external_desc, "\n",
                           SVN_VA_NULL),
               pool);
   A_url = apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL);
@@ -1247,6 +1248,14 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           /* Don't bother testing the exact date value here. */
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+        }
+      else if (strcmp(item->url, "^/svn") == 0)
+        {
+          SVN_TEST_STRING_ASSERT(item->target_dir, "1.0");
+          /* Was and not in externals_to_pin, operative revision was a date. */
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_date);
+          /* Don't bother testing the exact date value here. */
+          SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_head);
         }
       else
         SVN_TEST_ASSERT(FALSE); /* unknown URL */
