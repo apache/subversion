@@ -2747,8 +2747,7 @@ def dir_prop_conflict_details(sbox):
   # The conflict properties file line was shown for previous versions, but the
   # conflict source urls are new since 1.8.
   expected_info = {
-    'Conflict Properties File' : re.escape(os.path.abspath(
-                                           sbox.ospath('A/dir_conflicts.prej'))),
+    'Conflict Properties File' : re.escape(sbox.ospath('A/dir_conflicts.prej')),
     'Conflict Details': re.escape('incoming dir edit upon update'
                                            + ' Source  left: (dir) ^/A@1'
                                            + ' Source right: (dir) ^/A@2')
