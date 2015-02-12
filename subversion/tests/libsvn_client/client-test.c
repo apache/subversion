@@ -1076,6 +1076,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   svn_wc_external_item2_t item2;
   svn_wc_external_item2_t item3;
   svn_wc_external_item2_t item4;
+  svn_wc_external_item2_t item5;
   svn_client_copy_source_t copy_source;
   apr_hash_t *props;
   apr_array_header_t *pinned_externals_descs;
@@ -1090,6 +1091,9 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
     { "^/A/D/H@1 C/exdir_H",    "^/A/D/H@1 C/exdir_H"  },
     { "^/A/D/H C/exdir_H2",     "^/A/D/H@2 C/exdir_H2" },
     { "-r1 ^/A/B D/z/y/z/blah", "-r1 ^/A/B@2 D/z/y/z/blah" } ,
+    /* Dated revision should retain their date string exactly. */
+    { "-r{1970-01-01T00:00} ^/A/C 70s", "-r{1970-01-01T00:00} ^/A/C@2 70s"}, 
+    { "-r{2004-02-23T} ^/svn 1.0", "-r{2004-02-23} ^/svn 1.0"}, 
     { NULL },
   };
 
@@ -1116,6 +1120,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
                           pin_externals_test_data[2].src_external_desc, "\n",
                           pin_externals_test_data[3].src_external_desc, "\n",
                           pin_externals_test_data[4].src_external_desc, "\n",
+                          pin_externals_test_data[5].src_external_desc, "\n",
                           SVN_VA_NULL),
               pool);
   A_url = apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL);
@@ -1123,7 +1128,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
                                     A_url, TRUE, 1, NULL,
                                     NULL, NULL, ctx, pool));
 
-  /* Set up parameters for pinning 3 externals. */
+  /* Set up parameters for pinning some externals. */
   externals_to_pin = apr_hash_make(pool);
   item1.url = "^/A/D/gamma";
   item1.target_dir = "B/gamma";
@@ -1131,16 +1136,19 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   item2.target_dir = "D/z/y/z/blah";
   item3.url = "^/A/D/H";
   item3.target_dir = "C/exdir_H2";
+  item4.url = "^/A/C";
+  item4.target_dir = "70s";
 
   /* Also add an entry which doesn't match any actual definition. */
-  item4.url = "^/this/does/not/exist";
-  item4.target_dir = "in/test/data";
+  item5.url = "^/this/does/not/exist";
+  item5.target_dir = "in/test/data";
 
   external_items = apr_array_make(pool, 2, sizeof(svn_wc_external_item2_t *));
   APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item1;
   APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item2;
   APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item3;
   APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item4;
+  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item5;
   svn_hash_sets(externals_to_pin, A_url, external_items);
 
   /* Copy ^/A to ^/A_copy, pinning two non-pinned externals. */
@@ -1228,6 +1236,15 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
           /* Pinned to r2. */
           SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->revision.value.number == 1);
+          SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+        }
+      else if (strcmp(item->url, "^/A/C") == 0)
+        {
+          SVN_TEST_STRING_ASSERT(item->target_dir, "70s");
+          /* Pinned to r2. */
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_date);
+          /* Don't bother testing the exact date value here. */
           SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
           SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
         }
