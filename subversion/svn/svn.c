@@ -144,7 +144,8 @@ typedef enum svn_cl__longopt_t {
   opt_remove_unversioned,
   opt_remove_ignored,
   opt_no_newline,
-  opt_show_passwords
+  opt_show_passwords,
+  opt_pin_externals,
 } svn_cl__longopt_t;
 
 
@@ -418,6 +419,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
   {"no-newline", opt_no_newline, 0, N_("do not output the trailing newline")},
   {"show-passwords", opt_show_passwords, 0, N_("show cached passwords")},
+  {"pin-externals", opt_pin_externals, 0,
+                       N_("pin externals with no explicit revision to their\n"
+                          "                             "
+                          "current revision (recommended when tagging)")},
 
   /* Long-opt Aliases
    *
@@ -608,7 +613,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  contact the repository.  As such, they may not, by default, be able\n"
      "  to propagate merge tracking information from the source of the copy\n"
      "  to the destination.\n"),
-    {'r', 'q', opt_ignore_externals, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
+    {'r', 'q', opt_ignore_externals, opt_parents, SVN_CL__LOG_MSG_OPTIONS,
+     opt_pin_externals} },
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
     ("Remove files and directories from version control.\n"
@@ -2389,6 +2395,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_show_passwords:
         opt_state.show_passwords = TRUE;
+        break;
+      case opt_pin_externals:
+        opt_state.pin_externals = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
