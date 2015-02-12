@@ -213,7 +213,7 @@ def _usage_exit(err=None):
   print("")
   print("  --with-apr_memcache=DIR")
   print("           the apr_memcache sources are in DIR")
-  print("  --disable-gmock")
+  print("  --disable-googlemock")
   print("           do not use Googlemock")
   sys.exit(1)
 
@@ -262,7 +262,7 @@ if __name__ == '__main__':
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
-                            'disable-gmock',
+                            'disable-googlemock',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")

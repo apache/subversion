@@ -128,7 +128,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   # this list, then the project is not generated on Windows.
   _windows_when = [
      'INSTALL_APACHE_MODS',
-     # not 'SVN_USE_GMOCK',
+     # not 'SVN_USE_GOOGLEMOCK',
   ]
 
   def parse_options(self, options):

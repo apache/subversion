@@ -623,27 +623,27 @@ AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
 dnl Googlemock -----------------
-AC_ARG_ENABLE([gmock],
-  AS_HELP_STRING([--disable-gmock],
+AC_ARG_ENABLE([googlemock],
+  AS_HELP_STRING([--disable-googlemock],
                  [Do not use the Googlemock testing framework]),
   [],
-  [enable_gmock=yes])
+  [enable_googlemock=yes])
 
-AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
+AC_SUBST([GOOGLEMOCK_SRCDIR], [$abs_srcdir/googlemock-fused])
 AC_MSG_CHECKING([whether use Googlemock])
-if test "$enable_gmock" != "no"; then
-  if test -d "$GMOCK_SRCDIR"; then
+if test "$enable_googlemock" != "no"; then
+  if test -d "$GOOGLEMOCK_SRCDIR"; then
     AC_MSG_RESULT([yes])
-    SVN_USE_GMOCK=true
+    SVN_USE_GOOGLEMOCK=true
   else
     AC_MSG_RESULT([no])
-    SVN_USE_GMOCK=false
+    SVN_USE_GOOGLEMOCK=false
   fi
 else
   AC_MSG_RESULT([no])
-  SVN_USE_GMOCK_SOURCES=false
+  SVN_USE_GOOGLEMOCK_SOURCES=false
 fi
-AC_SUBST([SVN_USE_GMOCK])
+AC_SUBST([SVN_USE_GOOGLEMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -1163,10 +1163,11 @@ elif test "$enable_optimization" = "no"; then
 fi
 
 dnl Dump the current compiler options
-AC_MSG_NOTICE([C compiler flags: $CFLAGS])
+AC_MSG_NOTICE([C compiler flags: $CMODEFLAGS $CFLAGS])
 AC_MSG_NOTICE([    user-defined: $CUSERFLAGS])
 AC_MSG_NOTICE([ maintainer-mode: $CMAINTAINERFLAGS])
-AC_MSG_NOTICE([C++ compiler flags: $CXXFLAGS])
+AC_MSG_NOTICE([C++98 compiler flags: $CXX98MODEFLAGS $CXXFLAGS])
+AC_MSG_NOTICE([C++11 compiler flags: $CXX11MODEFLAGS $CXXFLAGS])
 AC_MSG_NOTICE([      user-defined: $CXXUSERFLAGS])
 AC_MSG_NOTICE([   maintainer-mode: $CXXMAINTAINERFLAGS])
 
