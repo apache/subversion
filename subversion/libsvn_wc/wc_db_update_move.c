@@ -447,16 +447,10 @@ create_tree_conflict(svn_skel_t **conflict_p,
                      result_pool,
                      scratch_pool));
 
-  if (reason != svn_wc_conflict_reason_unversioned
-      && old_repos_relpath != NULL /* no local additions */)
-    {
-      conflict_old_version = svn_wc_conflict_version_create2(
+  conflict_old_version = svn_wc_conflict_version_create2(
                                old_version->repos_url, old_version->repos_uuid,
                                old_repos_relpath, old_version->peg_rev,
                                old_kind, scratch_pool);
-    }
-  else
-    conflict_old_version = NULL;
 
   conflict_new_version = svn_wc_conflict_version_create2(
                            new_version->repos_url, new_version->repos_uuid,
@@ -487,7 +481,6 @@ create_node_tree_conflict(svn_skel_t **conflict_p,
                           const char *dst_local_relpath,
                           svn_node_kind_t old_kind,
                           svn_node_kind_t new_kind,
-                          const char *old_repos_relpath,
                           svn_wc_conflict_reason_t reason,
                           svn_wc_conflict_action_t action,
                           const char *move_src_op_root_relpath,
@@ -495,6 +488,18 @@ create_node_tree_conflict(svn_skel_t **conflict_p,
                           apr_pool_t *scratch_pool)
 {
   update_move_baton_t *umb = nmb->umb;
+  const char *dst_repos_relpath;
+  const char *dst_root_relpath = svn_relpath_limit(nmb->dst_relpath,
+                                                   nmb->umb->dst_op_depth,
+                                                   scratch_pool);
+
+  dst_repos_relpath =
+            svn_relpath_join(nmb->umb->old_version->path_in_repos,
+                             svn_relpath_skip_ancestor(dst_root_relpath,
+                                                       nmb->dst_relpath),
+                             scratch_pool);
+
+
 
   return svn_error_trace(
             create_tree_conflict(conflict_p, umb->wcroot, dst_local_relpath,
@@ -504,7 +509,7 @@ create_node_tree_conflict(svn_skel_t **conflict_p,
                                  umb->db,
                                  umb->old_version, umb->new_version,
                                  umb->operation, old_kind, new_kind,
-                                 old_repos_relpath,
+                                 dst_repos_relpath,
                                  reason, action, move_src_op_root_relpath,
                                  result_pool, scratch_pool));
 }
@@ -547,7 +552,6 @@ static svn_error_t *
 mark_tc_on_op_root(node_move_baton_t *nmb,
                    svn_node_kind_t old_kind,
                    svn_node_kind_t new_kind,
-                   const char *old_repos_relpath,
                    svn_wc_conflict_action_t action,
                    apr_pool_t *scratch_pool)
 {
@@ -569,7 +573,6 @@ mark_tc_on_op_root(node_move_baton_t *nmb,
 
   SVN_ERR(create_node_tree_conflict(&conflict, nmb, nmb->dst_relpath,
                                     old_kind, new_kind,
-                                    old_repos_relpath,
                                     (move_dst_relpath
                                      ? svn_wc_conflict_reason_moved_away
                                      : svn_wc_conflict_reason_deleted),
@@ -611,10 +614,9 @@ mark_node_edited(node_move_baton_t *nmb,
   if (nmb->shadowed && !(nmb->pb && nmb->pb->shadowed))
     {
       svn_node_kind_t dst_kind, src_kind;
-      const char *dst_repos_relpath;
 
       SVN_ERR(svn_wc__db_depth_get_info(NULL, &dst_kind, NULL,
-                                        &dst_repos_relpath, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, NULL, NULL, NULL,
                                         nmb->umb->wcroot, nmb->dst_relpath,
                                         nmb->umb->dst_op_depth,
@@ -629,7 +631,6 @@ mark_node_edited(node_move_baton_t *nmb,
 
       SVN_ERR(mark_tc_on_op_root(nmb,
                                  dst_kind, src_kind,
-                                 dst_repos_relpath,
                                  svn_wc_conflict_action_edit,
                                  scratch_pool));
     }
@@ -659,61 +660,61 @@ tc_editor_add_directory(node_move_baton_t *nmb,
                         apr_pool_t *scratch_pool)
 {
   update_move_baton_t *b = nmb->umb;
-  const char *move_dst_repos_relpath;
   const char *local_abspath;
   svn_node_kind_t wc_kind;
   svn_skel_t *work_item = NULL;
   svn_skel_t *conflict = NULL;
+  svn_wc_conflict_reason_t reason = svn_wc_conflict_reason_unversioned;
 
   SVN_ERR(mark_parent_edited(nmb, scratch_pool));
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  /* We can't read the information from the pre-add node to obtain the
-     relpath, but in WORKING we can just calculate it from the op-root */
-  {
-    const char *dst_op_root_relpath = svn_relpath_limit(nmb->pb->dst_relpath,
-                                                        b->dst_op_depth,
-                                                        scratch_pool);
-    SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
-                                      &move_dst_repos_relpath, NULL, NULL,
-                                      NULL, NULL, NULL, NULL, NULL, NULL,
-                                      NULL,
-                                      b->wcroot, dst_op_root_relpath,
-                                      b->dst_op_depth,
-                                      scratch_pool, scratch_pool));
-
-    move_dst_repos_relpath =
-            svn_relpath_join(move_dst_repos_relpath,
-                             svn_relpath_skip_ancestor(dst_op_root_relpath,
-                                                       relpath),
-                             scratch_pool);
-  }
-
   if (nmb->shadowed)
     {
-      SVN_ERR(mark_tc_on_op_root(nmb,
-                                 svn_node_none, svn_node_dir,
-                                 move_dst_repos_relpath,
-                                 svn_wc_conflict_action_add,
-                                 scratch_pool));
-      return SVN_NO_ERROR;
-    }
+      svn_wc__db_status_t status;
 
-  /* Check for unversioned tree-conflict */
+      SVN_ERR(svn_wc__db_read_info_internal(&status, &wc_kind, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL,
+                                            b->wcroot, relpath,
+                                            scratch_pool, scratch_pool));
+
+      if (status == svn_wc__db_status_deleted)
+        reason = svn_wc_conflict_reason_deleted;
+      else if (status != svn_wc__db_status_added)
+        wc_kind = svn_node_none;
+      else if (old_kind == svn_node_none)
+        reason = svn_wc_conflict_reason_added;
+      else
+        reason = svn_wc_conflict_reason_replaced;
+    }
+  else
+    wc_kind = svn_node_none;
+
   local_abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
 
-  SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
-  if (wc_kind == old_kind)
+  if (wc_kind == svn_node_none)
+    {
+      /* Check for unversioned tree-conflict */
+      SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
+    }
+
+  if (!nmb->shadowed && wc_kind == old_kind)
     wc_kind = svn_node_none; /* Node will be gone once we install */
 
-  if (wc_kind != svn_node_none)
+  if (wc_kind != svn_node_none
+      && (nmb->shadowed || wc_kind != old_kind)) /* replace */
     {
       SVN_ERR(create_node_tree_conflict(&conflict, nmb, relpath,
-                                        wc_kind, svn_node_dir,
-                                        move_dst_repos_relpath,
-                                        svn_wc_conflict_reason_unversioned,
-                                        svn_wc_conflict_action_add, NULL,
+                                        old_kind, svn_node_dir,
+                                        reason,
+                                        (old_kind == svn_node_none)
+                                          ? svn_wc_conflict_action_add
+                                          : svn_wc_conflict_action_replace,
+                                        NULL,
                                         scratch_pool, scratch_pool));
       nmb->skip = TRUE;
     }
@@ -743,7 +744,7 @@ tc_editor_add_file(node_move_baton_t *nmb,
                    apr_pool_t *scratch_pool)
 {
   update_move_baton_t *b = nmb->umb;
-  const char *move_dst_repos_relpath;
+  svn_wc_conflict_reason_t reason = svn_wc_conflict_reason_unversioned;
   svn_node_kind_t wc_kind;
   const char *local_abspath;
   svn_skel_t *work_item = NULL;
@@ -753,52 +754,48 @@ tc_editor_add_file(node_move_baton_t *nmb,
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  /* We can't read the information from the pre-add node to obtain the
-     relpath, but in WORKING we can just calculate it from the op-root */
-  {
-    const char *dst_op_root_relpath = svn_relpath_limit(nmb->pb->dst_relpath,
-                                                        b->dst_op_depth,
-                                                        scratch_pool);
-    SVN_ERR(svn_wc__db_depth_get_info(NULL, NULL, NULL,
-                                      &move_dst_repos_relpath, NULL, NULL,
-                                      NULL, NULL, NULL, NULL, NULL, NULL,
-                                      NULL,
-                                      b->wcroot, dst_op_root_relpath,
-                                      b->dst_op_depth,
-                                      scratch_pool, scratch_pool));
-
-    move_dst_repos_relpath =
-            svn_relpath_join(move_dst_repos_relpath,
-                             svn_relpath_skip_ancestor(dst_op_root_relpath,
-                                                       relpath),
-                             scratch_pool);
-  }
-
-  /* Check for NODES tree-conflict. */
   if (nmb->shadowed)
     {
-      SVN_ERR(mark_tc_on_op_root(nmb,
-                                 svn_node_none, svn_node_file,
-                                 move_dst_repos_relpath,
-                                 svn_wc_conflict_action_add,
-                                 scratch_pool));
-      return SVN_NO_ERROR;
+      svn_wc__db_status_t status;
+
+      SVN_ERR(svn_wc__db_read_info_internal(&status, &wc_kind, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL,
+                                            b->wcroot, relpath,
+                                            scratch_pool, scratch_pool));
+
+      if (status == svn_wc__db_status_deleted)
+        reason = svn_wc_conflict_reason_deleted;
+      else if (status != svn_wc__db_status_added)
+        wc_kind = svn_node_none;
+      else if (old_kind == svn_node_none)
+        reason = svn_wc_conflict_reason_added;
+      else
+        reason = svn_wc_conflict_reason_replaced;
+    }
+  else
+    wc_kind = svn_node_none;
+
+  local_abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
+
+  if (wc_kind == svn_node_none)
+    {
+      /* Check for unversioned tree-conflict */
+      SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
     }
 
-  /* Check for unversioned tree-conflict */
-  local_abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
-  SVN_ERR(svn_io_check_path(local_abspath, &wc_kind, scratch_pool));
-
-  if (wc_kind == old_kind)
-    wc_kind = svn_node_none; /* Node will be gone once we install */
-
-  if (wc_kind != svn_node_none)
+  if (wc_kind != svn_node_none
+      && (nmb->shadowed || wc_kind != old_kind)) /* replace */
     {
       SVN_ERR(create_node_tree_conflict(&conflict, nmb, relpath,
-                                        wc_kind, svn_node_file,
-                                        move_dst_repos_relpath,
-                                        svn_wc_conflict_reason_unversioned,
-                                        svn_wc_conflict_action_add, NULL,
+                                        old_kind, svn_node_file,
+                                        reason,
+                                        (old_kind == svn_node_none)
+                                          ? svn_wc_conflict_action_add
+                                          : svn_wc_conflict_action_replace,
+                                        NULL,
                                         scratch_pool, scratch_pool));
       nmb->skip = TRUE;
     }
@@ -977,8 +974,7 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
   if (wc_kind != svn_node_none && wc_kind != svn_node_dir)
     {
       SVN_ERR(create_node_tree_conflict(&conflict_skel, nmb, dst_relpath,
-                                        wc_kind, svn_node_dir,
-                                        NULL /* local obstruction relpath */,
+                                        svn_node_dir, svn_node_dir,
                                         svn_wc_conflict_reason_obstructed,
                                         svn_wc_conflict_action_edit,
                                         NULL,
@@ -1080,8 +1076,7 @@ tc_editor_alter_file(node_move_baton_t *nmb,
   if (wc_kind != svn_node_none && wc_kind != svn_node_file)
     {
       SVN_ERR(create_node_tree_conflict(&conflict_skel, nmb, dst_relpath,
-                                        wc_kind, svn_node_file,
-                                        NULL /* local obstruction relpath */,
+                                        svn_node_file, svn_node_file,
                                         svn_wc_conflict_reason_obstructed,
                                         svn_wc_conflict_action_edit,
                                         NULL,
@@ -1209,8 +1204,6 @@ tc_editor_delete(node_move_baton_t *nmb,
 {
   update_move_baton_t *b = nmb->umb;
   svn_sqlite__stmt_t *stmt;
-  const char *move_dst_repos_relpath;
-  svn_node_kind_t move_dst_kind;
   const char *local_abspath;
   svn_boolean_t is_modified, is_all_deletes;
   svn_skel_t *work_items = NULL;
@@ -1220,21 +1213,13 @@ tc_editor_delete(node_move_baton_t *nmb,
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, NULL,
-                                    &move_dst_repos_relpath, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    b->wcroot, relpath, b->dst_op_depth,
-                                    scratch_pool, scratch_pool));
-
   /* Check before retracting delete to catch delete-delete
      conflicts. This catches conflicts on the node itself; deleted
      children are caught as local modifications below.*/
   if (nmb->shadowed)
     {
       SVN_ERR(mark_tc_on_op_root(nmb,
-                                 move_dst_kind,
-                                 new_kind,
-                                 move_dst_repos_relpath,
+                                 old_kind, new_kind,
                                  svn_wc_conflict_action_delete,
                                  scratch_pool));
       return SVN_NO_ERROR;
@@ -1262,8 +1247,7 @@ tc_editor_delete(node_move_baton_t *nmb,
       reason = svn_wc_conflict_reason_edited;
 
       SVN_ERR(create_node_tree_conflict(&conflict, nmb, relpath,
-                                        move_dst_kind, new_kind,
-                                        move_dst_repos_relpath, reason,
+                                        old_kind, new_kind, reason,
                                         (new_kind == svn_node_none)
                                           ? svn_wc_conflict_action_delete
                                           : svn_wc_conflict_action_replace,
@@ -1331,7 +1315,7 @@ tc_editor_delete(node_move_baton_t *nmb,
   if (conflict || (new_kind == svn_node_none))
     SVN_ERR(update_move_list_add(b->wcroot, relpath, b->db,
                                  svn_wc_notify_update_delete,
-                                 move_dst_kind,
+                                 new_kind,
                                  svn_wc_notify_state_inapplicable,
                                  svn_wc_notify_state_inapplicable,
                                  conflict, work_items, scratch_pool));

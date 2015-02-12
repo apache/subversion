@@ -1574,83 +1574,140 @@ def move_conflict_details(sbox):
   sbox.simple_append('A/B/E/new', 'new\n')
   sbox.simple_add('A/B/E/new')
   sbox.simple_append('A/B/E/alpha', '\nextra\nlines\n')
-  sbox.simple_rm('A/B/E/beta')
-  sbox.simple_propset('key', 'VAL', 'A/B/E')
+  sbox.simple_rm('A/B/E/beta', 'A/B/F')
+  sbox.simple_propset('key', 'VAL', 'A/B/E', 'A/B')
+  sbox.simple_mkdir('A/B/E/new-dir1')
+  sbox.simple_mkdir('A/B/E/new-dir2')
+  sbox.simple_mkdir('A/B/E/new-dir3')
+  sbox.simple_rm('A/B/lambda')
+  sbox.simple_mkdir('A/B/lambda')
   sbox.simple_commit()
 
   sbox.simple_update('', 1)
 
-  sbox.simple_move('A/B/E', 'E')
+  sbox.simple_move('A/B', 'B')
 
   sbox.simple_update('', 2)
 
   expected_info = [
-    {"Tree conflict": re.escape(
+    {
+      "Moved To": "B", # Just 'B'?? Not the full/relative path or something?
+      "Tree conflict": re.escape(
               'local dir moved away, incoming dir edit upon update' +
-              ' Source  left: (dir) ^/A/B/E@1' +
-              ' Source right: (dir) ^/A/B/E@2')
+              ' Source  left: (dir) ^/A/B@1' +
+              ' Source right: (dir) ^/A/B@2')
     }
   ]
-  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B/E'))
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B'))
 
-  sbox.simple_propset('key', 'vAl', 'E')
-  sbox.simple_move('E/beta', 'beta')
-  sbox.simple_append('E/alpha', 'other\nnew\nlines')
-  sbox.simple_mkdir('E/new')
+  sbox.simple_propset('key', 'vAl', 'B')
+  sbox.simple_move('B/E/beta', 'beta')
+  sbox.simple_propset('a', 'b', 'B/F', 'B/lambda')
+  sbox.simple_append('B/E/alpha', 'other\nnew\nlines')
+  sbox.simple_mkdir('B/E/new')
+  sbox.simple_mkdir('B/E/new-dir1')
+  sbox.simple_append('B/E/new-dir2', 'something')
+  sbox.simple_append('B/E/new-dir3', 'something')
+  sbox.simple_add('B/E/new-dir3')
+
 
   expected_output = [
-    " C   %s\n" % sbox.ospath('E'),         # Property conflicted
-    "C    %s\n" % sbox.ospath('E/alpha'),   # Text conflicted
-    "   C %s\n" % sbox.ospath('E/beta'),
-    "   C %s\n" % sbox.ospath('E/new'),
+    " C   %s\n" % sbox.ospath('B'),         # Property conflicted
+    " U   %s\n" % sbox.ospath('B/E'),       # Just updated
+    "C    %s\n" % sbox.ospath('B/E/alpha'), # Text conflicted
+    "   C %s\n" % sbox.ospath('B/E/beta'),
+    "   C %s\n" % sbox.ospath('B/E/new'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir1'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir2'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir3'),
+    "   C %s\n" % sbox.ospath('B/F'),
+    "   C %s\n" % sbox.ospath('B/lambda'),
     "Updated to revision 2.\n",
-    "Resolved conflicted state of '%s'\n" % sbox.ospath('A/B/E')
+    "Resolved conflicted state of '%s'\n" % sbox.ospath('A/B')
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'resolve', sbox.ospath('A/B/E'),
+                                     'resolve', sbox.ospath('A/B'),
                                      '--depth', 'empty',
                                      '--accept', 'mine-conflict')
 
   expected_info = [
     {
-      "Tree conflict": re.escape(
-         'local dir moved away, incoming dir edit upon update' +
-         ' Source  left: (dir) ^/A/B/E@1' +
-         ' Source right: (dir) ^/A/B/E@2')
-    }
-  ]
-
-  expected_info = [
-    {
-      "Path" : re.escape(sbox.ospath('E')),
+      "Path" : re.escape(sbox.ospath('B')),
+      
       "Conflict Properties File" :
-            re.escape(os.path.abspath(sbox.ospath('E/dir_conflicts.prej'))) +
-            '.*'
+            re.escape(os.path.abspath(sbox.ospath('B/dir_conflicts.prej'))) +
+            '.*',
+      "Conflict Details": re.escape(
+            'incoming dir edit upon update' +
+            ' Source  left: (dir) ^/A/B@1' +
+            ' Source right: (dir) ^/A/B@2')
     },
     {
-      "Path" : re.escape(sbox.ospath('E/alpha')),
+      "Path" : re.escape(sbox.ospath('B/E')),
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/alpha')),
       "Conflict Previous Base File" : '.*alpha.*',
       "Conflict Previous Working File" : '.*alpha.*',
       "Conflict Current Base File": '.*alpha.*',
+      "Conflict Details": re.escape(
+          'incoming file edit upon update' +
+          ' Source  left: (file) ^/A/B/E/alpha@1' +
+          ' Source right: (file) ^/A/B/E/alpha@2')
     },
     {
-      "Path" : re.escape(sbox.ospath('E/beta')),
+      "Path" : re.escape(sbox.ospath('B/E/beta')),
       "Tree conflict": re.escape(
           'local file moved away, incoming file delete or move upon update' +
           ' Source  left: (file) ^/A/B/E/beta@1' +
           ' Source right: (none) ^/A/B/E/beta@2')
     },
     {
-      "Path" : re.escape(sbox.ospath('E/new')),
-      "Tree conflict":
-          'local .*, incoming file add upon update .*' # Not recorded properly
-    }
+      "Path" : re.escape(sbox.ospath('B/E/new')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming file add upon update' +
+          ' Source  left: (none) ^/A/B/E/new@1' +
+          ' Source right: (file) ^/A/B/E/new@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir1')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir1@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir1@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir2')),
+      "Tree conflict": re.escape(
+          'local file unversioned, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir2@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir2@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir3')),
+      "Tree conflict": re.escape(
+          'local file add, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir3@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir3@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/F')),
+      "Tree conflict": re.escape(
+          'local dir edit, incoming dir delete or move upon update' +
+          ' Source  left: (dir) ^/A/B/F@1' +
+          ' Source right: (none) ^/A/B/F@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/lambda')),
+      "Tree conflict": re.escape(
+          'local file edit, incoming replace with dir upon update' +
+          ' Source  left: (file) ^/A/B/lambda@1' +
+          ' Source right: (dir) ^/A/B/lambda@2')
+    },
   ]
 
-  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('E'),
-                                                     sbox.ospath('E/alpha'),
-                                                     sbox.ospath('E/beta'),
-                                                     sbox.ospath('E/new'))
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('B'),
+                                      '--depth', 'infinity')
 
 
 #######################################################################

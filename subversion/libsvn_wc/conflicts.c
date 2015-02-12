@@ -1817,7 +1817,9 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
            operation == svn_wc_operation_switch)
     {
       /* For updates, the left version corresponds to the pre-update state. */
-      if (left_version)
+      if (left_version
+          && reason != svn_wc_conflict_reason_added
+          && reason != svn_wc_conflict_reason_replaced)
         local_kind = left_version->node_kind;
       else
         {
