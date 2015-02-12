@@ -441,6 +441,7 @@ print_info(void *baton,
       if (info->wc_info->conflicts)
         {
           svn_boolean_t printed_prop_conflict_file = FALSE;
+          svn_boolean_t printed_tc = FALSE;
           int i;
 
           for (i = 0; i < info->wc_info->conflicts->nelts; i++)
@@ -485,6 +486,7 @@ print_info(void *baton,
                   break;
 
                   case svn_wc_conflict_kind_tree:
+                    printed_tc = TRUE;
                     SVN_ERR(
                         svn_cl__get_human_readable_tree_conflict_description(
                                                     &desc, conflict, pool));
@@ -505,6 +507,19 @@ print_info(void *baton,
             const svn_wc_conflict_description2_t *conflict =
                   APR_ARRAY_IDX(info->wc_info->conflicts, 0,
                                 const svn_wc_conflict_description2_t *);
+
+            if (!printed_tc)
+              {
+                const char *desc;
+
+                SVN_ERR(svn_cl__get_human_readable_action_description(&desc,
+                                        svn_wc_conflict_reason_edited,
+                                        conflict->operation,
+                                        conflict->node_kind, pool));
+
+                SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
+                                               _("Conflict Details"), desc));
+              }
 
             src_left_version =
                         svn_cl__node_description(conflict->src_left_version,
