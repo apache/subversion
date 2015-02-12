@@ -35,6 +35,8 @@
 #include "svn_repos.h"
 #include "svn_subst.h"
 #include "private/svn_wc_private.h"
+#include "svn_props.h"
+#include "svn_hash.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -1055,6 +1057,236 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_copy_pin_externals(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_opt_revision_t rev;
+  svn_opt_revision_t peg_rev;
+  const char *repos_url;
+  const char *A_url;
+  const char *A_copy_url;
+  const char *wc_path;
+  svn_client_ctx_t *ctx;
+  const svn_string_t *propval;
+  apr_hash_t *externals_to_pin;
+  apr_array_header_t *external_items;
+  apr_array_header_t *copy_sources;
+  svn_wc_external_item2_t items[6];
+  svn_client_copy_source_t copy_source;
+  apr_hash_t *props;
+  apr_array_header_t *pinned_externals_descs;
+  apr_array_header_t *pinned_externals;
+  int i;
+  int num_tested_externals;
+  svn_stringbuf_t *externals_test_prop;
+  struct pin_externals_test_data {
+    const char *src_external_desc;
+    const char *expected_dst_external_desc;
+  } pin_externals_test_data[] = {
+    { "^/A/D/gamma B/gamma",    "^/A/D/gamma@2 B/gamma" },
+    { "-r1 ^/A/D/G C/exdir_G",  "-r1 ^/A/D/G C/exdir_G" },
+    { "^/A/D/H@1 C/exdir_H",    "^/A/D/H@1 C/exdir_H"  },
+    { "^/A/D/H C/exdir_H2",     "^/A/D/H@2 C/exdir_H2" },
+    { "-r1 ^/A/B D/z/y/z/blah", "-r1 ^/A/B@2 D/z/y/z/blah" } ,
+    { "-r1 ^/A/D@2 exdir_D", "-r1 ^/A/D@2 exdir_D" },
+    /* Dated revision should retain their date string exactly. */
+    { "-r{1970-01-01T00:00} ^/A/C 70s", "-r{1970-01-01T00:00} ^/A/C@2 70s"}, 
+    { "-r{2004-02-23} ^/svn 1.0", "-r{2004-02-23} ^/svn 1.0"}, 
+    { NULL },
+  };
+
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "pin-externals", opts, pool));
+
+  wc_path = svn_test_data_path("pin-externals-working-copy", pool);
+
+  /* Remove old test data from the previous run */
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
+
+  rev.kind = svn_opt_revision_head;
+  peg_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  /* Configure some externals on ^/A */
+  i = 0;
+  externals_test_prop = svn_stringbuf_create_empty(pool);
+  while (pin_externals_test_data[i].src_external_desc)
+    {
+      svn_stringbuf_appendcstr(externals_test_prop,
+                               pin_externals_test_data[i].src_external_desc);
+      svn_stringbuf_appendbyte(externals_test_prop, '\n');
+      i++;
+    }
+  propval = svn_string_create_from_buf(externals_test_prop, pool);
+  A_url = apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL);
+  SVN_ERR(svn_client_propset_remote(SVN_PROP_EXTERNALS, propval,
+                                    A_url, TRUE, 1, NULL,
+                                    NULL, NULL, ctx, pool));
+
+  /* Set up parameters for pinning some externals. */
+  externals_to_pin = apr_hash_make(pool);
+
+  items[0].url = "^/A/D/gamma";
+  items[0].target_dir = "B/gamma";
+  items[1].url = "^/A/B";
+  items[1].target_dir = "D/z/y/z/blah";
+  items[2].url = "^/A/D/H";
+  items[2].target_dir = "C/exdir_H2";
+  items[3].url= "^/A/D";
+  items[3].target_dir= "exdir_D";
+  items[4].url = "^/A/C";
+  items[4].target_dir = "70s";
+  /* Also add an entry which doesn't match any actual definition. */
+  items[5].url = "^/this/does/not/exist";
+  items[5].target_dir = "in/test/data";
+
+  external_items = apr_array_make(pool, 2, sizeof(svn_wc_external_item2_t *));
+  for (i = 0; i < sizeof(items) / sizeof(items[0]); i++)
+    APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &items[i];
+  svn_hash_sets(externals_to_pin, A_url, external_items);
+
+  /* Copy ^/A to ^/A_copy, pinning two non-pinned externals. */
+  copy_source.path = A_url;
+  copy_source.revision = &rev;
+  copy_source.peg_revision = &peg_rev;
+  copy_sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  APR_ARRAY_PUSH(copy_sources, svn_client_copy_source_t *) = &copy_source;
+  A_copy_url = apr_pstrcat(pool, repos_url, "/A_copy", SVN_VA_NULL);
+  SVN_ERR(svn_client_copy7(copy_sources, A_copy_url, FALSE, FALSE,
+                           FALSE, TRUE, externals_to_pin,
+                           NULL, NULL, NULL, ctx, pool));
+
+  /* Verify that externals were pinned as expected. */
+  SVN_ERR(svn_client_propget5(&props, NULL, SVN_PROP_EXTERNALS,
+                              A_copy_url, &peg_rev, &rev, NULL,
+                              svn_depth_empty, NULL, ctx, pool, pool));
+  propval = svn_hash_gets(props, A_copy_url);
+  SVN_TEST_ASSERT(propval);
+
+  /* Test the unparsed representation of copied externals descriptions. */
+  pinned_externals_descs = svn_cstring_split(propval->data, "\n", FALSE, pool);
+  for (i = 0; i < pinned_externals_descs->nelts; i++)
+    {
+      const char *externals_desc;
+      const char *expected_desc;
+      
+      externals_desc = APR_ARRAY_IDX(pinned_externals_descs, i, const char *);
+      expected_desc = pin_externals_test_data[i].expected_dst_external_desc;
+      SVN_TEST_STRING_ASSERT(externals_desc, expected_desc);
+    }
+  /* Ensure all test cases were tested. */
+  SVN_TEST_ASSERT(i == (sizeof(pin_externals_test_data) /
+                        sizeof(pin_externals_test_data[0]) - 1));
+  
+  SVN_ERR(svn_wc_parse_externals_description3(&pinned_externals, A_copy_url,
+                                              propval->data, TRUE, pool));
+
+  /* For completeness, test the parsed representation, too */
+  num_tested_externals = 0;
+  for (i = 0; i < pinned_externals->nelts; i++)
+    {
+      svn_wc_external_item2_t *item;
+
+      item = APR_ARRAY_IDX(pinned_externals, i, svn_wc_external_item2_t *);
+      if (strcmp(item->url, "^/A/D/gamma") == 0)
+        {
+          SVN_TEST_STRING_ASSERT(item->target_dir, "B/gamma");
+          /* Pinned to r2. */
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->revision.value.number == 2);
+          SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+          num_tested_externals++;
+        }
+      else if (strcmp(item->url, "^/A/D/G") == 0)
+        {
+          SVN_TEST_STRING_ASSERT(item->target_dir, "C/exdir_G");
+          /* Not pinned. */
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->revision.value.number == 1);
+          SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_head);
+          num_tested_externals++;
+        }
+      else if (strcmp(item->url, "^/A/D/H") == 0)
+        {
+          if (strcmp(item->target_dir, "C/exdir_H") == 0)
+            {
+              /* Was already pinned to r1. */
+              SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
+              SVN_TEST_ASSERT(item->revision.value.number == 1);
+              SVN_TEST_ASSERT(item->peg_revision.kind ==
+                              svn_opt_revision_number);
+              SVN_TEST_ASSERT(item->peg_revision.value.number == 1);
+              num_tested_externals++;
+            }
+          else if (strcmp(item->target_dir, "C/exdir_H2") == 0)
+            {
+              /* Pinned to r2. */
+              SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
+              SVN_TEST_ASSERT(item->revision.value.number == 2);
+              SVN_TEST_ASSERT(item->peg_revision.kind ==
+                              svn_opt_revision_number);
+              SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+              num_tested_externals++;
+            }
+          else
+            SVN_TEST_ASSERT(FALSE); /* unknown external */
+        }
+      else if (strcmp(item->url, "^/A/B") == 0)
+        {
+          SVN_TEST_STRING_ASSERT(item->target_dir, "D/z/y/z/blah");
+          /* Pinned to r2. */
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->revision.value.number == 1);
+          SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+          num_tested_externals++;
+        }
+      else if (strcmp(item->url, "^/A/D") == 0)
+        {
+          SVN_TEST_STRING_ASSERT(item->target_dir, "exdir_D");
+          /* Pinned to r2. */
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->revision.value.number == 1);
+          SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+          num_tested_externals++;
+        }
+      else if (strcmp(item->url, "^/A/C") == 0)
+        {
+          SVN_TEST_STRING_ASSERT(item->target_dir, "70s");
+          /* Pinned to r2. */
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_date);
+          /* Don't bother testing the exact date value here. */
+          SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_number);
+          SVN_TEST_ASSERT(item->peg_revision.value.number == 2);
+          num_tested_externals++;
+        }
+      else if (strcmp(item->url, "^/svn") == 0)
+        {
+          SVN_TEST_STRING_ASSERT(item->target_dir, "1.0");
+          /* Was and not in externals_to_pin, operative revision was a date. */
+          SVN_TEST_ASSERT(item->revision.kind == svn_opt_revision_date);
+          /* Don't bother testing the exact date value here. */
+          SVN_TEST_ASSERT(item->peg_revision.kind == svn_opt_revision_head);
+          num_tested_externals++;
+        }
+      else
+        SVN_TEST_ASSERT(FALSE); /* unknown URL */
+    }
+
+  /* Ensure all test cases were tested. */
+  SVN_TEST_ASSERT(num_tested_externals == (sizeof(pin_externals_test_data) /
+                                           sizeof(pin_externals_test_data[0])
+                                          - 1));
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -1079,6 +1311,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_client_suggest_merge_sources"),
     SVN_TEST_OPTS_PASS(test_remote_only_status,
                        "test svn_client_status6 with ignore_local_mods"),
+    SVN_TEST_OPTS_PASS(test_copy_pin_externals,
+                       "test svn_client_copy7 with externals_to_pin"),
     SVN_TEST_NULL
   };
 
