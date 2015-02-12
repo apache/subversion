@@ -1635,8 +1635,7 @@ def move_conflict_details(sbox):
       "Path" : re.escape(sbox.ospath('B')),
       
       "Conflict Properties File" :
-            re.escape(os.path.abspath(sbox.ospath('B/dir_conflicts.prej'))) +
-            '.*',
+            re.escape(sbox.ospath('B/dir_conflicts.prej')) + '.*',
       "Conflict Details": re.escape(
             'incoming dir edit upon update' +
             ' Source  left: (dir) ^/A/B@1' +
