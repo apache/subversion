@@ -1178,7 +1178,10 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
       expected_desc = pin_externals_test_data[i].expected_dst_external_desc;
       SVN_TEST_STRING_ASSERT(externals_desc, expected_desc);
     }
-
+  /* Ensure all test cases were tested. */
+  SVN_TEST_ASSERT(i == (sizeof(pin_externals_test_data) /
+                        sizeof(pin_externals_test_data[0]) - 1));
+  
   SVN_ERR(svn_wc_parse_externals_description3(&pinned_externals, A_copy_url,
                                               propval->data, TRUE, pool));
 
