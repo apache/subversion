@@ -2481,8 +2481,7 @@ x_closest_copy(svn_fs_root_t **root_p,
      exists as of COPY_DST_REV and is related to this node-rev. */
   SVN_ERR(svn_fs_x__revision_root(&copy_dst_root, fs, copy_dst_rev, pool));
   SVN_ERR(svn_fs_x__get_dag_path(&copy_dst_dag_path, copy_dst_root, path,
-                                 svn_fs_x__dag_path_node_only
-                                   | svn_fs_x__dag_path_allow_null, FALSE,
+                                 svn_fs_x__dag_path_allow_null, FALSE,
                                  scratch_pool));
   if (copy_dst_dag_path == NULL)
     {
