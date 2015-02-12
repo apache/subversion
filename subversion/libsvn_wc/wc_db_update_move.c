@@ -228,6 +228,7 @@ typedef struct node_move_baton_t
 static svn_error_t *
 update_move_list_add(svn_wc__db_wcroot_t *wcroot,
                      const char *local_relpath,
+                     svn_wc__db_t *db,
                      svn_wc_notify_action_t action,
                      svn_node_kind_t kind,
                      svn_wc_notify_state_t content_state,
@@ -240,9 +241,18 @@ update_move_list_add(svn_wc__db_wcroot_t *wcroot,
 
   if (conflict)
     {
-      action = svn_wc_notify_tree_conflict;
-      content_state = svn_wc_notify_state_inapplicable;
-      prop_state = svn_wc_notify_state_inapplicable;
+      svn_boolean_t tree_conflict;
+
+      SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, NULL, NULL,
+                                         &tree_conflict,
+                                         db, wcroot->abspath, conflict,
+                                         scratch_pool, scratch_pool));
+      if (tree_conflict)
+        {
+          action = svn_wc_notify_tree_conflict;
+          content_state = svn_wc_notify_state_inapplicable;
+          prop_state = svn_wc_notify_state_inapplicable;
+        }
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -568,7 +578,7 @@ mark_tc_on_op_root(node_move_baton_t *nmb,
                                               : NULL,
                                     scratch_pool, scratch_pool));
 
-  SVN_ERR(update_move_list_add(b->wcroot, nmb->dst_relpath,
+  SVN_ERR(update_move_list_add(b->wcroot, nmb->dst_relpath, b->db,
                                svn_wc_notify_tree_conflict,
                                new_kind,
                                svn_wc_notify_state_inapplicable,
@@ -713,7 +723,7 @@ tc_editor_add_directory(node_move_baton_t *nmb,
                                            scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(update_move_list_add(b->wcroot, relpath,
+  SVN_ERR(update_move_list_add(b->wcroot, relpath, b->db,
                                (old_kind == svn_node_none)
                                   ? svn_wc_notify_update_add
                                   : svn_wc_notify_update_replace,
@@ -805,7 +815,7 @@ tc_editor_add_file(node_move_baton_t *nmb,
                                             scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(update_move_list_add(b->wcroot, relpath,
+  SVN_ERR(update_move_list_add(b->wcroot, relpath, b->db,
                                (old_kind == svn_node_none)
                                   ? svn_wc_notify_update_add
                                   : svn_wc_notify_update_replace,
@@ -1010,7 +1020,7 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
                                       scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
+  SVN_ERR(update_move_list_add(b->wcroot, dst_relpath, b->db,
                                svn_wc_notify_update_update,
                                svn_node_dir,
                                svn_wc_notify_state_inapplicable,
@@ -1180,7 +1190,7 @@ tc_editor_alter_file(node_move_baton_t *nmb,
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
 
-  SVN_ERR(update_move_list_add(b->wcroot, dst_relpath,
+  SVN_ERR(update_move_list_add(b->wcroot, dst_relpath, b->db,
                                svn_wc_notify_update_update,
                                svn_node_file,
                                content_state,
@@ -1319,7 +1329,7 @@ tc_editor_delete(node_move_baton_t *nmb,
 
   /* Only notify if add_file/add_dir is not going to notify */
   if (conflict || (new_kind == svn_node_none))
-    SVN_ERR(update_move_list_add(b->wcroot, relpath,
+    SVN_ERR(update_move_list_add(b->wcroot, relpath, b->db,
                                  svn_wc_notify_update_delete,
                                  move_dst_kind,
                                  svn_wc_notify_state_inapplicable,
@@ -2026,7 +2036,7 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                                move_src_op_root_relpath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR(update_move_list_add(wcroot, move_src_root_relpath,
+  SVN_ERR(update_move_list_add(wcroot, move_src_root_relpath, db,
                                svn_wc_notify_tree_conflict,
                                new_kind,
                                svn_wc_notify_state_inapplicable,
@@ -2385,7 +2395,7 @@ svn_wc__db_op_raise_moved_away_internal(
                                  iterpool, iterpool);
 
       if (!err)
-        err = update_move_list_add(wcroot, src_relpath,
+        err = update_move_list_add(wcroot, src_relpath, db,
                                    svn_wc_notify_tree_conflict,
                                    src_kind,
                                    svn_wc_notify_state_inapplicable,
@@ -2481,6 +2491,7 @@ break_moved_away(svn_wc__db_wcroot_t *wcroot,
 
 static svn_error_t *
 break_moved_away_children(svn_wc__db_wcroot_t *wcroot,
+                          svn_wc__db_t *db,
                           const char *local_relpath,
                           apr_pool_t *scratch_pool)
 {
@@ -2514,7 +2525,7 @@ break_moved_away_children(svn_wc__db_wcroot_t *wcroot,
 
       if (! err)
         {
-          err = update_move_list_add(wcroot, src_relpath,
+          err = update_move_list_add(wcroot, src_relpath, db,
                                      svn_wc_notify_move_broken,
                                      src_kind,
                                      svn_wc_notify_state_inapplicable,
@@ -2599,7 +2610,7 @@ svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_WC__DB_WITH_TXN(
-    break_moved_away_children(wcroot, local_relpath, scratch_pool),
+    break_moved_away_children(wcroot, db, local_relpath, scratch_pool),
     wcroot);
 
   SVN_ERR(svn_wc__db_update_move_list_notify(wcroot,

@@ -1566,6 +1566,92 @@ def revert_del_root_of_move(sbox):
     expected_status.tweak('A/B/E', treeconflict='C')
     svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def move_conflict_details(sbox):
+  "move conflict details"
+
+  sbox.build()
+
+  sbox.simple_append('A/B/E/new', 'new\n')
+  sbox.simple_add('A/B/E/new')
+  sbox.simple_append('A/B/E/alpha', '\nextra\nlines\n')
+  sbox.simple_rm('A/B/E/beta')
+  sbox.simple_propset('key', 'VAL', 'A/B/E')
+  sbox.simple_commit()
+
+  sbox.simple_update('', 1)
+
+  sbox.simple_move('A/B/E', 'E')
+
+  sbox.simple_update('', 2)
+
+  expected_info = [
+    {"Tree conflict": re.escape(
+              'local dir moved away, incoming dir edit upon update' +
+              ' Source  left: (dir) ^/A/B/E@1' +
+              ' Source right: (dir) ^/A/B/E@2')
+    }
+  ]
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B/E'))
+
+  sbox.simple_propset('key', 'vAl', 'E')
+  sbox.simple_move('E/beta', 'beta')
+  sbox.simple_append('E/alpha', 'other\nnew\nlines')
+  sbox.simple_mkdir('E/new')
+
+  expected_output = [
+    " C   %s\n" % sbox.ospath('E'),         # Property conflicted
+    "C    %s\n" % sbox.ospath('E/alpha'),   # Text conflicted
+    "   C %s\n" % sbox.ospath('E/beta'),
+    "   C %s\n" % sbox.ospath('E/new'),
+    "Updated to revision 2.\n",
+    "Resolved conflicted state of '%s'\n" % sbox.ospath('A/B/E')
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'resolve', sbox.ospath('A/B/E'),
+                                     '--depth', 'empty',
+                                     '--accept', 'mine-conflict')
+
+  expected_info = [
+    {
+      "Tree conflict": re.escape(
+         'local dir moved away, incoming dir edit upon update' +
+         ' Source  left: (dir) ^/A/B/E@1' +
+         ' Source right: (dir) ^/A/B/E@2')
+    }
+  ]
+
+  expected_info = [
+    {
+      "Path" : re.escape(sbox.ospath('E')),
+      "Conflict Properties File" :
+            re.escape(os.path.abspath(sbox.ospath('E/dir_conflicts.prej'))) +
+            '.*'
+    },
+    {
+      "Path" : re.escape(sbox.ospath('E/alpha')),
+      "Conflict Previous Base File" : '.*alpha.*',
+      "Conflict Previous Working File" : '.*alpha.*',
+      "Conflict Current Base File": '.*alpha.*',
+    },
+    {
+      "Path" : re.escape(sbox.ospath('E/beta')),
+      "Tree conflict": re.escape(
+          'local file moved away, incoming file delete or move upon update' +
+          ' Source  left: (file) ^/A/B/E/beta@1' +
+          ' Source right: (none) ^/A/B/E/beta@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('E/new')),
+      "Tree conflict":
+          'local .*, incoming file add upon update .*' # Not recorded properly
+    }
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('E'),
+                                                     sbox.ospath('E/alpha'),
+                                                     sbox.ospath('E/beta'),
+                                                     sbox.ospath('E/new'))
+
 
 #######################################################################
 # Run the tests
@@ -1585,6 +1671,7 @@ test_list = [ None,
               copy_move_commit,
               move_to_from_external,
               revert_del_root_of_move,
+              move_conflict_details,
             ]
 
 if __name__ == '__main__':
