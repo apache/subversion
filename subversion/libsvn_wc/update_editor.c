@@ -825,10 +825,11 @@ complete_conflict(svn_skel_t *conflict,
                   const char *new_repos_relpath,
                   svn_node_kind_t local_kind,
                   svn_node_kind_t target_kind,
+                  const svn_skel_t *delete_conflict,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  svn_wc_conflict_version_t *original_version;
+  svn_wc_conflict_version_t *original_version = NULL;
   svn_wc_conflict_version_t *target_version;
   svn_boolean_t is_complete;
 
@@ -849,8 +850,23 @@ complete_conflict(svn_skel_t *conflict,
                                                        old_revision,
                                                        local_kind,
                                                        result_pool);
-  else
-    original_version = NULL;
+  else if (delete_conflict)
+    {
+      const apr_array_header_t *locations;
+
+      SVN_ERR(svn_wc__conflict_read_info(NULL, &locations, NULL, NULL, NULL,
+                                         eb->db, local_abspath,
+                                         delete_conflict,
+                                         scratch_pool, scratch_pool));
+
+      if (locations)
+        {
+          const svn_wc_conflict_version_t *left_version;
+
+          original_version = APR_ARRAY_IDX(locations, 0,
+                                       const svn_wc_conflict_version_t *);
+        }
+    }
 
   target_version = svn_wc_conflict_version_create2(eb->repos_root,
                                                    eb->repos_uuid,
@@ -896,6 +912,7 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
                                 db->old_repos_relpath, db->old_revision,
                                 db->new_repos_relpath,
                                 svn_node_dir, svn_node_dir,
+                                NULL,
                                 db->pool, scratch_pool));
       SVN_ERR(svn_wc__db_op_mark_conflict(db->edit_baton->db,
                                           db->local_abspath,
@@ -930,6 +947,7 @@ mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
                                 fb->local_abspath, fb->old_repos_relpath,
                                 fb->old_revision, fb->new_repos_relpath,
                                 svn_node_file, svn_node_file,
+                                NULL, 
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(fb->edit_baton->db,
@@ -1249,7 +1267,7 @@ open_root(void *edit_baton,
                                         db->old_revision,
                                         db->new_repos_relpath,
                                         svn_node_dir, svn_node_dir,
-                                        pool, pool));
+                                        NULL, pool, pool));
               SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
                                                   move_src_root_abspath,
                                                   tree_conflict,
@@ -1878,10 +1896,7 @@ delete_entry(const char *path,
                                   scratch_pool));
   SVN_ERR(complete_conflict(tree_conflict, eb, local_abspath, repos_relpath,
                             old_revision, deleted_repos_relpath,
-                            (kind == svn_node_dir)
-                                ? svn_node_dir
-                                : svn_node_file,
-                            svn_node_none,
+                            kind, svn_node_none, NULL,
                             pb->pool, scratch_pool));
 
   /* Issue a wq operation to delete the BASE_NODE data and to delete actual
@@ -1934,23 +1949,17 @@ delete_entry(const char *path,
                                                  eb->cancel_func,
                                                  eb->cancel_baton,
                                                  scratch_pool));
-      do_notification(eb, local_abspath, svn_node_unknown,
+      do_notification(eb, local_abspath, kind,
                       svn_wc_notify_tree_conflict, scratch_pool);
     }
   else
     {
       svn_wc_notify_action_t action = svn_wc_notify_update_delete;
-      svn_node_kind_t node_kind;
 
       if (pb->shadowed || pb->edit_obstructed)
         action = svn_wc_notify_update_shadowed_delete;
 
-      if (kind == svn_node_dir)
-        node_kind = svn_node_dir;
-      else
-        node_kind = svn_node_file;
-
-      do_notification(eb, local_abspath, node_kind, action, scratch_pool);
+      do_notification(eb, local_abspath, kind, action, scratch_pool);
     }
 
   svn_pool_destroy(scratch_pool);
@@ -2264,8 +2273,11 @@ add_directory(const char *path,
     SVN_ERR(complete_conflict(tree_conflict, eb, db->local_abspath,
                               db->old_repos_relpath, db->old_revision,
                               db->new_repos_relpath,
-                              wc_kind,
-                              svn_node_dir,
+                              wc_kind, svn_node_dir,
+                              pb->deletion_conflicts
+                                ? svn_hash_gets(pb->deletion_conflicts,
+                                                db->name)
+                                : NULL,
                               db->pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_base_add_incomplete_directory(
@@ -2858,6 +2870,11 @@ close_directory(void *dir_baton,
                                     db->old_revision,
                                     db->new_repos_relpath,
                                     svn_node_dir, svn_node_dir,
+                                    db->parent_baton->deletion_conflicts
+                                      ? svn_hash_gets(
+                                            db->parent_baton->deletion_conflicts,
+                                            db->name)
+                                      : NULL,
                                     db->pool, scratch_pool));
 
           SVN_ERR(svn_wc__conflict_create_markers(&work_item,
@@ -3081,9 +3098,8 @@ absent_node(const char *path,
     if (tree_conflict)
       SVN_ERR(complete_conflict(tree_conflict, eb, local_abspath,
                                 NULL, SVN_INVALID_REVNUM, repos_relpath,
-                                kind, svn_node_unknown,
+                                kind, svn_node_unknown, NULL,
                                 scratch_pool, scratch_pool));
-                                
 
     /* Insert an excluded node below the parent node to note that this child
        is absent. (This puts it in the parent db if the child is obstructed) */
@@ -3445,8 +3461,11 @@ add_file(const char *path,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
                                 fb->new_repos_relpath,
-                                wc_kind,
-                                svn_node_file,
+                                wc_kind, svn_node_file,
+                                pb->deletion_conflicts
+                                  ? svn_hash_gets(pb->deletion_conflicts,
+                                                  fb->name)
+                                  : NULL,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
@@ -3851,7 +3870,7 @@ change_file_prop(void *file_baton,
                                     fb->local_abspath, fb->old_repos_relpath,
                                     fb->old_revision, fb->new_repos_relpath,
                                     svn_node_file, svn_node_file,
-                                    fb->pool, scratch_pool));
+                                    NULL, fb->pool, scratch_pool));
 
           /* Create a copy of the existing (pre update) BASE node in WORKING,
              mark a tree conflict and handle the rest of the update as
@@ -4564,6 +4583,11 @@ close_file(void *file_baton,
                                 fb->old_revision,
                                 fb->new_repos_relpath,
                                 svn_node_file, svn_node_file,
+                                fb->dir_baton->deletion_conflicts
+                                  ? svn_hash_gets(
+                                        fb->dir_baton->deletion_conflicts,
+                                        fb->name)
+                                  : NULL,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_create_markers(&work_item,
