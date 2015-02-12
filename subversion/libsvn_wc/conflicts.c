@@ -1807,7 +1807,7 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
          or if it doesn't exist directly from disk. */
       SVN_ERR(svn_wc__db_read_kind(&local_kind, db, local_abspath,
                                    TRUE /* allow missing */,
-                                   FALSE /* show deleted */,
+                                   TRUE /* show deleted */,
                                    FALSE /* show hidden */, scratch_pool));
 
       if (local_kind == svn_node_unknown || local_kind == svn_node_none)
