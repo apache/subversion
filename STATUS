@@ -251,6 +251,15 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1659399
+   Make the SQLite build with recent (3.8.x?) amalgamated versions.
+   Justification:
+     It's a trivial change to catch up with upstream arbitrariness,
+     and there's no reason to support a different set of amalgamated
+     SQLite versions than library versions.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
