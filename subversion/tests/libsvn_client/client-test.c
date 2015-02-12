@@ -1072,17 +1072,13 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   apr_hash_t *externals_to_pin;
   apr_array_header_t *external_items;
   apr_array_header_t *copy_sources;
-  svn_wc_external_item2_t item1;
-  svn_wc_external_item2_t item2;
-  svn_wc_external_item2_t item3;
-  svn_wc_external_item2_t item4;
-  svn_wc_external_item2_t item5;
-  svn_wc_external_item2_t item6;
+  svn_wc_external_item2_t items[6];
   svn_client_copy_source_t copy_source;
   apr_hash_t *props;
   apr_array_header_t *pinned_externals_descs;
   apr_array_header_t *pinned_externals;
   int i;
+  svn_stringbuf_t *externals_test_prop;
   struct pin_externals_test_data {
     const char *src_external_desc;
     const char *expected_dst_external_desc;
@@ -1115,18 +1111,16 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
   /* Configure some externals on ^/A */
-  propval = svn_string_create(
-              apr_pstrcat(pool,
-                          pin_externals_test_data[0].src_external_desc, "\n",
-                          pin_externals_test_data[1].src_external_desc, "\n",
-                          pin_externals_test_data[2].src_external_desc, "\n",
-                          pin_externals_test_data[3].src_external_desc, "\n",
-                          pin_externals_test_data[4].src_external_desc, "\n",
-                          pin_externals_test_data[5].src_external_desc, "\n",
-                          pin_externals_test_data[6].src_external_desc, "\n",
-                          pin_externals_test_data[7].src_external_desc, "\n",
-                          SVN_VA_NULL),
-              pool);
+  i = 0;
+  externals_test_prop = svn_stringbuf_create_empty(pool);
+  while (pin_externals_test_data[i].src_external_desc)
+    {
+      svn_stringbuf_appendcstr(externals_test_prop,
+                               pin_externals_test_data[i].src_external_desc);
+      svn_stringbuf_appendbyte(externals_test_prop, '\n');
+      i++;
+    }
+  propval = svn_string_create_from_buf(externals_test_prop, pool);
   A_url = apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL);
   SVN_ERR(svn_client_propset_remote(SVN_PROP_EXTERNALS, propval,
                                     A_url, TRUE, 1, NULL,
@@ -1134,28 +1128,24 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
 
   /* Set up parameters for pinning some externals. */
   externals_to_pin = apr_hash_make(pool);
-  item1.url = "^/A/D/gamma";
-  item1.target_dir = "B/gamma";
-  item2.url = "^/A/B";
-  item2.target_dir = "D/z/y/z/blah";
-  item3.url = "^/A/D/H";
-  item3.target_dir = "C/exdir_H2";
-  item4.url= "^/A/D";
-  item4.target_dir= "exdir_D";
-  item5.url = "^/A/C";
-  item5.target_dir = "70s";
 
+  items[0].url = "^/A/D/gamma";
+  items[0].target_dir = "B/gamma";
+  items[1].url = "^/A/B";
+  items[1].target_dir = "D/z/y/z/blah";
+  items[2].url = "^/A/D/H";
+  items[2].target_dir = "C/exdir_H2";
+  items[3].url= "^/A/D";
+  items[3].target_dir= "exdir_D";
+  items[4].url = "^/A/C";
+  items[4].target_dir = "70s";
   /* Also add an entry which doesn't match any actual definition. */
-  item6.url = "^/this/does/not/exist";
-  item6.target_dir = "in/test/data";
+  items[5].url = "^/this/does/not/exist";
+  items[5].target_dir = "in/test/data";
 
   external_items = apr_array_make(pool, 2, sizeof(svn_wc_external_item2_t *));
-  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item1;
-  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item2;
-  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item3;
-  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item4;
-  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item5;
-  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item6;
+  for (i = 0; i < sizeof(items) / sizeof(items[0]); i++)
+    APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &items[i];
   svn_hash_sets(externals_to_pin, A_url, external_items);
 
   /* Copy ^/A to ^/A_copy, pinning two non-pinned externals. */
