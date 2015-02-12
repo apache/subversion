@@ -84,8 +84,7 @@ def export_nonexistent_url(sbox):
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = os.path.join(sbox.wc_dir, 'nonexistent')
   nonexistent_url = sbox.repo_url + "/nonexistent"
-  svntest.actions.run_and_verify_svn("Error about nonexistent URL expected",
-                                     None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'export', nonexistent_url, export_target)
 
 def export_working_copy(sbox):
@@ -189,8 +188,7 @@ def export_over_existing_dir(sbox):
   # the export operation to fail.
   os.mkdir(export_target)
 
-  svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'export', sbox.wc_dir, export_target)
 
   # As an extra precaution, make sure export_target doesn't have
@@ -470,8 +468,7 @@ def export_nonexistent_file(sbox):
 
   export_target = sbox.add_wc_path('export')
 
-  svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'export', kappa_path, export_target)
 
 def export_unversioned_file(sbox):
@@ -485,8 +482,7 @@ def export_unversioned_file(sbox):
 
   export_target = sbox.add_wc_path('export')
 
-  svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'export', kappa_path, export_target)
 
 def export_with_state_deleted(sbox):
@@ -497,7 +493,7 @@ def export_with_state_deleted(sbox):
 
   # state deleted=true caused export to crash
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', alpha_path)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Deleting'),
     })
@@ -557,7 +553,7 @@ def export_HEADplus1_fails(sbox):
 
   sbox.build(create_wc = False, read_only = True)
 
-  svntest.actions.run_and_verify_svn(None, None, '.*No such revision.*',
+  svntest.actions.run_and_verify_svn(None, '.*No such revision.*',
                                      'export', sbox.repo_url, sbox.wc_dir,
                                      '-r', 38956)
 
@@ -613,7 +609,7 @@ def export_file_overwrite_fails(sbox):
 
   # Run it for source local
   open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
-  svntest.actions.run_and_verify_svn(None, [], '.*exist.*',
+  svntest.actions.run_and_verify_svn([], '.*exist.*',
                                      'export', iota_path, tmpdir)
 
   # Verify it failed
@@ -624,7 +620,7 @@ def export_file_overwrite_fails(sbox):
 
   # Run it for source URL
   open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
-  svntest.actions.run_and_verify_svn(None, [], '.*exist.*',
+  svntest.actions.run_and_verify_svn([], '.*exist.*',
                                      'export', iota_url, tmpdir)
 
   # Verify it failed
@@ -736,11 +732,11 @@ def export_with_url_unsafe_characters(sbox):
   # Create the file with special name and commit it.
   svntest.main.file_write(url_unsafe_path, 'This is URL unsafe path file.')
   svntest.main.run_svn(None, 'add', url_unsafe_path + '@')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', 'log msg',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', '-m', 'log msg',
                                      '--quiet', wc_dir)
 
   # Export the file and verify it.
-  svntest.actions.run_and_verify_svn(None, None, [], 'export',
+  svntest.actions.run_and_verify_svn(None, [], 'export',
                                      url_unsafe_path_url, export_target + '@')
 
   if not os.path.exists(export_target):
@@ -906,14 +902,14 @@ def export_file_overwrite_with_force(sbox):
 
   # Run it for WC export
   open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput,
                                      [], 'export', '--force',
                                      iota_path, tmpdir)
   svntest.actions.verify_disk(tmpdir, expected_disk)
 
   # Run it for URL export
   open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput,
                                      [], 'export', '--force',
                                      iota_url, tmpdir)
   svntest.actions.verify_disk(tmpdir, expected_disk)
@@ -956,7 +952,7 @@ def export_custom_keywords(sbox):
   export_file = os.path.join(export_target, 'alpha')
   os.remove(export_file)
   expected_output = ['A    %s\n' % export_file, 'Export complete.\n']
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'export', '--force',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      export_target)

@@ -188,7 +188,7 @@ def logical_changes_in_branch(sbox, branch):
 def get_mergeinfo_change(sbox, target):
   """Return a list of revision numbers representing the mergeinfo change
   on TARGET (working version against base).  Non-recursive."""
-  exit, out, err = actions.run_and_verify_svn(None, None, [],
+  exit, out, err = actions.run_and_verify_svn(None, [],
                                               'diff', '--depth=empty',
                                               sbox.ospath(target))
   merged_revs = []
@@ -302,7 +302,7 @@ def automatic_merge(sbox, source, target, args=[],
   before_changes = logical_changes_in_branch(sbox, target)
 
   exp_out = expected_automatic_merge_output(target, expect_3ways)
-  exit, out, err = svntest.actions.run_and_verify_svn(None, exp_out, [],
+  exit, out, err = svntest.actions.run_and_verify_svn(exp_out, [],
                                      'merge',
                                      '^/' + source, target,
                                      *args)
@@ -782,20 +782,20 @@ def subtree_to_and_fro(sbox):
 
   # r7 - Edit a file on the branch.
   svntest.main.file_write(A_COPY_gamma_path, "Branch edit to 'gamma'.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir,
                                      '-m', 'Edit a file on our branch')
 
   # r8 - Do a subtree sync merge from ^/A/D to A_COPY/D.
   # Note that among other things this changes A_COPY/D/H/psi.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A/D', A_COPY_D_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir,
                                      '-m', 'Automatic subtree merge')
 
   # r9 - Make an edit to A/D/H/psi.
   svntest.main.file_write(psi_path, "Trunk Edit to 'psi'.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir,
                                      '-m', 'Edit a file on our trunk')
 
   # Now reintegrate ^/A_COPY back to A.  Prior to issue #4258's fix, the
@@ -820,9 +820,9 @@ def subtree_to_and_fro(sbox):
   #    U   A
   #   Summary of conflicts:
   #     Text conflicts: 1
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, [], svntest.verify.AnyOutput,
+    [], svntest.verify.AnyOutput,
     'merge', sbox.repo_url + '/A_COPY', A_path)
 
   # Better to produce the same warning that explicitly using the
@@ -876,13 +876,13 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   #   Properties on 'A_COPY\B':
   #     svn:mergeinfo
   #       /A/B:2-4,6
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c-5',
+  svntest.actions.run_and_verify_svn(None, [], 'merge', '-c-5',
                                      sbox.repo_url + '/A/B',
                                      A_COPY_B_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir, '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir, '-m',
                                      'sync merge and reverse subtree merge')
 
   # Try an automatic sync merge from ^/A to A_COPY.  Revision 5 should be
@@ -917,7 +917,7 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   #   ___________________________________________________________________
   #   Modified: svn:mergeinfo
   #      Merged /A:r7
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   expected_output = wc.State(A_COPY_path, {
     'B/E/beta'   : Item(status='U '),
     })
@@ -1117,7 +1117,6 @@ def auto_merge_handles_replacements_in_merge_source(sbox):
   #   unusual way.
   #   Please contact the application's support team for more information.
   svntest.actions.run_and_verify_svn(
-    None,
     ["--- Recording mergeinfo for merge of r2 into '" + branch2_path + "':\n",
      " U   " + branch2_path + "\n",
      "--- Recording mergeinfo for merge of r3 into '" + branch2_path + "':\n",
@@ -1175,7 +1174,7 @@ def effective_sync_results_in_reintegrate(sbox):
     "--- Recording mergeinfo for merge between repository URLs into '" +
     A_path + "':\n",
     " U   " + A_path + "\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+  svntest.actions.run_and_verify_svn(expected_output, [], 'merge',
                                      sbox.repo_url + '/branch', A_path,
                                      '--reintegrate')
 
@@ -1198,8 +1197,8 @@ def effective_sync_results_in_reintegrate(sbox):
   # Conflict discovered in file 'A\mu'.
   # Select: (p) postpone, (df) diff-full, (e) edit, (m) merge,
   #         (mc) mine-conflict, (tc) theirs-conflict, (s) show all options: p
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', A_path, '-R')
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'revert', A_path, '-R')
+  svntest.actions.run_and_verify_svn(expected_output, [], 'merge',
                                      sbox.repo_url + '/branch', A_path)
 
 @Issue(4481)
@@ -1225,7 +1224,7 @@ def reintegrate_subtree_not_updated(sbox):
     + sbox.ospath('A/D/G') + "':\n",
     " U   "
     + sbox.ospath('A/D/G') + "\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'merge',
                                      sbox.repo_url + '/D_1/G',
                                      sbox.ospath('A/D/G'))
@@ -1238,7 +1237,7 @@ def reintegrate_subtree_not_updated(sbox):
     + sbox.ospath('A/D/H') + "':\n",
     " U   "
     + sbox.ospath('A/D/H') + "\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'merge',
                                      sbox.repo_url + '/D_1/H',
                                      sbox.ospath('A/D/H'))
@@ -1274,7 +1273,7 @@ def reintegrate_subtree_not_updated(sbox):
     + sbox.ospath('D_2/G') + "':\n",
     " U   "
     + sbox.ospath('D_2/G') + "\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'merge',
                                      sbox.repo_url + '/A/D',
                                      sbox.ospath('D_2'))
@@ -1295,7 +1294,7 @@ def reintegrate_subtree_not_updated(sbox):
     + sbox.ospath('A/D') + "\n",
     " U   "
     + sbox.ospath('A/D/G') + "\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'merge',
                                      sbox.repo_url + '/D_2',
                                      sbox.ospath('A/D'))
@@ -1321,7 +1320,7 @@ def reintegrate_subtree_not_updated(sbox):
     + sbox.ospath('D_2') + "\n",
     " G   "
     + sbox.ospath('D_2/G') + "\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'merge',
                                      sbox.repo_url + '/A/D',
                                      sbox.ospath('D_2'))

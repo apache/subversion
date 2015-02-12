@@ -58,7 +58,7 @@ struct dir_baton
   svn_revnum_t copyfrom_rev;
 
   /* Headers accumulated so far for this directory */
-  apr_array_header_t *headers;
+  svn_repos__dumpfile_headers_t *headers;
 
   /* Properties which were modified during change_dir_prop. */
   apr_hash_t *props;
@@ -72,9 +72,8 @@ struct dir_baton
      us, although they're all really within this directory. */
   apr_hash_t *deleted_entries;
 
-  /* Flags to trigger dumping props and record termination newlines. */
+  /* Flag to trigger dumping props. */
   svn_boolean_t dump_props;
-  svn_boolean_t dump_newlines;
 };
 
 /* A file baton used by all file-related callback functions in the dump
@@ -223,7 +222,7 @@ make_file_baton(const char *path,
  * content section, to represent the property delta of PROPS/DELETED_PROPS.
  */
 static svn_error_t *
-get_props_content(apr_array_header_t *headers,
+get_props_content(svn_repos__dumpfile_headers_t *headers,
                   svn_stringbuf_t **content,
                   apr_hash_t *props,
                   apr_hash_t *deleted_props,
@@ -262,7 +261,8 @@ dump_node_delete(svn_stream_t *stream,
                  const char *node_relpath,
                  apr_pool_t *pool)
 {
-  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+  svn_repos__dumpfile_headers_t *headers
+    = svn_repos__dumpfile_headers_create(pool);
 
   assert(svn_relpath_is_canonical(node_relpath));
 
@@ -274,7 +274,9 @@ dump_node_delete(svn_stream_t *stream,
   svn_repos__dumpfile_header_push(
     headers, SVN_REPOS_DUMPFILE_NODE_ACTION, "delete");
 
-  SVN_ERR(svn_repos__dump_headers(stream, headers, TRUE, pool));
+  SVN_ERR(svn_repos__dump_node_record(stream, headers,
+                                      NULL, FALSE, 0,  /* props & text */
+                                      FALSE /*content_length_always*/, pool));
   return SVN_NO_ERROR;
 }
 
@@ -296,7 +298,7 @@ dump_node_delete(svn_stream_t *stream,
  * header block.)
  */
 static svn_error_t *
-dump_node(apr_array_header_t **headers_p,
+dump_node(svn_repos__dumpfile_headers_t **headers_p,
           struct dump_edit_baton *eb,
           const char *repos_relpath,
           struct dir_baton *db,
@@ -308,7 +310,8 @@ dump_node(apr_array_header_t **headers_p,
           apr_pool_t *pool)
 {
   const char *node_relpath = repos_relpath;
-  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+  svn_repos__dumpfile_headers_t *headers
+    = svn_repos__dumpfile_headers_create(pool);
 
   assert(svn_relpath_is_canonical(repos_relpath));
   assert(!copyfrom_path || svn_relpath_is_canonical(copyfrom_path));
@@ -394,16 +397,6 @@ dump_node(apr_array_header_t **headers_p,
             headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV, "%ld", copyfrom_rev);
           svn_repos__dumpfile_header_push(
             headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH, copyfrom_path);
-
-          /* Ugly hack: If a directory was copied from a previous
-             revision, nothing like close_file() will be called to write two
-             blank lines. If change_dir_prop() is called, props are dumped
-             (along with the necessary PROPS-END\n\n and we're good. So
-             set DUMP_NEWLINES here to print the newlines unless
-             change_dir_prop() is called next otherwise the `svnadmin load`
-             parser will fail.  */
-          if (db)
-            db->dump_newlines = TRUE;
         }
       else
         {
@@ -445,7 +438,8 @@ dump_mkdir(struct dump_edit_baton *eb,
            apr_pool_t *pool)
 {
   svn_stringbuf_t *prop_content;
-  apr_array_header_t *headers = svn_repos__dumpfile_headers_create(pool);
+  svn_repos__dumpfile_headers_t *headers
+    = svn_repos__dumpfile_headers_create(pool);
 
   /* Node-path: ... */
   svn_repos__dumpfile_header_push(
@@ -496,23 +490,16 @@ dump_pending_dir(struct dump_edit_baton *eb,
                                       FALSE, 0, FALSE /*content_length_always*/,
                                       scratch_pool));
 
+  /* No text is going to be dumped. Write a couple of newlines and
+       wait for the next node/ revision. */
+  SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
+
   if (db->dump_props)
     {
-      /* No text is going to be dumped. Write a couple of newlines and
-         wait for the next node/ revision. */
-      SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
-
       /* Cleanup so that data is never dumped twice. */
       apr_hash_clear(db->props);
       apr_hash_clear(db->deleted_props);
       db->dump_props = FALSE;
-    }
-
-  /* Some pending newlines to dump? */
-  if (db->dump_newlines)
-    {
-      SVN_ERR(svn_stream_puts(eb->stream, "\n\n"));
-      db->dump_newlines = FALSE;
     }
 
   /* Anything that was pending is pending no longer. */
@@ -828,9 +815,7 @@ change_dir_prop(void *parent_baton,
   else
     svn_hash_sets(db->deleted_props, apr_pstrdup(db->pool, name), "");
 
-  /* Make sure we eventually output the props, and disable printing
-     a couple of extra newlines */
-  db->dump_newlines = FALSE;
+  /* Make sure we eventually output the props */
   db->dump_props = TRUE;
 
   return SVN_NO_ERROR;
@@ -896,7 +881,7 @@ close_file(void *file_baton,
   struct dump_edit_baton *eb = fb->eb;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
   svn_stringbuf_t *propstring = NULL;
-  apr_array_header_t *headers;
+  svn_repos__dumpfile_headers_t *headers;
 
   SVN_ERR(dump_pending_dir(eb, pool));
 

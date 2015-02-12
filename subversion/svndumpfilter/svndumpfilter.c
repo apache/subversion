@@ -278,7 +278,7 @@ struct node_baton_t
   svn_filesize_t tcl;
 
   /* Pointers to dumpfile data. */
-  apr_array_header_t *headers;
+  svn_repos__dumpfile_headers_t *headers;
   svn_stringbuf_t *props;
 
   /* Expect deltas? */

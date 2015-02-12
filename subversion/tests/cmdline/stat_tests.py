@@ -66,7 +66,7 @@ def status_unversioned_file_in_current_dir(sbox):
 
   svntest.main.file_append('foo', 'a new file')
 
-  svntest.actions.run_and_verify_svn(None, [ "?       foo\n" ], [],
+  svntest.actions.run_and_verify_svn([ "?       foo\n" ], [],
                                      'stat', 'foo')
 
 #----------------------------------------------------------------------
@@ -136,7 +136,7 @@ def status_shows_all_in_current_dir(sbox):
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, [],
                                                               'stat', '-vN')
 
   if (len(output) != len(os.listdir("."))):
@@ -155,14 +155,14 @@ def status_missing_file(sbox):
 
   os.remove('iota')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, [],
                                                               'status')
   for line in output:
     if not re.match("! +iota", line):
       raise svntest.Failure
 
   # This invocation is for issue #2127.
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, [],
                                                               'status', '-u',
                                                               'iota')
   found_it = 0
@@ -213,7 +213,7 @@ def status_type_change(sbox):
 
   expected_output = [s.replace('/', os.path.sep) for s in expected_output]
 
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status')
 
   # Now change the file that is obstructing the versioned dir into an
@@ -247,7 +247,7 @@ def status_type_change(sbox):
   # Fix separator for Windows
   expected_output = [s.replace('/', os.path.sep) for s in expected_output]
 
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status')
 
   # Now change the versioned dir that is obstructing the file into an
@@ -255,7 +255,7 @@ def status_type_change(sbox):
   svntest.main.safe_rmtree('iota')
   os.mkdir('iota')
 
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status')
 
 #----------------------------------------------------------------------
@@ -288,7 +288,7 @@ def status_type_change_to_symlink(sbox):
         '~       iota\n',
   ]
 
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status')
 
   # "valid" symlinks
@@ -297,7 +297,7 @@ def status_type_change_to_symlink(sbox):
   os.symlink('A/mu', 'iota')
   os.symlink('C', 'A/D')
 
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [], 'status')
 
 #----------------------------------------------------------------------
@@ -318,7 +318,7 @@ def status_with_new_files_pending(sbox):
   svntest.main.run_svn(None,
                        'up', '-r', '1')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, [],
                                                               'status', '-u')
 
   # The bug fixed in revision 3686 was a segmentation fault.
@@ -353,8 +353,7 @@ def status_for_unignored_file(sbox):
         ['I       newdir\n',
          'I       newfile\n',
          ' M      .\n'])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      'status', '--no-ignore', '.')
 
@@ -362,8 +361,7 @@ def status_for_unignored_file(sbox):
   expected = svntest.verify.UnorderedOutput(
         ['I       newdir\n',
          'I       newfile\n'])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      'status', 'newdir', 'newfile')
 
@@ -379,7 +377,7 @@ def status_for_nonexistent_file(sbox):
   os.chdir(wc_dir)
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(
-    None, None, [], 'status', 'nonexistent-file')
+    None, [], 'status', 'nonexistent-file')
 
   # there should *not* be a status line printed for the nonexistent file
   for line in output:
@@ -403,10 +401,10 @@ def status_nonrecursive_update_different_cwd(sbox):
   J_url  = sbox.repo_url + '/A/C/J'
   K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', '-m', 'rev 2', J_url)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', K_path)
 
   os.chdir(wc_dir)
@@ -418,8 +416,7 @@ def status_nonrecursive_update_different_cwd(sbox):
     'Status against revision:      2\n' ]
 
   os.chdir('A')
-  svntest.actions.run_and_verify_svn(None,
-                                     UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [],
                                      'status', '-v', '-N', '-u', 'C')
 
@@ -430,8 +427,7 @@ def status_nonrecursive_update_different_cwd(sbox):
     'Status against revision:      2\n']
 
   os.chdir('C')
-  svntest.actions.run_and_verify_svn(None,
-                                     UnorderedOutput(expected_output),
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected_output),
                                      [],
                                      'status', '-v', '-N', '-u', '.')
 
@@ -494,7 +490,7 @@ def status_file_needs_update(sbox):
   # the -v flag, which we don't want, as this bug never appeared when
   # -v was passed.  So we run status by hand:
   os.chdir(was_cwd)
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, [],
                                                            'status', '-u',
                                                            other_wc)
 
@@ -558,7 +554,7 @@ def status_uninvited_parent_directory(sbox):
   # the bug is present).  So run status by hand:
   os.chdir(was_cwd)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, None, [],
+    None, [],
     'status', '-u', os.path.join(other_wc, 'newfile'))
 
   for line in out:
@@ -592,7 +588,7 @@ def status_on_forward_deletion(sbox):
   #    svn: Working copy not locked
   #    svn: directory '' not locked
   #
-  svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
+  svntest.actions.run_and_verify_svn(None, [], 'st', '-u', 'wc')
 
   # Try again another way; the error would look like this:
   #
@@ -607,13 +603,13 @@ def status_on_forward_deletion(sbox):
   svntest.main.safe_rmtree('wc')
   svntest.main.run_svn(None,
                        'co', '-r1', A_url + "@1", 'wc')
-  svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
+  svntest.actions.run_and_verify_svn(None, [], 'st', '-u', 'wc')
 
 #----------------------------------------------------------------------
 
 def get_last_changed_date(path):
   "get the Last Changed Date for path using svn info"
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, [],
                                                            'info', path)
   for line in out:
     if re.match("^Last Changed Date", line):
@@ -624,7 +620,7 @@ def get_last_changed_date(path):
 # Helper for timestamp_behaviour test
 def get_text_timestamp(path):
   "get the text-time for path using svn info"
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, [],
                                                            'info', path)
   for line in out:
     if re.match("^Text Last Updated", line):
@@ -634,7 +630,7 @@ def get_text_timestamp(path):
 
 def no_text_timestamp(path):
   "ensure no text-time for path using svn info"
-  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, [],
                                                            'info', path)
   for line in out:
     if re.match("^Text Last Updated", line):
@@ -670,9 +666,9 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
 
   # revert/cleanup change the text-time even though the text doesn't change
   if cmd == 'cleanup':
-    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
+    svntest.actions.run_and_verify_svn(None, [], cmd, wc_dir)
   else:
-    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
+    svntest.actions.run_and_verify_svn(None, [], cmd, wc_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   text_time = get_text_timestamp(wc_path)
   if text_time == pre_text_time:
@@ -718,7 +714,7 @@ use-commit-times = yes
   svntest.main.create_config_dir(config_dir, config_contents)
 
   other_wc = sbox.add_wc_path('other')
-  svntest.actions.run_and_verify_svn("checkout failed", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'co', sbox.repo_url,
                                      other_wc,
                                      '--config-dir', config_dir)
@@ -794,7 +790,7 @@ def status_on_unversioned_dotdot(sbox):
   os.mkdir(new_subsub)
 
   os.chdir(new_subsub)
-  svntest.actions.run_and_verify_svn2(None, None,
+  svntest.actions.run_and_verify_svn2(None,
                                      "svn: warning: W155(010|007):.*'.*'.*not",
                                       0, 'st', '..')
 
@@ -868,7 +864,7 @@ def missing_dir_in_anchor(sbox):
   wc_dir = sbox.wc_dir
 
   foo_path = sbox.ospath('foo')
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir', foo_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'foo' : Item(status='A ', wc_rev=0),
@@ -894,7 +890,7 @@ def status_in_xml(sbox):
 
   # Retrieve last changed date from svn log
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [], 'log', file_path, '--xml', '-rHEAD')
+    None, [], 'log', file_path, '--xml', '-rHEAD')
 
   info_msg = "<date>"
   for line in output:
@@ -912,7 +908,7 @@ def status_in_xml(sbox):
 
   svntest.actions.run_and_verify_status_xml(expected_entries, file_path, '-u')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', '-m', 'repo-to-repo copy',
                                      sbox.repo_url + '/iota',
                                      sbox.repo_url + '/iota2')
@@ -926,7 +922,7 @@ def status_in_xml(sbox):
 
   svntest.actions.run_and_verify_status_xml(expected_entries, file_path, '-u')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '-m', 'repo delete',
                                      sbox.repo_url + '/A/B/E/alpha')
 
@@ -951,8 +947,7 @@ def status_ignored_dir(sbox):
   new_dir = sbox.ospath('dir.o')
   new_dir_url = sbox.repo_url + "/dir.o"
 
-  svntest.actions.run_and_verify_svn("Create dir",
-                                     ["Committing transaction...\n",
+  svntest.actions.run_and_verify_svn(["Committing transaction...\n",
                                       "Committed revision 2.\n"], [],
                                      'mkdir', new_dir_url, '-m', 'msg')
 
@@ -960,8 +955,7 @@ def status_ignored_dir(sbox):
   os.mkdir(new_dir)
 
   # run_and_verify_status doesn't handle this weird kind of entry.
-  svntest.actions.run_and_verify_svn(None,
-                                     ['I       *            ' + new_dir + "\n",
+  svntest.actions.run_and_verify_svn(['I       *            ' + new_dir + "\n",
                                       '        *        1   ' + wc_dir + "\n",
                                       'Status against revision:      2\n'], [],
                                      "status", "-u", wc_dir)
@@ -979,7 +973,7 @@ def status_unversioned_dir_in_wc(sbox):
   expected_err = "svn: warning: (W155007|W155010): .*'.*(/|\\\\)" + \
                  os.path.basename(path) + \
                  "' was not found"
-  svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
+  svntest.actions.run_and_verify_svn2([], expected_err, 0,
                                       "status", path)
 
 #----------------------------------------------------------------------
@@ -1002,7 +996,7 @@ def status_missing_dir(sbox):
   expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
                for s in expected ]
 
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected), [],
                                      "status", wc_dir)
 
   expected = [
@@ -1014,7 +1008,7 @@ def status_missing_dir(sbox):
   ]
 
   # now run status -u, we should be able to do this without crashing
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected), [],
                                      "status", "-u", wc_dir)
 
   # Finally run an explicit status request directly on the missing directory.
@@ -1027,7 +1021,7 @@ def status_missing_dir(sbox):
   expected = [ s.replace('A/D/G', a_d_g).replace('/', os.path.sep)
                for s in expected ]
 
-  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected), [],
+  svntest.actions.run_and_verify_svn(UnorderedOutput(expected), [],
                                      "status", a_d_g)
 
 def status_add_plus_conflict(sbox):
@@ -1040,42 +1034,42 @@ def status_add_plus_conflict(sbox):
   branch_url  = sbox.repo_url + '/branch'
   trunk_url  = sbox.repo_url + '/trunk'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', '-m', 'rev 2',
                                      branch_url, trunk_url)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'update', wc_dir)
 
   branch_file = sbox.ospath('branch/file')
 
   svntest.main.file_write(branch_file, "line 1\nline2\nline3\n", 'wb+')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', branch_file)
+  svntest.actions.run_and_verify_svn(None, [], 'add', branch_file)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'commit',
                                      branch_file, '-m', 'rev 3')
 
   svntest.main.file_write(branch_file, "line 1\nline3\n", 'wb')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'commit',
                                      branch_file, '-m', 'rev 4')
 
   svntest.main.file_write(branch_file, "line 1\nline2\n", 'wb')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'commit',
                                      branch_file, '-m', 'rev 5')
 
   trunk_dir = sbox.ospath('trunk')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'merge',
                                      branch_url, '-r', '2:3', trunk_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'merge',
                                      branch_url, '-r', '4:5', trunk_dir)
 
@@ -1090,7 +1084,7 @@ def status_add_plus_conflict(sbox):
 
   expected_output = svntest.verify.UnorderedOutput(lines)
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'status', wc_dir)
 
 #----------------------------------------------------------------------
@@ -1104,8 +1098,7 @@ def inconsistent_eol(sbox):
 
   svntest.main.file_write(iota_path, "line 1\nline 2\n", "wb")
 
-  svntest.actions.run_and_verify_svn(None,
-                                     "property 'svn:eol-style' set on.*iota",
+  svntest.actions.run_and_verify_svn("property 'svn:eol-style' set on.*iota",
                                      [],
                                      'propset', 'svn:eol-style', 'native',
                                      sbox.ospath('iota'))
@@ -1177,8 +1170,7 @@ def status_update_with_incoming_props(sbox):
           "        *        1   " + wc_dir + "\n",
           "Status against revision:      2\n" ])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u",
                                      wc_dir)
@@ -1190,12 +1182,12 @@ def status_update_with_incoming_props(sbox):
           "        *        1        1 jrandom      " + wc_dir + "\n",
           "Status against revision:      2\n" ])
 
-  svntest.actions.run_and_verify_svn(None, expected, [],
+  svntest.actions.run_and_verify_svn(expected, [],
                                      "status", "-uvN",
                                      wc_dir)
 
   # Retrieve last changed date from svn log
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None, [],
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, [],
                                                                 'log', wc_dir,
                                                                 '--xml', '-r1')
 
@@ -1303,8 +1295,7 @@ def status_update_verbose_with_incoming_props(sbox):
           "        *" + common + wc_dir  + "\n",
           "Status against revision:      2\n" ])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-uv", wc_dir)
 
@@ -1358,8 +1349,7 @@ def status_nonrecursive_update(sbox):
   xout = ["        *        1   " + sbox.ospath('A/mu') + "\n",
           "Status against revision:      2\n" ]
 
-  svntest.actions.run_and_verify_svn(None,
-                                     xout,
+  svntest.actions.run_and_verify_svn(xout,
                                      [],
                                      "status", "-uN", A_path)
 
@@ -1416,8 +1406,7 @@ def status_depth_local(sbox):
   # depth=empty
   expected = svntest.verify.UnorderedOutput(
                   [" M      %s\n" % A_path])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "--depth=empty", A_path)
 
@@ -1426,8 +1415,7 @@ def status_depth_local(sbox):
                   [" M      %s\n" % A_path,
                    "M       %s\n" % mu_path])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "--depth=files", A_path)
 
@@ -1437,8 +1425,7 @@ def status_depth_local(sbox):
                    " M      %s\n" % D_path,
                    "M       %s\n" % mu_path])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "--depth=immediates", A_path)
 
@@ -1449,8 +1436,7 @@ def status_depth_local(sbox):
                    "M       %s\n" % mu_path,
                    "M       %s\n" % gamma_path])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "--depth=infinity", A_path)
 
@@ -1482,8 +1468,7 @@ def status_depth_update(sbox):
                   ["        *        1   %s\n" % A_path,
                    "Status against revision:      3\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=empty", A_path)
 
@@ -1493,8 +1478,7 @@ def status_depth_update(sbox):
                    "        *        1   %s\n" % A_path,
                    "Status against revision:      3\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=files",
                                      A_path)
@@ -1506,8 +1490,7 @@ def status_depth_update(sbox):
                    "        *        1   %s\n" % mu_path,
                    "Status against revision:      3\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=immediates",
                                      A_path)
@@ -1520,8 +1503,7 @@ def status_depth_update(sbox):
                    "        *        1   %s\n" % gamma_path,
                    "Status against revision:      3\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=infinity",
                                      A_path)
@@ -1550,8 +1532,7 @@ def status_depth_update_local_modifications(sbox):
                   [" M               1   %s\n" % A_path,
                    "Status against revision:      1\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=empty", A_path)
 
@@ -1559,8 +1540,7 @@ def status_depth_update_local_modifications(sbox):
                   ["M                1   %s\n" % mu_path,
                    "Status against revision:      1\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=empty", mu_path)
 
@@ -1570,8 +1550,7 @@ def status_depth_update_local_modifications(sbox):
                    " M               1   %s\n" % A_path,
                    "Status against revision:      1\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=files",
                                      A_path)
@@ -1583,8 +1562,7 @@ def status_depth_update_local_modifications(sbox):
                    "M                1   %s\n" % mu_path,
                    "Status against revision:      1\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=immediates",
                                      A_path)
@@ -1597,8 +1575,7 @@ def status_depth_update_local_modifications(sbox):
                    "M                1   %s\n" % gamma_path,
                    "Status against revision:      1\n"])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "--depth=infinity",
                                      A_path)
@@ -1615,7 +1592,7 @@ def status_dash_u_deleted_directories(sbox):
   B_path = os.path.join(A_path, 'B')
 
   # delete the B directory
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', B_path)
 
   # now run status -u on B and its children
@@ -1632,8 +1609,7 @@ def status_dash_u_deleted_directories(sbox):
           "D                1   %s\n" % os.path.join("B", "E", "beta"),
           "D                1   %s\n" % os.path.join("B", "F"),
           "Status against revision:      1\n" ])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", "B")
 
@@ -1649,8 +1625,7 @@ def status_dash_u_deleted_directories(sbox):
           "D                1   %s\n" % os.path.join("E", "beta"),
           "D                1   %s\n" % "F",
           "Status against revision:      1\n" ])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", ".")
 
@@ -1663,8 +1638,7 @@ def status_dash_u_deleted_directories(sbox):
 
   os.chdir(was_cwd)
   os.chdir(A_path)
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u",
                                      os.path.join("B", "E"))
@@ -1689,8 +1663,7 @@ def status_dash_u_type_change(sbox):
   xout = ["~                1   iota\n",
           "Status against revision:      1\n" ]
 
-  svntest.actions.run_and_verify_svn(None,
-                                     xout,
+  svntest.actions.run_and_verify_svn(xout,
                                      [],
                                      "status", "-u")
 
@@ -1725,8 +1698,7 @@ def status_dash_u_type_change(sbox):
                         [s.replace('/', os.path.sep)
                             for s in  output])
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u")
 
@@ -1756,8 +1728,7 @@ def status_with_tree_conflicts(sbox):
           "      >   local file delete, incoming file delete or move upon update\n",
          ] + svntest.main.summary_of_conflicts(tree_conflicts=3))
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", G)
 
@@ -1772,8 +1743,7 @@ def status_with_tree_conflicts(sbox):
           "      >   local file delete, incoming file delete or move upon update\n",
          ] + svntest.main.summary_of_conflicts(tree_conflicts=3))
 
-  svntest.actions.run_and_verify_svn(None,
-                                     expected,
+  svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-v", G)
 
@@ -1831,7 +1801,7 @@ def status_nested_wc_old_format(sbox):
   svntest.main.file_append(sbox.ospath('subdir/.svn/format'),
                            '10\n') # format 10 was the Subversion 1.6 format
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "?       subdir\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn([ "?       subdir\n" ], [], 'st')
 
 #----------------------------------------------------------------------
 # Regression test for issue #3855 "status doesn't show 'K' on a locked
@@ -1844,9 +1814,9 @@ def status_locked_deleted(sbox):
   iota_path = sbox.ospath('iota')
 
   sbox.simple_rm('iota')
-  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+  svntest.actions.run_and_verify_svn(None, [], 'lock',
                                      os.path.join(sbox.wc_dir, 'iota'))
-  svntest.actions.run_and_verify_svn(None, ['D    K  %s\n' % iota_path], [],
+  svntest.actions.run_and_verify_svn(['D    K  %s\n' % iota_path], [],
                                      'status', iota_path)
 
 @Issue(3774)
@@ -1858,7 +1828,7 @@ def wc_wc_copy_timestamp(sbox):
 
   time.sleep(1.1)
   svntest.main.file_append(sbox.ospath('A/D/H/psi'), 'modified\n')
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+  svntest.actions.run_and_verify_svn(None, [], 'copy',
                                      sbox.ospath('A/D/H'),
                                      sbox.ospath('A/D/H2'))
 
@@ -1889,7 +1859,7 @@ def wc_wc_copy_timestamp(sbox):
     raise svntest.Failure("psi timestamps should be the same")
 
   # Cleanup repairs timestamps, so this should be a no-op.
-  svntest.actions.run_and_verify_svn(None, None, [], 'cleanup', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'cleanup', wc_dir)
   chi_dst_timestamp2 = get_text_timestamp(sbox.ospath('A/D/H2/chi'))
   if chi_dst_timestamp2 != chi_dst_timestamp1:
     raise svntest.Failure("chi timestamps should be the same")
@@ -1917,7 +1887,7 @@ def wclock_status(sbox):
                                                       'A/D/G',
                                                       'A/D/H']
       ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'status', wc_dir)
 
   # Second non-recursive lock
@@ -1931,7 +1901,7 @@ def wclock_status(sbox):
                                                       'A/D/G',
                                                       'A/D/H']
       ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'status', wc_dir)
 
 
@@ -1953,12 +1923,12 @@ def modified_modulo_translation(sbox):
   # Run status.  Expect some output.
   # TODO: decide how such files should show in the output; whether they
   #       always show, or only with some --flag; and adjust this accordingly.
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      'status', wc_dir)
 
   # Expect the file to be renormalized (to LF) after a revert.
   sbox.simple_revert('iota')
-  svntest.actions.run_and_verify_svn(None, [], [], 'status', wc_dir)
+  svntest.actions.run_and_verify_svn([], [], 'status', wc_dir)
 
 def status_not_present(sbox):
   "no status on not-present and excluded nodes"
@@ -1972,7 +1942,7 @@ def status_not_present(sbox):
                        sbox.ospath('A/mu'), sbox.ospath('A/B'))
   sbox.simple_commit()
 
-  svntest.actions.run_and_verify_svn(None, [], [],'status',
+  svntest.actions.run_and_verify_svn([], [],'status',
                                      sbox.ospath('iota'),
                                      sbox.ospath('A/B'),
                                      sbox.ospath('A/C'),
@@ -1989,7 +1959,7 @@ def status_unversioned_dir(sbox):
   # This should work on UNIX-like systems and Windows systems
   expected_err = "svn: warning: W1550(07|10): .*'.*(/|\\\\)" + \
                  "' is not a working copy"
-  svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
+  svntest.actions.run_and_verify_svn2([], expected_err, 0,
                                       "status", "/")
 
 def status_case_changed(sbox):
@@ -2075,7 +2045,7 @@ def move_update_timestamps(sbox):
                                         expected_status)
 
   time.sleep(1.1)
-  svntest.actions.run_and_verify_svn("resolve failed", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'resolve',
                                      '--accept=mine-conflict',
                                      sbox.ospath('A/B/E'))
@@ -2149,7 +2119,7 @@ def status_move_missing_direct(sbox):
     'D  +    %s\n' % sbox.ospath('ZB/E'),
     '        > moved to %s\n' % os.path.join('..', 'Z', 'B', 'E'),
   ]
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status',
+  svntest.actions.run_and_verify_svn(expected_output, [], 'status',
                                      sbox.ospath('ZB'), '--depth', 'immediates')
 
   # And calling svn status on just 'ZB/E' should have the same result for this node
@@ -2158,7 +2128,7 @@ def status_move_missing_direct(sbox):
     'D  +    %s\n' % sbox.ospath('ZB/E'),
     '        > moved to %s\n' % os.path.join('..', '..', 'Z', 'B', 'E'),
   ]
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status',
+  svntest.actions.run_and_verify_svn(expected_output, [], 'status',
                                      sbox.ospath('ZB/E'), '--depth', 'empty')
 
 def status_move_missing_direct_base(sbox):
@@ -2198,7 +2168,7 @@ def status_move_missing_direct_base(sbox):
     'D  +    %s\n' % sbox.ospath('Q/ZB/E'),
     '        > moved to %s\n' % os.path.join('..', '..', 'Z', 'B', 'E'),
   ]
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status',
+  svntest.actions.run_and_verify_svn(expected_output, [], 'status',
                                      sbox.ospath('Q/ZB'), '--depth', 'immediates')
 
   # And calling svn status on just 'ZB/E' should have the same result for this node,
@@ -2207,7 +2177,7 @@ def status_move_missing_direct_base(sbox):
     'D  +    %s\n' % sbox.ospath('Q/ZB/E'),
     '        > moved to %s\n' % os.path.join('..', '..', '..', 'Z', 'B', 'E'),
   ]
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status',
+  svntest.actions.run_and_verify_svn(expected_output, [], 'status',
                                      sbox.ospath('Q/ZB/E'), '--depth', 'empty')
 
 ########################################################################
