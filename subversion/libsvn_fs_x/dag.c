@@ -362,8 +362,8 @@ svn_fs_x__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
 
 /* Set *ID_P to the noderev-id for entry NAME in PARENT.  If no such
    entry, set *ID_P to NULL but do not error. */
-static svn_error_t *
-dir_entry_id_from_node(svn_fs_x__id_t *id_p,
+svn_error_t *
+svn_fs_x__dir_entry_id(svn_fs_x__id_t *id_p,
                        dag_node_t *parent,
                        const char *name,
                        apr_pool_t *scratch_pool)
@@ -1128,7 +1128,7 @@ svn_fs_x__dag_open(dag_node_t **child_p,
   svn_fs_x__id_t node_id;
 
   /* Ensure that NAME exists in PARENT's entry list. */
-  SVN_ERR(dir_entry_id_from_node(&node_id, parent, name, scratch_pool));
+  SVN_ERR(svn_fs_x__dir_entry_id(&node_id, parent, name, scratch_pool));
   if (! svn_fs_x__id_used(&node_id))
     {
       *child_p = NULL;

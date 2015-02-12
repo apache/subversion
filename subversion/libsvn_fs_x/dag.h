@@ -273,6 +273,14 @@ svn_fs_x__dag_open(dag_node_t **child_p,
                    apr_pool_t *scratch_pool);
 
 
+/* Set *ID_P to the noderev-id for entry NAME in PARENT.  If no such
+   entry exists, set *ID_P to "unused" but do not error. */
+svn_error_t *
+svn_fs_x__dir_entry_id(svn_fs_x__id_t *id_p,
+                       dag_node_t *parent,
+                       const char *name,
+                       apr_pool_t *scratch_pool);
+
 /* Set *ENTRIES_P to an array of NODE's entries, sorted by entry names,
    and the values are svn_fs_x__dirent_t. The returned table (and elements)
    is allocated in RESULT_POOL, temporaries in SCRATCH_POOL. */
