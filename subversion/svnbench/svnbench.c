@@ -758,7 +758,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             svn_error_clear
               (svn_cmdline_fprintf
                (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
-                                "Type 'svn-bench help %s' for usage.\n"),
+                                "Type 'svnbench help %s' for usage.\n"),
                 subcommand->name, optstr, subcommand->name));
           *exit_code = EXIT_FAILURE;
           return SVN_NO_ERROR;
@@ -960,7 +960,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           err = svn_error_quick_wrap(
                   err, apr_psprintf(pool,
-                                    _("Try 'svn-bench help %s' for more information"),
+                                    _("Try 'svnbench help %s' for more information"),
                                     subcommand->name));
         }
       if (err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
@@ -992,7 +992,7 @@ main(int argc, const char *argv[])
   svn_error_t *err;
 
   /* Initialize the app. */
-  if (svn_cmdline_init("svn-bench", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svnbench", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a separate mutexless allocator,
@@ -1009,7 +1009,7 @@ main(int argc, const char *argv[])
   if (err)
     {
       exit_code = EXIT_FAILURE;
-      svn_cmdline_handle_exit_error(err, NULL, "svn-bench: ");
+      svn_cmdline_handle_exit_error(err, NULL, "svnbench: ");
     }
 
   svn_pool_destroy(pool);
