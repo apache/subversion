@@ -829,7 +829,7 @@ complete_conflict(svn_skel_t *conflict,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  svn_wc_conflict_version_t *original_version = NULL;
+  const svn_wc_conflict_version_t *original_version = NULL;
   svn_wc_conflict_version_t *target_version;
   svn_boolean_t is_complete;
 
@@ -861,10 +861,8 @@ complete_conflict(svn_skel_t *conflict,
 
       if (locations)
         {
-          const svn_wc_conflict_version_t *left_version;
-
           original_version = APR_ARRAY_IDX(locations, 0,
-                                       const svn_wc_conflict_version_t *);
+                                           const svn_wc_conflict_version_t *);
         }
     }
 
