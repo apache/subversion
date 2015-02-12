@@ -330,16 +330,13 @@ cache_lookup_last_path(svn_fs_x__dag_cache_t *cache,
  */
 static dag_node_t *
 dag_node_cache_get(svn_fs_root_t *root,
-                   const char *path)
+                   const svn_string_t *path)
 {
   svn_fs_x__data_t *ffd = root->fs->fsap_data;
-  cache_entry_t *bucket;
-  svn_string_t normalized;
+  svn_fs_x__change_set_t change_set = root_change_set(root);
 
   auto_clear_dag_cache(ffd->dag_node_cache);
-  bucket = cache_lookup(ffd->dag_node_cache, root_change_set(root),
-                        normalize_path(&normalized, path));
-  return bucket->node;
+  return cache_lookup(ffd->dag_node_cache, change_set, path)->node;
 }
 
 
@@ -536,8 +533,8 @@ make_parent_path(dag_node_t *node,
 }
 
 /* Try a short-cut for the open_path() function using the last node accessed.
- * If that ROOT is that nodes's "created rev" and PATH of PATH_LEN chars is
- * its "created path", return the node in *NODE_P.  Set it to NULL otherwise.
+ * If that ROOT is that nodes's "created rev" and PATH matches its "created-
+ * path", return the node in *NODE_P.  Set it to NULL otherwise.
  *
  * This function is used to support ra_serf-style access patterns where we
  * are first asked for path@rev and then for path@c_rev of the same node.
@@ -548,17 +545,13 @@ make_parent_path(dag_node_t *node,
 static svn_error_t *
 try_match_last_node(dag_node_t **node_p,
                     svn_fs_root_t *root,
-                    const char *path,
-                    apr_size_t path_len,
-                    apr_pool_t *scratch_pool)
+                    const svn_string_t *path)
 {
   svn_fs_x__data_t *ffd = root->fs->fsap_data;
 
   /* Optimistic lookup: if the last node returned from the cache applied to
      the same PATH, return it in NODE. */
-  svn_string_t normalized;
-  dag_node_t *node = cache_lookup_last_path(ffd->dag_node_cache,
-                                            normalize_path(&normalized, path));
+  dag_node_t *node = cache_lookup_last_path(ffd->dag_node_cache, path);
 
   /* Did we get a bucket with a committed node? */
   if (node && !svn_fs_x__dag_check_mutable(node))
@@ -567,14 +560,16 @@ try_match_last_node(dag_node_t **node_p,
          This is repository location for which this node is _known_ to be
          the right lookup result irrespective of how we found it. */
       const char *created_path
-        = svn_fs_x__dag_get_created_path(node);
+        = svn_fs_x__dag_get_created_path(node) + 1;
       svn_revnum_t revision = svn_fs_x__dag_get_revision(node);
 
       /* Is it an exact match? */
-      if (revision == root->rev && strcmp(created_path, path) == 0)
+      if (   revision == root->rev
+          && strlen(created_path) == path->len
+          && memcmp(created_path, path->data, path->len) == 0)
         {
           /* Cache it under its full path@rev access path. */
-          svn_fs_x__set_dag_node(root, path, node);
+          svn_fs_x__set_dag_node(root, created_path, node);
 
           *node_p = node;
           return SVN_NO_ERROR;
@@ -657,13 +652,16 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
           svn_fs_x__copy_id_inherit_t inherit;
           const char *copy_path = NULL;
           dag_node_t *cached_node = NULL;
+          svn_string_t normalized;
 
           /* If we found a directory entry, follow it.  First, we
              check our node cache, and, failing that, we hit the DAG
              layer.  Don't bother to contact the cache for the last
              element if we already know the lookup to fail for the
              complete path. */
-          cached_node = dag_node_cache_get(root, path_so_far->data);
+          cached_node = dag_node_cache_get(root,
+                                           normalize_path(&normalized,
+                                                          path_so_far->data));
           if (cached_node)
             child = cached_node;
           else
@@ -881,7 +879,9 @@ walk_dag_path(dag_node_t **node_p,
      So, try it first. */
   if (!root->is_txn_root)
     {
-      SVN_ERR(try_match_last_node(node_p, root, path, path_len, iterpool));
+      svn_string_t normalized;
+      SVN_ERR(try_match_last_node(node_p, root,
+                                  normalize_path(&normalized, path)));
 
       /* Did the shortcut work? */
       if (*node_p)
@@ -894,7 +894,8 @@ walk_dag_path(dag_node_t **node_p,
   directory = svn_dirent_dirname(path, pool);
   if (directory[1] != 0) /* root nodes are covered anyway */
     {
-      here = dag_node_cache_get(root, directory);
+      svn_string_t normalized;
+      here = dag_node_cache_get(root, normalize_path(&normalized, directory));
 
       /* Did the shortcut work? */
       if (here)
@@ -980,11 +981,10 @@ svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
                        apr_pool_t *pool)
 {
   dag_node_t *node = NULL;
+  svn_string_t normalized;
 
-  /* First we look for the DAG in our cache
-     (if the path may be canonical). */
-  if (*path == '/')
-    node = dag_node_cache_get(root, path);
+  /* First we look for the DAG in our cache. */
+  node = dag_node_cache_get(root, normalize_path(&normalized, path));
 
   if (! node)
     {
@@ -994,10 +994,7 @@ svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
        * performance benefit over previously checking path for being
        * canonical. */
       path = svn_fs__canonicalize_abspath(path, pool);
-      node = dag_node_cache_get(root, path);
-
-      if (! node)
-        SVN_ERR(walk_dag_path(&node, root, path, pool));
+      SVN_ERR(walk_dag_path(&node, root, path, pool));
     }
 
   *dag_node_p = svn_fs_x__dag_copy_into_pool(node, pool);
