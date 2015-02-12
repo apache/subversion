@@ -188,7 +188,7 @@ svn_cl__null_log(apr_getopt_t *os,
           if (svn_path_is_url(target) || target[0] == '/')
             return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                      _("Only relative paths can be specified"
-                                       " after a URL for 'svn-bench log', "
+                                       " after a URL for 'svnbench log', "
                                        "but '%s' is not a relative path"),
                                      target);
         }
