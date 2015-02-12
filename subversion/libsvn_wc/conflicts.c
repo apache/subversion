@@ -1817,7 +1817,9 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
            operation == svn_wc_operation_switch)
     {
       /* For updates, the left version corresponds to the pre-update state. */
-      if (left_version)
+      if (left_version
+          && reason != svn_wc_conflict_reason_added
+          && reason != svn_wc_conflict_reason_replaced)
         local_kind = left_version->node_kind;
       else
         {
@@ -1846,6 +1848,19 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
   return SVN_NO_ERROR;
 }
 
+/* Forward definition */
+static svn_error_t *
+resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              const svn_skel_t *conflict,
+                              svn_wc_conflict_choice_t conflict_choice,
+                              apr_hash_t *resolve_later,
+                              svn_wc_notify_func2_t notify_func,
+                              void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
@@ -2015,6 +2030,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
     {
       svn_wc_conflict_result_t *result;
       svn_wc_conflict_description2_t *desc;
+      svn_boolean_t resolved;
 
       SVN_ERR(read_tree_conflict_desc(&desc,
                                       db, local_abspath, conflict_skel,
@@ -2025,9 +2041,21 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
       SVN_ERR(resolver_func(&result, desc, resolver_baton, scratch_pool,
                             scratch_pool));
 
-      /* Ignore the result. We cannot apply it here since this code runs
-       * during an update or merge operation. Tree conflicts are always
-       * postponed and resolved after the operation has completed. */
+      if (result == NULL)
+        return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                _("Conflict callback violated API:"
+                                  " returned no results"));
+
+      /* Pass retry hash to avoid erroring out on cases where update
+         can continue safely. ### Need notify handling */
+      if (result->choice != svn_wc_conflict_choose_postpone)
+        SVN_ERR(resolve_tree_conflict_on_node(&resolved,
+                                              db, local_abspath, conflict_skel,
+                                              result->choice,
+                                              apr_hash_make(scratch_pool),
+                                              NULL, NULL, /* ### notify */
+                                              cancel_func, cancel_baton,
+                                              scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2100,8 +2128,8 @@ read_prop_conflict_descs(apr_array_header_t *conflicts,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc__db_base_get_props(&base_props, db, local_abspath,
-                                    result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_props(&base_props, db, local_abspath,
+                                         result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, conflicted_props);
        hi;
@@ -2489,6 +2517,7 @@ static svn_error_t *
 resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                               svn_wc__db_t *db,
                               const char *local_abspath,
+                              const svn_skel_t *conflicts,
                               svn_wc_conflict_choice_t conflict_choice,
                               apr_hash_t *resolve_later,
                               svn_wc_notify_func2_t notify_func,
@@ -2499,17 +2528,11 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
 {
   svn_wc_conflict_reason_t reason;
   svn_wc_conflict_action_t action;
-  svn_skel_t *conflicts;
   svn_wc_operation_t operation;
   svn_boolean_t tree_conflicted;
   const char *src_op_root_abspath;
 
   *did_resolve = FALSE;
-
-  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
-                                   scratch_pool, scratch_pool));
-  if (!conflicts)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL,
                                      &tree_conflicted, db, local_abspath,
@@ -2553,7 +2576,9 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
               if (err)
                 {
                   const char *dup_abspath;
-                  if (err && err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
+
+                  if (!resolve_later
+                      || err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
                     return svn_error_trace(err);
 
                   svn_error_clear(err);
@@ -2586,15 +2611,18 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
           if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
             {
               err = svn_wc__db_update_moved_away_conflict_victim(
-                        db, local_abspath,
-                        notify_func, notify_baton,
+                        db, local_abspath, src_op_root_abspath,
+                        operation, action, reason,
                         cancel_func, cancel_baton,
+                        notify_func, notify_baton,
                         scratch_pool);
 
               if (err)
                 {
                   const char *dup_abspath;
-                  if (err && err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
+
+                  if (!resolve_later
+                      || err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
                     return svn_error_trace(err);
 
                   svn_error_clear(err);
@@ -2755,6 +2783,35 @@ struct conflict_status_walker_baton
   apr_hash_t *resolve_later;
 };
 
+/* Implements svn_wc_notify_func2_t to collect new conflicts caused by
+   resolving a tree conflict. */
+static void
+tree_conflict_collector(void *baton,
+                        const svn_wc_notify_t *notify,
+                        apr_pool_t *pool)
+{
+  struct conflict_status_walker_baton *cswb = baton;
+
+  if (cswb->notify_func)
+    cswb->notify_func(cswb->notify_baton, notify, pool);
+
+  if (cswb->resolve_later
+      && (notify->action == svn_wc_notify_tree_conflict
+          || notify->prop_state == svn_wc_notify_state_conflicted
+          || notify->content_state == svn_wc_notify_state_conflicted))
+    {
+      if (!svn_hash_gets(cswb->resolve_later, notify->path))
+        {
+          const char *dup_path;
+
+          dup_path = apr_pstrdup(apr_hash_pool_get(cswb->resolve_later),
+                                 notify->path);
+
+          svn_hash_sets(cswb->resolve_later, dup_path, dup_path);
+        }
+    }
+}
+
 /* Implements svn_wc_status4_t to walk all conflicts to resolve.
  */
 static svn_error_t *
@@ -2771,7 +2828,6 @@ conflict_status_walker(void *baton,
   int i;
   svn_boolean_t resolved = FALSE;
   svn_skel_t *conflict;
-  svn_boolean_t text_conflicted;
 
   if (!status->conflicted)
     return SVN_NO_ERROR;
@@ -2780,10 +2836,6 @@ conflict_status_walker(void *baton,
 
   SVN_ERR(svn_wc__db_read_conflict(&conflict, db, local_abspath,
                                    scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, &text_conflicted, NULL, NULL,
-                                     db, local_abspath, conflict,
-                                     scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__read_conflicts(&conflicts, db, local_abspath, TRUE,
                                  scratch_pool, iterpool));
@@ -2797,6 +2849,13 @@ conflict_status_walker(void *baton,
       svn_skel_t *work_items;
 
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
+
+      if ((cd->kind == svn_wc_conflict_kind_property && !cswb->resolve_prop)
+          || (cd->kind == svn_wc_conflict_kind_text && !cswb->resolve_text)
+          || (cd->kind == svn_wc_conflict_kind_tree && !cswb->resolve_tree))
+        {
+          continue; /* Easy out. Don't call resolver func and ignore result */
+        }
 
       svn_pool_clear(iterpool);
 
@@ -2824,11 +2883,11 @@ conflict_status_walker(void *baton,
               break;
             SVN_ERR(resolve_tree_conflict_on_node(&did_resolve,
                                                   db,
-                                                  local_abspath,
+                                                  local_abspath, conflict,
                                                   my_choice,
                                                   cswb->resolve_later,
-                                                  cswb->notify_func,
-                                                  cswb->notify_baton,
+                                                  tree_conflict_collector,
+                                                  cswb,
                                                   cswb->cancel_func,
                                                   cswb->cancel_baton,
                                                   iterpool));
@@ -2968,7 +3027,9 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   cswb.notify_func = notify_func;
   cswb.notify_baton = notify_baton;
 
-  cswb.resolve_later = apr_hash_make(scratch_pool);
+  cswb.resolve_later = (depth != svn_depth_empty)
+                          ? apr_hash_make(scratch_pool)
+                          : NULL;
 
   if (notify_func)
     notify_func(notify_baton,
@@ -2988,7 +3049,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                            cancel_func, cancel_baton,
                            scratch_pool);
 
-  while (!err && apr_hash_count(cswb.resolve_later))
+  while (!err && cswb.resolve_later && apr_hash_count(cswb.resolve_later))
     {
       apr_hash_index_t *hi;
       svn_boolean_t cleared_one = FALSE;
@@ -2999,17 +3060,19 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
       else
         iterpool = svn_pool_create(scratch_pool);
 
-      for (hi = apr_hash_first(scratch_pool, cswb.resolve_later);
-          hi && !err;
-          hi = apr_hash_next(hi))
+      hi = apr_hash_first(scratch_pool, cswb.resolve_later);
+      cswb.resolve_later = apr_hash_make(scratch_pool);
+
+      for (; hi && !err; hi = apr_hash_next(hi))
         {
           tc_abspath = apr_hash_this_key(hi);
           svn_pool_clear(iterpool);
 
-          svn_hash_sets(cswb.resolve_later, tc_abspath, NULL);
+          /* ### TODO: Check if tc_abspath falls within selected depth */
 
-          err = svn_wc_walk_status(wc_ctx, tc_abspath, depth, FALSE, FALSE,
-                                   TRUE, NULL, conflict_status_walker, &cswb,
+          err = svn_wc_walk_status(wc_ctx, tc_abspath, svn_depth_empty,
+                                   FALSE, FALSE, TRUE, NULL,
+                                   conflict_status_walker, &cswb,
                                    cancel_func, cancel_baton,
                                    iterpool);
 

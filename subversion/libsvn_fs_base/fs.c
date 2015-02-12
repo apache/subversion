@@ -783,8 +783,8 @@ base_create(svn_fs_t *fs,
   return SVN_NO_ERROR;;
 
 error:
-  svn_error_clear(cleanup_fs(fs));
-  return svn_err;
+  return svn_error_compose_create(svn_err,
+                                  svn_error_trace(cleanup_fs(fs)));
 }
 
 
@@ -871,8 +871,8 @@ base_open(svn_fs_t *fs,
   return SVN_NO_ERROR;
 
  error:
-  svn_error_clear(cleanup_fs(fs));
-  return svn_err;
+  return svn_error_compose_create(svn_err,
+                                  svn_error_trace(cleanup_fs(fs)));
 }
 
 

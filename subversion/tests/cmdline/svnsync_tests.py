@@ -121,7 +121,7 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
 
   # Setup the mirror repository.  Feed it the UUID of the source repository.
   exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
-  svntest.actions.run_and_verify_svnadmin2("Setting UUID", None, None, 0,
+  svntest.actions.run_and_verify_svnadmin2(None, None, 0,
                                            'setuuid', dest_sbox.repo_dir,
                                            output[0][:-1])
 
@@ -162,7 +162,7 @@ def verify_mirror(dest_sbox, exp_dump_file_contents):
   for prop_name in ("svn:sync-from-url", "svn:sync-from-uuid",
                     "svn:sync-last-merged-rev"):
     svntest.actions.run_and_verify_svn(
-      None, None, [], "propdel", "--revprop", "-r", "0",
+      None, [], "propdel", "--revprop", "-r", "0",
       prop_name, dest_sbox.repo_url)
 
   # Create a dump file from the mirror repository.
@@ -294,7 +294,6 @@ def detect_meddling(sbox):
 
   svntest.main.safe_rmtree(dest_sbox.wc_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'co',
                                      dest_sbox.repo_url,
@@ -306,7 +305,6 @@ def detect_meddling(sbox):
   run_sync(dest_sbox.repo_url)
 
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'up',
                                      dest_sbox.wc_dir)
@@ -315,7 +313,6 @@ def detect_meddling(sbox):
   svntest.main.file_append(os.path.join(dest_sbox.wc_dir, 'A', 'B', 'lambda'),
                            'new lambda text')
   svntest.actions.run_and_verify_svn(None,
-                                     None,
                                      [],
                                      'ci',
                                      '-m', 'msg',

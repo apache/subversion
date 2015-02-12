@@ -53,9 +53,19 @@ get_locks_callback(void *baton,
   struct get_locks_baton_t *b = baton;
   apr_pool_t *hash_pool = apr_hash_pool_get(b->locks);
   svn_string_t *lock_path = svn_string_create(lock->path, hash_pool);
-  apr_hash_set(b->locks, lock_path->data, lock_path->len,
-               svn_lock_dup(lock, hash_pool));
-  return SVN_NO_ERROR;
+
+  if (!apr_hash_get(b->locks, lock_path->data, lock_path->len))
+    {
+      apr_hash_set(b->locks, lock_path->data, lock_path->len,
+                   svn_lock_dup(lock, hash_pool));
+      return SVN_NO_ERROR; 
+    }
+  else
+    {
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "Lock for path '%s' is being reported twice.",
+                               lock->path);
+    }
 }
 
 /* A factory function. */
@@ -1134,6 +1144,72 @@ obtain_write_lock_failure(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+parent_and_child_lock(const svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_access_t *access;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  const char *conflict;
+  svn_revnum_t newrev;
+  svn_lock_t *lock;
+  struct get_locks_baton_t *get_locks_baton;
+  apr_size_t num_expected_paths;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-parent-and-child-lock", opts, pool));
+  SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
+  SVN_ERR(svn_fs_set_access(fs, access));
+
+  /* Make a file '/A'. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, "/A", pool));
+  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+
+  /* Obtain a lock on '/A'. */
+  SVN_ERR(svn_fs_lock(&lock, fs, "/A", NULL, NULL, FALSE, 0, newrev, FALSE,
+                      pool));
+
+  /* Add a lock token to FS access context. */
+  SVN_ERR(svn_fs_access_add_lock_token(access, lock->token));
+
+  /* Make some weird change: replace file '/A' by a directory with a
+     child.  Issue 2507 means that the result is that the directory /A
+     remains locked. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, newrev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_delete(root, "/A", pool));
+  SVN_ERR(svn_fs_make_dir(root, "/A", pool));
+  SVN_ERR(svn_fs_make_file(root, "/A/b", pool));
+  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+
+  /* Obtain a lock on '/A/b'.  Issue 2507 means that the lock index
+     for / refers to both /A and /A/b, and that the lock index for /A
+     refers to /A/b. */
+  SVN_ERR(svn_fs_lock(&lock, fs, "/A/b", NULL, NULL, FALSE, 0, newrev, FALSE,
+                      pool));
+
+  /* Verify the locked paths. The lock for /A/b should not be reported
+     twice even though issue 2507 means we access the index for / and
+     the index for /A both of which refer to /A/b. */
+  {
+    static const char *expected_paths[] = {
+      "/A",
+      "/A/b",
+    };
+    num_expected_paths = sizeof(expected_paths) / sizeof(const char *);
+    get_locks_baton = make_get_locks_baton(pool);
+    SVN_ERR(svn_fs_get_locks(fs, "/", get_locks_callback,
+                             get_locks_baton, pool));
+    SVN_ERR(verify_matching_lock_paths(get_locks_baton, expected_paths,
+                                       num_expected_paths, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -1171,6 +1247,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "lock callback error"),
     SVN_TEST_OPTS_PASS(obtain_write_lock_failure,
                        "lock/unlock when 'write-lock' couldn't be obtained"),
+    SVN_TEST_OPTS_PASS(parent_and_child_lock,
+                       "lock parent and it's child"),
     SVN_TEST_NULL
   };
 
