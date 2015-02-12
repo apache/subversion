@@ -177,6 +177,10 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+/* In *NEW_EXTERNALS_DESCRIPTION, return a new external description for
+ * use as a line in an svn:externals property, based on the external item
+ * ITEM and the additional parser information in INFO. Pin the external
+ * to EXTERNAL_PEGREV. Use POOL for all allocations. */
 static svn_error_t *
 make_external_description(const char **new_external_description,
                           const char *local_abspath_or_url,
@@ -494,6 +498,15 @@ pin_externals_prop(svn_string_t **pinned_externals,
   return SVN_NO_ERROR;
 }
 
+/* Return, in *NEW_EXTERNALS, a new hash of externals definitions, some or
+ * which all of which are pinned. If EXTERNALS_TO_PIN is NULL, pin all
+ * externals, else pin the externals mentioned in EXTERNALS_TO_PIN.
+ * The pinning operation takes place as part of the copy operation for
+ * the source/destination pair PAIR. Use RA_SESSION and REPOS_ROOT_URL
+ * to contact the repository containing the externals definition, if neccesary.
+ * Use CX to fopen additional RA sessions to external repositories, if
+ * neccessary. Allocate *NEW_EXTERNALS in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 resolve_pinned_externals(apr_hash_t **new_externals,
                          const apr_hash_t *externals_to_pin,
@@ -1259,6 +1272,14 @@ find_absent_parents2(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* Queue property changes for pinning svn:externals properties set on
+ * descendants of the path corresponding to PARENT_INFO. PINNED_EXTERNALS
+ * is keyed by the relative path of each descendant which should have some
+ * or all of its externals pinned, with the corresponding pinned svn:externals
+ * properties as values. Property changes are queued in a new list of path
+ * infos *NEW_PATH_INFOS, or in an existing item of the PATH_INFOS list if an
+ * existing item is found for the descendant. Allocate results in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 queue_externals_change_path_infos(apr_array_header_t *new_path_infos,
                                   apr_array_header_t *path_infos,
