@@ -58,18 +58,9 @@ typedef enum svn_fs_x__dag_path_flags_t {
      component zero.  */
   svn_fs_x__dag_path_last_optional = 1,
 
-  /* When this flag is set, don't bother to lookup the DAG node in
-     our caches because we already tried this.  Ignoring this flag
-     has no functional impact.  */
-  svn_fs_x__dag_path_uncached = 2,
-
-  /* The caller does not care about the parent node chain but only
-     the final DAG node. */
-  svn_fs_x__dag_path_node_only = 4,
-
   /* The caller wants a NULL path object instead of an error if the
      path cannot be found. */
-  svn_fs_x__dag_path_allow_null = 8
+  svn_fs_x__dag_path_allow_null = 2
 } svn_fs_x__dag_path_flags_t;
 
 
@@ -119,10 +110,8 @@ typedef struct svn_fs_x__dag_path_t
    callers that create new nodes --- we find the parent directory for
    them, and tell them whether the entry exists already.
 
-   The remaining bits in FLAGS are hints that allow this function
-   to take shortcuts based on knowledge that the caller provides,
-   such as the caller is not actually being interested in PARENT_PATH_P,
-   but only in (*PARENT_PATH_P)->NODE.
+   If FLAGS & svn_fs_x__dag_path_allow_null is non-zero, set the
+   *PARENT_PATH_P to NULL if any node in the path could not be found.
 
    NOTE: Public interfaces which only *read* from the filesystem
    should not call this function directly, but should instead use

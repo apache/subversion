@@ -605,7 +605,6 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
      at the respective position and replacing that with a '/' in the next
      iteration.  This is correct as we assert() PATH to be canonical. */
   svn_stringbuf_t *path_so_far = svn_stringbuf_create(path, pool);
-  apr_size_t path_len = path_so_far->len;
 
   /* Callers often traverse the DAG in some path-based order or along the
      history segments.  That allows us to try a few guesses about where to
@@ -613,64 +612,11 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
      the full parent chain. */
   assert(svn_fs__is_canonical_abspath(path));
   path_so_far->len = 0; /* "" */
-  if (flags & svn_fs_x__dag_path_node_only)
-    {
-      const char *directory;
 
-      /* First attempt: Assume that we access the DAG for the same path as
-         in the last lookup but for a different revision that happens to be
-         the last revision that touched the respective node.  This is a
-         common pattern when e.g. checking out over ra_serf.  Note that this
-         will only work for committed data as the revision info for nodes in
-         txns is bogus.
-
-         This shortcut is quick and will exit this function upon success.
-         So, try it first. */
-      if (!root->is_txn_root)
-        {
-          dag_node_t *node;
-          SVN_ERR(try_match_last_node(&node, root, path, path_len, iterpool));
-
-          /* Did the shortcut work? */
-          if (node)
-            {
-              /* Construct and return the result. */
-              svn_pool_destroy(iterpool);
-
-              dag_path = make_parent_path(node, 0, 0, pool);
-              dag_path->copy_inherit = svn_fs_x__copy_id_inherit_self;
-              *dag_path_p = dag_path;
-
-              return SVN_NO_ERROR;
-            }
-        }
-
-      /* Second attempt: Try starting the lookup immediately at the parent
-         node.  We will often have recently accessed either a sibling or
-         said parent DIRECTORY itself for the same revision. */
-      directory = svn_dirent_dirname(path, pool);
-      if (directory[1] != 0) /* root nodes are covered anyway */
-        {
-          here = dag_node_cache_get(root, directory);
-
-          /* Did the shortcut work? */
-          if (here)
-            {
-              apr_size_t dirname_len = strlen(directory);
-              path_so_far->len = dirname_len;
-              rest = path + dirname_len + 1;
-            }
-        }
-    }
-
-  /* did the shortcut work? */
-  if (!here)
-    {
-      /* Make a parent_path item for the root node, using its own current
-         copy id.  */
-      SVN_ERR(svn_fs_x__root_node(&here, root, pool, iterpool));
-      rest = path + 1; /* skip the leading '/', it saves in iteration */
-    }
+  /* Make a parent_path item for the root node, using its own current
+     copy id.  */
+  SVN_ERR(svn_fs_x__root_node(&here, root, pool, iterpool));
+  rest = path + 1; /* skip the leading '/', it saves in iteration */
 
   path_so_far->data[path_so_far->len] = '\0';
   dag_path = make_parent_path(here, 0, 0, pool);
@@ -717,8 +663,7 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
              layer.  Don't bother to contact the cache for the last
              element if we already know the lookup to fail for the
              complete path. */
-          if (next || !(flags & svn_fs_x__dag_path_uncached))
-            cached_node = dag_node_cache_get(root, path_so_far->data);
+          cached_node = dag_node_cache_get(root, path_so_far->data);
           if (cached_node)
             child = cached_node;
           else
@@ -734,8 +679,7 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
               if ((flags & svn_fs_x__dag_path_last_optional)
                   && (! next || *next == '\0'))
                 {
-                  dag_path = make_parent_path(NULL, entry, dag_path,
-                                                 pool);
+                  dag_path = make_parent_path(NULL, entry, dag_path, pool);
                   break;
                 }
               else if (flags & svn_fs_x__dag_path_allow_null)
@@ -751,22 +695,14 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
                 }
             }
 
-          if (flags & svn_fs_x__dag_path_node_only)
+          /* Now, make a parent_path item for CHILD. */
+          dag_path = make_parent_path(child, entry, dag_path, pool);
+          if (is_txn_path)
             {
-              /* Shortcut: the caller only wants the final DAG node. */
-              dag_path->node = svn_fs_x__dag_copy_into_pool(child, pool);
-            }
-          else
-            {
-              /* Now, make a parent_path item for CHILD. */
-              dag_path = make_parent_path(child, entry, dag_path, pool);
-              if (is_txn_path)
-                {
-                  SVN_ERR(get_copy_inheritance(&inherit, &copy_path, fs,
-                                               dag_path, iterpool));
-                  dag_path->copy_inherit = inherit;
-                  dag_path->copy_src_path = apr_pstrdup(pool, copy_path);
-                }
+              SVN_ERR(get_copy_inheritance(&inherit, &copy_path, fs,
+                                           dag_path, iterpool));
+              dag_path->copy_inherit = inherit;
+              dag_path->copy_src_path = apr_pstrdup(pool, copy_path);
             }
 
           /* Cache the node we found (if it wasn't already cached). */
@@ -895,13 +831,154 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
 }
 
 
+/* Walk the DAG starting at ROOT, following PATH and return a reference to
+   the target node in *NODE_P.  PATH must be in canonical form.
+
+   NOTE: *NODE_P may or may not be allocated from POOL.  Hence, it may
+   become invalid upon the next cache insertion.  Callers must create a copy
+   if they want a non-temporary object.
+*/
+static svn_error_t *
+walk_dag_path(dag_node_t **node_p,
+              svn_fs_root_t *root,
+              const char *path,
+              apr_pool_t *pool)
+{
+  svn_fs_t *fs = root->fs;
+  dag_node_t *here = NULL; /* The directory we're currently looking at.  */
+  svn_fs_x__dag_path_t *dag_path; /* The path from HERE up to the root. */
+  const char *rest = NULL; /* The portion of PATH we haven't traversed yet. */
+  const char *next;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *directory;
+
+  /* path to the currently processed entry without trailing '/'.
+     We will reuse this across iterations by simply putting a NUL terminator
+     at the respective position and replacing that with a '/' in the next
+     iteration.  This is correct as we assert() PATH to be canonical. */
+  svn_stringbuf_t *path_so_far = svn_stringbuf_create(path, pool);
+  apr_size_t path_len = path_so_far->len;
+
+  /* Special case: root directory.
+     We will later assume that all paths have at least one parent level,
+     so we must check here for those that don't. */
+  if (path_len == 0)
+    return svn_error_trace(svn_fs_x__root_node(node_p, root, pool, pool));
+
+  /* Callers often traverse the DAG in some path-based order or along the
+     history segments.  That allows us to try a few guesses about where to
+     find the next item.  This is only useful if the caller didn't request
+     the full parent chain. */
+
+  /* First attempt: Assume that we access the DAG for the same path as
+     in the last lookup but for a different revision that happens to be
+     the last revision that touched the respective node.  This is a
+     common pattern when e.g. checking out over ra_serf.  Note that this
+     will only work for committed data as the revision info for nodes in
+     txns is bogus.
+
+     This shortcut is quick and will exit this function upon success.
+     So, try it first. */
+  if (!root->is_txn_root)
+    {
+      SVN_ERR(try_match_last_node(node_p, root, path, path_len, iterpool));
+
+      /* Did the shortcut work? */
+      if (*node_p)
+          return SVN_NO_ERROR;
+    }
+
+  /* Second attempt: Try starting the lookup immediately at the parent
+     node.  We will often have recently accessed either a sibling or
+     said parent DIRECTORY itself for the same revision. */
+  directory = svn_dirent_dirname(path, pool);
+  if (directory[1] != 0) /* root nodes are covered anyway */
+    {
+      here = dag_node_cache_get(root, directory);
+
+      /* Did the shortcut work? */
+      if (here)
+        {
+          apr_size_t dirname_len = strlen(directory);
+          path_so_far->len = dirname_len;
+          rest = path + dirname_len + 1;
+          here = svn_fs_x__dag_copy_into_pool(here, pool);
+        }
+    }
+
+  /* did the shortcut work? */
+  if (!here)
+    {
+      /* Make a parent_path item for the root node, using its own current
+         copy id.  */
+      SVN_ERR(svn_fs_x__root_node(&here, root, pool, iterpool));
+
+      rest = path + 1; /* skip the leading '/', it saves in iteration */
+      path_so_far->len = 0; /* "" */
+    }
+
+  path_so_far->data[path_so_far->len] = '\0';
+  dag_path = make_parent_path(here, 0, 0, pool);
+  dag_path->copy_inherit = svn_fs_x__copy_id_inherit_self;
+
+  /* Whenever we are at the top of this loop:
+     - HERE is our current directory,
+     - ID is the node revision ID of HERE,
+     - REST is the path we're going to find in HERE, and
+     - PARENT_PATH includes HERE and all its parents.  */
+  for (; rest ; rest = next)
+    {
+      char *entry;
+
+      svn_pool_clear(iterpool);
+
+      /* Parse out the next entry from the path.  */
+      entry = svn_fs__next_entry_name(&next, rest, pool);
+
+      /* Update the path traversed thus far. */
+      path_so_far->data[path_so_far->len] = '/';
+      path_so_far->len += strlen(entry) + 1;
+      path_so_far->data[path_so_far->len] = '\0';
+
+      /* Given the behavior of svn_fs__next_entry_name(), ENTRY may be an
+         empty string when the path either starts or ends with a slash.
+         In either case, we stay put: the current directory stays the
+         same, and we add nothing to the parent path.  We only need to
+         process non-empty path segments. */
+      if (!*entry)
+        continue;
+
+      /* The path isn't finished yet; we'd better be in a directory.  */
+      if (svn_fs_x__dag_node_kind(here) != svn_node_dir)
+        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far->data),
+                  apr_psprintf(iterpool, _("Failure opening '%s'"), path));
+
+      /* If we found a directory entry, follow it. */
+      SVN_ERR(svn_fs_x__dag_open(&here, here, entry, pool, iterpool));
+
+      /* "file not found" requires special handling.  */
+      if (here == NULL)
+        {
+          /* Build a better error message than svn_fs_x__dag_open
+             can provide, giving the root and full path name.  */
+          return SVN_FS__NOT_FOUND(root, path);
+        }
+
+      svn_fs_x__set_dag_node(root, path_so_far->data, here);
+    }
+
+  svn_pool_destroy(iterpool);
+  *node_p = here;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
                        svn_fs_root_t *root,
                        const char *path,
                        apr_pool_t *pool)
 {
-  svn_fs_x__dag_path_t *parent_path;
   dag_node_t *node = NULL;
 
   /* First we look for the DAG in our cache
@@ -920,17 +997,7 @@ svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
       node = dag_node_cache_get(root, path);
 
       if (! node)
-        {
-          /* Call open_path with no flags, as we want this to return an
-           * error if the node for which we are searching doesn't exist. */
-          SVN_ERR(svn_fs_x__get_dag_path(&parent_path, root, path,
-                                         svn_fs_x__dag_path_uncached
-                                           | svn_fs_x__dag_path_node_only,
-                                         FALSE, pool));
-          node = parent_path->node;
-
-          /* No need to cache our find -- open_path() will do that for us. */
-        }
+        SVN_ERR(walk_dag_path(&node, root, path, pool));
     }
 
   *dag_node_p = svn_fs_x__dag_copy_into_pool(node, pool);
