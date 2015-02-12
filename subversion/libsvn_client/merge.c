@@ -1851,7 +1851,10 @@ merge_file_opened(void **new_file_baton,
         {
           fb->shadowed = TRUE;
 
-          fb->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+          fb->tree_conflict_reason =
+                  (fb->tree_conflict_local_node_kind != svn_node_none)
+                      ? svn_wc_conflict_reason_added
+                      : svn_wc_conflict_reason_obstructed;
 
           /* ### Similar to directory */
           *skip = TRUE;
@@ -1953,7 +1956,10 @@ merge_file_opened(void **new_file_baton,
             {
               /* Set a tree conflict */
               fb->shadowed = TRUE;
-              fb->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+              fb->tree_conflict_reason =
+                  (fb->tree_conflict_local_node_kind != svn_node_none)
+                      ? svn_wc_conflict_reason_added
+                      : svn_wc_conflict_reason_obstructed;
             }
         }
 
@@ -2623,7 +2629,10 @@ merge_dir_opened(void **new_dir_baton,
         {
           db->shadowed = TRUE;
 
-          db->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+          db->tree_conflict_reason =
+            (db->tree_conflict_local_node_kind != svn_node_none)
+                      ? svn_wc_conflict_reason_added
+                      : svn_wc_conflict_reason_obstructed;
 
           /* ### To avoid breaking tests */
           *skip = TRUE;
@@ -2767,7 +2776,10 @@ merge_dir_opened(void **new_dir_baton,
             {
               /* Set a tree conflict */
               db->shadowed = TRUE;
-              db->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+              db->tree_conflict_reason = 
+                  (db->tree_conflict_local_node_kind != svn_node_none)
+                      ? svn_wc_conflict_reason_added
+                      : svn_wc_conflict_reason_obstructed;
             }
         }
 

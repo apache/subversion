@@ -1949,6 +1949,159 @@ def merge_replace_on_del_fails(sbox):
   actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
     sbox.repo_url + '/A', branch_path)
 
+def merge_conflict_details(sbox):
+  "merge conflict details"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/B/E/new', 'new\n')
+  sbox.simple_add('A/B/E/new')
+  sbox.simple_append('A/B/E/alpha', '\nextra\nlines\n')
+  sbox.simple_rm('A/B/E/beta', 'A/B/F')
+  sbox.simple_propset('key', 'VAL', 'A/B/E', 'A/B')
+  sbox.simple_mkdir('A/B/E/new-dir1')
+  sbox.simple_mkdir('A/B/E/new-dir2')
+  sbox.simple_mkdir('A/B/E/new-dir3')
+  sbox.simple_rm('A/B/lambda')
+  sbox.simple_mkdir('A/B/lambda')
+  sbox.simple_commit()
+
+  sbox.simple_update('', 1)
+
+  sbox.simple_move('A/B', 'B')
+
+  sbox.simple_propset('key', 'vAl', 'B')
+  sbox.simple_move('B/E/beta', 'beta')
+  sbox.simple_propset('a', 'b', 'B/F', 'B/lambda')
+  sbox.simple_append('B/E/alpha', 'other\nnew\nlines')
+  sbox.simple_mkdir('B/E/new')
+  sbox.simple_mkdir('B/E/new-dir1')
+  sbox.simple_append('B/E/new-dir2', 'something')
+  sbox.simple_append('B/E/new-dir3', 'something')
+  sbox.simple_add('B/E/new-dir3')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'B'                  : Item(status=' C', copied='+', moved_from='A/B',
+                                wc_rev='-', entry_status='AC'),
+    'B/E'                 : Item(status=' M', copied='+', wc_rev='-'),
+    'B/E/new'             : Item(status='A ', treeconflict='C', wc_rev='-'),
+    'B/E/beta'            : Item(status='D ', copied='+', treeconflict='C',
+                                 wc_rev='-', moved_to='beta'),
+    'B/E/alpha'           : Item(status='C ', copied='+', wc_rev='-'),
+    'B/E/new-dir3'        : Item(status='A ', treeconflict='C', wc_rev='-'),
+    'B/E/new-dir1'        : Item(status='A ', treeconflict='C', wc_rev='-'),
+    'B/F'                 : Item(status=' M', copied='+', treeconflict='C',
+                                 wc_rev='-'),
+    'B/lambda'            : Item(status=' M', copied='+', treeconflict='C',
+                                 wc_rev='-'),
+    'beta'                : Item(status='A ', copied='+',
+                                 moved_from='B/E/beta', wc_rev='-')
+  })
+  expected_status.tweak('A/B', status='D ', wc_rev='1', moved_to='B')
+  expected_status.tweak('A/B/lambda', 'A/B/E', 'A/B/E/beta', 'A/B/E/alpha',
+                        'A/B/F', status='D ')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'B'                   : Item(status=' C'),
+    'B/E'                 : Item(status=' U'),
+    'B/E/new'             : Item(status='  ', treeconflict='C'),
+    'B/E/beta'            : Item(status='  ', treeconflict='C'),
+    'B/E/alpha'           : Item(status='C '),
+    'B/E/new-dir3'        : Item(status='  ', treeconflict='C'),
+    'B/E/new-dir1'        : Item(status='  ', treeconflict='C'),
+    'B/F'                 : Item(status='  ', treeconflict='C'),
+    'B/lambda'            : Item(status='  ', treeconflict='C'),
+  })
+  expected_skip = wc.State(wc_dir, {
+    'B/E/new-dir2'      : Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_merge(sbox.ospath('B'),
+                                       1, 2, '^/A/B', '^/A/B',
+                                       expected_output,
+                                       None, None,
+                                       None, None, expected_skip)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_info = [
+    {
+      "Path" : re.escape(sbox.ospath('B')),
+      
+      "Conflict Properties File" :
+            re.escape(sbox.ospath('B/dir_conflicts.prej')) + '.*',
+      "Conflict Details": re.escape(
+            'incoming dir edit upon merge' +
+            ' Source  left: (dir) ^/A/B@1' +
+            ' Source right: (dir) ^/A/B@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E')),
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/alpha')),
+      "Conflict Previous Base File" : '.*alpha.*',
+      "Conflict Previous Working File" : '.*alpha.*',
+      "Conflict Current Base File": '.*alpha.*',
+      "Conflict Details": re.escape(
+          'incoming file edit upon merge' +
+          ' Source  left: (file) ^/A/B/E/alpha@1' +
+          ' Source right: (file) ^/A/B/E/alpha@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/beta')),
+      "Tree conflict": re.escape(
+          'local file moved away, incoming file delete or move upon merge' +
+          ' Source  left: (file) ^/A/B/E/beta@1' +
+          ' Source right: (none) ^/A/B/E/beta@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming file add upon merge' +
+          ' Source  left: (none) ^/A/B/E/new@1' +
+          ' Source right: (file) ^/A/B/E/new@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir1')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming dir add upon merge' +
+          ' Source  left: (none) ^/A/B/E/new-dir1@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir1@2')
+    },
+    #{ ### Skipped
+    #  "Path" : re.escape(sbox.ospath('B/E/new-dir2')),
+    #  "Tree conflict": re.escape(
+    #      'local file unversioned, incoming dir add upon merge' +
+    #      ' Source  left: (none) ^/A/B/E/new-dir2@1' +
+    #      ' Source right: (dir) ^/A/B/E/new-dir2@2')
+    #},
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir3')),
+      "Tree conflict": re.escape(
+          'local file add, incoming dir add upon merge' +
+          ' Source  left: (none) ^/A/B/E/new-dir3@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir3@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/F')),
+      "Tree conflict": re.escape(
+          'local dir edit, incoming dir delete or move upon merge' +
+          ' Source  left: (dir) ^/A/B/F@1' +
+          ' Source right: (none) ^/A/B/F@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/lambda')),
+      "Tree conflict": re.escape(
+          'local file edit, incoming replace with dir upon merge' +
+          ' Source  left: (file) ^/A/B/lambda@1' +
+          ' Source right: (dir) ^/A/B/lambda@2')
+    },
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('B'),
+                                      '--depth', 'infinity')
+
 ########################################################################
 # Run the tests
 
@@ -1979,6 +2132,7 @@ test_list = [ None,
               merge_replace_causes_tree_conflict,
               merge_replace_causes_tree_conflict2,
               merge_replace_on_del_fails,
+              merge_conflict_details,
              ]
 
 if __name__ == '__main__':
