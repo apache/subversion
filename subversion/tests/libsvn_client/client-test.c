@@ -1075,10 +1075,23 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   svn_wc_external_item2_t item1;
   svn_wc_external_item2_t item2;
   svn_wc_external_item2_t item3;
+  svn_wc_external_item2_t item4;
   svn_client_copy_source_t copy_source;
   apr_hash_t *props;
+  apr_array_header_t *pinned_externals_descs;
   apr_array_header_t *pinned_externals;
   int i;
+  struct pin_externals_test_data {
+    const char *src_external_desc;
+    const char *expected_dst_external_desc;
+  } pin_externals_test_data[] = {
+    { "^/A/D/gamma B/gamma",    "^/A/D/gamma@2 B/gamma" },
+    { "-r1 ^/A/D/G C/exdir_G",  "-r1 ^/A/D/G C/exdir_G" },
+    { "^/A/D/H@1 C/exdir_H",    "^/A/D/H@1 C/exdir_H"  },
+    { "^/A/D/H C/exdir_H2",     "^/A/D/H@2 C/exdir_H2" },
+    { "-r1 ^/A/B D/z/y/z/blah", "-r1 ^/A/B@2 D/z/y/z/blah" } ,
+    { NULL },
+  };
 
   /* Create a filesytem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "pin-externals", opts, pool));
@@ -1096,18 +1109,21 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_create_context(&ctx, pool));
 
   /* Configure some externals on ^/A */
-  propval = svn_string_create("^/A/D/gamma B/gamma\n"
-                              "-r1 ^/A/D/G C/exdir_G\n"
-                              "^/A/D/H@1 C/exdir_H\n"
-                              "^/A/D/H C/exdir_H2\n"
-                              "-r1 ^/A/B D/z/y/z/blah\n",
-                              pool);
+  propval = svn_string_create(
+              apr_pstrcat(pool,
+                          pin_externals_test_data[0].src_external_desc, "\n",
+                          pin_externals_test_data[1].src_external_desc, "\n",
+                          pin_externals_test_data[2].src_external_desc, "\n",
+                          pin_externals_test_data[3].src_external_desc, "\n",
+                          pin_externals_test_data[4].src_external_desc, "\n",
+                          SVN_VA_NULL),
+              pool);
   A_url = apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL);
   SVN_ERR(svn_client_propset_remote(SVN_PROP_EXTERNALS, propval,
                                     A_url, TRUE, 1, NULL,
                                     NULL, NULL, ctx, pool));
 
-  /* Set up parameters for pinning 2 externals. */
+  /* Set up parameters for pinning 3 externals. */
   externals_to_pin = apr_hash_make(pool);
   item1.url = "^/A/D/gamma";
   item1.target_dir = "B/gamma";
@@ -1115,10 +1131,16 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   item2.target_dir = "D/z/y/z/blah";
   item3.url = "^/A/D/H";
   item3.target_dir = "C/exdir_H2";
+
+  /* Also add an entry which doesn't match any actual definition. */
+  item4.url = "^/this/does/not/exist";
+  item4.target_dir = "in/test/data";
+
   external_items = apr_array_make(pool, 2, sizeof(svn_wc_external_item2_t *));
   APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item1;
   APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item2;
   APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item3;
+  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item4;
   svn_hash_sets(externals_to_pin, A_url, external_items);
 
   /* Copy ^/A to ^/A_copy, pinning two non-pinned externals. */
@@ -1139,9 +1161,22 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   propval = svn_hash_gets(props, A_copy_url);
   SVN_TEST_ASSERT(propval);
 
+  /* Test the unparsed representation of copied externals descriptions. */
+  pinned_externals_descs = svn_cstring_split(propval->data, "\n", FALSE, pool);
+  for (i = 0; i < pinned_externals_descs->nelts; i++)
+    {
+      const char *externals_desc;
+      const char *expected_desc;
+      
+      externals_desc = APR_ARRAY_IDX(pinned_externals_descs, i, const char *);
+      expected_desc = pin_externals_test_data[i].expected_dst_external_desc;
+      SVN_TEST_STRING_ASSERT(externals_desc, expected_desc);
+    }
+
   SVN_ERR(svn_wc_parse_externals_description3(&pinned_externals, A_copy_url,
                                               propval->data, TRUE, pool));
 
+  /* For completeness, test the parsed representation, too */
   for (i = 0; i < pinned_externals->nelts; i++)
     {
       svn_wc_external_item2_t *item;
