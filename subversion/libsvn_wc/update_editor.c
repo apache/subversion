@@ -2124,7 +2124,7 @@ add_directory(const char *path,
              replacement. Let's install a better tree conflict. */
 
           SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, NULL,
-                                                     &move_src_op_root_abspath,
+                                                      &move_src_op_root_abspath,
                                                       eb->db,
                                                       db->local_abspath,
                                                       tree_conflict,
