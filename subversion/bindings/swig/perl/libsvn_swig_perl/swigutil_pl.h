@@ -135,9 +135,9 @@ svn_error_t * svn_swig_pl_thunk_client_diff_summarize_func(
 
 /* thunked commit editor callback. */
 svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
-					       const char *date,
-					       const char *author,
-					       void *baton);
+                                               const char *date,
+                                               const char *author,
+                                               void *baton);
 
 /* thunked commit editor callback2. */
 svn_error_t *svn_swig_pl_thunk_commit_callback2(const svn_commit_info_t *commit_info,
@@ -219,12 +219,12 @@ svn_error_t *thunk_get_wc_prop(void *baton,
 /* Thunked version of svn_wc_notify_func_t callback type */
 void svn_swig_pl_notify_func(void * baton,
                              const char *path,
-		             svn_wc_notify_action_t action,
-			     svn_node_kind_t kind,
-			     const char *mime_type,
-			     svn_wc_notify_state_t content_state,
-			     svn_wc_notify_state_t prop_state,
-			     svn_revnum_t revision);
+                             svn_wc_notify_action_t action,
+                             svn_node_kind_t kind,
+                             const char *mime_type,
+                             svn_wc_notify_state_t content_state,
+                             svn_wc_notify_state_t prop_state,
+                             svn_revnum_t revision);
 
 
 /* Thunked version of svn_client_get_commit_log3_t callback type. */

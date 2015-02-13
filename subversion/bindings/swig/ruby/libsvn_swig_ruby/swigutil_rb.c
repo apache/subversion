@@ -481,9 +481,9 @@ static void
 check_apr_status(apr_status_t status, VALUE exception_class, const char *format)
 {
     if (status != APR_SUCCESS) {
-	char buffer[1024];
-	apr_strerror(status, buffer, sizeof(buffer) - 1);
-	rb_raise(exception_class, format, buffer);
+        char buffer[1024];
+        apr_strerror(status, buffer, sizeof(buffer) - 1);
+        rb_raise(exception_class, format, buffer);
     }
 }
 
@@ -526,8 +526,8 @@ svn_swig_rb_destroyer_destroy(VALUE self, VALUE target)
 
     objects[0] = target;
     if (find_swig_type_object(1, objects) && DATA_PTR(target)) {
-	svn_swig_rb_destroy_internal_pool(target);
-	DATA_PTR(target) = NULL;
+        svn_swig_rb_destroy_internal_pool(target);
+        DATA_PTR(target) = NULL;
     }
 
     return Qnil;
@@ -545,9 +545,9 @@ svn_swig_rb_initialize(void)
   }
 
   check_apr_status(apr_allocator_create(&swig_rb_allocator),
-		   rb_eLoadError, "failed to create allocator: %s");
+                   rb_eLoadError, "failed to create allocator: %s");
   apr_allocator_max_free_set(swig_rb_allocator,
-			     SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+                             SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
 
   swig_rb_pool = svn_pool_create_ex(NULL, swig_rb_allocator);
   apr_pool_tag(swig_rb_pool, "svn-ruby-pool");
@@ -556,8 +556,8 @@ svn_swig_rb_initialize(void)
     apr_thread_mutex_t *mutex;
 
     check_apr_status(apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
-					     swig_rb_pool),
-		     rb_eLoadError, "failed to create allocator: %s");
+                                             swig_rb_pool),
+                                             rb_eLoadError, "failed to create allocator: %s");
     apr_allocator_mutex_set(swig_rb_allocator, mutex);
   }
 #endif
@@ -590,7 +590,7 @@ svn_swig_rb_initialize(void)
 
   mSvnDestroyer = rb_define_module_under(rb_svn(), "Destroyer");
   rb_define_module_function(mSvnDestroyer, "destroy",
-			    svn_swig_rb_destroyer_destroy, 1);
+                            svn_swig_rb_destroyer_destroy, 1);
 }
 
 apr_pool_t *
@@ -869,7 +869,7 @@ svn_swig_rb_raise_svn_repos_already_close(void)
 
 VALUE
 svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line,
-			  VALUE child)
+                          VALUE child)
 {
   return rb_funcall(rb_svn_error_svn_error(),
                     id_new_corresponding_error,

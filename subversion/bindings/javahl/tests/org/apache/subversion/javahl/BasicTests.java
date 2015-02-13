@@ -269,7 +269,7 @@ public class BasicTests extends SVNTests
         }
         catch(JNIError e)
         {
-	        return; // Test passes!
+            return; // Test passes!
         }
         fail("A JNIError should have been thrown here.");
     }
@@ -3218,7 +3218,7 @@ public class BasicTests extends SVNTests
                              // Do nothing, right now.
                             return false;
                          }
-    	});
+        });
     }
 
     /**

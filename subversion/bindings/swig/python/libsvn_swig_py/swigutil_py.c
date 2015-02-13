@@ -1417,62 +1417,62 @@ commit_item_array_to_list(const apr_array_header_t *array)
 }
 
 
-
+ 
 /*** Errors ***/
 
 /* Convert a given SubversionException to an svn_error_t. On failure returns
    NULL and sets a Python exception. */
 static svn_error_t *exception_to_error(PyObject * exc)
 {
-	const char *message, *file = NULL;
-	apr_status_t apr_err;
-	long line = 0;
-	PyObject *apr_err_ob = NULL, *child_ob = NULL, *message_ob = NULL;
-	PyObject *file_ob = NULL, *line_ob = NULL;
+    const char *message, *file = NULL;
+    apr_status_t apr_err;
+    long line = 0;
+    PyObject *apr_err_ob = NULL, *child_ob = NULL, *message_ob = NULL;
+    PyObject *file_ob = NULL, *line_ob = NULL;
     svn_error_t *rv = NULL, *child = NULL;
 
-	if ((apr_err_ob = PyObject_GetAttrString(exc, "apr_err")) == NULL)
-	    goto finished;
-	apr_err = (apr_status_t) PyInt_AsLong(apr_err_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((apr_err_ob = PyObject_GetAttrString(exc, "apr_err")) == NULL)
+        goto finished;
+    apr_err = (apr_status_t) PyInt_AsLong(apr_err_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	if ((message_ob = PyObject_GetAttrString(exc, "message")) == NULL)
-	    goto finished;
-	message = PyString_AsString(message_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((message_ob = PyObject_GetAttrString(exc, "message")) == NULL)
+        goto finished;
+    message = PyString_AsString(message_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	if ((file_ob = PyObject_GetAttrString(exc, "file")) == NULL)
-	    goto finished;
-	if (file_ob != Py_None)
-	    file = PyString_AsString(file_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((file_ob = PyObject_GetAttrString(exc, "file")) == NULL)
+        goto finished;
+    if (file_ob != Py_None)
+        file = PyString_AsString(file_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	if ((line_ob = PyObject_GetAttrString(exc, "line")) == NULL)
-	    goto finished;
-	if (line_ob != Py_None)
-	    line = PyInt_AsLong(line_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((line_ob = PyObject_GetAttrString(exc, "line")) == NULL)
+        goto finished;
+    if (line_ob != Py_None)
+        line = PyInt_AsLong(line_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	if ((child_ob = PyObject_GetAttrString(exc, "child")) == NULL)
-	    goto finished;
-	/* We could check if the child is a Subversion exception too,
-	   but let's just apply duck typing. */
-	if (child_ob != Py_None)
-	    child = exception_to_error(child_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((child_ob = PyObject_GetAttrString(exc, "child")) == NULL)
+        goto finished;
+    /* We could check if the child is a Subversion exception too,
+       but let's just apply duck typing. */
+    if (child_ob != Py_None)
+        child = exception_to_error(child_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	rv = svn_error_create(apr_err, child, message);
-	/* Somewhat hacky, but we need to preserve original file/line info. */
-	rv->file = file ? apr_pstrdup(rv->pool, file) : NULL;
-	rv->line = line;
+    rv = svn_error_create(apr_err, child, message);
+    /* Somewhat hacky, but we need to preserve original file/line info. */
+    rv->file = file ? apr_pstrdup(rv->pool, file) : NULL;
+    rv->line = line;
 
 finished:
-	Py_XDECREF(child_ob);
-	Py_XDECREF(line_ob);
-	Py_XDECREF(file_ob);
-	Py_XDECREF(message_ob);
-	Py_XDECREF(apr_err_ob);
-	return rv;
+    Py_XDECREF(child_ob);
+    Py_XDECREF(line_ob);
+    Py_XDECREF(file_ob);
+    Py_XDECREF(message_ob);
+    Py_XDECREF(apr_err_ob);
+    return rv;
 }
 
 /* If the currently set Python exception is a valid SubversionException,
@@ -3761,7 +3761,7 @@ ra_callbacks_open_tmp_file(apr_file_t **fp,
       *fp = svn_swig_py_make_file(result, pool);
       if (*fp == NULL)
        {
-      	  err = callback_exception_error();
+          err = callback_exception_error();
        }
     }
 
@@ -3811,7 +3811,7 @@ ra_callbacks_get_wc_prop(void *baton,
       Py_ssize_t len;
       if (PyString_AsStringAndSize(result, &buf, &len) == -1)
         {
-      	  err = callback_exception_error();
+          err = callback_exception_error();
         }
       else
         {
@@ -4053,7 +4053,7 @@ ra_callbacks_get_client_string(void *baton,
     {
       if ((*name = PyString_AsString(result)) == NULL)
         {
-      	  err = callback_exception_error();
+          err = callback_exception_error();
         }
     }
 
