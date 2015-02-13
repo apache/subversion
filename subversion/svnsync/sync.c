@@ -116,6 +116,7 @@ remove_r0_mergeinfo(const svn_string_t **str,
     {
       char *line = APR_ARRAY_IDX(lines, i, char *);
       char *colon;
+      char *rangelist;
 
       /* split at the last colon */
       colon = strrchr(line, ':');
@@ -125,13 +126,11 @@ remove_r0_mergeinfo(const svn_string_t **str,
                                  _("Missing colon in svn:mergeinfo "
                                    "property"));
 
+      rangelist = colon + 1;
+
       /* remove r0 */
       if (colon[1] == '0')
         {
-          char *rangelist;
-
-          rangelist = colon + 1;
-
           if (strncmp(rangelist, "0*,", 3) == 0)
             {
               rangelist += 3;
@@ -152,8 +151,11 @@ remove_r0_mergeinfo(const svn_string_t **str,
             {
               rangelist[0] = '1';
             }
+        }
 
-          /* reassemble */
+      /* reassemble */
+      if (rangelist[0])
+        {
           if (new_str->len)
             svn_stringbuf_appendbyte(new_str, '\n');
           svn_stringbuf_appendbytes(new_str, line, colon + 1 - line);
@@ -509,7 +511,7 @@ change_file_prop(void *file_baton,
       SVN_ERR(normalize_string(&value, &was_normalized,
                                eb->source_prop_encoding, pool, pool));
       /* Correct malformed mergeinfo. */
-      if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
+      if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
         {
           SVN_ERR(remove_r0_mergeinfo(&value, &mergeinfo_tweaked,
                                       pool, pool));
@@ -619,7 +621,7 @@ change_dir_prop(void *dir_baton,
       SVN_ERR(normalize_string(&value, &was_normalized, eb->source_prop_encoding,
                                pool, pool));
       /* Maybe adjust svn:mergeinfo. */
-      if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
+      if (value && strcmp(name, SVN_PROP_MERGEINFO) == 0)
         {
           SVN_ERR(remove_r0_mergeinfo(&value, &mergeinfo_tweaked,
                                       pool, pool));
