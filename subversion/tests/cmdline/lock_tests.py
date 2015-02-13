@@ -2372,6 +2372,7 @@ def copy_dir_with_locked_file(sbox):
                                      'mv', A_url, AA2_url,
                                      '-m', '')
 
+@Issue(4557)
 @XFail(svntest.main.is_ra_type_dav)
 def delete_dir_with_lots_of_locked_files(sbox):
   "delete a directory containing lots of locked files"
