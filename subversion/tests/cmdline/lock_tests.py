@@ -2372,6 +2372,43 @@ def copy_dir_with_locked_file(sbox):
                                      'mv', A_url, AA2_url,
                                      '-m', '')
 
+@XFail(svntest.main.is_ra_type_dav)
+def delete_dir_with_lots_of_locked_files(sbox):
+  "delete a directory containing lots of locked files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A lot of paths.
+  nfiles = 75 # NOTE: test XPASSES with 50 files!!!
+  locked_paths = []
+  for i in range(nfiles):
+      locked_paths.append("A/locked_files/file-%i" % i)
+  
+  # Create files at these paths
+  os.mkdir(sbox.ospath("A/locked_files"))
+  for file_path in locked_paths:
+    svntest.main.file_write(sbox.ospath(file_path), "This is a file\n")
+  sbox.simple_add("A/locked_files")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # lock all the files
+  for file_path in locked_paths:
+    svntest.actions.run_and_verify_svn(None, [], 'lock',
+                                       '--username', 'jrandom',
+                                       '-m', 'lock %s' % file_path,
+                                       sbox.ospath(file_path))
+  # Locally delete A
+  sbox.simple_rm("A")
+
+  # Commit the deletion
+  # XFAIL: As of 1.8.10, this commit fails with:
+  #  svn: E175002: Unexpected HTTP status 400 'Bad Request' on '<path>'
+  # and the following error in the httpd error log:
+  #  request failed: error reading the headers 
+  # This problem was introduced on the 1.8.x branch in r1606976.
+  sbox.simple_commit()
 
 ########################################################################
 # Run the tests
@@ -2438,6 +2475,7 @@ test_list = [ None,
               delete_locked_file_with_percent,
               lock_commit_bump,
               copy_dir_with_locked_file,
+              delete_dir_with_lots_of_locked_files,
             ]
 
 if __name__ == '__main__':
