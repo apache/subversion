@@ -222,7 +222,7 @@ Candidate changes:
      Trivial correctness fix that provides valueable information to the
      conflict resolver.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1658417
    Don't ask a resolver if we should resolve if we only take no as answer
