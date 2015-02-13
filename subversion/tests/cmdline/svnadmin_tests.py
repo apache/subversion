@@ -83,7 +83,7 @@ def check_hotcopy_fsfs_fsx(src, dst):
           continue
 
         # Ignore auto-created rep-cache.db-journal file
-        if src_file == 'rep-cache.db-journal':
+        if dst_dirent == 'rep-cache.db-journal':
           continue
 
         src_dirent = os.path.join(src_dirpath, dst_dirent)
@@ -98,6 +98,10 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if src_file == 'pack-lock':
           continue
         if src_file == 'write-lock':
+          continue
+
+        # Ignore auto-created rep-cache.db-journal file
+        if src_file == 'rep-cache.db-journal':
           continue
 
         src_path = os.path.join(src_dirpath, src_file)
