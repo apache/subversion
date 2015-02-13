@@ -10,7 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.7.19:
+Status of 1.7.20:
 
 Candidate changes:
 ==================
@@ -64,23 +64,93 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1643074
-   Don't let invalid mergeinfo stop 'svnadmin load' from working.
-     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
-     dump fail".
+ * r1644158, r1644530, r1644595, r1644599, r1652744
+   Fix patch output for reordered hunks, part of issue 4533.
    Justification:
-     The presence of 'bad' metadata in a repository should not prevent
-     backing up and restoring from a backup, given that this data does not
-     make the repository totally unusable.
-   Notes:
-     The 'svnadmin dump' part of this issue is already approved for backport.
-     The 'svnsync' part of this issue is not yet fixed.
+     Output is invalid.
    Branch:
-     ^/subversion/branches/1.7.x-r1643074
+     ^/subversion/branches/1.7.x-r1644595
+   Votes:
+     +1: philip
+
+ * r1544302, r1544303
+   Add HTTPd lock file configuration for testing against HTTPd 2.4+.
+   Justification:
+     Without this change, the davautocheck tests do not work on some
+     systems where HTTPd 2.4+ is the default; OSX 10.10 is one such case.
+   Notes:
+     As far as I'm concerned, this blocks 1.7.19 and 1.8.11 since the
+     tests won't run on a current version of a supported OS.
+   Votes:
+     +1: brane, breser
+
+ * r1646230, r1646250, r1646253
+   Make svnsync strip any r0 references from mergeinfo -- issue #4476.
+   Justification:
+     Without this is was not possible to svnsync a repository that contained
+     this kind of mergeinfo that is now considered invalid but previously
+     could be committed.
+   Branch:
+     ^/subversion/branches/1.7.x-r1646250
+   Notes:
+     r1646250 contains the fix itself, and a test for it.
+     r1646253 removes some stray debug statements.
+     r1646230 is required for the test to work.
+     r1643074 (nominated separately) is required for the test to work.
+     I would recommend not backporting r1646250 without r1643074.
+     This is also nominated for 1.8.x.
    Votes:
      +1: julianfoad
 
+ * r1646785, r1646786, r1646797
+   Fix a pool handling bug in config variable expansion.
+   Justification:
+     Using memory after free is undefined behaviour.
+   Branch:
+     ^/subversion/branches/1.7.x-r1646797
+   Votes:
+     +1: philip
 
+ * r1651759
+   Api correctness fix: Duplicate error filename when copying errors
+   Justification:
+     Simple to fix issue caused error on buildbot.
+   Votes:
+     +1: rhuijben
+
+ * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
+   Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
+   non-deltas dumpfile".
+   Justification:
+     Data loss.
+   Branch: ^/subversion/branches/1.7.x-issue4551
+   Notes:
+     r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
+   Votes:
+     +1 julianfoad
+
+ * r1561419
+   Fix 'svnadmin recover' for pre-1.4 FSFS repositories.
+   Justification:
+     After recovering a repository committed to by 1.8, future commits may
+     otherwise use ambiguous IDs.
+   Branch:
+     ^/subversion/branches/1.7.x-r1561419
+   Votes:
+     +1: stefan2
+
+ * r1654932, r1654933, r1654934, r1654937
+   Fix issue #4554, "0 file length reported in FSFS".
+   Justification:
+     We want 1.7 to cope with repositories that have been touched by 1.8.
+     The issue causes 'svnadmin dump' to create corrupted output that fails
+     to load and we provide no way to detect that problem other than loading
+     the respective dump.  We also want to prevent further instances of that
+     issue to be added to the repository.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4554
+   Votes:
+     +1: stefan2
 
 Veto-blocked changes:
 =====================
@@ -96,6 +166,25 @@ Veto-blocked changes:
      +1: danielsh (err->file and err->line are only in maintainer builds.
                    this is about err->message which is valid in all builds)
      -1: stsp (not a bug fix, changes output in a patch release)
+
+ * r1643074
+   Don't let invalid mergeinfo stop 'svnadmin load' from working.
+     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
+     dump fail".
+   Justification:
+     The presence of 'bad' metadata in a repository should not prevent
+     backing up and restoring from a backup, given that this data does not
+     make the repository totally unusable.
+   Notes:
+     The 'svnadmin dump' part of this issue is already approved for backport.
+     The 'svnsync' part of this issue is not yet fixed.
+   Branch:
+     ^/subversion/branches/1.7.x-r1643074
+   Votes:
+     +1: julianfoad
+     -1: breser (no changes on branch, attempt to merge something for this
+                 was mismerged on release branch in r1643189, the merge that
+                 was made broke swig-rb)
 
 Approved changes:
 =================
