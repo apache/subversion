@@ -134,6 +134,22 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+* r1643074
+   Don't let invalid mergeinfo stop 'svnadmin load' from working.
+     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
+     dump fail".
+   Justification:
+     The presence of 'bad' metadata in a repository should not prevent
+     backing up and restoring from a backup, given that this data does not
+     make the repository totally unusable.
+   Notes:
+     The 'svnadmin dump' part of this issue is already approved for backport.
+     The 'svnsync' part of this issue is not yet fixed.
+   Branch:
+     ^/subversion/branches/1.7.x-r1643074
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
@@ -149,24 +165,6 @@ Veto-blocked changes:
                    this is about err->message which is valid in all builds)
      -1: stsp (not a bug fix, changes output in a patch release)
 
- * r1643074
-   Don't let invalid mergeinfo stop 'svnadmin load' from working.
-     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
-     dump fail".
-   Justification:
-     The presence of 'bad' metadata in a repository should not prevent
-     backing up and restoring from a backup, given that this data does not
-     make the repository totally unusable.
-   Notes:
-     The 'svnadmin dump' part of this issue is already approved for backport.
-     The 'svnsync' part of this issue is not yet fixed.
-   Branch:
-     ^/subversion/branches/1.7.x-r1643074
-   Votes:
-     +1: julianfoad
-     -1: breser (no changes on branch, attempt to merge something for this
-                 was mismerged on release branch in r1643189, the merge that
-                 was made broke swig-rb)
 
  * r1646230, r1646250, r1646253, r1656893, r1657182, r1657195, r1657401
    Make svnsync strip any r0 references from mergeinfo -- issue #4476.
