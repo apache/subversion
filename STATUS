@@ -101,7 +101,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1643074
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
 
  * r1644158, r1644530, r1644595, r1644599, r1652744
    Fix patch output for reordered hunks, part of issue 4533.
