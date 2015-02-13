@@ -62,7 +62,7 @@
 # one version's client against another version's server) specify both APXS
 # *and* MODULE_PATH for the other server:
 #
-#   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \ 
+#   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \
 #     subversion/tests/cmdline/davautocheck.sh
 #
 # To prevent the server from advertising httpv2, pass USE_HTTPV1 in
@@ -71,7 +71,7 @@
 # To enable "SVNCacheRevProps on" set CACHE_REVPROPS in the environment.
 #
 # To test over https set USE_SSL in the environment.
-# 
+#
 # To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
 # appropriate value in the environment.
 #
@@ -114,7 +114,7 @@ query() {
   if [ -n "$BASH_VERSION" ]; then
     read -n 1 -t 32
   else
-    # 
+    #
     prog="
 import select as s
 import sys
@@ -163,7 +163,7 @@ get_prog_name() {
 }
 
 # Don't assume sbin is in the PATH.
-# ### Presumably this is used to locate /usr/sbin/apxs or /usr/sbin/apache2    
+# ### Presumably this is used to locate /usr/sbin/apxs or /usr/sbin/apache2
 PATH="$PATH:/usr/sbin:/usr/local/sbin"
 
 # Find the source and build directories. The build dir can be found if it is
