@@ -2027,7 +2027,7 @@ def merge_conflict_details(sbox):
   expected_info = [
     {
       "Path" : re.escape(sbox.ospath('B')),
-      
+
       "Conflict Properties File" :
             re.escape(sbox.ospath('B/dir_conflicts.prej')) + '.*',
       "Conflict Details": re.escape(

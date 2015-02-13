@@ -369,7 +369,7 @@ hotcopy_copy_packed_shard(svn_boolean_t *skipped_p,
   return SVN_NO_ERROR;
 }
 
-/* Remove file PATH, if it exists - even if it is read-only. 
+/* Remove file PATH, if it exists - even if it is read-only.
  * Use POOL for temporary allocations. */
 static svn_error_t *
 hotcopy_remove_file(const char *path,

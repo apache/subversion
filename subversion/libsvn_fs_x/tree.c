@@ -1701,9 +1701,9 @@ compare_dir_structure(svn_boolean_t *changed,
           svn_pool_clear(iterpool);
 
           /* Modified but not copied / replaced or anything? */
-          SVN_ERR(svn_fs_x__dag_get_node(&lhs_node, fs, &lhs_entry->id, 
+          SVN_ERR(svn_fs_x__dag_get_node(&lhs_node, fs, &lhs_entry->id,
                                          iterpool, iterpool));
-          SVN_ERR(svn_fs_x__dag_get_node(&rhs_node, fs, &rhs_entry->id, 
+          SVN_ERR(svn_fs_x__dag_get_node(&rhs_node, fs, &rhs_entry->id,
                                          iterpool, iterpool));
           SVN_ERR(svn_fs_x__dag_same_line_of_history(&same_history,
                                                      lhs_node, rhs_node));
@@ -2110,7 +2110,7 @@ merge_changes(dag_node_t *ancestor_node,
   svn_fs_t *fs = txn->fs;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(txn);
   svn_boolean_t related;
-  
+
   SVN_ERR(svn_fs_x__dag_txn_root(&txn_root_node, fs, txn_id, scratch_pool,
                                  scratch_pool));
 
@@ -2700,7 +2700,7 @@ x_copy(svn_fs_root_t *from_root,
 
   SVN_ERR(copy_helper(from_root,
                       svn_fs__canonicalize_abspath(from_path, subpool),
-                      to_root, 
+                      to_root,
                       svn_fs__canonicalize_abspath(to_path, subpool),
                       TRUE, subpool));
 
@@ -2939,7 +2939,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
      cb->target_string. */
   SVN_ERR(tb->interpreter(window, tb->interpreter_baton));
 
-  /* Is the window NULL?  If so, we're done.  The stream has already been 
+  /* Is the window NULL?  If so, we're done.  The stream has already been
      closed by the interpreter. */
   if (! window)
     SVN_ERR(svn_fs_x__dag_finalize_edits(tb->node, tb->result_checksum,

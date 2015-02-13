@@ -151,7 +151,7 @@ static struct x509_test cert_tests[] = {
     "b3b9789d8a53868f418619565f6b56af0033bdd3" },
   /* The issuer and subject (except for the country code) is
    * UnversalString encoded.  Created with a hacked version of openssl
-   * using utf8=yes and string_mask=MASK:256.  In order for that to 
+   * using utf8=yes and string_mask=MASK:256.  In order for that to
    * output UniversalString encoded data you need to change the
    * DIRSTRING_TYPE in crypto/asn1/asn1.h to be defined as
    * B_ASN1_DIRECTORYSTRING so that UnviersalString is available to be

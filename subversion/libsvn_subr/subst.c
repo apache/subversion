@@ -1150,7 +1150,7 @@ translate_chunk(svn_stream_t *dst,
                   const char *start = p + len;
                   const char *eol
                     = svn_eol__find_eol_start((char *)start, end - start);
-                  
+
                   /* EOL will be NULL if we did not find a line ending */
                   len += (eol ? eol : end) - start;
                 }
@@ -1972,7 +1972,7 @@ svn_subst_translate_string2(svn_string_t **new_value,
       return SVN_NO_ERROR;
     }
 
-  if (encoding && !strcmp(encoding, "UTF-8")) 
+  if (encoding && !strcmp(encoding, "UTF-8"))
     {
       val_utf8 = value->data;
     }

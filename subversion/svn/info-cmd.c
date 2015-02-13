@@ -391,14 +391,14 @@ print_info(void *baton,
       if (info->wc_info->moved_from_abspath)
         SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"),
                                    svn_cl__local_style_skip_ancestor(
-                                      path_prefix, 
+                                      path_prefix,
                                       info->wc_info->moved_from_abspath,
                                       pool)));
 
       if (info->wc_info->moved_to_abspath)
         SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"),
                                    svn_cl__local_style_skip_ancestor(
-                                      path_prefix, 
+                                      path_prefix,
                                       info->wc_info->moved_to_abspath,
                                       pool)));
     }

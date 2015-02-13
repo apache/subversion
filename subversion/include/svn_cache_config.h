@@ -43,7 +43,7 @@ extern "C" {
 
    @note Do not extend this data structure as this would break binary
          compatibility.
-   
+
    @since New in 1.7.
  */
 typedef struct svn_cache_config_t

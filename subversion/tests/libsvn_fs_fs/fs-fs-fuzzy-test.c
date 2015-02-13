@@ -325,7 +325,7 @@ fuzzing_null_byte_test(const svn_test_opts_t *opts,
                              apr_pool_t *pool) \
   { \
     return svn_error_trace(fuzzing_set_byte_test(opts, N, M, pool)); \
-  } 
+  }
 
 /* Add the test function declared above to the test_funcs array. */
 #define TEST_FUZZING_SET_BYTE_TEST_N(N,M)\

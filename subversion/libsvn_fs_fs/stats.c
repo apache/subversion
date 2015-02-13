@@ -300,7 +300,7 @@ add_change(svn_fs_fs__stats_t *stats,
         add_to_histogram(&stats->dir_prop_rep_histogram, rep_size);
         add_to_histogram(&stats->dir_prop_histogram, expanded_size);
         break;
-      case file_property_rep: 
+      case file_property_rep:
         add_to_histogram(&stats->file_prop_rep_histogram, rep_size);
         add_to_histogram(&stats->file_prop_histogram, expanded_size);
         break;
@@ -695,7 +695,7 @@ read_phys_revision(query_t *query,
   trailer = svn_stringbuf_ncreate(buf, len, scratch_pool);
 
   /* Parse that trailer. */
-  SVN_ERR(svn_fs_fs__parse_revision_trailer(&root_node_offset, 
+  SVN_ERR(svn_fs_fs__parse_revision_trailer(&root_node_offset,
                                             &changes_offset, trailer,
                                             info->revision));
   SVN_ERR(get_phys_change_count(query, info, scratch_pool));

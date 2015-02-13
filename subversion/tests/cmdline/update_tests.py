@@ -6766,7 +6766,7 @@ def update_conflict_details(sbox):
   expected_info = [
     {
       "Path" : re.escape(sbox.ospath('A/B')),
-      
+
       "Conflict Properties File" :
             re.escape(sbox.ospath('A/B/dir_conflicts.prej')) + '.*',
       "Conflict Details": re.escape(

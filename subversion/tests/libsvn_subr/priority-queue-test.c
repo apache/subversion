@@ -70,7 +70,7 @@ verify_empty_queue(svn_priority_queue__t *queue)
   /* these should be no-ops */
   svn_priority_queue__update(queue);
   svn_priority_queue__pop(queue);
-  
+
   return SVN_NO_ERROR;
 }
 

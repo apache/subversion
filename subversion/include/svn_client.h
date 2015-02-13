@@ -2724,7 +2724,7 @@ svn_client_status(svn_revnum_t *result_rev,
  *
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
- * 
+ *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
  * (i.e. retrieve none if the array is empty).
@@ -4510,7 +4510,7 @@ typedef struct svn_client_copy_source_t
  * If the copy source is a working copy, then all externals must be checked
  * out, be at a single-revision, contain no local modifications, and contain
  * no switched subtrees. Else, #SVN_ERR_WC_PATH_UNEXPECTED_STATUS is returned.
- * 
+ *
  * If non-NULL, @a externals_to_pin restricts pinning to a subset of externals.
  * It is a hash table keyed by either a local absolute path or a URL at which
  * an svn:externals property is set. The hash table contains apr_array_header_t*

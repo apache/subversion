@@ -1795,7 +1795,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                   && (!matched_line
                       || (matched_line > original_start
                           && (matched_line - original_start
-                              > original_start - search_start)))) 
+                              > original_start - search_start))))
                 {
                   svn_linenum_t search_start2 = 1;
 

@@ -63,7 +63,7 @@ path_txn_sha1(svn_fs_t *fs,
   svn_checksum_t checksum;
   checksum.digest = sha1;
   checksum.kind = svn_checksum_sha1;
-  
+
   return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                          svn_checksum_to_cstring(&checksum, pool),
                          pool);
@@ -465,7 +465,7 @@ get_writable_proto_rev(apr_file_t **file,
 
   /* We don't want unused sections (such as leftovers from failed delta
      stream) in our file.  If we use log addressing, we would need an
-     index entry for the unused section and that section would need to 
+     index entry for the unused section and that section would need to
      be all NUL by convention.  So, detect and fix those cases by truncating
      the protorev file. */
   if (!err)
@@ -973,7 +973,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   /* remove trailing newlines */
   line_length = svn__ui64tobase36(new_id_str, cb->txn_number+1);
   new_id_str[line_length] = '\n';
-  
+
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
   SVN_ERR(svn_io_write_atomic(txn_current_filename, new_id_str,
@@ -1164,7 +1164,7 @@ set_txn_proplist(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* Open the transaction properties file and write new contents to it. */
-  SVN_ERR(svn_io_write_atomic((final 
+  SVN_ERR(svn_io_write_atomic((final
                                ? path_txn_props_final(fs, txn_id, pool)
                                : path_txn_props(fs, txn_id, pool)),
                               buf->data, buf->len,
@@ -1270,7 +1270,7 @@ write_next_ids(svn_fs_t *fs,
   apr_file_t *file;
   char buffer[2 * SVN_INT64_BUFFER_SIZE + 2];
   char *p = buffer;
-  
+
   p += svn__ui64tobase36(p, node_id);
   *(p++) = ' ';
   p += svn__ui64tobase36(p, copy_id);
@@ -3354,7 +3354,7 @@ svn_fs_fs__add_index_data(svn_fs_t *fs,
                                       pool, pool));
 
   /* Append footer. */
-  footer = svn_fs_fs__unparse_footer(l2p_offset, l2p_checksum, 
+  footer = svn_fs_fs__unparse_footer(l2p_offset, l2p_checksum,
                                      p2l_offset, p2l_checksum, pool, pool);
   SVN_ERR(svn_io_file_write_full(file, footer->data, footer->len, NULL,
                                  pool));

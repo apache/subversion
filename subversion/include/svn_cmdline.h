@@ -342,7 +342,7 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
  *
  * @a trust_server_cert_other_failure: If @c TRUE, accept certificates
  * even if any other verification failure than the above occured.
- * 
+ *
  * @a cfg is the @c SVN_CONFIG_CATEGORY_CONFIG configuration, and
  * @a cancel_func and @a cancel_baton control the cancellation of the
  * prompting providers that are initialized.
@@ -370,7 +370,7 @@ svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
 
 /* Like svn_cmdline_create_auth_baton2, but with only one trust_server_cert
  * option which corresponds to trust_server_cert_unknown_ca.
- * 
+ *
  * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.6.
  */

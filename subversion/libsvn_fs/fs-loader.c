@@ -1691,7 +1691,7 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
             apr_pool_t *pool)
 {
   apr_hash_t *targets = apr_hash_make(pool);
-  svn_fs_lock_target_t target; 
+  svn_fs_lock_target_t target;
   svn_error_t *err;
   struct lock_baton_t baton = {0};
 
@@ -1710,7 +1710,7 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
     svn_error_compose(err, baton.fs_err);
   else if (!err)
     err = baton.fs_err;
-  
+
   return svn_error_trace(err);
 }
 
@@ -1958,7 +1958,7 @@ svn_fs_info_dup(const void *info_void,
   fs_library_vtable_t *vtable;
 
   SVN_ERR(get_library_vtable(&vtable, info->fs_type, scratch_pool));
-  
+
   if (vtable->info_fsap_dup)
     return vtable->info_fsap_dup(info_void, result_pool);
   else

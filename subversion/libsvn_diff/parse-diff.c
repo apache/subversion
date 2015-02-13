@@ -532,7 +532,7 @@ parse_mergeinfo(svn_boolean_t *found_mergeinfo,
         }
       else
         SVN_ERR(err);
-                            
+
       if (mergeinfo)
         {
           if (hunk->original_length > 0) /* reverse merges */

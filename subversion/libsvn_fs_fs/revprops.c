@@ -111,7 +111,7 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
                                               scratch_pool);
-  
+
   /* delete the non-packed revprops shards afterwards */
   for (shard = 0; shard < first_unpacked_shard; ++shard)
     {

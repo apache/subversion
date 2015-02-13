@@ -3487,7 +3487,7 @@ svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
 
 /* Like svn_wc__db_resolve_delete_raise_moved_away this should be
    combined.
-   
+
    ### LOCAL_ABSPATH specifies the move origin, but the move origin
    ### is not necessary unique enough. This function needs an op_root_abspath
    ### argument to differentiate between different origins.

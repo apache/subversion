@@ -484,7 +484,7 @@ svn_priority_queue__create(apr_array_header_t *elements,
 
   for (i = elements->nelts / 2; i >= 0; --i)
     heap_bubble_up(queue, i);
-  
+
   return queue;
 }
 

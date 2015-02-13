@@ -224,7 +224,7 @@ svn_test_add_dir_cleanup(const char *path)
       err = svn_mutex__lock(log_mutex);
       if (err)
         {
-          if (verbose_mode) 
+          if (verbose_mode)
             printf("FAILED svn_mutex__lock in svn_test_add_dir_cleanup.\n");
           svn_error_clear(err);
           return;
@@ -241,7 +241,7 @@ svn_test_add_dir_cleanup(const char *path)
       err = svn_mutex__unlock(log_mutex, NULL);
       if (err)
         {
-          if (verbose_mode) 
+          if (verbose_mode)
             printf("FAILED svn_mutex__unlock in svn_test_add_dir_cleanup.\n");
           svn_error_clear(err);
         }
@@ -620,7 +620,7 @@ do_tests_concurrently(const char *progname,
       CHECK_STATUS(result,
                    "Test thread returned an error.");
     }
-  
+
   return params.got_error != FALSE;
 }
 

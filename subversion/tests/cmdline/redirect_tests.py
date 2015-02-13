@@ -154,7 +154,7 @@ def redirected_nonroot_update(sbox):
                                              checkout_url, wc_dir)
   if err:
     raise svntest.Failure
-  
+
   # Relocate (by cheating) the working copy to the redirect URL.  When
   # we then update, we'll expect to find ourselves automagically back
   # to the original URL.  (This is because we can't easily introduce a

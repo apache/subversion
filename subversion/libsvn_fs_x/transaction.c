@@ -474,7 +474,7 @@ svn_fs_x__with_all_locks(svn_fs_t *fs,
                          apr_pool_t *scratch_pool)
 {
   /* Be sure to use the correct lock ordering as documented in
-     fs_fs_shared_data_t.  The lock chain is being created in 
+     fs_fs_shared_data_t.  The lock chain is being created in
      innermost (last to acquire) -> outermost (first to acquire) order. */
   with_lock_baton_t *lock_baton
     = create_lock_baton(fs, write_lock, body, baton, scratch_pool);
@@ -716,7 +716,7 @@ get_writable_proto_rev(apr_file_t **file,
 
   /* We don't want unused sections (such as leftovers from failed delta
      stream) in our file.  If we use log addressing, we would need an
-     index entry for the unused section and that section would need to 
+     index entry for the unused section and that section would need to
      be all NUL by convention.  So, detect and fix those cases by truncating
      the protorev file. */
   if (!err)
@@ -1368,7 +1368,7 @@ set_txn_proplist(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* Open the transaction properties file and write new contents to it. */
-  SVN_ERR(svn_io_write_atomic((final 
+  SVN_ERR(svn_io_write_atomic((final
                                ? svn_fs_x__path_txn_props_final(fs, txn_id,
                                                                 scratch_pool)
                                : svn_fs_x__path_txn_props(fs, txn_id,
@@ -1558,7 +1558,7 @@ write_next_ids(svn_fs_t *fs,
   apr_file_t *file;
   char buffer[2 * SVN_INT64_BUFFER_SIZE + 2];
   char *p = buffer;
-  
+
   p += svn__ui64tobase36(p, node_id);
   *(p++) = ' ';
   p += svn__ui64tobase36(p, copy_id);
@@ -3288,7 +3288,7 @@ svn_fs_x__add_index_data(svn_fs_t *fs,
                                      scratch_pool, scratch_pool));
 
   /* Append footer. */
-  footer = svn_fs_x__unparse_footer(l2p_offset, l2p_checksum, 
+  footer = svn_fs_x__unparse_footer(l2p_offset, l2p_checksum,
                                     p2l_offset, p2l_checksum, scratch_pool,
                                     scratch_pool);
   SVN_ERR(svn_io_file_write_full(file, footer->data, footer->len, NULL,

@@ -152,7 +152,7 @@ typedef struct svn_fs_t svn_fs_t;
  *
  * It is not ready for general production use.  Please consult the
  * respective release notes on suggested usage scenarios.
- * 
+ *
  * @since New in 1.9.
  */
 #define SVN_FS_TYPE_FSX                         "fsx"
@@ -346,12 +346,12 @@ typedef enum svn_fs_upgrade_notify_action_t
   svn_fs_upgrade_format_bumped
 } svn_fs_upgrade_notify_action_t;
 
-/** The type of a upgrade notification function.  @a number is specifc 
+/** The type of a upgrade notification function.  @a number is specifc
  * to @a action (see #svn_fs_upgrade_notify_action_t); @a action is the
  * type of action being performed.  @a baton is the corresponding baton
  * for the notification function, and @a pool can be used for temporary
  * allocations, but will be cleared between invocations.
- * 
+ *
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_fs_upgrade_notify_t)(void *baton,
@@ -393,7 +393,7 @@ svn_fs_upgrade2(const char *path,
  * Like svn_fs_upgrade2 but with notify_func, notify_baton, cancel_func
  * and cancel_baton being set to NULL.
  *
- * @deprecated Provided for backward compatibility with the 1.8 API. 
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.5.
  */
 SVN_DEPRECATED
@@ -449,7 +449,7 @@ svn_fs_path(svn_fs_t *fs,
  * Return a shallow copy of the configuration parameters used to open
  * @a fs, allocated in @a pool.  It may be @c NULL.  The contents of the
  * hash contents remains valid only for @a fs's lifetime.
- * 
+ *
  * @note This is just what was passed to svn_fs_create() or svn_fs_open().
  * You may not modify it.
  *
@@ -872,7 +872,7 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  */
 
 /** Defines the possible ways two arbitrary nodes may be related.
- * 
+ *
  * @since New in 1.9.
  */
 typedef enum svn_fs_node_relation_t
@@ -1137,7 +1137,7 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * new revision will have svn:date set to the current time at some
  * point during the commit and any svn:date on the transaction will be
  * lost.
- * 
+ *
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of

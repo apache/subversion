@@ -360,7 +360,7 @@ decode_size(apr_size_t *val,
   const unsigned char *result = svn__decode_uint(&temp, p, end);
   if (temp > APR_SIZE_MAX)
     return NULL;
-  
+
   *val = (apr_size_t)temp;
   return result;
 }
@@ -494,7 +494,7 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
   compressed.data = (char *)in;
   compressed.len = inLen;
   compressed.blocksize = inLen + 1;
-  
+
   return svn__decompress(&compressed, out, limit);
 }
 
@@ -796,7 +796,7 @@ read_one_byte(unsigned char *byte, svn_stream_t *stream)
   return SVN_NO_ERROR;
 }
 
-/* Read and decode one integer from STREAM into *SIZE. 
+/* Read and decode one integer from STREAM into *SIZE.
    Increment *BYTE_COUNTER by the number of chars we have read. */
 static svn_error_t *
 read_one_size(apr_size_t *size,

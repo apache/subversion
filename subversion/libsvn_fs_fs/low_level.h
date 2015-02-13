@@ -44,7 +44,7 @@
  * in *ROOT_OFFSET and the offset of the changed paths list in
  * *CHANGES_OFFSET.  Offsets are relative to the revision's start offset.
  * ROOT_OFFSET and / or CHANGES_OFFSET may be NULL.
- * 
+ *
  * Note that REV is only used to construct nicer error objects.
  */
 svn_error_t *
@@ -66,7 +66,7 @@ svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
  * and return the start offsets of the index data in *L2P_OFFSET and
  * *P2L_OFFSET, respectively.  Also, return the expected checksums in
  * in *L2P_CHECKSUM and *P2L_CHECKSUM.
- * 
+ *
  * Note that REV is only used to construct nicer error objects that
  * mention this revision.  Allocate the checksums in RESULT_POOL.
  */

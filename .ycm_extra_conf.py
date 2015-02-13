@@ -31,7 +31,7 @@ import os
 import ycm_core
 from clang_helpers import PrepareClangFlags
 
-compilation_database_folder = os.path.dirname(os.path.realpath(__file__)) 
+compilation_database_folder = os.path.dirname(os.path.realpath(__file__))
 
 if compilation_database_folder:
   database = ycm_core.CompilationDatabase( compilation_database_folder )
@@ -79,10 +79,10 @@ def FlagsForFile( filename ):
         filename )
     do_cache = True
   else:
-    final_flags = [ ] 
-    do_cache = False 
+    final_flags = [ ]
+    do_cache = False
 
   return {
     'flags': final_flags,
-    'do_cache': do_cache 
+    'do_cache': do_cache
   }

@@ -69,7 +69,7 @@ struct node_t
    * 0 for the root node.  Only then will key.prefix be NULL. */
   apr_uint32_t length;
 
-  /* Number of entries used in SUB_NODES. */ 
+  /* Number of entries used in SUB_NODES. */
   apr_uint32_t sub_node_count;
 
   /* The sub-nodes, ordered by first char.  node_t and svn_prefix_string__t
@@ -136,7 +136,7 @@ search_lower_bound(node_t **sub_nodes,
   /* Binary search for the lowest position at which to insert KEY. */
   while (lower <= upper)
     {
-      int current = lower + (upper - lower) / 2; 
+      int current = lower + (upper - lower) / 2;
 
       if ((unsigned char)sub_nodes[current]->key.data[0] < key)
         lower = current + 1;

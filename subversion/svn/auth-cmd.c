@@ -373,7 +373,7 @@ svn_cl__auth(apr_getopt_t *os, void *baton, apr_pool_t *pool)
             SVN_ERR(svn_cmdline_printf(pool,
                       _("Credentials cache in '%s' is empty\n"),
                       svn_dirent_local_style(config_path, pool)));
-          else 
+          else
             return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
                                      _("Credentials cache in '%s' contains "
                                        "no matching credentials"),

@@ -84,7 +84,7 @@ is_der_cert(const svn_string_t *raw)
 {
   /* really simplistic fingerprinting of a DER.  By definition it must
    * start with an ASN.1 tag of a constructed (0x20) sequence (0x10).
-   * It's somewhat unfortunate that 0x30 happens to also come out to the 
+   * It's somewhat unfortunate that 0x30 happens to also come out to the
    * ASCII for '0' which may mean this will create false positives. */
   return raw->data[0] == 0x30 ? TRUE : FALSE;
 }

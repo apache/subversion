@@ -23,12 +23,12 @@
 #include "svn_fs.h"
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
- * 
+ *
  * NOTE: Keep the old non-packed shards around until after the format bump.
  * Otherwise, re-running upgrade will drop the packed revprop shard but
  * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
  * the bump.
- * 
+ *
  * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
  * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
  */
@@ -42,7 +42,7 @@ svn_fs_fs__upgrade_pack_revprops(svn_fs_t *fs,
 
 /* In the filesystem FS, remove all non-packed revprop shards up to
  * min_unpacked_rev.  Temporary allocations are done in SCRATCH_POOL.
- * 
+ *
  * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
  * used in the usual way.  Cancellation is supported in the sense that we
  * will cleanly abort the operation.  However, there will be remnant shards
@@ -79,7 +79,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
 
 /* Return TRUE, if for REVISION in FS, we can find the revprop pack file.
  * Use POOL for temporary allocations.
- * Set *MISSING, if the reason is a missing manifest or pack file. 
+ * Set *MISSING, if the reason is a missing manifest or pack file.
  */
 svn_boolean_t
 svn_fs_fs__packed_revprop_available(svn_boolean_t *missing,

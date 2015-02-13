@@ -87,7 +87,7 @@ typedef struct l2p_page_table_entry_t
 
 /* Master run-time data structure of an log-to-phys index.  It contains
  * the page tables of every revision covered by that index - but not the
- * pages themselves. 
+ * pages themselves.
  */
 typedef struct l2p_header_t
 {
@@ -498,7 +498,7 @@ stream_write_encoded(svn_stream_t *stream,
                      apr_uint64_t value)
 {
   unsigned char encoded[ENCODED_INT_LENGTH];
- 
+
   apr_size_t len = encode_uint(encoded, value);
   return svn_error_trace(svn_stream_write(stream, (char *)encoded, &len));
 }
@@ -806,7 +806,7 @@ svn_fs_fs__l2p_index_append(svn_checksum_t **checksum,
    * The current implementation is limited to 2G entries per page. */
   if (ffd->l2p_page_size > APR_INT32_MAX)
     return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
-                            _("L2P index page size  %s" 
+                            _("L2P index page size  %s"
                               " exceeds current limit of 2G entries"),
                             apr_psprintf(local_pool, "%" APR_UINT64_T_FMT,
                                          ffd->l2p_page_size));
@@ -869,7 +869,7 @@ svn_fs_fs__l2p_index_append(svn_checksum_t **checksum,
             return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
                                     _("Item index %s too large "
                                       "in l2p proto index for revision %ld"),
-                                    apr_psprintf(local_pool, "%" APR_UINT64_T_FMT, 
+                                    apr_psprintf(local_pool, "%" APR_UINT64_T_FMT,
                                                  proto_entry.item_index),
                                     revision + page_counts->nelts);
 
@@ -1277,7 +1277,7 @@ l2p_page_table_access_func(void **out,
 
   /* set output as a courtesy to the caller */
   *out = table_baton->pages;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1669,7 +1669,7 @@ l2p_proto_index_lookup(apr_off_t *offset,
     }
 
   SVN_ERR(svn_io_file_close(file, scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2188,7 +2188,7 @@ get_p2l_header(p2l_header_t **header,
 
   /* allocate result data structure */
   result = apr_pcalloc(result_pool, sizeof(*result));
-  
+
   /* Read table sizes, check them for plausibility and allocate page array. */
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->first_revision = (svn_revnum_t)value;
@@ -2282,7 +2282,7 @@ p2l_page_info_copy(p2l_page_info_baton_t *baton,
                    const p2l_header_t *header,
                    const apr_off_t *offsets)
 {
-  /* if the requested offset is out of bounds, return info for 
+  /* if the requested offset is out of bounds, return info for
    * a zero-sized empty page right behind the last page.
    */
   if (baton->offset / header->page_size < header->page_count)
@@ -2595,7 +2595,7 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
              apr_pool_t *scratch_pool)
 {
   p2l_page_info_baton_t page_info;
-  
+
   /* request info for the index pages that describes the pack / rev file
    * contents at pack / rev file position OFFSET. */
   page_info.offset = offset;
@@ -2611,7 +2611,7 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
   /* return results */
   if (page_info_p)
     *page_info_p = page_info;
-  
+
   /* construct cache key */
   if (key_p)
     {
@@ -2621,7 +2621,7 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
       key.is_packed = rev_file->is_packed;
       key.page = page_info.page_no;
 
-      *key_p = key;  
+      *key_p = key;
     }
 
   return SVN_NO_ERROR;

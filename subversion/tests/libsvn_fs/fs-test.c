@@ -5136,7 +5136,7 @@ filename_trailing_newline(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(err == SVN_NO_ERROR);
   else
     SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
-  
+
 
   /* Create another file, with contents. */
   if (!legacy_backend)
@@ -5314,7 +5314,7 @@ test_compat_version(const svn_test_opts_t *opts,
 {
   svn_version_t *compatible_version;
   apr_hash_t *config = apr_hash_make(pool);
-  
+
   svn_version_t vcurrent = {SVN_VER_MAJOR, SVN_VER_MINOR, 0, ""};
   svn_version_t v1_2_0 = {1, 2, 0, ""};
   svn_version_t v1_3_0 = {1, 3, 0, ""};
@@ -5493,7 +5493,7 @@ reopen_modify(const svn_test_opts_t *opts,
 
   /* Create txn with changes. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
-  SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool)); 
+  SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
   SVN_ERR(svn_fs_make_dir(root, "X", pool));
 
@@ -5903,7 +5903,7 @@ compare_contents(const svn_test_opts_t *opts,
   svn_checksum_t *checksum1, *checksum2;
 
   /* (path, rev) pairs to compare plus the expected API return values */
-  struct 
+  struct
     {
       svn_revnum_t rev1;
       const char *path1;
@@ -5931,12 +5931,12 @@ compare_contents(const svn_test_opts_t *opts,
       { 3, "bar", 4, "bar", TRUE, svn_tristate_true },
 
       /* variations on the same theme: same content, possibly different rep */
-      { 4, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
-      { 1, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
-      { 2, "foo", 4, "bar", FALSE, svn_tristate_unknown }, 
-      { 1, "foo", 4, "foo", FALSE, svn_tristate_unknown }, 
-      { 2, "foo", 4, "foo", FALSE, svn_tristate_unknown }, 
-      { 2, "bar", 4, "bar", FALSE, svn_tristate_unknown }, 
+      { 4, "foo", 4, "bar", FALSE, svn_tristate_unknown },
+      { 1, "foo", 4, "bar", FALSE, svn_tristate_unknown },
+      { 2, "foo", 4, "bar", FALSE, svn_tristate_unknown },
+      { 1, "foo", 4, "foo", FALSE, svn_tristate_unknown },
+      { 2, "foo", 4, "foo", FALSE, svn_tristate_unknown },
+      { 2, "bar", 4, "bar", FALSE, svn_tristate_unknown },
 
       /* EOL */
       { 0 },
@@ -6743,7 +6743,7 @@ test_prop_and_text_rep_sharing_collision(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_file_length(&length, rev_root, "/foo", pool));
 
   SVN_TEST_ASSERT(length == 23);
-  return SVN_NO_ERROR; 
+  return SVN_NO_ERROR;
 }
 
 /* ------------------------------------------------------------------------ */

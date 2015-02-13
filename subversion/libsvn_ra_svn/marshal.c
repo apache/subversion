@@ -592,7 +592,7 @@ svn_ra_svn__write_proplist(svn_ra_svn_conn_t *conn,
   if (props)
     for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
       {
-        apr_hash_this(hi, (const void **)&propname, 
+        apr_hash_this(hi, (const void **)&propname,
                           (apr_ssize_t *)&len,
                           (void **)&propval);
 
@@ -972,7 +972,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       /* Read string data directly into the string structure.
        * Do it iteratively.  */
-      do      
+      do
         {
           /* Determine length of chunk to read and re-alloc the buffer. */
           readbuf_len
@@ -990,7 +990,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           len -= readbuf_len;
         }
       while (len);
-      
+
       /* zero-terminate the string */
       stringbuf->data[stringbuf->len] = '\0';
 
@@ -1093,7 +1093,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       item->u.list->elts = (char *)data;
       item->u.list->pool = pool;
       item->u.list->elt_size = sizeof(*data);
-      item->u.list->nelts = 0; 
+      item->u.list->nelts = 0;
       item->u.list->nalloc = 4;
 
       listitem = data;
@@ -1118,7 +1118,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           /* read next protocol item */
           SVN_ERR(read_item(conn, pool, listitem, c, level));
 
-          listitem++; 
+          listitem++;
           item->u.list->nelts++;
         }
       SVN_ERR(readbuf_getchar(conn, pool, &c));
@@ -2483,7 +2483,7 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
   SVN_ERR(write_tuple_boolean(conn, pool, has_children));
   SVN_ERR(write_tuple_boolean(conn, pool, invalid_revnum));
   SVN_ERR(svn_ra_svn__write_number(conn, pool, revprop_count));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2504,7 +2504,7 @@ svn_ra_svn__read_string(const apr_array_header_t *items,
   svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_STRING);
   *result = elt->u.string;
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -2518,7 +2518,7 @@ svn_ra_svn__read_cstring(const apr_array_header_t *items,
   svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_STRING);
   *result = elt->u.string->data;
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -2532,7 +2532,7 @@ svn_ra_svn__read_word(const apr_array_header_t *items,
   svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
   *result = elt->u.word;
-   
+
   return SVN_NO_ERROR;
 }
 
@@ -2546,7 +2546,7 @@ svn_ra_svn__read_revision(const apr_array_header_t *items,
   svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_NUMBER);
   *result = (svn_revnum_t)elt->u.number;
-    
+
   return SVN_NO_ERROR;
 }
 
@@ -2565,7 +2565,7 @@ svn_ra_svn__read_boolean(const apr_array_header_t *items,
     *result = FALSE;
   else
     CHECK_PROTOCOL_COND(FALSE);
-    
+
   return SVN_NO_ERROR;
 }
 

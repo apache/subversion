@@ -32,7 +32,7 @@ extern "C" {
 
 /* A string table is a very space efficient, read-only representation for
  * a set of strings with high degreed of prefix and postfix overhead.
- * 
+ *
  * Creating a string table is a two-stage process:  Use a builder class,
  * stuff all the strings in there and let it then do the heavy lifting of
  * classification and compression to create the actual string table object.
@@ -101,7 +101,7 @@ svn_error_t *
 svn_fs_x__read_string_table(string_table_t **table_p,
                             svn_stream_t *stream,
                             apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool); 
+                            apr_pool_t *scratch_pool);
 
 /* Serialize string table *ST within the serialization CONTEXT.
  */

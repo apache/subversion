@@ -693,7 +693,7 @@ svn_io_files_contents_three_same_p(svn_boolean_t *same12,
  *
  * Use @a pool for memory allocations.
  *
- * @since 
+ * @since
  */
 svn_error_t *
 svn_io_file_create(const char *file,
@@ -720,7 +720,7 @@ svn_io_file_create_bytes(const char *file,
                          apr_pool_t *pool);
 
 /** Create an empty file at utf8-encoded path @a file.
- * 
+ *
  * @a file must not already exist. If an error occurs while
  * closing the file, attempt to delete the file before returning the error.
  *

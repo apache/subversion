@@ -69,7 +69,7 @@
  * each of the 4 buckets separately.  The first three will simply order
  * their items by revision, starting with the newest once.  Placing rep
  * and noderev items is a more elaborate process documented in the code.
- * 
+ *
  * In short, we store items in the following order:
  * - changed paths lists
  * - node property
@@ -256,7 +256,7 @@ initialize_pack_context(pack_context_t *context,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *temp_dir;
   int max_revs = MIN(ffd->max_files_per_dir, max_items);
-  
+
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT);
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
 
@@ -272,7 +272,7 @@ initialize_pack_context(pack_context_t *context,
   context->start_rev = shard_rev;
   context->end_rev = shard_rev;
   context->shard_end_rev = shard_rev + ffd->max_files_per_dir;
-  
+
   /* Create the new directory and pack file. */
   context->shard_dir = shard_dir;
   context->pack_file_dir = pack_file_dir;
@@ -349,7 +349,7 @@ reset_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_file_trunc(context->reps_file, 0, pool));
 
   svn_pool_clear(context->info_pool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -377,7 +377,7 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_fs_fs__add_index_data(context->fs, context->pack_file,
                                     proto_l2p_index_path,
                                     proto_p2l_index_path,
-                                    context->shard_rev, 
+                                    context->shard_rev,
                                     pool));
 
   /* remove proto index files */
@@ -402,7 +402,7 @@ copy_file_data(pack_context_t *context,
   /* most non-representation items will be small.  Minimize the buffer
    * and infrastructure overhead in that case. */
   enum { STACK_BUFFER_SIZE = 1024 };
- 
+
   if (size < STACK_BUFFER_SIZE)
     {
       /* copy small data using a fixed-size buffer on stack */
@@ -481,9 +481,9 @@ copy_item_to_temp(pack_context_t *context,
 
   SVN_ERR(svn_fs_fs__get_file_offset(&new_entry->offset, temp_file, pool));
   APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *) = new_entry;
-  
+
   SVN_ERR(copy_file_data(context, temp_file, rev_file, entry->size, pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1001,7 +1001,7 @@ sort_reps(pack_context_t *context)
   /* We now know the final ordering. */
   for (i = 0; i < count; ++i)
     path_order[i] = temp[i];
-  
+
   svn_pool_destroy(temp_pool);
 }
 
@@ -1290,7 +1290,7 @@ pack_range(pack_context_t *context,
 
       /* store the indirect array index */
       APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps->nelts;
-  
+
       /* read the phys-to-log index file until we covered the whole rev file.
        * That index contains enough info to build both target indexes from it. */
       while (offset < rev_file->l2p_offset)
@@ -1391,7 +1391,7 @@ pack_range(pack_context_t *context,
   SVN_ERR(write_l2p_index(context, revpool));
 
   svn_pool_destroy(revpool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1639,7 +1639,7 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
 
 /* Packing logic for physical addresssing mode:
  * Simply concatenate all revision contents.
- * 
+ *
  * Pack the revision shard starting at SHARD_REV containing exactly
  * MAX_FILES_PER_DIR revisions from SHARD_PATH into the PACK_FILE_DIR,
  * using POOL for allocations.  CANCEL_FUNC and CANCEL_BATON are what you
@@ -1756,7 +1756,7 @@ pack_rev_shard(svn_fs_t *fs,
     SVN_ERR(pack_phys_addressed(pack_file_dir, shard_path, shard_rev,
                                 max_files_per_dir, cancel_func,
                                 cancel_baton, pool));
-  
+
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
   SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, pool));
 

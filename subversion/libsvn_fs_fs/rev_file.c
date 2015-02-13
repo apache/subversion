@@ -146,7 +146,7 @@ open_pack_or_rev_file(svn_fs_fs__revision_file_t *file,
 
       /* We may have to *temporarily* enable write access. */
       err = writable ? auto_make_writable(path, result_pool, scratch_pool)
-                     : SVN_NO_ERROR; 
+                     : SVN_NO_ERROR;
 
       /* open the revision file in buffered r/o or r/w mode */
       if (!err)

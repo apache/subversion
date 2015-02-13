@@ -631,7 +631,7 @@ typedef struct rep_state_t
                        -1 if the offset is yet unknown. */
   apr_off_t current;/* The current offset relative to START. */
   apr_off_t size;   /* The on-disk size of the representation. */
-  int ver;          /* If a delta, what svndiff version? 
+  int ver;          /* If a delta, what svndiff version?
                        -1 for unknown delta version. */
   int chunk_index;  /* number of the window to read */
 } rep_state_t;
@@ -991,7 +991,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   int count = 0;
   int shards = 1;
   svn_revnum_t last_shard = rep->revision / shard_size;
-  
+
   /* Check whether the length of the deltification chain is acceptable.
    * Otherwise, shared reps may form a non-skipping delta chain in
    * extreme cases. */
@@ -1104,7 +1104,7 @@ struct rep_read_baton
   /* The text we've been reading, if we're going to cache it. */
   svn_stringbuf_t *current_fulltext;
 
-  /* If not NULL, attempt to read the data from this cache. 
+  /* If not NULL, attempt to read the data from this cache.
      Once that lookup fails, reset it to NULL. */
   svn_cache__t *fulltext_cache;
 
@@ -1550,7 +1550,7 @@ read_plain_window(svn_stringbuf_t **nwin, rep_state_t *rs,
                   apr_pool_t *scratch_pool)
 {
   apr_off_t offset;
-  
+
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   SVN_ERR(auto_open_shared_file(rs->sfile));
@@ -2001,7 +2001,7 @@ rep_read_contents(void *baton,
                              &rb->src_state, &rb->len, rb->fs, &rb->rep,
                              rb->filehandle_pool));
 
-      /* In case we did read from the fulltext cache before, make the 
+      /* In case we did read from the fulltext cache before, make the
        * window stream catch up.  Also, initialize the fulltext buffer
        * if we want to cache the fulltext at the end. */
       SVN_ERR(skip_contents(rb, rb->fulltext_delivered));
@@ -2788,7 +2788,7 @@ init_rep_state(rep_state_t *rs,
   /* this function does not apply to representation containers */
   SVN_ERR_ASSERT(entry->type >= SVN_FS_FS__ITEM_TYPE_FILE_REP
                  && entry->type <= SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
-  
+
   shared_file->rfile = file;
   shared_file->fs = fs;
   shared_file->revision = entry->item.revision;
@@ -2850,7 +2850,7 @@ get_raw_window_end(void **out,
  * at or beyond that offset.  Use POOL for temporary allocations.
  *
  * This function requires RS->RAW_WINDOW_CACHE and RS->WINDOW_CACHE to
- * be non-NULL. 
+ * be non-NULL.
  */
 static svn_error_t *
 cache_windows(svn_fs_t *fs,
@@ -2965,7 +2965,7 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
 
   SVN_ERR(init_rep_state(&rs, rep_header, fs, rev_file, entry,
                          result_pool));
-  
+
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   offset = rs.start + rs.current;
@@ -3018,7 +3018,7 @@ read_rep_header(svn_fs_fs__rep_header_t **rep_header,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t is_cached = FALSE;
-  
+
   if (ffd->rep_header_cache)
     {
       SVN_ERR(svn_cache__get((void**)rep_header, &is_cached,
@@ -3246,7 +3246,7 @@ block_read(void **result,
 
   /* don't try this on transaction protorev files */
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  
+
   /* index lookup: find the OFFSET of the item we *must* read plus (in the
    * "do-while" block) the list of items in the same block. */
   SVN_ERR(svn_fs_fs__item_offset(&wanted_offset, fs, revision_file,

@@ -662,7 +662,7 @@ svn_client_blame5(const char *target,
                                             target, peg_revision,
                                             &younger_end,
                                             ctx, pool));
-  
+
     /* Make the session point to the real URL. */
     SVN_ERR(svn_ra_reparent(ra_session, loc->url, pool));
   }
@@ -740,7 +740,7 @@ svn_client_blame5(const char *target,
      revision. */
   SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, frb.currpool));
   SVN_ERR(svn_ra_get_file_revs2(ra_session, "",
-                                start_revnum 
+                                start_revnum
                                 - (0 < start_revnum && start_revnum <= end_revnum ? 1 : 0)
                                 + (youngest > start_revnum && start_revnum > end_revnum ? 1 : 0),
                                 end_revnum, include_merged_revisions,

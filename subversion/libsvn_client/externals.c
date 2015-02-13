@@ -171,7 +171,7 @@ switch_dir_external(const char *local_abspath,
   if (revision->kind == svn_opt_revision_number)
     external_rev = revision->value.number;
 
-  /* 
+  /*
    * The code below assumes existing versioned paths are *not* part of
    * the external's defining working copy.
    * The working copy library does not support registering externals

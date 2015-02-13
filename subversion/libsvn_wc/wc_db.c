@@ -4980,7 +4980,7 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
   /* ### TODO: Did we handle ACTUAL as intended? */
-  
+
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
 
   if (conflict)
@@ -6994,7 +6994,7 @@ op_revert_recursive_txn(void *baton,
                         STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
-      
+
       SVN_ERR(svn_sqlite__get_statement(
                         &stmt, wcroot->sdb,
                         STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
@@ -16278,7 +16278,7 @@ static int
 compare_queue_items(const void *v1,
                     const void *v2)
 {
-  const commit_queue_item_t *cqi1 
+  const commit_queue_item_t *cqi1
               = *(const commit_queue_item_t **)v1;
   const commit_queue_item_t *cqi2
               = *(const commit_queue_item_t **)v2;

@@ -209,7 +209,7 @@ svn_fs_x__dag_node_kind(dag_node_t *node);
    If properties do not exist on NODE, *PROPLIST_P will be set to
    NULL.
 
-   Allocate the result in RESULT_POOL and use SCRATCH_POOL for temporaries. 
+   Allocate the result in RESULT_POOL and use SCRATCH_POOL for temporaries.
  */
 svn_error_t *
 svn_fs_x__dag_get_proplist(apr_hash_t **proplist_p,
