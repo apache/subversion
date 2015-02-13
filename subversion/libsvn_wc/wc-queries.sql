@@ -292,17 +292,16 @@ INSERT OR REPLACE INTO nodes (
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target, moved_here, moved_to )
 SELECT
-    wc_id, ?4 /*local_relpath */, ?5 /*op_depth*/, ?6 /* parent_relpath */,
-    repos_id,
-    repos_path, revision, presence, depth, kind, changed_revision,
-    changed_date, changed_author, checksum, properties, translated_size,
-    last_mod_time, symlink_target, 1,
-    (SELECT dst.moved_to FROM nodes AS dst
-                         WHERE dst.wc_id = ?1
-                         AND dst.local_relpath = ?4
-                         AND dst.op_depth = ?5)
-FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+    s.wc_id, ?4 /*local_relpath */, ?5 /*op_depth*/, ?6 /* parent_relpath */,
+    s.repos_id,
+    s.repos_path, s.revision, s.presence, s.depth, s.kind, s.changed_revision,
+    s.changed_date, s.changed_author, s.checksum, s.properties,
+    CASE WHEN d.checksum=s.checksum THEN d.translated_size END,
+    CASE WHEN d.checksum=s.checksum THEN d.last_mod_time END,
+    s.symlink_target, 1, d.moved_to
+FROM nodes s
+LEFT JOIN nodes d ON d.wc_id=?1 AND d.local_relpath=?4 AND d.op_depth=?5
+WHERE s.wc_id = ?1 AND s.local_relpath = ?2 AND s.op_depth = ?3
 
 -- STMT_SELECT_NO_LONGER_MOVED_RV
 SELECT d.local_relpath, RELPATH_SKIP_JOIN(?2, ?4, d.local_relpath) srp,
