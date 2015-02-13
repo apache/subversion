@@ -506,6 +506,202 @@ mutable_root_node(dag_node_t **node_p,
 
 /* Traversing directory paths.  */
 
+/* Try a short-cut for the open_path() function using the last node accessed.
+ * If that ROOT is that nodes's "created rev" and PATH matches its "created-
+ * path", return the node in *NODE_P.  Set it to NULL otherwise.
+ *
+ * This function is used to support ra_serf-style access patterns where we
+ * are first asked for path@rev and then for path@c_rev of the same node.
+ * The shortcut works by ignoring the "rev" part of the cache key and then
+ * checking whether we got lucky.  Lookup and verification are both quick
+ * plus there are many early outs for common types of mismatch.
+ */
+static svn_error_t *
+try_match_last_node(dag_node_t **node_p,
+                    svn_fs_root_t *root,
+                    const svn_string_t *path)
+{
+  svn_fs_x__data_t *ffd = root->fs->fsap_data;
+
+  /* Optimistic lookup: if the last node returned from the cache applied to
+     the same PATH, return it in NODE. */
+  dag_node_t *node = cache_lookup_last_path(ffd->dag_node_cache, path);
+
+  /* Did we get a bucket with a committed node? */
+  if (node && !svn_fs_x__dag_check_mutable(node))
+    {
+      /* Get the path&rev pair at which this node was created.
+         This is repository location for which this node is _known_ to be
+         the right lookup result irrespective of how we found it. */
+      const char *created_path
+        = svn_fs_x__dag_get_created_path(node) + 1;
+      svn_revnum_t revision = svn_fs_x__dag_get_revision(node);
+
+      /* Is it an exact match? */
+      if (   revision == root->rev
+          && strlen(created_path) == path->len
+          && memcmp(created_path, path->data, path->len) == 0)
+        {
+          /* Cache it under its full path@rev access path. */
+          svn_fs_x__set_dag_node(root, created_path, node);
+
+          *node_p = node;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  *node_p = NULL;
+  return SVN_NO_ERROR;
+}
+
+
+/* From directory node PARENT, under ROOT, go one step down to the entry
+   NAME and return a reference to it in *CHILD_P.
+
+   PATH is the combination of PARENT's path and NAME and is provided by
+   the caller such that we don't have to construct it here ourselves.
+   Similarly, CHANGE_SET is redundant with ROOT.
+
+   NOTE: *NODE_P will live within the DAG cache and we merely return a
+   reference to it.  Hence, it will invalid upon the next cache insertion.
+   Callers must create a copy if they want a non-temporary object.
+*/
+static svn_error_t *
+dag_step(dag_node_t **child_p,
+         svn_fs_root_t *root,
+         dag_node_t *parent,
+         const char *name,
+         const svn_string_t *path,
+         svn_fs_x__change_set_t change_set,
+         apr_pool_t *scratch_pool)
+{
+  svn_fs_t *fs = svn_fs_x__dag_get_fs(parent);
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+  cache_entry_t *bucket;
+  svn_fs_x__id_t node_id;
+
+  /* Get the ID of the node we are looking for.  The function call checks
+     for various error conditions such like PARENT not being a directory. */
+  SVN_ERR(svn_fs_x__dir_entry_id(&node_id, parent, name, scratch_pool));
+  if (! svn_fs_x__id_used(&node_id))
+    {
+      const char *dir = apr_pstrmemdup(scratch_pool, path->data, path->len);
+      dir = svn_fs__canonicalize_abspath(dir, scratch_pool);
+
+      return SVN_FS__NOT_FOUND(root, dir);
+    }
+
+  /* Auto-insert the node in the cache. */
+  auto_clear_dag_cache(ffd->dag_node_cache);
+  bucket = cache_lookup(ffd->dag_node_cache, change_set, path);
+
+  /* If it is not already cached, construct the DAG node object for NODE_ID.
+     Let it live in the cache.  Sadly, we often can't reuse txn DAG nodes. */
+  if (bucket->node == NULL || root->is_txn_root)
+    SVN_ERR(svn_fs_x__dag_get_node(&bucket->node, fs, &node_id,
+                                  ffd->dag_node_cache->pool,
+                                  scratch_pool));
+
+  /* Return a reference to the cached object. */
+  *child_p = bucket->node;
+  return SVN_NO_ERROR;
+}
+
+/* Walk the DAG starting at ROOT, following PATH and return a reference to
+   the target node in *NODE_P.   Use SCRATCH_POOL for temporary allocations.
+
+   NOTE: *NODE_P will live within the DAG cache and we merely return a
+   reference to it.  Hence, it will invalid upon the next cache insertion.
+   Callers must create a copy if they want a non-temporary object.
+*/
+static svn_error_t *
+walk_dag_path(dag_node_t **node_p,
+              svn_fs_root_t *root,
+              svn_string_t *path,
+              apr_pool_t *scratch_pool)
+{
+  dag_node_t *here = NULL; /* The directory we're currently looking at.  */
+  apr_pool_t *iterpool;
+  svn_fs_x__change_set_t change_set = root_change_set(root);
+  const char *entry;
+  svn_string_t directory;
+  svn_stringbuf_t *entry_buffer;
+
+  /* Special case: root directory.
+     We will later assume that all paths have at least one parent level,
+     so we must check here for those that don't. */
+  if (path->len == 0)
+    return svn_error_trace(svn_fs_x__root_node(node_p, root, scratch_pool,
+                                               scratch_pool));
+
+  /* Callers often traverse the DAG in some path-based order or along the
+     history segments.  That allows us to try a few guesses about where to
+     find the next item.  This is only useful if the caller didn't request
+     the full parent chain. */
+
+  /* First attempt: Assume that we access the DAG for the same path as
+     in the last lookup but for a different revision that happens to be
+     the last revision that touched the respective node.  This is a
+     common pattern when e.g. checking out over ra_serf.  Note that this
+     will only work for committed data as the revision info for nodes in
+     txns is bogus.
+
+     This shortcut is quick and will exit this function upon success.
+     So, try it first. */
+  if (!root->is_txn_root)
+    {
+      SVN_ERR(try_match_last_node(node_p, root, path));
+
+      /* Did the shortcut work? */
+      if (*node_p)
+          return SVN_NO_ERROR;
+    }
+
+  /* Second attempt: Try starting the lookup immediately at the parent
+     node.  We will often have recently accessed either a sibling or
+     said parent directory itself for the same revision.  ENTRY will
+     point to the last '/' in PATH. */
+  entry_buffer = svn_stringbuf_create_ensure(64, scratch_pool);
+  if (extract_last_segment(path, &directory, entry_buffer))
+    {
+      here = dag_node_cache_get(root, &directory);
+
+      /* Did the shortcut work? */
+      if (here)
+        return svn_error_trace(dag_step(node_p, root, here,
+                                        entry_buffer->data, path,
+                                        change_set, scratch_pool));
+    }
+
+  /* Now there is something to iterate over. Thus, create the ITERPOOL. */
+  iterpool = svn_pool_create(scratch_pool);
+
+  /* Make a parent_path item for the root node, using its own current
+     copy id.  */
+  SVN_ERR(svn_fs_x__root_node(&here, root, scratch_pool, iterpool));
+  path->len = 0;
+
+  /* Whenever we are at the top of this loop:
+     - HERE is our current directory,
+     - REST is the path we're going to find in HERE. */
+  for (entry = next_entry_name(path, entry_buffer);
+       entry;
+       entry = next_entry_name(path, entry_buffer))
+    {
+      svn_pool_clear(iterpool);
+
+      /* Note that HERE is allocated from the DAG node cache and will
+         therefore survive the ITERPOOL cleanup. */
+      SVN_ERR(dag_step(&here, root, here, entry, path, change_set, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  *node_p = here;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Return a text string describing the absolute path of parent path
    DAG_PATH.  It will be allocated in POOL. */
 static const char *
@@ -625,55 +821,6 @@ make_parent_path(dag_node_t *node,
   dag_path->copy_src_path = NULL;
   return dag_path;
 }
-
-/* Try a short-cut for the open_path() function using the last node accessed.
- * If that ROOT is that nodes's "created rev" and PATH matches its "created-
- * path", return the node in *NODE_P.  Set it to NULL otherwise.
- *
- * This function is used to support ra_serf-style access patterns where we
- * are first asked for path@rev and then for path@c_rev of the same node.
- * The shortcut works by ignoring the "rev" part of the cache key and then
- * checking whether we got lucky.  Lookup and verification are both quick
- * plus there are many early outs for common types of mismatch.
- */
-static svn_error_t *
-try_match_last_node(dag_node_t **node_p,
-                    svn_fs_root_t *root,
-                    const svn_string_t *path)
-{
-  svn_fs_x__data_t *ffd = root->fs->fsap_data;
-
-  /* Optimistic lookup: if the last node returned from the cache applied to
-     the same PATH, return it in NODE. */
-  dag_node_t *node = cache_lookup_last_path(ffd->dag_node_cache, path);
-
-  /* Did we get a bucket with a committed node? */
-  if (node && !svn_fs_x__dag_check_mutable(node))
-    {
-      /* Get the path&rev pair at which this node was created.
-         This is repository location for which this node is _known_ to be
-         the right lookup result irrespective of how we found it. */
-      const char *created_path
-        = svn_fs_x__dag_get_created_path(node) + 1;
-      svn_revnum_t revision = svn_fs_x__dag_get_revision(node);
-
-      /* Is it an exact match? */
-      if (   revision == root->rev
-          && strlen(created_path) == path->len
-          && memcmp(created_path, path->data, path->len) == 0)
-        {
-          /* Cache it under its full path@rev access path. */
-          svn_fs_x__set_dag_node(root, created_path, node);
-
-          *node_p = node;
-          return SVN_NO_ERROR;
-        }
-    }
-
-  *node_p = NULL;
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
@@ -922,152 +1069,6 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
-
-/* From directory node PARENT, under ROOT, go one step down to the entry
-   NAME and return a reference to it in *CHILD_P.
-
-   PATH is the combination of PARENT's path and NAME and is provided by
-   the caller such that we don't have to construct it here ourselves.
-   Similarly, CHANGE_SET is redundant with ROOT.
-
-   NOTE: *NODE_P will live within the DAG cache and we merely return a
-   reference to it.  Hence, it will invalid upon the next cache insertion.
-   Callers must create a copy if they want a non-temporary object.
-*/
-static svn_error_t *
-dag_step(dag_node_t **child_p,
-         svn_fs_root_t *root,
-         dag_node_t *parent,
-         const char *name,
-         const svn_string_t *path,
-         svn_fs_x__change_set_t change_set,
-         apr_pool_t *scratch_pool)
-{
-  svn_fs_t *fs = svn_fs_x__dag_get_fs(parent);
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-  cache_entry_t *bucket;
-  svn_fs_x__id_t node_id;
-
-  /* Get the ID of the node we are looking for.  The function call checks
-     for various error conditions such like PARENT not being a directory. */
-  SVN_ERR(svn_fs_x__dir_entry_id(&node_id, parent, name, scratch_pool));
-  if (! svn_fs_x__id_used(&node_id))
-    {
-      const char *dir = apr_pstrmemdup(scratch_pool, path->data, path->len);
-      dir = svn_fs__canonicalize_abspath(dir, scratch_pool);
-
-      return SVN_FS__NOT_FOUND(root, dir);
-    }
-
-  /* Auto-insert the node in the cache. */
-  auto_clear_dag_cache(ffd->dag_node_cache);
-  bucket = cache_lookup(ffd->dag_node_cache, change_set, path);
-
-  /* If it is not already cached, construct the DAG node object for NODE_ID.
-     Let it live in the cache.  Sadly, we often can't reuse txn DAG nodes. */
-  if (bucket->node == NULL || root->is_txn_root)
-    SVN_ERR(svn_fs_x__dag_get_node(&bucket->node, fs, &node_id,
-                                  ffd->dag_node_cache->pool,
-                                  scratch_pool));
-
-  /* Return a reference to the cached object. */
-  *child_p = bucket->node;
-  return SVN_NO_ERROR;
-}
-
-/* Walk the DAG starting at ROOT, following PATH and return a reference to
-   the target node in *NODE_P.   Use SCRATCH_POOL for temporary allocations.
-
-   NOTE: *NODE_P will live within the DAG cache and we merely return a
-   reference to it.  Hence, it will invalid upon the next cache insertion.
-   Callers must create a copy if they want a non-temporary object.
-*/
-static svn_error_t *
-walk_dag_path(dag_node_t **node_p,
-              svn_fs_root_t *root,
-              svn_string_t *path,
-              apr_pool_t *scratch_pool)
-{
-  dag_node_t *here = NULL; /* The directory we're currently looking at.  */
-  apr_pool_t *iterpool;
-  svn_fs_x__change_set_t change_set = root_change_set(root);
-  const char *entry;
-  svn_string_t directory;
-  svn_stringbuf_t *entry_buffer;
-
-  /* Special case: root directory.
-     We will later assume that all paths have at least one parent level,
-     so we must check here for those that don't. */
-  if (path->len == 0)
-    return svn_error_trace(svn_fs_x__root_node(node_p, root, scratch_pool,
-                                               scratch_pool));
-
-  /* Callers often traverse the DAG in some path-based order or along the
-     history segments.  That allows us to try a few guesses about where to
-     find the next item.  This is only useful if the caller didn't request
-     the full parent chain. */
-
-  /* First attempt: Assume that we access the DAG for the same path as
-     in the last lookup but for a different revision that happens to be
-     the last revision that touched the respective node.  This is a
-     common pattern when e.g. checking out over ra_serf.  Note that this
-     will only work for committed data as the revision info for nodes in
-     txns is bogus.
-
-     This shortcut is quick and will exit this function upon success.
-     So, try it first. */
-  if (!root->is_txn_root)
-    {
-      SVN_ERR(try_match_last_node(node_p, root, path));
-
-      /* Did the shortcut work? */
-      if (*node_p)
-          return SVN_NO_ERROR;
-    }
-
-  /* Second attempt: Try starting the lookup immediately at the parent
-     node.  We will often have recently accessed either a sibling or
-     said parent directory itself for the same revision.  ENTRY will
-     point to the last '/' in PATH. */
-  entry_buffer = svn_stringbuf_create_ensure(64, scratch_pool);
-  if (extract_last_segment(path, &directory, entry_buffer))
-    {
-      here = dag_node_cache_get(root, &directory);
-
-      /* Did the shortcut work? */
-      if (here)
-        return svn_error_trace(dag_step(node_p, root, here,
-                                        entry_buffer->data, path,
-                                        change_set, scratch_pool));
-    }
-
-  /* Now there is something to iterate over. Thus, create the ITERPOOL. */
-  iterpool = svn_pool_create(scratch_pool);
-
-  /* Make a parent_path item for the root node, using its own current
-     copy id.  */
-  SVN_ERR(svn_fs_x__root_node(&here, root, scratch_pool, iterpool));
-  path->len = 0;
-
-  /* Whenever we are at the top of this loop:
-     - HERE is our current directory,
-     - REST is the path we're going to find in HERE. */
-  for (entry = next_entry_name(path, entry_buffer);
-       entry;
-       entry = next_entry_name(path, entry_buffer))
-    {
-      svn_pool_clear(iterpool);
-
-      /* Note that HERE is allocated from the DAG node cache and will
-         therefore survive the ITERPOOL cleanup. */
-      SVN_ERR(dag_step(&here, root, here, entry, path, change_set, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-  *node_p = here;
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
