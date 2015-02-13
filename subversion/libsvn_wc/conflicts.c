@@ -1797,7 +1797,7 @@ read_tree_conflict_desc(svn_wc_conflict_description2_t **desc,
            && left_version
            && (operation == svn_wc_operation_update
                ||operation == svn_wc_operation_switch)
-           && (reason == svn_wc_conflict_action_delete
+           && (reason == svn_wc_conflict_reason_deleted
                || reason == svn_wc_conflict_reason_moved_away))
     {
       /* We have nothing locally to take the kind from */
