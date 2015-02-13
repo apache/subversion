@@ -681,9 +681,7 @@ walk_dag_path(dag_node_t **node_p,
   SVN_ERR(svn_fs_x__root_node(&here, root, scratch_pool, iterpool));
   path->len = 0;
 
-  /* Whenever we are at the top of this loop:
-     - HERE is our current directory,
-     - REST is the path we're going to find in HERE. */
+  /* Walk the path segment by segment. */
   for (entry = next_entry_name(path, entry_buffer);
        entry;
        entry = next_entry_name(path, entry_buffer))
