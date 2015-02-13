@@ -203,8 +203,7 @@ Veto-blocked changes:
      This is also nominated for 1.7.x.
    Votes:
      +1: julianfoad
-     -1: philip (deletes mergeinfo that doesn't contain r0)
-         (for r1646230, r1646250, r1646253 only)
+     -1: philip (new test is a FAIL, needs a fix for issue 4538)
 
 Approved changes:
 =================
