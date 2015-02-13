@@ -10,7 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.8.11:
+Status of 1.8.12:
 
 Candidate changes:
 ==================
@@ -41,21 +41,10 @@ Candidate changes:
      this patch, there is no way except of 'svnadmin load' to know that these
      dump files will load at all.  With this patch, a successful verify run
      should guarantee loadable dump files.
-   Branch: ^/subversion/branches/1.8.x-r1536854
+   Branch:
+     ^/subversion/branches/1.8.x-r1536854
    Votes:
      +1: stefan2, breser
-
- * r1555491
-   Fix svn_fs_close_root for FSFS transaction roots.
-   Justification:
-     Without this patch, cache-related pool cleanups may be run after the
-     svn_fs_t object has been destroyed.  I.e. even with explicit calls to
-     svn_fs_close_root, the user may see a segfault.
-   Branch:
-     ^/subversion/branches/1.8.x-r1555491
-   Votes:
-     +1: stefan2
-     -0: philip, rhuijben (Seems to be a different name for the same pool?)
 
  * r1590751
    Use empty, rather than NULL, config if default is unreadable.
@@ -81,6 +70,23 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1619380, r1619393
+   Fix diff of a locally copied directory with props: it showed all props
+   as added instead of a diff against the copy-from props.
+   Justification:
+     Behaviour regression introduced in 1.8.0.
+   Notes:
+     r1619380 is the fix; r1619393 a test for it.
+     The test on trunk@1619393 is tweaked to account for a trunk bug in the
+     display of diff headers; the backport branch provides the correct
+     version for 1.8.x.
+   Branch:
+     ^/subversion/branches/1.8.x-r1619380
+   Votes:
+     +1: rhuijben
+     +0: julianfoad (previously said +1 with the wrong branch mentioned)
+     +0: stefan2 (previously said +1 with the wrong branch mentioned)
+
  * r1643074
    Don't let invalid mergeinfo stop 'svnadmin load' from working.
      Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
@@ -95,7 +101,86 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1643074
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
+
+ * r1644158, r1644530, r1644595, r1644599, r1652744
+   Fix patch output for reordered hunks, part of issue 4533.
+   Justification:
+     Output is invalid, hunks replace the wrong bits of the file.
+   Branch:
+     ^/subversion/branches/1.8.x-r1644595
+   Votes:
+     +1: philip, rhuijben
+
+ * r1646785, r1646786, r1646797
+   Fix a pool handling bug in config variable expansion.
+   Justification:
+     Using memory after free is undefined behaviour.
+   Branch:
+     ^/subversion/branches/1.8.x-r1646797
+   Votes:
+     +1: philip, rhuijben
+
+ * r1650531
+   Fix a redirect handling bug in 'svn log' over HTTP. 
+   Justification:
+     Redirects should work.
+   Notes:
+     Merge with --accept tc
+   Votes:
+     +1: stsp, philip
+
+ * r1651963, r1651966, r1651980, r1651997
+   Sequence of moves shouldn't trigger an assertion in the working copy
+   Justification:
+     Users shouldn't be able to trigger assertions by performing normal
+     operations.
+   Votes:
+     +1: rhuijben
+
+ * r1513479, r1625522 
+   Fix issue #4411, 'parent-relative file external can corrupt working copy'.
+   Justification:
+     Broken working copies are bad.
+   Notes:
+     This also adds a test case for issue #4519 which was fixed in 1.8.11.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4411
+   Votes:
+     +1: stsp, rhuijben
+
+ * r1654932, r1654933, r1654934, r1654937
+   Fix issue #4554, "0 file length reported in FSFS".
+   Justification:
+     This causes 'svnadmin dump' to create corrupted output that fails to
+     load and we provide no way to detect that problem other than loading
+     the respective dump.  We also want to prevent further instances of
+     that issue to be added to the repository.
+   Notes:
+     r1561419 has been removed from this change set and proposed for a
+     separate backport because it is not a necessary part of the #4554 fix.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4554
+   Votes:
+     +1: stefan2
+     +0: rhuijben (patch looks sane, but hard to oversee consequences)
+
+ * r1658115, r1659553, r1659554
+   Stop dropping a value when copying tree conflict information
+   Justification:
+     Trivial correctness fix that provides valueable information to the
+     conflict resolver.
+   Votes:
+     +1: rhuijben, ivan
+
+ * r1658417
+   Don't ask a resolver if we should resolve if we only take no as answer
+   Justification:
+     Presenting conflicts to the conflict resolver only makes sense if the
+     result of the function is potentially applied. I'm surprised that
+     nobody noticed this problem in svn_wc_resolved_conflict5().
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -110,5 +195,74 @@ Veto-blocked changes:
      +1: stsp
      -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
 
+ * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
+   Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
+   non-deltas dumpfile".
+   Justification:
+     Data loss.
+   Branch: ^/subversion/branches/1.8.x-issue4551
+   Notes:
+     r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
+   Votes:
+     +1: julianfoad, rhuijben
+     -1: philip (uses apr_hash_key this without the neccessary backport support)
+
+ * r1646230, r1646250, r1646253
+   Make svnsync strip any r0 references from mergeinfo -- issue #4476.
+   Justification:
+     Without this is was not possible to svnsync a repository that contained
+     this kind of mergeinfo that is now considered invalid but previously
+     could be committed.
+   Notes:
+     r1646250 contains the fix itself, and a test for it.
+     r1646253 removes some stray debug statements.
+     r1646230 is required for the test to work.
+     r1643074 (nominated separately) is required for the test to work.
+     I would recommend not backporting r1646250 without r1643074.
+     This is also nominated for 1.7.x.
+   Votes:
+     +1: julianfoad
+     -1: philip (deletes mergeinfo that doesn't contain r0)
+
 Approved changes:
 =================
+
+ * r1659013, r1659315
+   Fix a race in the DSO initialisation code.
+   Justification:
+     Fixes occasional SEGV when multiple threads load DSOs in parallel.
+   Votes:
+     +1: philip, rhuijben, ivan
+
+ * r1651759
+   Api correctness fix: Duplicate error filename when copying errors
+   Justification:
+     Simple to fix issue caused error on buildbot.
+   Votes:
+     +1: rhuijben, ivan, philip
+
+ * r1659399
+   Make the SQLite build with recent (3.8.x?) amalgamated versions.
+   Justification:
+     It's a trivial change to catch up with upstream arbitrariness,
+     and there's no reason to support a different set of amalgamated
+     SQLite versions than library versions.
+   Votes:
+     +1: brane, ivan, philip
+
+ * r1656713
+   Fix reporting errors from ra_svn's svn_ra_get_dir2() in some cases.
+   Justification:
+     Causes a connection stall in custom repository browsers that get
+     into this code path by not verifying if the directory exists before
+     calling this function. Regression against <= 1.7.x.
+   Votes:
+     +1: rhuijben, ivan, philip
+
+ * r1596882
+   Fix build with Ruby 2.
+   Justification:
+     Move along with the times! And should fix buildbot failures
+     according to jamessan, who submitted the patch.
+   Votes:
+     +1: stsp, rhuijben, philip

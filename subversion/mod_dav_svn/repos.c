@@ -508,6 +508,9 @@ parse_vtxnstub_uri(dav_resource_combined *comb,
   if (parse_txnstub_uri(comb, path, label, use_checked_in))
     return TRUE;
 
+  if (!comb->priv.root.txn_name)
+    return TRUE;
+
   comb->priv.root.vtxn_name = comb->priv.root.txn_name;
   comb->priv.root.txn_name = dav_svn__get_txn(comb->priv.repos,
                                               comb->priv.root.vtxn_name);
@@ -574,6 +577,9 @@ parse_vtxnroot_uri(dav_resource_combined *comb,
   /* format: !svn/vtxr/TXN_NAME/[PATH] */
 
   if (parse_txnroot_uri(comb, path, label, use_checked_in))
+    return TRUE;
+
+  if (!comb->priv.root.txn_name)
     return TRUE;
 
   comb->priv.root.vtxn_name = comb->priv.root.txn_name;
@@ -921,6 +927,10 @@ prep_working(dav_resource_combined *comb)
      point. */
   if (txn_name == NULL)
     {
+      if (!comb->priv.root.activity_id)
+        return dav_svn__new_error(comb->res.pool, HTTP_BAD_REQUEST, 0,
+                                  "The request did not specify an activity ID");
+
       txn_name = dav_svn__get_txn(comb->priv.repos,
                                   comb->priv.root.activity_id);
       if (txn_name == NULL)
@@ -1031,8 +1041,13 @@ prep_working(dav_resource_combined *comb)
 static dav_error *
 prep_activity(dav_resource_combined *comb)
 {
-  const char *txn_name = dav_svn__get_txn(comb->priv.repos,
-                                          comb->priv.root.activity_id);
+  const char *txn_name;
+
+  if (!comb->priv.root.activity_id)
+    return dav_svn__new_error(comb->res.pool, HTTP_BAD_REQUEST, 0,
+                              "The request did not specify an activity ID");
+
+  txn_name = dav_svn__get_txn(comb->priv.repos, comb->priv.root.activity_id);
 
   comb->priv.root.txn_name = txn_name;
   comb->res.exists = txn_name != NULL;
@@ -4144,7 +4159,9 @@ typedef struct walker_ctx_t {
 
 
 static dav_error *
-do_walk(walker_ctx_t *ctx, int depth)
+do_walk(walker_ctx_t *ctx,
+        int depth,
+        apr_pool_t *scratch_pool)
 {
   const dav_walk_params *params = ctx->params;
   int isdir = ctx->res.collection;
@@ -4217,19 +4234,19 @@ do_walk(walker_ctx_t *ctx, int depth)
                            svn_log__get_dir(ctx->info.repos_path,
                                             ctx->info.root.rev,
                                             TRUE, FALSE, SVN_DIRENT_ALL,
-                                            params->pool));
+                                            scratch_pool));
 
   /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
-                            ctx->info.repos_path, params->pool);
+                            ctx->info.repos_path, scratch_pool);
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "could not fetch collection members",
                                 params->pool);
 
   /* iterate over the children in this collection */
-  iterpool = svn_pool_create(params->pool);
-  for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
@@ -4282,7 +4299,7 @@ do_walk(walker_ctx_t *ctx, int depth)
           ctx->res.uri = ctx->uri->data;
 
           /* recurse on this collection */
-          err = do_walk(ctx, depth - 1);
+          err = do_walk(ctx, depth - 1, iterpool);
           if (err != NULL)
             return err;
 
@@ -4364,7 +4381,7 @@ walk(const dav_walk_params *params, int depth, dav_response **response)
   /* ### is the root already/always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
-  err = do_walk(&ctx, depth);
+  err = do_walk(&ctx, depth, params->pool);
   *response = ctx.wres.response;
 
   return err;
