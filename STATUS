@@ -154,13 +154,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1651759
-   Api correctness fix: Duplicate error filename when copying errors
-   Justification:
-     Simple to fix issue caused error on buildbot.
-   Votes:
-     +1: rhuijben, ivan
-
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
    Justification:
@@ -264,3 +257,10 @@ Approved changes:
      Fixes occasional SEGV when multiple threads load DSOs in parallel.
    Votes:
      +1: philip, rhuijben, ivan
+
+ * r1651759
+   Api correctness fix: Duplicate error filename when copying errors
+   Justification:
+     Simple to fix issue caused error on buildbot.
+   Votes:
+     +1: rhuijben, ivan, philip
