@@ -268,10 +268,10 @@ svn_sort__array_lookup(const apr_array_header_t *array,
           /* Intend to insert at a position inside the array, i.e. not
            * at one of the boundaries.  The predecessor must be smaller
            * and the current entry at IDX must be larger than KEY. */
-		  void *previous;
+          void *previous;
 
           *hint = idx;
-		  previous = array->elts + (idx-1) * array->elt_size;
+          previous = array->elts + (idx-1) * array->elt_size;
           result = array->elts + idx * array->elt_size;
           if (compare_func(previous, key) && !compare_func(result, key))
             return result;
