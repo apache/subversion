@@ -10912,6 +10912,75 @@ move_edit_obstruction(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_deep_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_deep_bump", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "B/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "B/B/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "B/B/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "B/B/A/A/A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "C"));
+  SVN_ERR(sbox_wc_mkdir(&b, "C/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "Z"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_mkdir(&b, "B/B/A/A/A/A"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "B/B/A", "B/B/B"));
+  SVN_ERR(sbox_wc_move(&b, "B/B/B/A", "C/C/A"));
+
+  /* This can't bump C/C/A as that is outside the lock range
+     so we expect a tree conflict.
+
+     This used to cause a node not found during bumping
+     because B/B/B/A doesn't have a BASE node */
+  SVN_ERR(sbox_wc_update(&b, "B/B", 2));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",                 "normal",       1, ""},
+      {0, "B",                "normal",       1, "B"},
+      {0, "B/B",              "normal",       2, "B/B"},
+      {0, "B/B/A",            "normal",       2, "B/B/A"},
+      {0, "B/B/A/A",          "normal",       2, "B/B/A/A"},
+      {0, "B/B/A/A/A",        "normal",       2, "B/B/A/A/A"},
+      {0, "C",                "normal",       1, "C"},
+      {0, "C/C",              "normal",       1, "C/C"},
+      {3, "B/B/A",            "base-deleted", NO_COPY_FROM, "B/B/B"},
+      {3, "B/B/A/A",          "base-deleted", NO_COPY_FROM},
+      {3, "B/B/A/A/A",        "base-deleted", NO_COPY_FROM},
+      {3, "B/B/B",            "normal",       2, "B/B/A", MOVED_HERE},
+      {3, "B/B/B/A",          "normal",       2, "B/B/A/A", MOVED_HERE},
+      {3, "B/B/B/A/A",        "normal",       2, "B/B/A/A/A", MOVED_HERE},
+      {3, "C/C/A",            "normal",       1, "B/B/A/A", MOVED_HERE},
+      {3, "C/C/A/A",          "normal",       1, "B/B/A/A/A", MOVED_HERE},
+      {4, "B/B/B/A",          "base-deleted", NO_COPY_FROM, "C/C/A"},
+      {4, "B/B/B/A/A",        "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    conflict_info_t conflicts[] = {
+      {"B/B/B/A", FALSE, FALSE, {svn_wc_conflict_action_edit, 
+                                 svn_wc_conflict_reason_moved_away, "B/B/B/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+
+  SVN_ERR(sbox_wc_resolve(&b, "B/B/B/A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(check_db_conflicts(&b, "", NULL));
+
+  return SVN_NO_ERROR;
+}
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -11119,6 +11188,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                         "move within mixed move"),
     SVN_TEST_OPTS_PASS(move_edit_obstruction,
                        "move edit obstruction"),
+    SVN_TEST_OPTS_PASS(move_deep_bump,
+                       "move deep bump"),
     SVN_TEST_NULL
   };
 

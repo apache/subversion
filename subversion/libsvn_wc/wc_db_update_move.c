@@ -1942,6 +1942,7 @@ depth_sufficient_to_bump(svn_boolean_t *can_bump,
 static svn_error_t *
 bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
                         const char *move_src_root_relpath,
+                        int src_op_depth,
                         const char *move_src_op_root_relpath,
                         const char *move_dst_op_root_relpath,
                         svn_wc__db_t *db,
@@ -1964,12 +1965,12 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(verify_write_lock(wcroot, move_src_root_relpath, scratch_pool));
 
   /* Read new (post-update) information from the new move source BASE node. */
-  SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &new_kind, &new_rev,
-                                            &new_repos_relpath, &repos_id,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            wcroot, move_src_op_root_relpath,
-                                            scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_depth_get_info(NULL, &new_kind, &new_rev,
+                                    &new_repos_relpath, &repos_id,
+                                    NULL, NULL, NULL, NULL, NULL,
+                                    NULL, NULL, NULL,
+                                    wcroot, move_src_op_root_relpath,
+                                    src_op_depth, scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
                                       wcroot, repos_id, scratch_pool));
 
@@ -2105,6 +2106,7 @@ bump_moved_layer(svn_boolean_t *recurse,
   svn_boolean_t have_row;
   svn_skel_t *conflict;
   svn_boolean_t can_bump;
+  const char *src_root_relpath;
 
   SVN_ERR(verify_write_lock(wcroot, local_relpath, scratch_pool));
 
@@ -2143,24 +2145,21 @@ bump_moved_layer(svn_boolean_t *recurse,
         can_bump = FALSE;
     }
 
-  {
-    const char *src_root_relpath = src_relpath;
-    while (relpath_depth(src_root_relpath) > src_del_depth)
-      src_root_relpath = svn_relpath_dirname(src_root_relpath, scratch_pool);
+  src_root_relpath = svn_relpath_limit(src_relpath, src_del_depth,
+                                       scratch_pool);
 
-    if (!can_bump)
-      {
-        SVN_ERR(bump_mark_tree_conflict(wcroot, src_relpath,
-                                        src_root_relpath, dst_relpath,
-                                        db, scratch_pool));
+  if (!can_bump)
+    {
+      SVN_ERR(bump_mark_tree_conflict(wcroot, src_relpath, op_depth,
+                                      src_root_relpath, dst_relpath,
+                                      db, scratch_pool));
 
-        return SVN_NO_ERROR;
-      }
+      return SVN_NO_ERROR;
+    }
 
-    SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, wcroot,
-                                              src_root_relpath,
-                                              scratch_pool, scratch_pool));
-  }
+  SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, wcroot,
+                                            src_root_relpath,
+                                            scratch_pool, scratch_pool));
 
   /* ### TODO: check this is the right sort of tree-conflict? */
   if (!conflict)
@@ -2316,7 +2315,7 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
               if (locked)
                 {
                   SVN_ERR(bump_mark_tree_conflict(wcroot,
-                                                  move_src_root_relpath,
+                                                  move_src_root_relpath, 0,
                                                   delete_relpath,
                                                   move_dst_op_root_relpath,
                                                   db, scratch_pool));
