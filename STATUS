@@ -216,7 +216,7 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1658115
+ * r1658115, r1659553, r1659554
    Stop dropping a value when copying tree conflict information
    Justification:
      Trivial correctness fix that provides valueable information to the
