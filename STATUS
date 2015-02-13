@@ -162,18 +162,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
-   Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
-   non-deltas dumpfile".
-   Justification:
-     Data loss.
-   Branch: ^/subversion/branches/1.8.x-issue4551
-   Notes:
-     r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
-   Votes:
-     +1: julianfoad, rhuijben
-     -1: uses apr_hash_key this without the neccessary backport support.
-
  * r1513479, r1625522 
    Fix issue #4411, 'parent-relative file external can corrupt working copy'.
    Justification:
@@ -230,6 +218,18 @@ Veto-blocked changes:
    Votes:
      +1: stsp
      -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
+
+ * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
+   Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
+   non-deltas dumpfile".
+   Justification:
+     Data loss.
+   Branch: ^/subversion/branches/1.8.x-issue4551
+   Notes:
+     r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
+   Votes:
+     +1: julianfoad, rhuijben
+     -1: philip (uses apr_hash_key this without the neccessary backport support)
 
 Approved changes:
 =================
