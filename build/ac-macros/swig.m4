@@ -92,25 +92,18 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/rhel-3/subversion.spec
     #   packages/rpm/rhel-4/subversion.spec
-    if test -n "$SWIG_VERSION" \
-       && test "$SWIG_VERSION" -ge "103024" \
-       && test "$SWIG_VERSION" -lt "300000"; then
+    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
-      if test "$SWIG_VERSION" -lt "300000"; then
-        AC_MSG_WARN([Subversion requires SWIG 1.3.24 or later])
-      else
-        AC_MSG_WARN([Subversion dos not support SWIG 3.0 and later])
-      fi
-      AC_MSG_WARN([Building Python, Perl and/or Ruby bindings is disabled])
+      AC_MSG_WARN([Subversion requires SWIG 1.3.24 or later])
     fi
   fi
-
+ 
   SWIG_PY_COMPILE="none"
   SWIG_PY_LINK="none"
-  if test "$PYTHON" != "none" && test "$SWIG_SUITABLE" = "yes"; then
+  if test "$PYTHON" != "none"; then
     AC_MSG_NOTICE([Configuring python swig binding])
 
     AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
@@ -173,7 +166,7 @@ AC_DEFUN(SVN_FIND_SWIG,
                        [ for apr_int64_t])
   fi
 
-  if test "$PERL" != "none" && test "$SWIG_SUITABLE" = "yes"; then
+  if test "$PERL" != "none"; then
     AC_MSG_CHECKING([perl version])
     dnl Note that the q() bit is there to avoid unbalanced brackets
     dnl which m4 really doesn't like.
@@ -188,7 +181,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   SWIG_RB_COMPILE="none"
   SWIG_RB_LINK="none"
-  if test "$RUBY" != "none" && test "$SWIG_SUITABLE" = "yes"; then
+  if test "$RUBY" != "none"; then
     rbconfig="$RUBY -rrbconfig -e "
 
     for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
