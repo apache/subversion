@@ -377,7 +377,8 @@ create_tree_conflict(svn_skel_t **conflict_p,
                                            child_relpath, scratch_pool);
     }
 
-  err = svn_wc__db_read_conflict_internal(&conflict, wcroot, local_relpath,
+  err = svn_wc__db_read_conflict_internal(&conflict, NULL,
+                                          wcroot, local_relpath,
                                           result_pool, scratch_pool);
   if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
     return svn_error_trace(err);
@@ -1364,8 +1365,8 @@ get_tc_info(svn_wc_operation_t *operation,
   svn_skel_t *conflict_skel;
 
   /* Check for tree conflict on src. */
-  SVN_ERR(svn_wc__db_read_conflict(&conflict_skel, db,
-                                   src_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflict_skel, NULL,
+                                   db, src_abspath,
                                    scratch_pool, scratch_pool));
   if (!conflict_skel)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
@@ -2156,7 +2157,7 @@ bump_moved_layer(svn_boolean_t *recurse,
         return SVN_NO_ERROR;
       }
 
-    SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, wcroot,
+    SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, wcroot,
                                               src_root_relpath,
                                               scratch_pool, scratch_pool));
   }
