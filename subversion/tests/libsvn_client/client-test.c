@@ -1091,8 +1091,8 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
     { "-r1 ^/A/B D/z/y/z/blah", "-r1 ^/A/B@2 D/z/y/z/blah" } ,
     { "-r1 ^/A/D@2 exdir_D", "-r1 ^/A/D@2 exdir_D" },
     /* Dated revision should retain their date string exactly. */
-    { "-r{1970-01-01T00:00} ^/A/C 70s", "-r{1970-01-01T00:00} ^/A/C@2 70s"}, 
-    { "-r{2004-02-23} ^/svn 1.0", "-r{2004-02-23} ^/svn 1.0"}, 
+    { "-r{1970-01-01T00:00} ^/A/C 70s", "-r{1970-01-01T00:00} ^/A/C@2 70s"},
+    { "-r{2004-02-23} ^/svn 1.0", "-r{2004-02-23} ^/svn 1.0"},
     { NULL },
   };
 
@@ -1173,7 +1173,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
     {
       const char *externals_desc;
       const char *expected_desc;
-      
+
       externals_desc = APR_ARRAY_IDX(pinned_externals_descs, i, const char *);
       expected_desc = pin_externals_test_data[i].expected_dst_external_desc;
       SVN_TEST_STRING_ASSERT(externals_desc, expected_desc);
@@ -1181,7 +1181,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   /* Ensure all test cases were tested. */
   SVN_TEST_ASSERT(i == (sizeof(pin_externals_test_data) /
                         sizeof(pin_externals_test_data[0]) - 1));
-  
+
   SVN_ERR(svn_wc_parse_externals_description3(&pinned_externals, A_copy_url,
                                               propval->data, TRUE, pool));
 

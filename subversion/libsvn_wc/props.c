@@ -541,7 +541,7 @@ prop_conflict_new(const svn_string_t **conflict_desc,
 
   /* How we render the conflict:
 
-     We have four sides: original, mine, incoming_base, incoming.  
+     We have four sides: original, mine, incoming_base, incoming.
      We render the conflict as a 3-way diff.  A diff3 API has three parts,
      called:
 

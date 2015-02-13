@@ -707,7 +707,7 @@ def checkout_peg_rev_date(sbox):
                                           expected_output,
                                           expected_wc)
 
-  # now try another checkout with repo@r1_string 
+  # now try another checkout with repo@r1_string
   checkout_target = sbox.add_wc_path('checkout2')
   os.mkdir(checkout_target)
 
@@ -1160,9 +1160,9 @@ def checkout_wc_from_drive(sbox):
       'D/G/tau'   : Item(contents="This is the file 'tau'.\n"),
       'D/G/pi'    : Item(contents="This is the file 'pi'.\n"),
       'D/gamma'   : Item(contents="This is the file 'gamma'.\n"),
-      'mu'        : Item(contents="This is the file 'mu'.\n"),    
+      'mu'        : Item(contents="This is the file 'mu'.\n"),
     })
-    
+
     svntest.actions.run_and_verify_checkout(repo_url + '/A', wc2_dir,
                                             expected_output, expected_wc,
                                             None, None, None, None)
@@ -1187,7 +1187,7 @@ def checkout_wc_from_drive(sbox):
       'G/pi'    : Item(contents="This is the file 'pi'.\n"),
       'G/tau'   : Item(contents="This is the file 'tau'.\n"),
       'G/rho'   : Item(contents="This is the file 'rho'.\n"),
-      'gamma'   : Item(contents="This is the file 'gamma'.\n"),    
+      'gamma'   : Item(contents="This is the file 'gamma'.\n"),
     })
 
     svntest.actions.run_and_verify_checkout(repo_url + '/A/D', wc3_dir,

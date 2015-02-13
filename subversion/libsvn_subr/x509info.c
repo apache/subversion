@@ -168,7 +168,7 @@ svn_x509_oid_to_string(const unsigned char *oid, apr_size_t oid_len,
       }
     else if (*p < 128)
       {
-        /* The remaining values if they're less than 128 are just 
+        /* The remaining values if they're less than 128 are just
          * the number one to one encoded */
         temp = apr_psprintf(scratch_pool, ".%d", *p);
         p++;

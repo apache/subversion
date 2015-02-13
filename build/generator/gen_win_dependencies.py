@@ -19,7 +19,7 @@
 #
 #
 #
-# gen_win_dependencies.py 
+# gen_win_dependencies.py
 #
 #   base class for generating windows projects, containing the
 #   dependency locator code shared between the test runner and
@@ -73,22 +73,22 @@ class SVNCommonLibrary:
       self.debug_lib_dir = debug_lib_dir
     else:
       self.debug_lib_dir = lib_dir
-      
+
     if debug_lib_name:
       self.debug_lib_name = debug_lib_name
     else:
       self.debug_lib_name = lib_name
-      
+
     if debug_dll_dir:
       self.debug_dll_dir = debug_dll_dir
     else:
       self.debug_dll_dir = dll_dir
-      
+
     if debug_dll_name:
       self.debug_dll_name = debug_dll_name
     else:
       self.debug_dll_name = dll_name
-      
+
     self.extra_bin = extra_bin
 
 class GenDependenciesBase(gen_base.GeneratorBase):
@@ -278,7 +278,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if find_libs:
       self.find_libraries(False)
-      
+
   def find_libraries(self, show_warnings):
     "find required and optional libraries"
 
@@ -312,7 +312,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not self.apr_path:
       sys.stderr.write("ERROR: Use '--with-apr' option to configure APR " + \
                        "location.\n")
-      sys.exit(1)                       
+      sys.exit(1)
 
     inc_base = os.path.join(self.apr_path, 'include')
 
@@ -391,18 +391,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     extra_bin = []
 
-    if dll_dir:        
+    if dll_dir:
       bin_files = os.listdir(dll_dir)
       if debug_dll_dir and os.path.isdir(debug_dll_dir):
         debug_bin_files = os.listdir(debug_dll_dir)
       else:
-        debug_bin_files = bin_files 
-      
+        debug_bin_files = bin_files
+
       for bin in bin_files:
         if bin in debug_bin_files:
           if re.match('^(lib)?apr[-_].*' + suffix + '(d)?.dll$', bin):
             extra_bin.append(bin)
-      
+
     self._libraries['apr'] = SVNCommonLibrary('apr', inc_path, lib_dir, lib_name,
                                               apr_version,
                                               debug_lib_dir=debug_lib_dir,
@@ -442,7 +442,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = (major, minor, patch)
     self.aprutil_version = aprutil_version = '%d.%d.%d' % version
-    
+
     if version < minimal_aprutil_version:
       sys.stderr.write("ERROR: apr-util %s or higher is required "
                        "(%s found)\n" % (
@@ -462,7 +462,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       debug_dll_dir = None
       dll_name = None
       defines.extend(["APU_DECLARE_STATIC"])
-      
+
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
         # Installed APR-Util instead of APR-Util-Source
@@ -473,7 +473,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       lib_name = 'libaprutil%s.lib' % suffix
       lib_dir = os.path.join(self.apr_util_path, 'Release')
-      
+
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
         # Installed APR-Util instead of APR-Util-Source
@@ -481,7 +481,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_lib_dir = lib_dir
       else:
         debug_lib_dir = os.path.join(self.apr_util_path, 'Debug')
-        
+
       dll_name = 'libaprutil%s.dll' % suffix
       if os.path.isfile(os.path.join(lib_dir, dll_name)):
         dll_dir = lib_dir
@@ -491,13 +491,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_dll_dir = None
 
     extra_bin = []
-    
+
     if dll_dir:
       bin_files = os.listdir(dll_dir)
       if debug_dll_dir and os.path.isdir(debug_dll_dir):
         debug_bin_files = os.listdir(debug_dll_dir)
       else:
-        debug_bin_files = bin_files 
+        debug_bin_files = bin_files
 
       for bin in bin_files:
         if bin in debug_bin_files:
@@ -688,7 +688,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
         lib_name = 'zlibstatic.lib'
       else:
-        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)      
+        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)
         lib_name = 'zlib.lib'
       debug_lib_name = None
     else:
@@ -711,7 +711,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = tuple(map(int, vermatch.groups()))
     self.zlib_version = '%d.%d.%d' % version
-    
+
     if version < minimal_zlib_version:
       sys.stderr.write("ERROR: ZLib %s or higher is required "
                        "(%s found)\n" % (
@@ -804,10 +804,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
   def _find_openssl(self, show_warnings):
     "Find openssl"
-    
+
     if not self.openssl_path:
       return
-      
+
     version_path = os.path.join(self.openssl_path, 'inc32/openssl/opensslv.h')
     if os.path.isfile(version_path):
       # We have an OpenSSL Source location
@@ -840,12 +840,12 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     vermatch = re.search(
       r'#\s*define\s+OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
       txt)
-  
-    version = (int(vermatch.group(2)), 
+
+    version = (int(vermatch.group(2)),
                int(vermatch.group(3)),
                int(vermatch.group(4)))
     openssl_version = vermatch.group(1)
-  
+
     self._libraries['openssl'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
                                                   'ssleay32.lib',
                                                   openssl_version,
@@ -1378,7 +1378,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Amalgamation
       inc_dir = sqlite_base
       lib_dir = None
-      lib_name = None 
+      lib_name = None
       defines.append('SVN_SQLITE_INLINE')
     else:
       sys.stderr.write("ERROR: SQLite not found\n")

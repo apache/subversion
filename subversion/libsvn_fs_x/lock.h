@@ -60,7 +60,7 @@ svn_fs_x__unlock(svn_fs_t *fs,
                  void *lock_baton,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool);
-  
+
 /* See svn_fs_get_lock(). */
 svn_error_t *
 svn_fs_x__get_lock(svn_lock_t **lock,

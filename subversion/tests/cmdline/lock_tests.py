@@ -1841,8 +1841,8 @@ def commit_stolen_lock(sbox):
                                         err_re,
                                         wc_dir)
 
-# When removing directories, the locks of contained files were not 
-# correctly removed from the working copy database, thus they later 
+# When removing directories, the locks of contained files were not
+# correctly removed from the working copy database, thus they later
 # magically reappeared when new files or directories with the same
 # pathes were added.
 @Issue(4364)
@@ -1857,10 +1857,10 @@ def drop_locks_on_parent_deletion(sbox):
   sbox.simple_lock('A/B/E/alpha')
   sbox.simple_lock('A/B/E/beta')
   sbox.simple_rm('A/B')
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove_subtree('A/B')
-  
+
   svntest.actions.run_and_verify_commit(wc_dir,
                                         [],
                                         expected_status,
@@ -1874,7 +1874,7 @@ def drop_locks_on_parent_deletion(sbox):
   # The bug also resurrected locks on directories when their path
   # matched a former file.
   sbox.simple_mkdir('A/B/E', 'A/B/E/alpha')
-    
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B',
                         'A/B/E',
@@ -1883,7 +1883,7 @@ def drop_locks_on_parent_deletion(sbox):
                         'A/B/lambda',
                         wc_rev='3')
   expected_status.remove('A/B/E/beta')
-   
+
   svntest.actions.run_and_verify_commit(wc_dir,
                                         [],
                                         expected_status,
@@ -2147,7 +2147,7 @@ def non_root_locks(sbox):
                                      'cp', sbox.repo_url, sbox.repo_url + '/X',
                                      '-m', 'copy greek tree')
 
-  sbox.simple_switch(sbox.repo_url + '/X')  
+  sbox.simple_switch(sbox.repo_url + '/X')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -2336,20 +2336,20 @@ def lock_commit_bump(sbox):
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=3)
-  
+
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
                                         None, wc_dir)
 
   # We explicitly check both the Revision and Last Changed Revision.
-  expected_infos = [ { 
+  expected_infos = [ {
     'Revision'           : '1' ,
     'Last Changed Rev'   : '1' ,
     'URL'                : '.*',
     'Lock Token'         : None, }
   ]
-  svntest.actions.run_and_verify_info(expected_infos, 
+  svntest.actions.run_and_verify_info(expected_infos,
                                       sbox.ospath('iota'))
 
 def copy_dir_with_locked_file(sbox):

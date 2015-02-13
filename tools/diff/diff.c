@@ -117,7 +117,7 @@ int main(int argc, const char *argv[])
 
           APR_ARRAY_PUSH(options_array, const char *) = argv[i];
 
-          /* Special case: '-U' takes an argument, so capture the 
+          /* Special case: '-U' takes an argument, so capture the
            * next argument in the array. */
           if (argv[i][1] == 'U' && !argv[i][2])
             {

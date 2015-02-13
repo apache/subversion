@@ -57,7 +57,7 @@ int dav_svn__status(request_rec *r)
 
   ap_set_content_type(r, "text/html; charset=ISO-8859-1");
 
-  ap_rvputs(r, 
+  ap_rvputs(r,
             DOCTYPE_HTML_3_2
             "<html><head>\n"
             "<title>Apache SVN Status</title>\n"

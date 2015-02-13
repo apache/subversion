@@ -261,7 +261,7 @@ svn_fs_base__lock(svn_fs_t *fs,
       args.expiration_date = expiration_date;
       args.current_rev = target->current_rev;
       args.result_pool = result_pool;
-      
+
       err = svn_fs_base__retry_txn(fs, txn_body_lock, &args, TRUE,
                                    scratch_pool);
       if (!cb_err && lock_callback)

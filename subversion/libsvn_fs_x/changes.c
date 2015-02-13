@@ -187,7 +187,7 @@ svn_fs_x__changes_append_list(apr_size_t *list_index,
                               apr_array_header_t *list)
 {
   int i;
-  
+
   /* CHANGES must be in 'builder' mode */
   SVN_ERR_ASSERT(changes->builder);
   SVN_ERR_ASSERT(changes->paths == NULL);
@@ -272,7 +272,7 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
       change->copyfrom_rev = binary_change->copyfrom_rev;
       change->copyfrom_known = TRUE;
       if (SVN_IS_VALID_REVNUM(binary_change->copyfrom_rev))
-        change->copyfrom_path 
+        change->copyfrom_path
           = svn_fs_x__string_table_get(changes->paths,
                                         binary_change->copyfrom_path,
                                         NULL,
@@ -338,7 +338,7 @@ svn_fs_x__write_changes_container(svn_stream_t *stream,
   /* write to disk */
   SVN_ERR(svn_fs_x__write_string_table(stream, paths, scratch_pool));
   SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -394,7 +394,7 @@ svn_fs_x__read_changes_container(svn_fs_x__changes_t **changes_p,
     }
 
   *changes_p = changes;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -520,7 +520,7 @@ svn_fs_x__changes_get_list_func(void **out,
       change->copyfrom_rev = binary_change->copyfrom_rev;
       change->copyfrom_known = TRUE;
       if (SVN_IS_VALID_REVNUM(binary_change->copyfrom_rev))
-        change->copyfrom_path 
+        change->copyfrom_path
           = svn_fs_x__string_table_get_func(paths,
                                             binary_change->copyfrom_path,
                                             NULL,

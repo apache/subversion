@@ -70,7 +70,7 @@
  * each of the 4 buckets separately.  The first three will simply order
  * their items by revision, starting with the newest once.  Placing rep
  * and noderev items is a more elaborate process documented in the code.
- * 
+ *
  * In short, we store items in the following order:
  * - changed paths lists
  * - node property
@@ -269,7 +269,7 @@ initialize_pack_context(pack_context_t *context,
   context->start_rev = shard_rev;
   context->end_rev = shard_rev;
   context->shard_end_rev = shard_rev + ffd->max_files_per_dir;
-  
+
   /* Create the new directory and pack file. */
   context->shard_dir = shard_dir;
   context->pack_file_dir = pack_file_dir;
@@ -346,7 +346,7 @@ reset_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_file_trunc(context->reps_file, 0, scratch_pool));
 
   svn_pool_clear(context->info_pool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -375,7 +375,7 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_fs_x__add_index_data(context->fs, context->pack_file,
                                     proto_l2p_index_path,
                                     proto_p2l_index_path,
-                                    context->shard_rev, 
+                                    context->shard_rev,
                                     scratch_pool));
 
   /* remove proto index files */
@@ -401,7 +401,7 @@ copy_file_data(pack_context_t *context,
   /* most non-representation items will be small.  Minimize the buffer
    * and infrastructure overhead in that case. */
   enum { STACK_BUFFER_SIZE = 1024 };
- 
+
   if (size < STACK_BUFFER_SIZE)
     {
       /* copy small data using a fixed-size buffer on stack */
@@ -484,10 +484,10 @@ copy_item_to_temp(pack_context_t *context,
   SVN_ERR(svn_fs_x__get_file_offset(&new_entry->offset, temp_file,
                                     scratch_pool));
   APR_ARRAY_PUSH(entries, svn_fs_x__p2l_entry_t *) = new_entry;
-  
+
   SVN_ERR(copy_file_data(context, temp_file, rev_file->file, entry->size,
                          scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -749,7 +749,7 @@ compare_p2l_info(const svn_fs_x__p2l_entry_t * const * lhs,
     return (*lhs)->item_count == 0 ? 0 : -1;
   if ((*lhs)->item_count == 0)
     return 1;
-  
+
   if ((*lhs)->items[0].change_set == (*rhs)->items[0].change_set)
     return (*lhs)->items[0].number > (*rhs)->items[0].number ? -1 : 1;
 
@@ -842,7 +842,7 @@ auto_pad_block(pack_context_t *context,
                apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = context->fs->fsap_data;
-  
+
   /* This is the maximum number of bytes "wasted" that way per block.
    * Larger items will cross the block boundaries. */
   const apr_off_t max_padding = MAX(ffd->block_size / 50, 512);
@@ -873,7 +873,7 @@ auto_pad_block(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
-/* Return the index of the first entry in CONTEXT->REFERENCES that 
+/* Return the index of the first entry in CONTEXT->REFERENCES that
  * references ITEM->ITEMS[0] if such entries exist.  All matching items
  * will be consecutive.
  */
@@ -886,7 +886,7 @@ find_first_reference(pack_context_t *context,
 
   while (lower <= upper)
     {
-      int current = lower + (upper - lower) / 2; 
+      int current = lower + (upper - lower) / 2;
       reference_t *reference
         = APR_ARRAY_IDX(context->references, current, reference_t *);
 
@@ -1005,7 +1005,7 @@ reps_fit_into_containers(apr_array_header_t *selected,
   return TRUE;
 }
 
-/* Write the *CONTAINER containing the noderevs described by the 
+/* Write the *CONTAINER containing the noderevs described by the
  * svn_fs_x__p2l_entry_t * in ITEMS to the pack file on CONTEXT.
  * Append a P2L entry for the container to CONTAINER->REPS.
  * Afterwards, clear ITEMS and re-allocate *CONTAINER in CONTAINER_POOL
@@ -1072,8 +1072,8 @@ write_nodes_container(pack_context_t *context,
  * from TEMP_FILE and add them to *CONTAINER and NODES_IN_CONTAINER.
  * Whenever the container grows bigger than the current block in CONTEXT,
  * write the data to disk and continue in the next block.
- * 
- * Use CONTAINER_POOL to re-allocate the *CONTAINER as necessary and 
+ *
+ * Use CONTAINER_POOL to re-allocate the *CONTAINER as necessary and
  * SCRATCH_POOL to temporary allocations.
  */
 static svn_error_t *
@@ -1430,7 +1430,7 @@ copy_reps_from_temp(pack_context_t *context,
                           nodes_in_container, container_pool, iterpool));
 
       /* actually flush the noderevs to disk if the reps container is likely
-       * to fill the block, i.e. no further noderevs will be added to the 
+       * to fill the block, i.e. no further noderevs will be added to the
        * nodes container. */
       if (should_flush_nodes_container(context, nodes_container, node_parts))
         SVN_ERR(write_nodes_container(context, &nodes_container,
@@ -1730,7 +1730,7 @@ pack_range(pack_context_t *context,
 
       /* store the indirect array index */
       APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps->nelts;
-  
+
       /* read the phys-to-log index file until we covered the whole rev file.
        * That index contains enough info to build both target indexes from it. */
       while (offset < rev_file->l2p_offset)
@@ -1826,7 +1826,7 @@ pack_range(pack_context_t *context,
   SVN_ERR(write_l2p_index(context, revpool));
 
   svn_pool_destroy(revpool);
-  
+
   return SVN_NO_ERROR;
 }
 

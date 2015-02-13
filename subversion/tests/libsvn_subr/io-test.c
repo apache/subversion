@@ -703,7 +703,7 @@ ignore_enoent(apr_pool_t *pool)
   SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
   SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
   SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
-  
+
   /* Neither path nor parent exists. */
   path = svn_dirent_join(path, "not-present", pool);
   SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));

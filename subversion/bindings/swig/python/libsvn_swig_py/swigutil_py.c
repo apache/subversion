@@ -2376,7 +2376,7 @@ static svn_error_t *parse_fn3_close_revision(void *revision_baton)
 }
 
 
-static const svn_repos_parse_fns3_t thunk_parse_fns3_vtable = 
+static const svn_repos_parse_fns3_t thunk_parse_fns3_vtable =
   {
     parse_fn3_magic_header_record,
     parse_fn3_uuid_record,

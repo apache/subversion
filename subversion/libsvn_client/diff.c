@@ -2207,7 +2207,7 @@ do_diff(const char **root_relpath,
 
               SVN_ERR(svn_dirent_get_absolute(&abspath1, path_or_url1,
                                               scratch_pool));
-              SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2, 
+              SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2,
                                               scratch_pool));
 
               /* ### What about ddi? */

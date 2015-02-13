@@ -333,7 +333,7 @@ static void get_prefix_tail(const char *prefix, char *prefix_tail)
   apr_size_t len = strlen(prefix);
   apr_size_t to_copy = MIN(len, PREFIX_TAIL_LEN - 1);
   const char *last_colon = strrchr(prefix, ':');
-  apr_size_t last_element_pos = last_colon ? 0 : last_colon - prefix + 1; 
+  apr_size_t last_element_pos = last_colon ? 0 : last_colon - prefix + 1;
 
   to_copy = MIN(to_copy, len - last_element_pos);
   memset(prefix_tail, 0, PREFIX_TAIL_LEN);
@@ -411,7 +411,7 @@ typedef struct group_header_t
   /* number of elements in the chain from start to here.
    * >= 1 for used groups, 0 for unused spare groups */
   apr_uint32_t chain_length;
- 
+
 } group_header_t;
 
 /* The size of the group struct should be a power of two make sure it does
@@ -439,7 +439,7 @@ typedef struct entry_group_t
 {
   /* group globals */
   group_header_t header;
-  
+
   /* padding and also room for future extensions */
   char padding[GROUP_BLOCK_SIZE - sizeof(group_header_t)
                - sizeof(entry_t) * GROUP_SIZE];
@@ -971,11 +971,11 @@ unchain_entry(svn_membuffer_t *cache,
 {
   assert(idx == get_index(cache, entry));
 
-  /* update 
+  /* update
    */
   if (level->next == idx)
     level->next = entry->next;
-  
+
   /* unlink it from the chain of used entries
    */
   if (entry->previous == NO_INDEX)
@@ -1375,12 +1375,12 @@ promote_entry(svn_membuffer_t *cache, entry_t *entry)
 }
 
 /* This function implements the cache insertion / eviction strategy for L2.
- * 
+ *
  * If necessary, enlarge the insertion window of CACHE->L2 until it is at
  * least TO_FIT_IN->SIZE bytes long. TO_FIT_IN->SIZE must not exceed the
  * data buffer size allocated to CACHE->L2.  IDX is the item index of
  * TO_FIT_IN and is given for performance reasons.
- * 
+ *
  * Return TRUE if enough room could be found or made.  A FALSE result
  * indicates that the respective item shall not be added.
  */
@@ -1507,7 +1507,7 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
                * Count the "hit importance" such that we are not sacrificing
                * too much of the high-hit contents.  However, don't count
                * low-priority hits because higher prio entries will often
-               * provide the same data but in a further stage of processing. 
+               * provide the same data but in a further stage of processing.
                */
               if (entry->priority > SVN_CACHE__MEMBUFFER_LOW_PRIORITY)
                 drop_hits += entry->hit_count * (apr_uint64_t)entry->priority;
@@ -2495,7 +2495,7 @@ typedef struct svn_membuffer_cache_t
 
   /* priority class for all items written through this interface */
   apr_uint32_t priority;
-  
+
   /* Temporary buffer containing the hash key for the current access
    */
   entry_key_t combined_key;
@@ -2504,7 +2504,7 @@ typedef struct svn_membuffer_cache_t
    * Will be NULL for caches with short fix-sized keys.
    */
   last_access_key_t *last_access;
-  
+
   /* if enabled, this will serialize the access to this instance.
    */
   svn_mutex__t *mutex;

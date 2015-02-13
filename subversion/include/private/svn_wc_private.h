@@ -1297,7 +1297,7 @@ svn_wc__parse_externals_description(apr_array_header_t **externals_p,
                                     const char *desc,
                                     svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool);
-  
+
 /**
  * Set @a *editor and @a *edit_baton to an editor that generates
  * #svn_wc_status3_t structures and sends them through @a status_func /
@@ -1854,7 +1854,7 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
  * If ROOT_RELPATH is not NULL, set *ROOT_RELPATH to the target of the diff
  * within the diff namespace. ("" or a single path component).
  *
- * If ROOT_IS_FILE is NOT NULL set it 
+ * If ROOT_IS_FILE is NOT NULL set it
  * the first processor call. (The anchor is LOCAL_ABSPATH or an ancestor of it)
  */
 svn_error_t *

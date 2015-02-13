@@ -137,7 +137,7 @@ class Repository:
   @classmethod
   def is_repository(cls, path):
     """ Quick check that PATH is (probably) a repository.
-        This is mainly to filter out aux files put next to 
+        This is mainly to filter out aux files put next to
         (not inside) the repositories to copy. """
 
     format_path = os.path.join(path, 'db', 'format')

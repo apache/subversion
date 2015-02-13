@@ -122,7 +122,7 @@ svn_fs_x__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
                                               scratch_pool);
-  
+
   /* delete the non-packed revprops shards afterwards */
   for (shard = 0; shard < first_unpacked_shard; ++shard)
     {
@@ -660,7 +660,7 @@ typedef struct packed_revprops_t
  * our file system, the revprops belong to REVISION and the global revprop
  * GENERATION is used as well.
  *
- * The returned hash will be allocated in RESULT_POOL, SCRATCH_POOL is 
+ * The returned hash will be allocated in RESULT_POOL, SCRATCH_POOL is
  * being used for temporary allocations.
  */
 static svn_error_t *
@@ -942,7 +942,7 @@ parse_packed_revprops(svn_fs_t *fs,
   if (read_all)
     {
       /* Init / construct REVPROPS members. */
-      revprops->sizes = apr_array_make(result_pool, (int)count, 
+      revprops->sizes = apr_array_make(result_pool, (int)count,
                                        sizeof(offset));
       revprops->offsets = apr_array_make(result_pool, (int)count,
                                          sizeof(offset));

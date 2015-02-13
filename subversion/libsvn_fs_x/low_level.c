@@ -588,7 +588,7 @@ format_digest(const unsigned char *digest,
   svn_checksum_t checksum;
   checksum.digest = digest;
   checksum.kind = kind;
-  
+
   if (is_null)
     return "(null)";
 
@@ -754,7 +754,7 @@ svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,
                            apr_pool_t *scratch_pool)
 {
   const char *text;
-  
+
   switch (header->type)
     {
       case svn_fs_x__rep_self_delta:
@@ -1004,7 +1004,7 @@ svn_fs_x__read_changes_incrementally(svn_stream_t *stream,
     }
   while (change);
   svn_pool_destroy(iterpool);
-  
+
   return SVN_NO_ERROR;
 }
 

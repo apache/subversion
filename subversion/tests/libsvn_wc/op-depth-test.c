@@ -9141,15 +9141,15 @@ move_twice_within_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       nodes_row_t nodes[] = {
 
         { 0, "",          "normal",       1, "" },
-                          
+
         { 0, "A",         "normal",       1, "A" },
         { 0, "A/A",       "normal",       1, "A/A" },
         { 0, "A/A/A",     "normal",       1, "A/A/A" },
-                          
+
         { 1, "A",         "base-deleted", NO_COPY_FROM, "B/A" },
         { 1, "A/A",       "base-deleted", NO_COPY_FROM },
         { 1, "A/A/A",     "base-deleted", NO_COPY_FROM },
-                          
+
         { 1, "AA",        "normal",       1, "A/A/A", MOVED_HERE },
 
         { 1, "B",         "normal",       NO_COPY_FROM },
@@ -10966,7 +10966,7 @@ move_deep_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0}
     };
     conflict_info_t conflicts[] = {
-      {"B/B/B/A", FALSE, FALSE, {svn_wc_conflict_action_edit, 
+      {"B/B/B/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
                                  svn_wc_conflict_reason_moved_away, "B/B/B/A"}},
       {0}
     };

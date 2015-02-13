@@ -238,7 +238,7 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
-  /* Should we use chunked transfer encoding. */ 
+  /* Should we use chunked transfer encoding. */
   SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
                                   SVN_CONFIG_SECTION_GLOBAL,
                                   SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
@@ -305,7 +305,7 @@ load_config(svn_ra_serf__session_t *session,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
 
-      /* Should we use chunked transfer encoding. */ 
+      /* Should we use chunked transfer encoding. */
       SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
                                       server_group,
                                       SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,

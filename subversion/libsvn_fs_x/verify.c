@@ -180,7 +180,7 @@ verify_index_checksum(apr_file_t *file,
       const char *file_name;
 
       SVN_ERR(svn_io_file_name_get(&file_name, file, scratch_pool));
-      SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+      SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool,
                                         _("%s checksum mismatch in file %s"),
                                         name, file_name));
     }
@@ -768,7 +768,7 @@ verify_metadata_consistency(svn_fs_t *fs,
       /* Check for external corruption to the indexes. */
       err = verify_index_checksums(fs, pack_start, cancel_func,
                                    cancel_baton, iterpool);
- 
+
       /* two-way index check */
       if (!err)
         err = compare_l2p_to_p2l_index(fs, pack_start, pack_end - pack_start,

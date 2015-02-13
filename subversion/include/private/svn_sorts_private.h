@@ -28,7 +28,7 @@
 #ifndef SVN_SORTS_PRIVATE_H
 #define SVN_SORTS_PRIVATE_H
 
-#include "../svn_sorts.h" 
+#include "../svn_sorts.h"
 
 #ifdef __cplusplus
 extern "C" {

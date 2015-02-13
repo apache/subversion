@@ -296,7 +296,7 @@ typedef struct svn_fs_fs__p2l_entry_t
 {
   /* offset of the first byte that belongs to the item */
   apr_off_t offset;
-  
+
   /* length of the item in bytes */
   apr_off_t size;
 

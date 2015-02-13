@@ -221,7 +221,7 @@ svn_packed__byte_count(svn_packed__byte_stream_t *stream);
 /* Return the next number from STREAM as unsigned integer.  Returns 0 when
  * reading beyond the end of the stream.
  */
-apr_uint64_t 
+apr_uint64_t
 svn_packed__get_uint(svn_packed__int_stream_t *stream);
 
 /* Return the next number from STREAM as signed integer.  Returns 0 when

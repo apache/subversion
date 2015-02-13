@@ -743,7 +743,7 @@ static svn_boolean_t
 rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 {
   VALUE targets[1];
-  
+
   targets[0] = target;
 
   if (!NIL_P(find_swig_type_object(1, targets))) {

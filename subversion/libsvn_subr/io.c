@@ -2387,7 +2387,7 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
                                          res_initial_len, &res->len,
                                          &eof, pool));
           res->data[res->len] = 0;
-          
+
           *result = res;
           return SVN_NO_ERROR;
         }

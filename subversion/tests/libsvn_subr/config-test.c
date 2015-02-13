@@ -363,7 +363,7 @@ test_expand(const svn_test_opts_t *opts,
   /* Get expanded "c". */
   svn_config_get(cfg, &val, "section1", "c", NULL);
 
-  /* With pool debugging enabled this ensures that the expanded value 
+  /* With pool debugging enabled this ensures that the expanded value
      of "c" was not created in a temporary pool when expanding "g". */
   SVN_TEST_STRING_ASSERT(val, "bar");
 

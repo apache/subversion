@@ -3437,7 +3437,7 @@ def update_deletes_file_external(sbox):
   # As of r1448345, this update fails:
   # E000002: Can't remove directory '.../A_copy/C': No such file or directory
   sbox.simple_update()
-  
+
 
 @Issue(4519)
 def switch_relative_externals(sbox):

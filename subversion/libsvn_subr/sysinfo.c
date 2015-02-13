@@ -449,7 +449,7 @@ systemd_release(apr_pool_t *pool)
       if (!strncmp(line->data, "PRETTY_NAME=", 12))
         {
           svn_stringbuf_t *release_name;
-          
+
           /* The value may or may not be enclosed by double quotes.  We don't
            * attempt to strip them. */
           release_name = svn_stringbuf_create(line->data + 12, pool);
@@ -1032,7 +1032,7 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
   write_stream = svn_stream_create(&resource, pool);
   svn_stream_set_write(write_stream, write_to_cfmutabledata);
   err = svn_stream_copy3(read_stream, write_stream, NULL, NULL, pool);
-  if (err) 
+  if (err)
     {
       svn_error_clear(err);
       return NULL;

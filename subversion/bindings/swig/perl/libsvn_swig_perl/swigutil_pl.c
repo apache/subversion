@@ -130,11 +130,11 @@ static void *convert_pl_revision_range(SV *value, void *ctx, apr_pool_t *pool)
         /* this will assign to range */
         SWIG_ConvertPtr(value, (void **)&range, _SWIG_TYPE("svn_opt_revision_range_t *"), 0);
         return range;
-    } 
+    }
 
-    if (SvROK(value) 
+    if (SvROK(value)
         && SvTYPE(SvRV(value)) == SVt_PVAV
-        && av_len((AV *)SvRV(value)) == 1) {    
+        && av_len((AV *)SvRV(value)) == 1) {
         /* value is a two-element ARRAY */
         AV* array = (AV *)SvRV(value);
         svn_opt_revision_t temp_start, temp_end;
@@ -143,17 +143,17 @@ static void *convert_pl_revision_range(SV *value, void *ctx, apr_pool_t *pool)
 
         /* Note: Due to how svn_swig_pl_set_revision works,
          * either the passed in svn_opt_revision_t is modified
-         * (and the original pointer returned) or a different pointer 
+         * (and the original pointer returned) or a different pointer
          * is returned. svn_swig_pl_set_revision may return NULL
          * only if croak_on_error is FALSE.
          */
-        start = svn_swig_pl_set_revision(&temp_start, 
-                                         *av_fetch(array, 0, 0), 
+        start = svn_swig_pl_set_revision(&temp_start,
+                                         *av_fetch(array, 0, 0),
                                          croak_on_error, pool);
         if (start == NULL)
             return NULL;
-        end = svn_swig_pl_set_revision(&temp_end, 
-                                       *av_fetch(array, 1, 0), 
+        end = svn_swig_pl_set_revision(&temp_end,
+                                       *av_fetch(array, 1, 0),
                                        croak_on_error, pool);
         if (end == NULL)
             return NULL;
@@ -163,7 +163,7 @@ static void *convert_pl_revision_range(SV *value, void *ctx, apr_pool_t *pool)
         range->start = *start;
         range->end = *end;
         return range;
-    } 
+    }
 
     if (croak_on_error)
         croak("unknown revision range: "
@@ -283,7 +283,7 @@ apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
 }
 
 /* Convert a single revision range or an array of revisions ranges
- * Note: We can't simply use svn_swig_pl_to_array() as is, since 
+ * Note: We can't simply use svn_swig_pl_to_array() as is, since
  * it immediatley checks whether source is an array reference and then
  * proceeds to treat this as the "array of ..." case. But a revision range
  * may be specified as a (two-element) array. Hence we first try to
@@ -297,7 +297,7 @@ apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
     svn_opt_revision_range_t *range;
 
     if ((range = convert_pl_revision_range(source, &croak_on_error, pool))) {
-        apr_array_header_t *temp = apr_array_make(pool, 1, 
+        apr_array_header_t *temp = apr_array_make(pool, 1,
                                                   sizeof(svn_opt_revision_range_t *));
         temp->nelts = 1;
         APR_ARRAY_IDX(temp, 0, svn_opt_revision_range_t *) = range;
@@ -306,7 +306,7 @@ apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
 
     if (SvROK(source) && SvTYPE(SvRV(source)) == SVt_PVAV) {
         croak_on_error = TRUE;
-        return svn_swig_pl_to_array(source, convert_pl_revision_range, 
+        return svn_swig_pl_to_array(source, convert_pl_revision_range,
                                     &croak_on_error, pool);
     }
 
@@ -314,7 +314,7 @@ apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
 
     /* This return is actually unreachable because of the croak above,
      * however, Visual Studio's compiler doesn't like if all paths don't have
-     * a return and errors out otherwise. */ 
+     * a return and errors out otherwise. */
     return NULL;
 }
 
@@ -430,8 +430,8 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 }
 
 /* perl -> c svn_opt_revision_t conversion */
-svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, 
-                                             SV *source, 
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev,
+                                             SV *source,
                                              svn_boolean_t croak_on_error,
                                              apr_pool_t *pool)
 {
@@ -471,7 +471,7 @@ svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev,
                 maybe_croak(("unknown opt_revision_t string \"%s\": "
                              "missing closing brace for \"{DATE}\"", input));
             *end = '\0';
-            err = svn_parse_date (&matched, &tm, 
+            err = svn_parse_date (&matched, &tm,
                                   input + 1, apr_time_now(), pool);
             if (err) {
                 svn_error_clear (err);
@@ -1043,7 +1043,7 @@ svn_error_t *svn_swig_pl_thunk_log_entry_receiver(void *baton,
 
     svn_swig_pl_callback_thunk(CALL_SV,
                                receiver, NULL,
-                               "SS", 
+                               "SS",
                                log_entry, _SWIG_TYPE("svn_log_entry_t *"),
                                pool, POOLINFO);
 

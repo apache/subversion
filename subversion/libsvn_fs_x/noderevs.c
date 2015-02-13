@@ -50,7 +50,7 @@
 #define NODEREV_HAS_CPATH    0x00040
 
 /* Our internal representation of a svn_fs_x__noderev_t.
- * 
+ *
  * We will store path strings in a string container and reference them
  * from here.  Similarly, IDs and representations are being stored in
  * separate containers and then also referenced here.  This eliminates
@@ -274,7 +274,7 @@ svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
                                            0);
 
   binary_noderev.mergeinfo_count = noderev->mergeinfo_count;
-  
+
   APR_ARRAY_PUSH(container->noderevs, binary_noderev_t) = binary_noderev;
 
   return container->noderevs->nelts - 1;
@@ -574,7 +574,7 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
   /* write to disk */
   SVN_ERR(svn_fs_x__write_string_table(stream, paths, scratch_pool));
   SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -724,7 +724,7 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
     }
 
   *container = noderevs;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -905,7 +905,7 @@ svn_fs_x__mergeinfo_count_get_func(void **out,
   /* Resolve all container pointers */
   resolve_apr_array_header(&noderevs, container, &container->noderevs);
   binary_noderev = &APR_ARRAY_IDX(&noderevs, idx, binary_noderev_t);
-  
+
   *(apr_int64_t *)out = binary_noderev->mergeinfo_count;
 
   return SVN_NO_ERROR;

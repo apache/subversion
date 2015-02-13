@@ -126,7 +126,7 @@ enum run_mode {
  *
  * Since very slow connections will hog a full thread for a potentially
  * long time before timing out, be sure to not set this limit too low.
- * 
+ *
  * On the other hand, keep in mind that every thread will allocate up to
  * 4MB of unused RAM in the APR allocator of its root pool.  32 bit servers
  * must hence do with fewer threads.
@@ -150,7 +150,7 @@ enum run_mode {
  *
  * Larger values improve scalability with lots of small requests coming
  * on over long latency networks.
- * 
+ *
  * The OS may actually use a lower limit than specified here.
  */
 #define ACCEPT_BACKLOG 128
@@ -475,7 +475,7 @@ static apr_status_t redirect_stdout(void *arg)
 /* Wait for the next client connection to come in from SOCK.  Allocate
  * the connection in a root pool from CONNECTION_POOLS and assign PARAMS.
  * Return the connection object in *CONNECTION.
- * 
+ *
  * Use HANDLING_MODE for proper internal cleanup.
  */
 static svn_error_t *
@@ -486,30 +486,30 @@ accept_connection(connection_t **connection,
                   apr_pool_t *pool)
 {
   apr_status_t status;
-  
+
   /* Non-standard pool handling.  The main thread never blocks to join
    *         the connection threads so it cannot clean up after each one.  So
    *         separate pools that can be cleared at thread exit are used. */
-  
+
   apr_pool_t *connection_pool = svn_pool_create(pool);
   *connection = apr_pcalloc(connection_pool, sizeof(**connection));
   (*connection)->pool = connection_pool;
   (*connection)->params = params;
   (*connection)->ref_count = 1;
-  
+
   do
     {
       #ifdef WIN32
       if (winservice_is_stopping())
         exit(0);
       #endif
-      
+
       status = apr_socket_accept(&(*connection)->usock, sock,
                                  connection_pool);
       if (handling_mode == connection_mode_fork)
         {
           apr_proc_t proc;
-          
+
           /* Collect any zombie child processes. */
           while (apr_proc_wait_all_procs(&proc, NULL, NULL, APR_NOWAIT,
             connection_pool) == APR_CHILD_DONE)
@@ -519,7 +519,7 @@ accept_connection(connection_t **connection,
   while (APR_STATUS_IS_EINTR(status)
     || APR_STATUS_IS_ECONNABORTED(status)
     || APR_STATUS_IS_ECONNRESET(status));
-  
+
   return status
        ? svn_error_wrap_apr(status, _("Can't accept client connection"))
        : SVN_NO_ERROR;
@@ -611,7 +611,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
     close_connection(connection);
   else
     apr_thread_pool_push(threads, serve_thread, connection, 0, NULL);
-    
+
   return NULL;
 }
 
@@ -983,7 +983,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                 cache_revprops ? "2" :"0");
   svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
-                use_block_read ? "1" :"0");  
+                use_block_read ? "1" :"0");
 
   SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
                                         is_multi_threaded,
@@ -1001,7 +1001,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
       SVN_ERR(svn_repos__config_pool_get(&params.cfg, NULL,
                                          params.config_pool,
-                                         config_filename, 
+                                         config_filename,
                                          TRUE, /* must_exist */
                                          FALSE, /* names_case_sensitive */
                                          NULL,

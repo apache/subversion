@@ -884,7 +884,7 @@ svn_auth_get_platform_specific_client_providers(
  * @note An administrative password reset may invalidate the account's
  * secret key. This function will detect that situation and behave as
  * if the password were not cached at all.
- * @deprecated Provided for backwards compatibility with the 1.8 API.  Use 
+ * @deprecated Provided for backwards compatibility with the 1.8 API.  Use
  * svn_auth_get_platform_specific_provider with provider_name of "windows"
  * and provider_type of "simple".
  */

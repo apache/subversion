@@ -63,7 +63,7 @@ my @sh = qw/false true/;
 die if grep { ($sh[$_] eq 'true') != !!$_ } $DEBUG, $MAY_COMMIT, $VERBOSE, $YES;
 
 # Username for entering votes.
-my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';            
+my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';
 my ($AVAILID) = $ENV{AVAILID} // do {
   local $_ = `$SVN auth svn.apache.org:443 2>/dev/null`; # TODO: pass $SVN_A_O_REALM
   ($? == 0 && /Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/) ? $1 : undef
@@ -288,7 +288,7 @@ sub shell_safe_path_or_url($) {
   local $_ = shift;
   return m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/;
 }
-  
+
 # Shell-safety-validating wrapper for File::Temp::tempfile
 sub my_tempfile {
   my ($fh, $fn) = tempfile();
@@ -502,8 +502,8 @@ sub parse_entry {
         $notes .= shift while @_ and $_[0] !~ /^\w/;
         my %accepts = map { $_ => 1 } ($notes =~ /--accept[ =]([a-z-]+)/g);
         given (scalar keys %accepts) {
-          when (0) { } 
-          when (1) { $accept = [keys %accepts]->[0]; } 
+          when (0) { }
+          when (1) { $accept = [keys %accepts]->[0]; }
           default  {
             warn "Too many --accept values at '",
                  logsummarysummary({ logsummary => [@logsummary] }),
@@ -625,7 +625,7 @@ sub vote {
       (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
-    
+
     s/^(\s*\Q$vote\E:.*)/"$1, $AVAILID"/me
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header}, trailing_eol => 2
@@ -648,7 +648,7 @@ sub vote {
     grep { !$approvedcheck{$_} } keys %$approved
     if scalar(keys %$approved) != scalar(keys %approvedcheck);
   prompt "Press the 'any' key to continue...\n", dontprint => 1
-    if scalar(keys %$approved) != scalar(keys %approvedcheck) 
+    if scalar(keys %$approved) != scalar(keys %approvedcheck)
     or scalar(keys %$votes) != scalar(keys %votescheck);
   move "$STATUS.$$.tmp", $STATUS;
 
@@ -893,7 +893,7 @@ sub handle_entry {
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
-        while (1) { 
+        while (1) {
           given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
             when (/^y/i) {
               # TODO: if $MAY_COMMIT, save the log message to a file (say,
@@ -1091,7 +1091,7 @@ sub nominate_main {
   # Construct entry.
   my $logmsg = `$SVN propget --revprop -r $revnums[0] --strict svn:log '^/'`;
   die "Can't fetch log message of r$revnums[0]: $!" unless $logmsg;
-  
+
   unless ($logmsg =~ s/^(.*?)\n\n.*/$1/s) {
     # "* file\n  (symbol): Log message."
 

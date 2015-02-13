@@ -142,7 +142,7 @@ private:
   const char* m_repos_root_url; ///< The root of the repository
   const char* m_base_relpath;   ///< The root of the session within the repo
   bool m_found_paths;           ///< Returned paths are absolute
-  
+
   svn_editor_t* m_editor;
   const svn_delta_editor_t* m_delta_editor;
   void* m_delta_baton;

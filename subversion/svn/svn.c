@@ -503,7 +503,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     "  expand them.\n"),
     { opt_remove, opt_show_passwords },
     { {opt_remove, N_("remove matching authentication credentials")} }
-    
+
     },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_

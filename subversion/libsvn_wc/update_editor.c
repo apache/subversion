@@ -945,7 +945,7 @@ mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
                                 fb->local_abspath, fb->old_repos_relpath,
                                 fb->old_revision, fb->new_repos_relpath,
                                 svn_node_file, svn_node_file,
-                                NULL, 
+                                NULL,
                                 fb->pool, scratch_pool));
 
       SVN_ERR(svn_wc__db_op_mark_conflict(fb->edit_baton->db,
@@ -4756,7 +4756,7 @@ update_keywords_after_switch_cb(void *baton,
       install_from = NULL;
       record_fileinfo = TRUE;
     }
-    
+
   SVN_ERR(svn_wc__wq_build_file_install(&work_items, eb->db, local_abspath,
                                         install_from,
                                         eb->use_commit_times,
@@ -4880,7 +4880,7 @@ close_edit(void *edit_baton,
   if (eb->switch_repos_relpath)
     {
       svn_depth_t depth;
-      
+
       if (eb->requested_depth > svn_depth_empty)
         depth = eb->requested_depth;
       else

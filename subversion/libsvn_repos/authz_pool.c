@@ -154,7 +154,7 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
   authz_object_t *authz_ref
     = apr_pcalloc(authz_ref_pool, sizeof(*authz_ref));
   svn_boolean_t have_all_keys;
-  
+
   /* read the configurations */
   SVN_ERR(svn_repos__config_pool_get(&authz_ref->authz_cfg,
                                      &authz_ref->authz_key,
@@ -162,7 +162,7 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
                                      path, must_exist, TRUE,
                                      preferred_repos, authz_ref_pool));
   have_all_keys = authz_ref->authz_key != NULL;
-  
+
   if (groups_path)
     {
       SVN_ERR(svn_repos__config_pool_get(&authz_ref->groups_cfg,
@@ -173,12 +173,12 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
       have_all_keys &= authz_ref->groups_key != NULL;
     }
 
-  /* fall back to standard implementation in case we don't have all the 
+  /* fall back to standard implementation in case we don't have all the
    * facts (i.e. keys). */
   if (!have_all_keys)
     return svn_error_trace(svn_repos_authz_read2(authz_p, path, groups_path,
                                                  must_exist, pool));
-    
+
   /* all keys are known and lookup is unambigious. */
   authz_ref->key = construct_key(authz_ref->authz_key,
                                  authz_ref->groups_key,

@@ -166,7 +166,7 @@ create_packed_filesystem(const char *dir,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_LOG,
-                                 svn_string_create(R1_LOG_MSG, pool), 
+                                 svn_string_create(R1_LOG_MSG, pool),
                                  pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));

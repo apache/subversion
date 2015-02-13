@@ -1311,7 +1311,7 @@ queue_externals_change_path_infos(apr_array_header_t *new_path_infos,
       for (i = 0; i < path_infos->nelts; i++)
         {
           path_driver_info_t *existing_info;
-          
+
           existing_info = APR_ARRAY_IDX(path_infos, i, path_driver_info_t *);
           if (strcmp(src_url, existing_info->src_url) == 0)
             {
@@ -1750,7 +1750,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       for (i = 0; i < pin_externals_only_infos->nelts; i++)
         {
           path_driver_info_t *info;
-          
+
           info = APR_ARRAY_IDX(pin_externals_only_infos, i, path_driver_info_t *);
           APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
           svn_hash_sets(action_hash, info->dst_path, info);

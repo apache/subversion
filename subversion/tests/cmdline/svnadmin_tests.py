@@ -179,7 +179,7 @@ def check_hotcopy_fsfs(src, dst):
 def check_hotcopy_fsx(src, dst):
     "Verify that the SRC FSX repository has been correctly copied to DST."
     check_hotcopy_fsfs_fsx(src, dst)
-        
+
 #----------------------------------------------------------------------
 
 # How we currently test 'svnadmin' --
@@ -2051,7 +2051,7 @@ def verify_keep_going(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', '-m', 'log_msg',
                                      C_url)
-  
+
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   fp = open(r2, 'r+b')
   fp.write("""inserting junk to corrupt the rev""")

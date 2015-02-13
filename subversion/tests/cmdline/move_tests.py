@@ -1373,7 +1373,7 @@ def move_many_update_delete(sbox):
   svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
                                         expected_status)
 
-  # Would be nice if we could run the resolver as a separate step, 
+  # Would be nice if we could run the resolver as a separate step,
   # but 'svn resolve' just fails for any value but working
 
 def move_many_update_add(sbox):
@@ -1483,7 +1483,7 @@ def copy_move_commit(sbox):
     #     create table bbb (Id int not null)
     #   - Commit
     # Repro Issue 2
-    #    - Copy folder aaa under same parent folder (i.e. as a sibling). (using Ctrl drag/drop). 
+    #    - Copy folder aaa under same parent folder (i.e. as a sibling). (using Ctrl drag/drop).
     #      Creates Copy of aaa
     #    - Rename Copy of aaa to eee
     #    - Commit
@@ -1512,7 +1512,7 @@ def move_to_from_external(sbox):
                                      'move',
                                      sbox.ospath('iota'),
                                      sbox.ospath('GG/tau'))
-                                     
+
   svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'Commit both',
                                      sbox.ospath(''),
@@ -1633,7 +1633,7 @@ def move_conflict_details(sbox):
   expected_info = [
     {
       "Path" : re.escape(sbox.ospath('B')),
-      
+
       "Conflict Properties File" :
             re.escape(sbox.ospath('B/dir_conflicts.prej')) + '.*',
       "Conflict Details": re.escape(
