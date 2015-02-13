@@ -87,22 +87,6 @@ Candidate changes:
      +0: julianfoad (previously said +1 with the wrong branch mentioned)
      +0: stefan2 (previously said +1 with the wrong branch mentioned)
 
- * r1643074
-   Don't let invalid mergeinfo stop 'svnadmin load' from working.
-     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
-     dump fail".
-   Justification:
-     The presence of 'bad' metadata in a repository should not prevent
-     backing up and restoring from a backup, given that this data does not
-     make the repository totally unusable.
-   Notes:
-     The 'svnadmin dump' part of this issue was already backported in v1.8.9.
-     The 'svnsync' part of this issue is not yet fixed.
-   Branch:
-     ^/subversion/branches/1.8.x-r1643074
-   Votes:
-     +1: julianfoad, philip
-
  * r1644158, r1644530, r1644595, r1644599, r1652744
    Fix patch output for reordered hunks, part of issue 4533.
    Justification:
@@ -246,7 +230,7 @@ Approved changes:
      and there's no reason to support a different set of amalgamated
      SQLite versions than library versions.
    Votes:
-     +1: brane, ivan, philip
+     +1: brane, ivan, philip, rhuijben
 
  * r1656713
    Fix reporting errors from ra_svn's svn_ra_get_dir2() in some cases.
@@ -264,3 +248,20 @@ Approved changes:
      according to jamessan, who submitted the patch.
    Votes:
      +1: stsp, rhuijben, philip
+
+ * r1643074
+   Don't let invalid mergeinfo stop 'svnadmin load' from working.
+     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
+     dump fail".
+   Justification:
+     The presence of 'bad' metadata in a repository should not prevent
+     backing up and restoring from a backup, given that this data does not
+     make the repository totally unusable.
+   Notes:
+     The 'svnadmin dump' part of this issue was already backported in v1.8.9.
+     The 'svnsync' part of this issue is not yet fixed.
+   Branch:
+     ^/subversion/branches/1.8.x-r1643074
+   Votes:
+     +1: julianfoad, philip, rhuijben
+
