@@ -1019,19 +1019,20 @@ def run_and_verify_info(expected_infos, *args):
 
     for actual, expected in zip(actual_infos, expected_infos):
       # compare dicts
+      path = actual['Path']
       for key, value in expected.items():
         assert ':' not in key # caller passed impossible expectations?
         if value is None and key in actual:
-          raise main.SVNLineUnequal("Found unexpected key '%s' with value '%s'"
-                                    % (key, actual[key]))
+          raise main.SVNLineUnequal("On '%s': Found unexpected key '%s'\n  Value '%s'"
+                                    % (path, key, actual[key]))
         if value is not None and key not in actual:
-          raise main.SVNLineUnequal("Expected key '%s' (with value '%s') "
-                                    "not found" % (key, value))
+          raise main.SVNLineUnequal("On '%s': Expected key '%s' not found\n Expected value '%s'"
+                                    % (path, key, value))
         if value is not None and not re.match(value, actual[key]):
-          raise verify.SVNUnexpectedStdout("Values of key '%s' don't match:\n"
+          raise verify.SVNUnexpectedStdout("On '%s': Values of key '%s' don't match:\n"
                                            "  Expected: '%s' (regex)\n"
                                            "  Found:    '%s' (string)\n"
-                                           % (key, value, actual[key]))
+                                           % (path, key, value, actual[key]))
 
   except:
     sys.stderr.write("Bad 'svn info' output:\n"
