@@ -171,7 +171,8 @@ Candidate changes:
    Notes:
      r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
    Votes:
-     +1 julianfoad, rhuijben
+     +1: julianfoad, rhuijben
+     -1: uses apr_hash_key this without the neccessary backport support.
 
  * r1513479, r1625522 
    Fix issue #4411, 'parent-relative file external can corrupt working copy'.
