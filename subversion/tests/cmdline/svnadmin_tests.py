@@ -82,6 +82,10 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if dst_dirent == 'write-lock':
           continue
 
+        # Ignore auto-created rep-cache.db-journal file
+        if src_file == 'rep-cache.db-journal':
+          continue
+
         src_dirent = os.path.join(src_dirpath, dst_dirent)
         if not os.path.exists(src_dirent):
           raise svntest.Failure("%s does not exist in hotcopy "
