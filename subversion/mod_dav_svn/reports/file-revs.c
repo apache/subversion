@@ -254,6 +254,9 @@ dav_svn__file_revs_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   /* ### This is done on other places, but the document element is
      in this namespace, so is this necessary at all? */
