@@ -144,7 +144,7 @@ Candidate changes:
    Notes:
      Merge with --accept tc
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
  * r1596882
    Fix build with Ruby 2.
