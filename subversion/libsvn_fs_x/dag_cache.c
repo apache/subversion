@@ -98,7 +98,9 @@ root_change_set(svn_fs_root_t *root)
 
    Another optimization is that we don't NUL-terminate the path but strictly
    use its length info.  That way, it can be traversed easily without
-   chopping it up and patching it together again.
+   chopping it up and patching it together again.  ultimately, however,
+   the path string is NUL-terminated because we wrapped a NUL-terminated
+   C string.
  */
 
 /* Set *RESULT to a normalized version of PATH without actually copying any
@@ -124,6 +126,98 @@ normalize_path(svn_string_t *result,
   return result;
 }
 
+/* Extend PATH, i.e. increase its LEN, to cover the next segment.  Skip
+   sequences of '/'.  Store the segment in ENTRY and return a pointer to
+   it C string representation.  If no segment has been found (end of path),
+   return NULL. */
+static const char *
+next_entry_name(svn_string_t *path,
+                svn_stringbuf_t *entry)
+{
+  const char *segment_start;
+  const char *segment_end;
+
+  /* Moving to the next segment, skip separators
+     (normalized does not imply canonical). */
+  segment_start = path->data + path->len;
+  while (*segment_start == '/')
+    ++segment_start;
+
+  /* End of path? */
+  if (*segment_start == '\0')
+    return NULL;
+
+  /* Find the end of this segment.  Note that strchr would not give us the
+     length of the last segment. */
+  segment_end = segment_start;
+  while (*segment_end != '/' && *segment_end != '\0')
+    ++segment_end;
+
+  /* Copy the segment into the result buffer. */
+  svn_stringbuf_setempty(entry);
+  svn_stringbuf_appendbytes(entry, segment_start,
+                            segment_end - segment_start);
+
+  /* Extend the "visible" part of the path to the end of that segment. */
+  path->len = segment_end - path->data;
+
+  /* Indicate that we found something. */
+  return entry->data;
+}
+
+/* Split the normalized PATH into its last segment the corresponding parent
+   directory.  Store them in ENTRY and DIRECTORY, respectively.
+
+   If PATH is empty, return FALSE and produce no output.
+   Otherwise, return TRUE.
+ */
+static svn_boolean_t
+extract_last_segment(const svn_string_t *path,
+                     svn_string_t *directory,
+                     svn_stringbuf_t *entry)
+{
+  const char *segment_start;
+  const char *parent_end;
+
+  /* Edge case.  We can't navigate in empty paths. */
+  if (path->len == 0)
+    return FALSE;
+
+  /* Find the start of the last segment.  Note that normalized paths never
+     start nor end with a '/'. */
+  segment_start = path->data + path->len - 1;
+  while (*segment_start != '/' && segment_start != path->data)
+    --segment_start;
+
+  /* At root level already, i.e. no parent? */
+  if (segment_start == path->data)
+    {
+      /* Construct result. */
+      directory->data = "";
+      directory->len = 0;
+
+      svn_stringbuf_setempty(entry);
+      svn_stringbuf_appendbytes(entry, path->data, path->len);
+
+      return TRUE;
+    }
+
+  /* Find the end of the parent directory. */
+  parent_end = segment_start;
+  while (parent_end[-1] == '/')
+    --parent_end;
+
+  /* Construct result. */
+  directory->data = path->data;
+  directory->len = parent_end - path->data;
+
+  ++segment_start; /* previously pointed to the last '/'. */
+  svn_stringbuf_setempty(entry);
+  svn_stringbuf_appendbytes(entry, segment_start,
+                            path->len - (segment_start - path->data));
+
+  return TRUE;
+}
 
 
 /*** Node Caching ***/
@@ -895,11 +989,11 @@ walk_dag_path(dag_node_t **node_p,
               apr_pool_t *scratch_pool)
 {
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
-  const char *rest; /* The portion of PATH we haven't traversed yet. */
-  const char *next;
   apr_pool_t *iterpool;
   svn_fs_x__change_set_t change_set = root_change_set(root);
   const char *entry;
+  svn_string_t directory;
+  svn_stringbuf_t *entry_buffer;
 
   /* Special case: root directory.
      We will later assume that all paths have at least one parent level,
@@ -935,26 +1029,19 @@ walk_dag_path(dag_node_t **node_p,
      node.  We will often have recently accessed either a sibling or
      said parent directory itself for the same revision.  ENTRY will
      point to the last '/' in PATH. */
-  entry = path->data + path->len - 1;
-  while (*entry != '/' && entry != path->data)
-    --entry;
-
-  if (entry != path->data) /* root nodes are covered anyway */
+  entry_buffer = svn_stringbuf_create_ensure(64, scratch_pool);
+  if (extract_last_segment(path, &directory, entry_buffer))
     {
-      /* Temporarily hide the last segment from PATH and search the cache
-         for our directory. */
-      apr_size_t path_len = path->len;
-      path->len = entry - path->data;
-      here = dag_node_cache_get(root, path);
-      path->len = path_len;
+      here = dag_node_cache_get(root, &directory);
 
       /* Did the shortcut work? */
       if (here)
-        return svn_error_trace(dag_step(node_p, root, here, entry + 1, path,
+        return svn_error_trace(dag_step(node_p, root, here,
+                                        entry_buffer->data, path,
                                         change_set, scratch_pool));
     }
 
-  /* Now there is something to iterate over.  Thus, create the ITERPOOL. */
+  /* Now there is something to iterate over. Thus, create the ITERPOOL. */
   iterpool = svn_pool_create(scratch_pool);
 
   /* Make a parent_path item for the root node, using its own current
@@ -965,30 +1052,15 @@ walk_dag_path(dag_node_t **node_p,
   /* Whenever we are at the top of this loop:
      - HERE is our current directory,
      - REST is the path we're going to find in HERE. */
-  for (rest = path->data; rest; rest = next)
+  for (entry = next_entry_name(path, entry_buffer);
+       entry;
+       entry = next_entry_name(path, entry_buffer))
     {
       svn_pool_clear(iterpool);
 
-      /* Parse out the next entry from the path.  */
-      entry = svn_fs__next_entry_name(&next, rest, iterpool);
-
-      /* Update the path traversed thus far. */
-      if (path->len)
-        ++path->len;
-      path->len += strlen(entry);
-
-      /* Given the behavior of svn_fs__next_entry_name(), ENTRY may be an
-         empty string when the path either starts or ends with a slash.
-         In either case, we stay put: the current directory stays the
-         same, and we add nothing to the parent path.  We only need to
-         process non-empty path segments.
-
-         Also note that HERE is allocated from the DAG node cache and will
-         therefore survive the ITERPOOL cleanup.
-      */
-      if (*entry != '\0')
-        SVN_ERR(dag_step(&here, root, here, entry, path, change_set,
-                         iterpool));
+      /* Note that HERE is allocated from the DAG node cache and will
+         therefore survive the ITERPOOL cleanup. */
+      SVN_ERR(dag_step(&here, root, here, entry, path, change_set, iterpool));
     }
 
   svn_pool_destroy(iterpool);
