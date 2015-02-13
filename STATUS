@@ -130,14 +130,6 @@ Candidate changes:
    Votes:
      +1: stsp, philip
 
- * r1596882
-   Fix build with Ruby 2.
-   Justification:
-     Move along with the times! And should fix buildbot failures
-     according to jamessan, who submitted the patch.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
    Justification:
@@ -266,3 +258,11 @@ Approved changes:
      calling this function. Regression against <= 1.7.x.
    Votes:
      +1: rhuijben, ivan, philip
+
+ * r1596882
+   Fix build with Ruby 2.
+   Justification:
+     Move along with the times! And should fix buildbot failures
+     according to jamessan, who submitted the patch.
+   Votes:
+     +1: stsp, rhuijben, philip
