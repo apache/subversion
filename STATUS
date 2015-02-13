@@ -200,15 +200,6 @@ Candidate changes:
      +1: stefan2
      +0: rhuijben (patch looks sane, but hard to oversee consequences)
 
- * r1656713
-   Fix reporting errors from ra_svn's svn_ra_get_dir2() in some cases.
-   Justification:
-     Causes a connection stall in custom repository browsers that get
-     into this code path by not verifying if the directory exists before
-     calling this function. Regression against <= 1.7.x.
-   Votes:
-     +1: rhuijben, ivan
-
  * r1658115, r1659553, r1659554
    Stop dropping a value when copying tree conflict information
    Justification:
@@ -264,3 +255,12 @@ Approved changes:
      SQLite versions than library versions.
    Votes:
      +1: brane, ivan, philip
+
+ * r1656713
+   Fix reporting errors from ra_svn's svn_ra_get_dir2() in some cases.
+   Justification:
+     Causes a connection stall in custom repository browsers that get
+     into this code path by not verifying if the directory exists before
+     calling this function. Regression against <= 1.7.x.
+   Votes:
+     +1: rhuijben, ivan, philip
