@@ -253,7 +253,7 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 
 -- STMT_DELETE_WORKING_OP_DEPTH
 DELETE FROM nodes
-WHERE wc_id = ?1 
+WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
 
@@ -323,7 +323,7 @@ ORDER BY d.local_relpath DESC
 
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath, kind FROM nodes
-WHERE wc_id = ?1 
+WHERE wc_id = ?1
   AND parent_relpath = ?2
   AND op_depth = ?3
   AND presence != MAP_BASE_DELETED
@@ -332,7 +332,7 @@ ORDER BY local_relpath
 
 -- STMT_SELECT_OP_DEPTH_CHILDREN_EXISTS
 SELECT local_relpath, kind FROM nodes
-WHERE wc_id = ?1 
+WHERE wc_id = ?1
   AND parent_relpath = ?2
   AND op_depth = ?3
   AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)
@@ -466,7 +466,7 @@ SELECT (SELECT b.presence FROM nodes AS b
          WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),
        work.presence, work.op_depth, moved.moved_to
 FROM nodes_current AS work
-LEFT OUTER JOIN nodes AS moved 
+LEFT OUTER JOIN nodes AS moved
   ON moved.wc_id = work.wc_id
  AND moved.local_relpath = work.local_relpath
  AND moved.moved_to IS NOT NULL
@@ -543,7 +543,7 @@ UPDATE nodes SET repos_id = ?4, dav_cache = NULL
 WHERE (wc_id = ?1 AND local_relpath = ?2 AND repos_id = ?3)
    OR (wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
        AND repos_id = ?3)
- 
+
 
 -- STMT_UPDATE_LOCK_REPOS_ID
 UPDATE lock SET repos_id = ?2
@@ -800,7 +800,7 @@ WHERE wc_id = ?1
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND (changelist IS NULL
        OR NOT EXISTS (SELECT 1 FROM nodes_current c
-                      WHERE c.wc_id = ?1 
+                      WHERE c.wc_id = ?1
                         AND c.local_relpath = actual_node.local_relpath
                         AND c.kind = MAP_FILE))
 

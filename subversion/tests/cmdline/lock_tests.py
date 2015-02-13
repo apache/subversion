@@ -2385,7 +2385,7 @@ def delete_dir_with_lots_of_locked_files(sbox):
   locked_paths = []
   for i in range(nfiles):
       locked_paths.append("A/locked_files/file-%i" % i)
-  
+
   # Create files at these paths
   os.mkdir(sbox.ospath("A/locked_files"))
   for file_path in locked_paths:
@@ -2407,7 +2407,7 @@ def delete_dir_with_lots_of_locked_files(sbox):
   # XFAIL: As of 1.8.10, this commit fails with:
   #  svn: E175002: Unexpected HTTP status 400 'Bad Request' on '<path>'
   # and the following error in the httpd error log:
-  #  request failed: error reading the headers 
+  #  request failed: error reading the headers
   # This problem was introduced on the 1.8.x branch in r1606976.
   sbox.simple_commit()
 
