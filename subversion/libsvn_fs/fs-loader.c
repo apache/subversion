@@ -408,6 +408,11 @@ synchronized_initialize(void *baton, apr_pool_t *pool)
 svn_error_t *
 svn_fs_initialize(apr_pool_t *pool)
 {
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
+  /* Ensure that DSO subsystem is initialized early as possible if
+     we're going to use it. */
+  SVN_ERR(svn_dso_initialize2());
+#endif
   /* Protect against multiple calls. */
   return svn_error_trace(svn_atomic__init_once(&common_pool_initialized,
                                                synchronized_initialize,
