@@ -6766,7 +6766,7 @@ op_revert_txn(void *baton,
     }
   else
     {
-      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, wcroot,
+      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, wcroot,
                                                 local_relpath,
                                                 scratch_pool, scratch_pool));
     }
@@ -13859,6 +13859,7 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
 
 svn_error_t *
 svn_wc__db_read_conflict(svn_skel_t **conflict,
+                         svn_node_kind_t *kind,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -13872,14 +13873,15 @@ svn_wc__db_read_conflict(svn_skel_t **conflict,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_trace(svn_wc__db_read_conflict_internal(conflict, wcroot,
-                                                           local_relpath,
+  return svn_error_trace(svn_wc__db_read_conflict_internal(conflict, kind,
+                                                           wcroot, local_relpath,
                                                            result_pool,
                                                            scratch_pool));
 }
 
 svn_error_t *
 svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
+                                  svn_node_kind_t *kind,
                                   svn_wc__db_wcroot_t *wcroot,
                                   const char *local_relpath,
                                   apr_pool_t *result_pool,
@@ -13888,6 +13890,9 @@ svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
+  if (kind)
+    *kind = svn_node_none;
+
   /* Check if we have a conflict in ACTUAL */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
@@ -13895,12 +13900,13 @@ svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (! have_row)
+  if (!have_row || kind)
     {
       /* Do this while stmt is still open to avoid closing the sqlite
          transaction and then reopening. */
       svn_sqlite__stmt_t *stmt_node;
       svn_error_t *err;
+      svn_boolean_t have_info = FALSE;
 
       err = svn_sqlite__get_statement(&stmt_node, wcroot->sdb,
                                       STMT_SELECT_NODE_INFO);
@@ -13912,25 +13918,47 @@ svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
                                 local_relpath);
 
       if (!err)
-        err = svn_sqlite__step(&have_row, stmt_node);
+        err = svn_sqlite__step(&have_info, stmt_node);
+
+      if (!err && kind && have_info)
+        {
+          svn_wc__db_status_t status;
+          int op_depth = svn_sqlite__column_int(stmt_node, 0);
+
+          status = svn_sqlite__column_token(stmt_node, 3, presence_map);
+
+          if (op_depth > 0)
+            err = convert_to_working_status(&status, status);
+
+          if (!err && (status == svn_wc__db_status_normal
+                       || status == svn_wc__db_status_added
+                       || status == svn_wc__db_status_deleted
+                       || status == svn_wc__db_status_incomplete))
+            {
+              *kind = svn_sqlite__column_token(stmt_node, 4, kind_map);
+            }
+        }
 
       if (stmt_node)
         err = svn_error_compose_create(err,
                                        svn_sqlite__reset(stmt_node));
 
-      SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-
-      if (have_row)
+      if (!have_row || err)
         {
-          *conflict = NULL;
-          return SVN_NO_ERROR;
-        }
+          SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                               _("The node '%s' was not found."),
+          if (have_info)
+            {
+              *conflict = NULL;
+              return SVN_NO_ERROR;
+            }
+
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' was not found."),
                                    path_for_error_message(wcroot,
                                                           local_relpath,
                                                           scratch_pool));
+        }
     }
 
   {

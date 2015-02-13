@@ -509,7 +509,8 @@ check_db_conflicts(svn_test__sandbox_t *b,
       local_abspath = svn_dirent_join(b->wc_abspath, info->local_relpath,
                                       iterpool);
 
-      SVN_ERR(svn_wc__db_read_conflict(&conflict, b->wc_ctx->db, local_abspath,
+      SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL,
+                                       b->wc_ctx->db, local_abspath,
                                        iterpool, iterpool));
 
       SVN_TEST_ASSERT(conflict != NULL);
@@ -5928,7 +5929,7 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
   const apr_array_header_t *locations;
   svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflict, b->wc_ctx->db,
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, b->wc_ctx->db,
                                    sbox_wc_path(b, wc_path),
                                    b->pool, b->pool));
 
