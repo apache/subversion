@@ -1073,6 +1073,9 @@ static svn_error_t *ra_svn_end_commit(void *baton)
                                  &(commit_info->author),
                                  &(commit_info->post_commit_err)));
 
+  commit_info->repos_root = apr_pstrdup(ccb->pool,
+                                        ccb->sess_baton->conn->repos_root);
+
   if (ccb->callback)
     SVN_ERR(ccb->callback(commit_info, ccb->callback_baton, ccb->pool));
 

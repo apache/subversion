@@ -447,5 +447,8 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
                                 "a new revision"));
     }
 
+  merge_ctx->commit_info->repos_root = apr_pstrdup(result_pool,
+                                                   session->repos_root_str);
+
   return SVN_NO_ERROR;
 }

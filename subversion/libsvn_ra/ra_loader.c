@@ -587,61 +587,6 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 
-struct ccw_baton
-{
-  svn_commit_callback2_t original_callback;
-  void *original_baton;
-
-  svn_ra_session_t *session;
-};
-
-/* Wrapper which populates the repos_root field of the commit_info struct */
-static svn_error_t *
-commit_callback_wrapper(const svn_commit_info_t *commit_info,
-                        void *baton,
-                        apr_pool_t *pool)
-{
-  struct ccw_baton *ccwb = baton;
-  svn_commit_info_t *ci = svn_commit_info_dup(commit_info, pool);
-
-  SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
-
-  return ccwb->original_callback(ci, ccwb->original_baton, pool);
-}
-
-
-/* Some RA layers do not correctly fill in REPOS_ROOT in commit_info, or
-   they are third-party layers conforming to an older commit_info structure.
-   Interpose a utility function to ensure the field is valid.  */
-static void
-remap_commit_callback(svn_commit_callback2_t *callback,
-                      void **callback_baton,
-                      svn_ra_session_t *session,
-                      svn_commit_callback2_t original_callback,
-                      void *original_baton,
-                      apr_pool_t *result_pool)
-{
-  if (original_callback == NULL)
-    {
-      *callback = NULL;
-      *callback_baton = NULL;
-    }
-  else
-    {
-      /* Allocate this in RESULT_POOL, since the callback will be called
-         long after this function has returned. */
-      struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
-
-      ccwb->session = session;
-      ccwb->original_callback = original_callback;
-      ccwb->original_baton = original_baton;
-
-      *callback = commit_callback_wrapper;
-      *callback_baton = ccwb;
-    }
-}
-
-
 svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -652,10 +597,6 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
-  remap_commit_callback(&commit_callback, &commit_baton,
-                        session, commit_callback, commit_baton,
-                        pool);
-
   return session->vtable->get_commit_editor(session, editor, edit_baton,
                                             revprop_table,
                                             commit_callback, commit_baton,
@@ -1394,11 +1335,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
     {
       /* The specific RA layer does not have an implementation. Use our
          default shim over the normal commit editor.  */
-
-      /* Remap for RA layers exposing Ev1.  */
-      remap_commit_callback(&commit_callback, &commit_baton,
-                            session, commit_callback, commit_baton,
-                            result_pool);
 
       return svn_error_trace(svn_ra__use_commit_shim(
                                editor,
