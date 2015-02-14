@@ -142,7 +142,7 @@ Candidate changes:
      +1: julianfoad, rhuijben (without r1659721)
      +1: philip
 
- * r1646495, r1646505
+ * r1646495, r1646505, r1659801
    Fix issue #4538 'svnadmin load' strips r1 references in mergeinfo
    Justification:
      Fixes a design problem for an uncommon case that is exposed in the
@@ -150,7 +150,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1646505
    Votes:
-     +1: rhuijben, julianfoad
+     +1: rhuijben, julianfoad (without r1659801)
+     +1: philip
 
 Veto-blocked changes:
 =====================
