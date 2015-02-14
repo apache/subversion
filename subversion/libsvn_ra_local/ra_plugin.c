@@ -803,15 +803,16 @@ struct ccw_baton
 static svn_error_t *
 commit_callback_wrapper(const svn_commit_info_t *commit_info,
                         void *baton,
-                        apr_pool_t *pool)
+                        apr_pool_t *scratch_pool)
 {
   struct ccw_baton *ccwb = baton;
-  svn_commit_info_t *ci = svn_commit_info_dup(commit_info, pool);
+  svn_commit_info_t *ci = svn_commit_info_dup(commit_info, scratch_pool);
 
-  /* On RA-local it is safe to get this value in a callback :-) */
-  SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
+  SVN_ERR(svn_ra_local__get_repos_root(ccwb->session, &ci->repos_root,
+                                       scratch_pool));
 
-  return ccwb->original_callback(ci, ccwb->original_baton, pool);
+  return svn_error_trace(ccwb->original_callback(ci, ccwb->original_baton,
+                                                 scratch_pool));
 }
 
 
