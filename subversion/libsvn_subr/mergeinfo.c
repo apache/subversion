@@ -2014,7 +2014,7 @@ svn_mergeinfo__canonicalize_ranges(svn_mergeinfo_t mergeinfo,
 
   for (hi = apr_hash_first(scratch_pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      apr_array_header_t *rl = apr_hash_this_val(hi);
+      apr_array_header_t *rl = svn__apr_hash_index_val(hi);
 
       SVN_ERR(svn_rangelist__canonicalize(rl, scratch_pool));
     }
