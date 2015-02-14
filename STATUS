@@ -219,13 +219,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1651759
-   Api correctness fix: Duplicate error filename when copying errors
-   Justification:
-     Simple to fix issue caused error on buildbot.
-   Votes:
-     +1: rhuijben, ivan, philip
-
  * r1659399
    Make the SQLite build with recent (3.8.x?) amalgamated versions.
    Justification:
