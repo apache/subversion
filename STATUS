@@ -105,15 +105,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1650531
-   Fix a redirect handling bug in 'svn log' over HTTP. 
-   Justification:
-     Redirects should work.
-   Notes:
-     Merge with --accept tc
-   Votes:
-     +1: stsp, philip
-
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
    Justification:
@@ -218,3 +209,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1650531
+   Fix a redirect handling bug in 'svn log' over HTTP. 
+   Justification:
+     Redirects should work.
+   Notes:
+     Merge with --accept tc
+   Votes:
+     +1: stsp, philip, stefan2
+
