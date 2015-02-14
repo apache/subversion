@@ -630,7 +630,7 @@ commit_callback_with_failure(const svn_commit_info_t *info,
   SVN_TEST_STRING_ASSERT(info->post_commit_err, NULL);
 
   SVN_ERR(svn_time_from_cstring(&timetemp, info->date, scratch_pool));
-  SVN_TEST_ASSERT(info->date != 0);
+  SVN_TEST_ASSERT(timetemp != 0);
   SVN_TEST_ASSERT(info->repos_root != NULL);
   SVN_TEST_ASSERT(info->revision == 1);
 
