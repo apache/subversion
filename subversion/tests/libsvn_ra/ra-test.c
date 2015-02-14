@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
+#include "svn_time.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_dirent_uri.h"
@@ -616,6 +617,52 @@ get_dir_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_commit_callback2_t for commit_callback_failure() */
+static svn_error_t *
+commit_callback_with_failure(const svn_commit_info_t *info,
+                             void *baton,
+                             apr_pool_t *scratch_pool)
+{
+  apr_time_t timetemp;
+
+  SVN_TEST_ASSERT(info != NULL);
+  SVN_TEST_STRING_ASSERT(info->author, "jrandom");
+  SVN_TEST_STRING_ASSERT(info->post_commit_err, NULL);
+
+  SVN_ERR(svn_time_from_cstring(&timetemp, info->date, scratch_pool));
+  SVN_TEST_ASSERT(info->date != 0);
+  SVN_TEST_ASSERT(info->repos_root != NULL);
+  SVN_TEST_ASSERT(info->revision == 1);
+
+  return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+}
+
+static svn_error_t *
+commit_callback_failure(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  void *root_baton;
+  SVN_ERR(make_and_open_repos(&ra_session, "commit_cb_failure", opts, pool));
+
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    apr_hash_make(pool), commit_callback_with_failure,
+                                    NULL, NULL, FALSE, pool));
+
+  SVN_ERR(editor->open_root(edit_baton, 1, pool, &root_baton));
+  SVN_ERR(editor->change_dir_prop(root_baton, "A",
+                                  svn_string_create("B", pool), pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_TEST_ASSERT_ERROR(editor->close_edit(edit_baton, pool),
+                        SVN_ERR_CANCELLED);
+
+  /* This is what users should do if close_edit fails... Except that in this case
+     the commit actually succeeded*/
+  SVN_ERR(editor->abort_edit(edit_baton, pool));
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -635,6 +682,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "lock multiple paths"),
     SVN_TEST_OPTS_PASS(get_dir_test,
                        "test ra_get_dir2"),
+    SVN_TEST_OPTS_PASS(commit_callback_failure,
+                       "commit callback failure"),
     SVN_TEST_NULL
   };
 
