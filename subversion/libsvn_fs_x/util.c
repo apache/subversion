@@ -318,7 +318,7 @@ svn_fs_x__path_txn_sha1(svn_fs_t *fs,
   svn_checksum_t checksum;
   checksum.digest = sha1;
   checksum.kind = svn_checksum_sha1;
-  
+
   return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
                          svn_checksum_to_cstring(&checksum, pool),
                          pool);

@@ -366,7 +366,7 @@ hotcopy_copy_packed_shard(svn_boolean_t *skipped_p,
   return SVN_NO_ERROR;
 }
 
-/* Remove file PATH, if it exists - even if it is read-only. 
+/* Remove file PATH, if it exists - even if it is read-only.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 hotcopy_remove_file(const char *path,
@@ -683,7 +683,7 @@ hotcopy_revisions(svn_fs_t *src_fs,
       /* Copy the revprop file. */
       SVN_ERR(hotcopy_copy_shard_file(&skipped, src_revprops_dir,
                                       dst_revprops_dir,
-                                      rev, max_files_per_dir, 
+                                      rev, max_files_per_dir,
                                       iterpool));
 
       /* Whenever this revision did not previously exist in the destination,

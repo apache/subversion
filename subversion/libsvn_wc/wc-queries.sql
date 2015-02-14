@@ -253,7 +253,7 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 
 -- STMT_DELETE_WORKING_OP_DEPTH
 DELETE FROM nodes
-WHERE wc_id = ?1 
+WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
 
@@ -262,15 +262,12 @@ The op_root must exist (or there is no layer to replace) and an op-root
    always has presence 'normal' */
 -- STMT_SELECT_LAYER_FOR_REPLACE
 SELECT s.local_relpath, s.kind,
-  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, 'normal', 0
+  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, 'normal'
 FROM nodes s
 WHERE s.wc_id = ?1 AND s.local_relpath = ?2 AND s.op_depth = ?3
 UNION ALL
 SELECT s.local_relpath, s.kind,
-  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, d.presence,
-  EXISTS(SELECT * FROM nodes sh
-         WHERE sh.wc_id = ?1 AND sh.op_depth > ?5
-           AND sh.local_relpath = d.local_relpath) shadowed
+  RELPATH_SKIP_JOIN(?2, ?4, s.local_relpath) drp, d.presence
 FROM nodes s
 LEFT OUTER JOIN nodes d ON d.wc_id= ?1 AND d.op_depth = ?5
      AND d.local_relpath = drp
@@ -295,17 +292,16 @@ INSERT OR REPLACE INTO nodes (
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target, moved_here, moved_to )
 SELECT
-    wc_id, ?4 /*local_relpath */, ?5 /*op_depth*/, ?6 /* parent_relpath */,
-    repos_id,
-    repos_path, revision, presence, depth, kind, changed_revision,
-    changed_date, changed_author, checksum, properties, translated_size,
-    last_mod_time, symlink_target, 1,
-    (SELECT dst.moved_to FROM nodes AS dst
-                         WHERE dst.wc_id = ?1
-                         AND dst.local_relpath = ?4
-                         AND dst.op_depth = ?5)
-FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+    s.wc_id, ?4 /*local_relpath */, ?5 /*op_depth*/, ?6 /* parent_relpath */,
+    s.repos_id,
+    s.repos_path, s.revision, s.presence, s.depth, s.kind, s.changed_revision,
+    s.changed_date, s.changed_author, s.checksum, s.properties,
+    CASE WHEN d.checksum=s.checksum THEN d.translated_size END,
+    CASE WHEN d.checksum=s.checksum THEN d.last_mod_time END,
+    s.symlink_target, 1, d.moved_to
+FROM nodes s
+LEFT JOIN nodes d ON d.wc_id=?1 AND d.local_relpath=?4 AND d.op_depth=?5
+WHERE s.wc_id = ?1 AND s.local_relpath = ?2 AND s.op_depth = ?3
 
 -- STMT_SELECT_NO_LONGER_MOVED_RV
 SELECT d.local_relpath, RELPATH_SKIP_JOIN(?2, ?4, d.local_relpath) srp,
@@ -327,7 +323,7 @@ ORDER BY d.local_relpath DESC
 
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath, kind FROM nodes
-WHERE wc_id = ?1 
+WHERE wc_id = ?1
   AND parent_relpath = ?2
   AND op_depth = ?3
   AND presence != MAP_BASE_DELETED
@@ -336,7 +332,7 @@ ORDER BY local_relpath
 
 -- STMT_SELECT_OP_DEPTH_CHILDREN_EXISTS
 SELECT local_relpath, kind FROM nodes
-WHERE wc_id = ?1 
+WHERE wc_id = ?1
   AND parent_relpath = ?2
   AND op_depth = ?3
   AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)
@@ -470,7 +466,7 @@ SELECT (SELECT b.presence FROM nodes AS b
          WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),
        work.presence, work.op_depth, moved.moved_to
 FROM nodes_current AS work
-LEFT OUTER JOIN nodes AS moved 
+LEFT OUTER JOIN nodes AS moved
   ON moved.wc_id = work.wc_id
  AND moved.local_relpath = work.local_relpath
  AND moved.moved_to IS NOT NULL
@@ -547,7 +543,7 @@ UPDATE nodes SET repos_id = ?4, dav_cache = NULL
 WHERE (wc_id = ?1 AND local_relpath = ?2 AND repos_id = ?3)
    OR (wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
        AND repos_id = ?3)
- 
+
 
 -- STMT_UPDATE_LOCK_REPOS_ID
 UPDATE lock SET repos_id = ?2
@@ -804,7 +800,7 @@ WHERE wc_id = ?1
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND (changelist IS NULL
        OR NOT EXISTS (SELECT 1 FROM nodes_current c
-                      WHERE c.wc_id = ?1 
+                      WHERE c.wc_id = ?1
                         AND c.local_relpath = actual_node.local_relpath
                         AND c.kind = MAP_FILE))
 

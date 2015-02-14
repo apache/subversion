@@ -82,6 +82,10 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if dst_dirent == 'write-lock':
           continue
 
+        # Ignore auto-created rep-cache.db-journal file
+        if dst_dirent == 'rep-cache.db-journal':
+          continue
+
         src_dirent = os.path.join(src_dirpath, dst_dirent)
         if not os.path.exists(src_dirent):
           raise svntest.Failure("%s does not exist in hotcopy "
@@ -94,6 +98,10 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if src_file == 'pack-lock':
           continue
         if src_file == 'write-lock':
+          continue
+
+        # Ignore auto-created rep-cache.db-journal file
+        if src_file == 'rep-cache.db-journal':
           continue
 
         src_path = os.path.join(src_dirpath, src_file)
@@ -179,7 +187,7 @@ def check_hotcopy_fsfs(src, dst):
 def check_hotcopy_fsx(src, dst):
     "Verify that the SRC FSX repository has been correctly copied to DST."
     check_hotcopy_fsfs_fsx(src, dst)
-        
+
 #----------------------------------------------------------------------
 
 # How we currently test 'svnadmin' --
@@ -1952,7 +1960,7 @@ def verify_keep_going(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', '-m', 'log_msg',
                                      C_url)
-  
+
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   fp = open(r2, 'r+b')
   fp.write("""inserting junk to corrupt the rev""")

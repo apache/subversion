@@ -34,7 +34,7 @@
  */
 
 /* FNV-1 32 bit constants taken from
- * http://www.isthe.com/chongo/tech/comp/fnv/ 
+ * http://www.isthe.com/chongo/tech/comp/fnv/
  */
 #define FNV1_PRIME_32 0x01000193
 #define FNV1_BASE_32 2166136261U
@@ -47,7 +47,7 @@ fnv1a_32(apr_uint32_t hash, const void *input, apr_size_t len)
 {
   const unsigned char *data = input;
   const unsigned char *end = data + len;
-  
+
   for (; data != end; ++data)
     {
       hash ^= *data;
@@ -142,7 +142,7 @@ svn_fnv1a_32__context_create(apr_pool_t *pool)
 {
   svn_fnv1a_32__context_t *context = apr_palloc(pool, sizeof(*context));
   context->hash = FNV1_BASE_32;
-  
+
   return context;
 }
 
@@ -203,7 +203,7 @@ svn_fnv1a_32x4__update(svn_fnv1a_32x4__context_t *context,
       memcpy(context->buffer + context->buffered, data, to_copy);
       data = (const char *)data + to_copy;
       len -= to_copy;
-      
+
       fnv1a_32x4(context->hashes, context->buffer, SCALING);
       context->buffered = 0;
     }

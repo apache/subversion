@@ -2340,7 +2340,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
 
       revprops = new_revprops;
     }
-  
+
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
 

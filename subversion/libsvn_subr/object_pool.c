@@ -85,7 +85,7 @@ struct svn_object_pool__t
 
   /* the root pool owning this structure */
   apr_pool_t *pool;
-  
+
   /* extractor and updater for the user object wrappers */
   svn_object_pool__getter_t getter;
   svn_object_pool__setter_t setter;
@@ -171,7 +171,7 @@ static void
 add_object_ref(object_ref_t *object_ref,
               apr_pool_t *pool)
 {
-  /* Update ref counter. 
+  /* Update ref counter.
      Note that this is racy with object_ref_cleanup; see comment there. */
   if (svn_atomic_inc(&object_ref->ref_count) == 0)
     svn_atomic_dec(&object_ref->object_pool->unused_count);
@@ -275,7 +275,7 @@ insert(void **object,
       svn_atomic_inc(&object_pool->object_count);
 
       /* the new entry is *not* in use yet.
-       * add_object_ref will update counters again. 
+       * add_object_ref will update counters again.
        */
       svn_atomic_inc(&object_ref->object_pool->unused_count);
     }
@@ -345,7 +345,7 @@ svn_object_pool__create(svn_object_pool__t **object_pool,
    */
   apr_pool_cleanup_register(pool, result, object_pool_cleanup,
                             apr_pool_cleanup_null);
-  
+
   *object_pool = result;
   return SVN_NO_ERROR;
 }

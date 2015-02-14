@@ -18505,7 +18505,7 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
 
   C1_path = sbox.ospath('A/C/C1')
   test3_path = sbox.ospath('A/C/C1/test.txt')
-  
+
   # r3 - Add some subtrees:
   #   A /A/B/B1
   #   A /A/B/B1/B1a

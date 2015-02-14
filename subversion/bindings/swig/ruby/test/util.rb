@@ -1,4 +1,4 @@
-# ==================================================================== 
+# ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
@@ -91,7 +91,7 @@ module SvnTestUtil
     @need_svnserve = need_svnserve
     setup_default_variables
     setup_tmp
-    setup_tmp(@import_path) 
+    setup_tmp(@import_path)
     setup_repository
     add_hooks
     setup_svnserve if @need_svnserve

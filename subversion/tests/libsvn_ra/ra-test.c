@@ -441,7 +441,7 @@ lock_cb(void *baton,
   result->err = ra_err;
 
   svn_hash_sets(b->results, apr_pstrdup(b->pool, path), result);
-  
+
   return SVN_NO_ERROR;
 }
 

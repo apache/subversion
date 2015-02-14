@@ -40,7 +40,7 @@ extern "C" {
 #include "private/svn_mutex.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_subr_private.h"
-  
+
 enum username_case_type { CASE_FORCE_UPPER, CASE_FORCE_LOWER, CASE_ASIS };
 
 enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
@@ -70,7 +70,7 @@ typedef struct repository_t {
 
   enum access_type auth_access; /* access granted to authenticated users */
   enum access_type anon_access; /* access granted to annonymous users */
-  
+
 } repository_t;
 
 typedef struct client_info_t {
@@ -186,7 +186,7 @@ typedef struct connection_t
      the new thread decrease it and when it reaches 0 the pool can be
      released.  */
   svn_atomic_t ref_count;
-  
+
 } connection_t;
 
 /* Return a client_info_t structure allocated in POOL and initialize it

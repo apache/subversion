@@ -59,7 +59,7 @@ static svn_error_t *
 fuzzing_1_byte_test(const svn_test_opts_t *opts,
                     const char *repo_name,
                     unsigned char (* modifier)(unsigned char c),
-                    apr_pool_t *pool)
+                     apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_fs_t *fs;
@@ -157,7 +157,7 @@ fuzzing_1_byte_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-
+
 /*** Tests ***/
 
 /* ------------------------------------------------------------------------ */

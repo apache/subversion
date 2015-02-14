@@ -541,7 +541,7 @@ prop_conflict_new(const svn_string_t **conflict_desc,
 
   /* How we render the conflict:
 
-     We have four sides: original, mine, incoming_base, incoming.  
+     We have four sides: original, mine, incoming_base, incoming.
      We render the conflict as a 3-way diff.  A diff3 API has three parts,
      called:
 
@@ -750,7 +750,7 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
       apr_hash_t *conflicted_props;
       svn_skel_t *conflicts;
 
-      SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+      SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
                                       scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL, NULL,

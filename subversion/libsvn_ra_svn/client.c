@@ -1105,11 +1105,11 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
                                  "a log message with pre-1.5 servers; "
                                  "consider passing an empty one, or upgrading "
                                  "the server"));
-    } 
+    }
   else if (log_msg == NULL)
     /* 1.5+ server.  Set LOG_MSG to something, since the 'logmsg' argument
        to the 'commit' protocol command is non-optional; on the server side,
-       only REVPROP_TABLE will be used, and LOG_MSG will be ignored.  The 
+       only REVPROP_TABLE will be used, and LOG_MSG will be ignored.  The
        "svn:log" member of REVPROP_TABLE table is NULL, therefore the commit
        will have a NULL log message (not just "", really NULL).
 
@@ -1359,7 +1359,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
     SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_TIME));
   if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_LAST_AUTHOR));
-  
+
   /* Always send the, nominally optional, want-iprops as "false" to
      workaround a bug in svnserve 1.8.0-1.8.8 that causes the server
      to see "true" if it is omitted. */

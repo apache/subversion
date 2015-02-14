@@ -355,7 +355,7 @@ set_lock(const char *fs_path,
      always come back empty. */
   SVN_ERR(read_digest_file(&children, NULL, fs_path, digest_path, pool));
 
-  SVN_ERR(write_digest_file(children, lock, fs_path, digest_path, 
+  SVN_ERR(write_digest_file(children, lock, fs_path, digest_path,
                             perms_reference, pool));
 
   return SVN_NO_ERROR;
@@ -405,7 +405,7 @@ add_to_digest(const char *fs_path,
     }
 
   if (apr_hash_count(children) != original_count)
-    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path, 
+    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path,
                               perms_reference, pool));
 
   return SVN_NO_ERROR;
@@ -438,7 +438,7 @@ delete_from_digest(const char *fs_path,
     }
 
   if (apr_hash_count(children) || lock)
-    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path, 
+    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path,
                               perms_reference, pool));
   else
     SVN_ERR(svn_io_remove_file2(index_digest_path, TRUE, pool));
@@ -900,14 +900,17 @@ lock_body(void *baton, apr_pool_t *pool)
         {
           info->lock = svn_lock_create(lb->result_pool);
           if (target->token)
-            info->lock->token = target->token;
+            info->lock->token = apr_pstrdup(lb->result_pool, target->token);
           else
             SVN_ERR(svn_fs_fs__generate_lock_token(&(info->lock->token), lb->fs,
                                                    lb->result_pool));
 
+          /* The INFO->PATH is already allocated in LB->RESULT_POOL as a result
+             of svn_fspath__canonicalize() (see svn_fs_fs__lock()). */
           info->lock->path = info->path;
-          info->lock->owner = lb->fs->access_ctx->username;
-          info->lock->comment = lb->comment;
+          info->lock->owner = apr_pstrdup(lb->result_pool,
+                                          lb->fs->access_ctx->username);
+          info->lock->comment = apr_pstrdup(lb->result_pool, lb->comment);
           info->lock->is_dav_comment = lb->is_dav_comment;
           info->lock->creation_date = apr_time_now();
           info->lock->expiration_date = lb->expiration_date;
@@ -1147,7 +1150,7 @@ svn_fs_fs__lock(svn_fs_t *fs,
             info->fs_err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED,
                                              0, _("Failed to lock '%s'"),
                                              info->path);
-                                             
+
           cb_err = lock_callback(lock_baton, info->path, info->lock,
                                  info->fs_err, scratch_pool);
         }

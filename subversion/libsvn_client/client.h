@@ -1208,6 +1208,41 @@ svn_client__arbitrary_nodes_diff(const char **root_relpath,
                                  apr_pool_t *scratch_pool);
 
 
+/* Helper for the remote case of svn_client_propget.
+ *
+ * If PROPS is not null, then get the value of property PROPNAME in
+ * REVNUM, using RA_SESSION.  Store the value ('svn_string_t *') in
+ * PROPS, under the path key "TARGET_PREFIX/TARGET_RELATIVE"
+ * ('const char *').
+ *
+ * If INHERITED_PROPS is not null, then set *INHERITED_PROPS to a
+ * depth-first ordered array of svn_prop_inherited_item_t * structures
+ * representing the PROPNAME properties inherited by the target.  If
+ * INHERITABLE_PROPS in not null and no inheritable properties are found,
+ * then set *INHERITED_PROPS to an empty array.
+ *
+ * Recurse according to DEPTH, similarly to svn_client_propget3().
+ *
+ * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
+ * Yes, caller passes this; it makes the recursion more efficient :-).
+ *
+ * Allocate PROPS and *INHERITED_PROPS in RESULT_POOL, but do all temporary
+ * work in SCRATCH_POOL.  The two pools can be the same; recursive
+ * calls may use a different SCRATCH_POOL, however.
+ */
+svn_error_t *
+svn_client__remote_propget(apr_hash_t *props,
+                           apr_array_header_t **inherited_props,
+                           const char *propname,
+                           const char *target_prefix,
+                           const char *target_relative,
+                           svn_node_kind_t kind,
+                           svn_revnum_t revnum,
+                           svn_ra_session_t *ra_session,
+                           svn_depth_t depth,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

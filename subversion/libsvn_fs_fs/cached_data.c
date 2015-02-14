@@ -141,11 +141,11 @@ dbg_log_access(svn_fs_t *fs,
         }
     }
 
-  /* reduced logging for format 6 and earlier */
-  printf("%5s%10" APR_UINT64_T_HEX_FMT " %s %7ld %7" APR_UINT64_T_FMT \
-         "   %s\n",
-         pack, (apr_uint64_t)(offset), type, revision, item_index,
-         description);
+      /* reduced logging for format 6 and earlier */
+      printf("%5s%10" APR_UINT64_T_HEX_FMT " %s %7ld %7" APR_UINT64_T_FMT \
+             "   %s\n",
+             pack, (apr_uint64_t)(offset), type, revision, item_index,
+             description);
 #endif
 
   return SVN_NO_ERROR;
@@ -312,21 +312,21 @@ get_node_revision_body(node_revision_t **noderev_p,
                                      rev_item->number,
                                      scratch_pool));
 
-      /* physical addressing mode reading, parsing and caching */
-      SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
-                                      revision_file->stream,
-                                      result_pool,
-                                      scratch_pool));
+          /* physical addressing mode reading, parsing and caching */
+          SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
+                                          revision_file->stream,
+                                          result_pool,
+                                          scratch_pool));
 
-      /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-      (*noderev_p)->is_fresh_txn_root = FALSE;
+          /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+          (*noderev_p)->is_fresh_txn_root = FALSE;
 
-      /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
-      if (ffd->node_revision_cache)
-        SVN_ERR(svn_cache__set(ffd->node_revision_cache,
-                               &key,
-                               *noderev_p,
-                               scratch_pool));
+          /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
+          if (ffd->node_revision_cache)
+            SVN_ERR(svn_cache__set(ffd->node_revision_cache,
+                                   &key,
+                                   *noderev_p,
+                                   scratch_pool));
 
       SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
     }
@@ -488,32 +488,32 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_fs_fs__revision_file_t *revision_file;
-  apr_off_t root_offset;
-  svn_fs_id_t *root_id = NULL;
-  svn_boolean_t is_cached;
+      svn_fs_fs__revision_file_t *revision_file;
+      apr_off_t root_offset;
+      svn_fs_id_t *root_id = NULL;
+      svn_boolean_t is_cached;
 
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
 
-  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
-                        ffd->rev_root_id_cache, &rev, result_pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
+      SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
+                            ffd->rev_root_id_cache, &rev, result_pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
-                                           scratch_pool, scratch_pool));
-  SVN_ERR(get_root_changes_offset(&root_offset, NULL,
-                                  revision_file, fs, rev,
-                                  scratch_pool));
+      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
+                                               scratch_pool, scratch_pool));
+      SVN_ERR(get_root_changes_offset(&root_offset, NULL,
+                                      revision_file, fs, rev,
+                                      scratch_pool));
 
-  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
-                              root_offset, result_pool));
+      SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
+                                  root_offset, result_pool));
 
-  SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
+      SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
 
   SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, scratch_pool));
 
-  *root_id_p = root_id;
+      *root_id_p = root_id;
 
   return SVN_NO_ERROR;
 }
@@ -770,9 +770,9 @@ create_rep_state_body(rep_state_t **rep_state,
       /* populate the cache if appropriate */
       if (! svn_fs_fs__id_txn_used(&rep->txn_id))
         {
-          if (ffd->rep_header_cache)
-            SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh,
-                                   scratch_pool));
+            if (ffd->rep_header_cache)
+              SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh,
+                                     scratch_pool));
         }
     }
 
@@ -848,12 +848,12 @@ svn_fs_fs__check_rep(representation_t *rep,
                      void **hint,
                      apr_pool_t *scratch_pool)
 {
-  rep_state_t *rs;
-  svn_fs_fs__rep_header_t *rep_header;
+      rep_state_t *rs;
+      svn_fs_fs__rep_header_t *rep_header;
 
-  /* ### Should this be using read_rep_line() directly? */
-  SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint,
-                           rep, fs, scratch_pool, scratch_pool));
+      /* ### Should this be using read_rep_line() directly? */
+      SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint,
+                               rep, fs, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -430,7 +430,7 @@ svn_fs_fs__read_changes_incrementally(svn_stream_t *stream,
     }
   while (change);
   svn_pool_destroy(iterpool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -656,7 +656,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
 
   /* initialize transaction info (never stored) */
   svn_fs_fs__id_txn_reset(&rep->txn_id);
-  
+
   /* while in transactions, it is legal to simply write "-1" */
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
@@ -929,7 +929,7 @@ format_digest(const unsigned char *digest,
   svn_checksum_t checksum;
   checksum.digest = digest;
   checksum.kind = kind;
-  
+
   if (is_null)
     return "(null)";
 
@@ -1105,7 +1105,7 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
                             apr_pool_t *scratch_pool)
 {
   const char *text;
-  
+
   switch (header->type)
     {
       case svn_fs_fs__rep_plain:

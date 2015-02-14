@@ -170,7 +170,7 @@ zero_cross_match(apr_pool_t *pool)
     {
       svn_checksum_t *i_zero;
       svn_checksum_t *i_A;
-    
+
       i_zero = svn_checksum_create(i_kind, pool);
       SVN_ERR(svn_checksum_clear(i_zero));
       SVN_ERR(svn_checksum(&i_A, i_kind, "A", 1, pool));

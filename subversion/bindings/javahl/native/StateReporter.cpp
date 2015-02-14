@@ -83,7 +83,7 @@ StateReporter::setPath(jstring jpath, jlong jrevision, jobject jdepth,
   //DEBUG:fprintf(stderr, "  (n) StateReporter::setPath()\n");
 
   if (!m_valid) { throw_reporter_inactive(); return; }
-  
+
   JNIStringHolder lock_token(jlock_token);
   if (JNIUtil::isJavaExceptionThrown())
     return;

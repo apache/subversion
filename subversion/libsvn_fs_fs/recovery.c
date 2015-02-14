@@ -193,7 +193,7 @@ recover_find_max_ids(svn_fs_t *fs,
                               "representation"));
 
   /* Now create a stream that's allowed to read only as much data as is
-     stored in the representation.  Note that this is a directory, i.e. 
+     stored in the representation.  Note that this is a directory, i.e.
      represented using the hash format on disk and can never have 0 length. */
   baton.pool = pool;
   baton.remaining = noderev->data_rep->expanded_size

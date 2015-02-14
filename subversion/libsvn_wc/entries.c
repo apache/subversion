@@ -881,7 +881,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       svn_skel_t *conflict;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
-      SVN_ERR(svn_wc__db_read_conflict(&conflict, db, entry_abspath,
+      SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, db, entry_abspath,
                                        scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, &text_conflicted,

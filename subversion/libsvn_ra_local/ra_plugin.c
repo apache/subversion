@@ -1399,7 +1399,7 @@ lock_cb(void *lock_baton,
       b->cb_err = b->lock_func(b->lock_baton, path, b->is_lock, lock, fs_err,
                                pool);
     }
-  
+
   return SVN_NO_ERROR;
 }
 

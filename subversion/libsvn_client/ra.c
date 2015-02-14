@@ -706,7 +706,7 @@ repos_locations(const char **start_url,
           || (SVN_IS_VALID_REVNUM(end_revnum) && (end_revnum > youngest_rev)))
         return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                  _("No such revision %ld"),
-                                 (start_revnum > youngest_rev) 
+                                 (start_revnum > youngest_rev)
                                         ? start_revnum : end_revnum);
 
       if (start_url)

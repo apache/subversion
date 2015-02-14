@@ -88,7 +88,7 @@ typedef struct l2p_page_table_entry_t
 
 /* Master run-time data structure of an log-to-phys index.  It contains
  * the page tables of every revision covered by that index - but not the
- * pages themselves. 
+ * pages themselves.
  */
 typedef struct l2p_header_t
 {
@@ -732,7 +732,7 @@ stream_write_encoded(svn_stream_t *stream,
                      apr_uint64_t value)
 {
   unsigned char encoded[ENCODED_INT_LENGTH];
- 
+
   apr_size_t len = encode_uint(encoded, value);
   return svn_error_trace(svn_stream_write(stream, (char *)encoded, &len));
 }
@@ -813,7 +813,7 @@ encode_l2p_page(apr_array_header_t *entries,
   int container_count = 0;
   apr_uint64_t last_offset = 0;
   int i;
-  
+
   apr_size_t data_size = count * sizeof(l2p_page_entry_t);
   svn_stringbuf_t *container_offsets
     = svn_stringbuf_create_ensure(count * 2, scratch_pool);
@@ -939,7 +939,7 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
    * The current implementation is limited to 2G entries per page. */
   if (ffd->l2p_page_size > APR_INT32_MAX)
     return svn_error_createf(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
-                            _("L2P index page size  %s" 
+                            _("L2P index page size  %s"
                               " exceeds current limit of 2G entries"),
                             apr_psprintf(local_pool, "%" APR_UINT64_T_FMT,
                                          ffd->l2p_page_size));
@@ -1496,7 +1496,7 @@ get_l2p_page(l2p_page_t **page,
       container_offsets[i] = (apr_off_t)last_value - 1;
       /* '-1' is represented as '0' in the index file */
     }
-  
+
   /* read all page entries (offsets in rev file and container sub-items) */
   for (i = 0; i < result->entry_count; ++i)
     {
@@ -1544,14 +1544,14 @@ typedef struct l2p_page_baton_t
 
   /* offset within the cached page */
   apr_uint32_t page_offset;
-  
+
   /* out data */
   /* absolute item or container offset in rev / pack file */
   apr_off_t offset;
 
   /* 0 -> container / item itself; sub-item in container otherwise */
   apr_uint32_t sub_item;
- 
+
 } l2p_page_baton_t;
 
 /* Return the rev / pack file offset of the item at BATON->PAGE_OFFSET in
@@ -1650,7 +1650,7 @@ l2p_page_table_access_func(void **out,
 
   /* set output as a courtesy to the caller */
   *out = table_baton->pages;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1931,7 +1931,7 @@ l2p_proto_index_lookup(apr_off_t *offset,
     }
 
   SVN_ERR(svn_io_file_close(file, scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2451,7 +2451,7 @@ p2l_page_info_copy(p2l_page_info_baton_t *baton,
                    const p2l_header_t *header,
                    const apr_off_t *offsets)
 {
-  /* if the requested offset is out of bounds, return info for 
+  /* if the requested offset is out of bounds, return info for
    * a zero-sized empty page right behind the last page.
    */
   if (baton->offset / header->page_size < header->page_count)
@@ -2533,7 +2533,7 @@ get_p2l_header(p2l_header_t **header,
 
   /* allocate result data structure */
   result = apr_pcalloc(result_pool, sizeof(*result));
-  
+
   /* Read table sizes, check them for plausibility and allocate page array. */
   SVN_ERR(packed_stream_get(&value, rev_file->p2l_stream));
   result->first_revision = (svn_revnum_t)value;
@@ -2870,7 +2870,7 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
              apr_pool_t *scratch_pool)
 {
   p2l_page_info_baton_t page_info;
-  
+
   /* request info for the index pages that describes the pack / rev file
    * contents at pack / rev file position OFFSET. */
   page_info.offset = offset;
@@ -2896,7 +2896,7 @@ get_p2l_keys(p2l_page_info_baton_t *page_info_p,
       key.is_packed = svn_fs_x__is_packed_rev(fs, revision);
       key.page = page_info.page_no;
 
-      *key_p = key;  
+      *key_p = key;
     }
 
   return SVN_NO_ERROR;
@@ -3607,7 +3607,7 @@ compare_p2l_info_rev(const sub_item_ordered_t * lhs,
 {
   svn_fs_x__id_t *lhs_part;
   svn_fs_x__id_t *rhs_part;
-  
+
   assert(lhs != rhs);
   if (lhs->entry->item_count == 0)
     return rhs->entry->item_count == 0 ? 0 : -1;
@@ -3936,7 +3936,7 @@ svn_fs_x__serialize_p2l_page(void **data,
                             table_size);
 
   for (i = 0; i < page->nelts; ++i)
-    svn_temp_serializer__add_leaf(context, 
+    svn_temp_serializer__add_leaf(context,
                                   (const void * const *)&entries[i].items,
                                     entries[i].item_count
                                   * sizeof(*entries[i].items));
