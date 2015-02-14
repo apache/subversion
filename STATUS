@@ -96,15 +96,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1646785, r1646786, r1646797
-   Fix a pool handling bug in config variable expansion.
-   Justification:
-     Using memory after free is undefined behaviour.
-   Branch:
-     ^/subversion/branches/1.8.x-r1646797
-   Votes:
-     +1: philip, rhuijben
-
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
    Justification:
@@ -218,4 +209,13 @@ Approved changes:
      conflict resolver.
    Votes:
      +1: rhuijben, ivan, stefan2
+
+ * r1646785, r1646786, r1646797
+   Fix a pool handling bug in config variable expansion.
+   Justification:
+     Using memory after free is undefined behaviour.
+   Branch:
+     ^/subversion/branches/1.8.x-r1646797
+   Votes:
+     +1: philip, rhuijben, stefan2
 
