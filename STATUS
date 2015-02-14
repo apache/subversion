@@ -219,13 +219,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1659013, r1659315
-   Fix a race in the DSO initialisation code.
-   Justification:
-     Fixes occasional SEGV when multiple threads load DSOs in parallel.
-   Votes:
-     +1: philip, rhuijben, ivan
-
  * r1651759
    Api correctness fix: Duplicate error filename when copying errors
    Justification:
@@ -274,4 +267,3 @@ Approved changes:
      ^/subversion/branches/1.8.x-r1643074
    Votes:
      +1: julianfoad, philip, rhuijben
-
