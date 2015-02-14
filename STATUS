@@ -87,15 +87,6 @@ Candidate changes:
      +0: julianfoad (previously said +1 with the wrong branch mentioned)
      +0: stefan2 (previously said +1 with the wrong branch mentioned)
 
- * r1644158, r1644530, r1644595, r1644599, r1652744
-   Fix patch output for reordered hunks, part of issue 4533.
-   Justification:
-     Output is invalid, hunks replace the wrong bits of the file.
-   Branch:
-     ^/subversion/branches/1.8.x-r1644595
-   Votes:
-     +1: philip, rhuijben
-
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
    Justification:
@@ -216,6 +207,15 @@ Approved changes:
      Using memory after free is undefined behaviour.
    Branch:
      ^/subversion/branches/1.8.x-r1646797
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * r1644158, r1644530, r1644595, r1644599, r1652744
+   Fix patch output for reordered hunks, part of issue 4533.
+   Justification:
+     Output is invalid, hunks replace the wrong bits of the file.
+   Branch:
+     ^/subversion/branches/1.8.x-r1644595
    Votes:
      +1: philip, rhuijben, stefan2
 
