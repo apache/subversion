@@ -219,15 +219,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1656713
-   Fix reporting errors from ra_svn's svn_ra_get_dir2() in some cases.
-   Justification:
-     Causes a connection stall in custom repository browsers that get
-     into this code path by not verifying if the directory exists before
-     calling this function. Regression against <= 1.7.x.
-   Votes:
-     +1: rhuijben, ivan, philip
-
  * r1596882
    Fix build with Ruby 2.
    Justification:
