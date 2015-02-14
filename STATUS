@@ -140,14 +140,6 @@ Candidate changes:
      +1: stefan2
      +0: rhuijben (patch looks sane, but hard to oversee consequences)
 
- * r1658115, r1659553, r1659554
-   Stop dropping a value when copying tree conflict information
-   Justification:
-     Trivial correctness fix that provides valueable information to the
-     conflict resolver.
-   Votes:
-     +1: rhuijben, ivan
-
  * r1658417
    Don't ask a resolver if we should resolve if we only take no as answer
    Justification:
@@ -218,4 +210,12 @@ Approved changes:
      Merge with --accept tc
    Votes:
      +1: stsp, philip, stefan2
+
+ * r1658115, r1659553, r1659554
+   Stop dropping a value when copying tree conflict information
+   Justification:
+     Trivial correctness fix that provides valueable information to the
+     conflict resolver.
+   Votes:
+     +1: rhuijben, ivan, stefan2
 
