@@ -200,10 +200,21 @@ Veto-blocked changes:
    Notes:
      r1643074 (nominated separately) is required for the test to work.
      I would recommend not backporting r1646250 without r1643074.
-     This is also nominated for 1.7.x.
+     This is also nominated for 1.7.x. The regression test in this group
+     depends on the issue #4538 fix in r1646505.
    Votes:
      +1: julianfoad
      -1: philip (new test is a FAIL, needs a fix for issue 4538)
+
+ * r1646495, r1646505
+   Fix issue #4538 'svnadmin load' strips r1 references in mergeinfo
+   Justification:
+     Fixes a design problem for an uncommon case that is exposed in the
+     testcases for issue #4476.
+   Branch:
+     ^/subversion/branches/1.8.x-r1646505
+   Votes:
+     +1: rhuijben
 
 Approved changes:
 =================
