@@ -83,9 +83,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1619380
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
      +0: julianfoad (previously said +1 with the wrong branch mentioned)
-     +0: stefan2 (previously said +1 with the wrong branch mentioned)
 
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
