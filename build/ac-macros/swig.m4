@@ -185,7 +185,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     rbconfig="$RUBY -rrbconfig -e "
 
     for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
-                    rubyhdrdir sitedir sitelibdir sitearchdir libdir
+                    rubyhdrdir rubyarchhdrdir sitedir sitelibdir sitearchdir libdir
     do
       rbconfig_tmp=`$rbconfig "print RbConfig::CONFIG@<:@'$var_name'@:>@"`
       eval "rbconfig_$var_name=\"$rbconfig_tmp\""
@@ -196,7 +196,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
     if test -d "$rbconfig_rubyhdrdir"; then
       dnl Ruby >=1.9
-      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward -I$rbconfig_rubyhdrdir/$rbconfig_arch"
+      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward"
+      if test -d "$rbconfig_rubyarchhdrdir"; then
+        dnl Ruby >=2.0
+        svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyarchhdrdir"
+      else
+        svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyhdrdir/$rbconfig_arch"
+      fi
     else
       dnl Ruby 1.8
       svn_cv_ruby_includes="-I. -I$rbconfig_archdir"

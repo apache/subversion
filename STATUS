@@ -219,14 +219,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1596882
-   Fix build with Ruby 2.
-   Justification:
-     Move along with the times! And should fix buildbot failures
-     according to jamessan, who submitted the patch.
-   Votes:
-     +1: stsp, rhuijben, philip
-
  * r1643074
    Don't let invalid mergeinfo stop 'svnadmin load' from working.
      Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
