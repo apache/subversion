@@ -201,6 +201,7 @@ invoke_commit_cb(svn_commit_callback2_t commit_cb,
   commit_info->date = date ? date->data : NULL;
   commit_info->author = author ? author->data : NULL;
   commit_info->post_commit_err = post_commit_errstr;
+  /* commit_info->repos_root = NULL; ### Fixed up in ra-local handling */
 
   return svn_error_trace(commit_cb(commit_info, commit_baton, scratch_pool));
 }

@@ -791,6 +791,61 @@ svn_ra_local__rev_prop(svn_ra_session_t *session,
                                     NULL, NULL, pool);
 }
 
+struct ccw_baton
+{
+  svn_commit_callback2_t original_callback;
+  void *original_baton;
+
+  svn_ra_session_t *session;
+};
+
+/* Wrapper which populates the repos_root field of the commit_info struct */
+static svn_error_t *
+commit_callback_wrapper(const svn_commit_info_t *commit_info,
+                        void *baton,
+                        apr_pool_t *pool)
+{
+  struct ccw_baton *ccwb = baton;
+  svn_commit_info_t *ci = svn_commit_info_dup(commit_info, pool);
+
+  /* On RA-local it is safe to get this value in a callback :-) */
+  SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
+
+  return ccwb->original_callback(ci, ccwb->original_baton, pool);
+}
+
+
+/* The repository layer does not correctly fill in REPOS_ROOT in
+   commit_info, as it doesn't know the url that is used to access
+   it. This hooks the callback to fill in the missing pieces. */
+static void
+remap_commit_callback(svn_commit_callback2_t *callback,
+                      void **callback_baton,
+                      svn_ra_session_t *session,
+                      svn_commit_callback2_t original_callback,
+                      void *original_baton,
+                      apr_pool_t *result_pool)
+{
+  if (original_callback == NULL)
+    {
+      *callback = NULL;
+      *callback_baton = NULL;
+    }
+  else
+    {
+      /* Allocate this in RESULT_POOL, since the callback will be called
+         long after this function has returned. */
+      struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
+
+      ccwb->session = session;
+      ccwb->original_callback = original_callback;
+      ccwb->original_baton = original_baton;
+
+      *callback = commit_callback_wrapper;
+      *callback_baton = ccwb;
+    }
+}
+
 static svn_error_t *
 svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                                 const svn_delta_editor_t **editor,
@@ -804,6 +859,10 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   struct deltify_etc_baton *deb = apr_palloc(pool, sizeof(*deb));
+
+  /* Set repos_root_url in commit info */
+  remap_commit_callback(&callback, &callback_baton, session,
+                        callback, callback_baton, pool);
 
   /* Prepare the baton for deltify_etc()  */
   deb->fs = sess->fs;
@@ -1693,6 +1752,9 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   struct deltify_etc_baton *deb = apr_palloc(result_pool, sizeof(*deb));
+
+  remap_commit_callback(&commit_cb, &commit_baton, session,
+                        commit_cb, commit_baton, result_pool);
 
   /* NOTE: the RA callbacks are ignored. We pass everything directly to
      the REPOS editor.  */
