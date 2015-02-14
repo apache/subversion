@@ -128,7 +128,7 @@ Candidate changes:
      result of the function is potentially applied. I'm surprised that
      nobody noticed this problem in svn_wc_resolved_conflict5().
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271, r1659721
    Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
