@@ -2253,6 +2253,8 @@ close_edit(void *edit_baton,
                                response_code);
     }
 
+  ctx->txn_url = NULL; /* If HTTPv2, the txn is now done */
+
   /* Inform the WC that we did a commit.  */
   if (ctx->callback)
     err = ctx->callback(commit_info, ctx->callback_baton, pool);
@@ -2271,6 +2273,8 @@ close_edit(void *edit_baton,
 
       handler->response_handler = svn_ra_serf__expect_empty_body;
       handler->response_baton = handler;
+
+      ctx->activity_url = NULL; /* Don't try again in abort_edit() on fail */
 
       SVN_ERR(svn_error_compose_create(
                   err,
