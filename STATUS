@@ -130,17 +130,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1646495, r1646505, r1659801
-   Fix issue #4538 'svnadmin load' strips r1 references in mergeinfo
-   Justification:
-     Fixes a design problem for an uncommon case that is exposed in the
-     testcases for issue #4476.
-   Branch:
-     ^/subversion/branches/1.8.x-r1646505
-   Votes:
-     +1: julianfoad (without r1659801)
-     +1: philip, rhuijben
-
  * r1646230, r1646250, r1646253, r1656893, r1657182, r1657195, r1657401
    Make svnsync strip any r0 references from mergeinfo -- issue #4476.
    Justification:
@@ -179,5 +168,16 @@ Approved changes:
      r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
    Votes:
      +1: julianfoad (without r1659721)
+     +1: philip, rhuijben, stefan2
+
+ * r1646495, r1646505, r1659801
+   Fix issue #4538 'svnadmin load' strips r1 references in mergeinfo
+   Justification:
+     Fixes a design problem for an uncommon case that is exposed in the
+     testcases for issue #4476.
+   Branch:
+     ^/subversion/branches/1.8.x-r1646505
+   Votes:
+     +1: julianfoad (without r1659801)
      +1: philip, rhuijben, stefan2
 
