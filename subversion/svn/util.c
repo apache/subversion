@@ -75,6 +75,13 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
                           void *baton,
                           apr_pool_t *pool)
 {
+  /* Be very careful with returning errors from this callback as those
+     will be returned as errors from editor->close_edit(...), which may
+     cause callers to assume that the commit itself failed.
+
+     See log message of r1659867 and the svn_ra_get_commit_editor3
+     documentation for details on error scenarios. */
+
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
     SVN_ERR(svn_cmdline_printf(pool, _("Committed revision %ld%s.\n"),
                                commit_info->revision,
