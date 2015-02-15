@@ -705,6 +705,13 @@ close_edit(void *edit_baton,
           svn_error_clear(err);
           err = SVN_NO_ERROR;
         }
+
+      /* Make sure a future abort doesn't perform
+         any work. This may occur if the commit
+         callback returns an error! */
+
+      eb->txn = NULL;
+      eb->txn_root = NULL;
     }
   else
     {

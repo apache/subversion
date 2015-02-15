@@ -1536,6 +1536,10 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                           404 /* Not Found */, pool));
     }
 
+  /* Commit succeeded, make abort a no-op */
+  cc->txn_url = NULL;
+  cc->activity_url = NULL;
+
   if (cc->callback && commit_info->revision != SVN_INVALID_REVNUM)
     SVN_ERR(cc->callback(commit_info, cc->callback_baton, pool));
 

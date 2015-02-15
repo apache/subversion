@@ -2237,11 +2237,6 @@ close_edit(void *edit_baton,
                                svn_ra_serf__merge_get_status(merge_ctx));
     }
 
-  /* Inform the WC that we did a commit.  */
-  if (ctx->callback)
-    SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
-                          ctx->callback_baton, pool));
-
   /* If we're using activities, DELETE our completed activity.  */
   if (ctx->activity_url)
     {
@@ -2264,6 +2259,15 @@ close_edit(void *edit_baton,
 
       SVN_ERR_ASSERT(delete_ctx->status == 204);
     }
+
+  /* Make abort a no-op */
+  ctx->activity_url = NULL;
+  ctx->txn_url = NULL;
+
+  /* Inform the WC that we did a commit.  */
+  if (ctx->callback)
+    SVN_ERR(ctx->callback(svn_ra_serf__merge_get_commit_info(merge_ctx),
+                          ctx->callback_baton, pool));
 
   return SVN_NO_ERROR;
 }
