@@ -181,15 +181,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1646785, r1646786, r1646797
-   Fix a pool handling bug in config variable expansion.
-   Justification:
-     Using memory after free is undefined behaviour.
-   Branch:
-     ^/subversion/branches/1.8.x-r1646797
-   Votes:
-     +1: philip, rhuijben, stefan2
-
  * r1644158, r1644530, r1644595, r1644599, r1652744
    Fix patch output for reordered hunks, part of issue 4533.
    Justification:
