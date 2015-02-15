@@ -181,14 +181,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1658115, r1659553, r1659554
-   Stop dropping a value when copying tree conflict information
-   Justification:
-     Trivial correctness fix that provides valueable information to the
-     conflict resolver.
-   Votes:
-     +1: rhuijben, ivan, stefan2
-
  * r1646785, r1646786, r1646797
    Fix a pool handling bug in config variable expansion.
    Justification:
