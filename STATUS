@@ -94,17 +94,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1513479, r1625522 
-   Fix issue #4411, 'parent-relative file external can corrupt working copy'.
-   Justification:
-     Broken working copies are bad.
-   Notes:
-     This also adds a test case for issue #4519 which was fixed in 1.8.11.
-   Branch:
-     ^/subversion/branches/1.8.x-issue4411
-   Votes:
-     +1: stsp, rhuijben
-
  * r1654932, r1654933, r1654934, r1654937
    Fix issue #4554, "0 file length reported in FSFS".
    Justification:
@@ -180,4 +169,15 @@ Approved changes:
    Votes:
      +1: julianfoad (without r1659801)
      +1: philip, rhuijben, stefan2
+
+ * r1513479, r1625522 
+   Fix issue #4411, 'parent-relative file external can corrupt working copy'.
+   Justification:
+     Broken working copies are bad.
+   Notes:
+     This also adds a test case for issue #4519 which was fixed in 1.8.11.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4411
+   Votes:
+     +1: stsp, rhuijben, stefan2
 
