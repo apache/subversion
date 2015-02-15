@@ -352,6 +352,32 @@ test_ignore_bom(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_expand(const svn_test_opts_t *opts,
+            apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  const char *cfg_file, *val;
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, FALSE, pool));
+
+  /* Get expanded "g" which requires expanding "c". */
+  svn_config_get(cfg, &val, "section1", "g", NULL);
+
+  /* Get expanded "c". */
+  svn_config_get(cfg, &val, "section1", "c", NULL);
+
+  /* With pool debugging enabled this ensures that the expanded value 
+     of "c" was not created in a temporary pool when expanding "g". */
+  SVN_TEST_STRING_ASSERT(val, "bar");
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -376,5 +402,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_stream_interface,
                    "test svn_config_parse"),
     SVN_TEST_PASS2(test_ignore_bom, "test parsing config file with BOM"),
+    SVN_TEST_OPTS_PASS(test_expand,
+                       "test variable expansion"),
     SVN_TEST_NULL
   };
