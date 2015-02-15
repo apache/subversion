@@ -119,6 +119,21 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
+ * r1659867, r1659869
+   Fix reproducable memory corruption and unneeded io errors on editor abort
+   Justification:
+     A SIGPIPE caused by cancelling a commit at the wrong time may cause
+     the commit editor to return an error from editor->close_edit() which
+     makes most code paths call editor->abort_edit(). But ra-local and ra-serf
+     then still tried to access the original transaction which is already
+     gone. Daniel Shahaf reported reproducable see double frees when using
+     ra-local with fsfs. This fix makes calling abort safe (+- a NO-OP) after
+     a successfull commit. A testcase is added showcasing this scenario.
+   Branch:
+     ^/subversion/branches/1.8.x-r1659867
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
