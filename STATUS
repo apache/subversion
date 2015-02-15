@@ -134,6 +134,19 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1659867
+   Make editor-aborts after close edit safe.
+   Justification:
+     A SIGPIPE caused by cancelling a commit at the wrong time may cause
+     the commit editor to return an error from editor->close_edit() which
+     makes most code paths call editor->abort_edit(). This branch contains
+     the 1.7.x equivalent of the 1.8.x and trunk patch including a similar
+     fix for ra-neon.
+   Branch:
+     ^/subversion/branches/1.7.x-r1659867
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
