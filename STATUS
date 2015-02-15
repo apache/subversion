@@ -181,15 +181,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1650531
-   Fix a redirect handling bug in 'svn log' over HTTP. 
-   Justification:
-     Redirects should work.
-   Notes:
-     Merge with --accept tc
-   Votes:
-     +1: stsp, philip, stefan2
-
  * r1658115, r1659553, r1659554
    Stop dropping a value when copying tree conflict information
    Justification:
@@ -215,4 +206,3 @@ Approved changes:
      ^/subversion/branches/1.8.x-r1644595
    Votes:
      +1: philip, rhuijben, stefan2
-
