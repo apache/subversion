@@ -51,9 +51,12 @@ Candidate changes:
    Justification:
      svn SEGV reported by user.
    Votes:
-     +1: philip
+     +1: philip, danielsh
      -0: julianfoad (prefer to fix all the programs at the same time;
                      other queries -- see email thread)
+     +1: danielsh (julianf: I agree with your points on list, but +1ing anyway:
+                     fixing this segfault in svn need not block on fixing
+                     a similar segfault in svnadmin.)
 
  * r1561419, r1561427, 1547489, r1560643, r1573744
    Fix the hotcopy and recovery for pre-1.4 FSFS repositories.
@@ -109,6 +112,8 @@ Candidate changes:
    Votes:
      +1: stefan2
      +0: rhuijben (patch looks sane, but hard to oversee consequences)
+     +0: danielsh (hard to review all potential causes of expanded_size==0 in
+                   7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
  * r1658417
    Don't ask a resolver if we should resolve if we only take no as answer
@@ -122,6 +127,8 @@ Candidate changes:
  * r1659867, r1659869
    Fix reproducable memory corruption and unneeded io errors on editor abort
    Justification:
+     Reproducible double free(), which is undefined behaviour.  Details:
+     .
      A SIGPIPE caused by cancelling a commit at the wrong time may cause
      the commit editor to return an error from editor->close_edit() which
      makes most code paths call editor->abort_edit(). But ra-local and ra-serf
@@ -129,12 +136,15 @@ Candidate changes:
      gone. Daniel Shahaf reported reproducable see double frees when using
      ra-local with fsfs. This fix makes calling abort safe (+- a NO-OP) after
      a successfull commit. A testcase is added showcasing this scenario.
+   Notes:
+     'svn import -mm | (sleep 2; cat)' followed by ^C at the right time was
+     the reproduction.
    Branch:
      ^/subversion/branches/1.8.x-r1659867
    Votes:
      +1: rhuijben
+     +1: danielsh (without ra_serf part; looks good but I can't vouch for it)
 
-Veto-blocked changes:
 =====================
 
  * r1524145
