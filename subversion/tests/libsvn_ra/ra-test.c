@@ -181,7 +181,7 @@ commit_callback_failure(const svn_test_opts_t *opts,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *root_baton;
-  SVN_ERR(make_and_open_repos(&ra_session, "commit_cb_failure", opts, pool));
+  SVN_ERR(make_and_open_local_repos(&ra_session, "commit_cb_failure", opts, pool));
 
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     apr_hash_make(pool), commit_callback_with_failure,
