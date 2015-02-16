@@ -59,7 +59,7 @@ Candidate changes:
      "r1573744" is a bit of a misnomer as only the test case got backported
      because the workflow problem fixed by it does not exist in 1.8.x.
    Votes:
-     +1: stefan2
+     +1: stefan2, philip
 
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
