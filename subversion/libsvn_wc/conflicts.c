@@ -1365,18 +1365,24 @@ generate_propconflict(svn_boolean_t *conflict_remains,
         {
           svn_stringbuf_t *merged_stringbuf;
 
-          if (!cdesc->merged_file && !result->merged_file)
+          if (!cdesc->merged_file 
+              && (!result->merged_file && !result->merged_value))
             return svn_error_create
                 (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                  NULL, _("Conflict callback violated API:"
                          " returned no merged file"));
 
-          SVN_ERR(svn_stringbuf_from_file2(&merged_stringbuf,
-                                           result->merged_file ?
-                                                result->merged_file :
-                                                cdesc->merged_file,
-                                           scratch_pool));
-          new_value = svn_stringbuf__morph_into_string(merged_stringbuf);
+          if (result->merged_value)
+            new_value = result->merged_value;
+          else
+            {
+              SVN_ERR(svn_stringbuf_from_file2(&merged_stringbuf,
+                                               result->merged_file ?
+                                                    result->merged_file :
+                                                    cdesc->merged_file,
+                                               scratch_pool));
+              new_value = svn_stringbuf__morph_into_string(merged_stringbuf);
+            }
           *conflict_remains = FALSE;
           break;
         }
@@ -2336,6 +2342,7 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
                               const char *conflicted_propname,
                               svn_wc_conflict_choice_t conflict_choice,
                               const char *merged_file,
+                              const svn_string_t *merged_value,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool)
@@ -2396,21 +2403,27 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
       resolve_from = their_props;
       break;
     case svn_wc_conflict_choose_merged:
-      if (merged_file && conflicted_propname[0] != '\0')
+      if ((merged_file || merged_value) && conflicted_propname[0] != '\0')
         {
           apr_hash_t *actual_props;
-          svn_stream_t *stream;
-          svn_string_t *merged_propval;
 
           SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
                                         scratch_pool, scratch_pool));
           resolve_from = actual_props;
 
-          SVN_ERR(svn_stream_open_readonly(&stream, merged_file,
-                                           scratch_pool, scratch_pool));
-          SVN_ERR(svn_string_from_stream(&merged_propval, stream,
-                                         scratch_pool, scratch_pool));
-          svn_hash_sets(resolve_from, conflicted_propname, merged_propval);
+          if (!merged_value)
+            {
+              svn_stream_t *stream;
+              svn_string_t *merged_propval;
+
+              SVN_ERR(svn_stream_open_readonly(&stream, merged_file,
+                                               scratch_pool, scratch_pool));
+              SVN_ERR(svn_string_from_stream(&merged_propval, stream,
+                                             scratch_pool, scratch_pool));
+
+              merged_value = merged_propval;
+            }
+          svn_hash_sets(resolve_from, conflicted_propname, merged_value);
         }
       else
         resolve_from = NULL;
@@ -2734,7 +2747,8 @@ svn_wc__mark_resolved_prop_conflicts(svn_wc__db_t *db,
   return svn_error_trace(resolve_prop_conflict_on_node(
                            &ignored_result,
                            db, local_abspath, conflicts, "",
-                           svn_wc_conflict_choose_merged, NULL,
+                           svn_wc_conflict_choose_merged,
+                           NULL, NULL,
                            NULL, NULL,
                            scratch_pool));
 }
@@ -2903,6 +2917,9 @@ conflict_status_walker(void *baton,
                                                   my_choice,
                                                   result
                                                     ? result->merged_file
+                                                    : NULL,
+                                                  result
+                                                    ? result->merged_value
                                                     : NULL,
                                                   cswb->cancel_func,
                                                   cswb->cancel_baton,
@@ -3107,7 +3124,7 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
 {
   svn_wc_conflict_result_t *result = apr_pcalloc(pool, sizeof(*result));
   result->choice = choice;
-  result->merged_file = merged_file;
+  result->merged_file = apr_pstrdup(pool, merged_file);
   result->save_merged = FALSE;
 
   /* If we add more fields to svn_wc_conflict_result_t, add them here. */
