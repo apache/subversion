@@ -160,17 +160,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1646495, r1646505, r1659801
-   Fix issue #4538 'svnadmin load' strips r1 references in mergeinfo
-   Justification:
-     Fixes a design problem for an uncommon case that is exposed in the
-     testcases for issue #4476.
-   Branch:
-     ^/subversion/branches/1.8.x-r1646505
-   Votes:
-     +1: julianfoad (without r1659801)
-     +1: philip, rhuijben, stefan2
-
  * r1513479, r1625522 
    Fix issue #4411, 'parent-relative file external can corrupt working copy'.
    Justification:
