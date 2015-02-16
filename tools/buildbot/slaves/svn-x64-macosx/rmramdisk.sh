@@ -25,7 +25,7 @@ if [ -z "$1" ]; then
 fi
 
 if [ -z "$2" ]; then
-    echo "Missing parameter: device name file"
+    echo "Missing parameter: RAMdisk config file"
     exit 1
 fi
 
@@ -33,7 +33,11 @@ volume="/Volumes/$1"
 ramconf="$2"
 
 if [ ! -f "${ramconf}" ]; then
-    echo "Device name missing: ${ramconf}"
+    mount | grep "^/dev/disk[0-9][0-9]* on ${volume} (hfs" || {
+        echo "Not mounted: ${volume}"
+        exit 0
+    }
+    echo "Missing RAMdisk config file: ${ramconf}"
     exit 1
 fi
 
@@ -49,13 +53,10 @@ if [ "${device}" != "${devfmt}" ]; then
     exit 1
 fi
 
-mount | grep "^${device} on ${volume} (hfs" >/dev/null || {
-    echo "Not mounted: ${device} on ${volume}"
-    exit 1
+mount | grep "^${device} on ${volume} (hfs" >/dev/null && {
+    set -e
+    rm "${ramconf}"
+    hdiutil detach "${device}" -force
 }
-
-set -e
-rm "${ramconf}"
-hdiutil detach "${device}" -force
 
 exit 0
