@@ -3873,6 +3873,77 @@ def copy_pin_externals_wc_mixed_revisions(sbox):
                                      os.path.join(wc_dir, 'A_copy'),
                                      '--pin-externals')
 
+@Issue(4558)
+@XFail()
+def copy_pin_externals_whitepace_dir(sbox):
+  "copy --pin-externals with whitepace dir"
+
+  sbox.build(empty=True)
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+
+  extdef = sbox.get_tempname('extdef')
+
+  open(extdef, 'w').write(
+      '../deps/sqlite  ext/sqlite\n'
+      '"^/deps/A P R" \'ext/A P R\'\n' +
+      repo_url + '/deps/wors%23+\'t ext/wors#+\'t')
+
+  svntest.actions.run_and_verify_svnmucc(None, [], '-U', repo_url,
+                                         'mkdir', 'trunk',
+                                         'mkdir', 'branches',
+                                         'mkdir', 'deps',
+                                         'mkdir', 'deps/sqlite',
+                                         'mkdir', 'deps/A P R',
+                                         'mkdir', 'deps/wors#+\'t',
+                                         'propsetf', 'svn:externals', extdef,
+                                                    'trunk',
+                                         '-mm'
+                                         )
+
+  # Verify that externals definition worked
+  sbox.simple_update('trunk')
+  sbox.simple_update('branches')
+
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                     : Item(status='  ', wc_rev='0'),
+    'trunk'                : Item(status='  ', wc_rev='1'),
+    'trunk/ext'            : Item(status='X '),
+    'trunk/ext/A P R'      : Item(status='  ', wc_rev='1'),
+    'trunk/ext/sqlite'     : Item(status='  ', wc_rev='1'),
+    'trunk/ext/wors#+\'t'  : Item(status='  ', wc_rev='1'),
+    'branches'             : Item(status='  ', wc_rev='1'),
+  })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  trunk_url = repo_url + '/trunk'
+  branches_url = repo_url + '/branches'
+  trunk_wc = sbox.ospath('trunk')
+
+  # And let's copy/pin
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', '--pin-externals',
+                                     trunk_url, branches_url + '/url-url', '-mm')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', '--pin-externals',
+                                     trunk_url, sbox.ospath('branches/url-wc'))
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', '--pin-externals',
+                                     trunk_wc, branches_url + '/wc-url', '-mm')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', '--pin-externals',
+                                     trunk_wc, sbox.ospath('branches/wc-wc'))
+
+  expected_output = None ## TODO Add
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None, None, [])
+
+  ## TODO: Verify that all targets are here
+
+
 
 def nested_notification(sbox):
   "notification for nested externals"
@@ -3981,6 +4052,7 @@ test_list = [ None,
               copy_pin_externals_wc_local_mods,
               copy_pin_externals_wc_switched_subtrees,
               copy_pin_externals_wc_mixed_revisions,
+              copy_pin_externals_whitepace_dir,
               nested_notification,
              ]
 
