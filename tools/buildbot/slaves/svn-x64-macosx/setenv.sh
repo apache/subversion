@@ -56,6 +56,9 @@ export LIBTOOL_CONFIG
 # Set the absolute source path
 abssrc=$(pwd)
 
+# Set the path to the RAMdisk device name file
+ramconf=$(dirname "${abssrc}")/ramdisk.conf
+
 # The RAMdisk volume name is the same as the name of the builder
 volume_name=$(basename $(dirname "${abssrc}"))
 if [ -z "${volume_name}" ]; then
