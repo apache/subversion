@@ -125,6 +125,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1660220
+   Don't leave conflict markers on files that are moved
+   Justification:
+     Without this patch property or text conflicted files that are moved
+     leave dangling conflict markers in the old location. Easy fix.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
