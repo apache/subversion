@@ -4042,7 +4042,37 @@ def copy_pin_externals_whitepace_dir(sbox):
   svntest.actions.run_and_verify_update(wc_dir + '/branches', expected_output,
                                         None, expected_status, [])
 
+  # Now let's use our existing setup to perform some copies with dynamic
+  # destinations
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', '--parents', '--pin-externals',
+                                     repo_url + '/branches/wc-url',
+                                     repo_url + '/branches/url-url',
+                                     trunk_url,
+                                     branches_url + '/3x-url-url',
+                                     '-mm')
 
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', '--parents', '--pin-externals',
+                                     repo_url + '/branches/wc-url',
+                                     repo_url + '/branches/url-url',
+                                     trunk_url,
+                                     sbox.ospath('branches/3x-url-wc'))
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', '--parents', '--pin-externals',
+                                     sbox.ospath('branches/wc-url'),
+                                     sbox.ospath('branches/url-url'),
+                                     sbox.ospath('trunk'),
+                                     branches_url + '/3x-wc-url',
+                                     '-mm')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', '--parents', '--pin-externals',
+                                     sbox.ospath('branches/wc-url'),
+                                     sbox.ospath('branches/url-url'),
+                                     sbox.ospath('trunk'),
+                                     sbox.ospath('branches/3x-wc-wc'))
 
 def nested_notification(sbox):
   "notification for nested externals"
