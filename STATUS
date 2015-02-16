@@ -145,6 +145,15 @@ Candidate changes:
      +1: rhuijben
      +1: danielsh (without ra_serf part; looks good but I can't vouch for it)
 
+ * r1660071
+   When handling a pre-existing working copy as external, register it as such
+   Justification:
+     Without this the external is not properly handled as such when performing
+     operations like status.
+   Votes:
+     +1: rhuijben
+
+Veto-blocked changes:
 =====================
 
  * r1524145
