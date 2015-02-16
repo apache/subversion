@@ -177,6 +177,47 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+/* Quote a string if it would be handled as multiple or different tokens
+   during externals parsing */
+static const char *
+maybe_quote(const char *value,
+            apr_pool_t *result_pool)
+{
+  apr_status_t status;
+  char **argv;
+
+  status = apr_tokenize_to_argv(value, &argv, result_pool);
+
+  if (!status && argv[0] && !argv[1] && strcmp(argv[0], value) == 0)
+    return apr_pstrdup(result_pool, value);
+
+  {
+    svn_stringbuf_t *sb = svn_stringbuf_create_empty(result_pool);
+    const char *c;
+
+    svn_stringbuf_appendbyte(sb, '\"');
+
+    for (c = value; *c; c++)
+      {
+        if (*c == '\\' || *c == '\"' || *c == '\'')
+          svn_stringbuf_appendbyte(sb, '\\');
+
+        svn_stringbuf_appendbyte(sb, *c);
+      }
+
+    svn_stringbuf_appendbyte(sb, '\"');
+
+#ifdef SVN_DEBUG
+    status = apr_tokenize_to_argv(sb->data, &argv, result_pool);
+
+    SVN_ERR_ASSERT_NO_RETURN(!status && argv[0] && !argv[1]
+                             && !strcmp(argv[0], value));
+#endif
+
+    return sb->data;
+  }
+}
+
 /* In *NEW_EXTERNALS_DESCRIPTION, return a new external description for
  * use as a line in an svn:externals property, based on the external item
  * ITEM and the additional parser information in INFO. Pin the external
@@ -211,7 +252,9 @@ make_external_description(const char **new_external_description,
           }
 
         *new_external_description =
-          apr_psprintf(pool, "%s %s%s\n", item->target_dir, rev_str, item->url);
+          apr_psprintf(pool, "%s %s%s\n", maybe_quote(item->target_dir, pool),
+                                          rev_str,
+                                          maybe_quote(item->url, pool));
         break;
 
       case svn_wc__external_description_format_2:
@@ -239,8 +282,11 @@ make_external_description(const char **new_external_description,
           }
 
         *new_external_description =
-          apr_psprintf(pool, "%s%s%s %s\n", rev_str, item->url, peg_rev_str,
-                       item->target_dir);
+          apr_psprintf(pool, "%s%s %s\n", rev_str,
+                       maybe_quote(apr_psprintf(pool, "%s%s", item->url,
+                                                peg_rev_str),
+                                   pool),
+                       maybe_quote(item->target_dir, pool));
         break;
 
       default:

@@ -3874,28 +3874,36 @@ def copy_pin_externals_wc_mixed_revisions(sbox):
                                      '--pin-externals')
 
 @Issue(4558)
-@XFail()
 def copy_pin_externals_whitepace_dir(sbox):
   "copy --pin-externals with whitepace dir"
 
   sbox.build(empty=True)
   repo_url = sbox.repo_url
   wc_dir = sbox.wc_dir
+  ss_path = repo_url[repo_url.find('//'):]
 
   extdef = sbox.get_tempname('extdef')
+  info = sbox.get_tempname('info')
 
   open(extdef, 'w').write(
-      '../deps/sqlite  ext/sqlite\n'
+      '"' + ss_path +'/deps/sqlite"  ext/sqlite\n' +
       '"^/deps/A P R" \'ext/A P R\'\n' +
-      repo_url + '/deps/wors%23+\'t ext/wors#+\'t')
+      '^/deps/B\ D\ B\' ext/B\ D\ B\'\n' +
+      repo_url + '/deps/wors%23+t ext/wors#+t')
+  open(info, 'w').write('info\n')
 
   svntest.actions.run_and_verify_svnmucc(None, [], '-U', repo_url,
                                          'mkdir', 'trunk',
                                          'mkdir', 'branches',
                                          'mkdir', 'deps',
                                          'mkdir', 'deps/sqlite',
+                                         'put', info, 'deps/sqlite/readme',
                                          'mkdir', 'deps/A P R',
-                                         'mkdir', 'deps/wors#+\'t',
+                                         'put', info, 'deps/A P R/about',
+                                         'mkdir', 'deps/B D B\'',
+                                         'put', info, 'deps/B D B\'/copying',
+                                         'mkdir', 'deps/wors#+t',
+                                         'put', info, 'deps/wors#+t/brood',
                                          'propsetf', 'svn:externals', extdef,
                                                     'trunk',
                                          '-mm'
@@ -3906,13 +3914,18 @@ def copy_pin_externals_whitepace_dir(sbox):
   sbox.simple_update('branches')
 
   expected_status = svntest.wc.State(wc_dir, {
-    ''                     : Item(status='  ', wc_rev='0'),
-    'trunk'                : Item(status='  ', wc_rev='1'),
-    'trunk/ext'            : Item(status='X '),
-    'trunk/ext/A P R'      : Item(status='  ', wc_rev='1'),
-    'trunk/ext/sqlite'     : Item(status='  ', wc_rev='1'),
-    'trunk/ext/wors#+\'t'  : Item(status='  ', wc_rev='1'),
-    'branches'             : Item(status='  ', wc_rev='1'),
+    ''                          : Item(status='  ', wc_rev='0'),
+    'trunk'                     : Item(status='  ', wc_rev='1'),
+    'trunk/ext'                 : Item(status='X '),
+    'trunk/ext/sqlite'          : Item(status='  ', wc_rev='1'),
+    'trunk/ext/sqlite/readme'   : Item(status='  ', wc_rev='1'),
+    'trunk/ext/A P R'           : Item(status='  ', wc_rev='1'),
+    'trunk/ext/A P R/about'     : Item(status='  ', wc_rev='1'),
+    'trunk/ext/B D B\''         : Item(status='  ', wc_rev='1'),
+    'trunk/ext/B D B\'/copying' : Item(status='  ', wc_rev='1'),
+    'trunk/ext/wors#+t'         : Item(status='  ', wc_rev='1'),
+    'trunk/ext/wors#+t/brood'   : Item(status='  ', wc_rev='1'),
+    'branches'                  : Item(status='  ', wc_rev='1'),
   })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -3920,6 +3933,10 @@ def copy_pin_externals_whitepace_dir(sbox):
   trunk_url = repo_url + '/trunk'
   branches_url = repo_url + '/branches'
   trunk_wc = sbox.ospath('trunk')
+
+  # Create a new revision to creat interesting pinning revisions
+  sbox.simple_propset('A', 'B', 'trunk')
+  sbox.simple_commit('trunk')
 
   # And let's copy/pin
   svntest.actions.run_and_verify_svn(None, [],
@@ -3929,6 +3946,7 @@ def copy_pin_externals_whitepace_dir(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'copy', '--pin-externals',
                                      trunk_url, sbox.ospath('branches/url-wc'))
+  sbox.simple_commit('branches/url-wc')
 
   svntest.actions.run_and_verify_svn(None, [],
                                      'copy', '--pin-externals',
@@ -3937,11 +3955,69 @@ def copy_pin_externals_whitepace_dir(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'copy', '--pin-externals',
                                      trunk_wc, sbox.ospath('branches/wc-wc'))
+  sbox.simple_commit('branches/wc-wc')
 
-  expected_output = None ## TODO Add
-  svntest.actions.run_and_verify_update(wc_dir, expected_output, None, None, [])
+  expected_output = svntest.wc.State(wc_dir, {
+    'branches/url-url'                      : Item(status='A '),
+    'branches/url-url/ext/A P R/about'      : Item(status='A '),
+    'branches/url-url/ext/B D B\'/copying'  : Item(status='A '),
+    'branches/url-url/ext/wors#+t/brood'    : Item(status='A '),
+    'branches/url-url/ext/sqlite/readme'    : Item(status='A '),
 
-  ## TODO: Verify that all targets are here
+    # url-wc is already up to date
+
+    'branches/wc-url'                       : Item(status='A '),
+    'branches/wc-url/ext/wors#+t/brood'     : Item(status='A '),
+    'branches/wc-url/ext/sqlite/readme'     : Item(status='A '),
+    'branches/wc-url/ext/B D B\'/copying'   : Item(status='A '),
+    'branches/wc-url/ext/A P R/about'       : Item(status='A '),
+
+    ## branches/wc-wc should checkout its externals here
+  })
+  expected_status = svntest.wc.State(wc_dir, {
+    'branches'                              : Item(status='  ', wc_rev='6'),
+
+    'branches/url-url'                      : Item(status='  ', wc_rev='6'),
+    'branches/url-url/ext'                  : Item(status='X '),
+    'branches/url-url/ext/A P R'            : Item(status='  ', wc_rev='2'),
+    'branches/url-url/ext/A P R/about'      : Item(status='  ', wc_rev='2'),
+    'branches/url-url/ext/sqlite'           : Item(status='  ', wc_rev='2'),
+    'branches/url-url/ext/sqlite/readme'    : Item(status='  ', wc_rev='2'),
+    'branches/url-url/ext/wors#+t'          : Item(status='  ', wc_rev='2'),
+    'branches/url-url/ext/wors#+t/brood'    : Item(status='  ', wc_rev='2'),
+    'branches/url-url/ext/B D B\''          : Item(status='  ', wc_rev='2'),
+    'branches/url-url/ext/B D B\'/copying'  : Item(status='  ', wc_rev='2'),
+
+    'branches/url-wc'                       : Item(status='  ', wc_rev='6'),
+    'branches/url-wc/ext'                   : Item(status='X '),
+    'branches/url-wc/ext/wors#+t'           : Item(status='  ', wc_rev='3'),
+    'branches/url-wc/ext/wors#+t/brood'     : Item(status='  ', wc_rev='3'),
+    'branches/url-wc/ext/B D B\''           : Item(status='  ', wc_rev='3'),
+    'branches/url-wc/ext/B D B\'/copying'   : Item(status='  ', wc_rev='3'),
+    'branches/url-wc/ext/sqlite'            : Item(status='  ', wc_rev='3'),
+    'branches/url-wc/ext/sqlite/readme'     : Item(status='  ', wc_rev='3'),
+    'branches/url-wc/ext/A P R'             : Item(status='  ', wc_rev='3'),
+    'branches/url-wc/ext/A P R/about'       : Item(status='  ', wc_rev='3'),
+
+    'branches/wc-url'                       : Item(status='  ', wc_rev='6'),
+    'branches/wc-url/ext'                   : Item(status='X '),
+    'branches/wc-url/ext/wors#+t'           : Item(status='  ', wc_rev='1'),
+    'branches/wc-url/ext/wors#+t/brood'     : Item(status='  ', wc_rev='1'),
+    'branches/wc-url/ext/sqlite'            : Item(status='  ', wc_rev='1'),
+    'branches/wc-url/ext/sqlite/readme'     : Item(status='  ', wc_rev='1'),
+    'branches/wc-url/ext/B D B\''           : Item(status='  ', wc_rev='1'),
+    'branches/wc-url/ext/B D B\'/copying'   : Item(status='  ', wc_rev='1'),
+    'branches/wc-url/ext/A P R'             : Item(status='  ', wc_rev='1'),
+    'branches/wc-url/ext/A P R/about'       : Item(status='  ', wc_rev='1'),
+
+    'branches/wc-wc'                        : Item(status='  ', wc_rev='6'),
+    # ### Where are the externals of wc-wc?
+
+    # ### I'm guessing update doesn't want to update them because
+    # ### they are pinned?
+  })
+  svntest.actions.run_and_verify_update(wc_dir + '/branches', expected_output,
+                                        None, expected_status, [])
 
 
 
