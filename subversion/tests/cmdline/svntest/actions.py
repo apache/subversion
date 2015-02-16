@@ -1524,7 +1524,7 @@ def run_and_verify_status(wc_dir_name, status_tree,
   exit_code, output, errput = main.run_svn(None, 'status', '-v', '-u', '-q',
                                            wc_dir_name)
 
-  actual_status = svntest.wc.State.from_status(output)
+  actual_status = svntest.wc.State.from_status(output, wc_dir=wc_dir_name)
 
   # Verify actual output against expected output.
   if isinstance(status_tree, wc.State):
@@ -1569,7 +1569,7 @@ def run_and_verify_unquiet_status(wc_dir_name, status_tree):
   exit_code, output, errput = main.run_svn(None, 'status', '-v',
                                            '-u', wc_dir_name)
 
-  actual_status = svntest.wc.State.from_status(output)
+  actual_status = svntest.wc.State.from_status(output, wc_dir=wc_dir_name)
 
   # Verify actual output against expected output.
   if isinstance(status_tree, wc.State):

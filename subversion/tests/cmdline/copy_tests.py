@@ -5430,6 +5430,13 @@ def copy_and_move_conflicts(sbox):
                          'D/G/pi',
                          'D/G/rho',
                          'D/G/tau')
+  expected_status.tweak('B', moved_from='../A/B')
+  expected_status.tweak('D', moved_from='../A/D')
+  expected_status.tweak('H', moved_from='D/H')
+  expected_status.tweak('Q', moved_from='../A/Q')
+  expected_status.tweak('D/H', moved_to='H')
+  expected_status.tweak('alpha', moved_from='B/E/alpha')
+  expected_status.tweak('B/E/alpha', moved_to='alpha')
   svntest.actions.run_and_verify_status(wc('move-dest'), expected_status)
 
   expected_disk = svntest.wc.State('', {
