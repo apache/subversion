@@ -135,7 +135,7 @@ create_delete_wq_items(svn_skel_t **work_items,
       const apr_array_header_t *markers;
       int i;
 
-      SVN_ERR(svn_wc__db_read_conflict(&conflict, db, local_abspath,
+      SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, db, local_abspath,
                                        scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_read_markers(&markers, db, local_abspath,

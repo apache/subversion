@@ -397,7 +397,7 @@ test_svn_subst_long_keywords(apr_pool_t *pool)
       "01234567890123456789012345678901234567890123456789"
       "012345678901234567890123456789012345678901234567";
 
-  /* The longest keyword that can be expanded: the value is empty. */ 
+  /* The longest keyword that can be expanded: the value is empty. */
   const char keyword_z[]
     = "Q"
       "01234567890123456789012345678901234567890123456789"

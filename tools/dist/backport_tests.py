@@ -74,38 +74,38 @@ class BackportTest(object):
     """Return a decorator that: builds TEST_FUNC's sbox, creates
     ^/subversion/trunk, and calls TEST_FUNC, then compare its output to the
     expected dump file named after TEST_FUNC."""
-  
+
     # .wraps() propagates the wrappee's docstring to the wrapper.
-    @functools.wraps(test_func) 
+    @functools.wraps(test_func)
     def wrapped_test_func(sbox):
       expected_dump_file = './%s.dump' % (test_func.func_name,)
 
       sbox.build()
-  
+
       # r2: prepare ^/subversion/ tree
       sbox.simple_mkdir('subversion', 'subversion/trunk')
       sbox.simple_mkdir('subversion/tags', 'subversion/branches')
       sbox.simple_move('A', 'subversion/trunk')
       sbox.simple_move('iota', 'subversion/trunk')
       sbox.simple_commit(message='Create trunk')
-  
+
       # r3: branch
       sbox.simple_copy('subversion/trunk', 'branch')
       sbox.simple_append('branch/STATUS', '')
       sbox.simple_add('branch/STATUS')
       sbox.simple_commit(message='Create branch, with STATUS file')
-  
+
       # r4: random change on trunk
       sbox.simple_append('subversion/trunk/iota', 'First change\n')
       sbox.simple_commit(message='First change')
-  
+
       # r5: random change on trunk
       sbox.simple_append('subversion/trunk/A/mu', 'Second change\n')
       sbox.simple_commit(message='Second change')
-  
+
       # Do the work.
       test_func(sbox)
-  
+
       # Verify it.
       verify_backport(sbox, expected_dump_file, self.uuid)
     return wrapped_test_func
@@ -139,7 +139,7 @@ def serialize_entry(entry):
 
     # notes
     '   Notes: %s\n' % (entry['notes'],) if entry['notes'] else '',
-     
+
     # branch
     '   Branch: %s\n' % (entry['branch'],) if entry['branch'] else '',
 
@@ -294,7 +294,7 @@ def backport_accept(sbox):
   # r6: conflicting change on branch
   sbox.simple_append('branch/iota', 'Conflicts with first change\n')
   sbox.simple_commit(message="Conflicting change on iota")
-  
+
   # r7: nominate r4 with --accept (because of r6)
   approved_entries = [
     make_entry([4], notes="Merge with --accept=theirs-conflict."),
@@ -318,7 +318,7 @@ def backport_branches(sbox):
   # r6: conflicting change on branch
   sbox.simple_append('branch/iota', 'Conflicts with first change')
   sbox.simple_commit(message="Conflicting change on iota")
-  
+
   # r7: backport branch
   sbox.simple_update()
   sbox.simple_copy('branch', 'subversion/branches/r4')
@@ -367,7 +367,7 @@ def backport_conflicts_detection(sbox):
   # r6: conflicting change on branch
   sbox.simple_append('branch/iota', 'Conflicts with first change\n')
   sbox.simple_commit(message="Conflicting change on iota")
-  
+
   # r7: nominate r4, but without the requisite --accept
   approved_entries = [
     make_entry([4], notes="This will conflict."),

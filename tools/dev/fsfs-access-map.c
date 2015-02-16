@@ -60,7 +60,7 @@ typedef struct file_stats_t
 
   /* number of read() calls that returned 0 bytes */
   apr_int64_t empty_reads;
-  
+
   /* total number of bytes returned by those reads */
   apr_int64_t read_size;
 
@@ -314,7 +314,7 @@ parse_line(svn_stringbuf_t *line)
   else
     while(*func_start == ' ')
       func_start++;
-  
+
   first_param_end = strchr(func_end, ',');
   if (first_param_end == NULL)
     first_param_end = strchr(func_end, ')');
@@ -558,13 +558,13 @@ scale_line(color_t* out,
            int in_len)
 {
   double scaling_factor = (double)(in_len) / (double)(out_len);
-  
+
   apr_size_t i;
   memset(out, 0, out_len * sizeof(color_t));
   for (i = 0; i < out_len; ++i)
     {
       color_t color = { 0 };
-      
+
       double source_start = i * scaling_factor;
       double source_end = (i + 1) * scaling_factor;
 
@@ -626,7 +626,7 @@ write_bitmap(apr_array_header_t *info,
   /**/
   line = apr_pcalloc(pool, xsize * sizeof(color_t));
   scaled_line = apr_pcalloc(pool, row_size);
-  
+
   /* write header to file */
   write_bitmap_header(file, max_x, ysize);
 

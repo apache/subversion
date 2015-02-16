@@ -258,7 +258,7 @@ copy_versioned_file(svn_wc__db_t *db,
           svn_error_t *err;
 
           /* Is there a text conflict at the source path? */
-          SVN_ERR(svn_wc__db_read_conflict(&conflict, db, src_abspath,
+          SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, db, src_abspath,
                                          scratch_pool, scratch_pool));
 
           err = svn_wc__conflict_read_text_conflict(&conflict_working, NULL, NULL,
@@ -945,7 +945,7 @@ remove_node_conflict_markers(svn_wc__db_t *db,
 {
   svn_skel_t *conflict;
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflict, db, src_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, db, src_abspath,
                                    scratch_pool, scratch_pool));
 
   /* Do we have conflict markers that should be removed? */

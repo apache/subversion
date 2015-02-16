@@ -57,7 +57,7 @@ error_second(svn_sqlite__context_t *sctx,
     svn_sqlite__result_error(sctx, "fake error", 0);
   else
     svn_sqlite__result_int64(sctx, 1);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -102,7 +102,7 @@ test_sqlite_reset(apr_pool_t *pool)
 
   /* The svn_sqlite__step wrapper calls svn_sqlite__reset when step
      fails so the reset call here is a no-op.  The first step can be
-     repeated. */ 
+     repeated. */
   SVN_ERR(svn_sqlite__reset(stmt));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_TEST_ASSERT(have_row);

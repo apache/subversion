@@ -527,40 +527,18 @@ svn_client_revprop_set2(const char *propname,
   return SVN_NO_ERROR;
 }
 
-/* Helper for the remote case of svn_client_propget.
- *
- * If PROPS is not null, then get the value of property PROPNAME in
- * REVNUM, using RA_SESSION.  Store the value ('svn_string_t *') in
- * PROPS, under the path key "TARGET_PREFIX/TARGET_RELATIVE"
- * ('const char *').
- *
- * If INHERITED_PROPS is not null, then set *INHERITED_PROPS to a
- * depth-first ordered array of svn_prop_inherited_item_t * structures
- * representing the PROPNAME properties inherited by the target.  If
- * INHERITABLE_PROPS in not null and no inheritable properties are found,
- * then set *INHERITED_PROPS to an empty array.
- *
- * Recurse according to DEPTH, similarly to svn_client_propget3().
- *
- * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
- * Yes, caller passes this; it makes the recursion more efficient :-).
- *
- * Allocate PROPS and *INHERITED_PROPS in RESULT_POOL, but do all temporary
- * work in SCRATCH_POOL.  The two pools can be the same; recursive
- * calls may use a different SCRATCH_POOL, however.
- */
-static svn_error_t *
-remote_propget(apr_hash_t *props,
-               apr_array_header_t **inherited_props,
-               const char *propname,
-               const char *target_prefix,
-               const char *target_relative,
-               svn_node_kind_t kind,
-               svn_revnum_t revnum,
-               svn_ra_session_t *ra_session,
-               svn_depth_t depth,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__remote_propget(apr_hash_t *props,
+                           apr_array_header_t **inherited_props,
+                           const char *propname,
+                           const char *target_prefix,
+                           const char *target_relative,
+                           svn_node_kind_t kind,
+                           svn_revnum_t revnum,
+                           svn_ra_session_t *ra_session,
+                           svn_depth_t depth,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   apr_hash_t *dirents;
   apr_hash_t *prop_hash = NULL;
@@ -672,15 +650,15 @@ remote_propget(apr_hash_t *props,
           new_target_relative = svn_relpath_join(target_relative, this_name,
                                                  iterpool);
 
-          SVN_ERR(remote_propget(props, NULL,
-                                 propname,
-                                 target_prefix,
-                                 new_target_relative,
-                                 this_ent->kind,
-                                 revnum,
-                                 ra_session,
-                                 depth_below_here,
-                                 result_pool, iterpool));
+          SVN_ERR(svn_client__remote_propget(props, NULL,
+                                             propname,
+                                             target_prefix,
+                                             new_target_relative,
+                                             this_ent->kind,
+                                             revnum,
+                                             ra_session,
+                                             depth_below_here,
+                                             result_pool, iterpool));
         }
 
       svn_pool_destroy(iterpool);
@@ -970,7 +948,8 @@ svn_client_propget5(apr_hash_t **props,
           if (!local_explicit_props)
             *props = apr_hash_make(result_pool);
 
-          SVN_ERR(remote_propget(!local_explicit_props ? *props : NULL,
+          SVN_ERR(svn_client__remote_propget(
+                                 !local_explicit_props ? *props : NULL,
                                  !local_iprops ? inherited_props : NULL,
                                  propname, loc->url, "",
                                  kind, loc->rev, ra_session,

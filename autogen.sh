@@ -205,7 +205,7 @@ fi
 echo "Creating svn_private_config.h.in..."
 ${AUTOHEADER:-autoheader}
 
-# If there's a config.cache file, we may need to delete it.  
+# If there's a config.cache file, we may need to delete it.
 # If we have an existing configure script, save a copy for comparison.
 if [ -f config.cache ] && [ -f configure ]; then
   cp configure configure.$$.tmp

@@ -805,7 +805,7 @@ append_locks(dav_lockdb *lockdb,
          to return the lock details?
 
          Add yet another custom header?
-         Just an header doesn't handle a full error chain... 
+         Just an header doesn't handle a full error chain...
 
          ### Current behavior: we don't report an error.
        */

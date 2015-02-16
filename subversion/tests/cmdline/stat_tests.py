@@ -2093,12 +2093,12 @@ def status_path_handling(sbox):
 
 def status_move_missing_direct(sbox):
   "move information when status is called directly"
-  
+
   sbox.build()
   sbox.simple_copy('A', 'Z')
   sbox.simple_commit('')
   sbox.simple_update('')
-  
+
   sbox.simple_move('Z', 'ZZ')
   sbox.simple_move('A', 'Z')
   sbox.simple_move('Z/B', 'ZB')
@@ -2108,14 +2108,14 @@ def status_move_missing_direct(sbox):
   # Somehow 'svn status' now shows different output for 'ZB/E'
   # when called directly and via an ancestor, as this handles
   # multi-layer in a different way
-  
+
   # Note that the status output may change over different Subversion revisions,
   # but the status on a node should be identical anyway 'svn status' is called
   # on it.
-  
+
   expected_output = [
     'A  +    %s\n' % sbox.ospath('ZB'),
-    '        > moved from %s\n' % os.path.join('..', 'Z', 'B'),    
+    '        > moved from %s\n' % os.path.join('..', 'Z', 'B'),
     'D  +    %s\n' % sbox.ospath('ZB/E'),
     '        > moved to %s\n' % os.path.join('..', 'Z', 'B', 'E'),
   ]
@@ -2133,7 +2133,7 @@ def status_move_missing_direct(sbox):
 
 def status_move_missing_direct_base(sbox):
   "move when status is called directly with base"
-  
+
   sbox.build()
   sbox.simple_copy('A', 'Z')
   sbox.simple_mkdir('Q')
@@ -2141,10 +2141,10 @@ def status_move_missing_direct_base(sbox):
   sbox.simple_mkdir('Q/ZB/E')
   sbox.simple_commit('')
   sbox.simple_update('')
-  
+
   sbox.simple_rm('Q')
   sbox.simple_mkdir('Q')
-  
+
   sbox.simple_move('Z', 'ZZ')
   sbox.simple_move('A', 'Z')
   sbox.simple_move('Z/B', 'Q/ZB')
@@ -2154,14 +2154,14 @@ def status_move_missing_direct_base(sbox):
   # Somehow 'svn status' now shows different output for 'Q/ZB/E'
   # when called directly and via an ancestor, as this handles
   # multi-layer in a different way
-  
+
   # Note that the status output may change over different Subversion revisions,
   # but the status on a node should be identical anyway 'svn status' is called
   # on it.
-  
+
   # This test had a different result as status_move_missing_direct at the time of
   # writing this test.
-  
+
   expected_output = [
     'A  +    %s\n' % sbox.ospath('Q/ZB'),
     '        > moved from %s\n' % os.path.join('..', '..', 'Z', 'B'),

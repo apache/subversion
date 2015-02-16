@@ -627,6 +627,25 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 
 /*** From copy.c ***/
 svn_error_t *
+svn_client_copy6(const apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
+                 const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_error_trace(svn_client_copy7(sources, dst_path, copy_as_child,
+                                          make_parents, ignore_externals,
+                                          FALSE, NULL, revprop_table,
+                                          commit_callback, commit_baton,
+                                          ctx, pool));
+}
+
+svn_error_t *
 svn_client_copy5(svn_commit_info_t **commit_info_p,
                  const apr_array_header_t *sources,
                  const char *dst_path,

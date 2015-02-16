@@ -144,7 +144,7 @@ create_packed_filesystem(const char *dir,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_LOG,
-                                 svn_string_create(R1_LOG_MSG, pool), 
+                                 svn_string_create(R1_LOG_MSG, pool),
                                  pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
@@ -1164,7 +1164,7 @@ id_parser_test(const svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
  #define LONG_MAX_STR #LONG_MAX
-  
+
   /* Verify the revision number parser (e.g. first element of a txn ID) */
   svn_fs_fs__id_part_t id_part;
   SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "0-0"));

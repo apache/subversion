@@ -290,7 +290,7 @@ test_membuffer_serializer_error_handling(apr_pool_t *pool)
   /* Test setting data in cache using partial setter that
      always raises an error. */
   SVN_TEST_ASSERT_ERROR(
-    svn_cache__set_partial(cache, "twenty", 
+    svn_cache__set_partial(cache, "twenty",
                            raise_error_partial_setter_func,
                            NULL, pool),
     APR_EGENERAL);

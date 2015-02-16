@@ -39,7 +39,7 @@ typedef struct packed_int_private_t
 {
   /* First sub-stream, if any.  NULL otherwise. */
   svn_packed__int_stream_t *first_substream;
-  
+
   /* Last sub-stream, if any.  NULL otherwise. */
   svn_packed__int_stream_t *last_substream;
 
@@ -66,7 +66,7 @@ typedef struct packed_int_private_t
 
   /* Deltify data before storing it in PACKED. */
   svn_boolean_t diff;
-  
+
   /* Numbers are likely to contain negative values with small absolutes.
      If TRUE, store the signed bit in LSB before encoding. */
   svn_boolean_t is_signed;
@@ -141,7 +141,7 @@ svn_packed__data_create_root(apr_pool_t *pool)
 {
   svn_packed__data_root_t *root = apr_pcalloc(pool, sizeof(*root));
   root->pool = pool;
-  
+
   return root;
 }
 
@@ -160,7 +160,7 @@ svn_packed__create_int_stream(svn_packed__data_root_t *root,
   private_data->is_signed = signed_ints;
   private_data->is_last = TRUE;
   private_data->pool = root->pool;
- 
+
   stream->buffer_used = 0;
   stream->private_data = private_data;
 
@@ -564,7 +564,7 @@ write_stream_data(svn_stream_t *stream,
   SVN_ERR(svn__compress(uncompressed,
                         compressed,
                         SVN_DELTA_COMPRESSION_LEVEL_DEFAULT));
-      
+
   SVN_ERR(write_stream_uint(stream, compressed->len));
   SVN_ERR(svn_stream_write(stream, compressed->data, &compressed->len));
 
@@ -587,7 +587,7 @@ svn_packed__data_write(svn_stream_t *stream,
     = svn_stringbuf_create_ensure(1024, scratch_pool);
   svn_stringbuf_t *uncompressed
     = svn_stringbuf_create_ensure(1024, scratch_pool);
-    
+
   /* write tree structure */
   svn_stringbuf_t *tree_struct
     = svn_stringbuf_create_ensure(127, scratch_pool);
@@ -613,7 +613,7 @@ svn_packed__data_write(svn_stream_t *stream,
       append_int_stream(int_stream, uncompressed);
       SVN_ERR(write_stream_data(stream, uncompressed, compressed));
     }
-  
+
   for (byte_stream = root->first_byte_stream;
        byte_stream;
        byte_stream = byte_stream->next)
@@ -849,7 +849,7 @@ svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
   private_data->item_count -= end;
 }
 
-apr_uint64_t 
+apr_uint64_t
 svn_packed__get_uint(svn_packed__int_stream_t *stream)
 {
   if (stream->buffer_used == 0)
@@ -876,7 +876,7 @@ svn_packed__get_bytes(svn_packed__byte_stream_t *stream,
 
   /* advance packed buffer */
   stream->packed->data += count;
-  stream->packed->len -= count; 
+  stream->packed->len -= count;
   stream->packed->blocksize -= count;
 
   *len = count;
@@ -963,7 +963,7 @@ read_stream_data(svn_stream_t *stream,
 {
   apr_uint64_t len;
   apr_size_t compressed_len;
-  
+
   SVN_ERR(read_stream_uint(stream, &len));
   compressed_len = (apr_size_t)len;
 
@@ -1033,11 +1033,11 @@ svn_packed__data_read(svn_packed__data_root_t **root_p,
 {
   apr_uint64_t i;
   apr_uint64_t count;
-  
+
   svn_packed__int_stream_t *int_stream;
   svn_packed__byte_stream_t *byte_stream;
   svn_packed__data_root_t *root = svn_packed__data_create_root(result_pool);
-  
+
   svn_stringbuf_t *compressed
     = svn_stringbuf_create_ensure(1024, scratch_pool);
   svn_stringbuf_t *uncompressed
@@ -1052,7 +1052,7 @@ svn_packed__data_read(svn_packed__data_root_t **root_p,
   tree_struct
     = svn_stringbuf_create_ensure((apr_size_t)tree_struct_size, scratch_pool);
   tree_struct->len = (apr_size_t)tree_struct_size;
-  
+
   SVN_ERR(svn_stream_read_full(stream, tree_struct->data, &tree_struct->len));
   tree_struct->data[tree_struct->len] = '\0';
 
@@ -1066,7 +1066,7 @@ svn_packed__data_read(svn_packed__data_root_t **root_p,
 
   count = read_packed_uint(tree_struct);
   for (i = 0; i < count; ++i)
-    read_byte_stream_structure(tree_struct, 
+    read_byte_stream_structure(tree_struct,
                                create_bytes_stream_body(root),
                                root->first_int_stream);
 

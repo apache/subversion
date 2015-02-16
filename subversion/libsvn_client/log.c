@@ -303,7 +303,7 @@ limit_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 
    The limitations on TARGETS specified by svn_client_log5 are enforced here.
    So TARGETS can only contain a single WC path or a URL and zero or more
-   relative paths -- anything else will raise an error. 
+   relative paths -- anything else will raise an error.
 
    PEG_REVISION, TARGETS, and CTX are as per svn_client_log5.
 
@@ -642,7 +642,7 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
                apr_array_header_t *log_segments,
                svn_client__pathrev_t *actual_loc,
                svn_ra_session_t *ra_session,
-               /* The following are as per svn_client_log5. */ 
+               /* The following are as per svn_client_log5. */
                const apr_array_header_t *targets,
                int limit,
                svn_boolean_t discover_changed_paths,
@@ -761,7 +761,7 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
          So to be safe we handle that case. */
       if (matching_segment == NULL)
         continue;
-      
+
       /* A segment with a NULL path means there is gap in the history.
          We'll just proceed and let svn_ra_get_log2 fail with a useful
          error...*/

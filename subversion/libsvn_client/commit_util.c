@@ -1559,7 +1559,7 @@ do_item_commit(void **dir_baton,
     file_pool = pool;
 
   /* Subpools are cheap, but memory isn't */
-  file_pool = svn_pool_create(file_pool); 
+  file_pool = svn_pool_create(file_pool);
 
   /* Call the cancellation function. */
   if (ctx->cancel_func)

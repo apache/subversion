@@ -235,6 +235,11 @@ check_ra_version(const svn_version_t *ra_version, const char *scheme)
 
 svn_error_t *svn_ra_initialize(apr_pool_t *pool)
 {
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
+  /* Ensure that DSO subsystem is initialized early as possible if
+     we're going to use it. */
+  SVN_ERR(svn_dso_initialize2());
+#endif
   return SVN_NO_ERROR;
 }
 
@@ -733,18 +738,19 @@ struct ccw_baton
   svn_branch_revision_root_t *branching_txn;
 };
 
-/* Wrapper which populates the repos_root field of the commit_info struct */
+/* Wrapper which stores the branching/move-tracking info.
+ */
 static svn_error_t *
 commit_callback_wrapper(const svn_commit_info_t *commit_info,
                         void *baton,
                         apr_pool_t *pool)
 {
   struct ccw_baton *ccwb = baton;
-  svn_commit_info_t *ci = svn_commit_info_dup(commit_info, pool);
 
-  SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
-
-  SVN_ERR(ccwb->original_callback(ci, ccwb->original_baton, pool));
+  if (ccwb->original_callback)
+    {
+      SVN_ERR(ccwb->original_callback(commit_info, ccwb->original_baton, pool));
+    }
 
   /* if this commit used element-branching info, store the new info */
   if (ccwb->branching_txn)
@@ -769,25 +775,17 @@ remap_commit_callback(svn_commit_callback2_t *callback,
                       void *original_baton,
                       apr_pool_t *result_pool)
 {
-  if (original_callback == NULL)
-    {
-      *callback = NULL;
-      *callback_baton = NULL;
-    }
-  else
-    {
-      /* Allocate this in RESULT_POOL, since the callback will be called
-         long after this function has returned. */
-      struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
+  /* Allocate this in RESULT_POOL, since the callback will be called
+     long after this function has returned. */
+  struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
 
-      ccwb->session = session;
-      ccwb->branching_txn = branching_txn;
-      ccwb->original_callback = original_callback;
-      ccwb->original_baton = original_baton;
+  ccwb->session = session;
+  ccwb->branching_txn = branching_txn;
+  ccwb->original_callback = original_callback;
+  ccwb->original_baton = original_baton;
 
-      *callback = commit_callback_wrapper;
-      *callback_baton = ccwb;
-    }
+  *callback = commit_callback_wrapper;
+  *callback_baton = ccwb;
 }
 
 
@@ -938,11 +936,6 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
-  remap_commit_callback(&commit_callback, &commit_baton,
-                        session, NULL /*branching_txn*/,
-                        commit_callback, commit_baton,
-                        pool);
-
   SVN_ERR(session->vtable->get_commit_editor(session, editor, edit_baton,
                                              revprop_table,
                                              commit_callback, commit_baton,
@@ -1750,11 +1743,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
     {
       /* The specific RA layer does not have an implementation. Use our
          default shim over the normal commit editor.  */
-
-      /* Remap for RA layers exposing Ev1.  */
-      remap_commit_callback(&commit_callback, &commit_baton,
-                            session, NULL, commit_callback, commit_baton,
-                            result_pool);
 
       return svn_error_trace(svn_ra__use_commit_shim(
                                editor,
