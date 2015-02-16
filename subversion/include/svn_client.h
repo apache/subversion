@@ -4561,6 +4561,7 @@ svn_client_copy7(const apr_array_header_t *sources,
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy6(const apr_array_header_t *sources,
                  const char *dst_path,
