@@ -25,7 +25,7 @@ if [ -z "$1" ]; then
 fi
 
 if [ -z "$2" ]; then
-    echo "Missing parameter: device name file"
+    echo "Missing parameter: RAMdisk config file"
     exit 1
 fi
 
@@ -34,11 +34,11 @@ ramconf="$2"
 
 ramconfpath=$(dirname "${ramconf}")
 if [ ! -d "${ramconfpath}" ]; then
-    echo "Missing device name parent: ${ramconfpath}"
+    echo "Missing RAMdisk config file path: ${ramconfpath}"
     exit 1
 fi
 if [ -f "${ramconf}" ]; then
-    echo "Device name file exists: ${ramconf}"
+    echo "RAMdisk config file exists: ${ramconf}"
     exit 1
 fi
 
@@ -47,21 +47,17 @@ if [ -d "${volume}" ]; then
     exit 1
 fi
 
-mount | grep "^/dev/disk[0-9]* on ${volume} (hfs" >/dev/null && {
-    mountpoint=$(mount | grep "^/dev/disk[0-9]* on ${volume} (hfs")
-    echo "Already mounted: ${mountpoint}"
-    exit 1
+mount | grep "^/dev/disk[0-9][0-9]* on ${volume} (hfs" >/dev/null || {
+    set -e
+    echo -n "" > "${ramconf}"
+
+    # Make sure we strip trailing spaces from the result of older
+    # versions of hduitil.
+    device=$(echo $(hdiutil attach -nomount ram://900000))
+    newfs_hfs -M 0700 -v "$1" "${device}"
+    hdiutil mountvol "${device}"
+
+    echo -n "${device}" > "${ramconf}"
 }
-
-set -e
-echo -n "" > "${ramconf}"
-
-# Make sure we strip trailing spaces from the result of older
-# versions of hduitil.
-device=$(echo $(hdiutil attach -nomount ram://900000))
-newfs_hfs -M 0700 -v "$1" "${device}"
-hdiutil mountvol "${device}"
-
-echo -n "${device}" > "${ramconf}"
 
 exit 0
