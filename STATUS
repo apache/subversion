@@ -46,18 +46,6 @@ Candidate changes:
    Votes:
      +1: stefan2, breser
 
- * r1590751
-   Use empty, rather than NULL, config if default is unreadable.
-   Justification:
-     svn SEGV reported by user.
-   Votes:
-     +1: philip, danielsh
-     -0: julianfoad (prefer to fix all the programs at the same time;
-                     other queries -- see email thread)
-     +1: danielsh (julianf: I agree with your points on list, but +1ing anyway:
-                     fixing this segfault in svn need not block on fixing
-                     a similar segfault in svnadmin.)
-
  * r1561419, r1561427, 1547489, r1560643, r1573744
    Fix the hotcopy and recovery for pre-1.4 FSFS repositories.
    Branch: ^/subversion/branches/1.8.x-r1573744-and-friends
@@ -142,9 +130,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1659867
    Votes:
-     +1: rhuijben (without r1660091, r1660097)
      +1: danielsh (without r1660091, r1660097, ra_serf part; looks good but I can't vouch for it)
-     +1: philip
+     +1: philip, rhuijben
 
  * r1660071
    When handling a pre-existing working copy as external, register it as such
@@ -169,3 +156,15 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1590751
+   Use empty, rather than NULL, config if default is unreadable.
+   Justification:
+     svn SEGV reported by user.
+   Votes:
+     +1: philip, danielsh, rhuijben
+     -0: julianfoad (prefer to fix all the programs at the same time;
+                     other queries -- see email thread)
+     +1: danielsh (julianf: I agree with your points on list, but +1ing anyway:
+                     fixing this segfault in svn need not block on fixing
+                     a similar segfault in svnadmin.)
