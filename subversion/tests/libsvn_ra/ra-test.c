@@ -162,7 +162,7 @@ commit_callback_with_failure(const svn_commit_info_t *info,
   apr_time_t timetemp;
 
   SVN_TEST_ASSERT(info != NULL);
-  SVN_TEST_STRING_ASSERT(info->author, "jrandom");
+  SVN_TEST_STRING_ASSERT(info->author, "");  /* No auth baton supplied. */
   SVN_TEST_STRING_ASSERT(info->post_commit_err, NULL);
 
   SVN_ERR(svn_time_from_cstring(&timetemp, info->date, scratch_pool));
