@@ -485,8 +485,6 @@ svn_cl__print_status_xml(const char *target_abspath,
     SVN_ERR(svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
                                  ctx->wc_ctx, local_abspath, pool));
 
-  path = make_relpath(target_abspath, target_path, path, pool, pool);
-
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "path", svn_dirent_local_style(path, pool),
                         SVN_VA_NULL);
