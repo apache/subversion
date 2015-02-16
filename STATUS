@@ -75,7 +75,7 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1619380
    Votes:
      +1: rhuijben, stefan2
-     -0: julianfoad (assertion failure on incomplete dir -- see email)
+     -1: julianfoad (assertion failure on incomplete dir -- see email)
 
  * r1651963, r1651966, r1651980, r1651997
    Sequence of moves shouldn't trigger an assertion in the working copy
