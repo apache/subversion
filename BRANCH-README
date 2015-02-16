@@ -1,0 +1,23 @@
+This branch will be used to implement an alternative solution for
+the problem described in issue #4299 in order to solve issue #4556.
+
+Instead of 'svn youngest', we'll implement an extension to 'svn info',
+as described in option 1. of issue #4556, as follows:
+
+  - Add a --detail=FIELD option to 'svn info' that will cause it to
+    display only the value of FIELD and nothing else; for example:
+
+        $ svn info ^/subversion/trunk --detail=revision
+        1660035
+        $ svn info ^/subversion/trunk --detail=last-changed-rev
+        1660014
+
+    and so on.
+
+  - The --detail option is incompatible with the --xml option
+
+  - Initially, only a few field values will be supported with
+    --detail; revision, last-changed-rev, url, relative-url,
+      repository-root; maybe a few more.
+
+  - The 'svn youngest' command will be removed.
