@@ -1374,9 +1374,7 @@ queue_externals_change_path_infos(apr_array_header_t *new_path_infos,
           info->src_url = svn_path_url_add_component2(
                                 parent_info->src_url, dst_relpath,
                                 result_pool);
-          info->src_path = svn_relpath_join(parent_info->src_path,
-                                            dst_relpath,
-                                            result_pool);
+          info->src_path = NULL; /* Only needed on copied dirs */
           info->dst_path = svn_relpath_join(parent_info->dst_path,
                                             dst_relpath,
                                             result_pool);
@@ -1677,7 +1675,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
 
       /* More info for our INFO structure.  */
-      info->src_path = src_rel;
+      info->src_path = src_rel; /* May be NULL, if outside RA session scope */
       info->dst_path = dst_rel;
 
       svn_hash_sets(action_hash, info->dst_path, info);
