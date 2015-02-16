@@ -1051,8 +1051,12 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
       copyfrom_src->repos_relpath = original_repos_relpath;
     }
 
+  /* svn_wc__db_status_incomplete should never happen, as the result won't be
+     stable or guaranteed related to what is in the repository for this
+     revision, but without this it would be hard to diagnose that status... */
   assert(kind == svn_node_dir
          && (status == svn_wc__db_status_normal
+             || status == svn_wc__db_status_incomplete
              || status == svn_wc__db_status_added
              || (status == svn_wc__db_status_deleted && diff_pristine)));
 
@@ -1167,12 +1171,12 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
   if (!skip)
     {
       apr_hash_t *right_props;
-      if (diff_pristine)
-        SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
-                                               scratch_pool, scratch_pool));
+
+      if (props_mod && !diff_pristine)
+        SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
+                                      scratch_pool, scratch_pool));
       else
-        SVN_ERR(svn_wc__get_actual_props(&right_props, db, local_abspath,
-                                         scratch_pool, scratch_pool));
+        right_props = svn_prop_hash_dup(pristine_props, scratch_pool);
 
       SVN_ERR(processor->dir_added(relpath,
                                    copyfrom_src,
