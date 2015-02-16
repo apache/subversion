@@ -3230,6 +3230,42 @@ def update_dir_external_shallow(sbox):
                                         '--set-depth=infinity',
                                         sbox.ospath('A/B/E'))
 
+@Issue(4411)
+def switch_parent_relative_file_external(sbox):
+  "switch parent-relative file external"
+
+  sbox.build()
+
+  # Create a parent-relative file external in r2
+  sbox.simple_propset('svn:externals', '../D/gamma gamma-ext', 'A/B')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create a branch that contains the file external
+  sbox.simple_copy('A', 'A_copy')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Check out A/B_copy to a new working copy
+  branch_wc = sbox.add_wc_path("branch")
+  branch_url = sbox.repo_url + '/A_copy'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout', branch_url,
+                                     branch_wc)
+
+  # Rename the branch
+  sbox.simple_move('A_copy', 'A_copy2')
+  sbox.simple_commit()
+
+  # Switch the branch working copy to the new branch URL
+  new_branch_url = sbox.repo_url + '/A_copy2'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', new_branch_url,
+                                     branch_wc)
+
+  # Bug: The branch working copy can no longer be updated.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', branch_wc)
 
 def update_deletes_file_external(sbox):
   "update deletes a file external"
@@ -3262,6 +3298,41 @@ def update_deletes_file_external(sbox):
   # E000002: Can't remove directory '.../A_copy/C': No such file or directory
   sbox.simple_update()
   
+
+@Issue(4519)
+def switch_relative_externals(sbox):
+  "switch relative externals"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         '-U', sbox.repo_url, '-m', 'Q',
+                                         'mkdir', 'branches',
+                                         'cp', '1', 'A', 'trunk',
+                                         'cp', '1', 'A', 'branches/A',
+                                         'propset', 'svn:externals',
+                                            '../C dirExC\n ../mu fileExMu',
+                                            'trunk/B',
+                                         'propset', 'svn:externals',
+                                            '../C dirExC\n ../mu fileExMu',
+                                            'branches/A/B')
+
+  wc = sbox.add_wc_path('wc')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', sbox.repo_url + '/trunk', wc)
+
+  # This forgets to update some externals data
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', sbox.repo_url + '/branches/A', wc)
+
+  # This upgrade makes the following update fail
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', wc)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', wc)
+
 
 ########################################################################
 # Run the tests
@@ -3315,7 +3386,9 @@ test_list = [ None,
               move_with_file_externals,
               pinned_externals,
               update_dir_external_shallow,
-              update_deletes_file_external
+              switch_parent_relative_file_external,
+              update_deletes_file_external,
+              switch_relative_externals,
              ]
 
 if __name__ == '__main__':
