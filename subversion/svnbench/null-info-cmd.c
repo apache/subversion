@@ -256,7 +256,7 @@ svn_cl__null_info(apr_getopt_t *os,
           if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
               err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
             {
-              svn_handle_warning2(stderr, err, "svn-bench: ");
+              svn_handle_warning2(stderr, err, "svnbench: ");
               svn_error_clear(svn_cmdline_fprintf(stderr, subpool, "\n"));
             }
           else

@@ -240,10 +240,22 @@ public class SVNClient implements ISVNClient
 
     public native void copy(List<CopySource> sources, String destPath,
                             boolean copyAsChild, boolean makeParents,
-                            boolean ignoreExternals,
+                            boolean ignoreExternals, boolean pinExternals,
+                            Map<String, List<ExternalItem>> externalsToPin,
                             Map<String, String> revpropTable,
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
+
+    public void copy(List<CopySource> sources, String destPath,
+                     boolean copyAsChild, boolean makeParents,
+                     boolean ignoreExternals,
+                     Map<String, String> revpropTable,
+                     CommitMessageCallback handler, CommitCallback callback)
+            throws ClientException
+    {
+        copy(sources, destPath, copyAsChild, makeParents, ignoreExternals,
+             false, null, revpropTable, handler, callback);
+    }
 
     public native void move(Set<String> srcPaths, String destPath,
                             boolean force, boolean moveAsChild,

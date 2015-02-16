@@ -24,7 +24,7 @@ scripts=$(cd $(dirname "$0") && pwd)
 
 . ${scripts}/setenv.sh
 
-${scripts}/mkramdisk.sh ${volume_name}
+${scripts}/mkramdisk.sh ${volume_name} ${ramconf}
 
 # These are the default APR and Serf config options
 serfconfig="--with-serf=${SVNBB_SERF} --with-apxs=/usr/sbin/apxs"

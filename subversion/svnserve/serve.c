@@ -2179,7 +2179,7 @@ static svn_error_t *log_receiver(void *baton,
         }
     }
   SVN_ERR(svn_ra_svn__end_list(conn, pool));
-  
+
   /* send LOG_ENTRY main members */
   SVN_ERR(svn_ra_svn__write_data_log_entry(conn, pool,
                                            log_entry->revision,
@@ -2856,7 +2856,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                           &current_rev);
       if (write_err)
         break;
-      
+
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    subpool);
@@ -3755,7 +3755,7 @@ construct_server_baton(server_baton_t **baton,
   server_baton_t *b = apr_pcalloc(conn_pool, sizeof(*b));
   fs_warning_baton_t *warn_baton;
   svn_stringbuf_t *cap_log = svn_stringbuf_create_empty(scratch_pool);
-  
+
   b->repository = apr_pcalloc(conn_pool, sizeof(*b->repository));
   b->repository->username_case = params->username_case;
   b->repository->base = params->base;
@@ -3857,7 +3857,7 @@ construct_server_baton(server_baton_t **baton,
   err = handle_config_error(find_repos(client_url, params->root, b->vhost,
                                        b->read_only, params->cfg,
                                        b->repository, params->config_pool,
-                                       params->authz_pool, params->fs_config, 
+                                       params->authz_pool, params->fs_config,
                                        conn_pool, scratch_pool),
                             b);
   if (!err)

@@ -212,7 +212,7 @@ for opt, val in opts:
     test_javahl = 1
   elif opt == '--swig':
     if val not in ['perl', 'python', 'ruby']:
-      sys.stderr.write('Running \'%s\' swig tests not supported (yet).\n' 
+      sys.stderr.write('Running \'%s\' swig tests not supported (yet).\n'
                         % (val,))
     test_swig = val
   elif opt == '--list':
@@ -257,7 +257,7 @@ if fs_type == 'bdb':
   all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
             + gen_obj.scripts + gen_obj.bdb_scripts
 else:
-  all_tests = gen_obj.test_progs + gen_obj.scripts            
+  all_tests = gen_obj.test_progs + gen_obj.scripts
 
 client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
 
@@ -323,14 +323,14 @@ def locate_libs():
   "Move DLLs to a known location and set env vars"
 
   debug = (objdir == 'Debug')
-  
+
   for lib in gen_obj._libraries.values():
 
     if debug:
       name, dir = lib.debug_dll_name, lib.debug_dll_dir
     else:
       name, dir = lib.dll_name, lib.dll_dir
-      
+
     if name and dir:
       src = os.path.join(dir, name)
       if os.path.exists(src):
@@ -799,7 +799,7 @@ elif test_javahl:
             '-Dtest.rooturl=',
             '-Dtest.fstype=' + fs_type ,
             '-Dtest.tests=',
-  
+
             '-Djava.library.path='
                       + os.path.join(abs_objdir,
                                      'subversion/bindings/javahl/native'),

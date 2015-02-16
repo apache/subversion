@@ -242,8 +242,8 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   remove_lock = (! keep_locks && (item->state_flags
                                        & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
 
-  /* When the node was deleted (or replaced), we need to always remove the 
-     locks, as they're invalidated on the server. We cannot honor the 
+  /* When the node was deleted (or replaced), we need to always remove the
+     locks, as they're invalidated on the server. We cannot honor the
      SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN flag here because it does not tell
      us whether we have locked children. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
@@ -252,7 +252,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   return svn_error_trace(
          svn_wc_queue_committed4(queue, wc_ctx, item->path,
                                  loop_recurse,
-                                 0 != (item->state_flags & 
+                                 0 != (item->state_flags &
                                        (SVN_CLIENT_COMMIT_ITEM_ADD
                                         | SVN_CLIENT_COMMIT_ITEM_DELETE
                                         | SVN_CLIENT_COMMIT_ITEM_TEXT_MODS

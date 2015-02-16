@@ -443,7 +443,7 @@ svn_string_compare_stringbuf(const svn_string_t *str1,
  */
 
 /** Divide @a input into substrings, interpreting any char from @a sep
- * as a token separator.  
+ * as a token separator.
  *
  * Return an array of copies of those substrings (plain const char*),
  * allocating both the array and the copies in @a pool.

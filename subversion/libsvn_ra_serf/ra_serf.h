@@ -1078,7 +1078,7 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
 
 /* Set @a VCC_URL to the default VCC for our repository based on @a
  * ORIG_PATH for the session @a SESSION, ensuring that the VCC URL and
- * repository root URLs are cached in @a SESSION. 
+ * repository root URLs are cached in @a SESSION.
  *
  * All temporary allocations will be made in @a SCRATCH_POOL. */
 svn_error_t *

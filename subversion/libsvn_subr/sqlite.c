@@ -879,7 +879,7 @@ internal_open(svn_sqlite__db_t *db, const char *path, svn_sqlite__mode_t mode,
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t.  SQLite always
-       requires sqlite3_close() after sqlite3_open_v2() while Subversion 
+       requires sqlite3_close() after sqlite3_open_v2() while Subversion
        typically does not require close() after an open() that returns an
        error.  So we must ensure we close the handle if this function, or
        the caller svn_sqlite__open, returns an error to the application. */
@@ -1171,7 +1171,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  affects application(read: Subversion) performance/behavior. */
               "PRAGMA foreign_keys=OFF;"      /* SQLITE_DEFAULT_FOREIGN_KEYS*/
               "PRAGMA locking_mode = NORMAL;" /* SQLITE_DEFAULT_LOCKING_MODE */
-                            ),
+              "PRAGMA journal_mode = TRUNCATE;"
+              ),
                 *db);
 
 #if defined(SVN_DEBUG)

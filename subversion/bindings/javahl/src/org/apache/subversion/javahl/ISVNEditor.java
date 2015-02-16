@@ -30,7 +30,10 @@ import java.io.InputStream;
 import java.util.Map;
 
 /**
- * Editor interface (implements the EV2 abstraction).
+ * Commit/update/status editor interface.
+ * <p>
+ * <b>This interface is EXPERIMENTAL.
+ * It may change or be removed in a future version of JavaHL</b>
  * @see <a href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/private/svn_editor.h">svn_editor.h</a>
  *      for all restrictions on driving an editor.
  * @since 1.9

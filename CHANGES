@@ -138,6 +138,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * alow the use of libmagic to be configured via subversion configuration
       file or SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE env variable (r1572916)
     * store human readable info about SSL certs in auth store (r1573625)
+    * new '--pin-externals' option for svn copy (issue #1258)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)

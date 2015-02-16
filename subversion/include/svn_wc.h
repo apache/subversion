@@ -2185,6 +2185,14 @@ typedef struct svn_wc_conflict_result_t
       NULL) in the user's working copy. */
   svn_boolean_t save_merged;
 
+  /** If not NULL, this is the new merged property, used when choosing
+   * #svn_wc_conflict_choose_merged. This value is prefered over using
+   * merged_file.
+   *
+   * @since New in 1.9.
+   */
+  const svn_string_t *merged_value;
+
 } svn_wc_conflict_result_t;
 
 
@@ -2194,7 +2202,8 @@ typedef struct svn_wc_conflict_result_t
  *
  * Set the @c choice field of the structure to @a choice, @c merged_file
  * to @a merged_file, and @c save_merged to false.  Make only a shallow
- * copy of the pointer argument @a merged_file.
+ * copy of the pointer argument @a merged_file. @a merged_file may be
+ * NULL if setting merged_file is not needed.
  *
  * @since New in 1.5.
  */

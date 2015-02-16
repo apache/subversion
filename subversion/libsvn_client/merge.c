@@ -1849,9 +1849,14 @@ merge_file_opened(void **new_file_baton,
         }
       else if (fb->tree_conflict_local_node_kind != svn_node_file)
         {
+          svn_boolean_t added;
           fb->shadowed = TRUE;
 
-          fb->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+          SVN_ERR(svn_wc__node_is_added(&added, merge_b->ctx->wc_ctx,
+                                        local_abspath, scratch_pool));
+
+          fb->tree_conflict_reason = added ? svn_wc_conflict_reason_added
+                                           : svn_wc_conflict_reason_obstructed;
 
           /* ### Similar to directory */
           *skip = TRUE;
@@ -1952,8 +1957,14 @@ merge_file_opened(void **new_file_baton,
                    && !is_deleted)
             {
               /* Set a tree conflict */
+              svn_boolean_t added;
+
               fb->shadowed = TRUE;
-              fb->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+              SVN_ERR(svn_wc__node_is_added(&added, merge_b->ctx->wc_ctx,
+                                            local_abspath, scratch_pool));
+
+              fb->tree_conflict_reason = added ? svn_wc_conflict_reason_added
+                                               : svn_wc_conflict_reason_obstructed;
             }
         }
 
@@ -2621,9 +2632,14 @@ merge_dir_opened(void **new_dir_baton,
         }
       else if (db->tree_conflict_local_node_kind != svn_node_dir)
         {
-          db->shadowed = TRUE;
+          svn_boolean_t added;
 
-          db->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+          db->shadowed = TRUE;
+          SVN_ERR(svn_wc__node_is_added(&added, merge_b->ctx->wc_ctx,
+                                        local_abspath, scratch_pool));
+
+          db->tree_conflict_reason = added ? svn_wc_conflict_reason_added
+                                           : svn_wc_conflict_reason_obstructed;
 
           /* ### To avoid breaking tests */
           *skip = TRUE;
@@ -2766,8 +2782,14 @@ merge_dir_opened(void **new_dir_baton,
                    && !is_deleted)
             {
               /* Set a tree conflict */
+              svn_boolean_t added;
               db->shadowed = TRUE;
-              db->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+
+              SVN_ERR(svn_wc__node_is_added(&added, merge_b->ctx->wc_ctx,
+                                            local_abspath, scratch_pool));
+
+              db->tree_conflict_reason = added ? svn_wc_conflict_reason_added
+                                               : svn_wc_conflict_reason_obstructed;
             }
         }
 

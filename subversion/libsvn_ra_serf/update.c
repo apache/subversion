@@ -785,7 +785,7 @@ get_best_connection(report_context_t *ctx)
         }
       conn = ctx->sess->conns[best_conn];
 #else
-    /* We don't know how many requests are pending per connection, so just 
+    /* We don't know how many requests are pending per connection, so just
        cycle them. */
       conn = ctx->sess->conns[ctx->sess->cur_conn];
       ctx->sess->cur_conn++;
@@ -1053,7 +1053,7 @@ close_file(file_baton_t *file,
    ### Given that we only fetch props on additions, is this really necessary?
        Or is it covering up old local copy bugs where we copied locks to other
        paths? */
-  if (!ctx->add_props_included 
+  if (!ctx->add_props_included
       && file->lock_token && !file->found_lock_prop
       && SVN_IS_VALID_REVNUM(file->base_rev) /* file_is_added */)
     {
@@ -1854,9 +1854,9 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
         {
           const char *revstr = svn_hash_gets(attrs, "rev");
           apr_int64_t rev;
-        
+
           SVN_ERR(svn_cstring_atoi64(&rev, revstr));
-        
+
           SVN_ERR(ctx->editor->set_target_revision(ctx->editor_baton,
                                                    (svn_revnum_t)rev,
                                                    scratch_pool));

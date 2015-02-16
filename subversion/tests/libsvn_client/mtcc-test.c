@@ -614,7 +614,7 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
                                 handle_rev, &hrb,
                                 subpool));
   SVN_TEST_ASSERT(hrb.last == 6);
-  
+
   return SVN_NO_ERROR;
 }
 

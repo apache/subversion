@@ -1107,7 +1107,7 @@ run_prej_install(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
                                    scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__conflict_read_prop_conflict(&prejfile_abspath,
@@ -1287,7 +1287,7 @@ run_set_text_conflict_markers(work_item_baton_t *wqb,
     /* Check if we should combine with a property conflict... */
     svn_skel_t *conflicts;
 
-    SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+    SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
 
     if (! conflicts)
@@ -1353,7 +1353,7 @@ run_set_property_conflict_marker(work_item_baton_t *wqb,
     svn_skel_t *conflicts;
     apr_hash_t *prop_names;
 
-    SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+    SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
 
     if (! conflicts)

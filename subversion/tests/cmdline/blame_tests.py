@@ -951,12 +951,12 @@ def blame_youngest_to_oldest(sbox):
   line = "New contents for iota\n"
   svntest.main.file_append(iota, line)
   sbox.simple_commit()
-  
+
   # Move the file, to check that the operation will peg correctly.
   iota_moved = sbox.ospath('iota_moved')
   sbox.simple_move('iota', 'iota_moved')
   sbox.simple_commit()
-  
+
   # Delete a line.
   open(iota_moved, 'w').write(line)
   sbox.simple_commit()

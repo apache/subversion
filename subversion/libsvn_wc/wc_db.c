@@ -611,8 +611,7 @@ blank_ibb(insert_base_baton_t *pibb)
    was recorded, otherwise to FALSE.
  */
 static svn_error_t *
-db_extend_parent_delete(svn_boolean_t *added_delete,
-                        svn_wc__db_wcroot_t *wcroot,
+db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
                         const char *local_relpath,
                         svn_node_kind_t kind,
                         int op_depth,
@@ -624,9 +623,6 @@ db_extend_parent_delete(svn_boolean_t *added_delete,
   const char *parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
   SVN_ERR_ASSERT(local_relpath[0]);
-
-  if (added_delete)
-    *added_delete = FALSE;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
@@ -654,9 +650,6 @@ db_extend_parent_delete(svn_boolean_t *added_delete,
                                     local_relpath, parent_op_depth,
                                     parent_relpath, kind_map, kind));
           SVN_ERR(svn_sqlite__update(NULL, stmt));
-
-          if (added_delete)
-            *added_delete = TRUE;
         }
     }
 
@@ -881,8 +874,7 @@ insert_base_node(const insert_base_baton_t *pibb,
               || (pibb->status == svn_wc__db_status_incomplete))
           && ! pibb->file_external)
         {
-          SVN_ERR(db_extend_parent_delete(NULL,
-                                          wcroot, local_relpath,
+          SVN_ERR(db_extend_parent_delete(wcroot, local_relpath,
                                           pibb->kind, 0,
                                           scratch_pool));
         }
@@ -4878,14 +4870,11 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
     {
       const char *src_relpath;
       const char *dst_relpath;
-      svn_boolean_t exists;
 
       svn_pool_clear(iterpool);
 
       src_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
       dst_relpath = svn_sqlite__column_text(stmt, 2, iterpool);
-
-      exists = !svn_sqlite__column_is_null(stmt, 3);
 
       err = svn_sqlite__bindf(stmt2, "isdsds", wcroot->wc_id,
                               src_relpath, src_op_depth,
@@ -4899,21 +4888,11 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
       if (err)
         break;
 
-      if (strlen(dst_relpath) > strlen(dst_op_relpath))
+      /* The node can't be deleted where it is added, so extension of
+         an existing shadowing is only interesting 2 levels deep. */
+      if (relpath_depth(dst_relpath) > (dst_op_depth+1))
         {
-          svn_boolean_t added_delete = FALSE;
-          svn_node_kind_t kind = svn_sqlite__column_token(stmt, 1, kind_map);
-
-          /* The op root can't be shadowed, so extension of a parent delete
-             is only needed when the parent can be deleted */
-          if (relpath_depth(dst_relpath) > (dst_op_depth+1))
-            {
-              err = db_extend_parent_delete(&added_delete, wcroot, dst_relpath,
-                                            kind, dst_op_depth, iterpool);
-
-              if (err)
-                break;
-            }
+          svn_boolean_t exists = !svn_sqlite__column_is_null(stmt, 3);
 
           if (exists)
             {
@@ -4921,28 +4900,19 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
 
               presence = svn_sqlite__column_token(stmt, 3, presence_map);
 
-              if (presence == svn_wc__db_status_not_present)
+              if (presence != svn_wc__db_status_normal)
                 exists = FALSE;
             }
 
-          /* ### Fails in a few tests... Needs further research */
-          /*SVN_ERR_ASSERT(!(exists && added_delete));*/
-
           if (!exists)
             {
-              svn_boolean_t shadowed;
+              svn_node_kind_t kind = svn_sqlite__column_token(stmt, 1, kind_map);
 
-              shadowed = svn_sqlite__column_int(stmt, 4);
+              err = db_extend_parent_delete(wcroot, dst_relpath,
+                                            kind, dst_op_depth, iterpool);
 
-              /*if (!shadowed && !added_delete)
-                {
-                  err = svn_error_createf(
-                              SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                              _("Node '%s' was unexpectedly added unshadowed"),
-                                path_for_error_message(wcroot, dst_relpath,
-                                                       iterpool));
-                  break;
-                }*/
+              if (err)
+                break;
             }
         }
 
@@ -5010,7 +4980,7 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
   /* ### TODO: Did we handle ACTUAL as intended? */
-  
+
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
 
   if (conflict)
@@ -6796,7 +6766,7 @@ op_revert_txn(void *baton,
     }
   else
     {
-      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, wcroot,
+      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, wcroot,
                                                 local_relpath,
                                                 scratch_pool, scratch_pool));
     }
@@ -7024,7 +6994,7 @@ op_revert_recursive_txn(void *baton,
                         STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
-      
+
       SVN_ERR(svn_sqlite__get_statement(
                         &stmt, wcroot->sdb,
                         STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
@@ -13889,6 +13859,7 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **marker_files,
 
 svn_error_t *
 svn_wc__db_read_conflict(svn_skel_t **conflict,
+                         svn_node_kind_t *kind,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -13902,14 +13873,15 @@ svn_wc__db_read_conflict(svn_skel_t **conflict,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_trace(svn_wc__db_read_conflict_internal(conflict, wcroot,
-                                                           local_relpath,
+  return svn_error_trace(svn_wc__db_read_conflict_internal(conflict, kind,
+                                                           wcroot, local_relpath,
                                                            result_pool,
                                                            scratch_pool));
 }
 
 svn_error_t *
 svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
+                                  svn_node_kind_t *kind,
                                   svn_wc__db_wcroot_t *wcroot,
                                   const char *local_relpath,
                                   apr_pool_t *result_pool,
@@ -13918,6 +13890,9 @@ svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
+  if (kind)
+    *kind = svn_node_none;
+
   /* Check if we have a conflict in ACTUAL */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
@@ -13925,12 +13900,13 @@ svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (! have_row)
+  if (!have_row || kind)
     {
       /* Do this while stmt is still open to avoid closing the sqlite
          transaction and then reopening. */
       svn_sqlite__stmt_t *stmt_node;
       svn_error_t *err;
+      svn_boolean_t have_info = FALSE;
 
       err = svn_sqlite__get_statement(&stmt_node, wcroot->sdb,
                                       STMT_SELECT_NODE_INFO);
@@ -13942,25 +13918,47 @@ svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
                                 local_relpath);
 
       if (!err)
-        err = svn_sqlite__step(&have_row, stmt_node);
+        err = svn_sqlite__step(&have_info, stmt_node);
+
+      if (!err && kind && have_info)
+        {
+          svn_wc__db_status_t status;
+          int op_depth = svn_sqlite__column_int(stmt_node, 0);
+
+          status = svn_sqlite__column_token(stmt_node, 3, presence_map);
+
+          if (op_depth > 0)
+            err = convert_to_working_status(&status, status);
+
+          if (!err && (status == svn_wc__db_status_normal
+                       || status == svn_wc__db_status_added
+                       || status == svn_wc__db_status_deleted
+                       || status == svn_wc__db_status_incomplete))
+            {
+              *kind = svn_sqlite__column_token(stmt_node, 4, kind_map);
+            }
+        }
 
       if (stmt_node)
         err = svn_error_compose_create(err,
                                        svn_sqlite__reset(stmt_node));
 
-      SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-
-      if (have_row)
+      if (!have_row || err)
         {
-          *conflict = NULL;
-          return SVN_NO_ERROR;
-        }
+          SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                               _("The node '%s' was not found."),
+          if (have_info)
+            {
+              *conflict = NULL;
+              return SVN_NO_ERROR;
+            }
+
+          return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                   _("The node '%s' was not found."),
                                    path_for_error_message(wcroot,
                                                           local_relpath,
                                                           scratch_pool));
+        }
     }
 
   {
@@ -16280,7 +16278,7 @@ static int
 compare_queue_items(const void *v1,
                     const void *v2)
 {
-  const commit_queue_item_t *cqi1 
+  const commit_queue_item_t *cqi1
               = *(const commit_queue_item_t **)v1;
   const commit_queue_item_t *cqi2
               = *(const commit_queue_item_t **)v2;

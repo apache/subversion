@@ -48,7 +48,7 @@ typedef struct fs_x__id_t
 
 
 /* The state machine behind this is as follows:
- 
+
    (A) FS passed in during context construction still open and uses a
        different pool as the context (Usually the initial state).  In that
        case, FS_PATH is NULL and we watch for either pool's cleanup.

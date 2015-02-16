@@ -71,7 +71,7 @@ svn_fs_fs__l2p_proto_index_add_revision(apr_file_t *proto_index,
  * Not all possible index values need to be used.  OFFSET may be -1 to
  * mark 'invalid' item indexes but that is already implied for all item
  * indexes not explicitly given a mapping.
- * 
+ *
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
@@ -83,7 +83,7 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
 /* Use the proto index file stored at PROTO_FILE_NAME, construct the final
  * log-to-phys index and append it to INDEX_FILE.  The first revision will
  * be REVISION, entries to the next revision will be assigned to REVISION+1
- * and so forth.  
+ * and so forth.
  *
  * Return the MD5 checksum of the on-disk index data in *CHECKSUM, allocated
  * in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.

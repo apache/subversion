@@ -2121,7 +2121,7 @@ def tree_conflicts_on_switch_1_1(sbox):
     'DDF/D1/D2'         : Item(status='  ', treeconflict='U'),
     'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='U')
   })
-  
+
   expected_disk = svntest.wc.State('', {
   'F'               : Item(),
   'D'               : Item(),

@@ -257,7 +257,7 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
          later.  APR_STRERR will be in the local encoding, not in UTF-8, though.
        */
       svn_strerror(apr_err, apr_strerr, sizeof(apr_strerr));
-      return svn_error_createf(SVN_ERR_PLUGIN_LOAD_FAILURE, 
+      return svn_error_createf(SVN_ERR_PLUGIN_LOAD_FAILURE,
                                svn_error_create(apr_err, NULL, apr_strerr),
                                "%s%s", name, errstr);
     }
