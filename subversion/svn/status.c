@@ -138,37 +138,38 @@ generate_status_desc(enum svn_wc_status_kind status)
 
 /* Make a relative path containing '..' elements as needed.
    TARGET_ABSPATH shall be the absolute version of TARGET_PATH.
-   TARGET_ABSPATH, TARGET_PATH and PATH shall be canonical.
+   TARGET_ABSPATH, TARGET_PATH and LOCAL_ABSPATH shall be canonical
 
    If above conditions are met, a relative path that leads to PATH
    from TARGET_PATH is returned, but there is no error checking involved.
 
    The returned path is allocated from RESULT_POOL, all other
-   allocations are made in SCRATCH_POOL.  */
+   allocations are made in SCRATCH_POOL.
+
+   Note that it is not possible to just join the resulting path to
+   reconstruct the real path as the "../" paths are relative from
+   a different base than the normal relative paths!
+ */
 static const char *
 make_relpath(const char *target_abspath,
              const char *target_path,
-             const char *path,
+             const char *local_abspath,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
   const char *la;
   const char *parent_dir_els = "";
-  const char *abspath, *relative;
-  svn_error_t *err = svn_dirent_get_absolute(&abspath, path, scratch_pool);
+  const char *t_relpath;
+  const char *p_relpath;
 
-  if (err)
-    {
-      /* We probably got passed some invalid path. */
-      svn_error_clear(err);
-      return apr_pstrdup(result_pool, path);
-    }
+#ifdef SVN_DEBUG
+  SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_abspath));
+#endif
 
-  relative = svn_dirent_skip_ancestor(target_abspath, abspath);
-  if (relative)
-    {
-      return svn_dirent_join(target_path, relative, result_pool);
-    }
+  t_relpath = svn_dirent_skip_ancestor(target_abspath, local_abspath);
+
+  if (t_relpath)
+    return svn_dirent_join(target_path, t_relpath, result_pool);
 
   /* An example:
    *  relative_to_path = /a/b/c
@@ -180,17 +181,16 @@ make_relpath(const char *target_abspath,
    *  path             = C:/wc
    *  result           = C:/wc
    */
-
   /* Skip the common ancestor of both paths, here '/a'. */
-  la = svn_dirent_get_longest_ancestor(target_abspath, abspath,
+  la = svn_dirent_get_longest_ancestor(target_abspath, local_abspath,
                                        scratch_pool);
   if (*la == '\0')
     {
       /* Nothing in common: E.g. C:/ vs F:/ on Windows */
-      return apr_pstrdup(result_pool, path);
+      return apr_pstrdup(result_pool, local_abspath);
     }
-  relative = svn_dirent_skip_ancestor(la, target_abspath);
-  path = svn_dirent_skip_ancestor(la, path);
+  t_relpath = svn_dirent_skip_ancestor(la, target_abspath);
+  p_relpath = svn_dirent_skip_ancestor(la, local_abspath);
 
   /* In above example, we'd now have:
    *  relative_to_path = b/c
@@ -198,14 +198,14 @@ make_relpath(const char *target_abspath,
 
   /* Count the elements of relative_to_path and prepend as many '..' elements
    * to path. */
-  while (*relative)
+  while (*t_relpath)
     {
-      svn_dirent_split(&relative, NULL, relative,
-                       scratch_pool);
+      t_relpath = svn_dirent_dirname(t_relpath, scratch_pool);
       parent_dir_els = svn_dirent_join(parent_dir_els, "..", scratch_pool);
     }
 
-  return svn_dirent_join(parent_dir_els, path, result_pool);
+  /* This returns a ../ style path relative from the status target */
+  return svn_dirent_join(parent_dir_els, p_relpath, result_pool);
 }
 
 
@@ -231,8 +231,6 @@ print_status(const char *target_abspath,
   const char *tree_desc_line = "";
   const char *moved_from_line = "";
   const char *moved_to_line = "";
-
-  path = make_relpath(target_abspath, target_path, path, pool, pool);
 
   /* For historic reasons svn ignores the property status for added nodes, even
      if these nodes were copied and have local property changes.
