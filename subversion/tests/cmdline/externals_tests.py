@@ -3343,7 +3343,6 @@ def file_external_versioned_obstruction(sbox):
                                         expected_status)
 
 @Issue(4495)
-@XFail()
 def update_external_peg_rev(sbox):
   "update external peg rev"
 
@@ -3909,22 +3908,13 @@ def copy_pin_externals_whitepace_dir(sbox):
                                          '-mm'
                                          )
 
-  # Verify that externals definition worked
-  sbox.simple_update('trunk')
+  svntest.actions.run_and_verify_svn(None, [], 'update', sbox.ospath('trunk'),
+                                     '--ignore-externals')
   sbox.simple_update('branches')
 
   expected_status = svntest.wc.State(wc_dir, {
     ''                          : Item(status='  ', wc_rev='0'),
     'trunk'                     : Item(status='  ', wc_rev='1'),
-    'trunk/ext'                 : Item(status='X '),
-    'trunk/ext/sqlite'          : Item(status='  ', wc_rev='1'),
-    'trunk/ext/sqlite/readme'   : Item(status='  ', wc_rev='1'),
-    'trunk/ext/A P R'           : Item(status='  ', wc_rev='1'),
-    'trunk/ext/A P R/about'     : Item(status='  ', wc_rev='1'),
-    'trunk/ext/B D B\''         : Item(status='  ', wc_rev='1'),
-    'trunk/ext/B D B\'/copying' : Item(status='  ', wc_rev='1'),
-    'trunk/ext/wors#+t'         : Item(status='  ', wc_rev='1'),
-    'trunk/ext/wors#+t/brood'   : Item(status='  ', wc_rev='1'),
     'branches'                  : Item(status='  ', wc_rev='1'),
   })
 
@@ -3948,6 +3938,33 @@ def copy_pin_externals_whitepace_dir(sbox):
                                      trunk_url, sbox.ospath('branches/url-wc'))
   sbox.simple_commit('branches/url-wc')
 
+  # Now try to copy without externals in the WC
+  expected_err = '.*E155035: Cannot pin external.*'
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'copy', '--pin-externals',
+                                     trunk_wc, branches_url + '/wc-url', '-mm')
+
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'copy', '--pin-externals',
+                                     trunk_wc, sbox.ospath('branches/wc-wc'))
+
+  # Bring in the externals on trunk
+  svntest.actions.run_and_verify_svn(None, [], 'update', sbox.ospath('trunk'))
+  expected_status = svntest.wc.State(wc_dir, {
+    'trunk'                     : Item(status='  ', wc_rev='4'),
+    'trunk/ext'                 : Item(status='X '),
+    'trunk/ext/sqlite'          : Item(status='  ', wc_rev='4'),
+    'trunk/ext/sqlite/readme'   : Item(status='  ', wc_rev='4'),
+    'trunk/ext/A P R'           : Item(status='  ', wc_rev='4'),
+    'trunk/ext/A P R/about'     : Item(status='  ', wc_rev='4'),
+    'trunk/ext/B D B\''         : Item(status='  ', wc_rev='4'),
+    'trunk/ext/B D B\'/copying' : Item(status='  ', wc_rev='4'),
+    'trunk/ext/wors#+t'         : Item(status='  ', wc_rev='4'),
+    'trunk/ext/wors#+t/brood'   : Item(status='  ', wc_rev='4'),
+  })
+  svntest.actions.run_and_verify_status(sbox.ospath('trunk'), expected_status)
+
+  # And copy again
   svntest.actions.run_and_verify_svn(None, [],
                                      'copy', '--pin-externals',
                                      trunk_wc, branches_url + '/wc-url', '-mm')
@@ -3956,6 +3973,7 @@ def copy_pin_externals_whitepace_dir(sbox):
                                      'copy', '--pin-externals',
                                      trunk_wc, sbox.ospath('branches/wc-wc'))
   sbox.simple_commit('branches/wc-wc')
+
 
   expected_output = svntest.wc.State(wc_dir, {
     'branches/url-url'                      : Item(status='A '),
@@ -4001,20 +4019,25 @@ def copy_pin_externals_whitepace_dir(sbox):
 
     'branches/wc-url'                       : Item(status='  ', wc_rev='6'),
     'branches/wc-url/ext'                   : Item(status='X '),
-    'branches/wc-url/ext/wors#+t'           : Item(status='  ', wc_rev='1'),
-    'branches/wc-url/ext/wors#+t/brood'     : Item(status='  ', wc_rev='1'),
-    'branches/wc-url/ext/sqlite'            : Item(status='  ', wc_rev='1'),
-    'branches/wc-url/ext/sqlite/readme'     : Item(status='  ', wc_rev='1'),
-    'branches/wc-url/ext/B D B\''           : Item(status='  ', wc_rev='1'),
-    'branches/wc-url/ext/B D B\'/copying'   : Item(status='  ', wc_rev='1'),
-    'branches/wc-url/ext/A P R'             : Item(status='  ', wc_rev='1'),
-    'branches/wc-url/ext/A P R/about'       : Item(status='  ', wc_rev='1'),
+    'branches/wc-url/ext/wors#+t'           : Item(status='  ', wc_rev='4'),
+    'branches/wc-url/ext/wors#+t/brood'     : Item(status='  ', wc_rev='4'),
+    'branches/wc-url/ext/sqlite'            : Item(status='  ', wc_rev='4'),
+    'branches/wc-url/ext/sqlite/readme'     : Item(status='  ', wc_rev='4'),
+    'branches/wc-url/ext/B D B\''           : Item(status='  ', wc_rev='4'),
+    'branches/wc-url/ext/B D B\'/copying'   : Item(status='  ', wc_rev='4'),
+    'branches/wc-url/ext/A P R'             : Item(status='  ', wc_rev='4'),
+    'branches/wc-url/ext/A P R/about'       : Item(status='  ', wc_rev='4'),
 
     'branches/wc-wc'                        : Item(status='  ', wc_rev='6'),
-    # ### Where are the externals of wc-wc?
-
-    # ### I'm guessing update doesn't want to update them because
-    # ### they are pinned?
+    'branches/wc-wc/ext'                    : Item(status='X '),
+    'branches/wc-wc/ext/wors#+t'            : Item(status='  ', wc_rev='4'),
+    'branches/wc-wc/ext/wors#+t/brood'      : Item(status='  ', wc_rev='4'),
+    'branches/wc-wc/ext/sqlite'             : Item(status='  ', wc_rev='4'),
+    'branches/wc-wc/ext/sqlite/readme'      : Item(status='  ', wc_rev='4'),
+    'branches/wc-wc/ext/B D B\''            : Item(status='  ', wc_rev='4'),
+    'branches/wc-wc/ext/B D B\'/copying'    : Item(status='  ', wc_rev='4'),
+    'branches/wc-wc/ext/A P R'              : Item(status='  ', wc_rev='4'),
+    'branches/wc-wc/ext/A P R/about'        : Item(status='  ', wc_rev='4'),
   })
   svntest.actions.run_and_verify_update(wc_dir + '/branches', expected_output,
                                         None, expected_status, [])
