@@ -2824,7 +2824,10 @@ conflict_status_walker(void *baton,
 
       cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
 
-      if ((cd->kind == svn_wc_conflict_kind_property && !cswb->resolve_prop)
+      if ((cd->kind == svn_wc_conflict_kind_property
+           && (!cswb->resolve_prop
+               || (*cswb->resolve_prop != '\0'
+                   && strcmp(cswb->resolve_prop, cd->property_name) != 0)))
           || (cd->kind == svn_wc_conflict_kind_text && !cswb->resolve_text)
           || (cd->kind == svn_wc_conflict_kind_tree && !cswb->resolve_tree))
         {
@@ -2853,8 +2856,6 @@ conflict_status_walker(void *baton,
       switch (cd->kind)
         {
           case svn_wc_conflict_kind_tree:
-            if (!cswb->resolve_tree)
-              break;
             SVN_ERR(resolve_tree_conflict_on_node(&did_resolve,
                                                   db,
                                                   local_abspath, conflict,
@@ -2871,9 +2872,6 @@ conflict_status_walker(void *baton,
             break;
 
           case svn_wc_conflict_kind_text:
-            if (!cswb->resolve_text)
-              break;
-
             SVN_ERR(build_text_conflict_resolve_items(
                                         &work_items,
                                         &resolved,
@@ -2897,15 +2895,6 @@ conflict_status_walker(void *baton,
             break;
 
           case svn_wc_conflict_kind_property:
-            if (!cswb->resolve_prop)
-              break;
-
-            if (*cswb->resolve_prop != '\0' &&
-                strcmp(cswb->resolve_prop, cd->property_name) != 0)
-              {
-                break; /* This is not the property we want to resolve. */
-              }
-
             SVN_ERR(resolve_prop_conflict_on_node(&did_resolve,
                                                   db,
                                                   local_abspath,
