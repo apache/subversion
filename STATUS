@@ -160,18 +160,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271, r1659721
-   Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
-   non-deltas dumpfile".
-   Justification:
-     Data loss.
-   Branch: ^/subversion/branches/1.8.x-issue4551
-   Notes:
-     r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
-   Votes:
-     +1: julianfoad (without r1659721)
-     +1: philip, rhuijben, stefan2
-
  * r1646495, r1646505, r1659801
    Fix issue #4538 'svnadmin load' strips r1 references in mergeinfo
    Justification:
@@ -205,4 +193,3 @@ Approved changes:
      depends on the issue #4538 fix in r1646505.
    Votes:
      +1: julianfoad, philip, stefan2
-
