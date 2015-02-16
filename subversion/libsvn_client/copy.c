@@ -1675,7 +1675,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
 
       /* More info for our INFO structure.  */
-      info->src_path = src_rel; /* May be NULL, if outside RA session scope */
+      info->src_path = src_rel; /* May be NULL, if */
       info->dst_path = dst_rel;
 
       svn_hash_sets(action_hash, info->dst_path, info);
