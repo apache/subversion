@@ -434,13 +434,24 @@ class State:
     return not self.__eq__(other)
 
   @classmethod
-  def from_status(cls, lines):
+  def from_status(cls, lines, wc_dir=None):
     """Create a State object from 'svn status' output."""
 
     def not_space(value):
       if value and value != ' ':
         return value
       return None
+
+    def parse_move(path, wc_dir):
+      if path.startswith('../'):
+        # ../ style paths are relative from the status root
+        return to_relpath(os.path.normpath(repos_join(wc_dir, path)))
+      else:
+        # Other paths are just relative from cwd
+        return to_relpath(path)
+
+    if not wc_dir:
+      wc_dir = ''
 
     desc = { }
     last = None
@@ -455,15 +466,15 @@ class State:
 
         if ex_match:
           if ex_match.group('moved_from'):
-            path = ex_match.group('moved_from')
-            last.tweak(moved_from = to_relpath(path))
+            path = to_relpath(ex_match.group('moved_from'))
+            last.tweak(moved_from = parse_move(path, wc_dir))
           elif ex_match.group('moved_to'):
-            path = ex_match.group('moved_to')
-            last.tweak(moved_to = to_relpath(path))
+            path = to_relpath(ex_match.group('moved_to'))
+            last.tweak(moved_to = parse_move(path, wc_dir))
           elif ex_match.group('swapped_with'):
-            path = ex_match.group('swapped_with')
-            last.tweak(moved_to = to_relpath(path))
-            last.tweak(moved_from = to_relpath(path))
+            path = to_relpath(ex_match.group('swapped_with'))
+            last.tweak(moved_to = parse_move(path, wc_dir))
+            last.tweak(moved_from = parse_move(path, wc_dir))
 
           # Parse TC description?
 
