@@ -159,15 +159,3 @@ Candidate changes:
 
 Approved changes:
 =================
-
- * r1646230, r1646250, r1646253, r1656893, r1657182, r1657195, r1657401
-   Make svnsync strip any r0 references from mergeinfo -- issue #4476.
-   Justification:
-     Without this is was not possible to svnsync a repository that contained
-     this kind of mergeinfo that is now considered invalid but previously
-     could be committed.
-   Notes:
-     This is also nominated for 1.7.x. The regression test in this group
-     depends on the issue #4538 fix in r1646505.
-   Votes:
-     +1: julianfoad, philip, stefan2
