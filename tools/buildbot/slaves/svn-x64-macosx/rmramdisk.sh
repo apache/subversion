@@ -24,11 +24,38 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-volume="/Volumes/$1"
+if [ -z "$2" ]; then
+    echo "Missing parameter: device name file"
+    exit 1
+fi
 
-mount | fgrep "on ${volume} " >/dev/null && {
-    set -e
-    hdiutil detach "${volume}" -force
+volume="/Volumes/$1"
+ramconf="$2"
+
+if [ ! -f "${ramconf}" ]; then
+    echo "Device name missing: ${ramconf}"
+    exit 1
+fi
+
+if [ ! -d "${volume}" ]; then
+    echo "Mount point missing: ${volume}"
+    exit 1
+fi
+
+device=$(cat "${ramconf}")
+devfmt=$(echo "${device}" | grep "^/dev/disk[0-9][0-9]*$")
+if [ "${device}" != "${devfmt}" ]; then
+    echo "Invalid device name: ${device}"
+    exit 1
+fi
+
+mount | grep "^${device} on ${volume} (hfs" >/dev/null || {
+    echo "Not mounted: ${device} on ${volume}"
+    exit 1
 }
+
+set -e
+rm "${ramconf}"
+hdiutil detach "${device}" -force
 
 exit 0
