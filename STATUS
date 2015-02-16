@@ -67,7 +67,7 @@ Candidate changes:
      Users shouldn't be able to trigger assertions by performing normal
      operations.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1654932, r1654933, r1654934, r1654937
    Fix issue #4554, "0 file length reported in FSFS".
