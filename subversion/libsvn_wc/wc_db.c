@@ -1577,7 +1577,7 @@ svn_wc__db_init(svn_wc__db_t *db,
 
   /* ### REPOS_ROOT_URL and REPOS_UUID may be NULL. ... more doc: tbd  */
 
-  SVN_ERR(svn_config_get_bool((svn_config_t *)db->config, &sqlite_exclusive,
+  SVN_ERR(svn_config_get_bool(db->config, &sqlite_exclusive,
                               SVN_CONFIG_SECTION_WORKING_COPY,
                               SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE,
                               FALSE));
