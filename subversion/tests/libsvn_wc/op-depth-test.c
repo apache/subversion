@@ -1629,29 +1629,11 @@ test_base_dir_insert_remove(const svn_test_opts_t *opts, apr_pool_t *pool)
 }
 
 static svn_error_t *
-temp_op_make_copy(svn_test__sandbox_t *b,
-                  const char *local_relpath,
-                  nodes_row_t *before,
-                  nodes_row_t *after)
-{
-  const char *dir_abspath = svn_path_join(b->wc_abspath, local_relpath,
-                                          b->pool);
-
-  SVN_ERR(insert_dirs(b, before));
-
-  SVN_ERR(svn_wc__db_op_make_copy(b->wc_ctx->db, dir_abspath, NULL, NULL, b->pool));
-
-  SVN_ERR(check_db_rows(b, "", after));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_temp_op_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
+test_db_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "temp_op_make_copy", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(&b, "make_copy", opts, pool));
 
   {
     /*  /           norm        -
@@ -1727,7 +1709,11 @@ test_temp_op_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0 }
     };
 
-    SVN_ERR(temp_op_make_copy(&b, "A", before, after));
+    SVN_ERR(insert_dirs(&b, before));
+    SVN_ERR(svn_wc__db_op_make_copy(b.wc_ctx->db, sbox_wc_path(&b, "A"), 
+                                    NULL, NULL, pool));
+
+    SVN_ERR(check_db_rows(&b, "", after));
   }
 
   return SVN_NO_ERROR;
@@ -11032,8 +11018,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test_adds_change_kind"),
     SVN_TEST_OPTS_PASS(test_base_dir_insert_remove,
                        "test_base_dir_insert_remove"),
-    SVN_TEST_OPTS_PASS(test_temp_op_make_copy,
-                       "test_temp_op_make_copy"),
+    SVN_TEST_OPTS_PASS(test_db_make_copy,
+                       "test_db_make_copy"),
     SVN_TEST_OPTS_PASS(test_wc_move,
                        "test_wc_move"),
     SVN_TEST_OPTS_PASS(test_mixed_rev_copy,
