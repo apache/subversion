@@ -308,7 +308,11 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
                    svn_editor_t *editor,
                    apr_pool_t *scratch_pool);
 
-/* Ev3 version of svn_ra_get_commit_editor(). */
+/* Ev3 version of svn_ra_get_commit_editor().
+ *
+ * If BRANCH_INFO_DIR is non-null, store branching info in that local
+ * directory, otherwise store branching info in revprops.
+ */
 svn_error_t *
 svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                              svn_editor3_t **editor,
@@ -317,6 +321,7 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                              void *commit_baton,
                              apr_hash_t *lock_tokens,
                              svn_boolean_t keep_locks,
+                             const char *branch_info_dir,
                              apr_pool_t *pool);
 
 /* Ev3 version of svn_ra_do_update3(). */
