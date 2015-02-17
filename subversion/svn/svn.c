@@ -2519,9 +2519,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
           cfg_hash = apr_hash_make(pool);
-          SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
+          SVN_INT_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
           svn_hash_sets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, empty_cfg);
-          SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
+          SVN_INT_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
           svn_hash_sets(cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, empty_cfg);
         }
       else
