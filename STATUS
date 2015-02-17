@@ -164,15 +164,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1590751
-   Use empty, rather than NULL, config if default is unreadable.
-   Justification:
-     svn SEGV reported by user.
-   Votes:
-     +1: philip, danielsh, rhuijben
-     -0: julianfoad (prefer to fix all the programs at the same time;
-                     other queries -- see email thread)
-     +1: danielsh (julianf: I agree with your points on list, but +1ing anyway:
-                     fixing this segfault in svn need not block on fixing
-                     a similar segfault in svnadmin.)
