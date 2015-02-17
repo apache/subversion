@@ -114,7 +114,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1659867
    Votes:
-     +1: danielsh (without r1660091, r1660097, ra_serf part; looks good but I can't vouch for it)
+     +1: danielsh (without r1660091, r1660097,
+                   ra_serf part; looks good but I can't vouch for it)
      +1: philip, rhuijben
 
  * r1660071
@@ -183,8 +184,4 @@ Approved changes:
    Branch:
      ^/subversion/branches/1.8.x-r1590751
    Votes:
-     +1: rhuijben, philip, julianfoad
-     +1 (without r1660350): danielsh (julianf:
-                     I agree with your points on list, but +1ing anyway:
-                     fixing this segfault in svn need not block on fixing
-                     a similar segfault in svnadmin.)
+     +1: rhuijben, philip, julianfoad, danielsh
