@@ -178,9 +178,13 @@ verify_sqlite(svn_sqlite__db_t *sdb,
   while (have_row)
     {
       const char *item = svn_sqlite__column_text(stmt, 0, scratch_pool);
-      const char *msg = svn_sqlite__column_text(stmt, 1, scratch_pool);
+      int op_depth = svn_sqlite__column_int(stmt, 1);
+      const char *msg = svn_sqlite__column_text(stmt, 2, scratch_pool);
 
-      SVN_DBG(("DB-VRFY: %s: %s: %s", wc_abspath, item, msg));
+      if (op_depth >= 0)
+        SVN_DBG(("DB-VRFY: %s: %s:%d: %s", wc_abspath, item, op_depth, msg));
+      else
+        SVN_DBG(("DB-VRFY: %s: %s: %s", wc_abspath, item, msg));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
