@@ -167,7 +167,7 @@ _svn()
 	cmds="$cmds info list ls lock log merge mergeinfo mkdir move mv rename"
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
-	cmds="$cmds switch unlock update upgrade youngest"
+	cmds="$cmds switch unlock update upgrade"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -954,9 +954,6 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
-		;;
-	youngest)
-		cmdOpts="$pOpts --no-newline"
 		;;
 	*)
 		;;
