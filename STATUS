@@ -147,9 +147,6 @@ Candidate changes:
                      I agree with your points on list, but +1ing anyway:
                      fixing this segfault in svn need not block on fixing
                      a similar segfault in svnadmin.)
-     -1: kotkov (without r1660350)
-                   (breaks the build on Windows -- should use SVN_INT_ERR()
-                    instead of SVN_ERR())
 
  * r1592987
    Process 'svnadmin dump' output as binary in the test suite.
