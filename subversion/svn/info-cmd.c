@@ -76,6 +76,18 @@ schedule_str(svn_wc_schedule_t schedule)
     }
 }
 
+/* Return a relative URL from information in INFO using POOL for
+   temporary allocation. */
+static const char*
+relative_url(const svn_client_info2_t *info, apr_pool_t *pool)
+{
+  return apr_pstrcat(pool, "^/",
+                     svn_path_uri_encode(
+                         svn_uri_skip_ancestor(info->repos_root_URL,
+                                               info->URL, pool),
+                         pool), SVN_VA_NULL);
+}
+
 
 /* A callback of type svn_client_info_receiver2_t.
    Prints svn info in xml mode to standard out */
@@ -109,13 +121,7 @@ print_info_xml(void *baton,
     {
       /* "<relative-url> xx </relative-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "relative-url",
-                               apr_pstrcat(pool, "^/",
-                                           svn_path_uri_encode(
-                                               svn_uri_skip_ancestor(
-                                                   info->repos_root_URL,
-                                                   info->URL, pool),
-                                               pool),
-                                           SVN_VA_NULL));
+                               relative_url(info, pool));
     }
 
   if (info->repos_root_URL || info->repos_UUID)
@@ -285,11 +291,8 @@ print_info(void *baton,
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
 
   if (info->URL && info->repos_root_URL)
-    SVN_ERR(svn_cmdline_printf(pool, _("Relative URL: ^/%s\n"),
-                               svn_path_uri_encode(
-                                   svn_uri_skip_ancestor(info->repos_root_URL,
-                                                         info->URL, pool),
-                                   pool)));
+    SVN_ERR(svn_cmdline_printf(pool, _("Relative URL: %s\n"),
+                               relative_url(info, pool)));
 
   if (info->repos_root_URL)
     SVN_ERR(svn_cmdline_printf(pool, _("Repository Root: %s\n"),
