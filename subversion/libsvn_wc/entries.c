@@ -48,6 +48,7 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
+#include "token-map.h"
 
 #define MAYBE_ALLOC(x,p) ((x) ? (x) : apr_pcalloc((p), sizeof(*(x))))
 
@@ -1452,23 +1453,27 @@ insert_node(svn_sqlite__db_t *sdb,
             apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  svn_boolean_t present = (node->presence == svn_wc__db_status_normal
+                           || node->presence == svn_wc__db_status_incomplete);
 
   SVN_ERR_ASSERT(node->op_depth > 0 || node->repos_relpath);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnnnsnrisnnni",
+  SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnnnsnris",
                             node->wc_id,
                             node->local_relpath,
                             node->op_depth,
                             node->parent_relpath,
                             /* Setting depth for files? */
-                            svn_depth_to_word(node->depth),
+                            (node->kind == svn_node_dir && present)
+                              ? svn_depth_to_word(node->depth)
+                              : NULL,
                             node->changed_rev,
                             node->changed_date,
-                            node->changed_author,
-                            node->recorded_time));
+                            node->changed_author));
 
-  if (node->repos_relpath)
+  if (node->repos_relpath
+      && node->presence != svn_wc__db_status_base_deleted)
     {
       SVN_ERR(svn_sqlite__bind_int64(stmt, 5,
                                      node->repos_id));
@@ -1477,26 +1482,14 @@ insert_node(svn_sqlite__db_t *sdb,
       SVN_ERR(svn_sqlite__bind_revnum(stmt, 7, node->revision));
     }
 
-  if (node->presence == svn_wc__db_status_normal)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "normal"));
-  else if (node->presence == svn_wc__db_status_not_present)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "not-present"));
-  else if (node->presence == svn_wc__db_status_base_deleted)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "base-deleted"));
-  else if (node->presence == svn_wc__db_status_incomplete)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "incomplete"));
-  else if (node->presence == svn_wc__db_status_excluded)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "excluded"));
-  else if (node->presence == svn_wc__db_status_server_excluded)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 8, "server-excluded"));
+  SVN_ERR(svn_sqlite__bind_token(stmt, 8, presence_map, node->presence));
 
   if (node->kind == svn_node_none)
     SVN_ERR(svn_sqlite__bind_text(stmt, 10, "unknown"));
   else
-    SVN_ERR(svn_sqlite__bind_text(stmt, 10,
-                                  svn_node_kind_to_word(node->kind)));
+    SVN_ERR(svn_sqlite__bind_token(stmt, 10, kind_map, node->kind));
 
-  if (node->kind == svn_node_file)
+  if (node->kind == svn_node_file && present)
     {
       if (!node->checksum
           && node->op_depth == 0
@@ -1510,19 +1503,21 @@ insert_node(svn_sqlite__db_t *sdb,
 
       SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
                                         scratch_pool));
+
+      if (node->recorded_size != SVN_INVALID_FILESIZE)
+        SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->recorded_size));
+
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 17, node->recorded_time));
     }
 
-  if (node->properties) /* ### Never set, props done later */
+  if (node->properties && present) /* ### Never set, props done later */
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, node->properties,
                                         scratch_pool));
-
-  if (node->recorded_size != SVN_INVALID_FILESIZE)
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->recorded_size));
 
   if (node->file_external)
     SVN_ERR(svn_sqlite__bind_int(stmt, 20, 1));
 
-  if (node->inherited_props)
+  if (node->inherited_props && present)
     SVN_ERR(svn_sqlite__bind_iprops(stmt, 23, node->inherited_props,
                                     scratch_pool));
 
