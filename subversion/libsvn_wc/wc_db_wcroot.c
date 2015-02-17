@@ -28,6 +28,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_version.h"
 
 #include "wc.h"
@@ -42,7 +43,7 @@
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
-
+/* #define VERIFY_ON_CLOSE */
 
 /* Get the format version from a wc-1 directory. If it is not a working copy
    directory, then it sets VERSION to zero and returns no error.  */
@@ -162,6 +163,32 @@ svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb)
   return SVN_NO_ERROR;
 }
 
+#if defined(VERIFY_ON_CLOSE) && defined(SVN_DEBUG)
+static svn_error_t *
+verify_sqlite(svn_sqlite__db_t *sdb,
+              const char *wc_abspath,
+              apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_STATIC_VERIFY));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      const char *item = svn_sqlite__column_text(stmt, 0, scratch_pool);
+      const char *msg = svn_sqlite__column_text(stmt, 1, scratch_pool);
+
+      SVN_DBG(("DB-VRFY: %s: %s: %s", wc_abspath, item, msg));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
+}
+#endif
 
 /* */
 static apr_status_t
@@ -171,6 +198,18 @@ close_wcroot(void *data)
   svn_error_t *err;
 
   SVN_ERR_ASSERT_NO_RETURN(wcroot->sdb != NULL);
+
+#if defined(VERIFY_ON_CLOSE) && defined(SVN_DEBUG)
+  if (getenv("SVN_CMDLINE_VERIFY_SQL_AT_CLOSE"))
+    {
+      apr_pool_t *scratch_pool = svn_pool_create(NULL);
+
+      svn_error_clear(verify_sqlite(wcroot->sdb, wcroot->abspath,
+                                    scratch_pool));
+
+      svn_pool_destroy(scratch_pool);
+    }
+#endif
 
   err = svn_sqlite__close(wcroot->sdb);
   wcroot->sdb = NULL;

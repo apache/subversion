@@ -75,3 +75,36 @@ BEGIN
   SELECT RAISE(FAIL, 'WC DB validity check 04 failed');
 END;
 
+-- STMT_STATIC_VERIFY
+SELECT local_relpath, 'SV001: No ancestor in NODES'
+FROM nodes n WHERE local_relpath != ''
+ AND file_external IS NULL
+ AND NOT EXISTS(SELECT 1 from nodes i
+                WHERE i.wc_id=n.wc_id
+                  AND i.local_relpath=n.parent_relpath)
+
+UNION ALL
+
+SELECT local_relpath, 'SV002: No ancestor in ACTUAL'
+FROM actual_node a WHERE local_relpath != ''
+ AND NOT EXISTS(SELECT 1 from nodes i
+                WHERE i.wc_id=a.wc_id
+                  AND i.local_relpath=a.parent_relpath)
+ AND NOT EXISTS(SELECT 1 from nodes i
+                WHERE i.wc_id=a.wc_id
+                  AND i.local_relpath=a.local_relpath)
+
+UNION ALL
+
+SELECT a.local_relpath, 'SV003: Bad or Unneeded actual data'
+FROM actual_node a
+LEFT JOIN nodes n on n.wc_id = a.wc_id AND n.local_relpath = a.local_relpath
+   AND n.op_depth = (SELECT MAX(op_depth) from nodes i
+                     WHERE i.wc_id=a.wc_id AND i.local_relpath=a.local_relpath)
+WHERE (a.properties IS NOT NULL
+       AND n.presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE))
+   OR (a.changelist IS NOT NULL AND (n.kind IS NOT NULL AND n.kind != MAP_FILE))
+   OR (a.conflict_data IS NULL AND a.properties IS NULL AND a.changelist IS NULL)
+ AND NOT EXISTS(SELECT 1 from nodes i
+                WHERE i.wc_id=a.wc_id
+                  AND i.local_relpath=a.parent_relpath)
