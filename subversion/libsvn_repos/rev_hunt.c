@@ -1559,6 +1559,18 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   struct send_baton sb;
   int mainline_pos, merged_pos;
 
+  if (!SVN_IS_VALID_REVNUM(start)
+      || !SVN_IS_VALID_REVNUM(end))
+    {
+      svn_revnum_t youngest_rev;
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, repos->fs, scratch_pool));
+
+      if (!SVN_IS_VALID_REVNUM(start))
+        start = youngest_rev;
+      if (!SVN_IS_VALID_REVNUM(end))
+        end = youngest_rev;
+    }
+
   if (end < start)
     {
       if (include_merged_revisions)
