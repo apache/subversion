@@ -1723,14 +1723,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Local modifications are preserved.\n"),
     { 'q' } },
 
-  { "youngest", svn_cl__youngest, {0}, N_
-    ("Print the youngest revision number of a target's repository.\n"
-     "usage: youngest [TARGET]\n"
-     "\n"
-     "  Print the revision number of the youngest revision in the repository\n"
-     "  with which TARGET is associated.\n"),
-    { opt_no_newline } },
-
   { NULL, NULL, {0}, NULL, {0} }
 };
 

@@ -3083,32 +3083,6 @@ def peg_rev_on_non_existent_wc_path(sbox):
                                      'cat', '-r2', sbox.ospath('mu3') + '@3')
 
 
-@Issue(4299)
-def basic_youngest(sbox):
-  'basic youngest'
-
-  sbox.build(read_only=True)
-
-  repos_url = sbox.repo_url
-  deep_repos_url = repos_url + '/A/D/G'
-
-  wc_dir = sbox.wc_dir
-  deep_wc_dir = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
-  bad_wc_dir = os.path.join(wc_dir, 'Z')
-
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
-                                     'youngest', bad_wc_dir)
-
-  for flag, output in [(False, "1\n"), (True, "1")]:
-    for path in [repos_url, deep_repos_url, wc_dir, deep_wc_dir]:
-      if flag:
-        svntest.actions.run_and_verify_svn([output], [],
-                                           'youngest', '--no-newline', path)
-      else:
-        svntest.actions.run_and_verify_svn([output], [],
-                                           'youngest', path)
-
-
 # With 'svn mkdir --parents' the target directory may already exist on disk.
 # In that case it was wrongly performing a recursive 'add' on its contents.
 def mkdir_parents_target_exists_on_disk(sbox):
@@ -3202,7 +3176,6 @@ test_list = [ None,
               rm_missing_with_case_clashing_ondisk_item,
               delete_conflicts_one_of_many,
               peg_rev_on_non_existent_wc_path,
-              basic_youngest,
               mkdir_parents_target_exists_on_disk,
              ]
 
