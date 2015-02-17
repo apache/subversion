@@ -217,24 +217,28 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c', 2, 'J', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c/J-c-a', 2, 'J/J-c', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-d', 2, 'J', 2, 'moved/file', 2, 'normal',"
   "  1, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null, null);"
   "insert into nodes values ("
+  "  1, 'moved', 0, '', 2, 'moved', 2, 'normal',"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
   "  1, 'moved/file', 0, 'moved', 2, 'moved/file', 2, 'normal',"
   "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'moved/file', 2, 'moved', 2, 'moved/file', 2, 'base-deleted',"
-  "  null, 'J/J-d', 'file', '()', null, null, null, null, null, null,"
-  "  10, null, null, null, null);"
+  "  1, 'moved/file', 2, 'moved', null, null, null, 'base-deleted',"
+  "  null, 'J/J-d', 'file', null, null, null, null, null, null, null,"
+  "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'normal',"
   "  null, null, 'dir', '()', null, null, null, null, null, null,"
@@ -249,19 +253,19 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 2, 'J', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-a', 2, 'J/J-e', null, null, null, 'base-deleted',"
-  "  null, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b', 2, 'J/J-e', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b/Jeba', 1, 'J/J-e/J-e-b', null, null, null, 'base-deleted',"
-  "  null, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f', 1, 'J', null, null, null, 'normal',"
@@ -269,19 +273,19 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f/J-f-a', 1, 'J/J-f', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K', 1, '', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', '()', null, null, null, null, null, null,"
+  "  null, null, 'dir', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-a', 1, 'K', null, null, null, 'base-deleted',"
-  "  null, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-b', 1, 'K', null, null, null, 'base-deleted',"
-  "  null, null, 'file', '()', null, null, null, null, null, null,"
+  "  null, null, 'file', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L', 1, '', null, null, null, 'normal',"
@@ -297,11 +301,15 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a', 2, 'L', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a/L-a-a', 2, 'L/L-a', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
+  "  null, null, 'dir', null, null, null, null, null, null, null,"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'other', 0, '', 2, 'other', 2, 'normal',"
+  "  null, null, 'dir', '()', null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'other/place', 2, 'other', null, null, null, 'normal',"
@@ -320,7 +328,7 @@ static const char * const TESTING_DATA = (
   "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null, null);"
    "insert into actual_node values ("
-   "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
+   "  1, 'A', '', null, null, null, null, null, 'changelist', null, "
    "  null, null, null, null, null);"
    "insert into actual_node values ("
    "  1, 'F', '', null, null, null, null, null, null, null, "
@@ -776,10 +784,16 @@ test_children(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
                                        pool, pool));
-  SVN_TEST_ASSERT(children->nelts == 11);
+  SVN_TEST_ASSERT(children->nelts == 13);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
+
+      if (strcmp(name, "moved") == 0
+          || strcmp(name, "other") == 0)
+        {
+          continue;
+        }
 
       SVN_TEST_ASSERT(strlen(name) == 1);
       /* ### check the actual values */
@@ -788,10 +802,16 @@ test_children(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_read_children(&children,
                                    db, local_abspath,
                                    pool, pool));
-  SVN_TEST_ASSERT(children->nelts == 12);
+  SVN_TEST_ASSERT(children->nelts == 14);
   for (i = children->nelts; i--; )
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
+
+      if (strcmp(name, "moved") == 0
+          || strcmp(name, "other") == 0)
+        {
+          continue;
+        }
 
       SVN_TEST_ASSERT(strlen(name) == 1);
       /* ### check the actual values */
@@ -863,7 +883,7 @@ test_working_info(apr_pool_t *pool)
   SVN_TEST_ASSERT(checksum == NULL);
   SVN_TEST_ASSERT(recorded_size == SVN_INVALID_FILESIZE);
   SVN_TEST_ASSERT(target == NULL);
-  SVN_TEST_STRING_ASSERT(changelist, "changelist");
+  SVN_TEST_STRING_ASSERT(changelist, NULL);
   SVN_TEST_STRING_ASSERT(original_repos_relpath, "some/dir");
   SVN_TEST_STRING_ASSERT(original_root_url, ROOT_TWO);
   SVN_TEST_STRING_ASSERT(original_uuid, UUID_TWO);
@@ -881,8 +901,31 @@ test_working_info(apr_pool_t *pool)
 
   /* ### we need a hojillion more tests in here. I just want to get this
      ### round checked in, so I'm skipping more tests at this point.  */
-
-
+  SVN_ERR(svn_wc__db_read_info(
+            &status, &kind, &revision,
+            &repos_relpath, &repos_root_url, &repos_uuid,
+            &changed_rev, &changed_date, &changed_author,
+            &depth, &checksum, &target, &original_repos_relpath,
+            &original_root_url, &original_uuid, &original_revnum,
+            &lock, &recorded_size, &recorded_time, &changelist,
+            &conflicted, &op_root, &had_props, &props_mod,
+            &have_base, &have_more_work, &have_work,
+            db, svn_dirent_join(local_abspath, "A", pool),
+            pool, pool));
+  SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
+  SVN_TEST_ASSERT(kind == svn_node_file);
+  SVN_TEST_STRING_ASSERT(changelist, "changelist");
+  SVN_TEST_ASSERT(revision == 1);
+  SVN_TEST_STRING_ASSERT(repos_relpath, "A");
+  SVN_TEST_STRING_ASSERT(repos_root_url, "http://example.com/one");
+  SVN_TEST_STRING_ASSERT(repos_uuid, "uuid1");
+  SVN_TEST_ASSERT(changed_rev == 1);
+  SVN_TEST_ASSERT(changed_date == TIME_1a);
+  SVN_TEST_STRING_ASSERT(changed_author, AUTHOR_1);
+  SVN_TEST_ASSERT(depth == svn_depth_unknown);
+  SVN_TEST_ASSERT(checksum != NULL);
+  SVN_TEST_ASSERT(recorded_size == 10);
+  SVN_TEST_ASSERT(target == NULL);
   return SVN_NO_ERROR;
 }
 

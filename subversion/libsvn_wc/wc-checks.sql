@@ -76,7 +76,7 @@ BEGIN
 END;
 
 -- STMT_STATIC_VERIFY
-SELECT local_relpath, 'SV001: No ancestor in NODES'
+SELECT local_relpath, op_depth, 'SV001: No ancestor in NODES'
 FROM nodes n WHERE local_relpath != ''
  AND file_external IS NULL
  AND NOT EXISTS(SELECT 1 from nodes i
@@ -85,7 +85,7 @@ FROM nodes n WHERE local_relpath != ''
 
 UNION ALL
 
-SELECT local_relpath, 'SV002: No ancestor in ACTUAL'
+SELECT local_relpath, -1, 'SV002: No ancestor in ACTUAL'
 FROM actual_node a WHERE local_relpath != ''
  AND NOT EXISTS(SELECT 1 from nodes i
                 WHERE i.wc_id=a.wc_id
@@ -96,7 +96,7 @@ FROM actual_node a WHERE local_relpath != ''
 
 UNION ALL
 
-SELECT a.local_relpath, 'SV003: Bad or Unneeded actual data'
+SELECT a.local_relpath, -1, 'SV003: Bad or Unneeded actual data'
 FROM actual_node a
 LEFT JOIN nodes n on n.wc_id = a.wc_id AND n.local_relpath = a.local_relpath
    AND n.op_depth = (SELECT MAX(op_depth) from nodes i
@@ -111,7 +111,7 @@ WHERE (a.properties IS NOT NULL
 
 UNION ALL
 
-SELECT local_relpath, 'SV004: Unneeded node data'
+SELECT local_relpath, op_depth, 'SV004: Unneeded node data'
 FROM nodes
 WHERE presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE)
 AND (properties IS NOT NULL
@@ -129,7 +129,7 @@ AND (properties IS NOT NULL
 
 UNION ALL
 
-SELECT local_relpath, 'SV005: Unneeded base-deleted node data'
+SELECT local_relpath, op_depth, 'SV005: Unneeded base-deleted node data'
 FROM nodes
 WHERE presence IN (MAP_BASE_DELETED)
 AND (repos_id IS NOT NULL
