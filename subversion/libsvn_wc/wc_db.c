@@ -4831,6 +4831,72 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Remove unneeded actual nodes for svn_wc__db_op_copy_layer_internal */
+static svn_error_t *
+clear_or_remove_actual(svn_wc__db_wcroot_t *wcroot,
+                       const char *local_relpath,
+                       int op_depth,
+                       apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row, shadowed;
+  svn_boolean_t keep_conflict = FALSE;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      svn_wc__db_status_t presence;
+
+      shadowed = (svn_sqlite__column_int(stmt, 0) > op_depth);
+      presence = svn_sqlite__column_token(stmt, 3, presence_map);
+
+      if (shadowed && presence == svn_wc__db_status_base_deleted)
+        {
+          keep_conflict = TRUE;
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+          if (have_row)
+            shadowed = (svn_sqlite__column_int(stmt, 0) > op_depth);
+          else
+            shadowed = FALSE;
+        }
+    }
+  else
+    shadowed = FALSE;
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (shadowed)
+    return SVN_NO_ERROR;
+
+  if (keep_conflict)
+    {
+      /* We don't want to accidentally remove delete-delete conflicts */
+      SVN_ERR(svn_sqlite__get_statement(
+                          &stmt, wcroot->sdb,
+                          STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_EMPTY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
                                   const char *src_op_relpath,
@@ -4962,6 +5028,12 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
         err = svn_sqlite__step_done(stmt2);
 
       /* stmt2 is reset (never modified or by step_done) */
+      if (err)
+        break;
+
+      /* Delete ACTUAL information about this node that we just deleted */
+      err = clear_or_remove_actual(wcroot, dst_relpath, dst_op_depth,
+                                   scratch_pool);
 
       if (err)
         break;
@@ -4978,8 +5050,6 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
   svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-
-  /* ### TODO: Did we handle ACTUAL as intended? */
 
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
 
