@@ -722,6 +722,13 @@ INSERT OR IGNORE INTO actual_node (
 SELECT wc_id, local_relpath, parent_relpath
 FROM targets_list
 
+-- STMT_INSERT_ACTUAL_EMPTIES_FILES
+INSERT OR IGNORE INTO actual_node (
+     wc_id, local_relpath, parent_relpath)
+SELECT wc_id, local_relpath, parent_relpath
+FROM targets_list
+WHERE kind=MAP_FILE
+
 -- STMT_DELETE_ACTUAL_EMPTY
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
@@ -736,7 +743,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 -- STMT_DELETE_ACTUAL_EMPTIES
 DELETE FROM actual_node
 WHERE wc_id = ?1
-  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND properties IS NULL
   AND conflict_data IS NULL
   AND changelist IS NULL
