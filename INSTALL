@@ -192,7 +192,7 @@ I.    INTRODUCTION
       commands described in section II.B before installing the following.
 
 
-      1.  Apache Portable Runtime 0.9.7 or 1.X.X  (REQUIRED)
+      1.  Apache Portable Runtime 1.3 or newer  (REQUIRED)
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APR-util)
@@ -200,8 +200,8 @@ I.    INTRODUCTION
 
 
         ****************************************************************
-        **       IMPORTANT ISSUE ABOUT APR VERSIONS:  READ THIS.      **
-        **                                                            **
+        **       IMPORTANT ISSUE ABOUT APR VERSIONS:  READ THIS       **
+        **       IF UPGRADING FROM MUCH OLDER SUBVERSION              **
         ****************************************************************
         |                                                              |
         | APR 0.9.X and 1.X are binary-incompatible.                   |
@@ -624,10 +624,8 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.49 or greater)
-          db*.i386.rpm     (Version 4.0.14 or greater; version 4.3.27 or
-                            4.2.52 is preferred however)
-          expat            (Comes with RedHat)
+          apache*.i386.rpm (Version 2.2.0 or greater)
+          db*.i386.rpm     (Version 4.0.14 or greater)
 
       After downloading, install it (as root user):
 
@@ -658,7 +656,6 @@ II.   INSTALLATION
 
           # rm -f /usr/local/lib/libsvn*
           # rm -f /usr/local/lib/libapr*
-          # rm -f /usr/local/lib/libexpat*
           # rm -f /usr/local/lib/libserf*
 
       Start the process by running "autogen.sh":
@@ -813,7 +810,7 @@ II.   INSTALLATION
         program, not an installer - just rename it to awk.exe and it is
         ready to use.
       * Apache apr, apr-util, and optionally apr-iconv libraries, version
-        0.9.12 or later. Included in both the Subversion dependencies ZIP file
+        1.3 or later. Included in both the Subversion dependencies ZIP file
         and the Apache 2 source zip.  If you are building from a Subversion
         checkout and have not downloaded Apache 2, then get these 3 libraries
         from http://www.apache.org/dist/apr/.
@@ -830,11 +827,7 @@ II.   INSTALLATION
       * [Optional] Apache 2 source, downloaded from
         http://httpd.apache.org/download.cgi, these instructions assume
         version 2.0.58.  This is only needed for building the Subversion
-        server Apache modules.  Note that although Subversion will compile
-        against Apache 2.2.3 and APR 1.2.7, there is a bug that causes
-        runtime failures with Subversion on Windows.  The fix is included in
-        APR 1.2.8 and will be bundled in the next HTTP Server release
-        (likely to be 2.2.4).
+        server Apache modules.  ### FIXME Apache 2.2 or greater required.
       * [Optional] Apache 2 msi install file, also from
         http://httpd.apache.org/download.cgi (required for running the
         tests).  Only needed for testing the server dso modules and if
