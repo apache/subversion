@@ -491,7 +491,7 @@ handle_rev(void *baton,
 
   if (expected_rev == 7)
     expected_rev = hrb->up ? 8 : 6;
-  SVN_DBG(("%d vs %d (up=%d)", expected_rev, rev, hrb->up));
+
   SVN_TEST_ASSERT(rev == expected_rev);
   SVN_TEST_ASSERT(apr_hash_count(rev_props) >= 3);
   SVN_TEST_STRING_ASSERT(path, (rev < 5) ? "/iota" : "/mu");
