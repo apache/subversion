@@ -815,6 +815,17 @@ SET properties = NULL,
     right_checksum = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2
 
+-- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
+UPDATE actual_node
+SET properties = NULL,
+    text_mod = NULL,
+    tree_conflict_data = NULL,
+    older_checksum = NULL,
+    left_checksum = NULL,
+    right_checksum = NULL,
+    changelist = NULL
+WHERE wc_id = ?1 AND local_relpath = ?2
+
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
 UPDATE actual_node
 SET properties = NULL,
