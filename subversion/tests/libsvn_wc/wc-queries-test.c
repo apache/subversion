@@ -97,6 +97,7 @@ static const int slow_statements[] =
 
   /* Full temporary table read */
   STMT_INSERT_ACTUAL_EMPTIES,
+  STMT_INSERT_ACTUAL_EMPTIES_FILES,
   STMT_SELECT_REVERT_LIST_RECURSIVE,
   STMT_SELECT_DELETE_LIST,
   STMT_SELECT_UPDATE_MOVE_LIST,
@@ -302,13 +303,20 @@ parse_explanation_item(struct explanation_item **parsed_item,
       item->search = TRUE; /* Search or scan */
       token = apr_strtok(NULL, " ", &last);
 
-      if (!MATCH_TOKEN(token, "TABLE"))
+      if (MATCH_TOKEN(token, "TABLE"))
+        {
+          item->table = apr_strtok(NULL, " ", &last);
+        }
+      else if (MATCH_TOKEN(token, "SUBQUERY"))
+        {
+          item->table = apr_psprintf(result_pool, "SUBQUERY-%s",
+                                     apr_strtok(NULL, " ", &last));
+        }
+      else
         {
           printf("DBG: Expected 'TABLE', got '%s' in '%s'\n", token, text);
           return SVN_NO_ERROR; /* Nothing to parse */
         }
-
-      item->table = apr_strtok(NULL, " ", &last);
 
       token = apr_strtok(NULL, " ", &last);
 

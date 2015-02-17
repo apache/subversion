@@ -6388,7 +6388,7 @@ set_changelist_txn(void *baton,
   if (scb->new_changelist)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_ACTUAL_EMPTIES));
+                                        STMT_INSERT_ACTUAL_EMPTIES_FILES));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
