@@ -140,7 +140,7 @@ Candidate changes:
      it svnsync_tests.py 23: copy with non-LF line endings in svn:* props
      fails on Windows.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
 Veto-blocked changes:
 =====================
