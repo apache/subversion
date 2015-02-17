@@ -204,7 +204,7 @@ svn_cl__make_log_msg_baton(void **baton,
                            apr_hash_t *config,
                            apr_pool_t *pool)
 {
-  struct log_msg_baton *lmb = apr_palloc(pool, sizeof(*lmb));
+  struct log_msg_baton *lmb = apr_pcalloc(pool, sizeof(*lmb));
 
   if (opt_state->filedata)
     {
@@ -237,6 +237,8 @@ svn_cl__make_log_msg_baton(void **baton,
                      SVN_CONFIG_OPTION_LOG_ENCODING,
                      NULL);
     }
+  else
+    lmb->message_encoding = NULL;
 
   lmb->base_dir = base_dir ? base_dir : "";
   lmb->tmpfile_left = NULL;
