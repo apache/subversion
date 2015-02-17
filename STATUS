@@ -87,7 +87,7 @@ Candidate changes:
    Justification:
      Simple to fix issue caused error on buildbot.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
    Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
