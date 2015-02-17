@@ -6087,7 +6087,18 @@ set_actual_props(apr_int64_t wc_id,
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   if (affected_rows == 1 || !props)
-    return SVN_NO_ERROR; /* We are done */
+    {
+      /* Perhaps the entire ACTUAL record is unneeded now? */
+      if (!props && affected_rows)
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, db,
+                                            STMT_DELETE_ACTUAL_EMPTY));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
+
+      return SVN_NO_ERROR; /* We are done */
+    }
 
   /* We have to insert a row in ACTUAL */
 
