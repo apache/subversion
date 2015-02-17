@@ -108,3 +108,30 @@ WHERE (a.properties IS NOT NULL
  AND NOT EXISTS(SELECT 1 from nodes i
                 WHERE i.wc_id=a.wc_id
                   AND i.local_relpath=a.parent_relpath)
+
+UNION ALL
+
+SELECT local_relpath, 'SV004: Unneeded node data'
+FROM nodes
+WHERE presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE)
+AND (properties IS NOT NULL
+     OR checksum IS NOT NULL
+     OR depth IS NOT NULL
+     OR symlink_target IS NOT NULL
+     OR changed_revision IS NOT NULL
+     OR (changed_date IS NOT NULL AND changed_date != 0)
+     OR changed_author IS NOT NULL
+     OR translated_size IS NOT NULL
+     OR last_mod_time IS NOT NULL
+     OR dav_cache IS NOT NULL
+     OR file_external IS NOT NULL
+     OR inherited_props IS NOT NULL)
+
+UNION ALL
+
+SELECT local_relpath, 'SV005: Unneeded base-deleted node data'
+FROM nodes
+WHERE presence IN (MAP_BASE_DELETED)
+AND (repos_id IS NOT NULL
+     OR repos_path IS NOT NULL
+     OR revision IS NOT NULL)

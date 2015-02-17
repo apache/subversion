@@ -45,7 +45,11 @@ DELETE FROM nodes;
 -- STMT_INSERT_NODE
 INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,
                    revision, parent_relpath, wc_id, repos_id, kind, depth)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, 1, 'dir', 'infinity')
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1,
+                   CASE WHEN ?3 != 'base-deleted' THEN 1 END,
+                   'dir',
+                   CASE WHEN ?3 in ('normal', 'incomplete')
+                        THEN 'infinity' END)
 
 -- STMT_DELETE_ACTUAL
 DELETE FROM actual_node;
