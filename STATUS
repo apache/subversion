@@ -133,15 +133,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1590751, r1660341
+ * r1590751, r1660350
    Use empty, rather than NULL, config if default is unreadable.
    Justification:
      svn SEGV reported by user.
    Branch:
      ^/subversion/branches/1.8.x-r1590751
    Votes:
-     +1: rhuijben
-     +1 (without r1660350): philip, danielsh
+     +1: rhuijben, philip
+     +1 (without r1660350): danielsh
      -0: julianfoad (prefer to fix all the programs at the same time;
                      other queries -- see email thread)
      +1 (without r1660350): danielsh (julianf:
