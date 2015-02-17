@@ -131,7 +131,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'I', 0, '', 1, 'I', 1, 'normal',"
-  "  null, null, 'dir', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J', 0, '', 1, 'J', 1, 'normal',"
@@ -179,7 +179,7 @@ static const char * const TESTING_DATA = (
       the value 1 is just 'good enough' to make the nodes WORKING nodes. */
   "insert into nodes values ("
   "  1, 'I', 1, '', 2, 'some/dir', 2, 'normal',"
-  "  null, null, 'dir', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'file', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J', 1, '', null, null, null, 'normal',"
