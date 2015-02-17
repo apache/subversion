@@ -489,11 +489,15 @@ handle_rev(void *baton,
   struct handle_rev_baton *hrb = baton;
   svn_revnum_t expected_rev = hrb->up ? (hrb->last + 1) : (hrb->last - 1);
 
+  if (expected_rev == 7)
+    expected_rev = hrb->up ? 8 : 6;
+  SVN_DBG(("%d vs %d (up=%d)", expected_rev, rev, hrb->up));
   SVN_TEST_ASSERT(rev == expected_rev);
   SVN_TEST_ASSERT(apr_hash_count(rev_props) >= 3);
   SVN_TEST_STRING_ASSERT(path, (rev < 5) ? "/iota" : "/mu");
 
-  if (!hrb->first && rev == (hrb->up ? 5 : 4))
+  if (!hrb->first
+      && (rev == (hrb->up ? 5 : 4) || rev == (hrb->up ? 8 : 6)))
     SVN_TEST_ASSERT(delta_handler == NULL);
   else
     SVN_TEST_ASSERT(delta_handler != NULL);
@@ -614,6 +618,30 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
                                 handle_rev, &hrb,
                                 subpool));
   SVN_TEST_ASSERT(hrb.last == 6);
+
+  /* Ressurect mu */
+  svn_pool_clear(subpool);
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 7, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_copy("mu", 6, "mu", mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 8, subpool));
+
+  svn_pool_clear(subpool);
+  hrb.up = TRUE;
+  hrb.last = 0;
+  hrb.first = TRUE;
+  SVN_ERR(svn_ra_get_file_revs2(ra, "mu", 1, SVN_INVALID_REVNUM, FALSE,
+                                handle_rev, &hrb,
+                                subpool));
+  SVN_TEST_ASSERT(hrb.last == 8);
+
+  svn_pool_clear(subpool);
+  hrb.up = FALSE;
+  hrb.last = 9;
+  hrb.first = TRUE;
+  SVN_ERR(svn_ra_get_file_revs2(ra, "mu", SVN_INVALID_REVNUM, 1, FALSE,
+                                handle_rev, &hrb,
+                                subpool));
+  SVN_TEST_ASSERT(hrb.last == 1);
 
   return SVN_NO_ERROR;
 }
