@@ -280,8 +280,13 @@ sbox_wc_copy_url(svn_test__sandbox_t *b, const char *from_url,
 
   APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = src;
 
-  SVN_ERR(svn_client_copy6(sources, sbox_wc_path(b, to_path),
-                           FALSE, FALSE, FALSE, NULL, NULL, NULL,
+  SVN_ERR(svn_client_copy7(sources, sbox_wc_path(b, to_path),
+                           FALSE /* copy_as_child */,
+                           FALSE /* make_parents */,
+                           FALSE /* ignore_externals */,
+                           FALSE, NULL /* pin_external */,
+                           NULL /* revprops */,
+                           NULL, NULL, /* commit_callback */
                            ctx, scratch_pool));
 
   ctx->wc_ctx = NULL;
