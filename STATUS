@@ -141,14 +141,14 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1590751
    Votes:
      +1: rhuijben
-     +1 (without r1660341): philip, danielsh
+     +1 (without r1660350): philip, danielsh
      -0: julianfoad (prefer to fix all the programs at the same time;
                      other queries -- see email thread)
-     +1 (without r1660341): danielsh (julianf:
+     +1 (without r1660350): danielsh (julianf:
                      I agree with your points on list, but +1ing anyway:
                      fixing this segfault in svn need not block on fixing
                      a similar segfault in svnadmin.)
-     -1: kotkov (without r1660341)
+     -1: kotkov (without r1660350)
                    (breaks the build on Windows -- should use SVN_INT_ERR()
                     instead of SVN_ERR())
 
