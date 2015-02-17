@@ -1300,7 +1300,7 @@ svn__base36toui64(const char **next, const char *source)
 }
 
 
-unsigned int
+apr_size_t
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs)
 {
@@ -1312,7 +1312,7 @@ svn_cstring__similarity(const char *stra, const char *strb,
   return svn_string__similarity(&stringa, &stringb, buffer, rlcs);
 }
 
-unsigned int
+apr_size_t
 svn_string__similarity(const svn_string_t *stringa,
                        const svn_string_t *stringb,
                        svn_membuf_t *buffer, apr_size_t *rlcs)
@@ -1401,9 +1401,9 @@ svn_string__similarity(const svn_string_t *stringa,
 
   /* Return similarity ratio rounded to 4 significant digits */
   if (total)
-    return(unsigned int)((2000 * lcs + total/2) / total);
+    return ((2 * SVN_STRING__SIM_RANGE_MAX * lcs + total/2) / total);
   else
-    return 1000;
+    return SVN_STRING__SIM_RANGE_MAX;
 }
 
 apr_size_t
