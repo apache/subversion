@@ -162,9 +162,6 @@ Veto-blocked changes:
      +1: rhuijben, stefan2
      -1: julianfoad (assertion failure on incomplete dir -- see email)
 
-Approved changes:
-=================
-
  * r1590751
    Use empty, rather than NULL, config if default is unreadable.
    Justification:
@@ -176,3 +173,9 @@ Approved changes:
      +1: danielsh (julianf: I agree with your points on list, but +1ing anyway:
                      fixing this segfault in svn need not block on fixing
                      a similar segfault in svnadmin.)
+     -1: kotkov (breaks the build on Windows -- should use SVN_INT_ERR()
+                 instead of SVN_ERR())
+
+Approved changes:
+=================
+
