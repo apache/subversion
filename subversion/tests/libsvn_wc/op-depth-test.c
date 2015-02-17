@@ -1664,7 +1664,7 @@ test_db_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 2, "A/F",   "normal",       1, "S2" },
       { 2, "A/F/G", "normal",       1, "S2/G" },
       { 2, "A/F/H", "not-present",  1, "S2/H" },
-      { 2, "A/F/E", "base-deleted", 2, "A/F/E" },
+      { 2, "A/F/E", "base-deleted", NO_COPY_FROM },
       { 0 }
     };
     /*  /           norm        -
@@ -1702,7 +1702,7 @@ test_db_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 2, "A/B",   "normal",       NO_COPY_FROM },
       { 2, "A/B/C", "base-deleted", NO_COPY_FROM },
       { 2, "A/F",   "normal",       1, "S2" },
-      { 2, "A/F/E", "base-deleted", 2, "A/F/E" },
+      { 2, "A/F/E", "base-deleted", NO_COPY_FROM },
       { 2, "A/F/G", "normal",       1, "S2/G" },
       { 2, "A/F/H", "not-present",  1, "S2/H" },
       { 3, "A/B/C", "normal",       NO_COPY_FROM },
