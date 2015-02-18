@@ -157,6 +157,19 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * ^/subversion/branches/1.8.x-r1660593
+   Fix recording last-* information on nodes copied from foreign repositories
+   Justification:
+     Recording revisions (and other details) of foreign repositories causes
+     incorrect status output and bugs when using -rCOMMITTED, -rPREV, etc.
+     Local fix.
+   Notes:
+     The backport includes a small consistency fix from trunk.
+   Branch:
+     ^/subversion/branches/1.8.x-r1660593
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
