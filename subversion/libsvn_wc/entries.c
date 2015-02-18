@@ -1471,9 +1471,9 @@ insert_node(svn_sqlite__db_t *sdb,
 
   if (present && node->repos_relpath)
     {
-      SVN_ERR(svn_sqlite__bind_revnum(stmt, 10, node->changed_rev));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 11, node->changed_date));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 12, node->changed_author));
+      SVN_ERR(svn_sqlite__bind_revnum(stmt, 11, node->changed_rev));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 12, node->changed_date));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 13, node->changed_author));
     }
 
   if (node->repos_relpath
