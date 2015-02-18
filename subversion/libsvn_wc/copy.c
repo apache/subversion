@@ -997,6 +997,8 @@ static svn_error_t *
 remove_all_conflict_markers(svn_wc__db_t *db,
                             const char *src_dir_abspath,
                             const char *dst_dir_abspath,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1020,6 +1022,9 @@ remove_all_conflict_markers(svn_wc__db_t *db,
       const char *name = apr_hash_this_key(hi);
       struct svn_wc__db_info_t *info = apr_hash_this_val(hi);
 
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
       if (info->conflicted)
         {
           svn_pool_clear(iterpool);
@@ -1036,6 +1041,7 @@ remove_all_conflict_markers(svn_wc__db_t *db,
                             db,
                             svn_dirent_join(src_dir_abspath, name, iterpool),
                             svn_dirent_join(dst_dir_abspath, name, iterpool),
+                            cancel_func, cancel_baton,
                             iterpool));
         }
     }
@@ -1093,7 +1099,25 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
      is still in a valid state. So be careful when switching this over
      to the workqueue. */
   if (!metadata_only)
-    SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
+    {
+      svn_error_t *err;
+
+      err = svn_error_trace(svn_io_file_rename(src_abspath, dst_abspath,
+                                               scratch_pool));
+
+      /* Let's try if we can keep wc.db consistent even when the move
+         fails. Deleting the target is a wc.db only operation, while
+         going forward (delaying the error) would try to change
+         conflict markers, which might also fail. */
+      if (err)
+        return svn_error_trace(
+          svn_error_compose_create(
+              err,
+              svn_wc__db_op_delete(wc_ctx->db, dst_abspath, NULL, TRUE,
+                                   NULL, NULL, cancel_func, cancel_baton,
+                                   NULL, NULL,
+                                   scratch_pool)));
+    }
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1105,6 +1129,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
 
   if (kind == svn_node_dir)
     SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
+                                        cancel_func, cancel_baton,
                                         scratch_pool));
 
   if (conflicted)
