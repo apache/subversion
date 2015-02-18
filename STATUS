@@ -138,6 +138,20 @@ Candidate changes:
      +1: rhuijben
      +1: danielsh (libsvn_repos part only)
 
+ * ^/subversion/branches/1.7.x-buildfix-neon
+   Fix building neon when passing an absolute path to gen-make.py
+   Justification:
+     Don't create invalid paths in generated project files as those
+     will just produce unreadable errors.
+     See http://ci.apache.org/builders/svn-windows-local/builds/1617/steps/Build/logs/stdio
+     "System.InvalidOperationException: The item metadata "%(FullPath)" cannot be applied
+      to the path "D:\local\svn-local\build\D:\local\svn-local\deps\build\neon\neon.vcxproj".
+      The given path's format is not supported."
+   Branch:
+     ^/subversion/branches/1.7.x-buildfix-neon
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
