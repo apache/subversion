@@ -155,3 +155,36 @@ AND (kind IS NULL
      OR (CASE WHEN kind = MAP_SYMLINK THEN symlink_target IS NULL
                                       ELSE symlink_target IS NOT NULL END))
 
+UNION ALL
+
+SELECT local_relpath, op_depth, 'SV007: Invalid op-depth for local add'
+FROM nodes
+WHERE presence IN (MAP_NORMAL, MAP_INCOMPLETE)
+  AND repos_path IS NULL
+  AND op_depth != relpath_depth(local_relpath)
+
+UNION ALL
+
+SELECT local_relpath, op_depth, 'SV008: Node missing ancestor'
+FROM nodes n
+WHERE op_depth < relpath_depth(local_relpath)
+  AND file_external IS NULL
+  AND NOT EXISTS(SELECT 1 FROM nodes p
+                 WHERE p.wc_id=n.wc_id AND p.local_relpath=n.parent_relpath
+                   AND p.op_depth=n.op_depth
+                   AND (p.presence IN (MAP_NORMAL, MAP_INCOMPLETE)
+                        OR (p.presence = MAP_BASE_DELETED
+                            AND n.presence = MAP_BASE_DELETED)))
+
+UNION all
+
+SELECT n.local_relpath, n.op_depth, 'SV009: Copied descendant mismatch'
+FROM nodes n
+JOIN nodes p
+  ON p.wc_id=n.wc_id AND p.local_relpath=n.parent_relpath
+  AND n.op_depth=p.op_depth
+WHERE n.op_depth > 0 AND n.presence IN (MAP_NORMAL, MAP_INCOMPLETE)
+   AND (n.repos_id != p.repos_id
+        OR n.repos_path !=
+           RELPATH_SKIP_JOIN(n.parent_relpath, p.repos_path, n.local_relpath)
+        OR n.revision != p.revision)

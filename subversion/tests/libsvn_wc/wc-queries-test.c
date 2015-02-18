@@ -984,6 +984,15 @@ test_schema_statistics(apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+/* An SQLite application defined function that allows SQL queries to
+   use "relpath_depth(local_relpath)".  */
+static void relpath_depth_sqlite(sqlite3_context* context,
+                                 int argc,
+                                 sqlite3_value* values[])
+{
+  SVN_ERR_MALFUNCTION_NO_RETURN(); /* STUB! */
+}
+
 /* Parse all verify/check queries */
 static svn_error_t *
 test_verify_parsable(apr_pool_t *scratch_pool)
@@ -992,6 +1001,9 @@ test_verify_parsable(apr_pool_t *scratch_pool)
   int i;
 
   SVN_ERR(create_memory_db(&sdb, scratch_pool));
+
+  SQLITE_ERR(sqlite3_create_function(sdb, "relpath_depth", 1, SQLITE_ANY, NULL,
+                                     relpath_depth_sqlite, NULL, NULL));
 
   for (i=STMT_VERIFICATION_TRIGGERS; wc_queries[i]; i++)
     {
