@@ -2031,6 +2031,9 @@ insert_actual(svn_test__sandbox_t *b,
       SVN_ERR(svn_sqlite__step_done(stmt));
       if (actual->changelist)
         {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                            STMT_ENSURE_EMPTY_PRISTINE));
+          SVN_ERR(svn_sqlite__step_done(stmt));
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_NODES_SET_FILE));
           SVN_ERR(svn_sqlite__bindf(stmt, "s", actual->local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));

@@ -135,3 +135,23 @@ WHERE presence IN (MAP_BASE_DELETED)
 AND (repos_id IS NOT NULL
      OR repos_path IS NOT NULL
      OR revision IS NOT NULL)
+
+UNION ALL
+
+SELECT local_relpath, op_depth, 'SV006: Kind specific data invalid on normal'
+FROM nodes
+WHERE presence IN (MAP_NORMAL, MAP_INCOMPLETE)
+AND (kind IS NULL
+     OR (repos_path IS NULL
+         AND (properties IS NOT NULL
+              OR changed_revision IS NOT NULL
+              OR changed_author IS NOT NULL
+              OR (changed_date IS NOT NULL AND changed_date != 0)))
+     OR (CASE WHEN kind = MAP_FILE AND repos_path IS NOT NULL
+                                   THEN checksum IS NULL
+                                   ELSE checksum IS NOT NULL END)
+     OR (CASE WHEN kind = MAP_DIR THEN depth IS NULL
+                                  ELSE depth IS NOT NULL END)
+     OR (CASE WHEN kind = MAP_SYMLINK THEN symlink_target IS NULL
+                                      ELSE symlink_target IS NOT NULL END))
+

@@ -984,6 +984,47 @@ test_schema_statistics(apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+/* Parse all verify/check queries */
+static svn_error_t *
+test_verify_parsable(apr_pool_t *scratch_pool)
+{
+  sqlite3 *sdb;
+  int i;
+
+  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+
+  for (i=STMT_VERIFICATION_TRIGGERS; wc_queries[i]; i++)
+    {
+      sqlite3_stmt *stmt;
+      const char *text = wc_queries[i];
+
+      /* Some of our statement texts contain multiple queries. We prepare
+         them all. */
+      while (*text != '\0')
+        {
+          const char *tail;
+          int r = sqlite3_prepare_v2(sdb, text, -1, &stmt, &tail);
+
+          if (r != SQLITE_OK)
+            return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
+                                     "Preparing %s failed: %s\n%s",
+                                     wc_query_info[i][0],
+                                     sqlite3_errmsg(sdb),
+                                     text);
+
+          SQLITE_ERR(sqlite3_finalize(stmt));
+
+          /* Continue after the current statement */
+          text = tail;
+        }
+    }
+
+  SQLITE_ERR(sqlite3_close(sdb)); /* Close the DB if ok; otherwise leaked */
+
+  return SVN_NO_ERROR;
+}
+
+
 static int max_threads = 1;
 
 static struct svn_test_descriptor_t test_funcs[] =
@@ -999,6 +1040,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test query duplicates"),
     SVN_TEST_PASS2(test_schema_statistics,
                    "test schema statistics"),
+    SVN_TEST_PASS2(test_verify_parsable,
+                   "verify queries are parsable"),
     SVN_TEST_NULL
   };
 
