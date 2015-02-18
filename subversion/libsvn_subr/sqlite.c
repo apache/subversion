@@ -1515,6 +1515,16 @@ wrapped_func(sqlite3_context *context,
     }
 }
 
+/* pool cleanup function for function context */
+static apr_status_t
+clear_sqlite_function(void *baton)
+{
+  struct function_wrapper_baton_t *fwb = baton;
+
+  svn_pool_destroy(fwb->scratch_pool);
+  return APR_SUCCESS;
+}
+
 svn_error_t *
 svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
                                    const char *func_name,
@@ -1527,7 +1537,14 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
   struct function_wrapper_baton_t *fwb = apr_pcalloc(db->state_pool,
                                                      sizeof(*fwb));
 
-  fwb->scratch_pool = svn_pool_create(db->state_pool);
+  /* If we create our scratch pool in db->state pool it is cleared
+     before the database is closed. This breaks using queries
+     before we close the database :(
+
+     We create a subpool in the global pool and only destroy it
+     when we want it to be destroyed */
+
+  fwb->scratch_pool = svn_pool_create(NULL);
   fwb->func = func;
   fwb->baton = baton;
 
@@ -1538,6 +1555,9 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
   SQLITE_ERR(sqlite3_create_function(db->db3, func_name, argc, eTextRep,
                                      fwb, wrapped_func, NULL, NULL),
              db);
+
+  apr_pool_cleanup_register(db->state_pool, fwb, clear_sqlite_function,
+                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
