@@ -189,3 +189,10 @@ WHERE n.op_depth > 0 AND n.presence IN (MAP_NORMAL, MAP_INCOMPLETE)
         OR n.repos_path !=
            RELPATH_SKIP_JOIN(n.parent_relpath, p.repos_path, n.local_relpath)
         OR n.revision != p.revision)
+
+UNION all
+
+SELECT n.local_relpath, n.op_depth, 'SV010: Invalid op-root presence'
+FROM nodes n
+WHERE n.op_depth = relpath_depth(local_relpath)
+  AND presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE, MAP_BASE_DELETED)
