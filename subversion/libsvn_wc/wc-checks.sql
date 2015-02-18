@@ -76,6 +76,8 @@ BEGIN
 END;
 
 -- STMT_STATIC_VERIFY
+/* A parent node must exist for every normal node except the root.
+   That node must exist at a lower or equal op-depth */
 SELECT local_relpath, op_depth, 'SV001: No ancestor in NODES'
 FROM nodes n WHERE local_relpath != ''
  AND file_external IS NULL
@@ -86,6 +88,8 @@ FROM nodes n WHERE local_relpath != ''
 
 UNION ALL
 
+/* All ACTUAL nodes must have an equivalent NODE in NODES
+   or be only one level deep (delete-delete tc) */
 SELECT local_relpath, -1, 'SV002: No ancestor in ACTUAL'
 FROM actual_node a WHERE local_relpath != ''
  AND NOT EXISTS(SELECT 1 from nodes i
@@ -96,7 +100,8 @@ FROM actual_node a WHERE local_relpath != ''
                   AND i.local_relpath=a.local_relpath)
 
 UNION ALL
-
+/* Verify if the ACTUAL data makes sense for the related node.
+   Only conflict data is valid if there is none */
 SELECT a.local_relpath, -1, 'SV003: Bad or Unneeded actual data'
 FROM actual_node a
 LEFT JOIN nodes n on n.wc_id = a.wc_id AND n.local_relpath = a.local_relpath
@@ -111,7 +116,8 @@ WHERE (a.properties IS NOT NULL
                   AND i.local_relpath=a.parent_relpath)
 
 UNION ALL
-
+/* If a node is not present in the working copy (normal, add, copy) it doesn't
+   have revision details stored on this record */
 SELECT local_relpath, op_depth, 'SV004: Unneeded node data'
 FROM nodes
 WHERE presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE)
@@ -129,7 +135,8 @@ AND (properties IS NOT NULL
      OR inherited_props IS NOT NULL)
 
 UNION ALL
-
+/* base-deleted nodes don't have a repository location. They are just
+   shadowing without a replacement */
 SELECT local_relpath, op_depth, 'SV005: Unneeded base-deleted node data'
 FROM nodes
 WHERE presence IN (MAP_BASE_DELETED)
@@ -138,7 +145,7 @@ AND (repos_id IS NOT NULL
      OR revision IS NOT NULL)
 
 UNION ALL
-
+/* Verify if type specific data is set (or not set for wrong type) */
 SELECT local_relpath, op_depth, 'SV006: Kind specific data invalid on normal'
 FROM nodes
 WHERE presence IN (MAP_NORMAL, MAP_INCOMPLETE)
@@ -157,7 +164,8 @@ AND (kind IS NULL
                                       ELSE symlink_target IS NOT NULL END))
 
 UNION ALL
-
+/* Local-adds are always their own operation (read: they don't have
+   op-depth descendants, nor are op-depth descendants */
 SELECT local_relpath, op_depth, 'SV007: Invalid op-depth for local add'
 FROM nodes
 WHERE presence IN (MAP_NORMAL, MAP_INCOMPLETE)
@@ -165,7 +173,9 @@ WHERE presence IN (MAP_NORMAL, MAP_INCOMPLETE)
   AND op_depth != relpath_depth(local_relpath)
 
 UNION ALL
-
+/* op-depth descendants are only valid if they have a direct parent
+   node at the same op-depth. Only certain types allow further
+   descendants */
 SELECT local_relpath, op_depth, 'SV008: Node missing ancestor'
 FROM nodes n
 WHERE op_depth < relpath_depth(local_relpath)
@@ -174,11 +184,12 @@ WHERE op_depth < relpath_depth(local_relpath)
                  WHERE p.wc_id=n.wc_id AND p.local_relpath=n.parent_relpath
                    AND p.op_depth=n.op_depth
                    AND (p.presence IN (MAP_NORMAL, MAP_INCOMPLETE)
-                        OR (p.presence = MAP_BASE_DELETED
+                        OR (p.presence IN (MAP_BASE_DELETED, MAP_NOT_PRESENT)
                             AND n.presence = MAP_BASE_DELETED)))
 
-UNION all
-
+UNION ALL
+/* Present op-depth descendants have the repository location implied by their
+   ancestor */
 SELECT n.local_relpath, n.op_depth, 'SV009: Copied descendant mismatch'
 FROM nodes n
 JOIN nodes p
@@ -188,11 +199,65 @@ WHERE n.op_depth > 0 AND n.presence IN (MAP_NORMAL, MAP_INCOMPLETE)
    AND (n.repos_id != p.repos_id
         OR n.repos_path !=
            RELPATH_SKIP_JOIN(n.parent_relpath, p.repos_path, n.local_relpath)
-        OR n.revision != p.revision)
+        OR n.revision != p.revision
+        OR p.kind != MAP_DIR
+        OR n.moved_here != p.moved_here)
 
-UNION all
-
+UNION ALL
+/* Only certain presence values are valid as op-root.
+   Note that the wc-root always has presence normal or incomplete */
 SELECT n.local_relpath, n.op_depth, 'SV010: Invalid op-root presence'
 FROM nodes n
 WHERE n.op_depth = relpath_depth(local_relpath)
   AND presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE, MAP_BASE_DELETED)
+
+UNION ALL
+/* If a node is shadowed, all its present op-depth descendants
+   must be shadowed at the same op-depth as well */
+SELECT n.local_relpath, n.op_depth, 'SV011: Incomplete shadowing'
+FROM nodes n
+JOIN nodes s ON s.wc_id=n.wc_id AND s.local_relpath=n.local_relpath
+ AND s.op_depth = relpath_depth(s.local_relpath)
+ AND s.op_depth = (SELECT MIN(op_depth) FROM nodes d
+                   WHERE d.wc_id=s.wc_id AND d.local_relpath=s.local_relpath
+                     AND d.op_depth > n.op_depth)
+WHERE n.presence IN (MAP_NORMAL, MAP_INCOMPLETE)
+  AND EXISTS(SELECT 1
+             FROM nodes dn
+             WHERE dn.wc_id=n.wc_id AND dn.op_depth=n.op_depth
+               AND dn.presence IN (MAP_NORMAL, MAP_INCOMPLETE)
+               AND IS_STRICT_DESCENDANT_OF(dn.local_relpath, n.local_relpath)
+               AND dn.file_external IS NULL
+               AND NOT EXISTS(SELECT 1
+                              FROM nodes ds
+                              WHERE ds.wc_id=n.wc_id AND ds.op_depth=s.op_depth
+                                AND ds.local_relpath=dn.local_relpath))
+
+UNION ALL
+/* A base-delete is only valid if it directly deletes a present node */
+SELECT s.local_relpath, s.op_depth, 'SV012: Invalid base-delete'
+FROM nodes s
+LEFT JOIN nodes n ON n.wc_id=s.wc_id AND n.local_relpath=s.local_relpath
+ AND n.op_depth = (SELECT MAX(op_depth) FROM nodes d
+                   WHERE d.wc_id=s.wc_id AND d.local_relpath=s.local_relpath
+                     AND d.op_depth < s.op_depth)
+WHERE s.presence = MAP_BASE_DELETED
+  AND n.presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE)
+
+UNION ALL
+
+SELECT d.local_relpath, d.op_depth, 'SV013: Moved here without origin'
+FROM nodes d
+WHERE d.op_depth = relpath_depth(d.local_relpath)
+  AND d.moved_here = 1
+  AND NOT EXISTS(SELECT 1 FROM nodes s
+                 WHERE s.wc_id = d.wc_id AND s.moved_to = d.local_relpath)
+
+UNION ALL
+
+SELECT s.local_relpath, s.op_depth, 'SV014: Moved to without target'
+FROM nodes s
+WHERE s.moved_to IS NOT NULL
+  AND NOT EXISTS(SELECT 1 FROM nodes d
+                 WHERE d.wc_id = s.wc_id AND d.local_relpath = s.moved_to
+                   AND d.moved_here =1 AND d.repos_path IS NOT NULL)

@@ -140,7 +140,7 @@ class Processor(object):
 
       # '/'+1 == '0'
       line = re.sub(
-            r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
+            r'IS_STRICT_DESCENDANT_OF[(]([?]?[A-Za-z0-9_.]+), ([?]?[A-Za-z0-9_.]+)[)]',
             r"(((\1) > (CASE (\2) WHEN '' THEN '' ELSE (\2) || '/' END))" +
             r" AND ((\1) < CASE (\2) WHEN '' THEN X'FFFF' ELSE (\2) || '0' END))",
             line)
