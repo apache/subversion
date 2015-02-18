@@ -62,7 +62,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1542765
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1644158, r1644530, r1644595, r1644599, r1652744
    Fix patch output for reordered hunks, part of issue 4533.
@@ -71,7 +71,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1644595
    Votes:
-     +1: philip
+     +1: philip, stefan2
 
  * r1646785, r1646786, r1646797
    Fix a pool handling bug in config variable expansion.
@@ -80,7 +80,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1646797
    Votes:
-     +1: philip
+     +1: philip, stefan2
 
  * r1651759
    Api correctness fix: Duplicate error filename when copying errors
