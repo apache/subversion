@@ -24,6 +24,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1660646
+   Fix calculating the repository path of replaced directories on entry upgrade
+   Justification:
+     Simple fix that avoids recording invalid data in WC-NG.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
