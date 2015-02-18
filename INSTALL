@@ -123,7 +123,8 @@ I.    INTRODUCTION
          create a repository, you have the option of specifying a
          storage back-end.  The Berkeley DB back-end will only be
          available if the BDB libraries are discovered at compile
-         time.
+         time.  The Berkeley DB back-end has been deprecated and
+         is not recommend.
 
       * libsasl (OPTIONAL for client and server)
 
