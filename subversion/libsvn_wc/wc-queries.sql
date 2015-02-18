@@ -462,25 +462,13 @@ SELECT dav_cache FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_DELETION_INFO
-SELECT (SELECT b.presence FROM nodes AS b
-         WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),
-       work.presence, work.op_depth
-FROM nodes_current AS work
-WHERE work.wc_id = ?1 AND work.local_relpath = ?2 AND work.op_depth > 0
-LIMIT 1
-
--- STMT_SELECT_DELETION_INFO_SCAN
-/* ### FIXME.  moved.moved_to IS NOT NULL works when there is
- only one move but we need something else when there are several. */
-SELECT (SELECT b.presence FROM nodes AS b
-         WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),
-       work.presence, work.op_depth, moved.moved_to
-FROM nodes_current AS work
-LEFT OUTER JOIN nodes AS moved
-  ON moved.wc_id = work.wc_id
- AND moved.local_relpath = work.local_relpath
- AND moved.moved_to IS NOT NULL
-WHERE work.wc_id = ?1 AND work.local_relpath = ?2 AND work.op_depth > 0
+SELECT b.presence, w.presence, w.op_depth, w.moved_to
+FROM nodes w
+LEFT JOIN nodes b ON b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0
+WHERE w.wc_id = ?1 AND w.local_relpath = ?2
+  AND w.op_depth = (SELECT MAX(op_depth) FROM nodes d
+                    WHERE d.wc_id = ?1 AND d.local_relpath = ?2
+                      AND d.op_depth > 0)
 LIMIT 1
 
 -- STMT_SELECT_MOVED_TO_NODE
