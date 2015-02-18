@@ -174,14 +174,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1590751, r1660350
-   Use empty, rather than NULL, config if default is unreadable.
-   Justification:
-     svn SEGV reported by user.
-   Notes:
-     A test case is "HOME=/dev/null svn st".
-   Branch:
-     ^/subversion/branches/1.8.x-r1590751
-   Votes:
-     +1: rhuijben, philip, julianfoad, danielsh
