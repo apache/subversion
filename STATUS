@@ -91,7 +91,8 @@ Candidate changes:
    Notes:
      r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
    Votes:
-     +1 julianfoad
+     +1: julianfoad
+     -0: stefan2 (uses apr_hash_this_* functions)
 
  * r1561419
    Fix 'svnadmin recover' for pre-1.4 FSFS repositories.
