@@ -201,6 +201,8 @@ class Generator(gen_win.WinGeneratorBase):
       for i in range(len(depends)):
         if depends[i].fname.startswith(self.projfilesdir):
           path = depends[i].fname[len(self.projfilesdir) + 1:]
+        elif os.path.isabs(depends[i].fname):
+          path = depends[i].fname
         else:
           path = '$(SolutionDir)' + depends[i].fname
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
