@@ -4044,9 +4044,7 @@ scan_deletion_txn(const char **base_del_relpath,
   scan = (moved_to_op_root_relpath || moved_to_relpath);
 
   SVN_ERR(svn_sqlite__get_statement(
-                    &stmt, wcroot->sdb,
-                    scan ? STMT_SELECT_DELETION_INFO_SCAN
-                         : STMT_SELECT_DELETION_INFO));
+                    &stmt, wcroot->sdb, STMT_SELECT_DELETION_INFO));
 
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, current_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
