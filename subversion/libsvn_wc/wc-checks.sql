@@ -81,7 +81,8 @@ FROM nodes n WHERE local_relpath != ''
  AND file_external IS NULL
  AND NOT EXISTS(SELECT 1 from nodes i
                 WHERE i.wc_id=n.wc_id
-                  AND i.local_relpath=n.parent_relpath)
+                  AND i.local_relpath=n.parent_relpath
+                  AND i.op_depth <= n.op_depth)
 
 UNION ALL
 
