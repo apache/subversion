@@ -45,6 +45,7 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1536854
    Votes:
      +1: stefan2, breser
+     -0: julianfoad (test is missing from branch -- how do we know it works?)
 
  * r1561419, r1561427, 1547489, r1560643, r1573744
    Fix the hotcopy and recovery for pre-1.4 FSFS repositories.
