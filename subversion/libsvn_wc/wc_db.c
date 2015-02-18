@@ -1098,7 +1098,7 @@ insert_working_node(const insert_working_baton_t *piwb,
   assert(piwb->presence == svn_wc__db_status_normal
          || piwb->presence == svn_wc__db_status_incomplete
          || piwb->props == NULL);
-  if (present)
+  if (present && piwb->original_repos_relpath)
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, piwb->props, scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
@@ -5668,8 +5668,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                        const char *original_uuid,
                        svn_revnum_t original_revision,
                        const apr_array_header_t *children,
-                       svn_boolean_t is_move,
                        svn_depth_t depth,
+                       svn_boolean_t is_move,
                        const svn_skel_t *conflict,
                        const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool)
@@ -5696,11 +5696,6 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_node_dir;
 
-  iwb.props = props;
-  iwb.changed_rev = changed_rev;
-  iwb.changed_date = changed_date;
-  iwb.changed_author = changed_author;
-
   if (original_root_url != NULL)
     {
       SVN_ERR(create_repos_id(&iwb.original_repos_id,
@@ -5708,6 +5703,11 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                               wcroot->sdb, scratch_pool));
       iwb.original_repos_relpath = original_repos_relpath;
       iwb.original_revnum = original_revision;
+
+      iwb.props = props;
+      iwb.changed_rev = changed_rev;
+      iwb.changed_date = changed_date;
+      iwb.changed_author = changed_author;
     }
 
   /* ### Should we do this inside the transaction? */
@@ -5776,11 +5776,6 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_node_file;
 
-  iwb.props = props;
-  iwb.changed_rev = changed_rev;
-  iwb.changed_date = changed_date;
-  iwb.changed_author = changed_author;
-
   if (original_root_url != NULL)
     {
       SVN_ERR(create_repos_id(&iwb.original_repos_id,
@@ -5788,6 +5783,11 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                               wcroot->sdb, scratch_pool));
       iwb.original_repos_relpath = original_repos_relpath;
       iwb.original_revnum = original_revision;
+
+      iwb.props = props;
+      iwb.changed_rev = changed_rev;
+      iwb.changed_date = changed_date;
+      iwb.changed_author = changed_author;
     }
 
   /* ### Should we do this inside the transaction? */
@@ -5830,6 +5830,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                            const char *original_uuid,
                            svn_revnum_t original_revision,
                            const char *target,
+                           svn_boolean_t is_move,
                            const svn_skel_t *conflict,
                            const svn_skel_t *work_items,
                            apr_pool_t *scratch_pool)
@@ -5854,11 +5855,6 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_node_symlink;
 
-  iwb.props = props;
-  iwb.changed_rev = changed_rev;
-  iwb.changed_date = changed_date;
-  iwb.changed_author = changed_author;
-  iwb.moved_here = FALSE;
 
   if (original_root_url != NULL)
     {
@@ -5867,6 +5863,11 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                               wcroot->sdb, scratch_pool));
       iwb.original_repos_relpath = original_repos_relpath;
       iwb.original_revnum = original_revision;
+
+      iwb.props = props;
+      iwb.changed_rev = changed_rev;
+      iwb.changed_date = changed_date;
+      iwb.changed_author = changed_author;
     }
 
   /* ### Should we do this inside the transaction? */
@@ -5876,6 +5877,8 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                             wcroot, local_relpath, scratch_pool));
 
   iwb.target = target;
+  iwb.moved_here = is_move && (parent_op_depth == 0 ||
+                               iwb.op_depth == parent_op_depth);
 
   iwb.work_items = work_items;
   iwb.conflict = conflict;

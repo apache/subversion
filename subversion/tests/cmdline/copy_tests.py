@@ -1005,8 +1005,7 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'pi' : Item(status='A ',  wc_rev='0', entry_rev='1'),
-    # And from the foreign repository
+    'pi'            : Item(status='A ', wc_rev='0'),
     'E'             : Item(status='A ', wc_rev='0'),
     'E/beta'        : Item(status='A ', wc_rev='0'),
     'E/alpha'       : Item(status='A ', wc_rev='0'),
