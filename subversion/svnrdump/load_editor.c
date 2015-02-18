@@ -1010,8 +1010,8 @@ close_node(void *baton)
   for (hi = apr_hash_first(pool, nb->prop_changes);
        hi; hi = apr_hash_next(hi))
     {
-      const char *name = apr_hash_this_key(hi);
-      svn_prop_t *prop = apr_hash_this_val(hi);
+      const char *name = svn__apr_hash_index_key(hi);
+      svn_prop_t *prop = svn__apr_hash_index_val(hi);
 
       switch (nb->kind)
         {
