@@ -1479,6 +1479,7 @@ struct function_wrapper_baton_t
   void *baton;
 
   apr_pool_t *scratch_pool;
+  apr_pool_t *state_pool;
 };
 
 static void
@@ -1515,13 +1516,32 @@ wrapped_func(sqlite3_context *context,
     }
 }
 
-/* pool cleanup function for function context */
+/* Forward definition */
+static apr_status_t clear_sqlite_function_scratch(void *baton);
+
+/* pool cleanup function for function context on state pool */
 static apr_status_t
-clear_sqlite_function(void *baton)
+clear_sqlite_function_state(void *baton)
 {
   struct function_wrapper_baton_t *fwb = baton;
 
   svn_pool_destroy(fwb->scratch_pool);
+
+  apr_pool_cleanup_kill(fwb->scratch_pool, baton,
+                        clear_sqlite_function_scratch);
+
+  return APR_SUCCESS;
+}
+
+/* pool cleanup function for global cleanup on internal pool */
+static apr_status_t
+clear_sqlite_function_scratch(void *baton)
+{
+  struct function_wrapper_baton_t *fwb = baton;
+
+  apr_pool_cleanup_kill(fwb->state_pool, baton,
+                        clear_sqlite_function_state);
+
   return APR_SUCCESS;
 }
 
@@ -1544,6 +1564,7 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
      We create a subpool in the global pool and only destroy it
      when we want it to be destroyed */
 
+  fwb->state_pool = db->state_pool;
   fwb->scratch_pool = svn_pool_create(NULL);
   fwb->func = func;
   fwb->baton = baton;
@@ -1556,7 +1577,11 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
                                      fwb, wrapped_func, NULL, NULL),
              db);
 
-  apr_pool_cleanup_register(db->state_pool, fwb, clear_sqlite_function,
+  apr_pool_cleanup_register(fwb->state_pool, fwb,
+                            clear_sqlite_function_state,
+                            apr_pool_cleanup_null);
+  apr_pool_cleanup_register(fwb->scratch_pool, fwb,
+                            clear_sqlite_function_scratch,
                             apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
