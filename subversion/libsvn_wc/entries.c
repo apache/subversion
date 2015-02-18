@@ -1459,7 +1459,7 @@ insert_node(svn_sqlite__db_t *sdb,
   SVN_ERR_ASSERT(node->op_depth > 0 || node->repos_relpath);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnnnsnris",
+  SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnnnsn",
                             node->wc_id,
                             node->local_relpath,
                             node->op_depth,
@@ -1467,10 +1467,14 @@ insert_node(svn_sqlite__db_t *sdb,
                             /* Setting depth for files? */
                             (node->kind == svn_node_dir && present)
                               ? svn_depth_to_word(node->depth)
-                              : NULL,
-                            node->changed_rev,
-                            node->changed_date,
-                            node->changed_author));
+                              : NULL));
+
+  if (present && node->repos_relpath)
+    {
+      SVN_ERR(svn_sqlite__bind_revnum(stmt, 10, node->changed_rev));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 11, node->changed_date));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 12, node->changed_author));
+    }
 
   if (node->repos_relpath
       && node->presence != svn_wc__db_status_base_deleted)
@@ -1504,13 +1508,17 @@ insert_node(svn_sqlite__db_t *sdb,
       SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, node->checksum,
                                         scratch_pool));
 
-      if (node->recorded_size != SVN_INVALID_FILESIZE)
-        SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->recorded_size));
+      if (node->repos_relpath)
+        {
+          if (node->recorded_size != SVN_INVALID_FILESIZE)
+            SVN_ERR(svn_sqlite__bind_int64(stmt, 16, node->recorded_size));
 
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 17, node->recorded_time));
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 17, node->recorded_time));
+        }
     }
 
-  if (node->properties && present) /* ### Never set, props done later */
+   /* ### Never set, props done later */
+  if (node->properties && present && node->repos_relpath)
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, node->properties,
                                         scratch_pool));
 
