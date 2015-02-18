@@ -15,7 +15,7 @@ Contents:
        D. Documentation
 
     II. INSTALLATION
-       A. Building from a Tarball or RPM
+       A. Building from a Tarball
        B. Building the Latest Source under Unix
        C. Building under Unix in Different Directories
        D. Installing from a Zip or Installer File under Windows
@@ -574,7 +574,7 @@ I.    INTRODUCTION
 II.   INSTALLATION
       ============
 
-  A.  Building from a Tarball or RPM
+  A.  Building from a Tarball
       ------------------------------
 
       1.  Building from a Tarball
@@ -590,31 +590,6 @@ II.   INSTALLATION
           # make install
 
       You can also run the full test suite by running 'make check'.
-
-
-      2.  Building from an RPM
-
-      If you are using Linux (or any OS that can use RPM) then another
-      possibility is to download the binary RPM from the
-      http://summersoft.fay.ar.us/pub/subversion directory.
-
-      Currently only Linux on the i386 platform is supported
-      using this method.  You might also require additional RPMS
-      (which can be found in the above mentioned directory) to use the
-      subversion RPM depending on what packages you already have installed:
-
-          subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.2.0 or greater)
-          db*.i386.rpm     (Version 4.0.14 or greater)
-
-      After downloading, install it (as root user):
-
-          # rpm -ivh subversion*.386.rpm (add other packages as necessary)
-
-      Note: For an easy way to generate a new version of the RPM
-      source and binary package from the latest source code you
-      just checked out, see the packages/rpm/README file for a
-      one-line build procedure.
 
 
   B.  Building the Latest Source under Unix
@@ -1136,12 +1111,6 @@ III.  BUILDING A SUBVERSION SERVER
 
   A.  Setting Up Apache
       -----------------
-
-      (Following the BOOTSTRAPPING FROM RPM procedures above will install and
-      build the latest Subversion server for Linux RedHat 7.1, 7.2, and PPC
-      Linux systems *IF* the apache-devel-2.0.41 or greater package is already
-      installed when the SUBVERSION RPM is built.)
-
 
       1.  Obtaining and Installing Apache 2
 
