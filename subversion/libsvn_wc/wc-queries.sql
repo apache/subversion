@@ -233,6 +233,16 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 
 -- STMT_DELETE_WORKING_BASE_DELETE
 DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND presence = MAP_BASE_DELETED
+  AND op_depth > ?3
+  AND op_depth = (SELECT MIN(op_depth) FROM nodes n
+                    WHERE n.wc_id = ?1
+                      AND n.local_relpath = nodes.local_relpath
+                      AND op_depth > ?3)
+
+-- STMT_DELETE_WORKING_BASE_DELETE_RECURSIVE
+DELETE FROM nodes
 WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND presence = MAP_BASE_DELETED
   AND op_depth > ?3
@@ -1023,15 +1033,17 @@ WHERE wc_id = ?1
 ORDER BY local_relpath
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
-INSERT INTO nodes (
+INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
-    symlink_target )
+    symlink_target, moved_to )
 SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
     repos_path, revision, presence, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
-    last_mod_time, symlink_target
+    last_mod_time, symlink_target,
+    (SELECT moved_to FROM nodes
+     WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3) moved_to
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
