@@ -183,37 +183,35 @@ static const char * const TESTING_DATA = (
   "  null, null, 'dir', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
 
-   /* I'm not sure what the working J is supposed to represent.  It
-      replaces the base J, but is it a copy or not?  It has no
-      copyfrom, but nodes like J/J-e appear to be deleted which
-      implies they are children of a copied J. */
+   /* J was originally a local addition, but its descendants are replaced,
+      so let's turn J in a copy */
   "insert into nodes values ("
-  "  1, 'J', 1, '', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'immediates', null, null, null, null, null,"
+  "  1, 'J', 1, '', 2, 'q', 2, 'normal',"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-a', 1, 'J', null, null, null, 'normal',"
-  "  null, null, 'file', null, null, null, null, null, null, null,"
+  "  1, 'J/J-a', 1, 'J', 2, 'q/J-a', 2, 'normal',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-b', 2, 'J', 2, 'some/dir', 2, 'normal',"
-  "  null, null, 'dir', null, 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  1, 'J/J-b', 1, 'J', 2, 'q/J-b', 2, 'normal',"
+  "  null, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-b/J-b-a', 3, 'J/J-b', 2, 'another/dir', 2, 'normal',"
   "  null, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-b/J-b-b', 2, 'J/J-b', null, null, 2, 'normal',"
-  "  null, null, 'file', null, null, null, null, null, null, null,"
+  "  1, 'J/J-b/J-b-b', 1, 'J/J-b', 2, 'q/J-b/J-b-b', 2, 'normal',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-c', 1, 'J', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'infinity', null, null, null, null, null,"
+  "  1, 'J/J-c', 1, 'J', 2, 'q/J-c', 2, 'normal',"
+  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-c/J-c-a', 1, 'J/J-c', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'infinity', null, null, null, null, null,"
+  "  1, 'J/J-c/J-c-a', 1, 'J/J-c', 2, 'q/J-c/J-c-a', 2, 'normal',"
+  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-c', 2, 'J', null, null, null, 'base-deleted',"
@@ -240,16 +238,16 @@ static const char * const TESTING_DATA = (
   "  null, 'J/J-d', 'file', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-e', 1, 'J', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'infinity', null, null, null, null, null,"
+  "  1, 'J/J-e', 1, 'J', 2, 'q/J-e', 2, 'normal',"
+  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-e/J-e-a', 1, 'J/J-e', null, null, null, 'normal',"
-  "  null, null, 'file', null, null, null, null, null, null, null,"
+  "  1, 'J/J-e/J-e-a', 1, 'J/J-e', 2, 'q/J-e/J-e-a', 2, 'normal',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b', 1, 'J/J-e', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'infinity', null, null, null, null, null,"
+  "  1, 'J/J-e/J-e-b', 1, 'J/J-e', 2, 'q/J-e/J-e-b', 2, 'normal',"
+  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 2, 'J', null, null, null, 'base-deleted',"
@@ -264,12 +262,12 @@ static const char * const TESTING_DATA = (
   "  null, null, 'dir', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b/Jeba', 1, 'J/J-e/J-e-b', null, null, null, 'base-deleted',"
+  "  1, 'J/J-e/J-e-b/Jeba', 2, 'J/J-e/J-e-b', null, null, null, 'base-deleted',"
   "  null, null, 'file', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'J/J-f', 1, 'J', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'immediates', null, null, null, null, null,"
+  "  1, 'J/J-f', 1, 'J', 2, 'q/J-f', 2, 'normal',"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f/J-f-a', 1, 'J/J-f', null, null, null, 'base-deleted',"
@@ -288,16 +286,16 @@ static const char * const TESTING_DATA = (
   "  null, null, 'file', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'L', 1, '', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'immediates', null, null, null, null, null,"
+  "  1, 'L', 1, '', 2, 'from', 2, 'normal',"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'L/L-a', 1, 'L', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'immediates', null, null, null, null, null,"
+  "  1, 'L/L-a', 1, 'L', 2, 'from/L-a', 2, 'normal',"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'L/L-a/L-a-a', 1, 'L/L-a', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'immediates', null, null, null, null, null,"
+  "  1, 'L/L-a/L-a-a', 1, 'L/L-a', 2, 'from/L-a/L-a-a', 2, 'normal',"
+  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
   "  1, 'L/L-a', 2, 'L', null, null, null, 'base-deleted',"
@@ -316,15 +314,15 @@ static const char * const TESTING_DATA = (
   "  1, null, 'dir', null, 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'other/place/J-e-a', 2, 'other/place', null, null, null, 'normal',"
+  "  1, 'other/place/J-e-a', 3, 'other/place', null, null, null, 'normal',"
   "  null, null, 'dir', null, 'immediates', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'other/place/J-e-b', 2, 'other/place', null, null, null, 'normal',"
+  "  1, 'other/place/J-e-b', 3, 'other/place', null, null, null, 'normal',"
   "  null, null, 'dir', null, 'infinity', null, null, null, null, null,"
   "  null, null, null, null, null);"
   "insert into nodes values ("
-  "  1, 'other/place/J-e-b/Jeba', 0, 'other/place/J-e-b', null, null, null, 'normal',"
+  "  1, 'other/place/J-e-b/Jeba', 4, 'other/place/J-e-b', null, null, null, 'normal',"
   "  null, null, 'file', null, null, null, null, null, null, null,"
   "  null, null, null, null, null);"
    "insert into actual_node values ("
@@ -374,18 +372,17 @@ set_prop(apr_hash_t *props, const char *name, const char *value,
 }
 
 
-static svn_boolean_t
+static svn_error_t *
 validate_abspath(const char *wcroot_abspath,
                  const char *expected_relpath,
                  const char *actual_abspath,
                  apr_pool_t *scratch_pool)
 {
-  if (actual_abspath == NULL)
-    return FALSE;
-  return strcmp(svn_dirent_join(wcroot_abspath,
+  SVN_TEST_STRING_ASSERT(actual_abspath,
+                         svn_dirent_join(wcroot_abspath,
                                 expected_relpath,
-                                scratch_pool),
-                actual_abspath) == 0;
+                                scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -949,9 +946,16 @@ test_pdh(apr_pool_t *pool)
             NULL, NULL,
             pool));
 
+  SVN_ERR(svn_wc__db_base_add_directory(
+            db, svn_dirent_join(local_abspath, "sub2", pool),
+            local_abspath, "sub2", ROOT_ONE, UUID_ONE, 1,
+            apr_hash_make(pool), 1, 1, "me", NULL,
+            svn_depth_infinity, NULL, FALSE, NULL, NULL,
+            NULL, NULL, pool));
+
   SVN_ERR(svn_wc__db_base_add_excluded_node(
-            db, svn_dirent_join(local_abspath, "sub/A", pool),
-            "sub/A", ROOT_ONE, UUID_ONE, 1,
+            db, svn_dirent_join(local_abspath, "sub2/A", pool),
+            "sub2/A", ROOT_ONE, UUID_ONE, 1,
             svn_node_file, svn_wc__db_status_server_excluded,
             NULL, NULL,
             pool));
@@ -989,17 +993,17 @@ test_scan_addition(apr_pool_t *pool)
             &original_revision,
             db, svn_dirent_join(local_abspath, "J", pool),
             pool, pool));
-  SVN_TEST_ASSERT(status == svn_wc__db_status_added);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J", op_root_abspath, pool));
+  SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
+  SVN_ERR(validate_abspath(local_abspath, "J", op_root_abspath, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "J");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
-  SVN_TEST_ASSERT(original_repos_relpath == NULL);
-  SVN_TEST_ASSERT(original_root_url == NULL);
-  SVN_TEST_ASSERT(original_uuid == NULL);
-  SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
+  SVN_TEST_STRING_ASSERT(original_repos_relpath, "q");
+  SVN_TEST_STRING_ASSERT(original_root_url, ROOT_TWO);
+  SVN_TEST_STRING_ASSERT(original_uuid, UUID_TWO);
+  SVN_TEST_ASSERT(original_revision == 2);
 
-  /* Simple addition of a file (affects how scan-up is started). */
+  /* Simple copy (affects how scan-up is started). */
   SVN_ERR(svn_wc__db_scan_addition(
             &status, &op_root_abspath,
             &repos_relpath, &repos_root_url, &repos_uuid,
@@ -1007,15 +1011,15 @@ test_scan_addition(apr_pool_t *pool)
             &original_revision,
             db, svn_dirent_join(local_abspath, "J/J-a", pool),
             pool, pool));
-  SVN_TEST_ASSERT(status == svn_wc__db_status_added);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J", op_root_abspath, pool));
+  SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
+  SVN_ERR(validate_abspath(local_abspath, "J", op_root_abspath, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "J/J-a");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
-  SVN_TEST_ASSERT(original_repos_relpath == NULL);
-  SVN_TEST_ASSERT(original_root_url == NULL);
-  SVN_TEST_ASSERT(original_uuid == NULL);
-  SVN_TEST_ASSERT(original_revision == SVN_INVALID_REVNUM);
+  SVN_TEST_STRING_ASSERT(original_repos_relpath, "q");
+  SVN_TEST_STRING_ASSERT(original_root_url, ROOT_TWO);
+  SVN_TEST_STRING_ASSERT(original_uuid, UUID_TWO);
+  SVN_TEST_ASSERT(original_revision == 2);
 
   /* Node was moved here. */
   SVN_ERR(svn_wc__db_scan_addition(
@@ -1033,15 +1037,15 @@ test_scan_addition(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "J/J-d", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_moved_here);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-d",
+  SVN_ERR(validate_abspath(local_abspath, "J/J-d",
                                    op_root_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/file",
+  SVN_ERR(validate_abspath(local_abspath, "moved/file",
                                    moved_from_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-d",
+  SVN_ERR(validate_abspath(local_abspath, "J/J-d",
                                    move_op_root_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/file",
+  SVN_ERR(validate_abspath(local_abspath, "moved/file",
                                    move_op_root_src, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/file",
+  SVN_ERR(validate_abspath(local_abspath, "moved/file",
                                    delete_op_root_abspath, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "J/J-d");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
@@ -1060,12 +1064,12 @@ test_scan_addition(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "J/J-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-b",
+  SVN_ERR(validate_abspath(local_abspath, "J",
                                    op_root_abspath, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "J/J-b");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
-  SVN_TEST_STRING_ASSERT(original_repos_relpath, "some/dir");
+  SVN_TEST_STRING_ASSERT(original_repos_relpath, "q");
   SVN_TEST_STRING_ASSERT(original_root_url, ROOT_TWO);
   SVN_TEST_STRING_ASSERT(original_uuid, UUID_TWO);
   SVN_TEST_ASSERT(original_revision == 2);
@@ -1079,7 +1083,7 @@ test_scan_addition(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "J/J-b/J-b-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-b/J-b-a",
+  SVN_ERR(validate_abspath(local_abspath, "J/J-b/J-b-a",
                                    op_root_abspath, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "J/J-b/J-b-a");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
@@ -1098,12 +1102,12 @@ test_scan_addition(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "J/J-b/J-b-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_copied);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-b",
+  SVN_ERR(validate_abspath(local_abspath, "J",
                                    op_root_abspath, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "J/J-b/J-b-b");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
-  SVN_TEST_STRING_ASSERT(original_repos_relpath, "some/dir");
+  SVN_TEST_STRING_ASSERT(original_repos_relpath, "q");
   SVN_TEST_STRING_ASSERT(original_root_url, ROOT_TWO);
   SVN_TEST_STRING_ASSERT(original_uuid, UUID_TWO);
   SVN_TEST_ASSERT(original_revision == 2);
@@ -1132,13 +1136,13 @@ test_scan_deletion(apr_pool_t *pool)
             &copy_op_root_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e", pool),
             pool, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
+  SVN_ERR(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
+  SVN_ERR(validate_abspath(local_abspath, "other/place",
                                    moved_to_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+  SVN_ERR(validate_abspath(local_abspath, "J/J-e",
                                    work_del_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
+  SVN_ERR(validate_abspath(local_abspath, "other/place",
                                    copy_op_root_abspath, pool));
 
   /* Node was moved elsewhere (child of operation root). */
@@ -1149,13 +1153,13 @@ test_scan_deletion(apr_pool_t *pool)
             &copy_op_root_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-a", pool),
             pool, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
+  SVN_ERR(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place/J-e-a",
+  SVN_ERR(validate_abspath(local_abspath, "other/place/J-e-a",
                                    moved_to_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
+  SVN_ERR(validate_abspath(local_abspath, "J/J-e",
                                    work_del_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
+  SVN_ERR(validate_abspath(local_abspath, "other/place",
                                    copy_op_root_abspath, pool));
 
   /* Root of delete. Parent is a WORKING node. */
@@ -1167,10 +1171,10 @@ test_scan_deletion(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "J/J-c", pool),
             pool, pool));
   /* Implicit delete of "J" (via replacement).  */
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
+  SVN_ERR(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-c",
+  SVN_ERR(validate_abspath(local_abspath, "J/J-c",
                                    work_del_abspath, pool));
 
   /* Child of a deleted root. */
@@ -1182,10 +1186,10 @@ test_scan_deletion(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "J/J-c/J-c-a", pool),
             pool, pool));
   /* Implicit delete of "J" (via replacement).  */
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
+  SVN_ERR(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-c",
+  SVN_ERR(validate_abspath(local_abspath, "J/J-c",
                                    work_del_abspath, pool));
 
   /* Base-deleted tree extending past deleted WORKING subtree.  */
@@ -1199,11 +1203,12 @@ test_scan_deletion(apr_pool_t *pool)
   /* ### I don't understand this.  "J/J-e/J-e-b/Jeba" is a deleted
      base node that is not overlayed by the replacement rooted at "J".
      Why does base_del_abspath refer to "J-e"?  */
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
+  SVN_ERR(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place/J-e-b/Jeba",
+  SVN_ERR(validate_abspath(local_abspath, "other/place/J-e-b/Jeba",
                                    moved_to_abspath, pool));
-  SVN_TEST_ASSERT(work_del_abspath == NULL);
+  SVN_ERR(validate_abspath(local_abspath, "J/J-e",
+                                   work_del_abspath, pool));
 
   /* Base-deleted tree extending past added WORKING tree.  */
   SVN_ERR(svn_wc__db_scan_deletion(
@@ -1214,7 +1219,7 @@ test_scan_deletion(apr_pool_t *pool)
             db, svn_dirent_join(local_abspath, "J/J-f/J-f-a", pool),
             pool, pool));
   /* Implicit delete of "J" (via replacement).  */
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
+  SVN_ERR(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(work_del_abspath == NULL);
@@ -1227,7 +1232,7 @@ test_scan_deletion(apr_pool_t *pool)
             NULL,
             db, svn_dirent_join(local_abspath, "K", pool),
             pool, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
+  SVN_ERR(validate_abspath(local_abspath, "K",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(work_del_abspath == NULL);
@@ -1240,7 +1245,7 @@ test_scan_deletion(apr_pool_t *pool)
             NULL,
             db, svn_dirent_join(local_abspath, "K/K-a", pool),
             pool, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
+  SVN_ERR(validate_abspath(local_abspath, "K",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(work_del_abspath == NULL);
@@ -1253,11 +1258,11 @@ test_scan_deletion(apr_pool_t *pool)
             &copy_op_root_abspath,
             db, svn_dirent_join(local_abspath, "K/K-b", pool),
             pool, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
+  SVN_ERR(validate_abspath(local_abspath, "K",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/away",
+  SVN_ERR(validate_abspath(local_abspath, "moved/away",
                                    moved_to_abspath, pool));
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/away",
+  SVN_ERR(validate_abspath(local_abspath, "moved/away",
                                    copy_op_root_abspath, pool));
   SVN_TEST_ASSERT(work_del_abspath == NULL);
 
@@ -1271,7 +1276,7 @@ test_scan_deletion(apr_pool_t *pool)
             pool, pool));
   SVN_TEST_ASSERT(base_del_abspath == NULL);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "L/L-a",
+  SVN_ERR(validate_abspath(local_abspath, "L/L-a",
                                    work_del_abspath, pool));
 
   /* Subtree deletion of added tree. Start at root.  */
@@ -1284,7 +1289,7 @@ test_scan_deletion(apr_pool_t *pool)
             pool, pool));
   SVN_TEST_ASSERT(base_del_abspath == NULL);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
-  SVN_TEST_ASSERT(validate_abspath(local_abspath, "L/L-a",
+  SVN_ERR(validate_abspath(local_abspath, "L/L-a",
                                    work_del_abspath, pool));
 
   return SVN_NO_ERROR;
