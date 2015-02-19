@@ -51,13 +51,6 @@ struct dag_node_t
   /* The filesystem this dag node came from. */
   svn_fs_t *fs;
 
-  /* In the special case that this node is the root of a transaction
-     that has not yet been modified, the revision of this node is the
-     respective txn's base rev.  Otherwise, this is SVN_INVALID_REVNUM
-     for txn nodes and the respective crev for committed nodes.
-     (Used in svn_fs_node_created_rev.) */
-  svn_revnum_t revision;
-
   /* The node's NODE-REVISION. */
   svn_fs_x__noderev_t *node_revision;
 
@@ -186,17 +179,6 @@ svn_fs_x__dag_check_mutable(const dag_node_t *node)
   return svn_fs_x__is_txn(svn_fs_x__dag_get_id(node)->change_set);
 }
 
-/* Update the REVISION member of NODE. */
-static void
-update_revision(dag_node_t *node)
-{
-  svn_fs_x__noderev_t *noderev = node->node_revision;
-  node->revision
-    = (  svn_fs_x__is_fresh_txn_root(noderev)
-       ? svn_fs_x__get_revnum(noderev->predecessor_id.change_set)
-       : svn_fs_x__get_revnum(noderev->noderev_id.change_set));
-}
-
 svn_error_t *
 svn_fs_x__dag_get_node(dag_node_t **node,
                        svn_fs_t *fs,
@@ -218,10 +200,6 @@ svn_fs_x__dag_get_node(dag_node_t **node,
   new_node->node_pool = result_pool;
   new_node->node_revision = noderev;
 
-  /* Support our quirky svn_fs_node_created_rev API.
-     Untouched txn roots report the base rev as theirs. */
-  update_revision(new_node);
-
   /* Return a fresh new node */
   *node = new_node;
   return SVN_NO_ERROR;
@@ -231,7 +209,10 @@ svn_fs_x__dag_get_node(dag_node_t **node,
 svn_revnum_t
 svn_fs_x__dag_get_revision(const dag_node_t *node)
 {
-  return node->revision;
+  svn_fs_x__noderev_t *noderev = node->node_revision;
+  return (  svn_fs_x__is_fresh_txn_root(noderev)
+          ? svn_fs_x__get_revnum(noderev->predecessor_id.change_set)
+          : svn_fs_x__get_revnum(noderev->noderev_id.change_set));
 }
 
 
@@ -352,7 +333,6 @@ set_entry(dag_node_t *parent,
                               kind, parent->node_pool, scratch_pool));
 
   /* Update cached data. */
-  update_revision(parent);
   svn_fs_x__update_dag_cache(parent);
 
   return SVN_NO_ERROR;
@@ -502,8 +482,6 @@ svn_fs_x__dag_set_proplist(dag_node_t *node,
   /* Set the new proplist. */
   SVN_ERR(svn_fs_x__set_proplist(node->fs, node->node_revision, proplist,
                                  scratch_pool));
-
-  update_revision(node);
   svn_fs_x__update_dag_cache(node);
 
   return SVN_NO_ERROR;
