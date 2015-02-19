@@ -1450,7 +1450,7 @@ x_make_dir(svn_fs_root_t *root,
                                  subpool, subpool));
 
   /* Add this directory to the path cache. */
-  svn_fs_x__set_dag_node(root, parent_path_path(dag_path, subpool), sub_dir);
+  svn_fs_x__update_dag_cache(sub_dir);
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
@@ -1791,7 +1791,7 @@ x_make_file(svn_fs_root_t *root,
                                   subpool, subpool));
 
   /* Add this file to the path cache. */
-  svn_fs_x__set_dag_node(root, parent_path_path(dag_path, subpool), child);
+  svn_fs_x__update_dag_cache(child);
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
