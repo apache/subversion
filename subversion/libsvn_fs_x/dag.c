@@ -123,54 +123,35 @@ copy_node_revision(svn_fs_x__noderev_t *noderev,
 }
 
 
-/* Return the node revision ID of NODE.  The value returned is shared
-   with NODE, and will be deallocated when NODE is.  */
-svn_error_t *
-svn_fs_x__dag_get_node_id(svn_fs_x__id_t *node_id,
-                          dag_node_t *node)
+const svn_fs_x__id_t *
+svn_fs_x__dag_get_node_id(dag_node_t *node)
 {
-  *node_id = node->node_revision->node_id;
-  return SVN_NO_ERROR;
+  return &node->node_revision->node_id;
 }
 
-/* Return the node revision ID of NODE.  The value returned is shared
-   with NODE, and will be deallocated when NODE is.  */
-svn_error_t *
-svn_fs_x__dag_get_copy_id(svn_fs_x__id_t *copy_id,
-                          dag_node_t *node)
+const svn_fs_x__id_t *
+svn_fs_x__dag_get_copy_id(dag_node_t *node)
 {
-  *copy_id = node->node_revision->copy_id;
-  return SVN_NO_ERROR;
+  return &node->node_revision->copy_id;
 }
 
-/* Return the node ID of NODE.  The value returned is shared with NODE,
-   and will be deallocated when NODE is.  */
-svn_error_t *
-svn_fs_x__dag_related_node(svn_boolean_t *same,
-                           dag_node_t *lhs,
+svn_boolean_t
+svn_fs_x__dag_related_node(dag_node_t *lhs,
                            dag_node_t *rhs)
 {
-  svn_fs_x__id_t lhs_node, rhs_node;
-
-  SVN_ERR(svn_fs_x__dag_get_node_id(&lhs_node, lhs));
-  SVN_ERR(svn_fs_x__dag_get_node_id(&rhs_node, rhs));
-  *same = svn_fs_x__id_eq(&lhs_node, &rhs_node);
-
-  return SVN_NO_ERROR;
+  return svn_fs_x__id_eq(&lhs->node_revision->node_id,
+                         &rhs->node_revision->node_id);
 }
 
-svn_error_t *
-svn_fs_x__dag_same_line_of_history(svn_boolean_t *same,
-                                   dag_node_t *lhs,
+svn_boolean_t
+svn_fs_x__dag_same_line_of_history(dag_node_t *lhs,
                                    dag_node_t *rhs)
 {
   svn_fs_x__noderev_t *lhs_noderev = lhs->node_revision;
   svn_fs_x__noderev_t *rhs_noderev = rhs->node_revision;
 
-  *same = svn_fs_x__id_eq(&lhs_noderev->node_id, &rhs_noderev->node_id)
-       && svn_fs_x__id_eq(&lhs_noderev->copy_id, &rhs_noderev->copy_id);
-
-  return SVN_NO_ERROR;
+  return svn_fs_x__id_eq(&lhs_noderev->node_id, &rhs_noderev->node_id)
+      && svn_fs_x__id_eq(&lhs_noderev->copy_id, &rhs_noderev->copy_id);
 }
 
 svn_boolean_t
