@@ -1819,6 +1819,61 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_cache__membuffer_clear(svn_membuffer_t *cache)
+{
+  apr_size_t seg;
+  apr_size_t segment_count = cache->segment_count;
+
+  /* Length of the group_initialized array in bytes.
+     See also svn_cache__membuffer_cache_create(). */
+  apr_size_t group_init_size
+    = 1 + (cache->group_count + cache->spare_group_count)
+            / (8 * GROUP_INIT_GRANULARITY);
+
+  /* Clear segment by segment.  This implies that other thread may read
+     and write to other segments after we cleared them and before the
+     last segment is done.
+
+     However, that is no different from a write request coming through
+     right after we cleared all segments because dependencies between
+     cache entries (recursive lookup / access locks) are not allowed.
+   */
+  for (seg = 0; seg < segment_count; ++seg)
+    {
+      /* Unconditionally acquire the write lock. */
+      SVN_ERR(force_write_lock_cache(&cache[seg]));
+
+      /* Mark all groups as "not initialized", which implies "empty". */
+      cache[seg].first_spare_group = NO_INDEX;
+      cache[seg].max_spare_used = 0;
+
+      memset(cache[seg].group_initialized, 0, group_init_size);
+
+      /* Unlink L1 contents. */
+      cache[seg].l1.first = NO_INDEX;
+      cache[seg].l1.last = NO_INDEX;
+      cache[seg].l1.next = NO_INDEX;
+      cache[seg].l1.current_data = cache[seg].l1.start_offset;
+
+      /* Unlink L2 contents. */
+      cache[seg].l2.first = NO_INDEX;
+      cache[seg].l2.last = NO_INDEX;
+      cache[seg].l2.next = NO_INDEX;
+      cache[seg].l2.current_data = cache[seg].l2.start_offset;
+
+      /* Reset content counters. */
+      cache[seg].data_used = 0;
+      cache[seg].used_entries = 0;
+
+      /* Segment may be used again. */
+      SVN_ERR(unlock_cache(&cache[seg], SVN_NO_ERROR));
+    }
+
+  /* done here */
+  return SVN_NO_ERROR;
+}
+
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND and set *FOUND accordingly.
  *
