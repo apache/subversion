@@ -31,7 +31,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1660969, r1660975
+ * r1660969, r1660975, r1660991
    Fix assertion reported as part of issue #4467,
    Justification:
      Fixing a few simple revision checks inside the blame handling allows the
