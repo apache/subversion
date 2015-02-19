@@ -88,254 +88,205 @@ static const char * const TESTING_DATA = (
    "insert into wcroot values (1, null); "
 
    "insert into pristine values ('$sha1$" SHA1_1 "', NULL, 15, 1, '$md5 $" MD5_1 "'); "
+);
 
-   /* ### The file_externals column in NODES is temporary, and will be
-      ### removed.  However, to keep the tests passing, we need to add it
-      ### to the following insert statements.  *Be sure to remove it*. */
+#define NOT_MOVED FALSE, NULL
+#define NO_COPY_FROM 0, NULL, SVN_INVALID_REVNUM
 
+static const svn_test__nodes_data_t nodes_init_data[] = {
    /* load the base nodes into the nodes table */
-  "insert into nodes values ("
-  "  1, '', 0, null, 1, '', 1, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'A', 0, '', 1, 'A', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  10, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'B', 0, '', 1, 'B', null, 'excluded',"
-  "  null, null, 'symlink', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'C', 0, '', 1, 'C', null, 'server-excluded',"
-  "  null, null, 'unknown', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'D', 0, '', 1, 'D', null, 'not-present',"
-  "  null, null, 'unknown', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'E', 0, '', 1, 'E', null, 'incomplete',"
-  "  null, null, 'unknown', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'F', 0, '', 1, 'F', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  15, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'G', 0, '', 2, 'G-alt', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
-  "  15, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'H', 0, '', 1, 'H', 1, 'normal',"
-  "  null, null, 'symlink', '()', null, null, 'H-target', 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'I', 0, '', 1, 'I', 1, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J', 0, '', 1, 'J', 1, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e', 0, 'J', 1, 'J/J-e', 1, 'normal',"
-  "  null, null, 'dir', null, 'infinity', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e/J-e-a', 0, 'J/J-e', 1, 'J/J-e/J-e-a', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  15, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b', 0, 'J/J-e', 1, 'J/J-e/J-e-b', 1, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b/Jeba', 0, 'J/J-e/J-e-b', 1, 'J/J-e/J-e-b/Jeba', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  15, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-f', 0, 'J', 1, 'J/J-f', 1, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-f/J-f-a', 0, 'J/J-f', 1, 'J/J-f/J-f-a', 1, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'K', 0, '', 1, 'K', 1, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'K/K-a', 0, 'K', 1, 'K/K-a', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  15, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'K/K-b', 0, 'K', 1, 'K/K-b', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
-  "  15, null, null, null, null);"
-  ""
-   /* Load data into NODES table;
-      ### op_depths have not been calculated by me yet;
-      the value 1 is just 'good enough' to make the nodes WORKING nodes. */
-  "insert into nodes values ("
-  "  1, 'I', 1, '', 2, 'some/dir', 2, 'normal',"
-  "  null, null, 'dir', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
-  "  null, null, null, null, null);"
+  { 0, "",            "normal",           1, "", 1,             NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "A",           "normal",           1, "A", 1,            NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 1, TIME_1a, AUTHOR_1,
+    FALSE, NULL, 10, 10 },
+
+  { 0, "B",           "excluded",         1, "B", SVN_INVALID_REVNUM, NOT_MOVED,
+    svn_node_symlink},
+
+  { 0, "C",           "server-excluded",  1, "C", 0,            NOT_MOVED,
+    svn_node_unknown},
+
+  { 0, "D",           "not-present",      1, "D", 0,            NOT_MOVED,
+    svn_node_unknown},
+
+  { 0, "E",           "incomplete",       1, "E", 1,            NOT_MOVED,
+    svn_node_unknown},
+
+  { 0, "F",           "normal",           1, "F", 1,            NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2},
+
+  { 0, "G",           "normal",           2, "G-alt", 1,        NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 0, "H",           "normal",           1, "H", 1,            NOT_MOVED,
+    svn_node_symlink, "()", NULL, NULL, "H-target", 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "I",           "normal",           1, "I", 1,            NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "J",           "normal",           1, "J", 1,            NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "J/J-e",       "normal",           1, "J/J-e", 1,        NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "J/J-e/J-e-a", "normal",           1, "J/J-e/J-e-a", 1,  NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "J/J-e/J-e-b", "normal",           1, "J/J-e/J-e-b", 1,  NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "J/J-e/J-e-b/Jeba", "normal",      1, "J/J-e/J-e-b/Jeba", 1,  NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "J/J-f",       "normal",           1, "J/J-f", 1,        NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "J/J-f/J-f-a", "normal",           1, "J/J-f/J-f-a", 1,  NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "J",           "normal",           1, "J", 1,            NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "K",           "normal",           1, "K", 1,            NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "K/K-a",       "normal",           2, "K/K-a", 1,        NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2,
+    FALSE, NULL, 15, 14},
+
+  { 0, "K/K-b",       "normal",           2, "K/K-b", 1,        NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2,
+    FALSE, NULL, 15, 14},
+
+   /* Load data into the working layers of NODES */
+
+  { 1, "I",           "normal",           2, "some/dir", 2,     NOT_MOVED,
+    svn_node_dir, "()", "immediates", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
 
    /* J was originally a local addition, but its descendants are replaced,
       so let's turn J in a copy */
-  "insert into nodes values ("
-  "  1, 'J', 1, '', 2, 'q', 2, 'normal',"
-  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-a', 1, 'J', 2, 'q/J-a', 2, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-b', 1, 'J', 2, 'q/J-b', 2, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-b/J-b-a', 3, 'J/J-b', 2, 'another/dir', 2, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-b/J-b-b', 1, 'J/J-b', 2, 'q/J-b/J-b-b', 2, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-c', 1, 'J', 2, 'q/J-c', 2, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-c/J-c-a', 1, 'J/J-c', 2, 'q/J-c/J-c-a', 2, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-c', 2, 'J', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-c/J-c-a', 2, 'J/J-c', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-d', 2, 'J', 2, 'moved/file', 2, 'normal',"
-  "  1, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
-  "  10, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'moved', 0, '', 2, 'moved', 2, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'moved/file', 0, 'moved', 2, 'moved/file', 2, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
-  "  10, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'moved/file', 2, 'moved', null, null, null, 'base-deleted',"
-  "  null, 'J/J-d', 'file', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e', 1, 'J', 2, 'q/J-e', 2, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e/J-e-a', 1, 'J/J-e', 2, 'q/J-e/J-e-a', 2, 'normal',"
-  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b', 1, 'J/J-e', 2, 'q/J-e/J-e-b', 2, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e', 2, 'J', null, null, null, 'base-deleted',"
-  "  null, 'other/place', 'dir', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e/J-e-a', 2, 'J/J-e', null, null, null, 'base-deleted',"
-  "  null, null, 'file', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b', 2, 'J/J-e', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-e/J-e-b/Jeba', 1, 'J/J-e/J-e-b', null, null, null, 'base-deleted',"
-  "  null, null, 'file', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-f', 1, 'J', 2, 'q/J-f', 2, 'normal',"
-  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'J/J-f/J-f-a', 1, 'J/J-f', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'K', 1, '', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'K/K-a', 1, 'K', null, null, null, 'base-deleted',"
-  "  null, null, 'file', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'K/K-b', 1, 'K', null, null, null, 'base-deleted',"
-  "  null, 'moved/away', 'file', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'L', 1, '', 2, 'from', 2, 'normal',"
-  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'L/L-a', 1, 'L', 2, 'from/L-a', 2, 'normal',"
-  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'L/L-a/L-a-a', 1, 'L/L-a', 2, 'from/L-a/L-a-a', 2, 'normal',"
-  "  null, null, 'dir', '()', 'immediates', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'L/L-a', 2, 'L', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'L/L-a/L-a-a', 2, 'L/L-a', null, null, null, 'base-deleted',"
-  "  null, null, 'dir', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'other', 0, '', 2, 'other', 2, 'normal',"
-  "  null, null, 'dir', '()', 'infinity', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'other/place', 2, 'other', null, null, null, 'normal',"
-  "  1, null, 'dir', null, 'immediates', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'other/place/J-e-a', 3, 'other/place', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'immediates', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'other/place/J-e-b', 3, 'other/place', null, null, null, 'normal',"
-  "  null, null, 'dir', null, 'infinity', null, null, null, null, null,"
-  "  null, null, null, null, null);"
-  "insert into nodes values ("
-  "  1, 'other/place/J-e-b/Jeba', 4, 'other/place/J-e-b', null, null, null, 'normal',"
-  "  null, null, 'file', null, null, null, null, null, null, null,"
-  "  null, null, null, null, null);"
-   "insert into actual_node values ("
-   "  1, 'A', '', null, null, null, null, null, 'changelist', null, "
-   "  null, null, null, null, null);"
-   "insert into actual_node values ("
-   "  1, 'F', '', null, null, null, null, null, null, null, "
-   "  '" F_TC_DATA "', null, null, null, null);"
-   "insert into actual_node values ("
-   "  1, 'G', '', null, null, null, null, null, null, null, "
-   "  '" G_TC_DATA "', null, null, null, null);"
-   );
+  { 1, "J",           "normal",           2, "q", 2,            NOT_MOVED,
+    svn_node_dir, "()", "immediates", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
 
+  { 1, "J/J-a",       "normal",           2, "q/J-a", 2,        NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "J/J-b",       "normal",           2, "q/J-b", 2,        NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 3, "J/J-b/J-b-a", "normal",           2, "another/dir", 2,  NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "J/J-b/J-b-b", "normal",           2, "q/J-b/J-b-b", 2,  NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "J/J-c",       "normal",           2, "q/J-c", 2,        NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "J/J-c/J-c-a", "normal",           2, "q/J-c/J-c-a", 2,  NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 2, "J/J-c",       "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir},
+
+  { 2, "J/J-c/J-c-a", "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir},
+
+  { 2, "J/J-d",       "normal",           2, "moved/file", 2,   TRUE, NULL,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 0, "moved",       "normal",           2, "moved", 2,        NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  { 0, "moved/file",  "normal",           2, "moved/file", 2,   NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 2, "moved/file",  "base-deleted",     NO_COPY_FROM,         FALSE, "J/J-d",
+    svn_node_file},
+
+  { 1, "J/J-e",       "normal",           2, "q/J-e", 2,        NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "J/J-e/J-e-a", "normal",           2, "q/J-e/J-e-a", 2,  NOT_MOVED,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "J/J-e/J-e-b", "normal",           2, "q/J-e/J-e-b", 2,  NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 2, "J/J-e",       "base-deleted",     NO_COPY_FROM,         FALSE, "other/place",
+    svn_node_dir},
+
+  { 2, "J/J-e/J-e-a", "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_file},
+
+  { 2, "J/J-e/J-e-b", "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir},
+
+  { 1, "J/J-e/J-e-b/Jeba", "base-deleted", NO_COPY_FROM,        NOT_MOVED,
+    svn_node_file},
+
+  { 1, "J/J-f",       "normal",           2, "q/J-f", 2,        NOT_MOVED,
+    svn_node_dir, "()", "immediates", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "J/J-f/J-f-a", "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir},
+
+  { 1, "K",           "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir},
+
+  { 1, "K/K-a",       "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_file},
+
+  { 1, "K/K-b",       "base-deleted",     NO_COPY_FROM,         FALSE, "moved/away",
+    svn_node_file},
+
+  { 1, "L",           "normal",           2, "from", 2,         NOT_MOVED,
+    svn_node_dir, "()", "immediates", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "L/L-a",       "normal",           2, "from/L-a", 2,     NOT_MOVED,
+    svn_node_dir, "()", "immediates", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 1, "L/L-a/L-a-a", "normal",           2, "from/L-a/L-a-a", 2, NOT_MOVED,
+    svn_node_dir, "()", "immediates", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 2, "L/L-a",       "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir},
+
+  { 2, "L/L-a/L-a-a", "base-deleted",     NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir},
+
+  { 0, "other",       "normal",           2, "other", 2,        NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 2, "other/place", "normal",           2, "q/J-e", 2,        TRUE, NULL,
+    svn_node_dir, "()", "immediates", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 2, "other/place/J-e-a", "normal",     2, "q/J-e/J-e-a", 2,  TRUE, NULL,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 2, "other/place/J-e-b", "normal",     2, "q/J-e/J-e-b", 2,  TRUE, NULL,
+    svn_node_dir, "()", "infinity", NULL, NULL, 2, TIME_2a, AUTHOR_2 },
+
+  { 2, "other/place/J-e-b/Jeba", "normal", 2, "q/J-e/J-e-b/Jeba", 2,  TRUE, NULL,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 1, TIME_1a, AUTHOR_1 },
+
+  /*** NEW ****/
+  { 2, "moved/away",  "normal",           2, "K/K-b", 1,        TRUE, NULL,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 2, TIME_2a, AUTHOR_2,
+    FALSE, NULL, 15, 14},
+  { 0 }
+};
+
+static const svn_test__actual_data_t actual_init_data[] = {
+  { "A", NULL, "changelist", NULL },
+  { "F", NULL, NULL, F_TC_DATA },
+  { "G", NULL, NULL, F_TC_DATA },
+
+  { 0 }
+};
 
 static svn_error_t *
 create_open(svn_wc__db_t **db,
@@ -352,7 +303,8 @@ create_open(svn_wc__db_t **db,
   SVN_ERR(svn_io_remove_dir2(*local_abspath, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
-  SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool));
+  SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA,
+                                   nodes_init_data, actual_init_data, pool));
 
   svn_test_add_dir_cleanup(*local_abspath);
 

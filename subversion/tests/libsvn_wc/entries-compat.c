@@ -310,7 +310,8 @@ create_fake_wc(const char *subdir, apr_pool_t *pool)
   SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_dirent_get_absolute(&wc_abspath, root, pool));
-  SVN_ERR(svn_test__create_fake_wc(wc_abspath, TESTING_DATA, pool));
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath, TESTING_DATA, NULL, NULL,
+                                   pool));
 
   return SVN_NO_ERROR;
 }
@@ -406,7 +407,7 @@ test_stubs(apr_pool_t *pool)
   SVN_ERR(create_open(&db, &local_abspath, WC_NAME, pool));
 
   M_dir = svn_dirent_join(local_abspath, "M", pool);
-  SVN_ERR(svn_test__create_fake_wc(M_dir, M_TESTING_DATA, pool));
+  SVN_ERR(svn_test__create_fake_wc(M_dir, M_TESTING_DATA, NULL, NULL, pool));
 
   /* The "M" entry is a subdir. Let's ensure we can reach its stub,
      and the actual contents.  */

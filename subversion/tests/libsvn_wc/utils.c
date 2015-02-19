@@ -33,7 +33,7 @@
 #include "../../libsvn_wc/wc-queries.h"
 #define SVN_WC__I_AM_WC_DB
 #include "../../libsvn_wc/wc_db_private.h"
-
+#include "../../libsvn_wc/token-map.h"
 svn_error_t *
 svn_test__create_client_ctx(svn_client_ctx_t **ctx,
                             svn_test__sandbox_t *sbox,
@@ -122,6 +122,9 @@ WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 svn_error_t *
 svn_test__create_fake_wc(const char *wc_abspath,
                          const char *extra_statements,
+                         const svn_test__nodes_data_t nodes[],
+                         const svn_test__actual_data_t actuals[],
+
                          apr_pool_t *scratch_pool)
 {
   const char *dotsvn_abspath = svn_dirent_join(wc_abspath, ".svn",
@@ -129,6 +132,8 @@ svn_test__create_fake_wc(const char *wc_abspath,
   svn_sqlite__db_t *sdb;
   const char **my_statements;
   int i;
+  svn_sqlite__stmt_t *stmt;
+  const apr_int64_t wc_id = 1;
 
   /* Allocate MY_STATEMENTS in RESULT_POOL because the SDB will continue to
    * refer to it over its lifetime. */
@@ -150,6 +155,110 @@ svn_test__create_fake_wc(const char *wc_abspath,
                                   scratch_pool, scratch_pool));
   for (i = 0; my_statements[i] != NULL; i++)
     SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
+
+  SVN_ERR(svn_sqlite__close(sdb));
+
+  if (!nodes && !actuals)
+    return SVN_NO_ERROR;
+
+  /* Re-open with normal set of statements */
+  SVN_ERR(svn_wc__db_util_open_db(&sdb, wc_abspath, "wc.db",
+                                  svn_sqlite__mode_readwrite,
+                                  FALSE /* exclusive */, 0 /* timeout */,
+                                  statements,
+                                  scratch_pool, scratch_pool));
+
+  if (nodes)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_INSERT_NODE));
+
+      for (i = 0; nodes[i].local_relpath; i++)
+        {
+          SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnns",
+                                wc_id,
+                                nodes[i].local_relpath,
+                                nodes[i].op_depth,
+                                nodes[i].local_relpath[0]
+                                  ? svn_relpath_dirname(nodes[i].local_relpath,
+                                                        scratch_pool)
+                                  : NULL,
+                                nodes[i].presence));
+
+          if (nodes[i].repos_relpath)
+            {
+                SVN_ERR(svn_sqlite__bind_int64(stmt, 5, nodes[i].repos_id));
+                SVN_ERR(svn_sqlite__bind_text(stmt, 6, nodes[i].repos_relpath));
+                SVN_ERR(svn_sqlite__bind_revnum(stmt, 7, nodes[i].revision));
+            }
+
+          if (nodes[i].depth)
+            SVN_ERR(svn_sqlite__bind_text(stmt, 9, nodes[i].depth));
+
+          if (nodes[i].kind != 0)
+            SVN_ERR(svn_sqlite__bind_token(stmt, 10, kind_map, nodes[i].kind));
+
+          if (nodes[i].last_author || nodes[i].last_date)
+            {
+              SVN_ERR(svn_sqlite__bind_revnum(stmt, 11, nodes[i].last_revision));
+              SVN_ERR(svn_sqlite__bind_int64(stmt, 12, nodes[i].last_date));
+              SVN_ERR(svn_sqlite__bind_text(stmt, 13, nodes[i].last_author));
+            }
+
+          if (nodes[i].checksum)
+            SVN_ERR(svn_sqlite__bind_text(stmt, 14, nodes[i].checksum));
+
+          if (nodes[i].properties)
+            SVN_ERR(svn_sqlite__bind_text(stmt, 15, nodes[i].properties));
+
+          if (nodes[i].recorded_size || nodes[i].recorded_time)
+            {
+              SVN_ERR(svn_sqlite__bind_int64(stmt, 16, nodes[i].recorded_size));
+              SVN_ERR(svn_sqlite__bind_int64(stmt, 17, nodes[i].recorded_time));
+            }
+
+          /* 18 is DAV cache */
+
+          if (nodes[i].symlink_target)
+            SVN_ERR(svn_sqlite__bind_text(stmt, 19, nodes[i].symlink_target));
+
+          if (nodes[i].file_external)
+            SVN_ERR(svn_sqlite__bind_int(stmt, 20, 1));
+
+          if (nodes[i].moved_to)
+            SVN_ERR(svn_sqlite__bind_text(stmt, 21, nodes[i].moved_to));
+
+          if (nodes[i].moved_here)
+            SVN_ERR(svn_sqlite__bind_int(stmt, 22, 1));
+
+          if (nodes[i].inherited_props)
+            SVN_ERR(svn_sqlite__bind_text(stmt, 23, nodes[i].inherited_props));
+
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
+    }
+
+  if (actuals)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_INSERT_ACTUAL_NODE));
+
+      for (i = 0; actuals[i].local_relpath; i++)
+        {
+          SVN_ERR(svn_sqlite__bindf(stmt, "isssss",
+                                wc_id,
+                                actuals[i].local_relpath,
+                                actuals[i].local_relpath[0]
+                                  ? svn_relpath_dirname(actuals[i].local_relpath,
+                                                        scratch_pool)
+                                  : NULL,
+                                actuals[i].properties,
+                                actuals[i].changelist,
+                                actuals[i].conflict_data));
+
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
+    }
 
   SVN_ERR(svn_sqlite__close(sdb));
 
