@@ -1804,6 +1804,10 @@ write_entry(struct write_baton **entry_node,
 
   if (entry->copied)
     {
+      db_node_t *work = parent_node->work
+                              ? parent_node->work
+                              : parent_node->below_work;
+
       if (entry->copyfrom_url)
         {
           working_node->repos_id = repos_id;
@@ -1813,20 +1817,37 @@ write_entry(struct write_baton **entry_node,
           working_node->revision = entry->copyfrom_rev;
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
+
+          if (work && work->repos_relpath
+              && work->repos_id == repos_id
+              && work->revision == entry->copyfrom_rev)
+            {
+              const char *name;
+
+              name = svn_relpath_skip_ancestor(work->repos_relpath,
+                                               working_node->repos_relpath);
+
+              if (name
+                  && !strcmp(name, svn_relpath_basename(local_relpath, NULL)))
+                {
+                  working_node->op_depth = work->op_depth;
+                }
+            }
         }
-      else if (parent_node->work && parent_node->work->repos_relpath)
+      else if (work && work->repos_relpath)
         {
           working_node->repos_id = repos_id;
           working_node->repos_relpath
-            = svn_relpath_join(parent_node->work->repos_relpath,
+            = svn_relpath_join(work->repos_relpath,
                                svn_relpath_basename(local_relpath, NULL),
                                result_pool);
-          working_node->revision = parent_node->work->revision;
-          working_node->op_depth = parent_node->work->op_depth;
+          working_node->revision = work->revision;
+          working_node->op_depth = work->op_depth;
         }
       else if (parent_node->below_work
                 && parent_node->below_work->repos_relpath)
         {
+          /* Parent deleted, this not-present or similar */
           working_node->repos_id = repos_id;
           working_node->repos_relpath
             = svn_relpath_join(parent_node->below_work->repos_relpath,
@@ -1840,6 +1861,29 @@ write_entry(struct write_baton **entry_node,
                                  _("No copyfrom URL for '%s'"),
                                  svn_dirent_local_style(local_relpath,
                                                         scratch_pool));
+
+      if (work && work->op_depth != working_node->op_depth
+          && work->repos_relpath
+          && work->repos_id == working_node->repos_id
+          && work->presence == svn_wc__db_status_normal
+          && !below_working_node)
+        {
+          /* Introduce a not-present node! */
+          below_working_node = MAYBE_ALLOC(below_working_node, scratch_pool);
+
+          below_working_node->wc_id = wc_id;
+          below_working_node->op_depth = work->op_depth;
+          below_working_node->local_relpath = local_relpath;
+          below_working_node->parent_relpath = parent_relpath;
+
+          below_working_node->presence = svn_wc__db_status_not_present;
+          below_working_node->repos_id = repos_id;
+          below_working_node->repos_relpath = working_node->local_relpath;
+
+          SVN_ERR(insert_node(sdb, below_working_node, scratch_pool));
+
+          below_working_node = NULL; /* Don't write a present intermediate! */
+        }
     }
 
   if (entry->conflict_old)

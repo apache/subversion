@@ -13314,8 +13314,19 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
         {
-          below_op_depth = svn_sqlite__column_int(stmt, 0);
           below_presence = svn_sqlite__column_token(stmt, 3, presence_map);
+
+          /* There might be an intermediate layer on mixed-revision copies,
+             or when BASE is shadowed */
+          if (below_presence == svn_wc__db_status_not_present
+              || below_presence == svn_wc__db_status_deleted)
+            SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+          if (have_row)
+            {
+              below_presence = svn_sqlite__column_token(stmt, 3, presence_map);
+              below_op_depth = svn_sqlite__column_int(stmt, 0);
+            }
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
