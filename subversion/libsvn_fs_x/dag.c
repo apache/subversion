@@ -41,6 +41,7 @@
 #include "svn_private_config.h"
 #include "private/svn_temp_serializer.h"
 #include "temp_serializer.h"
+#include "dag_cache.h"
 
 
 /* Initializing a filesystem.  */
@@ -240,6 +241,16 @@ svn_fs_x__dag_check_mutable(const dag_node_t *node)
   return svn_fs_x__is_txn(svn_fs_x__dag_get_id(node)->change_set);
 }
 
+/* Update the REVISION member of NODE. */
+static void
+update_revision(dag_node_t *node)
+{
+  svn_fs_x__noderev_t *noderev = node->node_revision;
+  node->revision
+    = (  svn_fs_x__is_fresh_txn_root(noderev)
+       ? svn_fs_x__get_revnum(noderev->predecessor_id.change_set)
+       : svn_fs_x__get_revnum(noderev->noderev_id.change_set));
+}
 
 svn_error_t *
 svn_fs_x__dag_get_node(dag_node_t **node,
@@ -269,10 +280,7 @@ svn_fs_x__dag_get_node(dag_node_t **node,
 
   /* Support our quirky svn_fs_node_created_rev API.
      Untouched txn roots report the base rev as theirs. */
-  new_node->revision
-    = (  svn_fs_x__is_fresh_txn_root(noderev)
-       ? svn_fs_x__get_revnum(noderev->predecessor_id.change_set)
-       : svn_fs_x__get_revnum(id->change_set));
+  update_revision(new_node);
 
   /* Return a fresh new node */
   *node = new_node;
@@ -417,8 +425,14 @@ set_entry(dag_node_t *parent,
   SVN_ERR(get_node_revision(&parent_noderev, parent));
 
   /* Set the new entry. */
-  return svn_fs_x__set_entry(parent->fs, txn_id, parent_noderev, name, id,
-                             kind, parent->node_pool, scratch_pool);
+  SVN_ERR(svn_fs_x__set_entry(parent->fs, txn_id, parent_noderev, name, id,
+                              kind, parent->node_pool, scratch_pool));
+
+  /* Update cached data. */
+  update_revision(parent);
+  svn_fs_x__update_dag_cache(parent);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -576,9 +590,26 @@ svn_fs_x__dag_set_proplist(dag_node_t *node,
   SVN_ERR(get_node_revision(&noderev, node));
 
   /* Set the new proplist. */
-  return svn_fs_x__set_proplist(node->fs, noderev, proplist, scratch_pool);
+  SVN_ERR(svn_fs_x__set_proplist(node->fs, noderev, proplist, scratch_pool));
+
+  update_revision(node);
+  svn_fs_x__update_dag_cache(node);
+
+  return SVN_NO_ERROR;
 }
 
+/* Write NODE's NODEREV element to disk.  Update the DAG cache.
+   Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+noderev_changed(dag_node_t *node,
+                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_fs_x__put_node_revision(node->fs, node->node_revision,
+                                      scratch_pool));
+  svn_fs_x__update_dag_cache(node);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
@@ -628,7 +659,7 @@ svn_fs_x__dag_increment_mergeinfo_count(dag_node_t *node,
     }
 
   /* Flush it out. */
-  return svn_fs_x__put_node_revision(node->fs, noderev, scratch_pool);
+  return noderev_changed(node, scratch_pool);
 }
 
 svn_error_t *
@@ -654,7 +685,7 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
   noderev->has_mergeinfo = has_mergeinfo;
 
   /* Flush it out. */
-  return svn_fs_x__put_node_revision(node->fs, noderev, scratch_pool);
+  return noderev_changed(node, scratch_pool);
 }
 
 
@@ -877,9 +908,7 @@ svn_fs_x__dag_delete(dag_node_t *parent,
   SVN_ERR(delete_if_mutable(parent->fs, &dirent->id, subpool));
 
   /* Remove this entry from its parent's entries list. */
-  SVN_ERR(svn_fs_x__set_entry(parent->fs, txn_id, parent_noderev, name,
-                              NULL, svn_node_unknown, parent->node_pool,
-                              subpool));
+  SVN_ERR(set_entry(parent, name, NULL, svn_node_unknown, txn_id, subpool));
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
@@ -1080,6 +1109,7 @@ svn_fs_x__dag_finalize_edits(dag_node_t *file,
                                          file->created_path);
     }
 
+  svn_fs_x__update_dag_cache(file);
   return SVN_NO_ERROR;
 }
 
@@ -1299,6 +1329,5 @@ svn_fs_x__dag_update_ancestry(dag_node_t *target,
   target_noderev->predecessor_count = source_noderev->predecessor_count;
   target_noderev->predecessor_count++;
 
-  return svn_fs_x__put_node_revision(target->fs, target_noderev,
-                                     scratch_pool);
+  return noderev_changed(target, scratch_pool);
 }
