@@ -112,7 +112,8 @@ LEFT JOIN nodes n on n.wc_id = a.wc_id AND n.local_relpath = a.local_relpath
    AND n.op_depth = (SELECT MAX(op_depth) from nodes i
                      WHERE i.wc_id=a.wc_id AND i.local_relpath=a.local_relpath)
 WHERE (a.properties IS NOT NULL
-       AND n.presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE))
+       AND (n.presence IS NULL
+            OR n.presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE)))
    OR (a.changelist IS NOT NULL AND (n.kind IS NOT NULL AND n.kind != MAP_FILE))
    OR (a.conflict_data IS NULL AND a.properties IS NULL AND a.changelist IS NULL)
  AND NOT EXISTS(SELECT 1 from nodes i
@@ -217,7 +218,7 @@ WHERE n.op_depth > 0 AND n.presence IN (MAP_NORMAL, MAP_INCOMPLETE)
            RELPATH_SKIP_JOIN(n.parent_relpath, p.repos_path, n.local_relpath)
         OR n.revision != p.revision
         OR p.kind != MAP_DIR
-        OR n.moved_here != p.moved_here)
+        OR n.moved_here IS NOT p.moved_here)
 
 UNION ALL
 /* Only certain presence values are valid as op-root.
@@ -230,7 +231,7 @@ WHERE n.op_depth = relpath_depth(local_relpath)
 UNION ALL
 /* If a node is shadowed, all its present op-depth descendants
    must be shadowed at the same op-depth as well */
-SELECT n.local_relpath, n.op_depth, 28, 'Incomplete shadowing'
+SELECT n.local_relpath, s.op_depth, 28, 'Incomplete shadowing'
 FROM nodes n
 JOIN nodes s ON s.wc_id=n.wc_id AND s.local_relpath=n.local_relpath
  AND s.op_depth = relpath_depth(s.local_relpath)
@@ -258,7 +259,9 @@ LEFT JOIN nodes n ON n.wc_id=s.wc_id AND n.local_relpath=s.local_relpath
                    WHERE d.wc_id=s.wc_id AND d.local_relpath=s.local_relpath
                      AND d.op_depth < s.op_depth)
 WHERE s.presence = MAP_BASE_DELETED
-  AND n.presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE)
+  AND (n.presence IS NULL
+       OR n.presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE)
+       /*OR n.kind != s.kind*/)
 
 UNION ALL
 /* Moves are stored in the working layers, not in BASE */
@@ -273,7 +276,7 @@ UNION ALL
 SELECT d.local_relpath, d.op_depth, 60, 'Moved here without origin'
 FROM nodes d
 WHERE d.op_depth = relpath_depth(d.local_relpath)
-  AND d.moved_here = 1
+  AND d.moved_here IS NOT NULL
   AND NOT EXISTS(SELECT 1 FROM nodes s
                  WHERE s.wc_id = d.wc_id AND s.moved_to = d.local_relpath)
 
