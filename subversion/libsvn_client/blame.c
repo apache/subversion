@@ -489,10 +489,12 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Create the rev structure. */
   delta_baton->rev = apr_pcalloc(frb->mainpool, sizeof(struct rev));
 
-  if (revnum < MIN(frb->start_rev, frb->end_rev))
+  if ((frb->start_rev < frb->end_rev)
+      ? (revnum < MIN(frb->start_rev, frb->end_rev))
+      : (revnum > MAX(frb->start_rev, frb->end_rev)))
     {
-      /* We shouldn't get more than one revision before the starting
-         revision (unless of including merged revisions). */
+      /* We shouldn't get more than one revision outside the
+         specified range (unless we alsoe receive merged revisions) */
       SVN_ERR_ASSERT((frb->last_filename == NULL)
                      || frb->include_merged_revisions);
 
