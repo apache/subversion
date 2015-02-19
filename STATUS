@@ -126,15 +126,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1592987
-   Process 'svnadmin dump' output as binary in the test suite.
-   Justification:
-     The testsuite change in the r1646230 group depends on this fix. Without
-     it svnsync_tests.py 23: copy with non-LF line endings in svn:* props
-     fails on Windows.
-   Votes:
-     +1: rhuijben, philip
-
  * r1532287
    Simplify Windows resource compilation to avoid warnings
    Justification:
@@ -147,7 +138,7 @@ Candidate changes:
      multiple warnings for each .dll and .exe on the Windows buildbot,
      thereby hiding more important warnings)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * ^/subversion/branches/1.8.x-r1660593
    Fix recording last-* information on nodes copied from foreign repositories
@@ -209,3 +200,12 @@ Approved changes:
      nobody noticed this problem in svn_wc_resolved_conflict5().
    Votes:
      +1: rhuijben, stefan2, ivan
+
+ * r1592987
+   Process 'svnadmin dump' output as binary in the test suite.
+   Justification:
+     The testsuite change in the r1646230 group depends on this fix. Without
+     it svnsync_tests.py 23: copy with non-LF line endings in svn:* props
+     fails on Windows.
+   Votes:
+     +1: rhuijben, philip, ivan
