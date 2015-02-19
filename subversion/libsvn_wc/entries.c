@@ -1912,11 +1912,6 @@ write_entry(struct write_baton **entry_node,
 
           WRITE_ENTRY_ASSERT(conflict->kind == svn_wc_conflict_kind_tree);
 
-          /* Fix dubious data stored by old clients, local adds don't have
-             a repository URL. */
-          if (conflict->reason == svn_wc_conflict_reason_added)
-            conflict->src_left_version = NULL;
-
           SVN_ERR(svn_wc__serialize_conflict(&new_skel, conflict,
                                              scratch_pool, scratch_pool));
 
