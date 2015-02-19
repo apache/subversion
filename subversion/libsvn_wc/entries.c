@@ -2293,6 +2293,11 @@ write_entry(struct write_baton **entry_node,
         {
           working_node->op_depth = parent_node->work->op_depth;
         }
+      else if (working_node->presence == svn_wc__db_status_excluded
+               && parent_node->work)
+        {
+          working_node->op_depth = parent_node->work->op_depth;
+        }
       else if (!entry->copied)
         {
           working_node->op_depth
