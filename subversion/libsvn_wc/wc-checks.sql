@@ -245,7 +245,7 @@ WHERE s.presence = MAP_BASE_DELETED
   AND n.presence NOT IN (MAP_NORMAL, MAP_INCOMPLETE)
 
 UNION ALL
-
+/* If moved_here is set on an op-root, there must be a proper moved_to */
 SELECT d.local_relpath, d.op_depth, 'SV013: Moved here without origin'
 FROM nodes d
 WHERE d.op_depth = relpath_depth(d.local_relpath)
@@ -254,10 +254,19 @@ WHERE d.op_depth = relpath_depth(d.local_relpath)
                  WHERE s.wc_id = d.wc_id AND s.moved_to = d.local_relpath)
 
 UNION ALL
-
+/* If moved_to is set there should be an moved op root at the target */
 SELECT s.local_relpath, s.op_depth, 'SV014: Moved to without target'
 FROM nodes s
 WHERE s.moved_to IS NOT NULL
   AND NOT EXISTS(SELECT 1 FROM nodes d
                  WHERE d.wc_id = s.wc_id AND d.local_relpath = s.moved_to
+                   AND d.op_depth = relpath_depth(d.local_relpath)
                    AND d.moved_here =1 AND d.repos_path IS NOT NULL)
+
+UNION ALL
+/* Moves are stored in the working layers, not in BASE */
+SELECT n.local_relpath, n.op_depth, 'SV015: Invalid data for BASE'
+FROM nodes n
+WHERE n.op_depth = 0
+  AND (n.moved_to IS NOT NULL
+       OR n.moved_here IS NOT NULL)
