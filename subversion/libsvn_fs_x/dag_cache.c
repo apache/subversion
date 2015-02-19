@@ -625,6 +625,39 @@ dag_step(dag_node_t **child_p,
   return SVN_NO_ERROR;
 }
 
+/* Return the CHANGE_SET's root node in *NODE_P.  ROOT is the FS API root
+   object for CHANGE_SET.  Use SCRATCH_POOL for temporary allocations.
+
+   NOTE: *NODE_P will live within the DAG cache and we merely return a
+   reference to it.  Hence, it will invalid upon the next cache insertion.
+   Callers must create a copy if they want a non-temporary object.
+ */
+static svn_error_t *
+get_root_node(dag_node_t **node_p,
+              svn_fs_root_t *root,
+              svn_fs_x__change_set_t change_set,
+              apr_pool_t *scratch_pool)
+{
+  svn_fs_t *fs = root->fs;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+  cache_entry_t *bucket;
+  const svn_string_t path = { "", 0 };
+
+  /* Auto-insert the node in the cache. */
+  auto_clear_dag_cache(ffd->dag_node_cache);
+  bucket = cache_lookup(ffd->dag_node_cache, change_set, &path);
+
+  /* If it is not already cached, construct the DAG node object for NODE_ID.
+     Let it live in the cache.  Sadly, we often can't reuse txn DAG nodes. */
+  if (bucket->node == NULL)
+    SVN_ERR(svn_fs_x__root_node(&bucket->node, root,
+                                ffd->dag_node_cache->pool, scratch_pool));
+
+  /* Return a reference to the cached object. */
+  *node_p = bucket->node;
+  return SVN_NO_ERROR;
+}
+
 /* Walk the DAG starting at ROOT, following PATH and return a reference to
    the target node in *NODE_P.   Use SCRATCH_POOL for temporary allocations.
 
@@ -649,8 +682,8 @@ walk_dag_path(dag_node_t **node_p,
      We will later assume that all paths have at least one parent level,
      so we must check here for those that don't. */
   if (path->len == 0)
-    return svn_error_trace(svn_fs_x__root_node(node_p, root, scratch_pool,
-                                               scratch_pool));
+    return svn_error_trace(get_root_node(node_p, root, change_set,
+                                         scratch_pool));
 
   /* Callers often traverse the DAG in some path-based order or along the
      history segments.  That allows us to try a few guesses about where to
@@ -696,7 +729,7 @@ walk_dag_path(dag_node_t **node_p,
 
   /* Make a parent_path item for the root node, using its own current
      copy id.  */
-  SVN_ERR(svn_fs_x__root_node(&here, root, scratch_pool, iterpool));
+  SVN_ERR(get_root_node(&here, root, change_set, iterpool));
   path->len = 0;
 
   /* Walk the path segment by segment. */
