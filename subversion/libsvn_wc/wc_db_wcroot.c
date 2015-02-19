@@ -164,32 +164,23 @@ svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb)
 }
 
 #if defined(VERIFY_ON_CLOSE) && defined(SVN_DEBUG)
+/* Implements svn_wc__db_verify_cb_t */
 static svn_error_t *
-verify_sqlite(svn_sqlite__db_t *sdb,
-              const char *wc_abspath,
-              apr_pool_t *scratch_pool)
+verify_db_cb(void *baton,
+             const char *wc_abspath,
+             const char *local_relpath,
+             int op_depth,
+             int id,
+             const char *msg,
+             apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
+  if (op_depth >= 0)
+    SVN_DBG(("DB-VRFY: %s: %s (%d): SV%04d %s",
+              wc_abspath, local_relpath, op_depth, id, msg));
+  else
+    SVN_DBG(("DB-VRFY: %s: %s: SV%04d %s",
+              wc_abspath, local_relpath, id, msg));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_STATIC_VERIFY));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  while (have_row)
-    {
-      const char *item = svn_sqlite__column_text(stmt, 0, scratch_pool);
-      int op_depth = svn_sqlite__column_int(stmt, 1);
-      const char *msg = svn_sqlite__column_text(stmt, 2, scratch_pool);
-
-      if (op_depth >= 0)
-        SVN_DBG(("DB-VRFY: %s: %s:%d: %s", wc_abspath, item, op_depth, msg));
-      else
-        SVN_DBG(("DB-VRFY: %s: %s: %s", wc_abspath, item, msg));
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  SVN_ERR(svn_sqlite__reset(stmt));
   return SVN_NO_ERROR;
 }
 #endif
@@ -208,8 +199,8 @@ close_wcroot(void *data)
     {
       apr_pool_t *scratch_pool = svn_pool_create(NULL);
 
-      svn_error_clear(verify_sqlite(wcroot->sdb, wcroot->abspath,
-                                    scratch_pool));
+      svn_error_clear(svn_wc__db_verify_db_full_internal(
+                                    wcroot, verify_db_cb, NULL, scratch_pool));
 
       svn_pool_destroy(scratch_pool);
     }

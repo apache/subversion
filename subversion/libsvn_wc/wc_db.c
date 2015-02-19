@@ -16088,6 +16088,69 @@ svn_wc__db_verify(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__db_verify_db_full_internal(svn_wc__db_wcroot_t *wcroot,
+                                   svn_wc__db_verify_cb_t callback,
+                                   void *baton,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_error_t *err = NULL;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_STATIC_VERIFY));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      const char *local_relpath;
+      int op_depth = svn_sqlite__column_int(stmt, 1);
+      int id = svn_sqlite__column_int(stmt, 2);
+      const char *msg;
+
+      svn_pool_clear(iterpool);
+
+      local_relpath =  svn_sqlite__column_text(stmt, 0, iterpool);
+      msg = svn_sqlite__column_text(stmt, 3, scratch_pool);
+
+      err = callback(baton, wcroot->abspath, local_relpath, op_depth,
+                     id, msg, iterpool);
+
+      if (err)
+        break;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return svn_error_trace(
+            svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+}
+
+svn_error_t *
+svn_wc__db_verify_db_full(svn_wc__db_t *db,
+                          const char *wri_abspath,
+                          svn_wc__db_verify_cb_t callback,
+                          void *baton,
+                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  return svn_error_trace(
+            svn_wc__db_verify_db_full_internal(wcroot, callback, baton,
+                                               scratch_pool));
+}
+
 svn_error_t *
 svn_wc__db_bump_format(int *result_format,
                        svn_boolean_t *bumped_format,
