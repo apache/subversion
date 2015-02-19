@@ -6917,6 +6917,31 @@ commit_moved_descendant(const svn_test_opts_t *opts, apr_pool_t *pool)
      shadowed, like in this case. The commit processing doesn't
      support this yet though*/
 
+   {
+    nodes_row_t nodes[] = {
+      {0, "",                 "normal",       0, ""},
+      {0, "A",                "normal",       1, "A"},
+      {0, "A/A",              "normal",       2, "A/A"},
+      {0, "A/A/A",            "normal",       2, "A/A/A"},
+      {0, "A/A/A/A",          "normal",       2, "A/A/A/A"},
+      {0, "A/A/A/A/A",        "normal",       2, "A/A/A/A/A"},
+      {0, "A/A/A/A/A/A",      "normal",       2, "A/A/A/A/A/A"},
+      {0, "A_copied",         "normal",       2, "A_copied"},
+      {0, "A_copied/A",       "normal",       2, "A_copied/A"},
+      {0, "A_copied/A/A",     "normal",       2, "A_copied/A/A"},
+      {0, "A_copied/A/A/A",   "normal",       2, "A_copied/A/A/A"},
+      {0, "A_copied/A/A/A/A", "normal",       2, "A_copied/A/A/A/A"},
+      {0, "A_copied/A/A/A/A/A","normal",       2, "A_copied/A/A/A/A/A"},
+      {0, "AAA_moved",        "normal",       2, "AAA_moved"},
+      {0, "AAA_moved/A",      "normal",       2, "AAA_moved/A"},
+      {0, "AAA_moved/A/A",    "normal",       2, "AAA_moved/A/A"},
+      {0, "AAA_moved/A/A/A",  "normal",       2, "AAA_moved/A/A/A"},
+
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -6939,9 +6964,62 @@ commit_moved_away_descendant(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_delete(&b, "A/A"));
   SVN_ERR(sbox_wc_copy(&b, "A_copied/A", "A/A"));
 
+  {
+    nodes_row_t nodes[] = {
+      {0, "",                   "normal",       0, ""},
+      {0, "A",                  "normal",       1, "A"},
+      {0, "A/A",                "normal",       1, "A/A"},
+      {0, "A/A/A",              "normal",       1, "A/A/A"},
+      {0, "A/A/A/A",            "normal",       1, "A/A/A/A"},
+      {0, "A/A/A/A/A",          "normal",       1, "A/A/A/A/A"},
+      {0, "A/A/A/A/A/A",        "normal",       1, "A/A/A/A/A/A"},
+      {1, "A_copied",           "normal",       1, "A"},
+      {1, "A_copied/A",         "normal",       1, "A/A"},
+      {1, "A_copied/A/A",       "normal",       1, "A/A/A"},
+      {1, "A_copied/A/A/A",     "normal",       1, "A/A/A/A"},
+      {1, "A_copied/A/A/A/A",   "normal",       1, "A/A/A/A/A"},
+      {1, "A_copied/A/A/A/A/A", "normal",       1, "A/A/A/A/A/A"},
+      {1, "AAA_moved",          "normal",       1, "A/A/A", MOVED_HERE},
+      {1, "AAA_moved/A",        "normal",       1, "A/A/A/A", MOVED_HERE},
+      {1, "AAA_moved/A/A",      "normal",       1, "A/A/A/A/A", MOVED_HERE},
+      {1, "AAA_moved/A/A/A",    "normal",       1, "A/A/A/A/A/A", MOVED_HERE},
+      {2, "A/A",                "normal",       1, "A/A"},
+      {2, "A/A/A",              "normal",       1, "A/A/A", FALSE, "AAA_moved"},
+      {2, "A/A/A/A",            "normal",       1, "A/A/A/A"},
+      {2, "A/A/A/A/A",          "normal",       1, "A/A/A/A/A"},
+      {2, "A/A/A/A/A/A",        "normal",       1, "A/A/A/A/A/A"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
   /* And now I want to make sure that I can't commit A, without also
      committing AAA_moved, as that would break the move*/
   SVN_ERR(sbox_wc_commit(&b, "A"));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",                   "normal",       0, ""},
+      {0, "A",                  "normal",       1, "A"},
+      {0, "A/A",                "normal",       2, "A/A"},
+      {0, "A/A/A",              "normal",       2, "A/A/A"},
+      {0, "A/A/A/A",            "normal",       2, "A/A/A/A"},
+      {0, "A/A/A/A/A",          "normal",       2, "A/A/A/A/A"},
+      {0, "A/A/A/A/A/A",        "normal",       2, "A/A/A/A/A/A"},
+      {1, "A_copied",           "normal",       1, "A"},
+      {1, "A_copied/A",         "normal",       1, "A/A"},
+      {1, "A_copied/A/A",       "normal",       1, "A/A/A"},
+      {1, "A_copied/A/A/A",     "normal",       1, "A/A/A/A"},
+      {1, "A_copied/A/A/A/A",   "normal",       1, "A/A/A/A/A"},
+      {1, "A_copied/A/A/A/A/A", "normal",       1, "A/A/A/A/A/A"},
+      {1, "AAA_moved",          "normal",       1, "A/A/A"},
+      {1, "AAA_moved/A",        "normal",       1, "A/A/A/A"},
+      {1, "AAA_moved/A/A",      "normal",       1, "A/A/A/A/A"},
+      {1, "AAA_moved/A/A/A",    "normal",       1, "A/A/A/A/A/A"},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
 
   return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                           "The commit should have failed");

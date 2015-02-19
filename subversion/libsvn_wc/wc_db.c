@@ -11387,35 +11387,18 @@ determine_repos_info(apr_int64_t *repos_id,
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_wc__db_global_commit()
-
-   Makes local_relpath and all its descendants at the same op-depth represent
-   the copy origin repos_id:repos_relpath@revision.
-
-   This code is only valid to fix-up a move from an old location, to a new
-   location during a commit.
-
-   Assumptions:
-     * local_relpath is not the working copy root (can't be moved)
-     * repos_relpath is not the repository root (can't be moved)
-   */
 static svn_error_t *
-moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
+moved_descendant_collect(apr_hash_t **map,
+                        svn_wc__db_wcroot_t *wcroot,
                         const char *local_relpath,
                         int op_depth,
-                        apr_int64_t repos_id,
-                        const char *repos_relpath,
-                        svn_revnum_t revision,
+                        apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  apr_hash_t *children;
-  apr_pool_t *iterpool;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_hash_index_t *hi;
 
-  SVN_ERR_ASSERT(*local_relpath != '\0'
-                 && *repos_relpath != '\0');
+  *map = NULL;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_MOVED_DESCENDANTS_SRC));
@@ -11427,20 +11410,55 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
   if (! have_row)
     return svn_error_trace(svn_sqlite__reset(stmt));
 
-  children = apr_hash_make(scratch_pool);
-
-  /* First, obtain all moved descendants */
-  /* To keep error handling simple, first cache them in a hashtable */
+  /* Find all moved descendants. Key them on target, because that is
+     always unique */
   while (have_row)
     {
-      const char *src_relpath = svn_sqlite__column_text(stmt, 1, scratch_pool);
-      const char *to_relpath = svn_sqlite__column_text(stmt, 4, scratch_pool);
+      const char *src_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
+      const char *to_relpath = svn_sqlite__column_text(stmt, 4, result_pool);
 
-      svn_hash_sets(children, src_relpath, to_relpath);
+      if (!*map)
+        *map = apr_hash_make(result_pool);
+
+      svn_hash_sets(*map, to_relpath, src_relpath);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+/* Helper for svn_wc__db_global_commit()
+
+   Makes local_relpath and all its descendants at the same op-depth represent
+   the copy origin repos_id:repos_relpath@revision.
+
+   This code is only valid to fix-up a move from an old location, to a new
+   location during a commit.
+
+   Assumptions:
+     * local_relpath is not the working copy root (can't be moved)
+     * repos_relpath is not the repository root (can't be moved)
+ */
+static svn_error_t *
+moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
+                        const char *local_relpath,
+                        apr_int64_t repos_id,
+                        const char *repos_relpath,
+                        svn_revnum_t revision,
+                        apr_hash_t *children,
+                        apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool;
+  svn_sqlite__stmt_t *stmt;
+  apr_hash_index_t *hi;
+
+  SVN_ERR_ASSERT(*local_relpath != '\0'
+                 && *repos_relpath != '\0');
+
+  if (!children)
+    return SVN_NO_ERROR;
 
   /* Then update them */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -11449,11 +11467,12 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, children); hi; hi = apr_hash_next(hi))
     {
-      const char *src_relpath = apr_hash_this_key(hi);
-      const char *to_relpath = apr_hash_this_val(hi);
+      const char *src_relpath = apr_hash_this_val(hi);
+      const char *to_relpath = apr_hash_this_key(hi);
       const char *new_repos_relpath;
       int to_op_depth = relpath_depth(to_relpath);
       int affected;
+      apr_hash_t *map;
 
       svn_pool_clear(iterpool);
 
@@ -11480,9 +11499,11 @@ moved_descendant_commit(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR_ASSERT(affected >= 1); /* If this fails there is no move dest */
 #endif
 
-      SVN_ERR(moved_descendant_commit(wcroot, to_relpath, to_op_depth,
+      SVN_ERR(moved_descendant_collect(&map, wcroot, to_relpath, to_op_depth,
+                                       iterpool, iterpool));
+      SVN_ERR(moved_descendant_commit(wcroot, to_relpath,
                                       repos_id, new_repos_relpath, revision,
-                                      iterpool));
+                                      map, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -11563,6 +11584,7 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
   const char *repos_relpath;
   int op_depth;
   svn_wc__db_status_t old_presence;
+  svn_boolean_t moved_here;
 
     /* If we are adding a file or directory, then we need to get
      repository information from the parent node since "this node" does
@@ -11631,6 +11653,8 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
 
   old_presence = svn_sqlite__column_token(stmt_info, 3, presence_map);
 
+  moved_here = svn_sqlite__column_int(stmt_info, 15);
+
   /* ### other stuff?  */
 
   SVN_ERR(svn_sqlite__reset(stmt_info));
@@ -11639,6 +11663,13 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
   if (op_depth > 0)
     {
       int affected_rows;
+      apr_hash_t *map_pre = NULL;
+      apr_hash_t *map_post = NULL;
+      svn_boolean_t op_root = (relpath_depth(local_relpath) == op_depth);
+
+      /* First collect the moves that we might delete in a bit */
+      SVN_ERR(moved_descendant_collect(&map_pre, wcroot, local_relpath, 0,
+                                       scratch_pool, scratch_pool));
 
       /* This removes all layers of this node and at the same time determines
          if we need to remove shadowed layers below our descendants. */
@@ -11672,26 +11703,61 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
          be integrated, they really affect a different op-depth and
          completely different nodes (via a different recursion pattern). */
 
-      /* Collapse descendants of the current op_depth in layer 0 */
-      SVN_ERR(descendant_commit(wcroot, local_relpath, op_depth,
-                                repos_id, repos_relpath, new_revision,
-                                scratch_pool));
+      if (op_root)
+        {
+          /* Collapse descendants of the current op_depth to layer 0,
+             this includes moved-from/to clearing */
+          SVN_ERR(descendant_commit(wcroot, local_relpath, op_depth,
+                                    repos_id, repos_relpath, new_revision,
+                                    scratch_pool));
+        }
+
+      SVN_ERR(moved_descendant_collect(&map_post, wcroot, local_relpath, 0,
+                                       scratch_pool, scratch_pool));
+
 
       /* And make the recorded local moves represent moves of the node we just
          committed. */
-      SVN_ERR(moved_descendant_commit(wcroot, local_relpath, 0,
+      SVN_ERR(moved_descendant_commit(wcroot, local_relpath,
                                       repos_id, repos_relpath, new_revision,
-                                      scratch_pool));
+                                      map_post, scratch_pool));
 
-      /* This node is no longer modified, so no node was moved here */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_CLEAR_MOVED_TO_FROM_DEST));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                                            local_relpath));
+      if (map_pre && map_post != map_pre)
+        {
+          apr_hash_index_t *hi;
 
-      SVN_ERR(svn_sqlite__step_done(stmt));
+          for (hi = apr_hash_first(scratch_pool, map_pre);
+               hi; hi = apr_hash_next(hi))
+            {
+              const char *to_relpath = apr_hash_this_key(hi);
+              svn_error_t *err;
+
+              if (map_post && svn_hash_gets(map_post, to_relpath))
+                continue;
+
+              err = clear_moved_here(wcroot, to_relpath, scratch_pool);
+
+              if (err)
+                {
+                  if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                    return svn_error_trace(err);
+
+                  svn_error_clear(err); /* Node already committed? */
+                }
+            }
+        }
+
+      if (op_root && moved_here)
+        {
+          /* This node is no longer modified, so no node was moved here */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_CLEAR_MOVED_TO_FROM_DEST));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                                local_relpath));
+
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
     }
-
   /* Update or add the BASE_NODE row with all the new information.  */
 
   if (*local_relpath == '\0')
@@ -11775,7 +11841,7 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
       svn_sqlite__stmt_t *lock_stmt;
 
       SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
-                                        STMT_DELETE_LOCK_RECURSIVELY));
+                                        STMT_DELETE_LOCK));
       SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
       SVN_ERR(svn_sqlite__step_done(lock_stmt));
     }
