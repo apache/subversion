@@ -780,7 +780,6 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
                      apr_pool_t *pool)
 {
   svn_fs_x__id_t child_copy_id, parent_copy_id;
-  svn_boolean_t related;
   const char *id_path = NULL;
   svn_fs_root_t *copyroot_root;
   dag_node_t *copyroot_node;
@@ -790,8 +789,8 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
   SVN_ERR_ASSERT(child && child->parent);
 
   /* Initialize some convenience variables. */
-  SVN_ERR(svn_fs_x__dag_get_copy_id(&child_copy_id, child->node));
-  SVN_ERR(svn_fs_x__dag_get_copy_id(&parent_copy_id, child->parent->node));
+  child_copy_id = *svn_fs_x__dag_get_copy_id(child->node);
+  parent_copy_id = *svn_fs_x__dag_get_copy_id(child->parent->node);
 
   /* If this child is already mutable, we have nothing to do. */
   if (svn_fs_x__dag_check_mutable(child->node))
@@ -831,8 +830,7 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
   SVN_ERR(svn_fs_x__get_dag_node(&copyroot_node, copyroot_root,
                                  copyroot_path, pool));
 
-  SVN_ERR(svn_fs_x__dag_related_node(&related, copyroot_node, child->node));
-  if (!related)
+  if (svn_fs_x__dag_related_node(copyroot_node, child->node))
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or
@@ -1041,7 +1039,6 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
       svn_boolean_t is_parent_copyroot = FALSE;
       svn_fs_root_t *copyroot_root;
       dag_node_t *copyroot_node;
-      svn_boolean_t related;
       apr_pool_t *subpool;
 
       /* We're trying to clone somebody's child.  Make sure our parent
@@ -1057,8 +1054,7 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
       switch (inherit)
         {
         case svn_fs_x__copy_id_inherit_parent:
-          SVN_ERR(svn_fs_x__dag_get_copy_id(&copy_id,
-                                            parent_path->parent->node));
+          copy_id = *svn_fs_x__dag_get_copy_id(parent_path->parent->node);
           break;
 
         case svn_fs_x__copy_id_inherit_new:
@@ -1084,9 +1080,7 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
       SVN_ERR(svn_fs_x__get_dag_node(&copyroot_node, copyroot_root,
                                      copyroot_path, result_pool));
 
-      SVN_ERR(svn_fs_x__dag_related_node(&related, copyroot_node,
-                                         parent_path->node));
-      if (!related)
+      if (svn_fs_x__dag_related_node(copyroot_node, parent_path->node))
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */

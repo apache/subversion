@@ -112,27 +112,23 @@ svn_fs_x__dag_get_id(const dag_node_t *node);
 
 /* Return the node ID of NODE.  The value returned is shared with NODE,
    and will be deallocated when NODE is.  */
-svn_error_t *
-svn_fs_x__dag_get_node_id(svn_fs_x__id_t *node_id,
-                          dag_node_t *node);
+const svn_fs_x__id_t *
+svn_fs_x__dag_get_node_id(dag_node_t *node);
 
 /* Return the copy ID of NODE.  The value returned is shared with NODE,
    and will be deallocated when NODE is.  */
-svn_error_t *
-svn_fs_x__dag_get_copy_id(svn_fs_x__id_t *copy_id,
-                          dag_node_t *node);
+const svn_fs_x__id_t *
+svn_fs_x__dag_get_copy_id(dag_node_t *node);
 
-/* Set *SAME to TRUE, if nodes LHS and RHS have the same node ID. */
-svn_error_t *
-svn_fs_x__dag_related_node(svn_boolean_t *same,
-                           dag_node_t *lhs,
+/* Return TRUE, iff nodes LHS and RHS have the same node ID. */
+svn_boolean_t
+svn_fs_x__dag_related_node(dag_node_t *lhs,
                            dag_node_t *rhs);
 
-/* Set *SAME to TRUE, if nodes LHS and RHS have the same node and copy IDs.
+/* Return TRUE, iff nodes LHS and RHS have the same node and copy IDs.
  */
-svn_error_t *
-svn_fs_x__dag_same_line_of_history(svn_boolean_t *same,
-                                   dag_node_t *lhs,
+svn_boolean_t
+svn_fs_x__dag_same_line_of_history(dag_node_t *lhs,
                                    dag_node_t *rhs);
 
 /* Return the created path of NODE.  The value returned is shared

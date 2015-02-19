@@ -353,11 +353,11 @@ x_node_relation(svn_fs_node_relation_t *relation,
    * Now, we can simply test for the ID values themselves. */
   SVN_ERR(svn_fs_x__get_dag_node(&node, root_a, path_a, scratch_pool));
   noderev_id_a = *svn_fs_x__dag_get_id(node);
-  SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_a, node));
+  node_id_a = *svn_fs_x__dag_get_node_id(node);
 
   SVN_ERR(svn_fs_x__get_dag_node(&node, root_b, path_b, scratch_pool));
   noderev_id_b = *svn_fs_x__dag_get_id(node);
-  SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_b, node));
+  node_id_b = *svn_fs_x__dag_get_node_id(node);
 
   if (svn_fs_x__id_eq(&noderev_id_a, &noderev_id_b))
     *relation = svn_fs_node_same;
@@ -680,7 +680,6 @@ compare_dir_structure(svn_boolean_t *changed,
 
       if (strcmp(lhs_entry->name, rhs_entry->name) == 0)
         {
-          svn_boolean_t same_history;
           dag_node_t *lhs_node, *rhs_node;
 
           /* Unchanged entry? */
@@ -695,9 +694,7 @@ compare_dir_structure(svn_boolean_t *changed,
                                          iterpool, iterpool));
           SVN_ERR(svn_fs_x__dag_get_node(&rhs_node, fs, &rhs_entry->id, 
                                          iterpool, iterpool));
-          SVN_ERR(svn_fs_x__dag_same_line_of_history(&same_history,
-                                                     lhs_node, rhs_node));
-          if (same_history)
+          if (svn_fs_x__dag_same_line_of_history(lhs_node, rhs_node))
             continue;
         }
 
@@ -979,7 +976,6 @@ merge(svn_stringbuf_t *conflict_p,
           dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
           const char *new_tpath;
           apr_int64_t sub_mergeinfo_increment;
-          svn_boolean_t s_a_same, t_a_same;
 
           /* If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
              double delete; if one of them is null, that's a delete versus
@@ -1009,11 +1005,8 @@ merge(svn_stringbuf_t *conflict_p,
 
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
-          SVN_ERR(svn_fs_x__dag_same_line_of_history(&s_a_same, s_ent_node,
-                                                     a_ent_node));
-          SVN_ERR(svn_fs_x__dag_same_line_of_history(&t_a_same, t_ent_node,
-                                                     a_ent_node));
-          if (!s_a_same || !t_a_same)
+          if (   !svn_fs_x__dag_same_line_of_history(s_ent_node, a_ent_node)
+              || !svn_fs_x__dag_same_line_of_history(t_ent_node, a_ent_node))
             return conflict_err(conflict_p,
                                 svn_fspath__join(target_path,
                                                  a_entry->name,
@@ -1099,8 +1092,7 @@ merge_changes(dag_node_t *ancestor_node,
   dag_node_t *txn_root_node;
   svn_fs_t *fs = txn->fs;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(txn);
-  svn_boolean_t related;
-  
+
   SVN_ERR(svn_fs_x__dag_txn_root(&txn_root_node, fs, txn_id, scratch_pool,
                                  scratch_pool));
 
@@ -1112,8 +1104,7 @@ merge_changes(dag_node_t *ancestor_node,
                                           scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(svn_fs_x__dag_related_node(&related, ancestor_node, txn_root_node));
-  if (!related)
+  if (svn_fs_x__dag_related_node(ancestor_node, txn_root_node))
     {
       /* If no changes have been made in TXN since its current base,
          then it can't conflict with any changes since that base.
@@ -2454,7 +2445,6 @@ x_closest_copy(svn_fs_root_t **root_p,
   const char *copy_dst_path;
   svn_fs_root_t *copy_dst_root;
   dag_node_t *copy_dst_node;
-  svn_boolean_t related;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   /* Initialize return values. */
@@ -2490,9 +2480,7 @@ x_closest_copy(svn_fs_root_t **root_p,
     }
 
   copy_dst_node = copy_dst_dag_path->node;
-  SVN_ERR(svn_fs_x__dag_related_node(&related, copy_dst_node,
-                                     dag_path->node));
-  if (!related)
+  if (!svn_fs_x__dag_related_node(copy_dst_node, dag_path->node))
     {
       svn_pool_destroy(scratch_pool);
       return SVN_NO_ERROR;
@@ -2545,7 +2533,7 @@ x_node_origin_rev(svn_revnum_t *revision,
   path = svn_fs__canonicalize_abspath(path, scratch_pool);
 
   SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
-  SVN_ERR(svn_fs_x__dag_get_node_id(&node_id, node));
+  node_id = *svn_fs_x__dag_get_node_id(node);
 
   *revision = svn_fs_x__get_revnum(node_id.change_set);
 
