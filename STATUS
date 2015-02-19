@@ -88,15 +88,6 @@ Candidate changes:
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
                    7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
- * r1658417
-   Don't ask a resolver if we should resolve if we only take no as answer
-   Justification:
-     Presenting conflicts to the conflict resolver only makes sense if the
-     result of the function is potentially applied. I'm surprised that
-     nobody noticed this problem in svn_wc_resolved_conflict5().
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1659867, r1659869, r1660091, r1660097
    Fix reproducable memory corruption and unneeded io errors on editor abort
    Justification:
@@ -209,3 +200,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1658417
+   Don't ask a resolver if we should resolve if we only take no as answer
+   Justification:
+     Presenting conflicts to the conflict resolver only makes sense if the
+     result of the function is potentially applied. I'm surprised that
+     nobody noticed this problem in svn_wc_resolved_conflict5().
+   Votes:
+     +1: rhuijben, stefan2, ivan
