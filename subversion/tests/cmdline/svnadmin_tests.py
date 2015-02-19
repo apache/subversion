@@ -2930,6 +2930,31 @@ def load_txdelta(sbox):
     ".*Verified revision *"):
     raise svntest.Failure
 
+@XFail()
+@Issues(4563)
+def load_no_svndate_r0(sbox):
+  "load without svn:date on r0"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # svn:date exits
+  svntest.actions.run_and_verify_svnlook(['  svn:date\n'], [],
+                                         'proplist', '--revprop', '-r0',
+                                         sbox.repo_dir)
+
+  dump_old = ["SVN-fs-dump-format-version: 2\n", "\n",
+              "UUID: bf52886d-358d-4493-a414-944a6e5ad4f5\n", "\n",
+              "Revision-number: 0\n",
+              "Prop-content-length: 10\n",
+              "Content-length: 10\n", "\n",
+              "PROPS-END\n", "\n"]
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_old)
+  
+  # svn:date should have been removed
+  svntest.actions.run_and_verify_svnlook([], [],
+                                         'proplist', '--revprop', '-r0',
+                                         sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2984,6 +3009,7 @@ test_list = [ None,
               freeze_same_uuid,
               upgrade,
               load_txdelta,
+              load_no_svndate_r0,
              ]
 
 if __name__ == '__main__':
