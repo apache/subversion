@@ -3527,6 +3527,28 @@ svn_wc__required_lock_for_resolve(const char **required_abspath,
                                   apr_pool_t *scratch_pool);
 /* @} */
 
+typedef svn_error_t * (*svn_wc__db_verify_cb_t)(void *baton,
+                                                const char *wc_abspath,
+                                                const char *local_relpath,
+                                                int op_depth,
+                                                int id,
+                                                const char *description,
+                                                apr_pool_t *scratch_pool);
+
+/* Checks the database for FULL-correctness according to the spec.
+
+   Note that typical 1.7-1.9 databases WILL PRODUCE warnings.
+
+   This is mainly useful for WC-NG developers, as there will be
+   warnings without the database being corrupt
+*/
+svn_error_t *
+svn_wc__db_verify_db_full(svn_wc__db_t *db,
+                          const char *wri_abspath,
+                          svn_wc__db_verify_cb_t callback,
+                          void *baton,
+                          apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
