@@ -748,7 +748,7 @@ def blame_output_after_merge(sbox):
   # Next test with the -g option with -rN:M
   expected_output = [ "       -          - New version of file 'mu'.\n",
                       "       -          - 2nd line in file 'mu'.\n",
-                      "G      -          - new 3rd line in file 'mu'.\n",
+                      "G      5    jrandom new 3rd line in file 'mu'.\n",
                       "G      6    jrandom add 3.5 line in file 'mu'.\n",
                       "       -          - 4th line in file 'mu'.\n",
                       "       -          - 5th line in file 'mu'.\n",
@@ -950,22 +950,31 @@ def blame_youngest_to_oldest(sbox):
   orig_line = open(iota).read()
   line = "New contents for iota\n"
   svntest.main.file_append(iota, line)
-  sbox.simple_commit()
+  sbox.simple_commit() #r2
 
   # Move the file, to check that the operation will peg correctly.
   iota_moved = sbox.ospath('iota_moved')
   sbox.simple_move('iota', 'iota_moved')
-  sbox.simple_commit()
+  sbox.simple_commit() #r3
 
   # Delete a line.
   open(iota_moved, 'w').write(line)
-  sbox.simple_commit()
+  sbox.simple_commit() #r4
 
   expected_output = [
         '     %d    jrandom %s\n' % (3, orig_line[:-1]),
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-r4:1', iota_moved)
+
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:1', iota_moved)
+
+  expected_output = [
+        '     %d    jrandom %s\n' % (2, line[:-1]),
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r1:HEAD', iota_moved)
 
 ########################################################################
 # Run the tests
