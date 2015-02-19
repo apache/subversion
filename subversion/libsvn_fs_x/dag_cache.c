@@ -434,11 +434,13 @@ dag_node_cache_get(svn_fs_root_t *root,
 }
 
 
-/* Add the NODE for PATH to ROOT's node cache. */
-void
-svn_fs_x__set_dag_node(svn_fs_root_t *root,
-                       const char *path,
-                       dag_node_t *node)
+/* Add the NODE for PATH to ROOT's node cache.  Call this function only
+   if NODE is not known to be a txn node.  svn_fs_x__update_dag_cache()
+   should be called if NODE is known to be a txn node. */
+static void
+set_dag_node(svn_fs_root_t *root,
+             const char *path,
+             dag_node_t *node)
 {
   svn_fs_x__data_t *ffd = root->fs->fsap_data;
   cache_entry_t *bucket;
@@ -447,6 +449,22 @@ svn_fs_x__set_dag_node(svn_fs_root_t *root,
 
   auto_clear_dag_cache(cache);
   bucket = cache_lookup(cache, root_change_set(root),
+                        normalize_path(&normalized, path));
+  bucket->node = svn_fs_x__dag_copy_into_pool(node, cache->pool);
+}
+
+void
+svn_fs_x__update_dag_cache(dag_node_t *node)
+{
+  svn_fs_x__data_t *ffd = svn_fs_x__dag_get_fs(node)->fsap_data;
+  const char *path = svn_fs_x__dag_get_created_path(node);
+  svn_fs_x__dag_cache_t *cache = ffd->dag_node_cache;
+
+  cache_entry_t *bucket;
+  svn_string_t normalized;
+
+  auto_clear_dag_cache(cache);
+  bucket = cache_lookup(cache, svn_fs_x__dag_get_id(node)->change_set,
                         normalize_path(&normalized, path));
   bucket->node = svn_fs_x__dag_copy_into_pool(node, cache->pool);
 }
@@ -543,7 +561,7 @@ try_match_last_node(dag_node_t **node_p,
           && memcmp(created_path, path->data, path->len) == 0)
         {
           /* Cache it under its full path@rev access path. */
-          svn_fs_x__set_dag_node(root, created_path, node);
+          set_dag_node(root, created_path, node);
 
           *node_p = node;
           return SVN_NO_ERROR;
@@ -944,7 +962,7 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
 
           /* Cache the node we found (if it wasn't already cached). */
           if (! cached_node)
-            svn_fs_x__set_dag_node(root, path_so_far->data, child);
+            set_dag_node(root, path_so_far->data, child);
         }
 
       /* Are we finished traversing the path?  */
@@ -1050,8 +1068,7 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
                                         subpool));
 
       /* Update the path cache. */
-      svn_fs_x__set_dag_node(root, parent_path_path(parent_path, subpool),
-                             clone);
+      svn_fs_x__update_dag_cache(clone);
       svn_pool_destroy(subpool);
     }
   else
