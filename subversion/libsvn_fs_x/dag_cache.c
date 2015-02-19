@@ -830,7 +830,7 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
   SVN_ERR(svn_fs_x__get_dag_node(&copyroot_node, copyroot_root,
                                  copyroot_path, pool));
 
-  if (svn_fs_x__dag_related_node(copyroot_node, child->node))
+  if (!svn_fs_x__dag_related_node(copyroot_node, child->node))
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or
@@ -1080,7 +1080,7 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
       SVN_ERR(svn_fs_x__get_dag_node(&copyroot_node, copyroot_root,
                                      copyroot_path, result_pool));
 
-      if (svn_fs_x__dag_related_node(copyroot_node, parent_path->node))
+      if (!svn_fs_x__dag_related_node(copyroot_node, parent_path->node))
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */

@@ -1104,7 +1104,7 @@ merge_changes(dag_node_t *ancestor_node,
                                           scratch_pool, scratch_pool));
     }
 
-  if (svn_fs_x__dag_related_node(ancestor_node, txn_root_node))
+  if (!svn_fs_x__dag_related_node(ancestor_node, txn_root_node))
     {
       /* If no changes have been made in TXN since its current base,
          then it can't conflict with any changes since that base.
