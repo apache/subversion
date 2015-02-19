@@ -489,20 +489,9 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Create the rev structure. */
   delta_baton->rev = apr_pcalloc(frb->mainpool, sizeof(struct rev));
 
-  if ((frb->start_rev < frb->end_rev)
-      ? (revnum < MIN(frb->start_rev, frb->end_rev))
-      : (revnum > MAX(frb->start_rev, frb->end_rev)))
-    {
-      /* We shouldn't get more than one revision outside the
-         specified range (unless we alsoe receive merged revisions) */
-      SVN_ERR_ASSERT((frb->last_filename == NULL)
-                     || frb->include_merged_revisions);
-
-      /* The file existed before start_rev; generate no blame info for
-         lines from this revision (or before). */
-      delta_baton->rev->revision = SVN_INVALID_REVNUM;
-    }
-  else
+  if (merged_revision
+      || (revnum >= MIN(frb->start_rev, frb->end_rev)
+          && revnum <= MAX(frb->start_rev, frb->end_rev)))
     {
       /* 1+ for the "youngest to oldest" blame */
       SVN_ERR_ASSERT(revnum <= 1 + MAX(frb->end_rev, frb->start_rev));
@@ -510,6 +499,16 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
       /* Set values from revision props. */
       delta_baton->rev->revision = revnum;
       delta_baton->rev->rev_props = svn_prop_hash_dup(rev_props, frb->mainpool);
+    }
+  else
+    {
+      /* We shouldn't get more than one revision outside the
+         specified range (unless we alsoe receive merged revisions) */
+      SVN_ERR_ASSERT(frb->last_filename == NULL);
+
+      /* The file existed before start_rev; generate no blame info for
+         lines from this revision (or before). */
+      delta_baton->rev->revision = SVN_INVALID_REVNUM;
     }
 
   if (frb->include_merged_revisions)
