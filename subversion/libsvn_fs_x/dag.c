@@ -196,60 +196,44 @@ svn_fs_x__dag_get_revision(const dag_node_t *node)
           : svn_fs_x__get_revnum(noderev->noderev_id.change_set));
 }
 
-
-svn_error_t *
-svn_fs_x__dag_get_predecessor_id(svn_fs_x__id_t *id_p,
-                                 dag_node_t *node)
+const svn_fs_x__id_t *
+svn_fs_x__dag_get_predecessor_id(dag_node_t *node)
 {
-  *id_p = node->node_revision->predecessor_id;
-
-  return SVN_NO_ERROR;
+  return &node->node_revision->predecessor_id;
 }
 
-
-svn_error_t *
-svn_fs_x__dag_get_predecessor_count(int *count,
-                                    dag_node_t *node)
+int
+svn_fs_x__dag_get_predecessor_count(dag_node_t *node)
 {
-  *count = node->node_revision->predecessor_count;
-  return SVN_NO_ERROR;
+  return node->node_revision->predecessor_count;
 }
 
-svn_error_t *
-svn_fs_x__dag_get_mergeinfo_count(apr_int64_t *count,
-                                  dag_node_t *node)
+apr_int64_t
+svn_fs_x__dag_get_mergeinfo_count(dag_node_t *node)
 {
-  *count = node->node_revision->mergeinfo_count;
-  return SVN_NO_ERROR;
+  return node->node_revision->mergeinfo_count;
 }
 
-svn_error_t *
-svn_fs_x__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
-                            dag_node_t *node)
+svn_boolean_t
+svn_fs_x__dag_has_mergeinfo(dag_node_t *node)
 {
-  *has_mergeinfo = node->node_revision->has_mergeinfo;
-  return SVN_NO_ERROR;
+  return node->node_revision->has_mergeinfo;
 }
 
-svn_error_t *
-svn_fs_x__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
-                                             dag_node_t *node)
+svn_boolean_t
+svn_fs_x__dag_has_descendants_with_mergeinfo(dag_node_t *node)
 {
   svn_fs_x__noderev_t *noderev = node->node_revision;
 
   if (noderev->kind != svn_node_dir)
-    {
-      *do_they = FALSE;
-      return SVN_NO_ERROR;
-    }
+      return FALSE;
 
   if (noderev->mergeinfo_count > 1)
-    *do_they = TRUE;
+    return TRUE;
   else if (noderev->mergeinfo_count == 1 && !noderev->has_mergeinfo)
-    *do_they = TRUE;
-  else
-    *do_they = FALSE;
-  return SVN_NO_ERROR;
+    return TRUE;
+
+  return FALSE;
 }
 
 
