@@ -128,6 +128,12 @@ static const svn_test__nodes_data_t nodes[] =
   { 0, "J",           "normal",         1, "J", 1,              NOT_MOVED,
     svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1},
 
+  { 0, "J/J-c",       "normal",         1, "J/J-c", 1,          NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1},
+
+  { 0, "J/J-c/J-c-a", "not-present",    1, "J/J-c/J-c-a", 1,    NOT_MOVED,
+    svn_node_dir},
+
   { 0, "J/J-e",       "normal",         1, "J/J-e", 1,          NOT_MOVED,
     svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1},
 
@@ -155,6 +161,15 @@ static const svn_test__nodes_data_t nodes[] =
   { 0, "K/K-b",       "normal",         1, "K/K-b", 1,          NOT_MOVED,
     svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 1, TIME_1a, AUTHOR_1},
 
+  { 0, "L",           "normal",         1, "switched", 1,        NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1},
+
+  { 0, "L/L-a",       "normal",         1, "switched/L-a", 1,    NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1},
+
+  { 0, "L/L-a/L-a-a", "normal",         1, "switched/L-a/L-a-a", 1, NOT_MOVED,
+    svn_node_dir, "()", "infinity", NULL, NULL, 1, TIME_1a, AUTHOR_1},
+
    /* Load data into NODES table;
       ### op_depths have not been calculated by me yet;
       the value 1 is just 'good enough' to make the nodes WORKING nodes. */
@@ -178,10 +193,7 @@ static const svn_test__nodes_data_t nodes[] =
     svn_node_file},
 
   /* This triggers a validation warning: bad delete */
-  { 2, "J/J-c",       "base-deleted",   NO_COPY_FROM,           NOT_MOVED,
-    svn_node_dir},
-
-  { 2, "J/J-c/J-c-a", "base-deleted",   NO_COPY_FROM,           NOT_MOVED,
+  { 1, "J/J-c",       "base-deleted",   NO_COPY_FROM,           NOT_MOVED,
     svn_node_dir},
 
   { 1, "J/J-d",       "normal",         2, "moved/file", 2,     NOT_MOVED,
@@ -231,6 +243,19 @@ static const svn_test__nodes_data_t nodes[] =
 
   { 1, "M/M-a",       "not-present",      1, "M/M-a", 1,        NOT_MOVED,
     svn_node_file},
+
+  /**** Move target of K/K-b ****/
+  { 1, "moved",       "normal",           NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir, NULL, "infinity" },
+  { 2, "moved/away",  "normal",           1, "??", 1,           TRUE, NULL,
+    svn_node_file, "()", NULL, "$sha1$" SHA1_1, NULL, 1, TIME_1a, AUTHOR_1},
+
+  /**** Move target of J/J-e ****/
+  { 1, "other",       "normal",           NO_COPY_FROM,         NOT_MOVED,
+    svn_node_dir, NULL, "empty"},
+
+  { 2, "other/place", "normal",           1, "??", 1,           TRUE, NULL,
+    svn_node_dir, "()", "infinity"},
 
   { 0 },
 };
@@ -328,8 +353,8 @@ test_entries_alloc(apr_pool_t *pool)
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE /* show_hidden */,
                               pool));
 
-  /* The wcroot has 12 BASE children + 1 WORKING child + "this dir".  */
-  SVN_TEST_ASSERT(apr_hash_count(entries) == 14);
+  /* The wcroot has 12 BASE children + 3 WORKING child + "this dir".  */
+  SVN_TEST_ASSERT(apr_hash_count(entries) == 16);
 
   /* The "D" entry in the entries hash should be what we get from the
      svn_wc_entry() entrypoint.  */
