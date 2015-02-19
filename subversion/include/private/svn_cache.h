@@ -542,6 +542,15 @@ svn_cache__get_global_membuffer_cache(void);
 svn_cache__info_t *
 svn_cache__membuffer_get_global_info(apr_pool_t *pool);
 
+/**
+ * Remove all current contents from CACHE.
+ *
+ * NOTE:  In a multi-threaded environment, new contents may have been put
+ * into the cache by the time this function returns.
+ */
+svn_error_t *
+svn_cache__membuffer_clear(svn_membuffer_t *cache);
+
 /** @} */
 
 
