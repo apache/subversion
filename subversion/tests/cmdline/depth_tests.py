@@ -2886,6 +2886,82 @@ def spurious_nodes_row(sbox):
     # ra_neon added a spurious not-present row that does not show up in status
     raise svntest.Failure("count changed from '%s' to '%s'" % (val1, val2))
 
+def commit_excluded(sbox):
+  "commit an excluded node"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(status='D '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        "--set-depth=exclude",
+                                        sbox.ospath('A/D/G'))
+
+  sbox.simple_copy('A/D', 'D')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'D' : Item(verb='Adding'),
+  })
+  
+  expected_status.add({
+    'D'          : Item(status='  ', wc_rev='2'),
+    'D/H'        : Item(status='  ', wc_rev='2'),
+    'D/H/chi'    : Item(status='  ', wc_rev='2'),
+    'D/H/psi'    : Item(status='  ', wc_rev='2'),
+    'D/H/omega'  : Item(status='  ', wc_rev='2'),
+    'D/gamma'    : Item(status='  ', wc_rev='2')
+  })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G'     : Item(status='A '),
+    'A/D/G/pi'  : Item(status='A '),
+    'A/D/G/tau' : Item(status='A '),
+    'A/D/G/rho' : Item(status='A '),
+    'D/G'       : Item(status='A '),
+    'D/G/pi'    : Item(status='A '),
+    'D/G/tau'   : Item(status='A '),
+    'D/G/rho'   : Item(status='A ')
+  })
+
+  expected_status.tweak(wc_rev=2)
+
+  expected_status.add({
+    'D'         : Item(status='  ', wc_rev='2'),
+    'D/G'       : Item(status='  ', wc_rev='2'),
+    'D/G/pi'    : Item(status='  ', wc_rev='2'),
+    'D/G/rho'   : Item(status='  ', wc_rev='2'),
+    'D/G/tau'   : Item(status='  ', wc_rev='2'),
+    'D/H'       : Item(status='  ', wc_rev='2'),
+    'D/H/chi'   : Item(status='  ', wc_rev='2'),
+    'D/H/psi'   : Item(status='  ', wc_rev='2'),
+    'D/H/omega' : Item(status='  ', wc_rev='2'),
+    'D/gamma'   : Item(status='  ', wc_rev='2'),
+    'A/D/G'     : Item(status='  ', wc_rev='2'),
+    'A/D/G/rho' : Item(status='  ', wc_rev='2'),
+    'A/D/G/tau' : Item(status='  ', wc_rev='2'),
+    'A/D/G/pi'  : Item(status='  ', wc_rev='2')
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        "--set-depth=infinity", wc_dir)
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
@@ -2937,6 +3013,7 @@ test_list = [ None,
               commit_then_immediates_update,
               revert_depth_files,
               spurious_nodes_row,
+              commit_excluded,
               ]
 
 if __name__ == "__main__":
