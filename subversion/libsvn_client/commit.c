@@ -537,6 +537,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   const char *current_abspath;
   const char *notify_prefix;
   int depth_empty_after = -1;
+  apr_hash_t *move_youngest = NULL;
   int i;
 
   SVN_ERR_ASSERT(depth != svn_depth_unknown && depth != svn_depth_exclude);
@@ -707,62 +708,12 @@ svn_client_commit6(const apr_array_header_t *targets,
           if (cmt_err)
             goto cleanup;
 
-          if (moved_from_abspath && delete_op_root_abspath &&
-              strcmp(moved_from_abspath, delete_op_root_abspath) == 0)
-
+          if (moved_from_abspath && delete_op_root_abspath)
             {
-              svn_boolean_t found_delete_half =
-                (svn_hash_gets(committables->by_path, delete_op_root_abspath)
-                 != NULL);
+              svn_client_commit_item3_t *delete_half =
+                svn_hash_gets(committables->by_path, delete_op_root_abspath);
 
-              if (!found_delete_half)
-                {
-                  const char *delete_half_parent_abspath;
-
-                  /* The delete-half isn't in the commit target list.
-                   * However, it might itself be the child of a deleted node,
-                   * either because of another move or a deletion.
-                   *
-                   * For example, consider: mv A/B B; mv B/C C; commit;
-                   * C's moved-from A/B/C is a child of the deleted A/B.
-                   * A/B/C does not appear in the commit target list, but
-                   * A/B does appear.
-                   * (Note that moved-from information is always stored
-                   * relative to the BASE tree, so we have 'C moved-from
-                   * A/B/C', not 'C moved-from B/C'.)
-                   *
-                   * An example involving a move and a delete would be:
-                   * mv A/B C; rm A; commit;
-                   * Now C is moved-from A/B which does not appear in the
-                   * commit target list, but A does appear.
-                   */
-
-                  /* Scan upwards for a deletion op-root from the
-                   * delete-half's parent directory. */
-                  delete_half_parent_abspath =
-                    svn_dirent_dirname(delete_op_root_abspath, iterpool);
-                  if (strcmp(delete_op_root_abspath,
-                             delete_half_parent_abspath) != 0)
-                    {
-                      const char *parent_delete_op_root_abspath;
-
-                      cmt_err = svn_error_trace(
-                                  svn_wc__node_get_deleted_ancestor(
-                                    &parent_delete_op_root_abspath,
-                                    ctx->wc_ctx, delete_half_parent_abspath,
-                                    iterpool, iterpool));
-                      if (cmt_err)
-                        goto cleanup;
-
-                      if (parent_delete_op_root_abspath)
-                        found_delete_half =
-                          (svn_hash_gets(committables->by_path,
-                                         parent_delete_op_root_abspath)
-                           != NULL);
-                    }
-                }
-
-              if (!found_delete_half)
+              if (!delete_half)
                 {
                   cmt_err = svn_error_createf(
                               SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -786,6 +737,17 @@ svn_client_commit6(const apr_array_header_t *targets,
                     }
 
                   goto cleanup;
+                }
+              else if (delete_half->revision == item->copyfrom_rev)
+                {
+                  /* Ok, now we know that we perform an out-of-date check
+                     on the copyfrom location. Remember this for a fixup
+                     round right before committing. */
+
+                  if (!move_youngest)
+                    move_youngest = apr_hash_make(pool);
+
+                  svn_hash_sets(move_youngest, item->path, item);
                 }
             }
         }
@@ -884,6 +846,37 @@ svn_client_commit6(const apr_array_header_t *targets,
 
   if (cmt_err)
     goto cleanup;
+
+  if (move_youngest != NULL)
+    {
+      apr_hash_index_t *hi;
+      svn_revnum_t youngest;
+
+      SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, pool));
+
+      for (hi = apr_hash_first(iterpool, move_youngest);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          svn_client_commit_item3_t *item = apr_hash_this_val(hi);
+
+          /* We delete the original side with its original revision and will
+             receive an out-of-date error if that node changed since that
+             revision.
+
+             The copy is of that same revision and we know that this revision
+             didn't change between this revision and youngest. So we can just
+             as well commit a copy from youngest.
+
+            Note that it is still possible to see gaps between the delete and
+            copy revisions as the repository might handle multiple commits
+            at the same time (or when an out of date proxy is involved), but
+            in general it should decrease the number of gaps. */
+
+          if (item->copyfrom_rev < youngest)
+            item->copyfrom_rev = youngest;
+        }
+    }
 
   cmt_err = svn_error_trace(
               get_ra_editor(&editor, &edit_baton, ra_session, ctx,
