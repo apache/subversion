@@ -526,22 +526,20 @@ svn_fs_x__dag_things_different(svn_boolean_t *props_changed,
 /* Set *REV and *PATH to the copyroot revision and path of node NODE, or
    to SVN_INVALID_REVNUM and NULL if no copyroot exists.
  */
-svn_error_t *
+void
 svn_fs_x__dag_get_copyroot(svn_revnum_t *rev,
                            const char **path,
                            dag_node_t *node);
 
-/* Set *REV to the copyfrom revision associated with NODE.
+/* Return the copyfrom revision associated with NODE.
  */
-svn_error_t *
-svn_fs_x__dag_get_copyfrom_rev(svn_revnum_t *rev,
-                               dag_node_t *node);
+svn_revnum_t
+svn_fs_x__dag_get_copyfrom_rev(dag_node_t *node);
 
-/* Set *PATH to the copyfrom path associated with NODE.
+/* Return the copyfrom path associated with NODE.
  */
-svn_error_t *
-svn_fs_x__dag_get_copyfrom_path(const char **path,
-                                dag_node_t *node);
+const char *
+svn_fs_x__dag_get_copyfrom_path(dag_node_t *node);
 
 /* Update *TARGET so that SOURCE is it's predecessor.
 

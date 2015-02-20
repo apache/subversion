@@ -1721,11 +1721,10 @@ x_copied_from(svn_revnum_t *rev_p,
 {
   dag_node_t *node;
 
-  /* There is no cached entry, look it up the old-fashioned
-      way. */
+  /* There is no cached entry, look it up the old-fashioned way. */
   SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, pool));
-  SVN_ERR(svn_fs_x__dag_get_copyfrom_rev(rev_p, node));
-  SVN_ERR(svn_fs_x__dag_get_copyfrom_path(path_p, node));
+  *rev_p = svn_fs_x__dag_get_copyfrom_rev(node);
+  *path_p = svn_fs_x__dag_get_copyfrom_path(node);
 
   return SVN_NO_ERROR;
 }
@@ -2403,8 +2402,7 @@ find_youngest_copyroot(svn_revnum_t *rev_p,
                                    dag_path->parent));
 
   /* Find our copyroot. */
-  SVN_ERR(svn_fs_x__dag_get_copyroot(&rev_mine, &path_mine,
-                                     dag_path->node));
+  svn_fs_x__dag_get_copyroot(&rev_mine, &path_mine, dag_path->node);
 
   /* If a parent and child were copied to in the same revision, prefer
      the child copy target, since it is the copy relevant to the
@@ -2650,8 +2648,8 @@ history_prev(svn_fs_history_t **prev_history,
           /* If we get here, then our current path is the destination
              of, or the child of the destination of, a copy.  Fill
              in the return values and get outta here.  */
-          SVN_ERR(svn_fs_x__dag_get_copyfrom_rev(&src_rev, node));
-          SVN_ERR(svn_fs_x__dag_get_copyfrom_path(&copy_src, node));
+          src_rev = svn_fs_x__dag_get_copyfrom_rev(node);
+          copy_src = svn_fs_x__dag_get_copyfrom_path(node);
 
           dst_rev = copyroot_rev;
           src_path = svn_fspath__join(copy_src, remainder_path, scratch_pool);
