@@ -977,12 +977,12 @@ def blame_youngest_to_oldest(sbox):
                                      'blame', '-r1:HEAD', iota_moved)
 
 @Issue(4467)
-@XFail()
 def blame_reverse_no_change(sbox):
   "blame reverse towards a revision with no change"
 
   sbox.build()
 
+  # Introduce a revision where iota doesn't change!
   sbox.simple_propset('a', 'b', 'A')
   sbox.simple_commit('') #r2
 
@@ -1003,6 +1003,7 @@ def blame_reverse_no_change(sbox):
   expected_output = [
     '     4    jrandom This is the file \'iota\'.\n',
   ]
+  # This used to trigger an assertion on 1.9.x before 1.9.0
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-rHEAD:2', sbox.ospath('iota'))
 
