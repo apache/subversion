@@ -76,7 +76,7 @@ struct diff_baton {
 /* The baton used for a file revision. Lives the entire operation */
 struct file_rev_baton {
   svn_revnum_t start_rev, end_rev;
-  svn_revnum_t highest_rev; /* highest revision received */
+  svn_boolean_t backwards;
   const char *target;
   svn_client_ctx_t *ctx;
   const svn_diff_file_options_t *diff_options;
@@ -97,6 +97,12 @@ struct file_rev_baton {
   /* pools for files which may need to persist for more than one rev. */
   apr_pool_t *filepool;
   apr_pool_t *prevfilepool;
+
+  /* When blaming backwards we have to use the changes
+     on the *next* revision, as the interesting change
+     happens when we move to the previous revision */
+  svn_revnum_t last_revnum;
+  apr_hash_t *last_props;
 };
 
 /* The baton used by the txdelta window handler. Allocated per revision */
@@ -432,9 +438,6 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Clear the current pool. */
   svn_pool_clear(frb->currpool);
 
-  if (revnum > frb->highest_rev)
-    frb->highest_rev = revnum;
-
   if (frb->ctx->notify_func2)
     {
       svn_wc_notify_t *notify
@@ -493,9 +496,24 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Create the rev structure. */
   delta_baton->rev = apr_pcalloc(frb->mainpool, sizeof(struct rev));
 
-  if (merged_revision
-      || (revnum >= MIN(frb->start_rev, frb->end_rev)
-          && revnum <= MAX(frb->start_rev, frb->end_rev)))
+  if (frb->backwards)
+    {
+      /* Use from last round...
+         SVN_INVALID_REVNUM on first, which is exactly
+         what we want */
+      delta_baton->rev->revision = frb->last_revnum;
+      delta_baton->rev->rev_props = frb->last_props;
+
+      /* Store for next delta */
+      if (revnum >= MIN(frb->start_rev, frb->end_rev))
+        {
+          frb->last_revnum = revnum;
+          frb->last_props = svn_prop_hash_dup(rev_props, frb->mainpool);
+        }
+      /* Else: Not needed on last rev */
+    }
+  else if (merged_revision
+           || (revnum >= MIN(frb->start_rev, frb->end_rev)))
     {
       /* 1+ for the "youngest to oldest" blame */
       SVN_ERR_ASSERT(revnum <= 1 + MAX(frb->end_rev, frb->start_rev));
@@ -508,6 +526,8 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     {
       /* We shouldn't get more than one revision outside the
          specified range (unless we alsoe receive merged revisions) */
+      SVN_ERR_ASSERT((frb->last_filename == NULL)
+                     || frb->include_merged_revisions);
 
       /* The file existed before start_rev; generate no blame info for
          lines from this revision (or before). 
@@ -634,7 +654,6 @@ svn_client_blame5(const char *target,
   svn_stream_t *stream;
   const char *target_abspath_or_url;
   svn_revnum_t youngest;
-  svn_revnum_t ignore_rev = SVN_INVALID_REVNUM-1;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
@@ -709,7 +728,6 @@ svn_client_blame5(const char *target,
 
   frb.start_rev = start_revnum;
   frb.end_rev = end_revnum;
-  frb.highest_rev = SVN_INVALID_REVNUM; /* -1 */
   frb.target = target;
   frb.ctx = ctx;
   frb.diff_options = diff_options;
@@ -728,6 +746,9 @@ svn_client_blame5(const char *target,
       frb.merged_chain->avail = NULL;
       frb.merged_chain->pool = pool;
     }
+  frb.backwards = (frb.start_rev > frb.end_rev);
+  frb.last_revnum = SVN_INVALID_REVNUM;
+  frb.last_props = NULL;
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &frb.repos_root_url, pool));
 
@@ -845,9 +866,6 @@ svn_client_blame5(const char *target,
       walk_merged = frb.merged_chain->blame;
     }
 
-  if (frb.start_rev > frb.end_rev)
-    ignore_rev = frb.highest_rev;
-
   /* Process each blame item. */
   for (walk = frb.chain->blame; walk; walk = walk->next)
     {
@@ -882,7 +900,7 @@ svn_client_blame5(const char *target,
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
           if (!eof || sb->len)
             {
-              if (walk->rev && walk->rev->revision != ignore_rev)
+              if (walk->rev)
                 SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
                                  line_no, walk->rev->revision,
                                  walk->rev->rev_props, merged_rev,
