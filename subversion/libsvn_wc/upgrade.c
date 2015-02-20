@@ -982,8 +982,6 @@ upgrade_apply_props(svn_sqlite__db_t *sdb,
 
   if (working_props != NULL)
     {
-      int affected_rows;
-
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                   STMT_UPDATE_ACTUAL_PROPS));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
