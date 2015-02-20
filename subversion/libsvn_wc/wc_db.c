@@ -1167,7 +1167,6 @@ gather_children(const apr_array_header_t **children,
   apr_array_header_t *result;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  const char *last_name = NULL;
 
   result = apr_array_make(result_pool, 16, sizeof(const char*));
 
@@ -1182,14 +1181,7 @@ gather_children(const apr_array_header_t **children,
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, result_pool);
 
-      if (op_depth < 0)
-        {
-          /* Remove possible duplicates */
-          if (!last_name || strcmp(last_name, name) != 0)
-            APR_ARRAY_PUSH(result, const char *) = last_name = name;
-        }
-      else
-        APR_ARRAY_PUSH(result, const char *) = name;
+      APR_ARRAY_PUSH(result, const char *) = name;
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
