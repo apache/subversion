@@ -22,7 +22,7 @@ Candidate changes:
      incorrect status output and bugs when using -rCOMMITTED, -rPREV, etc.
      Local fix.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1660646
    Fix calculating the repository path of replaced directories on entry upgrade
