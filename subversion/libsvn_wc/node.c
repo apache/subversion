@@ -83,12 +83,22 @@ filter_and_make_absolute(const apr_array_header_t **children_abspaths,
       /* Don't add hidden nodes to *CHILDREN if we don't want them. */
       if (!show_hidden)
         {
-          svn_boolean_t child_is_hidden;
+          svn_wc__db_status_t status;
 
-          SVN_ERR(svn_wc__db_node_hidden(&child_is_hidden, wc_ctx->db,
-                                         child_abspath, scratch_pool));
-          if (child_is_hidden)
-            continue;
+          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       wc_ctx->db, child_abspath,
+                                       scratch_pool, scratch_pool));
+
+          if (status == svn_wc__db_status_server_excluded
+              || status == svn_wc__db_status_not_present
+              || status == svn_wc__db_status_excluded)
+            {
+              continue;
+            }
         }
 
       APR_ARRAY_PUSH(children, const char *) = child_abspath;
