@@ -519,26 +519,6 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         apr_pool_t *scratch_pool);
 
 /**
- * Set @a *deleted_ancestor_abspath to the root of the delete operation
- * that deleted @a local_abspath. If @a local_abspath itself was deleted
- * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
- * @a local_abspath. If @a local_abspath was not deleted,
- * set @a *deleted_ancestor_abspath to @c NULL.
- *
- * A node is considered 'deleted' if it is deleted or moved-away, and is
- * not replaced.
- *
- * @a *deleted_ancestor_abspath is allocated in @a result_pool.
- * Use @a scratch_pool for all temporary allocations.
- */
-svn_error_t *
-svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-/**
  * Set @a *not_present to TRUE when @a local_abspath has status
  * svn_wc__db_status_not_present. Set @a *user_excluded to TRUE when
  * @a local_abspath has status svn_wc__db_status_excluded. Set

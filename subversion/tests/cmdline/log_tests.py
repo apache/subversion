@@ -2627,7 +2627,10 @@ def log_revision_move_copy(sbox):
   sbox.simple_append('iotb', 'new line\n')
 
   sbox.simple_copy('A/mu', 'mutb')
-  sbox.simple_append('iotb', 'mutb\n')
+  sbox.simple_append('mutb', 'mutb\n')
+
+  sbox.simple_move('A/B/E', 'E')
+  sbox.simple_move('E/alpha', 'alpha')
 
   #r2
   svntest.actions.run_and_verify_svn(None, [],
@@ -2639,10 +2642,12 @@ def log_revision_move_copy(sbox):
   # of these nodes behaves in r2.
 
   # This one might change behavior once we improve move handling
-  expected_output = []
-  expected_err = '.*E195012: Unable to find repository location.*'
+  expected_output = [
+    '------------------------------------------------------------------------\n'
+  ]
+  expected_err = []
   svntest.actions.run_and_verify_svn(expected_output, expected_err,
-                                     'log', '-v', sbox.ospath('iotb'),
+                                     'log', '-v',sbox.ospath('iotb'),
                                      '-r2')
 
   # While this one
@@ -2653,8 +2658,10 @@ def log_revision_move_copy(sbox):
                                      '-r2')
 
   # And just for fun, do the same thing for blame
-  expected_output = None
-  expected_err = '.*E195012: Unable to find repository location.*'
+  expected_output = [
+    '     1    jrandom This is the file \'iota\'.\n'
+  ]
+  expected_err = []
   svntest.actions.run_and_verify_svn(expected_output, expected_err,
                                      'blame', sbox.ospath('iotb'),
                                      '-r2')
@@ -2662,8 +2669,25 @@ def log_revision_move_copy(sbox):
   expected_output = None
   expected_err = '.*E195012: Unable to find repository location.*'
   svntest.actions.run_and_verify_svn(expected_output, expected_err,
-                                     'log', '-v', sbox.ospath('mutb'),
+                                     'blame', sbox.ospath('mutb'),
                                      '-r2')
+
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r3\ .*\n',
+    re.escape('Changed paths:\n'),
+    re.escape('   D /A/B/E\n'),
+    re.escape('   A /E (from /A/B/E:2)\n'), # Patched - Direct move
+    re.escape('   D /E/alpha\n'),
+    re.escape('   A /alpha (from /A/B/E/alpha:1)\n'), # Indirect move - Not patched
+    re.escape('   D /iota\n'),
+    re.escape('   A /iotb (from /iota:2)\n'), # Patched - Direct move
+    re.escape('   A /mutb (from /A/mu:1)\n'), # Copy (always r1)
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox.wc_dir,
+                                     '-c3')
 
 
 ########################################################################
