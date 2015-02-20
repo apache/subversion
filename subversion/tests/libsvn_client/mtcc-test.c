@@ -472,7 +472,54 @@ struct handle_rev_baton
   svn_revnum_t last;
   svn_boolean_t up;
   svn_boolean_t first;
+
+  /* Per revision handler */
+  svn_txdelta_window_handler_t inner_handler;
+  void *inner_baton;
+
+  /* Swapped between revisions to reconstruct data */
+  svn_stringbuf_t *cur;
+  svn_stringbuf_t *prev;
+
+  /* Pool for some test stuff */
+  apr_pool_t *pool;
 };
+
+/* Implement svn_txdelta_window_handler_t */
+static svn_error_t *
+handle_rev_delta(svn_txdelta_window_t *window,
+                 void * baton)
+{
+  struct handle_rev_baton *hrb = baton;
+
+  SVN_ERR(hrb->inner_handler(window, hrb->inner_baton));
+
+  if (!window)
+    {
+      int expected_rev;
+      const char *expected;
+
+      /* Some revisions don't update the revision body */
+      switch (hrb->last)
+        {
+          case 5:
+            expected_rev = 4;
+            break;
+          case 7: /* Not reported */
+          case 8:
+            expected_rev = 6;
+            break;
+          default:
+            expected_rev = (int)hrb->last;
+        }
+
+      expected = apr_psprintf(hrb->pool, "revision-%d", expected_rev);
+
+      SVN_TEST_STRING_ASSERT(hrb->cur->data, expected);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* Helper for test_file_revs_both_ways */
 static svn_error_t *
@@ -504,8 +551,23 @@ handle_rev(void *baton,
 
   if (delta_handler)
     {
-      *delta_handler = svn_delta_noop_window_handler;
-      *delta_baton = NULL;
+      svn_stringbuf_t *tmp;
+
+      *delta_handler = handle_rev_delta;
+      *delta_baton = hrb;
+
+      /* Swap string buffers, to use previous as original */
+      tmp = hrb->prev;
+      hrb->prev = hrb->cur;
+      hrb->cur = tmp;
+
+      svn_stringbuf_setempty(hrb->cur);
+
+      svn_txdelta_apply(svn_stream_from_stringbuf(hrb->prev, pool),
+                        svn_stream_from_stringbuf(hrb->cur, pool),
+                        NULL, NULL, pool,
+                        &hrb->inner_handler,
+                        &hrb->inner_baton);
     }
 
   hrb->last = rev;
@@ -583,10 +645,16 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_client_open_ra_session2(&ra, repos_url, NULL, ctx, pool, subpool));
 
+  hrb.prev = svn_stringbuf_create("", pool);
+  hrb.cur = svn_stringbuf_create("", pool);
+  hrb.pool = pool;
+
   svn_pool_clear(subpool);
   hrb.up = FALSE;
   hrb.last = 5;
   hrb.first = TRUE;
+  svn_stringbuf_setempty(hrb.prev);
+  svn_stringbuf_setempty(hrb.cur);
   SVN_ERR(svn_ra_get_file_revs2(ra, "iota", 4, 1, FALSE,
                                 handle_rev, &hrb,
                                 subpool));
@@ -596,6 +664,8 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
   hrb.up = TRUE;
   hrb.last = 0;
   hrb.first = TRUE;
+  svn_stringbuf_setempty(hrb.prev);
+  svn_stringbuf_setempty(hrb.cur);
   SVN_ERR(svn_ra_get_file_revs2(ra, "iota", 1, 4, FALSE,
                                 handle_rev, &hrb,
                                 subpool));
@@ -605,6 +675,8 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
   hrb.up = FALSE;
   hrb.last = 7;
   hrb.first = TRUE;
+  svn_stringbuf_setempty(hrb.prev);
+  svn_stringbuf_setempty(hrb.cur);
   SVN_ERR(svn_ra_get_file_revs2(ra, "mu", 6, 1, FALSE,
                                 handle_rev, &hrb,
                                 subpool));
@@ -614,6 +686,8 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
   hrb.up = TRUE;
   hrb.last = 0;
   hrb.first = TRUE;
+  svn_stringbuf_setempty(hrb.prev);
+  svn_stringbuf_setempty(hrb.cur);
   SVN_ERR(svn_ra_get_file_revs2(ra, "mu", 1, 6, FALSE,
                                 handle_rev, &hrb,
                                 subpool));
@@ -629,6 +703,8 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
   hrb.up = TRUE;
   hrb.last = 0;
   hrb.first = TRUE;
+  svn_stringbuf_setempty(hrb.prev);
+  svn_stringbuf_setempty(hrb.cur);
   SVN_ERR(svn_ra_get_file_revs2(ra, "mu", 1, SVN_INVALID_REVNUM, FALSE,
                                 handle_rev, &hrb,
                                 subpool));
@@ -638,6 +714,8 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
   hrb.up = FALSE;
   hrb.last = 9;
   hrb.first = TRUE;
+  svn_stringbuf_setempty(hrb.prev);
+  svn_stringbuf_setempty(hrb.cur);
   SVN_ERR(svn_ra_get_file_revs2(ra, "mu", SVN_INVALID_REVNUM, 1, FALSE,
                                 handle_rev, &hrb,
                                 subpool));
