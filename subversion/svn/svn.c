@@ -507,12 +507,27 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
-    ("Output the content of specified files or\n"
-     "URLs with revision and author information in-line.\n"
-     "usage: blame TARGET[@REV]...\n"
+    ("Show when each line of a file was last (or\n"
+     "next) changed.\n"
+     "usage: blame [-rM:N] TARGET[@REV]...\n"
+     "\n"
+     "  Annotate each line of a file with the revision number and author of the\n"
+     "  last change (or optionally the next change) to that line.\n"
+     "\n"
+     "  With no revision range (same as -r0:REV), or with '-r M:N' where M < N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the last revision at or before rN that changed or added the line,\n"
+     "  looking back no further than rM.\n"
+     "\n"
+     "  With a reverse revision range '-r M:N' where M > N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the NEXT revision AFTER rN that changed or DELETED the line,\n"
+     "  looking forward no further than rM.\n"
      "\n"
      "  If specified, REV determines in which revision the target is first\n"
-     "  looked up.\n"),
+     "  looked up.\n"
+     "\n"
+     "  Write the annotated result to standard output.\n"),
     {'r', 'v', 'g', opt_incremental, opt_xml, 'x', opt_force} },
 
   { "cat", svn_cl__cat, {0}, N_
