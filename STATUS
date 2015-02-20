@@ -31,6 +31,9 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
  * r1660969, r1660975, r1660991
    Fix assertion reported as part of issue #4467,
    Justification:
@@ -38,9 +41,7 @@ Candidate changes:
      'kidney blame' to work without assertions failing.
    Votes:
      +1: rhuijben
-
-Veto-blocked changes:
-=====================
+     -1: julianfoad (assertion still fails on the test case)
 
 
 Approved changes:
