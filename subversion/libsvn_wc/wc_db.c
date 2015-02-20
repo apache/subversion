@@ -1153,119 +1153,48 @@ insert_working_node(const insert_working_baton_t *piwb,
 }
 
 
-/* Each name is allocated in RESULT_POOL and stored into CHILDREN as a key
-   pointed to the same name.  */
+/* Return in *CHILDREN all of the children of the directory LOCAL_RELPATH,
+   of any status, in all op-depths in the NODES table. */
 static svn_error_t *
-add_children_to_hash(apr_hash_t *children,
-                     int stmt_idx,
-                     svn_sqlite__db_t *sdb,
-                     apr_int64_t wc_id,
-                     const char *parent_relpath,
-                     apr_pool_t *result_pool)
+gather_children(const apr_array_header_t **children,
+                svn_wc__db_wcroot_t *wcroot,
+                const char *parent_relpath,
+                int stmt_idx,
+                int op_depth,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *result;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  const char *last_name = NULL;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, stmt_idx));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
+  result = apr_array_make(result_pool, 16, sizeof(const char*));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, parent_relpath));
+  if (op_depth >= 0)
+    SVN_ERR(svn_sqlite__bind_int(stmt, 3, op_depth));
+
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, result_pool);
 
-      svn_hash_sets(children, name, name);
+      if (op_depth < 0)
+        {
+          /* Remove possible duplicates */
+          if (!last_name || strcmp(last_name, name) != 0)
+            APR_ARRAY_PUSH(result, const char *) = last_name = name;
+        }
+      else
+        APR_ARRAY_PUSH(result, const char *) = name;
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
-  return svn_sqlite__reset(stmt);
-}
-
-
-/* Set *CHILDREN to a new array of the (const char *) basenames of the
-   immediate children, whatever their status, of the working node at
-   LOCAL_RELPATH. */
-static svn_error_t *
-gather_children2(const apr_array_header_t **children,
-                 svn_wc__db_wcroot_t *wcroot,
-                 const char *local_relpath,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  apr_hash_t *names_hash = apr_hash_make(scratch_pool);
-  apr_array_header_t *names_array;
-
-  /* All of the names get allocated in RESULT_POOL.  It
-     appears to be faster to use the hash to remove duplicates than to
-     use DISTINCT in the SQL query. */
-  SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_WORKING_CHILDREN,
-                               wcroot->sdb, wcroot->wc_id,
-                               local_relpath, result_pool));
-
-  SVN_ERR(svn_hash_keys(&names_array, names_hash, result_pool));
-  *children = names_array;
-  return SVN_NO_ERROR;
-}
-
-/* Return in *CHILDREN all of the children of the directory LOCAL_RELPATH,
-   of any status, in all op-depths in the NODES table. */
-static svn_error_t *
-gather_children(const apr_array_header_t **children,
-                svn_wc__db_wcroot_t *wcroot,
-                const char *local_relpath,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  apr_hash_t *names_hash = apr_hash_make(scratch_pool);
-  apr_array_header_t *names_array;
-
-  /* All of the names get allocated in RESULT_POOL.  It
-     appears to be faster to use the hash to remove duplicates than to
-     use DISTINCT in the SQL query. */
-  SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_NODE_CHILDREN,
-                               wcroot->sdb, wcroot->wc_id,
-                               local_relpath, result_pool));
-
-  SVN_ERR(svn_hash_keys(&names_array, names_hash, result_pool));
-  *children = names_array;
-  return SVN_NO_ERROR;
-}
-
-
-/* Set *CHILDREN to a new array of (const char *) names of the children of
-   the repository directory corresponding to WCROOT:LOCAL_RELPATH:OP_DEPTH -
-   that is, only the children that are at the same op-depth as their parent. */
-static svn_error_t *
-gather_repo_children(const apr_array_header_t **children,
-                     svn_wc__db_wcroot_t *wcroot,
-                     const char *local_relpath,
-                     int op_depth,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *result
-    = apr_array_make(result_pool, 0, sizeof(const char *));
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_OP_DEPTH_CHILDREN));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
-                            op_depth));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-
-      /* Allocate the name in RESULT_POOL so we won't have to copy it. */
-      APR_ARRAY_PUSH(result, const char *)
-        = svn_relpath_basename(child_relpath, result_pool);
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
   SVN_ERR(svn_sqlite__reset(stmt));
-
   *children = result;
   return SVN_NO_ERROR;
 }
@@ -2819,8 +2748,10 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return gather_repo_children(children, wcroot, local_relpath, 0,
-                              result_pool, scratch_pool);
+  return svn_error_trace(
+              gather_children(children, wcroot, local_relpath,
+                              STMT_SELECT_OP_DEPTH_CHILDREN, 0,
+                              result_pool, scratch_pool));
 }
 
 
@@ -4605,8 +4536,9 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
       int src_op_depth;
 
       SVN_ERR(op_depth_of(&src_op_depth, src_wcroot, src_relpath));
-      SVN_ERR(gather_repo_children(&children, src_wcroot, src_relpath,
-                                   src_op_depth, scratch_pool, scratch_pool));
+      SVN_ERR(gather_children(&children, src_wcroot, src_relpath,
+                              STMT_SELECT_OP_DEPTH_CHILDREN, src_op_depth,
+                              scratch_pool, scratch_pool));
     }
   else
     children = NULL;
@@ -5466,8 +5398,9 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(gather_repo_children(&children, src_wcroot, src_relpath,
-                               src_op_depth, scratch_pool, iterpool));
+  SVN_ERR(gather_children(&children, src_wcroot, src_relpath,
+                          STMT_SELECT_OP_DEPTH_CHILDREN, src_op_depth,
+                          scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
@@ -10981,8 +10914,10 @@ svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return gather_children2(children, wcroot, local_relpath,
-                          result_pool, scratch_pool);
+  return svn_error_trace(
+          gather_children(children, wcroot, local_relpath,
+                          STMT_SELECT_WORKING_CHILDREN, -1,
+                          result_pool, scratch_pool));
 }
 
 /* Helper for svn_wc__db_node_check_replace().
@@ -11169,6 +11104,7 @@ svn_wc__db_read_children(const apr_array_header_t **children,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return gather_children(children, wcroot, local_relpath,
+                         STMT_SELECT_NODE_CHILDREN, -1,
                          result_pool, scratch_pool);
 }
 
@@ -14923,8 +14859,9 @@ make_copy_txn(svn_wc__db_wcroot_t *wcroot,
           const apr_array_header_t *children;
           apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-          SVN_ERR(gather_repo_children(&children, wcroot, local_relpath,
-                                        0, scratch_pool, iterpool));
+          SVN_ERR(gather_children(&children, wcroot, local_relpath,
+                                  STMT_SELECT_OP_DEPTH_CHILDREN, 0,
+                                  scratch_pool, iterpool));
 
           for (i = 0; i < children->nelts; i++)
             {
@@ -16300,6 +16237,7 @@ process_committed_internal(svn_wc__db_t *db,
 
       /* Read PATH's entries;  this is the absolute path. */
       SVN_ERR(gather_children(&children, wcroot, local_relpath,
+                              STMT_SELECT_NODE_CHILDREN, -1,
                               scratch_pool, iterpool));
 
       /* Recursively loop over all children. */
