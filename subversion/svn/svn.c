@@ -521,7 +521,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  With a reverse revision range '-r M:N' where M > N,\n"
      "  annotate each line that is present in revision N of the file, with\n"
-     "  the NEXT revision AFTER rN that changed or DELETED the line,\n"
+     "  the next revision after rN that changed or deleted the line,\n"
      "  looking forward no further than rM.\n"
      "\n"
      "  If specified, REV determines in which revision the target is first\n"
