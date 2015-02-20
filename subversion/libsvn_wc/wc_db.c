@@ -14164,6 +14164,7 @@ svn_wc__db_read_kind(svn_node_kind_t *kind,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt_info;
   svn_boolean_t have_info;
+  svn_wc__db_status_t status;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -14195,12 +14196,27 @@ svn_wc__db_read_kind(svn_node_kind_t *kind,
         }
     }
 
+  status = svn_sqlite__column_token(stmt_info, 3, presence_map);
+
+  if (show_deleted && status == svn_wc__db_status_base_deleted)
+    {
+      /* Let's return the kind of what is really deleted insead of what
+         we have cached in the base-deleted record */
+
+      SVN_ERR(svn_sqlite__step(&have_info, stmt_info));
+
+      if (!have_info)
+        {
+          /* No lower layer deleted? Database inconsistency! */
+          *kind = svn_node_none;
+          return svn_error_trace(svn_sqlite__reset(stmt_info));
+        }
+    }
+
   if (!(show_deleted && show_hidden))
     {
       int op_depth = svn_sqlite__column_int(stmt_info, 0);
       svn_boolean_t report_none = FALSE;
-      svn_wc__db_status_t status = svn_sqlite__column_token(stmt_info, 3,
-                                                            presence_map);
 
       if (op_depth > 0)
         SVN_ERR(convert_to_working_status(&status, status));
