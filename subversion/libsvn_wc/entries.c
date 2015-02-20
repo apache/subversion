@@ -2708,11 +2708,11 @@ svn_wc_walk_entries3(const char *path,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   svn_error_t *err;
   svn_node_kind_t kind;
-  svn_depth_t depth;
+  svn_wc__db_status_t status;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  err = svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, &depth, NULL, NULL,
+  err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL,
@@ -2731,7 +2731,9 @@ svn_wc_walk_entries3(const char *path,
         walk_baton, pool);
     }
 
-  if (kind == svn_node_file || depth == svn_depth_exclude)
+  if (kind == svn_node_file
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_server_excluded)
     {
       const svn_wc_entry_t *entry;
 
@@ -2740,27 +2742,24 @@ svn_wc_walk_entries3(const char *path,
          ### we should not call handle_error for an error the *callback*
          ###   gave us. let it deal with the problem before returning.  */
 
-      if (!show_hidden)
+      if (!show_hidden
+          && (status == svn_wc__db_status_not_present
+              || status == svn_wc__db_status_excluded
+              || status == svn_wc__db_status_server_excluded))
         {
-          svn_boolean_t hidden;
-          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, local_abspath, pool));
+          /* The fool asked to walk a "hidden" node. Report the node as
+              unversioned.
 
-          if (hidden)
-            {
-              /* The fool asked to walk a "hidden" node. Report the node as
-                 unversioned.
-
-                 ### this is incorrect behavior. see depth_test 36. the walk
-                 ### API will be revamped to avoid entry structures. we should
-                 ### be able to solve the problem with the new API. (since we
-                 ### shouldn't return a hidden entry here)  */
-              return walk_callbacks->handle_error(
-                               path, svn_error_createf(
-                                  SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                  _("'%s' is not under version control"),
-                                  svn_dirent_local_style(local_abspath, pool)),
-                               walk_baton, pool);
-            }
+              ### this is incorrect behavior. see depth_test 36. the walk
+              ### API will be revamped to avoid entry structures. we should
+              ### be able to solve the problem with the new API. (since we
+              ### shouldn't return a hidden entry here)  */
+          return walk_callbacks->handle_error(
+                            path, svn_error_createf(
+                              SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control"),
+                              svn_dirent_local_style(local_abspath, pool)),
+                            walk_baton, pool);
         }
 
       SVN_ERR(svn_wc__get_entry(&entry, db, local_abspath, FALSE,
