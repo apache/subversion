@@ -738,7 +738,7 @@ set_revision_property(void *baton,
 
   /* Collect property changes to apply them in one FS call in
      close_revision. */
-  svn_prop_t *prop = &APR_ARRAY_PUSH(rb->revprops, svn_prop_t);
+  prop = &APR_ARRAY_PUSH(rb->revprops, svn_prop_t);
   prop->name = apr_pstrdup(rb->pool, name);
   prop->value = svn_string_dup(value, rb->pool);
 
