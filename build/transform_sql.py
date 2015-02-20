@@ -194,14 +194,14 @@ class Processor(object):
             line)
 
       # Another preprocessing.
-      for symbol, string in self.token_map.iteritems():
+      for symbol, string in self.token_map.items():
         # ### This doesn't sql-escape 'string'
         line = re.sub(r'\b%s\b' % re.escape(symbol), "'%s'" % string, line)
 
       if line.strip():
         handled = False
 
-        for regex, handler in self._directives.iteritems():
+        for regex, handler in self._directives.items():
           match = regex.match(line)
           if match:
             handler(match)
