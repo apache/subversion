@@ -976,6 +976,37 @@ def blame_youngest_to_oldest(sbox):
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-r1:HEAD', iota_moved)
 
+@Issue(4467)
+@XFail()
+def blame_reverse_no_change(sbox):
+  "blame reverse towards a revision with no change"
+
+  sbox.build()
+
+  sbox.simple_propset('a', 'b', 'A')
+  sbox.simple_commit('') #r2
+
+  sbox.simple_append('iota', 'new line\n')
+  sbox.simple_commit('') #r3
+
+  sbox.simple_append('iota', 'another new line\n')
+  sbox.simple_commit('') #r4
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     3    jrandom new line\n',
+    '     4    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r2:HEAD', sbox.ospath('iota'))
+
+  expected_output = [
+    '     4    jrandom This is the file \'iota\'.\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:2', sbox.ospath('iota'))
+
+
 ########################################################################
 # Run the tests
 
@@ -1000,6 +1031,7 @@ test_list = [ None,
               blame_multiple_targets,
               blame_eol_handling,
               blame_youngest_to_oldest,
+              blame_reverse_no_change,
              ]
 
 if __name__ == '__main__':
