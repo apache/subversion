@@ -2618,6 +2618,53 @@ def merge_sensitive_log_xml_reverse_merges(sbox):
   svntest.actions.run_and_verify_log_xml(expected_log_attrs=log_attrs,
                                          args=['-g', '-r8', D_COPY_path])
 
+def log_revision_move_copy(sbox):
+  "log revision handling over move/copy"
+
+  sbox.build()
+
+  sbox.simple_move('iota', 'iotb')
+  sbox.simple_append('iotb', 'new line\n')
+
+  sbox.simple_copy('A/mu', 'mutb')
+  sbox.simple_append('iotb', 'mutb\n')
+
+  #r2
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'rm', sbox.repo_url + '/A/D', '-mm')
+
+  sbox.simple_commit() #r3
+
+  # This introduces a copy and a move in r3, but check how the history
+  # of these nodes behaves in r2.
+
+  # This one might change behavior once we improve move handling
+  expected_output = []
+  expected_err = '.*E195012: Unable to find repository location.*'
+  svntest.actions.run_and_verify_svn(expected_output, expected_err,
+                                     'log', '-v', sbox.ospath('iotb'),
+                                     '-r2')
+
+  # While this one
+  expected_output = []
+  expected_err = '.*E195012: Unable to find repository location.*'
+  svntest.actions.run_and_verify_svn(expected_output, expected_err,
+                                     'log', '-v', sbox.ospath('mutb'),
+                                     '-r2')
+
+  # And just for fun, do the same thing for blame
+  expected_output = None
+  expected_err = '.*E195012: Unable to find repository location.*'
+  svntest.actions.run_and_verify_svn(expected_output, expected_err,
+                                     'blame', sbox.ospath('iotb'),
+                                     '-r2')
+
+  expected_output = None
+  expected_err = '.*E195012: Unable to find repository location.*'
+  svntest.actions.run_and_verify_svn(expected_output, expected_err,
+                                     'log', '-v', sbox.ospath('mutb'),
+                                     '-r2')
+
 
 ########################################################################
 # Run the tests
@@ -2667,6 +2714,7 @@ test_list = [ None,
               log_multiple_revs_spanning_rename,
               mergeinfo_log,
               merge_sensitive_log_xml_reverse_merges,
+              log_revision_move_copy,
              ]
 
 if __name__ == '__main__':
