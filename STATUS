@@ -191,12 +191,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1592987
-   Process 'svnadmin dump' output as binary in the test suite.
-   Justification:
-     The testsuite change in the r1646230 group depends on this fix. Without
-     it svnsync_tests.py 23: copy with non-LF line endings in svn:* props
-     fails on Windows.
-   Votes:
-     +1: rhuijben, philip, ivan
