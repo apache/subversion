@@ -504,11 +504,12 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     {
       /* We shouldn't get more than one revision outside the
          specified range (unless we alsoe receive merged revisions) */
-      SVN_ERR_ASSERT(frb->last_filename == NULL
-                     || frb->include_merged_revisions);
 
       /* The file existed before start_rev; generate no blame info for
-         lines from this revision (or before). */
+         lines from this revision (or before). 
+
+         This revision specifies the state as it was at the start revision */
+
       delta_baton->rev->revision = SVN_INVALID_REVNUM;
     }
 
