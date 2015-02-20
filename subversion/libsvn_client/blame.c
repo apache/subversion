@@ -653,7 +653,6 @@ svn_client_blame5(const char *target,
   svn_stream_t *last_stream;
   svn_stream_t *stream;
   const char *target_abspath_or_url;
-  svn_revnum_t youngest;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
@@ -768,9 +767,8 @@ svn_client_blame5(const char *target,
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
-  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, frb.currpool));
   SVN_ERR(svn_ra_get_file_revs2(ra_session, "",
-                                frb.backwards ? MIN(start_revnum+1, youngest)
+                                frb.backwards ? start_revnum
                                               : MAX(0, start_revnum-1),
                                 end_revnum,
                                 include_merged_revisions,
