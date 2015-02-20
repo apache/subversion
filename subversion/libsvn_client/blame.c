@@ -98,6 +98,8 @@ struct file_rev_baton {
   apr_pool_t *filepool;
   apr_pool_t *prevfilepool;
 
+  svn_boolean_t check_mime_type;
+
   /* When blaming backwards we have to use the changes
      on the *next* revision, as the interesting change
      happens when we move to the previous revision */
@@ -438,6 +440,26 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Clear the current pool. */
   svn_pool_clear(frb->currpool);
 
+  if (frb->check_mime_type)
+    {
+      apr_hash_t *props = svn_prop_array_to_hash(prop_diffs, frb->currpool);
+      const char *value;
+
+      frb->check_mime_type = FALSE; /* Only check first */
+
+      value = svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
+
+      if (value && svn_mime_type_is_binary(value))
+        {
+          return svn_error_createf(
+              SVN_ERR_CLIENT_IS_BINARY_FILE, NULL,
+              _("Cannot calculate blame information for binary file '%s'"),
+               (svn_path_is_url(frb->target)
+                      ? frb->target 
+                      : svn_dirent_local_style(frb->target, pool)));
+        }
+    }
+
   if (frb->ctx->notify_func2)
     {
       svn_wc_notify_t *notify
@@ -695,28 +717,48 @@ svn_client_blame5(const char *target,
 
   /* We check the mime-type of the yougest revision before getting all
      the older revisions. */
-  if (!ignore_mime_type)
+  if (!ignore_mime_type
+      && start_revnum < end_revnum)
     {
       apr_hash_t *props;
-      apr_hash_index_t *hi;
+      const char *mime_type = NULL;
 
-      SVN_ERR(svn_client_propget5(&props, NULL, SVN_PROP_MIME_TYPE,
-                                  target_abspath_or_url,  peg_revision,
-                                  end, NULL, svn_depth_empty, NULL, ctx,
-                                  pool, pool));
+      if (svn_path_is_url(target)
+          || start_revnum > end_revnum
+          || (end->kind != svn_opt_revision_working
+              && end->kind != svn_opt_revision_base))
+        {
+          SVN_ERR(svn_ra_get_file(ra_session, "", end_revnum, NULL, NULL,
+                                  &props, pool));
 
-      /* props could be keyed on URLs or paths depending on the
-         peg_revision and end values so avoid using the key. */
-      hi = apr_hash_first(pool, props);
-      if (hi)
+          mime_type = svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
+        }
+      else 
         {
           svn_string_t *value;
 
-          /* Should only be one value */
-          SVN_ERR_ASSERT(apr_hash_count(props) == 1);
+          if (end->kind == svn_opt_revision_working)
+            SVN_ERR(svn_wc_prop_get2(&value, ctx->wc_ctx,
+                                     target_abspath_or_url,
+                                     SVN_PROP_MIME_TYPE,
+                                     pool, pool));
+          else
+            {
+              apr_hash_t *props;
+              SVN_ERR(svn_wc_get_pristine_props(&props, ctx->wc_ctx,
+                                                target_abspath_or_url,
+                                                pool, pool));
 
-          value = apr_hash_this_val(hi);
-          if (value && svn_mime_type_is_binary(value->data))
+              value = props ? svn_hash_gets(props, SVN_PROP_MIME_TYPE)
+                            : NULL;
+            }
+
+          mime_type = value ? value->data : NULL;
+        }
+
+      if (mime_type)
+        {
+          if (svn_mime_type_is_binary(mime_type))
             return svn_error_createf
               (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
                _("Cannot calculate blame information for binary file '%s'"),
@@ -748,6 +790,7 @@ svn_client_blame5(const char *target,
   frb.backwards = (frb.start_rev > frb.end_rev);
   frb.last_revnum = SVN_INVALID_REVNUM;
   frb.last_props = NULL;
+  frb.check_mime_type = (frb.backwards && !ignore_mime_type);
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &frb.repos_root_url, pool));
 
