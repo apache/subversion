@@ -31,6 +31,16 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
+ * r1661131, r1661179
+   Reduce revision gaps on simple moves during commit.
+   Justification:
+     Simple fix that exposes some of our hard work on move support in 1.8-1.9.
+   Notes:
+     This implements only the very simplest case to avoid touching too much
+     code, but it should handle the most common move cases.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
