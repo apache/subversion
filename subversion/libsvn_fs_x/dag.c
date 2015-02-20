@@ -1063,31 +1063,25 @@ svn_fs_x__dag_things_different(svn_boolean_t *props_changed,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
+void
 svn_fs_x__dag_get_copyroot(svn_revnum_t *rev,
                            const char **path,
                            dag_node_t *node)
 {
   *rev = node->node_revision->copyroot_rev;
   *path = node->node_revision->copyroot_path;
-
-  return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_x__dag_get_copyfrom_rev(svn_revnum_t *rev,
-                               dag_node_t *node)
+svn_revnum_t
+svn_fs_x__dag_get_copyfrom_rev(dag_node_t *node)
 {
-  *rev = node->node_revision->copyfrom_rev;
-  return SVN_NO_ERROR;
+  return node->node_revision->copyfrom_rev;
 }
 
-svn_error_t *
-svn_fs_x__dag_get_copyfrom_path(const char **path,
-                                dag_node_t *node)
+const char *
+svn_fs_x__dag_get_copyfrom_path(dag_node_t *node)
 {
-  *path = node->node_revision->copyfrom_path;
-  return SVN_NO_ERROR;
+  return node->node_revision->copyfrom_path;
 }
 
 svn_error_t *

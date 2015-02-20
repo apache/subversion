@@ -824,8 +824,7 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
      branch as its parent if the child itself is not a branch point,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
-  SVN_ERR(svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path,
-                                     child->node));
+  svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path, child->node);
   SVN_ERR(svn_fs_x__revision_root(&copyroot_root, fs, copyroot_rev, pool));
   SVN_ERR(svn_fs_x__get_dag_node(&copyroot_node, copyroot_root,
                                  copyroot_path, pool));
@@ -1073,8 +1072,8 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
         }
 
       /* Determine what copyroot our new child node should use. */
-      SVN_ERR(svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path,
-                                          parent_path->node));
+      svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path,
+                                 parent_path->node);
       SVN_ERR(svn_fs_x__revision_root(&copyroot_root, root->fs,
                                       copyroot_rev, subpool));
       SVN_ERR(svn_fs_x__get_dag_node(&copyroot_node, copyroot_root,
