@@ -487,35 +487,6 @@ repos_location_from_columns(apr_int64_t *repos_id,
     }
 }
 
-
-/* Get the statement given by STMT_IDX, and bind the appropriate wc_id and
-   local_relpath based upon LOCAL_ABSPATH.  Store it in *STMT, and use
-   SCRATCH_POOL for temporary allocations.
-
-   Note: WC_ID and LOCAL_RELPATH must be arguments 1 and 2 in the statement. */
-static svn_error_t *
-get_statement_for_path(svn_sqlite__stmt_t **stmt,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       int stmt_idx,
-                       apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(svn_sqlite__get_statement(stmt, wcroot->sdb, stmt_idx));
-  SVN_ERR(svn_sqlite__bindf(*stmt, "is", wcroot->wc_id, local_relpath));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* For a given REPOS_ROOT_URL/REPOS_UUID pair, return the existing REPOS_ID
    value. If one does not exist, then create a new one. */
 static svn_error_t *
@@ -2860,12 +2831,20 @@ svn_wc__db_base_set_dav_cache(svn_wc__db_t *db,
                               const apr_hash_t *props,
                               apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_UPDATE_BASE_NODE_DAV_CACHE,
-                                 scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_BASE_NODE_DAV_CACHE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
 
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
@@ -2887,11 +2866,20 @@ svn_wc__db_base_get_dav_cache(apr_hash_t **props,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_abspath,
-                                 STMT_SELECT_BASE_DAV_CACHE, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_BASE_DAV_CACHE));
+
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
