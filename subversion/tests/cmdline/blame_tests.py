@@ -962,7 +962,7 @@ def blame_youngest_to_oldest(sbox):
   sbox.simple_commit() #r4
 
   expected_output = [
-        '     %d    jrandom %s\n' % (3, orig_line[:-1]),
+        '     %d    jrandom %s\n' % (4, orig_line[:-1]),
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-r4:1', iota_moved)
@@ -1024,22 +1024,22 @@ def blame_reverse_no_change(sbox):
 
   expected_output = [
     '     -          - This is the file \'iota\'.\n',
-    '     4    jrandom new line\n',
+    '     5    jrandom new line\n',
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-rHEAD:3', sbox.ospath('iota'))
 
   expected_output = [
     '     -          - This is the file \'iota\'.\n',
-    '     4    jrandom new line\n',
-    '     5    jrandom another new line\n',
+    '     5    jrandom new line\n',
+    '     6    jrandom another new line\n',
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-rHEAD:4', sbox.ospath('iota'))
 
   expected_output = [
     '     -          - This is the file \'iota\'.\n',
-    '     5    jrandom another new line\n',
+    '     6    jrandom another new line\n',
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-rHEAD:5', sbox.ospath('iota'))
@@ -1053,7 +1053,7 @@ def blame_reverse_no_change(sbox):
 
   expected_output = [
     '     -          - This is the file \'iota\'.\n',
-    '     4    jrandom new line\n',
+    '     5    jrandom new line\n',
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-r5:3', sbox.ospath('iota'))
