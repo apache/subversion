@@ -278,10 +278,9 @@ add_work_items(svn_sqlite__db_t *sdb,
                apr_pool_t *scratch_pool);
 
 static svn_error_t *
-set_actual_props(apr_int64_t wc_id,
+set_actual_props(svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
                  apr_hash_t *props,
-                 svn_sqlite__db_t *db,
                  apr_pool_t *scratch_pool);
 
 static svn_error_t *
@@ -831,8 +830,8 @@ insert_base_node(const insert_base_baton_t *pibb,
             new_actual_props = NULL;
         }
 
-      SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath, new_actual_props,
-                               wcroot->sdb, scratch_pool));
+      SVN_ERR(set_actual_props(wcroot, local_relpath, new_actual_props,
+                               scratch_pool));
     }
 
   if (pibb->kind == svn_node_dir && pibb->children)
@@ -1107,8 +1106,8 @@ insert_working_node(const insert_working_baton_t *piwb,
             new_actual_props = NULL;
         }
 
-      SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath, new_actual_props,
-                               wcroot->sdb, scratch_pool));
+      SVN_ERR(set_actual_props(wcroot, local_relpath, new_actual_props,
+                               scratch_pool));
     }
 
   if (piwb->kind == svn_node_dir)
@@ -6075,17 +6074,17 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
  * props; to indicate no properties when the pristine has some props,
  * PROPS must be an empty hash. */
 static svn_error_t *
-set_actual_props(apr_int64_t wc_id,
+set_actual_props(svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
                  apr_hash_t *props,
-                 svn_sqlite__db_t *db,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPDATE_ACTUAL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_ACTUAL_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
@@ -6094,9 +6093,9 @@ set_actual_props(apr_int64_t wc_id,
       /* Perhaps the entire ACTUAL record is unneeded now? */
       if (!props && affected_rows)
         {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, db,
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                             STMT_DELETE_ACTUAL_EMPTY));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
 
@@ -6105,8 +6104,9 @@ set_actual_props(apr_int64_t wc_id,
 
   /* We have to insert a row in ACTUAL */
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_ACTUAL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_INSERT_ACTUAL_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   if (*local_relpath != '\0')
     SVN_ERR(svn_sqlite__bind_text(stmt, 3,
                                   svn_relpath_dirname(local_relpath,
@@ -6122,8 +6122,7 @@ svn_wc__db_op_set_props_internal(svn_wc__db_wcroot_t *wcroot,
                                  svn_boolean_t clear_recorded_info,
                                  apr_pool_t *scratch_pool)
 {
-  SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath,
-                           props, wcroot->sdb, scratch_pool));
+  SVN_ERR(set_actual_props(wcroot, local_relpath, props, scratch_pool));
 
   if (clear_recorded_info)
     {
@@ -13205,202 +13204,6 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
-                                   const char *dir_relpath,
-                                   apr_hash_t *cache_values,
-                                   apr_pool_t *scratch_pool)
-{
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_int64_t wc_id;
-  apr_hash_index_t *hi;
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR(svn_wc__db_util_fetch_wc_id(&wc_id, sdb, iterpool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_UPDATE_BASE_NODE_DAV_CACHE));
-
-  /* Iterate over all the wcprops, writing each one to the wc_db. */
-  for (hi = apr_hash_first(scratch_pool, cache_values);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *name = apr_hash_this_key(hi);
-      apr_hash_t *props = apr_hash_this_val(hi);
-      const char *local_relpath;
-
-      svn_pool_clear(iterpool);
-
-      local_relpath = svn_relpath_join(dir_relpath, name, iterpool);
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, iterpool));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
-                               const char *dir_abspath,
-                               const char *local_relpath,
-                               apr_hash_t *base_props,
-                               apr_hash_t *revert_props,
-                               apr_hash_t *working_props,
-                               int original_format,
-                               apr_int64_t wc_id,
-                               apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  int top_op_depth = -1;
-  int below_op_depth = -1;
-  svn_wc__db_status_t top_presence;
-  svn_wc__db_status_t below_presence;
-  int affected_rows;
-
-  /* ### working_props: use set_props_txn.
-     ### if working_props == NULL, then skip. what if they equal the
-     ### pristine props? we should probably do the compare here.
-     ###
-     ### base props go into WORKING_NODE if avail, otherwise BASE.
-     ###
-     ### revert only goes into BASE. (and WORKING better be there!)
-
-     Prior to 1.4.0 (ORIGINAL_FORMAT < 8), REVERT_PROPS did not exist. If a
-     file was deleted, then a copy (potentially with props) was disallowed
-     and could not replace the deletion. An addition *could* be performed,
-     but that would never bring its own props.
-
-     1.4.0 through 1.4.5 created the concept of REVERT_PROPS, but had a
-     bug in svn_wc_add_repos_file2() whereby a copy-with-props did NOT
-     construct a REVERT_PROPS if the target had no props. Thus, reverting
-     the delete/copy would see no REVERT_PROPS to restore, leaving the
-     props from the copy source intact, and appearing as if they are (now)
-     the base props for the previously-deleted file. (wc corruption)
-
-     1.4.6 ensured that an empty REVERT_PROPS would be established at all
-     times. See issue 2530, and r861670 as starting points.
-
-     We will use ORIGINAL_FORMAT and SVN_WC__NO_REVERT_FILES to determine
-     the handling of our inputs, relative to the state of this node.
-  */
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODE_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    {
-      top_op_depth = svn_sqlite__column_int(stmt, 0);
-      top_presence = svn_sqlite__column_token(stmt, 3, presence_map);
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (have_row)
-        {
-          below_presence = svn_sqlite__column_token(stmt, 3, presence_map);
-
-          /* There might be an intermediate layer on mixed-revision copies,
-             or when BASE is shadowed */
-          if (below_presence == svn_wc__db_status_not_present
-              || below_presence == svn_wc__db_status_deleted)
-            SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-          if (have_row)
-            {
-              below_presence = svn_sqlite__column_token(stmt, 3, presence_map);
-              below_op_depth = svn_sqlite__column_int(stmt, 0);
-            }
-        }
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* Detect the buggy scenario described above. We cannot upgrade this
-     working copy if we have no idea where BASE_PROPS should go.  */
-  if (original_format > SVN_WC__NO_REVERT_FILES
-      && revert_props == NULL
-      && top_op_depth != -1
-      && top_presence == svn_wc__db_status_normal
-      && below_op_depth != -1
-      && below_presence != svn_wc__db_status_not_present)
-    {
-      /* There should be REVERT_PROPS, so it appears that we just ran into
-         the described bug. Sigh.  */
-      return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                               _("The properties of '%s' are in an "
-                                 "indeterminate state and cannot be "
-                                 "upgraded. See issue #2530."),
-                               svn_dirent_local_style(
-                                 svn_dirent_join(dir_abspath, local_relpath,
-                                                 scratch_pool), scratch_pool));
-    }
-
-  /* Need at least one row, or two rows if there are revert props */
-  if (top_op_depth == -1
-      || (below_op_depth == -1 && revert_props))
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                             _("Insufficient NODES rows for '%s'"),
-                             svn_dirent_local_style(
-                               svn_dirent_join(dir_abspath, local_relpath,
-                                               scratch_pool), scratch_pool));
-
-  /* one row, base props only: upper row gets base props
-     two rows, base props only: lower row gets base props
-     two rows, revert props only: lower row gets revert props
-     two rows, base and revert props: upper row gets base, lower gets revert */
-
-
-  if (revert_props || below_op_depth == -1)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_UPDATE_NODE_PROPS));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isd",
-                                wc_id, local_relpath, top_op_depth));
-      SVN_ERR(svn_sqlite__bind_properties(stmt, 4, base_props, scratch_pool));
-      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-      SVN_ERR_ASSERT(affected_rows == 1);
-    }
-
-  if (below_op_depth != -1)
-    {
-      apr_hash_t *props = revert_props ? revert_props : base_props;
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_UPDATE_NODE_PROPS));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isd",
-                                wc_id, local_relpath, below_op_depth));
-      SVN_ERR(svn_sqlite__bind_properties(stmt, 4, props, scratch_pool));
-      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-      SVN_ERR_ASSERT(affected_rows == 1);
-    }
-
-  /* If there are WORKING_PROPS, then they always go into ACTUAL_NODE.  */
-  if (working_props != NULL
-      && base_props != NULL)
-    {
-      apr_array_header_t *diffs;
-
-      SVN_ERR(svn_prop_diffs(&diffs, working_props, base_props, scratch_pool));
-
-      if (diffs->nelts == 0)
-        working_props = NULL; /* No differences */
-    }
-
-  if (working_props != NULL)
-    {
-      SVN_ERR(set_actual_props(wc_id, local_relpath, working_props,
-                               sdb, scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
                                    const char *local_abspath,
@@ -13473,28 +13276,6 @@ svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
-                                svn_sqlite__db_t *sdb,
-                                const char *repos_root_url,
-                                apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", repos_root_url));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
-                             _("Repository '%s' not found in the database"),
-                             repos_root_url);
-
-  *repos_id = svn_sqlite__column_int64(stmt, 0);
-  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 svn_error_t *

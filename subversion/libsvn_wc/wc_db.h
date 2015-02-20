@@ -2926,34 +2926,6 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          const char *repos_uuid,
                          apr_pool_t *scratch_pool);
 
-
-svn_error_t *
-svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
-                                   const char *dir_relpath,
-                                   apr_hash_t *cache_values,
-                                   apr_pool_t *scratch_pool);
-
-
-/* ### need much more docco
-
-   ### this function should be called within a sqlite transaction. it makes
-   ### assumptions around this fact.
-
-   Apply the various sets of properties to the database nodes based on
-   their existence/presence, the current state of the node, and the original
-   format of the working copy which provided these property sets.
-*/
-svn_error_t *
-svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
-                               const char *dir_abspath,
-                               const char *local_relpath,
-                               apr_hash_t *base_props,
-                               apr_hash_t *revert_props,
-                               apr_hash_t *working_props,
-                               int original_format,
-                               apr_int64_t wc_id,
-                               apr_pool_t *scratch_pool);
-
 /* Simply insert (or replace) one row in the EXTERNALS table. */
 svn_error_t *
 svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
@@ -2967,20 +2939,6 @@ svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
                                    svn_revnum_t def_peg_revision,
                                    svn_revnum_t def_revision,
                                    apr_pool_t *scratch_pool);
-
-/* Get the repository identifier corresponding to REPOS_ROOT_URL from the
-   database in SDB. The value is returned in *REPOS_ID. All allocations
-   are allocated in SCRATCH_POOL.
-
-   NOTE: the row in REPOSITORY must exist. If not, then SVN_ERR_WC_DB_ERROR
-   is returned.
-
-   ### unclear on whether/how this interface will stay/evolve.  */
-svn_error_t *
-svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
-                                svn_sqlite__db_t *sdb,
-                                const char *repos_root_url,
-                                apr_pool_t *scratch_pool);
 
 /* Upgrade the metadata concerning the WC at WCROOT_ABSPATH, in DB,
  * to the SVN_WC__VERSION format.
