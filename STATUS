@@ -31,9 +31,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
-Veto-blocked changes:
-=====================
-
  * r1660969, r1660975, r1660991, r1661120, r1661121
    Fix assertion reported as part of issue #4467,
    Justification:
@@ -43,9 +40,10 @@ Veto-blocked changes:
      r1661120 adds a regression test for this assertion problem, in which
      it is required that the file doesn't change in the passed revision.
    Votes:
-     +1: rhuijben
-     -1: julianfoad (assertion still fails on the test case)
-                    (without r1661120, r1661121)
+     +1: rhuijben, julianfoad
+
+Veto-blocked changes:
+=====================
 
 
 Approved changes:
