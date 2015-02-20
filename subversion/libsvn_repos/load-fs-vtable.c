@@ -726,6 +726,7 @@ set_revision_property(void *baton,
   struct revision_baton *rb = baton;
   struct parse_baton *pb = rb->pb;
   svn_boolean_t is_date = strcmp(name, SVN_PROP_REVISION_DATE) == 0;
+  svn_prop_t *prop;
 
   /* If we're skipping this revision, we're done here. */
   if (rb->skipped)
@@ -735,32 +736,16 @@ set_revision_property(void *baton,
   if (is_date && pb->ignore_dates)
     return SVN_NO_ERROR;
 
-  if (rb->rev > 0)
-    {
-      svn_prop_t *prop = &APR_ARRAY_PUSH(rb->revprops, svn_prop_t);
+  /* Collect property changes to apply them in one FS call in
+     close_revision. */
+  svn_prop_t *prop = &APR_ARRAY_PUSH(rb->revprops, svn_prop_t);
+  prop->name = apr_pstrdup(rb->pool, name);
+  prop->value = svn_string_dup(value, rb->pool);
 
-      /* Collect property changes to apply them in one FS call in
-         close_revision. */
-      prop->name = apr_pstrdup(rb->pool, name);
-      prop->value = svn_string_dup(value, rb->pool);
-
-      /* Remember any datestamp that passes through!  (See comment in
-         close_revision() below.) */
-      if (is_date)
-        rb->datestamp = svn_string_dup(value, rb->pool);
-    }
-  else if (rb->rev == 0)
-    {
-      /* Special case: set revision 0 properties when loading into an
-         'empty' filesystem. */
-      svn_revnum_t youngest_rev;
-
-      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, pb->fs, rb->pool));
-
-      if (youngest_rev == 0)
-        SVN_ERR(change_rev_prop(pb->repos, 0, name, value,
-                                pb->validate_props, rb->pool));
-    }
+  /* Remember any datestamp that passes through!  (See comment in
+     close_revision() below.) */
+  if (is_date)
+    rb->datestamp = svn_string_dup(value, rb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1018,10 +1003,40 @@ close_revision(void *baton)
   const char *txn_name = NULL;
   apr_hash_t *hooks_env;
 
-  /* If we're skipping this revision or it has an invalid revision
-     number, we're done here. */
-  if (rb->skipped || (rb->rev <= 0))
+  /* If we're skipping this revision we're done here. */
+  if (rb->skipped)
     return SVN_NO_ERROR;
+
+  if (rb->rev == 0)
+    {
+      /* Special case: set revision 0 properties when loading into an
+         'empty' filesystem. */
+      svn_revnum_t youngest_rev;
+
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, pb->fs, rb->pool));
+
+      if (youngest_rev == 0)
+        {
+          apr_hash_t *orig_props;
+          apr_hash_t *new_props;
+          apr_array_header_t *diff;
+          int i;
+
+          SVN_ERR(svn_fs_revision_proplist(&orig_props, pb->fs, 0, rb->pool));
+          new_props = svn_prop_array_to_hash(rb->revprops, rb->pool);
+          SVN_ERR(svn_prop_diffs(&diff, new_props, orig_props, rb->pool));
+
+          for (i = 0; i < diff->nelts; i++)
+          {
+              const svn_prop_t *prop = &APR_ARRAY_IDX(diff, i, svn_prop_t);
+
+              SVN_ERR(change_rev_prop(pb->repos, 0, prop->name, prop->value,
+                                      pb->validate_props, rb->pool));
+          }
+        }
+
+      return SVN_NO_ERROR;
+    }
 
   /* If the dumpstream doesn't have an 'svn:date' property and we
      aren't ignoring the dates in the dumpstream altogether, remove

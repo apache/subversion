@@ -2930,7 +2930,6 @@ def load_txdelta(sbox):
     ".*Verified revision *"):
     raise svntest.Failure
 
-@XFail()
 @Issues(4563)
 def load_no_svndate_r0(sbox):
   "load without svn:date on r0"
