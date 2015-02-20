@@ -76,6 +76,7 @@ struct diff_baton {
 /* The baton used for a file revision. Lives the entire operation */
 struct file_rev_baton {
   svn_revnum_t start_rev, end_rev;
+  svn_revnum_t highest_rev; /* highest revision received */
   const char *target;
   svn_client_ctx_t *ctx;
   const svn_diff_file_options_t *diff_options;
@@ -431,6 +432,9 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Clear the current pool. */
   svn_pool_clear(frb->currpool);
 
+  if (revnum > frb->highest_rev)
+    frb->highest_rev = revnum;
+
   if (frb->ctx->notify_func2)
     {
       svn_wc_notify_t *notify
@@ -630,6 +634,7 @@ svn_client_blame5(const char *target,
   svn_stream_t *stream;
   const char *target_abspath_or_url;
   svn_revnum_t youngest;
+  svn_revnum_t ignore_rev = SVN_INVALID_REVNUM-1;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
@@ -704,6 +709,7 @@ svn_client_blame5(const char *target,
 
   frb.start_rev = start_revnum;
   frb.end_rev = end_revnum;
+  frb.highest_rev = SVN_INVALID_REVNUM; /* -1 */
   frb.target = target;
   frb.ctx = ctx;
   frb.diff_options = diff_options;
@@ -839,6 +845,9 @@ svn_client_blame5(const char *target,
       walk_merged = frb.merged_chain->blame;
     }
 
+  if (frb.start_rev > frb.end_rev)
+    ignore_rev = frb.highest_rev;
+
   /* Process each blame item. */
   for (walk = frb.chain->blame; walk; walk = walk->next)
     {
@@ -873,7 +882,7 @@ svn_client_blame5(const char *target,
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
           if (!eof || sb->len)
             {
-              if (walk->rev)
+              if (walk->rev && walk->rev->revision != ignore_rev)
                 SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
                                  line_no, walk->rev->revision,
                                  walk->rev->rev_props, merged_rev,

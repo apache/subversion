@@ -1001,11 +1001,62 @@ def blame_reverse_no_change(sbox):
                                      'blame', '-r2:HEAD', sbox.ospath('iota'))
 
   expected_output = [
-    '     4    jrandom This is the file \'iota\'.\n',
+    '     -          - This is the file \'iota\'.\n',
   ]
   # This used to trigger an assertion on 1.9.x before 1.9.0
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-rHEAD:2', sbox.ospath('iota'))
+
+  # Drop the middle line
+  sbox.simple_append('iota', 'This is the file \'iota\'.\n'
+                             'another new line\n', truncate=True)
+  sbox.simple_commit('') #r5
+
+  # Back to start
+  sbox.simple_append('iota', 'This is the file \'iota\'.\n', truncate=True)
+  sbox.simple_commit('') #r6
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:2', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     4    jrandom new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:3', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     4    jrandom new line\n',
+    '     5    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:4', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     5    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:5', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:6', sbox.ospath('iota'))
+
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     4    jrandom new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r5:3', sbox.ospath('iota'))
 
 
 ########################################################################
