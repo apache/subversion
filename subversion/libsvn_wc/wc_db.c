@@ -14252,38 +14252,6 @@ svn_wc__db_read_kind(svn_node_kind_t *kind,
   return svn_error_trace(svn_sqlite__reset(stmt_info));
 }
 
-
-svn_error_t *
-svn_wc__db_node_hidden(svn_boolean_t *hidden,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  svn_wc__db_status_t status;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(read_info(&status, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL,
-                    wcroot, local_relpath,
-                    scratch_pool, scratch_pool));
-
-  *hidden = (status == svn_wc__db_status_server_excluded
-             || status == svn_wc__db_status_not_present
-             || status == svn_wc__db_status_excluded);
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__db_is_wcroot(svn_boolean_t *is_wcroot,
                      svn_wc__db_t *db,

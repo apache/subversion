@@ -2397,16 +2397,6 @@ svn_wc__db_read_kind(svn_node_kind_t *kind,
                      svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool);
 
-
-/* An analog to svn_wc__entry_is_hidden().  Set *HIDDEN to TRUE if
-   LOCAL_ABSPATH in DB "is not present, and I haven't scheduled something
-   over the top of it." */
-svn_error_t *
-svn_wc__db_node_hidden(svn_boolean_t *hidden,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *scratch_pool);
-
 /* Checks if a node replaces a node in a different layer. Also check if it
    replaces a BASE (op_depth 0) node or just a node in a higher layer (a copy).
    Finally check if this is the root of the replacement, or if the replacement
