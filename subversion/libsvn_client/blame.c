@@ -770,10 +770,10 @@ svn_client_blame5(const char *target,
      revision. */
   SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, frb.currpool));
   SVN_ERR(svn_ra_get_file_revs2(ra_session, "",
-                                start_revnum
-                                - (0 < start_revnum && start_revnum <= end_revnum ? 1 : 0)
-                                + (youngest > start_revnum && start_revnum > end_revnum ? 1 : 0),
-                                end_revnum, include_merged_revisions,
+                                frb.backwards ? MIN(start_revnum+1, youngest)
+                                              : MAX(0, start_revnum-1),
+                                end_revnum,
+                                include_merged_revisions,
                                 file_rev_handler, &frb, pool));
 
   if (end->kind == svn_opt_revision_working)
