@@ -443,11 +443,12 @@ x_node_prop(svn_string_t **value_p,
   apr_hash_t *proplist;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path,  pool));
-  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, node, pool, scratch_pool));
+  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, node, scratch_pool,
+                                     scratch_pool));
   *value_p = NULL;
   if (proplist)
-    *value_p = svn_hash_gets(proplist, propname);
+    *value_p = svn_string_dup(svn_hash_gets(proplist, propname), pool);
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
