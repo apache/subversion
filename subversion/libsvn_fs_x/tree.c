@@ -517,7 +517,6 @@ x_change_node_prop(svn_fs_root_t *root,
     return SVN_FS__NOT_TXN(root);
   txn_id = svn_fs_x__root_txn_id(root);
 
-  path = svn_fs__canonicalize_abspath(path, subpool);
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool));
 
   /* Check (non-recursively) to see if path is locked; if so, check
@@ -1394,7 +1393,6 @@ x_make_dir(svn_fs_root_t *root,
   svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(root);
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  path = svn_fs__canonicalize_abspath(path, subpool);
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path,
                                  svn_fs_x__dag_path_last_optional,
                                  TRUE, subpool));
@@ -1452,7 +1450,6 @@ x_delete_node(svn_fs_root_t *root,
     return SVN_FS__NOT_TXN(root);
 
   txn_id = svn_fs_x__root_txn_id(root);
-  path = svn_fs__canonicalize_abspath(path, subpool);
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool));
   kind = svn_fs_x__dag_node_kind(dag_path->node);
 
@@ -1734,7 +1731,6 @@ x_make_file(svn_fs_root_t *root,
   svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(root);
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  path = svn_fs__canonicalize_abspath(path, subpool);
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path,
                                  svn_fs_x__dag_path_last_optional,
                                  TRUE, subpool));
@@ -2430,7 +2426,6 @@ x_closest_copy(svn_fs_root_t **root_p,
   *root_p = NULL;
   *path_p = NULL;
 
-  path = svn_fs__canonicalize_abspath(path, scratch_pool);
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, FALSE,
                                  scratch_pool));
 
@@ -2504,8 +2499,6 @@ x_node_origin_rev(svn_revnum_t *revision,
 {
   svn_fs_x__id_t node_id;
   dag_node_t *node;
-
-  path = svn_fs__canonicalize_abspath(path, scratch_pool);
 
   SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
   node_id = *svn_fs_x__dag_get_node_id(node);
@@ -2906,8 +2899,6 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
   svn_fs_x__dag_path_t *dag_path, *nearest_ancestor;
   apr_hash_t *proplist;
   svn_string_t *mergeinfo_string;
-
-  path = svn_fs__canonicalize_abspath(path, scratch_pool);
 
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, rev_root, path, 0, FALSE,
                                  scratch_pool));
