@@ -948,11 +948,6 @@ svn_client__get_copy_committables(svn_client__committables_t **committables,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* A qsort()-compatible sort routine for sorting an array of
-   svn_client_commit_item_t *'s by their URL member. */
-int svn_client__sort_commit_item_urls(const void *a, const void *b);
-
-
 /* Rewrite the COMMIT_ITEMS array to be sorted by URL.  Also, discover
    a common *BASE_URL for the items in the array, and rewrite those
    items' URLs to be relative to that *BASE_URL.

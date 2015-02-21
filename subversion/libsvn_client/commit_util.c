@@ -1380,7 +1380,10 @@ svn_client__get_copy_committables(svn_client__committables_t **committables,
 }
 
 
-int svn_client__sort_commit_item_urls(const void *a, const void *b)
+/* A svn_sort__array()/qsort()-compatible sort routine for sorting
+   an array of svn_client_commit_item_t *'s by their URL member. */
+static int
+sort_commit_item_urls(const void *a, const void *b)
 {
   const svn_client_commit_item3_t *item1
     = *((const svn_client_commit_item3_t * const *) a);
@@ -1404,7 +1407,7 @@ svn_client__condense_commit_items(const char **base_url,
   SVN_ERR_ASSERT(ci && ci->nelts);
 
   /* Sort our commit items by their URLs. */
-  svn_sort__array(ci, svn_client__sort_commit_item_urls);
+  svn_sort__array(ci, sort_commit_item_urls);
 
   /* Loop through the URLs, finding the longest usable ancestor common
      to all of them, and making sure there are no duplicate URLs.  */
