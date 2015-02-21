@@ -222,25 +222,15 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
 /* Revision and transaction roots.  */
 
 
-/* Open the root of revision REV of filesystem FS, allocating from
+/* Open the root of change set CHANGE_SET of filesystem FS, allocating from
    RESULT_POOL.  Set *NODE_P to the new node.  Use SCRATCH_POOL for
    temporary allocations.*/
 svn_error_t *
-svn_fs_x__dag_revision_root(dag_node_t **node_p,
-                            svn_fs_t *fs,
-                            svn_revnum_t rev,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-
-/* Set *NODE_P to the root of transaction TXN_ID in FS, allocating
-   from RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_fs_x__dag_txn_root(dag_node_t **node_p,
-                       svn_fs_t *fs,
-                       svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool);
+svn_fs_x__dag_root(dag_node_t **node_p,
+                   svn_fs_t *fs,
+                   svn_fs_x__change_set_t change_set,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 
 /* Directories.  */

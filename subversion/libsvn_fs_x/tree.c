@@ -178,30 +178,6 @@ svn_fs_x__root_change_set(svn_fs_root_t *root)
   return svn_fs_x__change_set_by_rev(root->rev);
 }
 
-/* Set *NODE_P to a freshly opened dag node referring to the root
-   directory of ROOT, allocating from RESULT_POOL.  Use SCRATCH_POOL
-   for temporary allocations.  */
-svn_error_t *
-svn_fs_x__root_node(dag_node_t **node_p,
-                    svn_fs_root_t *root,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  if (root->is_txn_root)
-    {
-      /* It's a transaction root.  Open a fresh copy.  */
-      return svn_fs_x__dag_txn_root(node_p, root->fs,
-                                    svn_fs_x__root_txn_id(root),
-                                    result_pool, scratch_pool);
-    }
-  else
-    {
-      /* It's a revision root, so we already have its root directory
-         opened.  */
-      return svn_fs_x__dag_revision_root(node_p, root->fs, root->rev,
-                                         result_pool, scratch_pool);
-    }
-}
 
 
 
@@ -1096,15 +1072,17 @@ merge_changes(dag_node_t *ancestor_node,
   svn_fs_t *fs = txn->fs;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(txn);
 
-  SVN_ERR(svn_fs_x__dag_txn_root(&txn_root_node, fs, txn_id, scratch_pool,
-                                 scratch_pool));
+  SVN_ERR(svn_fs_x__dag_root(&txn_root_node, fs,
+                             svn_fs_x__change_set_by_txn(txn_id),
+                             scratch_pool, scratch_pool));
 
   if (ancestor_node == NULL)
     {
       svn_revnum_t base_rev;
       SVN_ERR(svn_fs_x__get_base_rev(&base_rev, fs, txn_id, scratch_pool));
-      SVN_ERR(svn_fs_x__dag_revision_root(&ancestor_node, fs, base_rev,
-                                          scratch_pool, scratch_pool));
+      SVN_ERR(svn_fs_x__dag_root(&ancestor_node, fs,
+                                 svn_fs_x__change_set_by_rev(base_rev),
+                                 scratch_pool, scratch_pool));
     }
 
   if (!svn_fs_x__dag_related_node(ancestor_node, txn_root_node))
@@ -3419,7 +3397,9 @@ svn_fs_x__verify_root(svn_fs_root_t *root,
      When this code is called in the library, we want to ensure we
      use the on-disk data --- rather than some data that was read
      in the possibly-distance past and cached since. */
-  SVN_ERR(svn_fs_x__root_node(&root_dir, root, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__dag_root(&root_dir, root->fs,
+                             svn_fs_x__root_change_set(root),
+                             scratch_pool, scratch_pool));
 
   /* Recursively verify ROOT_DIR. */
   parent_nodes = apr_array_make(scratch_pool, 16, sizeof(dag_node_t *));
