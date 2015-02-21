@@ -41,14 +41,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1661247
-   Support Python 3 in autogen.sh / gen-make.py.
+ * r1661195,r1661208,r1661235,r1661236,r1661238,r1661253
+   More 'svn blame' fixes.
    Justification:
-     Allow building with Python 3, since Python 2 is end-of-life:
-     https://www.python.org/dev/peps/pep-0373/#maintenance-releases
+     Cleans up the 'Prospective blame' implementation to something usable.
+   Notes:
+     Depends on the r1660969 group.
    Votes:
-     +1: danielsh
-   
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
