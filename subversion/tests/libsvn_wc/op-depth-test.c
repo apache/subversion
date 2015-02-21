@@ -2793,12 +2793,7 @@ test_children_of_replaced_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
    * a 'hidden' child of the working dir (so should be excluded). */
 
   SVN_ERR(svn_wc__node_get_children_of_working_node(
-            &children_array, b.wc_ctx, A_abspath, TRUE /* show_hidden */,
-            pool, pool));
-  SVN_ERR(CHECK_ARRAY(children_array, working_children_inc_hidden, pool));
-
-  SVN_ERR(svn_wc__node_get_children_of_working_node(
-            &children_array, b.wc_ctx, A_abspath, FALSE /* show_hidden */,
+            &children_array, b.wc_ctx, A_abspath,
             pool, pool));
   SVN_ERR(CHECK_ARRAY(children_array, working_children_exc_hidden, pool));
 

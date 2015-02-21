@@ -417,7 +417,13 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
        OR
        (op_depth = (SELECT MAX(op_depth) FROM nodes
                     WHERE wc_id = ?1 AND local_relpath = ?2)
-        AND presence != MAP_BASE_DELETED))
+        AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)))
+ORDER BY local_relpath
+
+-- STMT_SELECT_BASE_NOT_PRESENT_CHILDREN
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0
+  AND presence = MAP_NOT_PRESENT
 ORDER BY local_relpath
 
 -- STMT_SELECT_NODE_PROPS
