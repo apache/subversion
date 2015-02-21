@@ -2384,22 +2384,20 @@ def delete_dir_with_lots_of_locked_files(sbox):
   nfiles = 75 # NOTE: test XPASSES with 50 files!!!
   locked_paths = []
   for i in range(nfiles):
-      locked_paths.append("A/locked_files/file-%i" % i)
+      locked_paths.append(sbox.ospath("A/locked_files/file-%i" % i))
 
   # Create files at these paths
   os.mkdir(sbox.ospath("A/locked_files"))
   for file_path in locked_paths:
-    svntest.main.file_write(sbox.ospath(file_path), "This is a file\n")
+    svntest.main.file_write(file_path, "This is '%s'.\n" % (file_path,))
   sbox.simple_add("A/locked_files")
   sbox.simple_commit()
   sbox.simple_update()
 
   # lock all the files
-  for file_path in locked_paths:
-    svntest.actions.run_and_verify_svn(None, [], 'lock',
-                                       '--username', 'jrandom',
-                                       '-m', 'lock %s' % file_path,
-                                       sbox.ospath(file_path))
+  svntest.actions.run_and_verify_svn(None, [], 'lock',
+                                     '-m', 'All locks',
+                                      *locked_paths)
   # Locally delete A
   sbox.simple_rm("A")
 
@@ -2410,6 +2408,62 @@ def delete_dir_with_lots_of_locked_files(sbox):
   #  request failed: error reading the headers
   # This problem was introduced on the 1.8.x branch in r1606976.
   sbox.simple_commit()
+
+def delete_locks_on_depth_commit(sbox):
+  "delete locks on depth-limited commit"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, [], 'lock',
+                                     '-m', 'All files',
+                                      *(sbox.ospath(x)
+                                        for x in ['iota', 'A/B/E/alpha',
+                                                  'A/B/E/beta', 'A/B/lambda',
+                                                  'A/D/G/pi', 'A/D/G/rho',
+                                                  'A/D/G/tau', 'A/D/H/chi',
+                                                  'A/D/H/omega', 'A/D/H/psi',
+                                                  'A/D/gamma', 'A/mu']))
+
+  sbox.simple_rm("A")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A' : Item(verb='Deleting'),
+  })
+
+  expected_status = svntest.wc.State(wc_dir, {
+    ''      : Item(status='  ', wc_rev='1'),
+    'iota'  : Item(status='  ', wc_rev='1'),
+  })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, [],
+                                        wc_dir, '--depth', 'immediates')
+
+  sbox.simple_update() # r2
+
+  svntest.actions.run_and_verify_svn(None, [], 'cp',
+                                     sbox.repo_url + '/A@1', sbox.ospath('A'))
+
+  expected_output = [
+    'Adding         %s\n' % sbox.ospath('A'),
+    'svn: The depth of this commit is \'immediates\', but copies ' \
+        'are always performed recursively in the repository.\n',
+    'Committing transaction...\n',
+    'Committed revision 3.\n',
+  ]
+
+  # Verifying the warning line... so can't use verify_commit()
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'commit', wc_dir, '--depth', 'immediates',
+                                     '-mm')
+
+  # Verify that all locks are gone at the server and at the client
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('', 'iota', wc_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 
 ########################################################################
 # Run the tests
@@ -2477,6 +2531,7 @@ test_list = [ None,
               lock_commit_bump,
               copy_dir_with_locked_file,
               delete_dir_with_lots_of_locked_files,
+              delete_locks_on_depth_commit,
             ]
 
 if __name__ == '__main__':
