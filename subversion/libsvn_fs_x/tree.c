@@ -168,6 +168,16 @@ svn_fs_x__root_txn_id(svn_fs_root_t *root)
   return frd->txn_id;
 }
 
+/* Return the change set to a given ROOT. */
+svn_fs_x__change_set_t
+svn_fs_x__root_change_set(svn_fs_root_t *root)
+{
+  if (root->is_txn_root)
+    return svn_fs_x__change_set_by_txn(svn_fs_x__root_txn_id(root));
+
+  return svn_fs_x__change_set_by_rev(root->rev);
+}
+
 /* Set *NODE_P to a freshly opened dag node referring to the root
    directory of ROOT, allocating from RESULT_POOL.  Use SCRATCH_POOL
    for temporary allocations.  */

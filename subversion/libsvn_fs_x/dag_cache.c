@@ -70,20 +70,6 @@
 #include "private/svn_fspath.h"
 #include "../libsvn_fs/fs-loader.h"
 
-
-
-
-/* Return the change set to a given ROOT. */
-static svn_fs_x__change_set_t
-root_change_set(svn_fs_root_t *root)
-{
-  if (root->is_txn_root)
-    return svn_fs_x__change_set_by_txn(svn_fs_x__root_txn_id(root));
-
-  return svn_fs_x__change_set_by_rev(root->rev);
-}
-
-
 
 /*** Path handling ***/
 
@@ -431,7 +417,7 @@ dag_node_cache_get(svn_fs_root_t *root,
                    const svn_string_t *path)
 {
   svn_fs_x__data_t *ffd = root->fs->fsap_data;
-  svn_fs_x__change_set_t change_set = root_change_set(root);
+  svn_fs_x__change_set_t change_set = svn_fs_x__root_change_set(root);
 
   auto_clear_dag_cache(ffd->dag_node_cache);
   return cache_lookup(ffd->dag_node_cache, change_set, path)->node;
@@ -452,7 +438,7 @@ set_dag_node(svn_fs_root_t *root,
   svn_string_t normalized;
 
   auto_clear_dag_cache(cache);
-  bucket = cache_lookup(cache, root_change_set(root),
+  bucket = cache_lookup(cache, svn_fs_x__root_change_set(root),
                         normalize_path(&normalized, path));
   bucket->node = svn_fs_x__dag_copy_into_pool(node, cache->pool);
 }
@@ -479,7 +465,7 @@ svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
 {
   svn_fs_x__data_t *ffd = root->fs->fsap_data;
   svn_fs_x__dag_cache_t *cache = ffd->dag_node_cache;
-  svn_fs_x__change_set_t change_set = root_change_set(root);
+  svn_fs_x__change_set_t change_set = svn_fs_x__root_change_set(root);
 
   apr_size_t i;
   for (i = 0; i < BUCKET_COUNT; ++i)
@@ -701,7 +687,7 @@ walk_dag_path(dag_node_t **node_p,
 {
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
   apr_pool_t *iterpool;
-  svn_fs_x__change_set_t change_set = root_change_set(root);
+  svn_fs_x__change_set_t change_set = svn_fs_x__root_change_set(root);
   const char *entry;
   svn_string_t directory;
   svn_stringbuf_t *entry_buffer;
@@ -910,7 +896,7 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
   svn_fs_x__dag_path_t *dag_path; /* The path from HERE up to the root. */
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  svn_fs_x__change_set_t change_set = root_change_set(root);
+  svn_fs_x__change_set_t change_set = svn_fs_x__root_change_set(root);
   const char *entry;
   svn_string_t path;
   svn_stringbuf_t *entry_buffer = svn_stringbuf_create_ensure(64, pool);
