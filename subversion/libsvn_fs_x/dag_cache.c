@@ -584,6 +584,9 @@ try_match_last_node(dag_node_t **node_p,
    the caller such that we don't have to construct it here ourselves.
    Similarly, CHANGE_SET is redundant with ROOT.
 
+   If the directory entry cannot be found, instead of returning an error,
+   *CHILD_P will be set to NULL if ALLOW_EMPTY is TRUE.
+
    NOTE: *NODE_P will live within the DAG cache and we merely return a
    reference to it.  Hence, it will invalid upon the next cache insertion.
    Callers must create a copy if they want a non-temporary object.
@@ -595,6 +598,7 @@ dag_step(dag_node_t **child_p,
          const char *name,
          const svn_string_t *path,
          svn_fs_x__change_set_t change_set,
+         svn_boolean_t allow_empty,
          apr_pool_t *scratch_pool)
 {
   svn_fs_t *fs = svn_fs_x__dag_get_fs(parent);
@@ -617,7 +621,17 @@ dag_step(dag_node_t **child_p,
   SVN_ERR(svn_fs_x__dir_entry_id(&node_id, parent, name, scratch_pool));
   if (! svn_fs_x__id_used(&node_id))
     {
-      const char *dir = apr_pstrmemdup(scratch_pool, path->data, path->len);
+      const char *dir;
+
+      /* No such directory entry.  Is a simple NULL result o.k.? */
+      if (allow_empty)
+        {
+          *child_p = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      /* Produce an appropriate error message. */
+      dir = apr_pstrmemdup(scratch_pool, path->data, path->len);
       dir = svn_fs__canonicalize_abspath(dir, scratch_pool);
 
       return SVN_FS__NOT_FOUND(root, dir);
@@ -735,7 +749,7 @@ walk_dag_path(dag_node_t **node_p,
       if (here)
         return svn_error_trace(dag_step(node_p, root, here,
                                         entry_buffer->data, path,
-                                        change_set, scratch_pool));
+                                        change_set, FALSE, scratch_pool));
     }
 
   /* Now there is something to iterate over. Thus, create the ITERPOOL. */
@@ -755,7 +769,8 @@ walk_dag_path(dag_node_t **node_p,
 
       /* Note that HERE is allocated from the DAG node cache and will
          therefore survive the ITERPOOL cleanup. */
-      SVN_ERR(dag_step(&here, root, here, entry, path, change_set, iterpool));
+      SVN_ERR(dag_step(&here, root, here, entry, path, change_set, FALSE,
+                       iterpool));
     }
 
   svn_pool_destroy(iterpool);
