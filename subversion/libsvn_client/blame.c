@@ -736,7 +736,7 @@ svn_client_blame5(const char *target,
         }
       else 
         {
-          svn_string_t *value;
+          const svn_string_t *value;
 
           if (end->kind == svn_opt_revision_working)
             SVN_ERR(svn_wc_prop_get2(&value, ctx->wc_ctx,
@@ -745,7 +745,6 @@ svn_client_blame5(const char *target,
                                      pool, pool));
           else
             {
-              apr_hash_t *props;
               SVN_ERR(svn_wc_get_pristine_props(&props, ctx->wc_ctx,
                                                 target_abspath_or_url,
                                                 pool, pool));
