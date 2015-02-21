@@ -180,12 +180,18 @@ to open a shell, and manually run 'svn commit' therein; or set \$MAY_COMMIT=1
 in the environment before running the script, in which case answering 'y'
 to the first prompt will not only run the merge but also commit it.
 
-There is also a batch mode (normally used only by cron jobs and buildbot tasks,
-rather than interactively): when \$YES and \$MAY_COMMIT are defined to '1' in
-the environment, this script will iterate the "Approved:" section, and merge
-and commit each entry therein.  If only \$YES is defined, the script will
-merge every nomination (including unapproved and vetoed ones), and complain
-to stderr if it notices any conflicts.
+There are two batch modes.  The first mode is used by the nightly svn-role
+mergebot.  It is enabled by setting \$YES and \$MAY_COMMIT to '1' in the
+environment.  In this mode, the script will iterate the "Approved changes:"
+section and merge and commit each entry therein.  To prevent an entry from
+being auto-merged, veto it or move it to a new section named "Approved, but
+merge manually:".
+
+The second batch mode is used by the hourly conflicts detector bot.  It is
+triggered by having \$YES defined in the environment to '1' and \$MAY_COMMIT
+undefined.  In this mode, the script will locally merge every nomination
+(including unapproved and vetoed ones), and complain to stderr if the merge
+failed due to a conflict.  This mode never commits anything.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
