@@ -40,15 +40,6 @@ svn_fs_x__root_txn_id(svn_fs_root_t *root);
 svn_fs_x__change_set_t
 svn_fs_x__root_change_set(svn_fs_root_t *root);
 
-/* Set *NODE_P to a freshly opened dag node referring to the root
-   directory of ROOT, allocating from RESULT_POOL.  Use SCRATCH_POOL
-   for temporary allocations.  */
-svn_error_t *
-svn_fs_x__root_node(dag_node_t **node_p,
-                    svn_fs_root_t *root,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
-
 /* Set *ROOT_P to the root directory of revision REV in filesystem FS.
    Allocate the structure in POOL. */
 svn_error_t *

@@ -488,29 +488,6 @@ svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
 
 /* Getting dag nodes for roots.  */
 
-/* Set *NODE_P to a mutable root directory for ROOT, cloning if
-   necessary, allocating in RESULT_POOL.  ROOT must be a transaction root.
-   Use ERROR_PATH in error messages.  Use SCRATCH_POOL for temporaries.*/
-static svn_error_t *
-mutable_root_node(dag_node_t **node_p,
-                  svn_fs_root_t *root,
-                  const char *error_path,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  if (root->is_txn_root)
-    {
-      /* It's a transaction root.  Open a fresh copy.  */
-      return svn_fs_x__dag_txn_root(node_p, root->fs,
-                                    svn_fs_x__root_txn_id(root),
-                                    result_pool, scratch_pool);
-    }
-  else
-    /* If it's not a transaction root, we can't change its contents.  */
-    return SVN_FS__ERR_NOT_MUTABLE(root->fs, root->rev, error_path);
-}
-
-
 
 /* Traversing directory paths.  */
 
@@ -664,8 +641,8 @@ get_root_node(dag_node_t **node_p,
   /* If it is not already cached, construct the DAG node object for NODE_ID.
      Let it live in the cache.  Sadly, we often can't reuse txn DAG nodes. */
   if (bucket->node == NULL)
-    SVN_ERR(svn_fs_x__root_node(&bucket->node, root,
-                                ffd->dag_node_cache->pool, scratch_pool));
+    SVN_ERR(svn_fs_x__dag_root(&bucket->node, fs, change_set,
+                               ffd->dag_node_cache->pool, scratch_pool));
 
   /* Return a reference to the cached object. */
   *node_p = bucket->node;
@@ -906,7 +883,7 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
   normalize_path(&path, fs_path); /* "" */
 
   /* Make a DAG_PATH for the root node, using its own current copy id.  */
-  SVN_ERR(svn_fs_x__root_node(&here, root, pool, iterpool));
+  SVN_ERR(get_root_node(&here, root, change_set, iterpool));
   dag_path = make_parent_path(here, entry_buffer, NULL, pool);
   dag_path->copy_inherit = svn_fs_x__copy_id_inherit_self;
 
@@ -969,6 +946,28 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
   return SVN_NO_ERROR;
 }
 
+/* Set *NODE_P to a mutable root directory for ROOT, cloning if
+   necessary, allocating in RESULT_POOL.  ROOT must be a transaction root.
+   Use ERROR_PATH in error messages.  Use SCRATCH_POOL for temporaries.*/
+static svn_error_t *
+mutable_root_node(dag_node_t **node_p,
+                  svn_fs_root_t *root,
+                  const char *error_path,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  /* If it's not a transaction root, we can't change its contents.  */
+  if (!root->is_txn_root)
+    return SVN_FS__ERR_NOT_MUTABLE(root->fs, root->rev, error_path);
+
+  /* It's a transaction root.
+     Get the appropriate DAG root node and copy it into RESULT_POOL. */
+  SVN_ERR(get_root_node(node_p, root, svn_fs_x__root_change_set(root),
+                        scratch_pool));
+  *node_p = svn_fs_x__dag_dup(*node_p, result_pool);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_x__make_path_mutable(svn_fs_root_t *root,

@@ -543,30 +543,16 @@ svn_fs_x__dag_set_has_mergeinfo(dag_node_t *node,
 /*** Roots. ***/
 
 svn_error_t *
-svn_fs_x__dag_revision_root(dag_node_t **node_p,
-                            svn_fs_t *fs,
-                            svn_revnum_t rev,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+svn_fs_x__dag_root(dag_node_t **node_p,
+                   svn_fs_t *fs,
+                   svn_fs_x__change_set_t change_set,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   svn_fs_x__id_t root_id;
+  root_id.change_set = change_set;
+  root_id.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
 
-  svn_fs_x__init_rev_root(&root_id, rev);
-  return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool,
-                                scratch_pool);
-}
-
-
-svn_error_t *
-svn_fs_x__dag_txn_root(dag_node_t **node_p,
-                       svn_fs_t *fs,
-                       svn_fs_x__txn_id_t txn_id,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  svn_fs_x__id_t root_id;
-
-  svn_fs_x__init_txn_root(&root_id, txn_id);
   return svn_fs_x__dag_get_node(node_p, fs, &root_id, result_pool,
                                 scratch_pool);
 }
