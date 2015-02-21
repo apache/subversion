@@ -82,12 +82,6 @@ dag_node_t *
 svn_fs_x__dag_dup(const dag_node_t *node,
                   apr_pool_t *result_pool);
 
-/* If NODE has been allocated in POOL, return NODE.  Otherwise, return
-   a copy created in RESULT_POOL with svn_fs_fs__dag_dup. */
-dag_node_t *
-svn_fs_x__dag_copy_into_pool(dag_node_t *node,
-                             apr_pool_t *result_pool);
-
 /* Return the filesystem containing NODE.  */
 svn_fs_t *
 svn_fs_x__dag_get_fs(dag_node_t *node);

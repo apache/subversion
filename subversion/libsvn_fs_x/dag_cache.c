@@ -437,7 +437,7 @@ svn_fs_x__update_dag_cache(dag_node_t *node)
   auto_clear_dag_cache(cache);
   bucket = cache_lookup(cache, svn_fs_x__dag_get_id(node)->change_set,
                         normalize_path(&normalized, path));
-  bucket->node = svn_fs_x__dag_copy_into_pool(node, cache->pool);
+  bucket->node = svn_fs_x__dag_dup(node, cache->pool);
 }
 
 void
@@ -841,7 +841,7 @@ make_parent_path(dag_node_t *node,
   svn_fs_x__dag_path_t *dag_path
     = apr_pcalloc(result_pool, sizeof(*dag_path));
   if (node)
-    dag_path->node = svn_fs_x__dag_copy_into_pool(node, result_pool);
+    dag_path->node = svn_fs_x__dag_dup(node, result_pool);
   dag_path->entry = apr_pstrmemdup(result_pool, entry->data, entry->len);
   dag_path->parent = parent;
   dag_path->copy_inherit = svn_fs_x__copy_id_inherit_unknown;
@@ -1073,7 +1073,7 @@ svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
     SVN_ERR(walk_dag_path(&node, root, &normalized, pool));
 
   /* We want the returned node to live in POOL. */
-  *dag_node_p = svn_fs_x__dag_copy_into_pool(node, pool);
+  *dag_node_p = svn_fs_x__dag_dup(node, pool);
 
   return SVN_NO_ERROR;
 }
