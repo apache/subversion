@@ -36,6 +36,10 @@ extern "C" {
 svn_fs_x__txn_id_t
 svn_fs_x__root_txn_id(svn_fs_root_t *root);
 
+/* Return the change set to a given ROOT. */
+svn_fs_x__change_set_t
+svn_fs_x__root_change_set(svn_fs_root_t *root);
+
 /* Set *NODE_P to a freshly opened dag node referring to the root
    directory of ROOT, allocating from RESULT_POOL.  Use SCRATCH_POOL
    for temporary allocations.  */
