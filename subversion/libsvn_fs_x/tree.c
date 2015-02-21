@@ -282,7 +282,7 @@ x_node_id(const svn_fs_id_t **id_p,
       apr_pool_t *scratch_pool = svn_pool_create(pool);
       dag_node_t *node;
 
-      SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
+      SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
       noderev_id = *svn_fs_x__dag_get_id(node);
       svn_pool_destroy(scratch_pool);
     }
@@ -337,11 +337,11 @@ x_node_relation(svn_fs_node_relation_t *relation,
 
   /* We checked for all separations between ID spaces (repos, txn).
    * Now, we can simply test for the ID values themselves. */
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root_a, path_a, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root_a, path_a, scratch_pool));
   noderev_id_a = *svn_fs_x__dag_get_id(node);
   node_id_a = *svn_fs_x__dag_get_node_id(node);
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root_b, path_b, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root_b, path_b, scratch_pool));
   noderev_id_b = *svn_fs_x__dag_get_id(node);
   node_id_b = *svn_fs_x__dag_get_node_id(node);
 
@@ -363,7 +363,7 @@ svn_fs_x__node_created_rev(svn_revnum_t *revision,
 {
   dag_node_t *node;
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
   *revision = svn_fs_x__dag_get_revision(node);
 
   return SVN_NO_ERROR;
@@ -380,8 +380,8 @@ x_node_created_path(const char **created_path,
 {
   dag_node_t *node;
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, pool));
-  *created_path = svn_fs_x__dag_get_created_path(node);
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, pool));
+  *created_path = apr_pstrdup(pool, svn_fs_x__dag_get_created_path(node));
 
   return SVN_NO_ERROR;
 }
@@ -398,7 +398,7 @@ node_kind(svn_node_kind_t *kind_p,
   dag_node_t *node;
 
   /* Get the node id. */
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
 
   /* Use the node id to get the real kind. */
   *kind_p = svn_fs_x__dag_node_kind(node);
@@ -443,7 +443,7 @@ x_node_prop(svn_string_t **value_p,
   apr_hash_t *proplist;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
   SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, node, scratch_pool,
                                      scratch_pool));
   *value_p = NULL;
@@ -468,7 +468,7 @@ x_node_proplist(apr_hash_t **table_p,
   dag_node_t *node;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
   SVN_ERR(svn_fs_x__dag_get_proplist(table_p, node, pool, scratch_pool));
 
   svn_pool_destroy(scratch_pool);
@@ -601,7 +601,7 @@ x_props_changed(svn_boolean_t *changed_p,
        _("Cannot compare property value between two different filesystems"));
 
   SVN_ERR(svn_fs_x__get_dag_node(&node1, root1, path1, subpool));
-  SVN_ERR(svn_fs_x__get_dag_node(&node2, root2, path2, subpool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node2, root2, path2, subpool));
   SVN_ERR(svn_fs_x__dag_things_different(changed_p, NULL, node1, node2,
                                          strict, subpool));
   svn_pool_destroy(subpool);
@@ -1340,7 +1340,7 @@ x_dir_entries(apr_hash_t **table_p,
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   /* Get the entries for this path in the caller's pool. */
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
   SVN_ERR(svn_fs_x__dag_dir_entries(&table, node, scratch_pool,
                                     scratch_pool));
 
@@ -1708,7 +1708,7 @@ x_copied_from(svn_revnum_t *rev_p,
   dag_node_t *node;
 
   /* There is no cached entry, look it up the old-fashioned way. */
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, pool));
   *rev_p = svn_fs_x__dag_get_copyfrom_rev(node);
   *path_p = svn_fs_x__dag_get_copyfrom_path(node);
 
@@ -1781,7 +1781,7 @@ x_file_length(svn_filesize_t *length_p,
   dag_node_t *file;
 
   /* First create a dag_node_t from the root/path pair. */
-  SVN_ERR(svn_fs_x__get_dag_node(&file, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&file, root, path, scratch_pool));
 
   /* Now fetch its length */
   return svn_fs_x__dag_file_length(length_p, file);
@@ -1800,7 +1800,7 @@ x_file_checksum(svn_checksum_t **checksum,
 {
   dag_node_t *file;
 
-  SVN_ERR(svn_fs_x__get_dag_node(&file, root, path, pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&file, root, path, pool));
   return svn_fs_x__dag_file_checksum(checksum, file, kind, pool);
 }
 
@@ -1819,7 +1819,7 @@ x_file_contents(svn_stream_t **contents,
   svn_stream_t *file_stream;
 
   /* First create a dag_node_t from the root/path pair. */
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, pool));
 
   /* Then create a readable stream from the dag_node_t. */
   SVN_ERR(svn_fs_x__dag_get_contents(&file_stream, node, pool));
@@ -1842,7 +1842,7 @@ x_try_process_file_contents(svn_boolean_t *success,
                             apr_pool_t *pool)
 {
   dag_node_t *node;
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, pool));
 
   return svn_fs_x__dag_try_process_file_contents(success, node,
                                                  processor, baton, pool);
@@ -2182,7 +2182,7 @@ x_contents_changed(svn_boolean_t *changed_p,
   }
 
   SVN_ERR(svn_fs_x__get_dag_node(&node1, root1, path1, subpool));
-  SVN_ERR(svn_fs_x__get_dag_node(&node2, root2, path2, subpool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node2, root2, path2, subpool));
   SVN_ERR(svn_fs_x__dag_things_different(NULL, changed_p, node1, node2,
                                          strict, subpool));
 
@@ -2210,8 +2210,8 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                    scratch_pool));
   else
     source_node = NULL;
-  SVN_ERR(svn_fs_x__get_dag_node(&target_node, target_root, target_path,
-                                 scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&target_node, target_root, target_path,
+                                      scratch_pool));
 
   /* Create a delta stream that turns the source into the target.  */
   SVN_ERR(svn_fs_x__dag_get_file_delta_stream(stream_p, source_node,
@@ -2500,7 +2500,7 @@ x_node_origin_rev(svn_revnum_t *revision,
   svn_fs_x__id_t node_id;
   dag_node_t *node;
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
   node_id = *svn_fs_x__dag_get_node_id(node);
 
   *revision = svn_fs_x__get_revnum(node_id.change_set);
@@ -2611,8 +2611,8 @@ history_prev(svn_fs_history_t **prev_history,
 
       SVN_ERR(svn_fs_x__revision_root(&copyroot_root, fs, copyroot_rev,
                                        scratch_pool));
-      SVN_ERR(svn_fs_x__get_dag_node(&node, copyroot_root, copyroot_path,
-                                     scratch_pool));
+      SVN_ERR(svn_fs_x__get_temp_dag_node(&node, copyroot_root,
+                                          copyroot_path, scratch_pool));
       copy_dst = svn_fs_x__dag_get_created_path(node);
 
       /* If our current path was the very destination of the copy,
@@ -2807,7 +2807,8 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
       svn_pool_clear(iterpool);
 
       kid_path = svn_fspath__join(this_path, dirent->name, iterpool);
-      SVN_ERR(svn_fs_x__get_dag_node(&kid_dag, root, kid_path, iterpool));
+      SVN_ERR(svn_fs_x__get_temp_dag_node(&kid_dag, root, kid_path,
+                                          iterpool));
 
       if (svn_fs_x__dag_has_mergeinfo(kid_dag))
         {
@@ -3046,7 +3047,7 @@ add_descendant_mergeinfo(svn_mergeinfo_catalog_t result_catalog,
 {
   dag_node_t *this_dag;
 
-  SVN_ERR(svn_fs_x__get_dag_node(&this_dag, root, path, scratch_pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&this_dag, root, path, scratch_pool));
   if (svn_fs_x__dag_has_descendants_with_mergeinfo(this_dag))
     SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
                                               path,

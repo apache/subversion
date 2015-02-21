@@ -137,7 +137,19 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Open the node identified by PATH in ROOT.  Set DAG_NODE_P to the
+/* Open the node identified by PATH in ROOT.  Set *DAG_NODE_P to a temporary
+   reference to the node we find.  That reference will become invalid upon
+   the next access to the DAG cache.
+
+   Return the error SVN_ERR_FS_NOT_FOUND if this node doesn't exist.
+ */
+svn_error_t *
+svn_fs_x__get_temp_dag_node(dag_node_t **node_p,
+                            svn_fs_root_t *root,
+                            const char *path,
+                            apr_pool_t *scratch_pool);
+
+/* Open the node identified by PATH in ROOT.  Set *DAG_NODE_P to the
    node we find, allocated in POOL.  Return the error
    SVN_ERR_FS_NOT_FOUND if this node doesn't exist.
  */
