@@ -878,11 +878,11 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
   return SVN_NO_ERROR;
 }
 
-/* Allocate a new svn_fs_x__dag_path_t node from RESULT_POOL, referring to
-   NODE, ENTRY, PARENT, and COPY_ID.  */
+/* Allocate a new svn_fs_x__dag_path_t node from RESULT_POOL, containing
+   NODE, ENTRY and PARENT, all copied into RESULT_POOL as well.  */
 static svn_fs_x__dag_path_t *
 make_parent_path(dag_node_t *node,
-                 char *entry,
+                 const svn_stringbuf_t *entry,
                  svn_fs_x__dag_path_t *parent,
                  apr_pool_t *result_pool)
 {
@@ -890,7 +890,7 @@ make_parent_path(dag_node_t *node,
     = apr_pcalloc(result_pool, sizeof(*dag_path));
   if (node)
     dag_path->node = svn_fs_x__dag_copy_into_pool(node, result_pool);
-  dag_path->entry = entry;
+  dag_path->entry = apr_pstrmemdup(result_pool, entry->data, entry->len);
   dag_path->parent = parent;
   dag_path->copy_inherit = svn_fs_x__copy_id_inherit_unknown;
   dag_path->copy_src_path = NULL;
@@ -900,7 +900,7 @@ make_parent_path(dag_node_t *node,
 svn_error_t *
 svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
                        svn_fs_root_t *root,
-                       const char *path,
+                       const char *fs_path,
                        int flags,
                        svn_boolean_t is_txn_path,
                        apr_pool_t *pool)
@@ -908,132 +908,74 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
   svn_fs_t *fs = root->fs;
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
   svn_fs_x__dag_path_t *dag_path; /* The path from HERE up to the root. */
-  const char *rest = NULL; /* The portion of PATH we haven't traversed yet. */
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  /* path to the currently processed entry without trailing '/'.
-     We will reuse this across iterations by simply putting a NUL terminator
-     at the respective position and replacing that with a '/' in the next
-     iteration.  This is correct as we assert() PATH to be canonical. */
-  svn_stringbuf_t *path_so_far = svn_stringbuf_create(path, pool);
+  svn_fs_x__change_set_t change_set = root_change_set(root);
+  const char *entry;
+  svn_string_t path;
+  svn_stringbuf_t *entry_buffer = svn_stringbuf_create_ensure(64, pool);
+  apr_size_t path_len;
 
-  /* Callers often traverse the DAG in some path-based order or along the
-     history segments.  That allows us to try a few guesses about where to
-     find the next item.  This is only useful if the caller didn't request
-     the full parent chain. */
-  assert(svn_fs__is_canonical_abspath(path));
-  path_so_far->len = 0; /* "" */
+  /* Normalize the FS_PATH to be compatible with our DAG walk utils. */
+  normalize_path(&path, fs_path); /* "" */
 
-  /* Make a parent_path item for the root node, using its own current
-     copy id.  */
+  /* Make a DAG_PATH for the root node, using its own current copy id.  */
   SVN_ERR(svn_fs_x__root_node(&here, root, pool, iterpool));
-  rest = path + 1; /* skip the leading '/', it saves in iteration */
-
-  path_so_far->data[path_so_far->len] = '\0';
-  dag_path = make_parent_path(here, 0, 0, pool);
+  dag_path = make_parent_path(here, entry_buffer, NULL, pool);
   dag_path->copy_inherit = svn_fs_x__copy_id_inherit_self;
 
-  /* Whenever we are at the top of this loop:
-     - HERE is our current directory,
-     - ID is the node revision ID of HERE,
-     - REST is the path we're going to find in HERE, and
-     - PARENT_PATH includes HERE and all its parents.  */
-  for (;;)
-    {
-      const char *next;
-      char *entry;
-      dag_node_t *child;
+  path_len = path.len;
+  path.len = 0;
 
+  /* Walk the path segment by segment.  Add to the DAG_PATH as we go. */
+  for (entry = next_entry_name(&path, entry_buffer);
+       entry;
+       entry = next_entry_name(&path, entry_buffer))
+    {
       svn_pool_clear(iterpool);
 
-      /* The NODE in PARENT_PATH always lives in POOL, i.e. it will
-       * survive the cleanup of ITERPOOL and the DAG cache.*/
-      here = dag_path->node;
+      /* Find the sub-node. */
+      SVN_ERR(dag_step(&here, root, dag_path->node, entry, &path, change_set,
+                       TRUE, iterpool));
 
-      /* Parse out the next entry from the path.  */
-      entry = svn_fs__next_entry_name(&next, rest, pool);
+      /* "node not found" requires special handling.  */
+      if (here == NULL)
+        {
+          /* If this was the last path component, and the caller
+             said it was optional, then don't return an error;
+             just put a NULL node pointer in the path. 
+           */
+          if ((flags & svn_fs_x__dag_path_last_optional)
+              && (path_len == path.len))
+            {
+              dag_path = make_parent_path(NULL, entry_buffer, dag_path, pool);
+              break;
+            }
+          else if (flags & svn_fs_x__dag_path_allow_null)
+            {
+              dag_path = NULL;
+              break;
+            }
+          else
+            {
+              /* Build a better error message than svn_fs_x__dag_open
+                 can provide, giving the root and full path name.  */
+              return SVN_FS__NOT_FOUND(root, fs_path);
+            }
+        }
 
-      /* Update the path traversed thus far. */
-      path_so_far->data[path_so_far->len] = '/';
-      path_so_far->len += strlen(entry) + 1;
-      path_so_far->data[path_so_far->len] = '\0';
-
-      /* Given the behavior of svn_fs__next_entry_name(), ENTRY may be an
-         empty string when the path either starts or ends with a slash.
-         In either case, we stay put: the current directory stays the
-         same, and we add nothing to the parent path.  We only need to
-         process non-empty path segments. */
-      if (*entry != '\0')
+      /* Now, make a parent_path item for CHILD. */
+      dag_path = make_parent_path(here, entry_buffer, dag_path, pool);
+      if (is_txn_path)
         {
           svn_fs_x__copy_id_inherit_t inherit;
           const char *copy_path = NULL;
-          dag_node_t *cached_node = NULL;
-          svn_string_t normalized;
+          SVN_ERR(get_copy_inheritance(&inherit, &copy_path, fs,
+                                       dag_path, iterpool));
 
-          /* If we found a directory entry, follow it.  First, we
-             check our node cache, and, failing that, we hit the DAG
-             layer.  Don't bother to contact the cache for the last
-             element if we already know the lookup to fail for the
-             complete path. */
-          cached_node = dag_node_cache_get(root,
-                                           normalize_path(&normalized,
-                                                          path_so_far->data));
-          if (cached_node)
-            child = cached_node;
-          else
-            SVN_ERR(svn_fs_x__dag_open(&child, here, entry, pool, iterpool));
-
-          /* "file not found" requires special handling.  */
-          if (child == NULL)
-            {
-              /* If this was the last path component, and the caller
-                 said it was optional, then don't return an error;
-                 just put a NULL node pointer in the path.  */
-
-              if ((flags & svn_fs_x__dag_path_last_optional)
-                  && (! next || *next == '\0'))
-                {
-                  dag_path = make_parent_path(NULL, entry, dag_path, pool);
-                  break;
-                }
-              else if (flags & svn_fs_x__dag_path_allow_null)
-                {
-                  dag_path = NULL;
-                  break;
-                }
-              else
-                {
-                  /* Build a better error message than svn_fs_x__dag_open
-                     can provide, giving the root and full path name.  */
-                  return SVN_FS__NOT_FOUND(root, path);
-                }
-            }
-
-          /* Now, make a parent_path item for CHILD. */
-          dag_path = make_parent_path(child, entry, dag_path, pool);
-          if (is_txn_path)
-            {
-              SVN_ERR(get_copy_inheritance(&inherit, &copy_path, fs,
-                                           dag_path, iterpool));
-              dag_path->copy_inherit = inherit;
-              dag_path->copy_src_path = apr_pstrdup(pool, copy_path);
-            }
-
-          /* Cache the node we found (if it wasn't already cached). */
-          if (! cached_node)
-            set_dag_node(root, path_so_far->data, child);
+          dag_path->copy_inherit = inherit;
+          dag_path->copy_src_path = apr_pstrdup(pool, copy_path);
         }
-
-      /* Are we finished traversing the path?  */
-      if (! next)
-        break;
-
-      /* The path isn't finished yet; we'd better be in a directory.  */
-      if (svn_fs_x__dag_node_kind(child) != svn_node_dir)
-        SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far->data),
-                  apr_psprintf(iterpool, _("Failure opening '%s'"), path));
-
-      rest = next;
     }
 
   svn_pool_destroy(iterpool);
