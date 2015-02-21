@@ -295,18 +295,22 @@ svn_fs_x__create_dag_cache(apr_pool_t *result_pool)
   return result;
 }
 
-/* Clears the CACHE at regular intervals (destroying all cached nodes)
+/* Clears the CACHE at regular intervals (destroying all cached nodes).
+ * Return TRUE if the cache got cleared and previously obtained references
+ * to cache contents have become invalid.
  */
-static void
+static svn_boolean_t
 auto_clear_dag_cache(svn_fs_x__dag_cache_t* cache)
 {
-  if (cache->insertions > BUCKET_COUNT)
-    {
-      svn_pool_clear(cache->pool);
+  if (cache->insertions <= BUCKET_COUNT)
+    return FALSE;
 
-      memset(cache->buckets, 0, sizeof(cache->buckets));
-      cache->insertions = 0;
-    }
+  svn_pool_clear(cache->pool);
+
+  memset(cache->buckets, 0, sizeof(cache->buckets));
+  cache->insertions = 0;
+
+  return TRUE;
 }
 
 /* For the given CHANGE_SET and PATH, return the respective entry in CACHE.
@@ -598,6 +602,16 @@ dag_step(dag_node_t **child_p,
   cache_entry_t *bucket;
   svn_fs_x__id_t node_id;
 
+  /* Locate the corresponding cache entry.  We may need PARENT to remain
+     valid for later use, so don't call auto_clear_dag_cache() here. */
+  bucket = cache_lookup(ffd->dag_node_cache, change_set, path);
+  if (bucket->node)
+    {
+      /* Already cached. Return a reference to the cached object. */
+      *child_p = bucket->node;
+      return SVN_NO_ERROR;
+    }
+
   /* Get the ID of the node we are looking for.  The function call checks
      for various error conditions such like PARENT not being a directory. */
   SVN_ERR(svn_fs_x__dir_entry_id(&node_id, parent, name, scratch_pool));
@@ -609,16 +623,16 @@ dag_step(dag_node_t **child_p,
       return SVN_FS__NOT_FOUND(root, dir);
     }
 
-  /* Auto-insert the node in the cache. */
-  auto_clear_dag_cache(ffd->dag_node_cache);
-  bucket = cache_lookup(ffd->dag_node_cache, change_set, path);
+  /* We are about to add a new entry to the cache.  Periodically clear it.
+     If we had to clear it just now (< 1% chance), re-add the entry for our
+     item. */
+  if (auto_clear_dag_cache(ffd->dag_node_cache))
+    bucket = cache_lookup(ffd->dag_node_cache, change_set, path);
 
-  /* If it is not already cached, construct the DAG node object for NODE_ID.
-     Let it live in the cache.  Sadly, we often can't reuse txn DAG nodes. */
-  if (bucket->node == NULL || root->is_txn_root)
-    SVN_ERR(svn_fs_x__dag_get_node(&bucket->node, fs, &node_id,
-                                  ffd->dag_node_cache->pool,
-                                  scratch_pool));
+  /* Construct the DAG node object for NODE_ID. Let it live in the cache. */
+  SVN_ERR(svn_fs_x__dag_get_node(&bucket->node, fs, &node_id,
+                                 ffd->dag_node_cache->pool,
+                                 scratch_pool));
 
   /* Return a reference to the cached object. */
   *child_p = bucket->node;
