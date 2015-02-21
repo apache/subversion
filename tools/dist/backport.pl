@@ -3,6 +3,8 @@ use warnings;
 use strict;
 use feature qw/switch say/;
 
+#no warnings 'experimental::smartmatch';
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -286,7 +288,7 @@ sub shell_escape {
 
 sub shell_safe_path_or_url($) {
   local $_ = shift;
-  return m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/;
+  return (m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/);
 }
 
 # Shell-safety-validating wrapper for File::Temp::tempfile
