@@ -925,14 +925,6 @@ svn_fs_x__dag_dup(const dag_node_t *node,
   return new_node;
 }
 
-dag_node_t *
-svn_fs_x__dag_copy_into_pool(dag_node_t *node,
-                             apr_pool_t *result_pool)
-{
-  return (node->node_pool == result_pool
-            ? node
-            : svn_fs_x__dag_dup(node, result_pool));
-}
 
 svn_error_t *
 svn_fs_x__dag_open(dag_node_t **child_p,
