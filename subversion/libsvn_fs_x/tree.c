@@ -2800,7 +2800,8 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
                                     iterpool));
   for (i = 0; i < entries->nelts; ++i)
     {
-      svn_fs_x__dirent_t *dirent = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
+      svn_fs_x__dirent_t *dirent
+        = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
       const char *kid_path;
       dag_node_t *kid_dag;
 
