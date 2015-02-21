@@ -486,9 +486,6 @@ svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
 }
 
 
-/* Getting dag nodes for roots.  */
-
-
 /* Traversing directory paths.  */
 
 /* Try a short-cut for the open_path() function using the last node accessed.
