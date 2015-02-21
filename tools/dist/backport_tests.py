@@ -210,12 +210,12 @@ def verify_backport(sbox, expected_dump_file, uuid):
   # mirror repository in preparation for the comparison dump.
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   for revnum in range(0, 1+int(sbox.youngest())):
-    svntest.actions.run_and_verify_svnadmin(None, [], [],
+    svntest.actions.run_and_verify_svnadmin([], [],
       "delrevprop", "-r", revnum, sbox.repo_dir, "svn:date")
 
   # Create a dump file from the mirror repository.
   dest_dump = open(expected_dump_file).readlines()
-  svntest.actions.run_and_verify_svnadmin(None, None, [],
+  svntest.actions.run_and_verify_svnadmin(None, [],
                                           'setuuid', '--', sbox.repo_dir, uuid)
   src_dump = svntest.actions.run_and_verify_dump(sbox.repo_dir)
 
@@ -265,7 +265,7 @@ def backport_two_approveds(sbox):
 
   # Now back up and do three entries.
   # r9: revert r7, r8
-  svntest.actions.run_and_verify_svnlook(None, ["8\n"], [],
+  svntest.actions.run_and_verify_svnlook(["8\n"], [],
                                          'youngest', sbox.repo_dir)
   sbox.simple_update()
   svntest.main.run_svn(None, 'merge', '-r8:6',
