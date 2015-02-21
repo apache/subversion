@@ -53,8 +53,8 @@ Candidate changes:
    More 'svn blame' fixes.
    Justification:
      Cleans up the 'Prospective blame' implementation to something usable.
-   Notes:
-     Depends on the r1660969 group.
+   Depends:
+     Requires that the already approved r1660969 group is merged.
    Votes:
      +1: rhuijben
 
