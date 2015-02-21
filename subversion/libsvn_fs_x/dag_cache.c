@@ -807,8 +807,8 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
      copy destination path. */
   svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path, child->node);
   SVN_ERR(svn_fs_x__revision_root(&copyroot_root, fs, copyroot_rev, pool));
-  SVN_ERR(svn_fs_x__get_dag_node(&copyroot_node, copyroot_root,
-                                 copyroot_path, pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&copyroot_node, copyroot_root,
+                                      copyroot_path, pool));
 
   if (!svn_fs_x__dag_related_node(copyroot_node, child->node))
     return SVN_NO_ERROR;
@@ -1021,8 +1021,8 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
                                  parent_path->node);
       SVN_ERR(svn_fs_x__revision_root(&copyroot_root, root->fs,
                                       copyroot_rev, subpool));
-      SVN_ERR(svn_fs_x__get_dag_node(&copyroot_node, copyroot_root,
-                                     copyroot_path, result_pool));
+      SVN_ERR(svn_fs_x__get_temp_dag_node(&copyroot_node, copyroot_root,
+                                          copyroot_path, subpool));
 
       if (!svn_fs_x__dag_related_node(copyroot_node, parent_path->node))
         is_parent_copyroot = TRUE;
@@ -1057,20 +1057,32 @@ svn_fs_x__make_path_mutable(svn_fs_root_t *root,
 
 
 svn_error_t *
+svn_fs_x__get_temp_dag_node(dag_node_t **node_p,
+                            svn_fs_root_t *root,
+                            const char *path,
+                            apr_pool_t *pool)
+{
+  svn_string_t normalized;
+
+  /* First we look for the DAG in our cache. */
+  *node_p = dag_node_cache_get(root, normalize_path(&normalized, path));
+
+  /* If it is not there, walk the DAG and fill the cache. */
+  if (! *node_p)
+    SVN_ERR(walk_dag_path(node_p, root, &normalized, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
                        svn_fs_root_t *root,
                        const char *path,
                        apr_pool_t *pool)
 {
   dag_node_t *node = NULL;
-  svn_string_t normalized;
-
-  /* First we look for the DAG in our cache. */
-  node = dag_node_cache_get(root, normalize_path(&normalized, path));
-
-  /* If it is not there, walk the DAG and fill the cache. */
-  if (! node)
-    SVN_ERR(walk_dag_path(&node, root, &normalized, pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, pool));
 
   /* We want the returned node to live in POOL. */
   *dag_node_p = svn_fs_x__dag_dup(node, pool);
