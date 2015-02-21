@@ -1997,7 +1997,6 @@ def failing_post_hooks(sbox):
                                      'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 def break_delete_add(sbox):
   "break a lock, delete and add the file"
 

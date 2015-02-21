@@ -2142,12 +2142,9 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   if (status == svn_wc__db_status_normal
       && keep_as_working)
     {
-      SVN_ERR(svn_wc__db_op_make_copy(db,
-                                      svn_dirent_join(wcroot->abspath,
-                                                      local_relpath,
-                                                      scratch_pool),
-                                      NULL, NULL,
-                                      scratch_pool));
+      SVN_ERR(svn_wc__db_op_make_copy_internal(wcroot, local_relpath,
+                                               NULL, NULL,
+                                               scratch_pool));
       keep_working = TRUE;
     }
   else
@@ -11778,9 +11775,18 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
   if (!no_unlock)
     {
       svn_sqlite__stmt_t *lock_stmt;
+      svn_boolean_t op_root = (op_depth > 0
+                               && (relpath_depth(local_relpath) == op_depth));
 
+      /* If we are committing an add of a delete, we can assume we own
+         all locks at or below REPOS_RELPATH (or the server would have
+         denied the commit). As we must have passed these to the server
+         we can now safely remove them.
+       */
       SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
-                                        STMT_DELETE_LOCK));
+                                        op_root
+                                          ? STMT_DELETE_LOCK_RECURSIVELY
+                                          : STMT_DELETE_LOCK));
       SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
       SVN_ERR(svn_sqlite__step_done(lock_stmt));
     }
