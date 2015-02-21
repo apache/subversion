@@ -41,6 +41,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1661247
+   Support Python 3 in autogen.sh / gen-make.py.
+   Justification:
+     Allow building with Python 3, since Python 2 is end-of-life:
+     https://www.python.org/dev/peps/pep-0373/#maintenance-releases
+   Votes:
+     +1: danielsh
+   
 Veto-blocked changes:
 =====================
 
