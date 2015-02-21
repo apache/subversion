@@ -455,17 +455,6 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool);
 
-/* Get a list of ignore patterns defined by the svn:global-ignores
-   properties set on, or inherited by, PATH_OR_URL.  Store the collected
-   patterns as const char * elements in the array *IGNORES.  Allocate
-   *IGNORES and its contents in RESULT_POOL.  Use  SCRATCH_POOL for
-   temporary allocations. */
-svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
-                                               const char *path_or_url,
-                                               svn_client_ctx_t *ctx,
-                                               apr_pool_t *result_pool,
-                                               apr_pool_t *scratch_pool);
-
 /* The main logic for client deletion from a working copy. Deletes PATH
    from CTX->WC_CTX.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE or KEEP_LOCAL
