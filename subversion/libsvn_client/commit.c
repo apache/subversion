@@ -240,7 +240,9 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
     loop_recurse = TRUE;
 
   remove_lock = (! keep_locks && (item->state_flags
-                                       & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
+                                       & (SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN
+                                          | SVN_CLIENT_COMMIT_ITEM_ADD
+                                          | SVN_CLIENT_COMMIT_ITEM_DELETE)));
 
   /* When the node was deleted (or replaced), we need to always remove the
      locks, as they're invalidated on the server. We cannot honor the
