@@ -6131,8 +6131,9 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
     } /*(parent == NULL) */
 
   /* Add all of PARENT's non-missing children that are not already present.*/
-  SVN_ERR(svn_wc__node_get_children(&children, ctx->wc_ctx,
-                                    parent_abspath, FALSE, pool, pool));
+  SVN_ERR(svn_wc__node_get_children_of_working_node(&children, ctx->wc_ctx,
+                                                    parent_abspath,
+                                                    pool, pool));
   iterpool = svn_pool_create(pool);
   for (i = 0; i < children->nelts; i++)
     {
@@ -6614,7 +6615,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
       SVN_ERR(svn_wc__node_get_children_of_working_node(
         &immediate_children, ctx->wc_ctx,
-        target->abspath, FALSE, scratch_pool, scratch_pool));
+        target->abspath, scratch_pool, scratch_pool));
 
       for (j = 0; j < immediate_children->nelts; j++)
         {
@@ -6698,9 +6699,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           const apr_array_header_t *children;
           int j;
 
-          SVN_ERR(svn_wc__node_get_children(&children,
+          SVN_ERR(svn_wc__node_get_children_of_working_node(
+                                            &children,
                                             ctx->wc_ctx,
-                                            child->abspath, FALSE,
+                                            child->abspath,
                                             iterpool, iterpool));
           for (j = 0; j < children->nelts; j++)
             {

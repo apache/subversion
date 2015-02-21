@@ -10912,6 +10912,30 @@ svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
                           result_pool, scratch_pool));
 }
 
+svn_error_t *
+svn_wc__db_base_read_not_present_children(
+                                const apr_array_header_t **children,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                             local_abspath,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  return svn_error_trace(
+          gather_children(children, wcroot, local_relpath,
+                          STMT_SELECT_BASE_NOT_PRESENT_CHILDREN, -1,
+                          result_pool, scratch_pool));
+}
+
 /* Helper for svn_wc__db_node_check_replace().
  */
 static svn_error_t *

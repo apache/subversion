@@ -467,10 +467,13 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
+  SVN_ERR_ASSERT(commit_relpath != NULL);
+
+  SVN_DBG(("Looking not-present below %s", local_abspath));
   /* A function to retrieve not present children would be nice to have */
-  SVN_ERR(svn_wc__node_get_children_of_working_node(
-                                    &children, wc_ctx, local_abspath, TRUE,
-                                    scratch_pool, iterpool));
+  SVN_ERR(svn_wc__node_get_not_present_children(&children, wc_ctx,
+                                                local_abspath,
+                                                scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
@@ -482,17 +485,16 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
 
       svn_pool_clear(iterpool);
 
+      SVN_DBG(("Checking %s", name));
+
       SVN_ERR(svn_wc__node_is_not_present(&not_present, NULL, NULL, wc_ctx,
                                           this_abspath, FALSE, scratch_pool));
 
       if (!not_present)
-        continue;
+        continue; /* Node is replaced */
 
-      if (commit_relpath == NULL)
-        this_commit_relpath = NULL;
-      else
-        this_commit_relpath = svn_relpath_join(commit_relpath, name,
-                                              iterpool);
+      this_commit_relpath = svn_relpath_join(commit_relpath, name,
+                                             iterpool);
 
       /* We should check if we should really add a delete operation */
       if (check_url_func)
