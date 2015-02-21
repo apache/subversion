@@ -194,6 +194,11 @@ undefined.  In this mode, the script will locally merge every nomination
 (including unapproved and vetoed ones), and complain to stderr if the merge
 failed due to a conflict.  This mode never commits anything.
 
+The hourly conflicts detector bot turns red if any entry produced a merge
+conflict.  When entry A depends on entry B for a clean merge, put a "Depends:"
+header on entry A to instruct the bot not to turn red due to A.  (The header
+is not parsed; only its presence or absence matters.)
+
 Both batch modes also perform a basic sanity-check on entries that declare
 backport branches (via the "Branch:" header): if a backport branch is used, but
 at least one of the revisions enumerated in the entry title had not been merged
