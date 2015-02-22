@@ -8395,7 +8395,15 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
 
       {0}
     };
+    conflict_info_t conflicts[] = {
+      {"A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                             svn_wc_conflict_reason_moved_away, "A/A"}},
+      {"A/B", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                             svn_wc_conflict_reason_replaced}},
+      { 0 },
+    };
     SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
   }
 
 
@@ -8428,7 +8436,14 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
 
       {0}
     };
+    conflict_info_t conflicts[] = {
+      {"A/B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                                 svn_wc_conflict_reason_replaced}},
+      {0}
+    };
+
     SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
   }
 
   /* ### TODO: Resolve via which specific target? */
@@ -9635,12 +9650,53 @@ del4_update_delete_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    conflict_info_t conflicts[] = {
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Go back to start position */
   SVN_ERR(sbox_wc_update(&b, "", 1));
+  {
+    conflict_info_t conflicts[] = {
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    conflict_info_t conflicts[] = {
+      {"A", FALSE, FALSE, {svn_wc_conflict_action_edit, svn_wc_conflict_reason_replaced}},
+      {"B", FALSE, FALSE, {svn_wc_conflict_action_edit, svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A", FALSE, FALSE, {svn_wc_conflict_action_edit, svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit, svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
   return SVN_NO_ERROR;
@@ -9655,12 +9711,53 @@ del4_update_add_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    conflict_info_t conflicts[] = {
+      {"A", FALSE, FALSE, {svn_wc_conflict_action_edit, svn_wc_conflict_reason_replaced}},
+      {"B", FALSE, FALSE, {svn_wc_conflict_action_edit, svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A", FALSE, FALSE, {svn_wc_conflict_action_edit, svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit, svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Go back to start position */
   SVN_ERR(sbox_wc_update(&b, "", 1));
+  {
+    conflict_info_t conflicts[] = {
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    conflict_info_t conflicts[] = {
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
   return SVN_NO_ERROR;
@@ -9675,12 +9772,57 @@ del4_update_replace_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    conflict_info_t conflicts[] = {
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Go back to start position */
   SVN_ERR(sbox_wc_update(&b, "", 1));
+  {
+    conflict_info_t conflicts[] = {
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    conflict_info_t conflicts[] = {
+      {"A",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_replaced}},
+      {"B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "B"}},
+      {"C/A",   FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "C/A"}},
+      {"D/A/A", FALSE, FALSE, {svn_wc_conflict_action_edit,
+                               svn_wc_conflict_reason_moved_away, "D/A/A"}},
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
   return SVN_NO_ERROR;
