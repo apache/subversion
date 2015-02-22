@@ -2110,7 +2110,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                svn_boolean_t queue_deletes,
                svn_boolean_t mark_not_present,
                svn_boolean_t mark_excluded,
-               svn_revnum_t not_present_revision,
+               svn_revnum_t marker_revision,
                svn_skel_t *conflict,
                svn_skel_t *work_items,
                apr_pool_t *scratch_pool)
@@ -2337,7 +2337,9 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                                  : svn_wc__db_status_not_present;
       ibb.kind = kind;
       ibb.repos_relpath = repos_relpath;
-      ibb.revision = not_present_revision;
+      ibb.revision = SVN_IS_VALID_REVNUM(marker_revision)
+                        ? marker_revision
+                        : revision;
 
       /* Depending upon KIND, any of these might get used. */
       ibb.children = NULL;
@@ -12107,7 +12109,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
           svn_sqlite__stmt_t *stmt;
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_BASE_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, child_local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
           continue;
         }
