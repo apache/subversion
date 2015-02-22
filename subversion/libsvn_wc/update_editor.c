@@ -1554,7 +1554,7 @@ check_tree_conflict(svn_skel_t **pconflict,
 
         if (modified)
           {
-            if (all_mods_are_deletes)
+            if (working_status == svn_wc__db_status_deleted)
               reason = svn_wc_conflict_reason_deleted;
             else
               reason = svn_wc_conflict_reason_edited;
