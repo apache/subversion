@@ -609,24 +609,30 @@ def node_hidden_info(sbox):
   svntest.actions.run_and_verify_svn(None, expected_err,
                                      'info', sbox.ospath('A/B/E/alpha'))
 
-  # Running info on WORKING not-present fails
-  expected_err = '.*(E|W)155010: The node \'.*alpha\' was not found.*'
-  svntest.actions.run_and_verify_svn(None, expected_err,
-                                     'info', sbox.ospath('E/alpha'))
-
   expected_info = [
     {
         'Path': re.escape(sbox.ospath('A/B/E/beta')),
+        'Schedule': 'normal',
         'Depth': 'exclude',
+        'Node Kind': 'file',
+    },
+    {
+        'Path': re.escape(sbox.ospath('E/alpha')),
+        'Schedule': 'delete',
+        'Depth': 'exclude',
+        'Node Kind': 'unknown',
     },
     {
         'Path': re.escape(sbox.ospath('E/beta')),
+        'Schedule': 'normal',
         'Depth': 'exclude',
+        'Node Kind': 'file',
     }
   ]
 
   svntest.actions.run_and_verify_info(expected_info,
                                       sbox.ospath('A/B/E/beta'),
+                                      sbox.ospath('E/alpha'),
                                       sbox.ospath('E/beta'))
 
 
