@@ -2137,15 +2137,26 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
 
 
 /**
- * Set *URL to the corresponding url for LOCAL_ABSPATH.
- * If the node is added, return the url it will have in the repository.
+ * Set *revision, *repos_relpath, *repos_root_url, *repos_uuid to
+ * the intended/commit location of LOCAL_ABSPATH. These arguments may be
+ * NULL if they are not needed.
+ *
+ * If the node is deleted, return the url it would have in the repository
+ * if it wouldn't be deleted. If the node is added return the url it will
+ * have in the repository, once committed.
+ *
+ * If the node is not added and has an existing repository location, set
+ * revision to its existing revision, otherwise to SVN_INVALID_REVNUM.
  */
 svn_error_t *
-svn_wc__db_read_url(const char **url,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_wc__db_read_repos_info(svn_revnum_t *revision,
+                           const char **repos_relpath,
+                           const char **repos_root_url,
+                           const char **repos_uuid,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the ACTUAL

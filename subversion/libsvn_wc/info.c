@@ -141,7 +141,6 @@ build_info_for_node(svn_wc__info2_t **info,
         {
           /* Root or child of copy */
           tmpinfo->rev = original_revision;
-          repos_relpath = original_repos_relpath;
 
           if (op_root)
             {
@@ -166,34 +165,6 @@ build_info_for_node(svn_wc__info2_t **info,
                    wc_info->moved_from_abspath = NULL;
                 }
             }
-        }
-      else if (op_root)
-        {
-          /* Local addition */
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                           &tmpinfo->repos_root_URL,
-                                           &tmpinfo->repos_UUID,
-                                           NULL, NULL, NULL, NULL,
-                                           db, local_abspath,
-                                           result_pool, scratch_pool));
-
-          if (have_base)
-            SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev, NULL,
-                                             NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL,
-                                             db, local_abspath,
-                                             scratch_pool, scratch_pool));
-        }
-      else
-        {
-          /* Child of copy. ### Not WC-NG like */
-          SVN_ERR(svn_wc__internal_get_origin(NULL, &tmpinfo->rev,
-                                              &repos_relpath,
-                                              &tmpinfo->repos_root_URL,
-                                              &tmpinfo->repos_UUID, NULL, NULL,
-                                              db, local_abspath, TRUE,
-                                              result_pool, scratch_pool));
         }
 
       /* ### We should be able to avoid both these calls with the information
@@ -222,14 +193,21 @@ build_info_for_node(svn_wc__info2_t **info,
           else
             wc_info->schedule = svn_wc_schedule_add;
         }
-      SVN_ERR(svn_wc__db_read_url(&tmpinfo->URL, db, local_abspath,
-                                result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
+                                         &tmpinfo->repos_root_URL,
+                                         &tmpinfo->repos_UUID,
+                                         db, local_abspath,
+                                         result_pool, scratch_pool));
+
+      tmpinfo->URL = svn_path_url_add_component2(tmpinfo->repos_root_URL,
+                                                 repos_relpath, result_pool);
     }
   else if (status == svn_wc__db_status_deleted)
     {
       const char *work_del_abspath;
+      svn_wc__db_status_t w_status;
 
-      SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL,
+      SVN_ERR(svn_wc__db_read_pristine_info(&w_status, &tmpinfo->kind,
                                             &tmpinfo->last_changed_rev,
                                             &tmpinfo->last_changed_date,
                                             &tmpinfo->last_changed_author,
@@ -239,57 +217,49 @@ build_info_for_node(svn_wc__info2_t **info,
                                             db, local_abspath,
                                             result_pool, scratch_pool));
 
+      if (w_status == svn_wc__db_status_deleted)
+        {
+          /* We have a working not-present status... */
+          *info = NULL;
+          return SVN_NO_ERROR;
+        }
+
       /* And now fetch the url and revision of what will be deleted */
       SVN_ERR(svn_wc__db_scan_deletion(NULL, &wc_info->moved_to_abspath,
-                                       &work_del_abspath, NULL,
+                                       NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
-      if (work_del_abspath != NULL)
-        {
-          /* This is a deletion within a copied subtree. Get the copied-from
-           * revision. */
-          const char *added_abspath = svn_dirent_dirname(work_del_abspath,
-                                                         scratch_pool);
 
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                           &tmpinfo->repos_root_URL,
-                                           &tmpinfo->repos_UUID,
-                                           NULL, NULL, NULL,
-                                           &tmpinfo->rev,
-                                           db, added_abspath,
-                                           result_pool, scratch_pool));
-
-          tmpinfo->URL = svn_path_url_add_component2(
-                              tmpinfo->repos_root_URL,
-                              svn_relpath_join(repos_relpath,
-                                    svn_dirent_skip_ancestor(added_abspath,
-                                                             local_abspath),
-                                    scratch_pool),
-                              result_pool);
-        }
-      else
-        {
-          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &tmpinfo->rev,
-                                           &repos_relpath,
-                                           &tmpinfo->repos_root_URL,
-                                           &tmpinfo->repos_UUID, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
-                                           db, local_abspath,
-                                           result_pool, scratch_pool));
-
-          tmpinfo->URL = svn_path_url_add_component2(tmpinfo->repos_root_URL,
-                                                     repos_relpath,
-                                                     result_pool);
-        }
+      SVN_ERR(svn_wc__db_read_repos_info(&tmpinfo->rev, &repos_relpath,
+                                         &tmpinfo->repos_root_URL,
+                                         &tmpinfo->repos_UUID,
+                                         db, local_abspath,
+                                         result_pool, scratch_pool));
 
       wc_info->schedule = svn_wc_schedule_delete;
+      tmpinfo->URL = svn_path_url_add_component2(tmpinfo->repos_root_URL,
+                                                 repos_relpath, result_pool);
     }
   else if (status == svn_wc__db_status_not_present
            || status == svn_wc__db_status_server_excluded)
     {
       *info = NULL;
       return SVN_NO_ERROR;
+    }
+  else if (status == svn_wc__db_status_excluded && !repos_relpath)
+    {
+      /* We have a WORKING exclude. Avoid segfault on no repos info */
+
+      SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
+                                         &tmpinfo->repos_root_URL,
+                                         &tmpinfo->repos_UUID,
+                                         db, local_abspath,
+                                         result_pool, scratch_pool));
+
+      wc_info->schedule = svn_wc_schedule_normal;
+      tmpinfo->URL = svn_path_url_add_component2(tmpinfo->repos_root_URL,
+                                                 repos_relpath, result_pool);
+      tmpinfo->wc_info->depth = svn_depth_exclude;
     }
   else
     {
@@ -298,10 +268,10 @@ build_info_for_node(svn_wc__info2_t **info,
                                                  repos_relpath,
                                                  result_pool);
       wc_info->schedule = svn_wc_schedule_normal;
-    }
 
-  if (status == svn_wc__db_status_excluded)
-    tmpinfo->wc_info->depth = svn_depth_exclude;
+      if (status == svn_wc__db_status_excluded)
+        wc_info->depth = svn_depth_exclude;
+    }
 
   /* A default */
   tmpinfo->size = SVN_INVALID_FILESIZE;
@@ -544,15 +514,14 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       if (!repos_root_url)
         {
-          SVN_ERR(svn_wc__internal_get_repos_info(NULL, NULL,
-                                                  &repos_root_url,
-                                                  &repos_uuid,
-                                                  wc_ctx->db,
-                                                  svn_dirent_dirname(
+          SVN_ERR(svn_wc__db_read_repos_info(NULL, NULL,
+                                             &repos_root_url,
+                                             &repos_uuid,
+                                             wc_ctx->db,
+                                             svn_dirent_dirname(
                                                             this_abspath,
                                                             iterpool),
-                                                  scratch_pool,
-                                                  iterpool));
+                                             scratch_pool, iterpool));
         }
 
       info->repos_root_URL = repos_root_url;
