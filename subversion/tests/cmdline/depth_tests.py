@@ -1955,22 +1955,29 @@ def fold_tree_with_unversioned_modified_items(sbox):
   # Fold the A dir to empty, expect the modified & unversioned ones left
   # unversioned rather than removed, along with paths to those items.
 
-  # Even though the directory B and D is not deleted because of local
-  # modificatoin or unversioned items, there will be only one notification at
-  # B and D.
+  # Directories B and D won't be deleted, because that would remove their
+  # local modifications. Their unmodified descendants are deleted though.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B'            : Item(status='D '),
+    'A/B/E'          : Item(status='D '),
+    'A/B/F'          : Item(status='D '),
+    'A/B/lambda'     : Item(status='D '),
     'A/C'            : Item(status='D '),
-    'A/D'            : Item(status='D '),
-    'A/mu'           : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/gamma'      : Item(status='D '),
     })
   # unversioned items will be ignored in in the status tree, since the
   # run_and_verify_update() function uses a quiet version of svn status
-  # Dir A is still versioned, since the wc root is in depth-infinity
   expected_status = svntest.wc.State(wc_dir, {
     ''               : Item(status='  ', wc_rev=1),
     'iota'           : Item(status='  ', wc_rev=1),
-    'A'              : Item(status='  ', wc_rev=1)
+    'A'              : Item(status='  ', wc_rev=1),
+    'A/D'            : Item(status='  ', wc_rev='1'),
+    'A/D/G'          : Item(status='  ', wc_rev='1'),
+    'A/D/G/pi'       : Item(status='M ', wc_rev='1'),
+    'A/B'            : Item(status='  ', wc_rev='1'),
+    'A/mu'           : Item(status='M ', wc_rev='1'),
     })
   expected_disk = svntest.wc.State('', {
     'iota'           : Item(contents="This is the file 'iota'.\n"),
