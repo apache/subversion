@@ -204,7 +204,6 @@ build_info_for_node(svn_wc__info2_t **info,
     }
   else if (status == svn_wc__db_status_deleted)
     {
-      const char *work_del_abspath;
       svn_wc__db_status_t w_status;
 
       SVN_ERR(svn_wc__db_read_pristine_info(&w_status, &tmpinfo->kind,
