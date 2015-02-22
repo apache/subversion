@@ -7240,9 +7240,21 @@ move_away_delete_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "P",  "normal", 2, "P"},
       {1, "C2", "normal", 1, "A/B/C"},
       {1, "Q2", "normal", 1, "P/Q"},
+
+      {2, "A/B",              "normal",       1, "A/B"},
+      {2, "A/B/C",            "normal",       1, "A/B/C", FALSE, "C2"},
+      {3, "A/B/C",            "base-deleted", NO_COPY_FROM},
+      {0}
+    };
+    conflict_info_t conflicts[] = {
+      {"A/B", FALSE, FALSE, {svn_wc_conflict_action_delete,
+                             svn_wc_conflict_reason_edited}},
+      {"P/Q", FALSE, FALSE, {svn_wc_conflict_action_delete,
+                             svn_wc_conflict_reason_moved_away, "P/Q"}},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
   }
 
   return SVN_NO_ERROR;
@@ -8684,36 +8696,46 @@ move_update_parent_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 2));
   {
     nodes_row_t nodes[] = {
-      {0, "",    "normal",       2, ""},
-      {0, "A",   "normal",       2, "A"},
-      {0, "A/B", "normal",       2, "A/B"},
-      {2, "A/C", "normal",       1, "A/B/C"},
+      {0, "",         "normal",       2, ""},
+      {0, "A",        "normal",       2, "A"},
+      {0, "A/B",      "normal",       2, "A/B"},
+
+      {2, "A/C",      "normal",       1, "A/B/C"},
+
+      {2, "A/B",      "normal",       1, "A/B"},
+      {2, "A/B/C",    "normal",       1, "A/B/C", FALSE, "A/C"},
+
+      {3, "A/B/C",    "base-deleted", NO_COPY_FROM},
+
       {0}
     };
-    actual_row_t actual[] = {
-      {"A/B", NULL},
+    conflict_info_t conflicts[] = {
+      {"A/B", FALSE, FALSE, {svn_wc_conflict_action_replace,
+                             svn_wc_conflict_reason_edited}},
       {0}
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
-    SVN_ERR(check_db_actual(&b, actual));
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
   }
 
   SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_infinity,
-                          svn_wc_conflict_choose_mine_conflict));
+                          svn_wc_conflict_choose_merged));
 
   {
     nodes_row_t nodes[] = {
-      {0, "",    "normal",       2, ""},
-      {0, "A",   "normal",       2, "A"},
-      {0, "A/B", "normal",       2, "A/B"},
-      {2, "A/C", "normal",       1, "A/B/C"},
+      {0, "",         "normal",       2, ""},
+      {0, "A",        "normal",       2, "A"},
+      {0, "A/B",      "normal",       2, "A/B"},
+      {2, "A/C",      "normal",       1, "A/B/C"},
+      {2, "A/B",      "normal",       1, "A/B"},
+      {2, "A/B/C",    "normal",       1, "A/B/C", FALSE, "A/C"},
+      {3, "A/B/C",    "base-deleted", NO_COPY_FROM},
+
       {0}
     };
-    actual_row_t actual[] = {
-      {0}
-    };
+
     SVN_ERR(check_db_rows(&b, "", nodes));
-    SVN_ERR(check_db_actual(&b, actual));
+    SVN_ERR(check_db_conflicts(&b, "", NULL));
   }
 
   return SVN_NO_ERROR;

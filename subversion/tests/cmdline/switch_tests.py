@@ -2391,12 +2391,12 @@ def tree_conflicts_on_switch_2_2(sbox):
   expected_output = deep_trees_conflict_output
 
   expected_disk = svntest.wc.State('', {
+    'DDF/D1/D2'       : Item(),
     'F'               : Item(),
     'D'               : Item(),
-    'DF'              : Item(),
-    'DD'              : Item(),
-    'DDF'             : Item(),
-    'DDD'             : Item(),
+    'DF/D1'           : Item(),
+    'DD/D1'           : Item(),
+    'DDD/D1/D2'       : Item(),
   })
 
   expected_status = svntest.deeptrees.deep_trees_virginal_state.copy()
@@ -2408,20 +2408,16 @@ def tree_conflicts_on_switch_2_2(sbox):
   # Expect the incoming tree deletes and the local leaf deletes to mean
   # that all deleted paths are *really* gone, not simply scheduled for
   # deletion.
-  expected_status.tweak('F/alpha',
-                        'D/D1',
-                        'DD/D1',
-                        'DF/D1',
-                        'DDD/D1',
-                        'DDF/D1',
+  expected_status.tweak('DD/D1', 'DF/D1', 'DDF/D1', 'DDD/D1',
+                        status='A ', copied='+', treeconflict='C',
+                        wc_rev='-')
+  expected_status.tweak('DDF/D1/D2', 'DDD/D1/D2',
+                        copied='+', wc_rev='-')
+  expected_status.tweak('DD/D1/D2',  'DF/D1/beta', 'DDD/D1/D2/D3',
+                        'DDF/D1/D2/gamma',
+                        status='D ', copied='+', wc_rev='-')
+  expected_status.tweak('F/alpha', 'D/D1',
                         status='! ', treeconflict='C', wc_rev=None)
-  # Remove from expected status and disk everything below the deleted paths.
-  expected_status.remove('DD/D1/D2',
-                         'DF/D1/beta',
-                         'DDD/D1/D2',
-                         'DDD/D1/D2/D3',
-                         'DDF/D1/D2',
-                         'DDF/D1/D2/gamma',)
 
   expected_info = {
     'F/alpha' : {
@@ -2432,13 +2428,13 @@ def tree_conflicts_on_switch_2_2(sbox):
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete or move upon switch'
+        '^local dir edit, incoming dir delete or move upon switch'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete or move upon switch'
+        '^local dir edit, incoming dir delete or move upon switch'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
@@ -2450,13 +2446,13 @@ def tree_conflicts_on_switch_2_2(sbox):
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete or move upon switch'
+        '^local dir edit, incoming dir delete or move upon switch'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete or move upon switch'
+        '^local dir edit, incoming dir delete or move upon switch'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
