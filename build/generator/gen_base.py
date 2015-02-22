@@ -240,12 +240,16 @@ class GeneratorBase:
         os.rename(new_hdrfile, hdrfile)
 
   def write_file_if_changed(self, fname, new_contents):
-    """Rewrite the file if new_contents are different than its current content.
+    """Rewrite the file if NEW_CONTENTS are different than its current content.
 
     If you have your windows projects open and generate the projects
     it's not a small thing for windows to re-read all projects so
     only update those that have changed.
+
+    Under Python >=3, NEW_CONTENTS must be a 'str', not a 'bytes'.
     """
+    if sys.version_info[0] >= 3:
+      new_contents = new_contents.encode()
 
     try:
       old_contents = open(fname, 'rb').read()

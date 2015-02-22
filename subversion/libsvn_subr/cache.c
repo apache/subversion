@@ -102,6 +102,11 @@ svn_cache__has_key(svn_boolean_t *found,
                    apr_pool_t *scratch_pool)
 {
   *found = FALSE;
+#ifdef SVN_DEBUG
+  if (cache->pretend_empty)
+    return SVN_NO_ERROR;
+#endif
+
   return handle_error(cache,
                       (cache->vtable->has_key)(found,
                                                cache->cache_internal,

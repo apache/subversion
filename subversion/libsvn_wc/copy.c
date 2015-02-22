@@ -965,18 +965,18 @@ remove_node_conflict_markers(svn_wc__db_t *db,
         {
           const char *marker_abspath;
           const char *child_relpath;
-          const char *child_abpath;
+          const char *child_abspath;
 
           marker_abspath = APR_ARRAY_IDX(markers, i, const char *);
 
-          child_relpath = svn_dirent_is_child(src_dir, marker_abspath, NULL);
+          child_relpath = svn_dirent_skip_ancestor(src_dir, marker_abspath);
 
           if (child_relpath)
             {
-              child_abpath = svn_dirent_join(dst_dir, child_relpath,
-                                             scratch_pool);
+              child_abspath = svn_dirent_join(dst_dir, child_relpath,
+                                              scratch_pool);
 
-              SVN_ERR(svn_io_remove_file2(child_abpath, TRUE, scratch_pool));
+              SVN_ERR(svn_io_remove_file2(child_abspath, TRUE, scratch_pool));
             }
         }
     }
@@ -996,7 +996,9 @@ remove_node_conflict_markers(svn_wc__db_t *db,
 static svn_error_t *
 remove_all_conflict_markers(svn_wc__db_t *db,
                             const char *src_dir_abspath,
-                            const char *wc_dir_abspath,
+                            const char *dst_dir_abspath,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1020,13 +1022,16 @@ remove_all_conflict_markers(svn_wc__db_t *db,
       const char *name = apr_hash_this_key(hi);
       struct svn_wc__db_info_t *info = apr_hash_this_val(hi);
 
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
       if (info->conflicted)
         {
           svn_pool_clear(iterpool);
           SVN_ERR(remove_node_conflict_markers(
                             db,
                             svn_dirent_join(src_dir_abspath, name, iterpool),
-                            svn_dirent_join(wc_dir_abspath, name, iterpool),
+                            svn_dirent_join(dst_dir_abspath, name, iterpool),
                             iterpool));
         }
       if (info->kind == svn_node_dir)
@@ -1035,7 +1040,8 @@ remove_all_conflict_markers(svn_wc__db_t *db,
           SVN_ERR(remove_all_conflict_markers(
                             db,
                             svn_dirent_join(src_dir_abspath, name, iterpool),
-                            svn_dirent_join(wc_dir_abspath, name, iterpool),
+                            svn_dirent_join(dst_dir_abspath, name, iterpool),
+                            cancel_func, cancel_baton,
                             iterpool));
         }
     }
@@ -1093,7 +1099,25 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
      is still in a valid state. So be careful when switching this over
      to the workqueue. */
   if (!metadata_only)
-    SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
+    {
+      svn_error_t *err;
+
+      err = svn_error_trace(svn_io_file_rename(src_abspath, dst_abspath,
+                                               scratch_pool));
+
+      /* Let's try if we can keep wc.db consistent even when the move
+         fails. Deleting the target is a wc.db only operation, while
+         going forward (delaying the error) would try to change
+         conflict markers, which might also fail. */
+      if (err)
+        return svn_error_trace(
+          svn_error_compose_create(
+              err,
+              svn_wc__db_op_delete(wc_ctx->db, dst_abspath, NULL, TRUE,
+                                   NULL, NULL, cancel_func, cancel_baton,
+                                   NULL, NULL,
+                                   scratch_pool)));
+    }
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1105,11 +1129,20 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
 
   if (kind == svn_node_dir)
     SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
+                                        cancel_func, cancel_baton,
                                         scratch_pool));
 
   if (conflicted)
-    SVN_ERR(remove_node_conflict_markers(db, src_abspath, dst_abspath,
-                                         scratch_pool));
+    {
+      /* When we moved a directory, we moved the conflict markers
+         with the target... if we moved a file we only moved the
+         file itself and the markers are still in the old location */
+      SVN_ERR(remove_node_conflict_markers(db, src_abspath,
+                                           (kind == svn_node_dir)
+                                             ? dst_abspath
+                                             : src_abspath,
+                                           scratch_pool));
+    }
 
   SVN_ERR(svn_wc__db_op_delete(db, src_abspath,
                                record_on_delete ? dst_abspath : NULL,

@@ -49,7 +49,7 @@ static svn_error_t *
 error_second(svn_sqlite__context_t *sctx,
              int argc,
              svn_sqlite__value_t *values[],
-             apr_pool_t *scratch_pool)
+             void *baton)
 {
   static int i = 0;
 

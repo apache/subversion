@@ -11,7 +11,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * membuffer: virtually perfect short-term cache efficiency (r1476664 et at)
     * membuffer: quadruple the maximum cacheable directory size (r1545948 et al)
     * resolve: improve interactive conflict resolution menus
-    * blame: allow -r M:N with M>N
+    * blame: support showing prospective as well as previous changes
     * svn auth: new subcommand to manage cached credentials and certs
     * svn youngest: new remote version of svnlook youngest (issue #4299)
     * new experimental filesystem fsx (faster, smaller)
