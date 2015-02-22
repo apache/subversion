@@ -591,6 +591,45 @@ def relpath_escaping(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None, None)
 
+def node_hidden_info(sbox):
+  "fetch svn info on 'hidden' nodes"
+
+  sbox.build()
+
+  sbox.simple_rm('A/B/E/alpha')
+  sbox.simple_commit()
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'up', '--set-depth', 'exclude',
+                                     sbox.ospath('A/B/E/beta'))
+
+  sbox.simple_copy('A/B/E', 'E')
+
+  # Running info on BASE not-present fails
+  expected_err = '.*(E|W)155010: The node \'.*alpha\' was not found.*'
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'info', sbox.ospath('A/B/E/alpha'))
+
+  # Running info on WORKING not-present fails
+  expected_err = '.*(E|W)155010: The node \'.*alpha\' was not found.*'
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'info', sbox.ospath('E/alpha'))
+
+  expected_info = [
+    {
+        'Path': re.escape(sbox.ospath('A/B/E/beta')),
+        'Depth': 'exclude',
+    },
+    {
+        'Path': re.escape(sbox.ospath('E/beta')),
+        'Depth': 'exclude',
+    }
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info,
+                                      sbox.ospath('A/B/E/beta'),
+                                      sbox.ospath('E/beta'))
+
+
 ########################################################################
 # Run the tests
 
@@ -606,6 +645,7 @@ test_list = [ None,
               info_show_exclude,
               binary_tree_conflict,
               relpath_escaping,
+              node_hidden_info,
              ]
 
 if __name__ == '__main__':
