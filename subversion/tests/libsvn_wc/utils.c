@@ -393,6 +393,7 @@ sbox_wc_copy_url(svn_test__sandbox_t *b, const char *from_url,
                            FALSE /* copy_as_child */,
                            FALSE /* make_parents */,
                            FALSE /* ignore_externals */,
+                           FALSE /* metadata_only */,
                            FALSE, NULL /* pin_external */,
                            NULL /* revprops */,
                            NULL, NULL, /* commit_callback */
