@@ -376,6 +376,7 @@ public interface ISVNClient
      * @param makeParents Whether to create intermediate parents
      * @param ignoreExternals Whether or not to process external definitions
      *                        as part of this operation.
+     * @param metadataOnly Copy just the metadata and not the working files/dirs
      * @param pinExternals Whether or not to pin external definitions as part
      *                     of this operation.
      * @param externalsToPin The set of externals to pin.
@@ -401,7 +402,8 @@ public interface ISVNClient
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
-              boolean ignoreExternals,  boolean pinExternals,
+              boolean ignoreExternals, boolean metadataOnly,
+              boolean pinExternals,
               Map<String, List<ExternalItem>> externalsToPin,
               Map<String, String> revpropTable,
               CommitMessageCallback handler, CommitCallback callback)

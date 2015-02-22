@@ -4492,6 +4492,12 @@ typedef struct svn_client_copy_source_t
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
+ * If @a metadata_only is @c TRUE and copying a file in a working copy,
+ * everything in the metadata is updated as if the node is moved, but the
+ * actual disk copy operation is not performed. This feature is useful for
+ * clients that want to keep the working copy in sync while the actual working
+ * copy is updated by some other task.
+ *
  * If @a pin_externals is set, pin URLs in copied externals definitions
  * to their current revision unless they were already pinned to a
  * particular revision. A pinned external uses a URL which points at a
@@ -4547,6 +4553,7 @@ svn_client_copy7(const apr_array_header_t *sources,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
                  svn_boolean_t ignore_externals,
+                 svn_boolean_t metadata_only,
                  svn_boolean_t pin_externals,
                  const apr_hash_t *externals_to_pin,
                  const apr_hash_t *revprop_table,
@@ -4556,7 +4563,9 @@ svn_client_copy7(const apr_array_header_t *sources,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_copy7(), but cannot pin externals.
+ * Similar to svn_client_copy7(), but doesn't support meta_data_only
+ * and cannot pin externals.
+ * 
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
