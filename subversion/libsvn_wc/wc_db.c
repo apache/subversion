@@ -11558,6 +11558,7 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
 
   /* Figure out the new node's kind. It will be whatever is in WORKING_NODE,
      or there will be a BASE_NODE that has it.  */
+  old_presence = svn_sqlite__column_token(stmt_info, 3, presence_map);
   new_kind = svn_sqlite__column_token(stmt_info, 4, kind_map);
 
   /* What will the new depth be?  */
@@ -11576,28 +11577,35 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
                             svn_sqlite__column_text(stmt_info, 2, NULL)) == 0);
     }
 
-  /* Find the appropriate new properties -- ACTUAL overrides any properties
-     in WORKING that arrived as part of a copy/move.
+  if (old_presence != svn_wc__db_status_base_deleted)
+    {
+      /* Find the appropriate new properties -- ACTUAL overrides any properties
+         in WORKING that arrived as part of a copy/move.
 
-     Note: we'll keep them as a big blob of data, rather than
-     deserialize/serialize them.  */
-  if (have_act)
-    prop_blob.data = svn_sqlite__column_blob(stmt_act, 1, &prop_blob.len,
-                                             scratch_pool);
-  if (prop_blob.data == NULL)
-    prop_blob.data = svn_sqlite__column_blob(stmt_info, 14, &prop_blob.len,
-                                             scratch_pool);
+         Note: we'll keep them as a big blob of data, rather than
+         deserialize/serialize them.  */
+      if (have_act)
+        prop_blob.data = svn_sqlite__column_blob(stmt_act, 1, &prop_blob.len,
+                                                 scratch_pool);
+      if (prop_blob.data == NULL)
+        prop_blob.data = svn_sqlite__column_blob(stmt_info, 14, &prop_blob.len,
+                                                 scratch_pool);
 
-  inherited_prop_blob.data = svn_sqlite__column_blob(stmt_info, 16,
-                                                     &inherited_prop_blob.len,
-                                                     scratch_pool);
+      inherited_prop_blob.data = svn_sqlite__column_blob(
+                                            stmt_info, 16,
+                                            &inherited_prop_blob.len,
+                                            scratch_pool);
 
-  if (keep_changelist && have_act)
-    changelist = svn_sqlite__column_text(stmt_act, 0, scratch_pool);
+      if (keep_changelist && have_act)
+        changelist = svn_sqlite__column_text(stmt_act, 0, scratch_pool);
 
-  old_presence = svn_sqlite__column_token(stmt_info, 3, presence_map);
-
-  moved_here = svn_sqlite__column_int(stmt_info, 15);
+      moved_here = svn_sqlite__column_int(stmt_info, 15);
+    }
+  else
+    {
+      moved_here = FALSE;
+      changelist = NULL;
+    }
 
   /* ### other stuff?  */
 
@@ -11647,7 +11655,8 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
          be integrated, they really affect a different op-depth and
          completely different nodes (via a different recursion pattern). */
 
-      if (op_root)
+      if (op_root
+          && old_presence != svn_wc__db_status_base_deleted)
         {
           /* Collapse descendants of the current op_depth to layer 0,
              this includes moved-from/to clearing */
@@ -11710,38 +11719,56 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
     parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
   /* Preserve any incomplete status */
-  new_presence = (old_presence == svn_wc__db_status_incomplete
-                  ? svn_wc__db_status_incomplete
-                  : svn_wc__db_status_normal);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_APPLY_CHANGES_TO_BASE_NODE));
-  /* symlink_target not yet used */
-  SVN_ERR(svn_sqlite__bindf(stmt, "issisrtstrisnbn",
-                            wcroot->wc_id, local_relpath,
-                            parent_relpath,
-                            repos_id,
-                            repos_relpath,
-                            new_revision,
-                            presence_map, new_presence,
-                            new_depth_str,
-                            kind_map, new_kind,
-                            changed_rev,
-                            changed_date,
-                            changed_author,
-                            prop_blob.data, prop_blob.len));
-
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 13, new_checksum,
-                                    scratch_pool));
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 15, new_dav_cache,
-                                      scratch_pool));
-  if (inherited_prop_blob.data != NULL)
+  if (old_presence != svn_wc__db_status_base_deleted)
     {
-      SVN_ERR(svn_sqlite__bind_blob(stmt, 17, inherited_prop_blob.data,
-                                    inherited_prop_blob.len));
-    }
+      new_presence = (old_presence == svn_wc__db_status_incomplete
+                      ? svn_wc__db_status_incomplete
+                      : svn_wc__db_status_normal);
 
-  SVN_ERR(svn_sqlite__step_done(stmt));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_APPLY_CHANGES_TO_BASE_NODE));
+      /* symlink_target not yet used */
+      SVN_ERR(svn_sqlite__bindf(stmt, "issisrtstrisnbn",
+                                wcroot->wc_id, local_relpath,
+                                parent_relpath,
+                                repos_id,
+                                repos_relpath,
+                                new_revision,
+                                presence_map, new_presence,
+                                new_depth_str,
+                                kind_map, new_kind,
+                                changed_rev,
+                                changed_date,
+                                changed_author,
+                                prop_blob.data, prop_blob.len));
+
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 13, new_checksum,
+                                        scratch_pool));
+      SVN_ERR(svn_sqlite__bind_properties(stmt, 15, new_dav_cache,
+                                          scratch_pool));
+      if (inherited_prop_blob.data != NULL)
+        {
+          SVN_ERR(svn_sqlite__bind_blob(stmt, 17, inherited_prop_blob.data,
+                                        inherited_prop_blob.len));
+        }
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      struct insert_base_baton_t ibb;
+      blank_ibb(&ibb);
+
+      ibb.repos_id = repos_id;
+      ibb.status = svn_wc__db_status_not_present;
+      ibb.kind = new_kind;
+      ibb.repos_relpath = repos_relpath;
+      ibb.revision = new_revision;
+
+      SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
+
+      keep_changelist = FALSE; /* Nothing there */
+    }
 
   if (have_act)
     {
@@ -16099,19 +16126,7 @@ process_committed_leaf(svn_wc__db_t *db,
                           scratch_pool));
   }
 
-  if (status == svn_wc__db_status_deleted)
-    {
-      return svn_error_trace(
-                 db_base_remove(wcroot, local_relpath, db,
-                                FALSE /* keep_as_working */,
-                                FALSE /* queue_deletes */,
-                                TRUE  /* remove_locks */,
-                                (! via_recurse)
-                                    ? new_revnum : SVN_INVALID_REVNUM,
-                                NULL, NULL,
-                                scratch_pool));
-    }
-  else if (status == svn_wc__db_status_not_present)
+  if (status == svn_wc__db_status_not_present)
     {
       /* We are committing the leaf of a copy operation.
          We leave the not-present marker to allow pulling in excluded
@@ -16124,9 +16139,11 @@ process_committed_leaf(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(status == svn_wc__db_status_normal
                  || status == svn_wc__db_status_incomplete
-                 || status == svn_wc__db_status_added);
+                 || status == svn_wc__db_status_added
+                 || status == svn_wc__db_status_deleted);
 
-  if (kind != svn_node_dir)
+  if (kind != svn_node_dir
+      && status != svn_wc__db_status_deleted)
     {
       /* If we sent a delta (meaning: post-copy modification),
          then this file will appear in the queue and so we should have
