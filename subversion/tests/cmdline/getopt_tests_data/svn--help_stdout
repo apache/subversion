@@ -46,7 +46,6 @@ Available subcommands:
    unlock
    update (up)
    upgrade
-   youngest
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.apache.org/

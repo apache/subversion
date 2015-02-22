@@ -1497,7 +1497,7 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
   if (include_merged_revisions)
     SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
 
-  if (start > end)
+  if (start > end || !SVN_IS_VALID_REVNUM(start))
     SVN_ERR(
      svn_ra__assert_capable_server(session,
                                    SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
@@ -1507,7 +1507,8 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
   err = session->vtable->get_file_revs(session, path, start, end,
                                        include_merged_revisions,
                                        handler, handler_baton, pool);
-  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
+  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+      && !include_merged_revisions)
     {
       svn_error_clear(err);
 
@@ -1515,7 +1516,7 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
       err = svn_ra__file_revs_from_log(session, path, start, end,
                                        handler, handler_baton, pool);
     }
-  return err;
+  return svn_error_trace(err);
 }
 
 svn_error_t *svn_ra_lock(svn_ra_session_t *session,

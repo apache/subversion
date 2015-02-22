@@ -511,4 +511,10 @@ svn_wc__db_update_move_list_notify(svn_wc__db_wcroot_t *wcroot,
                                    void *notify_baton,
                                    apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_verify_db_full_internal(svn_wc__db_wcroot_t *wcroot,
+                                   svn_wc__db_verify_cb_t callback,
+                                   void *baton,
+                                   apr_pool_t *scratch_pool);
+
 #endif /* WC_DB_PRIVATE_H */

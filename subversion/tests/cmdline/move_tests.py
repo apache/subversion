@@ -1156,23 +1156,11 @@ def move_missing(sbox):
   expected_status.tweak('A/D/G', 'A/D/G/tau', 'A/D/G/pi', 'A/D/G/rho',
                         status='! ', entry_status='  ')
 
-  expected_status.add({
-    'R'                 : Item(status='! ', wc_rev='-',
-                               entry_status='A ', entry_copied='+'),
-    'R/pi'              : Item(status='! ', wc_rev='-',
-                               entry_status='  ', entry_copied='+'),
-    'R/tau'             : Item(status='! ', wc_rev='-',
-                               entry_status='  ', entry_copied='+'),
-    'R/rho'             : Item(status='! ', wc_rev='-',
-                               entry_status='  ', entry_copied='+'),
-  })
-
   # Verify that the status processing doesn't crash
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # The issue is a crash when the destination is present
   os.mkdir(sbox.ospath('R'))
-  expected_status.tweak('R', status='A ', copied='+')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 

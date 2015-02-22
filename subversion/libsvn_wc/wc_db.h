@@ -1421,8 +1421,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                        const char *original_uuid,
                        svn_revnum_t original_revision,
                        const apr_array_header_t *children,
-                       svn_boolean_t is_move,
                        svn_depth_t depth,
+                       svn_boolean_t is_move,
                        const svn_skel_t *conflict,
                        const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
@@ -1463,6 +1463,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                            const char *original_uuid,
                            svn_revnum_t original_revision,
                            const char *target,
+                           svn_boolean_t is_move,
                            const svn_skel_t *conflict,
                            const svn_skel_t *work_items,
                            apr_pool_t *scratch_pool);
@@ -2136,15 +2137,26 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
 
 
 /**
- * Set *URL to the corresponding url for LOCAL_ABSPATH.
- * If the node is added, return the url it will have in the repository.
+ * Set *revision, *repos_relpath, *repos_root_url, *repos_uuid to
+ * the intended/commit location of LOCAL_ABSPATH. These arguments may be
+ * NULL if they are not needed.
+ *
+ * If the node is deleted, return the url it would have in the repository
+ * if it wouldn't be deleted. If the node is added return the url it will
+ * have in the repository, once committed.
+ *
+ * If the node is not added and has an existing repository location, set
+ * revision to its existing revision, otherwise to SVN_INVALID_REVNUM.
  */
 svn_error_t *
-svn_wc__db_read_url(const char **url,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_wc__db_read_repos_info(svn_revnum_t *revision,
+                           const char **repos_relpath,
+                           const char **repos_root_url,
+                           const char **repos_uuid,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the ACTUAL
@@ -2308,6 +2320,14 @@ svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_base_read_not_present_children(
+                                const apr_array_header_t **children,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
 /* Like svn_wc__db_read_children_of_working_node(), except also include any
    path that was a child of a deleted directory that existed at
    LOCAL_ABSPATH, even if that directory is now scheduled to be replaced by
@@ -2395,16 +2415,6 @@ svn_wc__db_read_kind(svn_node_kind_t *kind,
                      svn_boolean_t show_deleted,
                      svn_boolean_t show_hidden,
                      apr_pool_t *scratch_pool);
-
-
-/* An analog to svn_wc__entry_is_hidden().  Set *HIDDEN to TRUE if
-   LOCAL_ABSPATH in DB "is not present, and I haven't scheduled something
-   over the top of it." */
-svn_error_t *
-svn_wc__db_node_hidden(svn_boolean_t *hidden,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
-                       apr_pool_t *scratch_pool);
 
 /* Checks if a node replaces a node in a different layer. Also check if it
    replaces a BASE (op_depth 0) node or just a node in a higher layer (a copy).
@@ -2935,34 +2945,6 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          const char *repos_uuid,
                          apr_pool_t *scratch_pool);
 
-
-svn_error_t *
-svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
-                                   const char *dir_relpath,
-                                   apr_hash_t *cache_values,
-                                   apr_pool_t *scratch_pool);
-
-
-/* ### need much more docco
-
-   ### this function should be called within a sqlite transaction. it makes
-   ### assumptions around this fact.
-
-   Apply the various sets of properties to the database nodes based on
-   their existence/presence, the current state of the node, and the original
-   format of the working copy which provided these property sets.
-*/
-svn_error_t *
-svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
-                               const char *dir_abspath,
-                               const char *local_relpath,
-                               apr_hash_t *base_props,
-                               apr_hash_t *revert_props,
-                               apr_hash_t *working_props,
-                               int original_format,
-                               apr_int64_t wc_id,
-                               apr_pool_t *scratch_pool);
-
 /* Simply insert (or replace) one row in the EXTERNALS table. */
 svn_error_t *
 svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
@@ -2976,20 +2958,6 @@ svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
                                    svn_revnum_t def_peg_revision,
                                    svn_revnum_t def_revision,
                                    apr_pool_t *scratch_pool);
-
-/* Get the repository identifier corresponding to REPOS_ROOT_URL from the
-   database in SDB. The value is returned in *REPOS_ID. All allocations
-   are allocated in SCRATCH_POOL.
-
-   NOTE: the row in REPOSITORY must exist. If not, then SVN_ERR_WC_DB_ERROR
-   is returned.
-
-   ### unclear on whether/how this interface will stay/evolve.  */
-svn_error_t *
-svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
-                                svn_sqlite__db_t *sdb,
-                                const char *repos_root_url,
-                                apr_pool_t *scratch_pool);
 
 /* Upgrade the metadata concerning the WC at WCROOT_ABSPATH, in DB,
  * to the SVN_WC__VERSION format.
@@ -3525,6 +3493,28 @@ svn_wc__required_lock_for_resolve(const char **required_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 /* @} */
+
+typedef svn_error_t * (*svn_wc__db_verify_cb_t)(void *baton,
+                                                const char *wc_abspath,
+                                                const char *local_relpath,
+                                                int op_depth,
+                                                int id,
+                                                const char *description,
+                                                apr_pool_t *scratch_pool);
+
+/* Checks the database for FULL-correctness according to the spec.
+
+   Note that typical 1.7-1.9 databases WILL PRODUCE warnings.
+
+   This is mainly useful for WC-NG developers, as there will be
+   warnings without the database being corrupt
+*/
+svn_error_t *
+svn_wc__db_verify_db_full(svn_wc__db_t *db,
+                          const char *wri_abspath,
+                          svn_wc__db_verify_cb_t callback,
+                          void *baton,
+                          apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

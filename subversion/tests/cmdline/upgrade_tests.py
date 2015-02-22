@@ -935,15 +935,15 @@ def tree_replace1(sbox):
     {
       ''      : Item(status=' M', wc_rev=17),
       'B'     : Item(status='R ', copied='+', wc_rev='-'),
-      'B/f'   : Item(status='R ', copied='+', wc_rev='-'),
+      'B/f'   : Item(status='  ', copied='+', wc_rev='-'),
       'B/g'   : Item(status='D ', wc_rev=17),
-      'B/h'   : Item(status='A ', copied='+', wc_rev='-'),
-      'B/C'   : Item(status='R ', copied='+', wc_rev='-'),
-      'B/C/f' : Item(status='R ', copied='+', wc_rev='-'),
+      'B/h'   : Item(status='  ', copied='+', wc_rev='-'),
+      'B/C'   : Item(status='  ', copied='+', wc_rev='-'),
+      'B/C/f' : Item(status='  ', copied='+', wc_rev='-'),
       'B/D'   : Item(status='D ', wc_rev=17),
       'B/D/f' : Item(status='D ', wc_rev=17),
-      'B/E'   : Item(status='A ', copied='+', wc_rev='-'),
-      'B/E/f' : Item(status='A ', copied='+', wc_rev='-'),
+      'B/E'   : Item(status='  ', copied='+', wc_rev='-'),
+      'B/E/f' : Item(status='  ', copied='+', wc_rev='-'),
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
@@ -961,11 +961,11 @@ def tree_replace2(sbox):
       'B'     : Item(status='R ', copied='+', wc_rev='-'),
       'B/f'   : Item(status='D ', wc_rev=12),
       'B/D'   : Item(status='D ', wc_rev=12),
-      'B/g'   : Item(status='A ', copied='+', wc_rev='-'),
-      'B/E'   : Item(status='A ', copied='+', wc_rev='-'),
+      'B/g'   : Item(status='  ', copied='+', wc_rev='-'),
+      'B/E'   : Item(status='  ', copied='+', wc_rev='-'),
       'C'     : Item(status='R ', copied='+', wc_rev='-'),
-      'C/f'   : Item(status='A ', copied='+', wc_rev='-'),
-      'C/D'   : Item(status='A ', copied='+', wc_rev='-'),
+      'C/f'   : Item(status='  ', copied='+', wc_rev='-'),
+      'C/D'   : Item(status='  ', copied='+', wc_rev='-'),
       'C/g'   : Item(status='D ', wc_rev=12),
       'C/E'   : Item(status='D ', wc_rev=12),
     })

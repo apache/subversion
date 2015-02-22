@@ -519,6 +519,7 @@ apr_hash_t *get_externals_to_pin(jobject jexternalsToPin, SVN::Pool& pool)
 void SVNClient::copy(CopySources &copySources, const char *destPath,
                      CommitMessage *message, bool copyAsChild,
                      bool makeParents, bool ignoreExternals,
+                     bool metadataOnly,
                      bool pinExternals, jobject jexternalsToPin,
                      PropertyTable &revprops, CommitCallback *callback)
 {
@@ -538,6 +539,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     if (!JNIUtil::isJavaExceptionThrown())
       SVN_JNI_ERR(svn_client_copy7(srcs, destinationPath.c_str(),
                                    copyAsChild, makeParents, ignoreExternals,
+                                   metadataOnly,
                                    pinExternals, pin_set,
                                    revprops.hash(subPool),
                                    CommitCallback::callback, callback,
