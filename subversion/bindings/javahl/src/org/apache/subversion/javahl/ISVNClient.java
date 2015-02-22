@@ -413,8 +413,9 @@ public interface ISVNClient
      * Copy versioned paths with the history preserved.
      * <p>
      * Behaves like the 1.9 version with
-     *     <code>pinExternals<code> set to <code>false</code> and
-     *     <code>externalsToPin<code> set to <code>null</code>.
+     *     <code>pinExternals</code> set to <code>false</code> and
+     *     <code>externalsToPin</code> set to <code>null</code> and
+     *     <code>metadataOnly</code> set to <code>false</code>.
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
