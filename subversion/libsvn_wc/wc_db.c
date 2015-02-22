@@ -2108,7 +2108,8 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                svn_wc__db_t *db, /* For checking conflicts */
                svn_boolean_t keep_as_working,
                svn_boolean_t queue_deletes,
-               svn_boolean_t remove_locks,
+               svn_boolean_t mark_not_present,
+               svn_boolean_t mark_excluded,
                svn_revnum_t not_present_revision,
                svn_skel_t *conflict,
                svn_skel_t *work_items,
@@ -2119,25 +2120,16 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   svn_wc__db_status_t status;
   apr_int64_t repos_id;
   const char *repos_relpath;
+  svn_revnum_t revision;
   svn_node_kind_t kind;
   svn_boolean_t keep_working;
 
-  SVN_ERR(svn_wc__db_base_get_info_internal(&status, &kind, NULL,
+  SVN_ERR(svn_wc__db_base_get_info_internal(&status, &kind, &revision,
                                             &repos_relpath, &repos_id,
                                             NULL, NULL, NULL, NULL, NULL,
                                             NULL, NULL, NULL, NULL, NULL,
                                             wcroot, local_relpath,
                                             scratch_pool, scratch_pool));
-
-  if (remove_locks)
-    {
-      svn_sqlite__stmt_t *lock_stmt;
-
-      SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
-                                        STMT_DELETE_LOCK_RECURSIVELY));
-      SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
-      SVN_ERR(svn_sqlite__step_done(lock_stmt));
-    }
 
   if (status == svn_wc__db_status_normal
       && keep_as_working)
@@ -2335,13 +2327,14 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  if (SVN_IS_VALID_REVNUM(not_present_revision))
+  if (mark_not_present || mark_excluded)
     {
       struct insert_base_baton_t ibb;
       blank_ibb(&ibb);
 
       ibb.repos_id = repos_id;
-      ibb.status = svn_wc__db_status_not_present;
+      ibb.status = mark_excluded ? svn_wc__db_status_excluded
+                                 : svn_wc__db_status_not_present;
       ibb.kind = kind;
       ibb.repos_relpath = repos_relpath;
       ibb.revision = not_present_revision;
@@ -2369,7 +2362,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t keep_as_working,
                        svn_boolean_t queue_deletes,
-                       svn_boolean_t remove_locks,
+                       svn_boolean_t mark_not_present,
+                       svn_boolean_t mark_excluded,
                        svn_revnum_t not_present_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,
@@ -2386,7 +2380,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
   SVN_WC__DB_WITH_TXN(db_base_remove(wcroot, local_relpath,
                                      db, keep_as_working, queue_deletes,
-                                     remove_locks, not_present_revision,
+                                     mark_not_present, mark_excluded,
+                                     not_present_revision,
                                      conflict, work_items, scratch_pool),
                       wcroot);
 
@@ -12109,11 +12104,11 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
           || (child_info->status == svn_wc__db_status_server_excluded &&
               child_info->revnum != new_rev))
         {
-          SVN_ERR(db_base_remove(wcroot,
-                                 child_local_relpath,
-                                 db, FALSE, FALSE, FALSE,
-                                 SVN_INVALID_REVNUM,
-                                 NULL, NULL, scratch_pool));
+          svn_sqlite__stmt_t *stmt;
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_BASE_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
           continue;
         }
 
