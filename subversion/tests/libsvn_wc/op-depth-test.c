@@ -2783,8 +2783,8 @@ test_children_of_replaced_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
             &children_array, b.wc_ctx->db, A_abspath, pool, pool));
   SVN_ERR(CHECK_ARRAY(children_array, working_children_inc_hidden, pool));
 
-  SVN_ERR(svn_wc__node_get_children(&children_array, b.wc_ctx, A_abspath,
-                                    TRUE /* show_hidden */, pool, pool));
+  SVN_ERR(svn_wc__db_read_children(&children_array, b.wc_ctx->db, A_abspath,
+                                   pool, pool));
   SVN_ERR(CHECK_ARRAY(children_array, all_children_inc_hidden, pool));
 
   /* I am not testing svn_wc__node_get_children(show_hidden=FALSE) because

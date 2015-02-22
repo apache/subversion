@@ -415,22 +415,6 @@ svn_wc__node_get_not_present_children(const apr_array_header_t **children,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
-
-/**
- * Like svn_wc__node_get_children_of_working_node(), except also include any
- * path that was a child of a deleted directory that existed at
- * @a dir_abspath, even if that directory is now scheduled to be replaced by
- * the working node at @a dir_abspath.
- */
-svn_error_t *
-svn_wc__node_get_children(const apr_array_header_t **children,
-                          svn_wc_context_t *wc_ctx,
-                          const char *dir_abspath,
-                          svn_boolean_t show_hidden,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
-
 /**
  * Fetch the repository information for the working version
  * of the node at @a local_abspath into @a *revision, @a *repos_relpath,
