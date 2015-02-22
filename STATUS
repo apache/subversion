@@ -67,11 +67,11 @@ Candidate changes:
    Votes:
      +1: rhuijben (not after 1.9.0)
 
- * r1661476
+ * r1661476, r1661480
    Fix a segfault when running 'svn info' on a WORKING exclude
    Justification:
      Optimizes url calculation through libsvn_wc and libsvn_client and
-     fixes a few real bugs.
+     fixes a few real bugs. Makes not-present behavior in info explicit.
    Votes:
      +1: rhuijben
 
