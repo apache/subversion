@@ -219,9 +219,13 @@ build_info_for_node(svn_wc__info2_t **info,
 
       if (w_status == svn_wc__db_status_deleted)
         {
-          /* We have a working not-present status... */
-          *info = NULL;
-          return SVN_NO_ERROR;
+          /* We have a working not-present status. We don't know anything
+             about this node, but it *is visible* in STATUS.
+
+             Let's tell that it is excluded */
+
+          wc_info->depth = svn_depth_exclude;
+          tmpinfo->kind = svn_node_unknown;
         }
 
       /* And now fetch the url and revision of what will be deleted */
