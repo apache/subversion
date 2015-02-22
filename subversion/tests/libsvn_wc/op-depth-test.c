@@ -1319,7 +1319,7 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
   SVN_ERR(svn_wc__db_base_remove(b->wc_ctx->db, dir_abspath,
                                  FALSE /* keep_as_Working */,
                                  FALSE /* queue_deletes */,
-                                 FALSE /* remove_locks */,
+                                 FALSE, FALSE,
                                  SVN_INVALID_REVNUM,
                                  NULL, NULL, b->pool));
   SVN_ERR(svn_wc__wq_run(b->wc_ctx->db, dir_abspath,
@@ -11508,7 +11508,7 @@ make_copy_and_delete_mixed(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(svn_wc__db_base_remove(b.wc_ctx->db, sbox_wc_path(&b, "A"),
-                                 TRUE, FALSE, FALSE, 99,
+                                 TRUE, FALSE, TRUE, FALSE, 99,
                                  NULL, NULL, pool));
 
   {

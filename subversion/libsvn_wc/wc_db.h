@@ -702,12 +702,11 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
    (With KEEP_AS_WORKING TRUE, this is a no-op, as everything is
     automatically shadowed by the created copy)
 
-   If REMOVE_LOCKS is TRUE, all locks of this node and any subnodes
-   are also removed. This is to be done during commit of deleted nodes.
 
-   If NOT_PRESENT_REVISION specifies a valid revision a not-present
-   node is installed in BASE node with kind NOT_PRESENT_KIND after
-   deleting.
+   If MARK_NOT_PRESENT or MARK_EXCLUDED is TRUE, install a marker
+   of the specified type at the root of the now removed tree, with
+   either the specified revision (or in case of SVN_INVALID_REVNUM)
+   the original revision.
 
    If CONFLICT and/or WORK_ITEMS are passed they are installed as part
    of the operation, after the work items inserted by the operation
@@ -718,7 +717,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t keep_as_working,
                        svn_boolean_t queue_deletes,
-                       svn_boolean_t remove_locks,
+                       svn_boolean_t mark_not_present,
+                       svn_boolean_t mark_excluded,
                        svn_revnum_t not_present_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,

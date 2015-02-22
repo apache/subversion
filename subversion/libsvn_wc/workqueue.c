@@ -144,7 +144,7 @@ run_base_remove(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__db_base_remove(db, local_abspath,
                                  FALSE /* keep_as_working */,
                                  TRUE /* queue_deletes */,
-                                 FALSE /* remove_locks */,
+                                 SVN_IS_VALID_REVNUM(not_present_rev), FALSE,
                                  not_present_rev,
                                  NULL, NULL, scratch_pool));
 

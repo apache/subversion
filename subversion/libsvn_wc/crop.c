@@ -110,7 +110,7 @@ crop_children(svn_wc__db_t *db,
             SVN_ERR(svn_wc__db_base_remove(db, child_abspath,
                                            FALSE /* keep_as_working */,
                                            FALSE /* queue_deletes */,
-                                           FALSE /* remove_locks */,
+                                           FALSE, FALSE,
                                            SVN_INVALID_REVNUM,
                                            NULL, NULL, iterpool));
 
