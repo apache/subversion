@@ -54,18 +54,14 @@
 
 
 /* Set *CHILDREN_ABSPATHS to a new array of the full paths formed by joining
- * each name in REL_CHILDREN onto DIR_ABSPATH.  If SHOW_HIDDEN is false then
- * omit any paths that are reported as 'hidden' by svn_wc__db_node_hidden().
+ * each name in REL_CHILDREN onto DIR_ABSPATH.
  *
  * Allocate the output array and its elements in RESULT_POOL. */
-static svn_error_t *
-filter_and_make_absolute(const apr_array_header_t **children_abspaths,
-                         svn_wc_context_t *wc_ctx,
-                         const char *dir_abspath,
-                         const apr_array_header_t *rel_children,
-                         svn_boolean_t show_hidden,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+static void
+make_absolute(const apr_array_header_t **children_abspaths,
+              const char *dir_abspath,
+              const apr_array_header_t *rel_children,
+              apr_pool_t *result_pool)
 {
   apr_array_header_t *children;
   int i;
@@ -74,39 +70,13 @@ filter_and_make_absolute(const apr_array_header_t **children_abspaths,
                             sizeof(const char *));
   for (i = 0; i < rel_children->nelts; i++)
     {
-      const char *child_abspath = svn_dirent_join(dir_abspath,
-                                                  APR_ARRAY_IDX(rel_children,
-                                                                i,
-                                                                const char *),
-                                                  result_pool);
-
-      /* Don't add hidden nodes to *CHILDREN if we don't want them. */
-      if (!show_hidden)
-        {
-          svn_wc__db_status_t status;
-
-          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       wc_ctx->db, child_abspath,
-                                       scratch_pool, scratch_pool));
-
-          if (status == svn_wc__db_status_server_excluded
-              || status == svn_wc__db_status_not_present
-              || status == svn_wc__db_status_excluded)
-            {
-              continue;
-            }
-        }
-
-      APR_ARRAY_PUSH(children, const char *) = child_abspath;
+      const char *name = APR_ARRAY_IDX(rel_children, i, const char *);
+      APR_ARRAY_PUSH(children, const char *) =
+                        svn_dirent_join(dir_abspath, name,
+                                        result_pool);
     }
 
   *children_abspaths = children;
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -117,14 +87,12 @@ svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *rel_children;
+  const apr_array_header_t *child_names;
 
-  SVN_ERR(svn_wc__db_read_children_of_working_node(&rel_children,
+  SVN_ERR(svn_wc__db_read_children_of_working_node(&child_names,
                                                    wc_ctx->db, dir_abspath,
                                                    scratch_pool, scratch_pool));
-  SVN_ERR(filter_and_make_absolute(children, wc_ctx, dir_abspath,
-                                   rel_children, TRUE /* no filter! */,
-                                   result_pool, scratch_pool));
+  make_absolute(children, dir_abspath, child_names, result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -135,39 +103,17 @@ svn_wc__node_get_not_present_children(const apr_array_header_t **children,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *rel_children;
+  const apr_array_header_t *child_names;
 
   SVN_ERR(svn_wc__db_base_read_not_present_children(
-                                   &rel_children,
+                                   &child_names,
                                    wc_ctx->db, dir_abspath,
                                    scratch_pool, scratch_pool));
-  SVN_ERR(filter_and_make_absolute(children, wc_ctx, dir_abspath,
-                                   rel_children, TRUE /* no filter! */,
-                                   result_pool, scratch_pool));
+  make_absolute(children, dir_abspath, child_names, result_pool);
   return SVN_NO_ERROR;
 }
-
 
 
-svn_error_t *
-svn_wc__node_get_children(const apr_array_header_t **children,
-                          svn_wc_context_t *wc_ctx,
-                          const char *dir_abspath,
-                          svn_boolean_t show_hidden,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  const apr_array_header_t *rel_children;
-
-  SVN_ERR(svn_wc__db_read_children(&rel_children, wc_ctx->db, dir_abspath,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(filter_and_make_absolute(children, wc_ctx, dir_abspath,
-                                   rel_children, show_hidden,
-                                   result_pool, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__internal_get_repos_info(svn_revnum_t *revision,
                                 const char **repos_relpath,
