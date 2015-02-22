@@ -35,6 +35,97 @@
 
 #include "svn_private_config.h"
 
+/* A baton for use with modcheck_found_entry(). */
+typedef struct modcheck_baton_t {
+  svn_wc__db_t *db;         /* wc_db to access nodes */
+  svn_boolean_t found_mod;  /* whether a modification has been found */
+  svn_boolean_t found_not_delete;  /* Found a not-delete modification */
+} modcheck_baton_t;
+
+/* An implementation of svn_wc_status_func4_t, similar to a function
+   with the same name in update_editor.c, but with slightly different
+   behavior around unversioned items */
+static svn_error_t *
+modcheck_callback(void *baton,
+                  const char *local_abspath,
+                  const svn_wc_status3_t *status,
+                  apr_pool_t *scratch_pool)
+{
+  modcheck_baton_t *mb = baton;
+
+  switch (status->node_status)
+    {
+      case svn_wc_status_normal:
+      case svn_wc_status_incomplete:
+      case svn_wc_status_ignored:
+      case svn_wc_status_none:
+      case svn_wc_status_external:
+        break;
+
+      case svn_wc_status_deleted:
+        mb->found_mod = TRUE;
+        break;
+
+      case svn_wc_status_missing:
+      case svn_wc_status_obstructed:
+        mb->found_mod = TRUE;
+        mb->found_not_delete = TRUE;
+        /* Exit from the status walker: We know what we want to know */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+
+      default:
+      case svn_wc_status_added:
+      case svn_wc_status_replaced:
+      case svn_wc_status_modified:
+      case svn_wc_status_unversioned:
+        mb->found_mod = TRUE;
+        mb->found_not_delete = TRUE;
+        /* Exit from the status walker: We know what we want to know */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Set *ALLOW to true if the path can be safely deleted by the crop operation,
+   otherwise to false. */
+static svn_error_t *
+allow_crop(svn_boolean_t *allow,
+           svn_wc__db_t *db,
+           const char *local_abspath,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
+           apr_pool_t *scratch_pool)
+{
+  modcheck_baton_t modcheck_baton = { NULL, FALSE, FALSE };
+  svn_error_t *err;
+
+  modcheck_baton.db = db;
+
+  /* Walk the WC tree for status with depth infinity, looking for any local
+   * modifications. If it's a "sparse" directory, that's OK: there can be
+   * no local mods in the pieces that aren't present in the WC. */
+
+  err = svn_wc__internal_walk_status(db, local_abspath,
+                                     svn_depth_infinity,
+                                     FALSE, FALSE, FALSE, NULL,
+                                     modcheck_callback, &modcheck_baton,
+                                     cancel_func, cancel_baton,
+                                     scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
+
+  *allow = !modcheck_baton.found_mod || (modcheck_baton.found_mod
+                                         && !modcheck_baton.found_not_delete);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper function that crops the children of the LOCAL_ABSPATH, under the
  * constraint of NEW_DEPTH. The DIR_PATH itself will never be cropped. The
  * whole subtree should have been locked.
@@ -53,7 +144,7 @@ crop_children(svn_wc__db_t *db,
               void *notify_baton,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *children;
   apr_pool_t *iterpool;
@@ -65,7 +156,7 @@ crop_children(svn_wc__db_t *db,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
 
   if (dir_depth == svn_depth_unknown)
     dir_depth = svn_depth_infinity;
@@ -76,8 +167,8 @@ crop_children(svn_wc__db_t *db,
                                          iterpool));
 
   /* Looping over current directory's SVN entries: */
-  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath, pool,
-                                   iterpool));
+  SVN_ERR(svn_wc__db_base_get_children(&children, db, local_abspath,
+                                       scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
@@ -86,6 +177,8 @@ crop_children(svn_wc__db_t *db,
       svn_wc__db_status_t child_status;
       svn_node_kind_t kind;
       svn_depth_t child_depth;
+      svn_boolean_t have_work;
+      svn_depth_t remove_below;
 
       svn_pool_clear(iterpool);
 
@@ -96,16 +189,33 @@ crop_children(svn_wc__db_t *db,
                                    NULL,NULL, NULL, NULL, &child_depth,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, &have_work,
                                    db, child_abspath, iterpool, iterpool));
 
-      if (child_status == svn_wc__db_status_server_excluded ||
-          child_status == svn_wc__db_status_excluded ||
-          child_status == svn_wc__db_status_not_present)
+      if (have_work)
         {
-          svn_depth_t remove_below = (kind == svn_node_dir)
-                                            ? svn_depth_immediates
-                                            : svn_depth_files;
+          if (child_status != svn_wc__db_status_deleted)
+            continue; /* Leave local additions alone */
+
+          svn_boolean_t allow;
+
+          SVN_ERR(allow_crop(&allow,
+                             db, child_abspath,
+                             cancel_func, cancel_baton,
+                             iterpool));
+
+          if (!allow)
+            continue; /* Something interesting is still there */
+        }
+
+      remove_below = (kind == svn_node_dir)
+                       ? svn_depth_immediates
+                       : svn_depth_files;
+
+      if ((child_status == svn_wc__db_status_server_excluded ||
+           child_status == svn_wc__db_status_excluded ||
+           child_status == svn_wc__db_status_not_present))
+        {
           if (new_depth < remove_below)
             SVN_ERR(svn_wc__db_base_remove(db, child_abspath,
                                            FALSE /* keep_as_working */,
@@ -114,68 +224,46 @@ crop_children(svn_wc__db_t *db,
                                            SVN_INVALID_REVNUM,
                                            NULL, NULL, iterpool));
 
-          continue;
-        }
-      else if (kind == svn_node_file)
-        {
-          if (new_depth == svn_depth_empty)
-            SVN_ERR(svn_wc__db_op_remove_node(NULL,
-                                              db, child_abspath,
-                                              TRUE /* destroy */,
-                                              FALSE /* destroy_changes */,
-                                              SVN_INVALID_REVNUM,
-                                              svn_wc__db_status_not_present,
-                                              svn_node_none,
-                                              NULL, NULL,
-                                              cancel_func, cancel_baton,
-                                              iterpool));
-          else
-            continue;
-
-        }
-      else if (kind == svn_node_dir)
-        {
-          if (new_depth < svn_depth_immediates)
-            {
-              SVN_ERR(svn_wc__db_op_remove_node(NULL,
-                                                db, child_abspath,
-                                                TRUE /* destroy */,
-                                                FALSE /* destroy_changes */,
-                                                SVN_INVALID_REVNUM,
-                                                svn_wc__db_status_not_present,
-                                                svn_node_none,
-                                                NULL, NULL,
-                                                cancel_func, cancel_baton,
-                                                iterpool));
-            }
-          else
-            {
-              SVN_ERR(crop_children(db,
-                                    child_abspath,
-                                    child_depth,
-                                    svn_depth_empty,
-                                    notify_func,
-                                    notify_baton,
-                                    cancel_func,
-                                    cancel_baton,
-                                    iterpool));
-              continue;
-            }
-        }
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown node kind for '%s'"),
-             svn_dirent_local_style(child_abspath, iterpool));
+          continue; /* No recurse */
         }
 
-      if (notify_func)
+      if (new_depth < remove_below)
         {
-          svn_wc_notify_t *notify;
-          notify = svn_wc_create_notify(child_abspath,
-                                        svn_wc_notify_delete,
-                                        iterpool);
-          (*notify_func)(notify_baton, notify, iterpool);
+          svn_boolean_t allow;
+
+          SVN_ERR(allow_crop(&allow,
+                             db, child_abspath,
+                             cancel_func, cancel_baton,
+                             iterpool));
+
+          if (allow)
+            {
+              SVN_ERR(svn_wc__db_base_remove(db, child_abspath,
+                                             FALSE, TRUE, FALSE, FALSE,
+                                             SVN_INVALID_REVNUM,
+                                             NULL, NULL, iterpool));
+              if (notify_func)
+                {
+                  svn_wc_notify_t *notify;
+                  notify = svn_wc_create_notify(child_abspath,
+                                                svn_wc_notify_delete,
+                                                iterpool);
+                  (*notify_func)(notify_baton, notify, iterpool);
+                }
+
+              continue; /* No recurse */
+            }
+
+          /* Fall through: recurse:*/
+        }
+
+      if (kind == svn_node_dir)
+        {
+          SVN_ERR(crop_children(db, child_abspath,
+                                child_depth, svn_depth_empty,
+                                notify_func, notify_baton,
+                                cancel_func, cancel_baton,
+                                iterpool));
         }
     }
 
@@ -197,6 +285,8 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
   svn_revnum_t revision;
+  svn_depth_t depth;
+  svn_boolean_t allow;
   const char *repos_relpath, *repos_root, *repos_uuid;
 
   SVN_ERR(svn_wc__db_is_switched(&is_root, &is_switched, NULL,
@@ -221,7 +311,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision, &repos_relpath,
                                &repos_root, &repos_uuid, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &depth, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL,
                                wc_ctx->db, local_abspath,
@@ -258,29 +348,40 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
         break; /* Ok to exclude */
     }
 
-  /* Remove all working copy data below local_abspath */
-  SVN_ERR(svn_wc__db_op_remove_node(NULL,
-                                    wc_ctx->db, local_abspath,
-                                    TRUE /* destroy */,
-                                    FALSE /* destroy_changes */,
-                                    revision,
-                                    svn_wc__db_status_excluded,
-                                    kind,
-                                    NULL, NULL,
-                                    cancel_func, cancel_baton,
-                                    scratch_pool));
+  SVN_ERR(allow_crop(&allow, wc_ctx->db, local_abspath,
+                     cancel_func, cancel_baton,
+                     scratch_pool));
 
-  SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
-                         cancel_func, cancel_baton,
-                         scratch_pool));
-
-  if (notify_func)
+  if (allow)
     {
-      svn_wc_notify_t *notify;
-      notify = svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_exclude,
-                                    scratch_pool);
-      notify_func(notify_baton, notify, scratch_pool);
+      /* Remove all working copy data below local_abspath */
+      SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
+                                     FALSE /* keep_working */,
+                                     TRUE, FALSE, TRUE,
+                                     revision,
+                                     NULL, NULL,
+                                     scratch_pool));
+
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
+                             cancel_func, cancel_baton,
+                             scratch_pool));
+
+      if (notify_func)
+        {
+          svn_wc_notify_t *notify;
+          notify = svn_wc_create_notify(local_abspath,
+                                        svn_wc_notify_exclude,
+                                        scratch_pool);
+          notify_func(notify_baton, notify, scratch_pool);
+        }
+    }
+  else
+    {
+      /* Do the next best thing: retry below this path */
+      SVN_ERR(crop_children(wc_ctx->db, local_abspath, depth, svn_depth_empty,
+                            notify_func, notify_baton,
+                            cancel_func, cancel_baton,
+                            scratch_pool));
     }
 
   return SVN_NO_ERROR;

@@ -857,6 +857,7 @@ WHERE wc_id = ?1
 UPDATE nodes SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
   AND kind=MAP_DIR
+  AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)
 
 -- STMT_UPDATE_NODE_BASE_PRESENCE
 UPDATE nodes SET presence = ?3
