@@ -615,10 +615,22 @@ modcheck_callback(void *baton,
   switch (status->node_status)
     {
       case svn_wc_status_normal:
-      case svn_wc_status_incomplete:
       case svn_wc_status_ignored:
       case svn_wc_status_none:
       case svn_wc_status_external:
+        break;
+
+      case svn_wc_status_incomplete:
+        if ((status->text_status != svn_wc_status_normal
+             && status->text_status != svn_wc_status_none)
+            || (status->prop_status != svn_wc_status_normal
+                && status->prop_status != svn_wc_status_none))
+          {
+            mb->found_mod = TRUE;
+            mb->found_not_delete = TRUE;
+            /* Incomplete, but local modifications */
+            return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+          }
         break;
 
       case svn_wc_status_deleted:
