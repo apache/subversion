@@ -219,7 +219,6 @@ crop_children(svn_wc__db_t *db,
           if (new_depth < remove_below)
             SVN_ERR(svn_wc__db_base_remove(db, child_abspath,
                                            FALSE /* keep_as_working */,
-                                           FALSE /* queue_deletes */,
                                            FALSE, FALSE,
                                            SVN_INVALID_REVNUM,
                                            NULL, NULL, iterpool));
@@ -239,7 +238,7 @@ crop_children(svn_wc__db_t *db,
           if (allow)
             {
               SVN_ERR(svn_wc__db_base_remove(db, child_abspath,
-                                             FALSE, TRUE, FALSE, FALSE,
+                                             FALSE, FALSE, FALSE,
                                              SVN_INVALID_REVNUM,
                                              NULL, NULL, iterpool));
               if (notify_func)
@@ -357,7 +356,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
       /* Remove all working copy data below local_abspath */
       SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
                                      FALSE /* keep_working */,
-                                     TRUE, FALSE, TRUE,
+                                     FALSE, TRUE,
                                      revision,
                                      NULL, NULL,
                                      scratch_pool));
