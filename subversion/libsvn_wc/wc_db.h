@@ -3270,7 +3270,8 @@ svn_wc__db_get_not_present_descendants(const apr_array_header_t **descendants,
  *
  * Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
  * LOCAL_ABSPATH is sparse.
- * Indicate in *IS_MODIFIED whether the working copy has local modifications.
+ * Indicate in *IS_MODIFIED whether the working copy has local modifications
+ * recorded for it in DB.
  *
  * Indicate in *IS_SWITCHED whether any node beneath LOCAL_ABSPATH
  * is switched. If TRAIL_URL is non-NULL, use it to determine if LOCAL_ABSPATH
@@ -3291,8 +3292,6 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            const char *local_abspath,
                            const char *trail_url,
                            svn_boolean_t committed,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
                            apr_pool_t *scratch_pool);
 
 /* Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
@@ -3353,16 +3352,13 @@ svn_wc__db_get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
 /* Indicate in *IS_MODIFIED whether the working copy has local modifications,
  * using DB. Use SCRATCH_POOL for temporary allocations.
  *
- * This function provides a subset of the functionality of
- * svn_wc__db_revision_status() and is more efficient if the caller
- * doesn't need all information returned by svn_wc__db_revision_status(). */
+ * This function does not check the working copy state, but is a lot more
+ * efficient than a full status walk. */
 svn_error_t *
-svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
-                          apr_pool_t *scratch_pool);
+svn_wc__db_has_db_mods(svn_boolean_t *is_modified,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 
 /* Verify the consistency of metadata concerning the WC that contains

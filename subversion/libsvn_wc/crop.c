@@ -35,97 +35,6 @@
 
 #include "svn_private_config.h"
 
-/* A baton for use with modcheck_found_entry(). */
-typedef struct modcheck_baton_t {
-  svn_wc__db_t *db;         /* wc_db to access nodes */
-  svn_boolean_t found_mod;  /* whether a modification has been found */
-  svn_boolean_t found_not_delete;  /* Found a not-delete modification */
-} modcheck_baton_t;
-
-/* An implementation of svn_wc_status_func4_t, similar to a function
-   with the same name in update_editor.c, but with slightly different
-   behavior around unversioned items */
-static svn_error_t *
-modcheck_callback(void *baton,
-                  const char *local_abspath,
-                  const svn_wc_status3_t *status,
-                  apr_pool_t *scratch_pool)
-{
-  modcheck_baton_t *mb = baton;
-
-  switch (status->node_status)
-    {
-      case svn_wc_status_normal:
-      case svn_wc_status_incomplete:
-      case svn_wc_status_ignored:
-      case svn_wc_status_none:
-      case svn_wc_status_external:
-        break;
-
-      case svn_wc_status_deleted:
-        mb->found_mod = TRUE;
-        break;
-
-      case svn_wc_status_missing:
-      case svn_wc_status_obstructed:
-        mb->found_mod = TRUE;
-        mb->found_not_delete = TRUE;
-        /* Exit from the status walker: We know what we want to know */
-        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
-
-      default:
-      case svn_wc_status_added:
-      case svn_wc_status_replaced:
-      case svn_wc_status_modified:
-      case svn_wc_status_unversioned:
-        mb->found_mod = TRUE;
-        mb->found_not_delete = TRUE;
-        /* Exit from the status walker: We know what we want to know */
-        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Set *ALLOW to true if the path can be safely deleted by the crop operation,
-   otherwise to false. */
-static svn_error_t *
-allow_crop(svn_boolean_t *allow,
-           svn_wc__db_t *db,
-           const char *local_abspath,
-           svn_cancel_func_t cancel_func,
-           void *cancel_baton,
-           apr_pool_t *scratch_pool)
-{
-  modcheck_baton_t modcheck_baton = { NULL, FALSE, FALSE };
-  svn_error_t *err;
-
-  modcheck_baton.db = db;
-
-  /* Walk the WC tree for status with depth infinity, looking for any local
-   * modifications. If it's a "sparse" directory, that's OK: there can be
-   * no local mods in the pieces that aren't present in the WC. */
-
-  err = svn_wc__internal_walk_status(db, local_abspath,
-                                     svn_depth_infinity,
-                                     FALSE, FALSE, FALSE, NULL,
-                                     modcheck_callback, &modcheck_baton,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
-
-  *allow = !modcheck_baton.found_mod || (modcheck_baton.found_mod
-                                         && !modcheck_baton.found_not_delete);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Helper function that crops the children of the LOCAL_ABSPATH, under the
  * constraint of NEW_DEPTH. The DIR_PATH itself will never be cropped. The
  * whole subtree should have been locked.
@@ -194,17 +103,17 @@ crop_children(svn_wc__db_t *db,
 
       if (have_work)
         {
-          svn_boolean_t allow;
+          svn_boolean_t modified, all_deletes;
 
           if (child_status != svn_wc__db_status_deleted)
             continue; /* Leave local additions alone */
 
-          SVN_ERR(allow_crop(&allow,
-                             db, child_abspath,
-                             cancel_func, cancel_baton,
-                             iterpool));
+          SVN_ERR(svn_wc__node_has_local_mods(&modified, &all_deletes,
+                                              db, child_abspath, FALSE,
+                                              cancel_func, cancel_baton,
+                                              iterpool));
 
-          if (!allow)
+          if (modified && !all_deletes)
             continue; /* Something interesting is still there */
         }
 
@@ -228,14 +137,14 @@ crop_children(svn_wc__db_t *db,
 
       if (new_depth < remove_below)
         {
-          svn_boolean_t allow;
+          svn_boolean_t modified, all_deletes;
 
-          SVN_ERR(allow_crop(&allow,
-                             db, child_abspath,
-                             cancel_func, cancel_baton,
-                             iterpool));
+          SVN_ERR(svn_wc__node_has_local_mods(&modified, &all_deletes,
+                                              db, child_abspath, FALSE,
+                                              cancel_func, cancel_baton,
+                                              iterpool));
 
-          if (allow)
+          if (!modified || all_deletes)
             {
               SVN_ERR(svn_wc__db_base_remove(db, child_abspath,
                                              FALSE, FALSE, FALSE,
@@ -285,7 +194,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
   svn_node_kind_t kind;
   svn_revnum_t revision;
   svn_depth_t depth;
-  svn_boolean_t allow;
+  svn_boolean_t modified, all_deletes;
   const char *repos_relpath, *repos_root, *repos_uuid;
 
   SVN_ERR(svn_wc__db_is_switched(&is_root, &is_switched, NULL,
@@ -347,11 +256,12 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
         break; /* Ok to exclude */
     }
 
-  SVN_ERR(allow_crop(&allow, wc_ctx->db, local_abspath,
-                     cancel_func, cancel_baton,
-                     scratch_pool));
+  SVN_ERR(svn_wc__node_has_local_mods(&modified, &all_deletes,
+                                      wc_ctx->db, local_abspath, FALSE,
+                                      cancel_func, cancel_baton,
+                                      scratch_pool));
 
-  if (allow)
+  if (!modified || all_deletes)
     {
       /* Remove all working copy data below local_abspath */
       SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,

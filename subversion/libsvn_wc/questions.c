@@ -596,18 +596,138 @@ svn_wc__has_switched_subtrees(svn_boolean_t *is_switched,
 }
 
 
+/* A baton for use with modcheck_found_entry(). */
+typedef struct modcheck_baton_t {
+  svn_boolean_t ignore_unversioned;
+  svn_boolean_t found_mod;  /* whether a modification has been found */
+  svn_boolean_t found_not_delete;  /* Found a not-delete modification */
+} modcheck_baton_t;
+
+/* An implementation of svn_wc_status_func4_t. */
+static svn_error_t *
+modcheck_callback(void *baton,
+                  const char *local_abspath,
+                  const svn_wc_status3_t *status,
+                  apr_pool_t *scratch_pool)
+{
+  modcheck_baton_t *mb = baton;
+
+  switch (status->node_status)
+    {
+      case svn_wc_status_normal:
+      case svn_wc_status_incomplete:
+      case svn_wc_status_ignored:
+      case svn_wc_status_none:
+      case svn_wc_status_external:
+        break;
+
+      case svn_wc_status_deleted:
+        mb->found_mod = TRUE;
+        if (!mb->ignore_unversioned
+            && status->actual_kind != svn_node_none
+            && status->actual_kind != svn_node_unknown)
+          {
+            /* The delete is obstructed by something unversioned */
+            mb->found_not_delete = TRUE;
+            return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+          }
+        break;
+
+      case svn_wc_status_unversioned:
+        if (mb->ignore_unversioned)
+          break;
+        /* else fall through */
+      case svn_wc_status_missing:
+      case svn_wc_status_obstructed:
+        mb->found_mod = TRUE;
+        mb->found_not_delete = TRUE;
+        /* Exit from the status walker: We know what we want to know */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+
+      default:
+      case svn_wc_status_added:
+      case svn_wc_status_replaced:
+      case svn_wc_status_modified:
+        mb->found_mod = TRUE;
+        mb->found_not_delete = TRUE;
+        /* Exit from the status walker: We know what we want to know */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Set *MODIFIED to true iff there are any local modifications within the
+ * tree rooted at LOCAL_ABSPATH, using DB. If *MODIFIED
+ * is set to true and all the local modifications were deletes then set
+ * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  LOCAL_ABSPATH
+ * may be a file or a directory. */
+svn_error_t *
+svn_wc__node_has_local_mods(svn_boolean_t *modified,
+                            svn_boolean_t *all_edits_are_deletes,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_boolean_t ignore_unversioned,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool)
+{
+  modcheck_baton_t modcheck_baton = { FALSE, FALSE, FALSE };
+  svn_error_t *err;
+
+  if (!all_edits_are_deletes)
+    {
+      SVN_ERR(svn_wc__db_has_db_mods(modified, db, local_abspath,
+                                     scratch_pool));
+
+      if (*modified)
+        return SVN_NO_ERROR;
+    }
+
+  modcheck_baton.ignore_unversioned = ignore_unversioned;
+
+  /* Walk the WC tree for status with depth infinity, looking for any local
+   * modifications. If it's a "sparse" directory, that's OK: there can be
+   * no local mods in the pieces that aren't present in the WC. */
+
+  err = svn_wc__internal_walk_status(db, local_abspath,
+                                     svn_depth_infinity,
+                                     FALSE, FALSE, FALSE, NULL,
+                                     modcheck_callback, &modcheck_baton,
+                                     cancel_func, cancel_baton,
+                                     scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
+
+  *modified = modcheck_baton.found_mod;
+  if (all_edits_are_deletes)
+    *all_edits_are_deletes = (modcheck_baton.found_mod
+                              && !modcheck_baton.found_not_delete);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
+                       svn_boolean_t ignore_unversioned,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__db_has_local_mods(is_modified,
-                                                   wc_ctx->db,
-                                                   local_abspath,
-                                                   cancel_func,
-                                                   cancel_baton,
-                                                   scratch_pool));
+  svn_boolean_t modified;
+
+  SVN_ERR(svn_wc__node_has_local_mods(&modified, NULL,
+                                      wc_ctx->db, local_abspath,
+                                      ignore_unversioned,
+                                      cancel_func, cancel_baton,
+                                      scratch_pool));
+
+  *is_modified = modified;
+  return SVN_NO_ERROR;
 }
