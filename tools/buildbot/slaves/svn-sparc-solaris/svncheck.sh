@@ -30,10 +30,10 @@ export LD_PRELOAD_64
 
 if [ $SVN_VER_MINOR -eq 9 ]; then
   echo "============ make svnserveautocheck"
-  make svnserveautocheck CLEANUP=1 PARALLEL=30 THREADED=1
+  make svnserveautocheck CLEANUP=1 PARALLEL=30 THREADED=1 || exit $?
 else
   echo "============ make check"
-  make check CLEANUP=1 PARALLEL=30 THREADED=1
+  make check CLEANUP=1 PARALLEL=30 THREADED=1 || exit $?
 fi
 
 exit 0
