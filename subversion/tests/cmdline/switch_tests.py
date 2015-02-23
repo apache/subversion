@@ -2048,7 +2048,7 @@ def tolerate_local_mods(sbox):
   svntest.main.file_write(LM_path, 'Locally modified file.\n', 'w+')
 
   expected_output = svntest.wc.State(wc_dir, {
-    'A/L' : Item(status='D '),
+    'A/L' : Item(status='  ', treeconflict='C'),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -2060,6 +2060,9 @@ def tolerate_local_mods(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak('', 'iota', wc_rev=1)
   expected_status.tweak('A', switched='S')
+  expected_status.add({
+    'A/L' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-')
+  })
 
   # Used to fail with locally modified or unversioned files
   svntest.actions.run_and_verify_switch(wc_dir, A_path, A2_url,
