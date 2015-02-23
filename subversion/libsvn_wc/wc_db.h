@@ -3099,10 +3099,6 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
    This operation always recursively removes all nodes at and below
    LOCAL_ABSPATH from NODES and ACTUAL.
 
-   If NOT_PRESENT_REVISION specifies a valid revision, leave a not_present
-   BASE node at local_abspath of the specified status and kind.
-   (Requires an existing BASE node before removing)
-
    If DESTROY_WC is TRUE, this operation *installs* workqueue operations to
    update the local filesystem after the database operation. If DESTROY_CHANGES
    is FALSE, modified and unversioned files are left after running this
@@ -3120,9 +3116,6 @@ svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
                           const char *local_abspath,
                           svn_boolean_t destroy_wc,
                           svn_boolean_t destroy_changes,
-                          svn_revnum_t not_present_revision,
-                          svn_wc__db_status_t not_present_status,
-                          svn_node_kind_t not_present_kind,
                           const svn_skel_t *conflict,
                           const svn_skel_t *work_items,
                           svn_cancel_func_t cancel_func,
