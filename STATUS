@@ -75,6 +75,26 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1661664, r1661669, r1661673, r1661695, r1661682, r1661698
+   Properly handle deletes that have local replacements as a plain delete
+   Justification:
+     Avoids loosing work. This scenario needs to raise tree conflicts in
+     the update editor.
+   Notes:
+     More backports or a backport branch might be necessary.
+     Contains change to public api, so 1.9.0 only
+     (And otherwise performance hit)
+   Votes:
+     +0: rhuijben (Fixes actual user bugs)
+
+ * r1661718 and many others
+   Fix invalid database state (moves) on incoming deletes during update
+   Justification:
+     Fixes database corruption. A huge catch-up merge is probably easier
+     than a backport.
+   Votes:
+     +0: rhuijben
+
 Veto-blocked changes:
 =====================
 
