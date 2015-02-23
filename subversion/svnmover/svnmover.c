@@ -2282,6 +2282,8 @@ main(int argc, const char *argv[])
    */
   pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
+  svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
+
   err = sub_main(&exit_code, argc, argv, pool);
 
   /* Flush stdout and report if it fails. It would be flushed on exit anyway
