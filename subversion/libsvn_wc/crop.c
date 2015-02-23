@@ -194,10 +194,10 @@ crop_children(svn_wc__db_t *db,
 
       if (have_work)
         {
+          svn_boolean_t allow;
+
           if (child_status != svn_wc__db_status_deleted)
             continue; /* Leave local additions alone */
-
-          svn_boolean_t allow;
 
           SVN_ERR(allow_crop(&allow,
                              db, child_abspath,
