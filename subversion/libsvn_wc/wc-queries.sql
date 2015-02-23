@@ -184,16 +184,6 @@ INSERT OR REPLACE INTO nodes (
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
         ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
 
--- STMT_SELECT_BASE_PRESENT
-SELECT local_relpath, kind FROM nodes n
-WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth = 0
-  AND presence in (MAP_NORMAL, MAP_INCOMPLETE)
-  AND NOT EXISTS(SELECT 1 FROM NODES w
-                 WHERE w.wc_id = ?1 AND w.local_relpath = n.local_relpath
-                   AND op_depth > 0)
-ORDER BY local_relpath DESC
-
 -- STMT_SELECT_WORKING_PRESENT
 SELECT local_relpath, kind, checksum, translated_size, last_mod_time
 FROM nodes n
