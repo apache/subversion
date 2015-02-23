@@ -1859,11 +1859,11 @@ log_message_func(const char **log_msg,
 /* Parse the action arguments into action structures. */
 static svn_error_t *
 parse_actions(apr_array_header_t **actions,
+              const char **anchor_url_p,
               apr_array_header_t *action_args,
-              const char *root_url,
-              const char *anchor,
               apr_pool_t *pool)
 {
+  const char *anchor_url = *anchor_url_p;
   int i;
 
   *actions = apr_array_make(pool, 1, sizeof(struct action *));
@@ -1920,33 +1920,32 @@ parse_actions(apr_array_header_t **actions,
 
           SVN_ERR(svn_opt_parse_path(&action->rev_spec[j], &path, path, pool));
 
-          /* If there's a ROOT_URL, we expect URL to be a path
-             relative to ROOT_URL (and we build a full url from the
+          /* If there's an ANCHOR_URL, we expect URL to be a path
+             relative to ANCHOR_URL (and we build a full url from the
              combination of the two).  Otherwise, it should be a full
              url. */
           if (svn_path_is_url(path))
             {
-              url = path;
-              path = svn_uri_skip_ancestor(root_url, url, pool);
+              url = sanitize_url(path, pool);
+              path = svn_uri_skip_ancestor(anchor_url, url, pool);
             }
           else
             {
-              if (! root_url)
+              if (! anchor_url)
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                          "'%s' is not a URL, and "
                                          "--root-url (-U) not provided",
                                          path);
-              url = svn_path_url_add_component2(root_url, path, pool);
+              url = svn_path_url_add_component2(anchor_url, path, pool);
             }
-          url = sanitize_url(url, pool);
           action->path[j] = path;
 
-          if (! anchor)
-            anchor = url;
+          if (! anchor_url)
+            anchor_url = url;
           else
             {
-              anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
-              if (!anchor || !anchor[0])
+              anchor_url = svn_uri_get_longest_ancestor(anchor_url, url, pool);
+              if (!anchor_url || !anchor_url[0])
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                          "URLs in the action list do not "
                                          "share a common ancestor");
@@ -1956,6 +1955,7 @@ parse_actions(apr_array_header_t **actions,
       APR_ARRAY_PUSH(*actions, struct action *) = action;
     }
 
+  *anchor_url_p = anchor_url;
   return SVN_NO_ERROR;
 }
 
@@ -1968,7 +1968,6 @@ static svn_error_t *
 sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   apr_array_header_t *actions;
-  const char *anchor = NULL;
   svn_error_t *err = SVN_NO_ERROR;
   apr_getopt_t *opts;
   enum {
@@ -2007,7 +2006,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   const char *message = "";
   svn_stringbuf_t *filedata = NULL;
   const char *username = NULL, *password = NULL;
-  const char *root_url = NULL, *extra_args_file = NULL;
+  const char *anchor_url = NULL, *extra_args_file = NULL;
   const char *config_dir = NULL;
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
@@ -2067,12 +2066,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           password = apr_pstrdup(pool, arg);
           break;
         case 'U':
-          SVN_ERR(svn_utf_cstring_to_utf8(&root_url, arg, pool));
-          if (! svn_path_is_url(root_url))
+          SVN_ERR(svn_utf_cstring_to_utf8(&anchor_url, arg, pool));
+          if (! svn_path_is_url(anchor_url))
             return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                     "'%s' is not a URL", root_url);
-          root_url = sanitize_url(root_url, pool);
-          anchor = root_url;
+                                     "'%s' is not a URL", anchor_url);
+          anchor_url = sanitize_url(anchor_url, pool);
           break;
         case 'r':
           {
@@ -2228,17 +2226,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       /* Parse arguments -- converting local style to internal style,
        * repos-relative URLs to regular URLs, etc., appending the root
        * URL temporarily as a reference for repos-relative URLs. */
-      if (root_url)
-        APR_ARRAY_PUSH(action_args, const char *) = root_url;
+      if (anchor_url)
+        APR_ARRAY_PUSH(action_args, const char *) = anchor_url;
       SVN_ERR(svn_client_args_to_target_array2(&action_args, opts, action_args,
                                                ctx, FALSE, pool));
-      if (root_url)
+      if (anchor_url)
         action_args->nelts--;
 
-      if ((err = parse_actions(&actions,
-                               action_args, root_url, anchor,
+      if ((err = parse_actions(&actions, &anchor_url,
+                               action_args,
                                pool))
-          || (err = execute(actions, anchor, revprops,
+          || (err = execute(actions, anchor_url, revprops,
                             base_revision, ctx, pool)))
         {
           if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
