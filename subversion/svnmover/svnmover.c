@@ -1675,7 +1675,7 @@ static void
 usage(FILE *stream, apr_pool_t *pool)
 {
   svn_error_clear(svn_cmdline_fputs(
-    _("usage: svnmover [-U REPO_URL] [ACTION...]\n"
+    _("usage: svnmover -U REPO_URL [ACTION...]\n"
       "A client for experimenting with move tracking.\n"
       "\n"
       "  Perform URL-based ACTIONs on a Subversion repository, committing the\n"
@@ -1700,12 +1700,12 @@ usage(FILE *stream, apr_pool_t *pool)
       "  diff LEFT RIGHT        : diff LEFT to RIGHT\n"
       "  diff-e LEFT RIGHT      : diff LEFT to RIGHT (element-focused output)\n"
       "  merge FROM TO YCA@REV  : merge changes YCA->FROM and YCA->TO into TO\n"
-      "  cp REV SRC-URL DST-URL : copy SRC-URL@REV to DST-URL\n"
-      "  mv SRC-URL DST-URL     : move SRC-URL to DST-URL\n"
-      "  rm URL                 : delete URL\n"
-      "  mkdir URL              : create new directory URL\n"
-      "  put SRC-FILE URL       : add or modify file URL with text copied from\n"
-      "                           SRC-FILE (use \"-\" to read from standard input)\n"
+      "  cp REV SRC DST         : copy SRC@REV to DST\n"
+      "  mv SRC DST             : move SRC to DST\n"
+      "  rm PATH                : delete PATH\n"
+      "  mkdir PATH             : create new directory PATH\n"
+      "  put LOCAL_FILE PATH    : add or modify file PATH with text copied from\n"
+      "                           LOCAL_FILE (use \"-\" to read from standard input)\n"
       "\n"
       "Valid options:\n"
       "  -h, -? [--help]        : display this text\n"
@@ -1859,11 +1859,9 @@ log_message_func(const char **log_msg,
 /* Parse the action arguments into action structures. */
 static svn_error_t *
 parse_actions(apr_array_header_t **actions,
-              const char **anchor_url_p,
               apr_array_header_t *action_args,
               apr_pool_t *pool)
 {
-  const char *anchor_url = *anchor_url_p;
   int i;
 
   *actions = apr_array_make(pool, 1, sizeof(struct action *));
@@ -1907,7 +1905,7 @@ parse_actions(apr_array_header_t **actions,
       /* Parse the required number of URLs. */
       for (j = 0; j < num_url_args; ++j)
         {
-          const char *path, *url;
+          const char *path;
 
           if (++i == action_args->nelts)
             return svn_error_trace(insufficient());
@@ -1926,36 +1924,16 @@ parse_actions(apr_array_header_t **actions,
              url. */
           if (svn_path_is_url(path))
             {
-              url = sanitize_url(path, pool);
-              path = svn_uri_skip_ancestor(anchor_url, url, pool);
-            }
-          else
-            {
-              if (! anchor_url)
-                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                         "'%s' is not a URL, and "
-                                         "--root-url (-U) not provided",
-                                         path);
-              url = svn_path_url_add_component2(anchor_url, path, pool);
+              return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                       "Argument '%s' is a URL; use "
+                                       "--root-url (-U) instead", path);
             }
           action->path[j] = path;
-
-          if (! anchor_url)
-            anchor_url = url;
-          else
-            {
-              anchor_url = svn_uri_get_longest_ancestor(anchor_url, url, pool);
-              if (!anchor_url || !anchor_url[0])
-                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                         "URLs in the action list do not "
-                                         "share a common ancestor");
-            }
         }
 
       APR_ARRAY_PUSH(*actions, struct action *) = action;
     }
 
-  *anchor_url_p = anchor_url;
   return SVN_NO_ERROR;
 }
 
@@ -2199,6 +2177,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
                 svn_string_create(log_msg, pool));
 
+  if (!anchor_url)
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "--root-url (-U) not provided");
+
   /* Copy the rest of our command-line arguments to an array,
      UTF-8-ing them along the way. */
   /* If there are extra arguments in a supplementary file, tack those
@@ -2224,16 +2206,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   do
     {
       /* Parse arguments -- converting local style to internal style,
-       * repos-relative URLs to regular URLs, etc., appending the root
-       * URL temporarily as a reference for repos-relative URLs. */
-      if (anchor_url)
-        APR_ARRAY_PUSH(action_args, const char *) = anchor_url;
+       * repos-relative URLs to regular URLs, etc. */
       SVN_ERR(svn_client_args_to_target_array2(&action_args, opts, action_args,
                                                ctx, FALSE, pool));
-      if (anchor_url)
-        action_args->nelts--;
 
-      if ((err = parse_actions(&actions, &anchor_url,
+      if ((err = parse_actions(&actions,
                                action_args,
                                pool))
           || (err = execute(actions, anchor_url, revprops,
