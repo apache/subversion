@@ -11504,7 +11504,6 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
             apr_time_t changed_date,
             const char *changed_author,
             const svn_checksum_t *new_checksum,
-            const apr_array_header_t *new_children,
             apr_hash_t *new_dav_cache,
             svn_boolean_t keep_changelist,
             svn_boolean_t no_unlock,
@@ -11613,13 +11612,24 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
   if (op_depth > 0)
     {
       int affected_rows;
-      apr_hash_t *map_pre = NULL;
-      apr_hash_t *map_post = NULL;
-      svn_boolean_t op_root = (relpath_depth(local_relpath) == op_depth);
 
-      /* First collect the moves that we might delete in a bit */
-      SVN_ERR(moved_descendant_collect(&map_pre, wcroot, local_relpath, 0,
-                                       scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(op_depth == relpath_depth(local_relpath));
+
+      /* First clear the moves that we are going to delete in a bit */
+      {
+        apr_hash_t *old_moves;
+        apr_hash_index_t *hi;
+        SVN_ERR(moved_descendant_collect(&old_moves, wcroot, local_relpath, 0,
+                                         scratch_pool, scratch_pool));
+
+        if (old_moves)
+          for (hi = apr_hash_first(scratch_pool, old_moves);
+                hi; hi = apr_hash_next(hi))
+            {
+              SVN_ERR(clear_moved_here(wcroot, apr_hash_this_key(hi),
+                                        scratch_pool));
+            }
+      }
 
       /* This removes all layers of this node and at the same time determines
          if we need to remove shadowed layers below our descendants. */
@@ -11653,8 +11663,7 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
          be integrated, they really affect a different op-depth and
          completely different nodes (via a different recursion pattern). */
 
-      if (op_root
-          && old_presence != svn_wc__db_status_base_deleted)
+      if (old_presence != svn_wc__db_status_base_deleted)
         {
           /* Collapse descendants of the current op_depth to layer 0,
              this includes moved-from/to clearing */
@@ -11663,42 +11672,21 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
                                     scratch_pool));
         }
 
-      SVN_ERR(moved_descendant_collect(&map_post, wcroot, local_relpath, 0,
-                                       scratch_pool, scratch_pool));
-
-
-      /* And make the recorded local moves represent moves of the node we just
-         committed. */
-      SVN_ERR(moved_descendant_commit(wcroot, local_relpath,
-                                      repos_id, repos_relpath, new_revision,
-                                      map_post, scratch_pool));
-
-      if (map_pre && map_post != map_pre)
+      if (old_presence != svn_wc__db_status_base_deleted)
         {
-          apr_hash_index_t *hi;
+          apr_hash_t *moves = NULL;
 
-          for (hi = apr_hash_first(scratch_pool, map_pre);
-               hi; hi = apr_hash_next(hi))
-            {
-              const char *to_relpath = apr_hash_this_key(hi);
-              svn_error_t *err;
+          SVN_ERR(moved_descendant_collect(&moves, wcroot, local_relpath, 0,
+                                           scratch_pool, scratch_pool));
 
-              if (map_post && svn_hash_gets(map_post, to_relpath))
-                continue;
-
-              err = clear_moved_here(wcroot, to_relpath, scratch_pool);
-
-              if (err)
-                {
-                  if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-                    return svn_error_trace(err);
-
-                  svn_error_clear(err); /* Node already committed? */
-                }
-            }
+          /* And make the recorded local moves represent moves of the node we
+             just committed. */
+          SVN_ERR(moved_descendant_commit(wcroot, local_relpath,
+                                      repos_id, repos_relpath, new_revision,
+                                      moves, scratch_pool));
         }
 
-      if (op_root && moved_here)
+      if (moved_here)
         {
           /* This node is no longer modified, so no node was moved here */
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -11794,17 +11782,6 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
         }
     }
 
-  if (new_kind == svn_node_dir)
-    {
-      /* When committing a directory, we should have its new children.  */
-      /* ### one day. just not today.  */
-#if 0
-      SVN_ERR_ASSERT(new_children != NULL);
-#endif
-
-      /* ### process the children  */
-    }
-
   if (!no_unlock)
     {
       svn_sqlite__stmt_t *lock_stmt;
@@ -11839,7 +11816,6 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          apr_time_t changed_date,
                          const char *changed_author,
                          const svn_checksum_t *new_checksum,
-                         const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
                          svn_boolean_t no_unlock,
@@ -11851,7 +11827,6 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
-  SVN_ERR_ASSERT(new_checksum == NULL || new_children == NULL);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
@@ -11860,7 +11835,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   SVN_WC__DB_WITH_TXN(
     commit_node(wcroot, local_relpath,
                 new_revision, changed_revision, changed_date, changed_author,
-                new_checksum, new_children, new_dav_cache, keep_changelist,
+                new_checksum, new_dav_cache, keep_changelist,
                 no_unlock, work_items, scratch_pool),
     wcroot);
 
@@ -16122,7 +16097,6 @@ process_committed_leaf(svn_wc__db_t *db,
                       new_revnum, new_changed_rev,
                       new_changed_date, new_changed_author,
                       checksum,
-                      NULL /* new_children */,
                       new_dav_cache,
                       !remove_changelist,
                       !remove_lock,

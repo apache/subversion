@@ -2519,11 +2519,6 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
    CHANGED_AUTHOR is the (server-side) author of CHANGED_REVISION. It may be
    NULL if the revprop is missing on the revision.
 
-   One or both of NEW_CHECKSUM and NEW_CHILDREN should be NULL. For new:
-     files: NEW_CHILDREN should be NULL
-     dirs: NEW_CHECKSUM should be NULL
-     symlinks: both should be NULL
-
    WORK_ITEMS will be place into the work queue.
 */
 svn_error_t *
@@ -2534,7 +2529,6 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          apr_time_t changed_date,
                          const char *changed_author,
                          const svn_checksum_t *new_checksum,
-                         const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
                          svn_boolean_t no_unlock,
