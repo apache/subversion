@@ -619,7 +619,7 @@ def update_obstructing_symlink(sbox):
   wc_dir = sbox.wc_dir
   mu_path = sbox.ospath('A/mu')
 
-  iota_abspath = os.path.abspath(iota_path)
+  iota_abspath = os.path.abspath(sbox.ospath('iota'))
 
   # delete mu and replace it with an (not-added) symlink
   sbox.simple_rm('A/mu')
