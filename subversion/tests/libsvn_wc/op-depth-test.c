@@ -3725,6 +3725,8 @@ incomplete_switch(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
 
     SVN_ERR(insert_dirs(&b, before));
+    SVN_ERR(svn_io_remove_dir2(sbox_wc_path(&b, "A/B/C/D"), FALSE,
+                               NULL, NULL, pool));
     SVN_ERR(check_db_rows(&b, "", before));
     SVN_ERR(sbox_wc_update(&b, "", 4));
     SVN_ERR(check_db_rows(&b, "", after_update));
