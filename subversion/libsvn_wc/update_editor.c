@@ -1332,14 +1332,21 @@ modcheck_callback(void *baton,
       case svn_wc_status_incomplete:
       case svn_wc_status_ignored:
       case svn_wc_status_none:
-      case svn_wc_status_unversioned:
       case svn_wc_status_external:
         break;
 
       case svn_wc_status_deleted:
         mb->found_mod = TRUE;
+        if (status->actual_kind != svn_node_none
+            && status->actual_kind != svn_node_unknown)
+          {
+            /* The delete is obstructed by something unversioned */
+            mb->found_not_delete = TRUE;
+            return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+          }
         break;
 
+      case svn_wc_status_unversioned:
       case svn_wc_status_missing:
       case svn_wc_status_obstructed:
         mb->found_mod = TRUE;

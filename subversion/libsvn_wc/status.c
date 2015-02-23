@@ -378,9 +378,6 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t copied = FALSE;
   svn_boolean_t conflicted;
   const char *moved_from_abspath = NULL;
-  svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
-                                ? dirent->filesize
-                                : SVN_INVALID_FILESIZE;
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind node_status = svn_wc_status_normal;
@@ -644,7 +641,21 @@ assemble_status(svn_wc_status3_t **status,
         stat->kind = svn_node_unknown;
     }
   stat->depth = info->depth;
-  stat->filesize = filesize;
+  if (dirent)
+    {
+      stat->filesize = (dirent->kind == svn_node_file)
+                            ? dirent->filesize
+                            : SVN_INVALID_FILESIZE;
+      stat->actual_kind = dirent->special ? svn_node_symlink
+                                          : dirent->kind;
+    }
+  else
+    {
+      stat->filesize = SVN_INVALID_FILESIZE;
+      stat->actual_kind = ignore_text_mods ? svn_node_unknown
+                                           : svn_node_none;
+    }
+
   stat->node_status = node_status;
   stat->text_status = text_status;
   stat->prop_status = prop_status;
@@ -733,9 +744,20 @@ assemble_unversioned(svn_wc_status3_t **status,
   /*stat->versioned = FALSE;*/
   stat->kind = svn_node_unknown; /* not versioned */
   stat->depth = svn_depth_unknown;
-  stat->filesize = (dirent && dirent->kind == svn_node_file)
-                        ? dirent->filesize
-                        : SVN_INVALID_FILESIZE;
+  if (dirent)
+    {
+      stat->actual_kind = dirent->special ? svn_node_symlink
+                                           : dirent->kind;
+      stat->filesize = (dirent->kind == svn_node_file)
+                            ? dirent->filesize
+                            : SVN_INVALID_FILESIZE;
+    }
+  else
+    {
+       stat->actual_kind = svn_node_none;
+       stat->filesize = SVN_INVALID_FILESIZE;
+    }
+
   stat->node_status = svn_wc_status_none;
   stat->text_status = svn_wc_status_none;
   stat->prop_status = svn_wc_status_none;
