@@ -1690,7 +1690,7 @@ JOIN nodes n ON n.wc_id = ?1 AND n.local_relpath = s.local_relpath
                  WHERE d.wc_id = ?1 AND d.local_relpath = ?2
                    AND d.op_depth < ?3)
 WHERE s.wc_id = ?1 AND s.op_depth = ?3
-  AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
+  AND (s.local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2))
   AND s.moved_to IS NOT NULL
 
 /* This statement is very similar to STMT_SELECT_MOVED_DESCENDANTS_SHD,
@@ -1705,7 +1705,7 @@ JOIN nodes s ON s.wc_id = n.wc_id AND s.local_relpath = n.local_relpath
                       AND d.local_relpath = s.local_relpath
                       AND d.op_depth > ?3)
 WHERE n.wc_id = ?1 AND n.op_depth = ?3
-  AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND (n.local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2))
   AND s.moved_to IS NOT NULL
 
 -- STMT_COMMIT_UPDATE_ORIGIN
