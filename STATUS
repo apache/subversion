@@ -65,7 +65,7 @@ Candidate changes:
      and revert. The implementation is used by at least one Subversion
      GUI since 1.8 (as the flag is available at the libsvn_wc level)
    Votes:
-     +1: rhuijben (not after 1.9.0)
+     +1: rhuijben, philip (not after 1.9.0)
 
  * r1661476, r1661480, r1661482
    Fix a segfault when running 'svn info' on a WORKING exclude
