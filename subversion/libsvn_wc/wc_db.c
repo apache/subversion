@@ -7369,9 +7369,6 @@ remove_node_txn(svn_boolean_t *left_changes,
                 svn_wc__db_t *db,
                 svn_boolean_t destroy_wc,
                 svn_boolean_t destroy_changes,
-                svn_revnum_t not_present_rev,
-                svn_wc__db_status_t not_present_status,
-                svn_node_kind_t not_present_kind,
                 const svn_skel_t *conflict,
                 const svn_skel_t *work_items,
                 svn_cancel_func_t cancel_func,
@@ -7379,9 +7376,6 @@ remove_node_txn(svn_boolean_t *left_changes,
                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-
-  apr_int64_t repos_id;
-  const char *repos_relpath;
 
   /* Note that unlike many similar functions it is a valid scenario for this
      function to be called on a wcroot! */
@@ -7391,15 +7385,6 @@ remove_node_txn(svn_boolean_t *left_changes,
 
   if (left_changes)
     *left_changes = FALSE;
-
-  /* Need info for not_present node? */
-  if (SVN_IS_VALID_REVNUM(not_present_rev))
-    SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
-                                              &repos_relpath, &repos_id,
-                                              NULL, NULL, NULL, NULL, NULL,
-                                              NULL, NULL, NULL, NULL, NULL,
-                                              wcroot, local_relpath,
-                                              scratch_pool, scratch_pool));
 
   if (destroy_wc
       && (!destroy_changes || *local_relpath == '\0'))
@@ -7597,26 +7582,6 @@ remove_node_txn(svn_boolean_t *left_changes,
                                          local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* Should we leave a not-present node? */
-  if (SVN_IS_VALID_REVNUM(not_present_rev))
-    {
-      insert_base_baton_t ibb;
-      blank_ibb(&ibb);
-
-      ibb.repos_id = repos_id;
-
-      SVN_ERR_ASSERT(not_present_status == svn_wc__db_status_not_present
-                     || not_present_status == svn_wc__db_status_excluded);
-
-      ibb.status = not_present_status;
-      ibb.kind = not_present_kind;
-
-      ibb.repos_relpath = repos_relpath;
-      ibb.revision = not_present_rev;
-
-      SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
-    }
-
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
   if (conflict)
     SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
@@ -7631,9 +7596,6 @@ svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
                           const char *local_abspath,
                           svn_boolean_t destroy_wc,
                           svn_boolean_t destroy_changes,
-                          svn_revnum_t not_present_revision,
-                          svn_wc__db_status_t not_present_status,
-                          svn_node_kind_t not_present_kind,
                           const svn_skel_t *conflict,
                           const svn_skel_t *work_items,
                           svn_cancel_func_t cancel_func,
@@ -7652,8 +7614,7 @@ svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
   SVN_WC__DB_WITH_TXN(remove_node_txn(left_changes,
                                       wcroot, local_relpath, db,
                                       destroy_wc, destroy_changes,
-                                      not_present_revision, not_present_status,
-                                      not_present_kind, conflict, work_items,
+                                      conflict, work_items,
                                       cancel_func, cancel_baton, scratch_pool),
                       wcroot);
 
