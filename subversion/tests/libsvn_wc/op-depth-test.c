@@ -562,6 +562,34 @@ check_db_conflicts(svn_test__sandbox_t *b,
   return comparison_baton.errors;
 }
 
+static svn_error_t *
+verify_db_callback(void *baton,
+                   const char *wc_abspath,
+                   const char *local_relpath,
+                   int op_depth,
+                   int id,
+                   const char *msg,
+                   apr_pool_t *scratch_pool)
+{
+  if (op_depth >= 0)
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                "Verify: %s: %s (%d): SV%04d %s",
+                wc_abspath, local_relpath, op_depth, id, msg);
+  else
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                "DB-VRFY: %s: %s: SV%04d %s",
+                wc_abspath, local_relpath, id, msg);
+}
+
+static svn_error_t *
+verify_db(svn_test__sandbox_t *b)
+{
+  SVN_ERR(svn_wc__db_verify_db_full(b->wc_ctx->db, b->wc_abspath,
+                                    verify_db_callback, NULL, b->pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The test functions */
@@ -11410,6 +11438,8 @@ make_copy_mixed(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
+  SVN_ERR(verify_db(&b));
+
   return SVN_NO_ERROR;
 }
 
@@ -11560,13 +11590,15 @@ make_copy_and_delete_mixed(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
+  SVN_ERR(verify_db(&b));
+
   return SVN_NO_ERROR;
 }
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
-static int max_threads = 2;
+static int max_threads = 4;
 
 static struct svn_test_descriptor_t test_funcs[] =
   {
@@ -11774,7 +11806,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "move deep bump"),
     SVN_TEST_OPTS_PASS(make_copy_mixed,
                        "make a copy of a mixed revision tree"),
-    SVN_TEST_OPTS_XFAIL(make_copy_and_delete_mixed,
+    SVN_TEST_OPTS_PASS(make_copy_and_delete_mixed,
                        "make a copy of a mixed revision tree and del"),
     SVN_TEST_NULL
   };
