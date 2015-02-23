@@ -477,7 +477,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                              SVN_PROP_EXTERNALS);
 
                   SVN_ERR(svn_wc__has_local_mods(&is_modified, ctx->wc_ctx,
-                                                 external_abspath,
+                                                 external_abspath, TRUE,
                                                  ctx->cancel_func,
                                                  ctx->cancel_baton,
                                                  iterpool));

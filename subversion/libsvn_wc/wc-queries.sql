@@ -1580,16 +1580,6 @@ WHERE wc_id = ?1
   AND repos_path IS NOT RELPATH_SKIP_JOIN(?2, ?3, local_relpath)
 LIMIT 1
 
--- STMT_SELECT_BASE_FILES_RECURSIVE
-SELECT local_relpath, translated_size, last_mod_time FROM nodes AS n
-WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND op_depth = 0
-  AND kind=MAP_FILE
-  AND presence=MAP_NORMAL
-  AND file_external IS NULL
-
 -- STMT_SELECT_MOVED_FROM_RELPATH
 SELECT local_relpath, op_depth FROM nodes
 WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth > 0

@@ -1228,7 +1228,7 @@ tc_editor_delete(node_move_baton_t *nmb,
 
   local_abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
   SVN_ERR(svn_wc__node_has_local_mods(&is_modified, &is_all_deletes,
-                                      nmb->umb->db, local_abspath,
+                                      nmb->umb->db, local_abspath, FALSE,
                                       NULL, NULL, scratch_pool));
   if (is_modified)
     {

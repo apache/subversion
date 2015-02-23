@@ -917,15 +917,17 @@ svn_wc__get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
 
 /* Indicate in @a *is_modified whether the working copy has local
  * modifications, using context @a wc_ctx.
- * Use @a scratch_pool for temporary allocations.
  *
- * This function provides a subset of the functionality of
- * svn_wc_revision_status2() and is more efficient if the caller
- * doesn't need all information returned by svn_wc_revision_status2(). */
+ * If IGNORE_UNVERSIONED, unversioned paths inside the tree rooted by
+ * LOCAL_ABSPATH are not seen as a change, otherwise they are.
+ * (svn:ignored paths are always ignored)
+ *
+ * Use @a scratch_pool for temporary allocations. */
 svn_error_t *
 svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
+                       svn_boolean_t ignore_unversioned,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
