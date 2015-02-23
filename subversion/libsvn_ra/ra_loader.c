@@ -824,17 +824,21 @@ commit_callback_wrapper(const svn_commit_info_t *commit_info,
 {
   struct ccw_baton *ccwb = baton;
 
-  if (ccwb->original_callback)
-    {
-      SVN_ERR(ccwb->original_callback(commit_info, ccwb->original_baton, pool));
-    }
-
   /* if this commit used element-branching info, store the new info */
   if (ccwb->branching_txn)
     {
+      svn_branch_repos_t *repos = ccwb->branching_txn->repos;
+
       ccwb->branching_txn->rev = commit_info->revision;
+      APR_ARRAY_PUSH(repos->rev_roots, void *) = ccwb->branching_txn;
       SVN_ERR(store_repos_info(ccwb->branching_txn, ccwb->session,
                                ccwb->branch_info_dir, pool));
+    }
+
+  /* call the wrapped callback */
+  if (ccwb->original_callback)
+    {
+      SVN_ERR(ccwb->original_callback(commit_info, ccwb->original_baton, pool));
     }
 
   return SVN_NO_ERROR;

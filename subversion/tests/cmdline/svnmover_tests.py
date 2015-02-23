@@ -65,7 +65,7 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
                                                             *varargs)
   if errlines:
     raise svntest.main.SVNCommitFailure(str(errlines))
-  if len(outlines) < 1 or not _commit_re.match(outlines[-1]):
+  if not any(map(_commit_re.match, outlines)):
     raise svntest.main.SVNLineUnequal(str(outlines))
 
   # Now, run 'svn log -vq -rHEAD'

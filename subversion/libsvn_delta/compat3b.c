@@ -834,12 +834,13 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **node_p,
 
   /* Node content is null iff node is a subbranch root, but we shouldn't
      be querying a subbranch root. */
-  SVN_ERR_ASSERT(!node || node->content);
+  /* ### Why/how not? */
+  /*SVN_ERR_ASSERT(!node || node->content);*/
 
   node = node ? svn_branch_el_rev_content_dup(node, result_pool) : NULL;
 
   /* If content is by reference, fetch full content. */
-  if (node && (node->content->ref.relpath))
+  if (node && node->content && node->content->ref.relpath)
     {
       SVN_ERR(content_fetch(&node->content, NULL,
                             eb, &node->content->ref,
