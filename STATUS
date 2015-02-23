@@ -56,7 +56,7 @@ Candidate changes:
    Depends:
      Requires that the already approved r1660969 group is merged.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1661451, r1661484, r1661511
    Expose metadata_only option on svn_client_copy7()
