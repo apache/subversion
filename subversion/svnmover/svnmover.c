@@ -1351,7 +1351,6 @@ svn_branch_log(svn_editor3_t *editor,
 static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor_url,
-        const char *log_msg,
         apr_hash_t *revprops,
         svn_revnum_t base_revision,
         svn_client_ctx_t *ctx,
@@ -1364,15 +1363,6 @@ execute(const apr_array_header_t *actions,
   svn_boolean_t made_changes = FALSE;
   int i;
   svn_error_t *err;
-
-  /* Put the log message in the list of revprops, and check that the user
-     did not try to supply any other "svn:*" revprops. */
-  if (svn_prop_has_svn_prop(revprops, pool))
-    return svn_error_create(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                            _("Standard properties can't be set "
-                              "explicitly as revision properties"));
-  svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
-                svn_string_create(log_msg, pool));
 
   SVN_ERR(mtcc_create(&mtcc,
                       anchor_url, base_revision, revprops,
@@ -1685,12 +1675,16 @@ static void
 usage(FILE *stream, apr_pool_t *pool)
 {
   svn_error_clear(svn_cmdline_fputs(
-    _("usage: svnmover ACTION...\n"
-      "Subversion mover command client.\n"
-      "Type 'svnmover --version' to see the program version.\n"
+    _("usage: svnmover [-U REPO_URL] [ACTION...]\n"
+      "A client for experimenting with move tracking.\n"
       "\n"
-      "  Perform one or more Subversion repository URL-based ACTIONs, committing\n"
-      "  the result as a (single) new revision.\n"
+      "  Perform URL-based ACTIONs on a Subversion repository, committing the\n"
+      "  result as a (single) new revision, similar to svnmucc.\n"
+      "\n"
+      "  With no ACTIONs, read actions interactively from standard input, making\n"
+      "  one commit for each line of input.\n"
+      "\n"
+      "  Store move tracking metadata either in local files or in revprops.\n"
       "\n"
       "Actions:\n"
       "  ls-br                  : list all branches in this family\n"
@@ -1862,6 +1856,109 @@ log_message_func(const char **log_msg,
     }
 }
 
+/* Parse the action arguments into action structures. */
+static svn_error_t *
+parse_actions(apr_array_header_t **actions,
+              apr_array_header_t *action_args,
+              const char *root_url,
+              const char *anchor,
+              apr_pool_t *pool)
+{
+  int i;
+
+  *actions = apr_array_make(pool, 1, sizeof(struct action *));
+
+  for (i = 0; i < action_args->nelts; ++i)
+    {
+      int j, num_url_args;
+      const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
+      struct action *action = apr_pcalloc(pool, sizeof(*action));
+      const char *cp_from_rev = NULL;
+
+      /* First, parse the action. */
+      if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
+          || ! strcmp(action_string, "help"))
+        {
+          usage(stdout, pool);
+          return SVN_NO_ERROR;
+        }
+      for (j = 0; j < sizeof(action_defn) / sizeof(action_defn[0]); j++)
+        {
+          if (strcmp(action_string, action_defn[j].name) == 0)
+            {
+              action->action = action_defn[j].code;
+              num_url_args = action_defn[j].num_args;
+              break;
+            }
+        }
+      if (j == sizeof(action_defn) / sizeof(action_defn[0]))
+        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                 "'%s' is not an action",
+                                 action_string);
+
+      if (action->action == ACTION_CP)
+        {
+          /* next argument is the copy source revision */
+          if (++i == action_args->nelts)
+            return svn_error_trace(insufficient());
+          cp_from_rev = APR_ARRAY_IDX(action_args, i, const char *);
+        }
+
+      /* Parse the required number of URLs. */
+      for (j = 0; j < num_url_args; ++j)
+        {
+          const char *path, *url;
+
+          if (++i == action_args->nelts)
+            return svn_error_trace(insufficient());
+          path = APR_ARRAY_IDX(action_args, i, const char *);
+
+          if (cp_from_rev && j == 0)
+            {
+              path = apr_psprintf(pool, "%s@%s", path, cp_from_rev);
+            }
+
+          SVN_ERR(svn_opt_parse_path(&action->rev_spec[j], &path, path, pool));
+
+          /* If there's a ROOT_URL, we expect URL to be a path
+             relative to ROOT_URL (and we build a full url from the
+             combination of the two).  Otherwise, it should be a full
+             url. */
+          if (svn_path_is_url(path))
+            {
+              url = path;
+              path = svn_uri_skip_ancestor(root_url, url, pool);
+            }
+          else
+            {
+              if (! root_url)
+                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                         "'%s' is not a URL, and "
+                                         "--root-url (-U) not provided",
+                                         path);
+              url = svn_path_url_add_component2(root_url, path, pool);
+            }
+          url = sanitize_url(url, pool);
+          action->path[j] = path;
+
+          if (! anchor)
+            anchor = url;
+          else
+            {
+              anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
+              if (!anchor || !anchor[0])
+                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                         "URLs in the action list do not "
+                                         "share a common ancestor");
+            }
+        }
+
+      APR_ARRAY_PUSH(*actions, struct action *) = action;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /*
  * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
  * either return an error to be displayed, or set *EXIT_CODE to non-zero and
@@ -1870,8 +1967,7 @@ log_message_func(const char **log_msg,
 static svn_error_t *
 sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
-  apr_array_header_t *actions = apr_array_make(pool, 1,
-                                               sizeof(struct action *));
+  apr_array_header_t *actions;
   const char *anchor = NULL;
   svn_error_t *err = SVN_NO_ERROR;
   apr_getopt_t *opts;
@@ -1916,6 +2012,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
   svn_boolean_t force_interactive = FALSE;
+  svn_boolean_t interactive_actions;
   svn_boolean_t trust_server_cert = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
@@ -1925,7 +2022,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   svn_client_ctx_t *ctx;
   const char *log_msg;
-  int i;
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
@@ -2096,6 +2192,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   if (! log_msg)
     return SVN_NO_ERROR;
 
+  /* Put the log message in the list of revprops, and check that the user
+     did not try to supply any other "svn:*" revprops. */
+  if (svn_prop_has_svn_prop(revprops, pool))
+    return svn_error_create(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                            _("Standard properties can't be set "
+                              "explicitly as revision properties"));
+  svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
+                svn_string_create(log_msg, pool));
+
   /* Copy the rest of our command-line arguments to an array,
      UTF-8-ing them along the way. */
   /* If there are extra arguments in a supplementary file, tack those
@@ -2113,122 +2218,54 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
                                FALSE, pool);
     }
-  /* Append the root URL temporarily as a reference for repos-relative URLs. */
-  if (root_url)
-    APR_ARRAY_PUSH(action_args, const char *) = root_url;
-  /* Parse arguments -- converting local style to internal style,
-   * repos-relative URLs to regular URLs, etc. */
-  SVN_ERR(svn_client_args_to_target_array2(&action_args, opts, action_args,
-                                           ctx, FALSE, pool));
-  if (root_url)
-    action_args->nelts--;
 
-  /* Now, we iterate over the combined set of arguments -- our actions. */
-  for (i = 0; i < action_args->nelts; ++i)
+  interactive_actions = !(opts->ind < opts->argc
+                          || extra_args_file
+                          || non_interactive);
+
+  do
     {
-      int j, num_url_args;
-      const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
-      struct action *action = apr_pcalloc(pool, sizeof(*action));
-      const char *cp_from_rev = NULL;
+      /* Parse arguments -- converting local style to internal style,
+       * repos-relative URLs to regular URLs, etc., appending the root
+       * URL temporarily as a reference for repos-relative URLs. */
+      if (root_url)
+        APR_ARRAY_PUSH(action_args, const char *) = root_url;
+      SVN_ERR(svn_client_args_to_target_array2(&action_args, opts, action_args,
+                                               ctx, FALSE, pool));
+      if (root_url)
+        action_args->nelts--;
 
-      /* First, parse the action. */
-      if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
-          || ! strcmp(action_string, "help"))
+      if ((err = parse_actions(&actions,
+                               action_args, root_url, anchor,
+                               pool))
+          || (err = execute(actions, anchor, revprops,
+                            base_revision, ctx, pool)))
         {
-          usage(stdout, pool);
-          return SVN_NO_ERROR;
-        }
-      for (j = 0; j < sizeof(action_defn) / sizeof(action_defn[0]); j++)
-        {
-          if (strcmp(action_string, action_defn[j].name) == 0)
+          if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
+            err = svn_error_quick_wrap(err,
+                                       _("Authentication failed and interactive"
+                                         " prompting is disabled; see the"
+                                         " --force-interactive option"));
+          if (interactive_actions)
             {
-              action->action = action_defn[j].code;
-              num_url_args = action_defn[j].num_args;
-              break;
-            }
-        }
-      if (j == sizeof(action_defn) / sizeof(action_defn[0]))
-        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                 "'%s' is not an action",
-                                 action_string);
-
-      if (action->action == ACTION_CP)
-        {
-          /* next argument is the copy source revision */
-          if (++i == action_args->nelts)
-            return svn_error_trace(insufficient());
-          cp_from_rev = APR_ARRAY_IDX(action_args, i, const char *);
-        }
-
-      /* Parse the required number of URLs. */
-      for (j = 0; j < num_url_args; ++j)
-        {
-          const char *path, *url;
-
-          if (++i == action_args->nelts)
-            return svn_error_trace(insufficient());
-          path = APR_ARRAY_IDX(action_args, i, const char *);
-
-          if (cp_from_rev && j == 0)
-            {
-              path = apr_psprintf(pool, "%s@%s", path, cp_from_rev);
-            }
-
-          SVN_ERR(svn_opt_parse_path(&action->rev_spec[j], &path, path, pool));
-
-          /* If there's a ROOT_URL, we expect URL to be a path
-             relative to ROOT_URL (and we build a full url from the
-             combination of the two).  Otherwise, it should be a full
-             url. */
-          if (svn_path_is_url(path))
-            {
-              url = path;
-              path = svn_uri_skip_ancestor(root_url, url, pool);
+              svn_handle_warning2(stderr, err, "svnmover: ");
+              svn_error_clear(err);
             }
           else
-            {
-              if (! root_url)
-                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                         "'%s' is not a URL, and "
-                                         "--root-url (-U) not provided",
-                                         path);
-              url = svn_path_url_add_component2(root_url, path, pool);
-            }
-          url = sanitize_url(url, pool);
-          action->path[j] = path;
-
-          if (! anchor)
-            anchor = url;
-          else
-            {
-              anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
-              if (!anchor || !anchor[0])
-                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                         "URLs in the action list do not "
-                                         "share a common ancestor");
-            }
+            SVN_ERR(err);
         }
 
-      APR_ARRAY_PUSH(actions, struct action *) = action;
-    }
+      /* Possibly read more actions from the command line */
+      if (interactive_actions)
+        {
+          const char *input;
 
-  if (! actions->nelts)
-    {
-      *exit_code = EXIT_FAILURE;
-      usage(stderr, pool);
-      return SVN_NO_ERROR;
+          SVN_ERR(svn_cmdline_prompt_user2(&input, "svnmover> ", NULL, pool));
+          action_args = svn_cstring_split(input, " ",
+                                          TRUE /*chop_whitespace*/, pool);
+        }
     }
-
-  if ((err = execute(actions, anchor, log_msg, revprops,
-                     base_revision, ctx, pool)))
-    {
-      if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
-        err = svn_error_quick_wrap(err,
-                                   _("Authentication failed and interactive"
-                                     " prompting is disabled; see the"
-                                     " --force-interactive option"));
-      return err;
-    }
+  while (interactive_actions);
 
   return SVN_NO_ERROR;
 }
