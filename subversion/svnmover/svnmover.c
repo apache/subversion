@@ -114,12 +114,15 @@ typedef struct mtcc_t
 } mtcc_t;
 
 static svn_error_t *
+commit_callback(const svn_commit_info_t *commit_info,
+                void *baton,
+                apr_pool_t *pool);
+
+static svn_error_t *
 mtcc_create(mtcc_t **mtcc_p,
             const char *anchor_url,
             svn_revnum_t base_revision,
             apr_hash_t *revprops,
-            svn_commit_callback2_t commit_callback,
-            void *commit_baton,
             svn_client_ctx_t *ctx,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
@@ -166,7 +169,7 @@ mtcc_create(mtcc_t **mtcc_p,
 
   SVN_ERR(svn_ra_get_commit_editor_ev3(mtcc->ra_session, &mtcc->editor,
                                        revprops,
-                                       commit_callback, commit_baton,
+                                       commit_callback, mtcc,
                                        NULL /*lock_tokens*/, FALSE /*keep_locks*/,
                                        branch_info_dir,
                                        result_pool));
@@ -213,19 +216,6 @@ mtcc_commit(mtcc_t *mtcc,
   err = svn_editor3_complete(mtcc->editor);
 
   return svn_error_trace(err);
-}
-
-static svn_error_t *
-commit_callback(const svn_commit_info_t *commit_info,
-                void *baton,
-                apr_pool_t *pool)
-{
-  SVN_ERR(svn_cmdline_printf(pool, "r%ld committed by %s at %s\n",
-                             commit_info->revision,
-                             (commit_info->author
-                              ? commit_info->author : "(no author)"),
-                             commit_info->date));
-  return SVN_NO_ERROR;
 }
 
 typedef enum action_code_t {
@@ -1318,6 +1308,38 @@ svn_branch_log(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+/* This commit callback prints not only a commit summary line but also
+ * a log-style summary of the changes.
+ */
+static svn_error_t *
+commit_callback(const svn_commit_info_t *commit_info,
+                void *baton,
+                apr_pool_t *pool)
+{
+  mtcc_t *mtcc = baton;
+  svn_branch_el_rev_id_t *el_rev_left, *el_rev_right;
+  const char *rrpath = "";
+
+  SVN_ERR(svn_cmdline_printf(pool, "r%ld committed by %s at %s\n",
+                             commit_info->revision,
+                             (commit_info->author
+                              ? commit_info->author : "(no author)"),
+                             commit_info->date));
+
+  SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_left, mtcc->editor,
+                                    commit_info->revision - 1, rrpath,
+                                    pool, pool));
+  SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_right, mtcc->editor,
+                                    commit_info->revision, rrpath,
+                                    pool, pool));
+  printf("   Committed change:\n");
+  SVN_ERR(svn_branch_diff_r(mtcc->editor,
+                            el_rev_left, el_rev_right,
+                            svn_branch_diff_e, "   ",
+                            pool));
+  return SVN_NO_ERROR;
+}
+
 #define VERIFY_REV_SPECIFIED(op, i)                                     \
   if (el_rev[i]->rev == SVN_INVALID_REVNUM)                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
@@ -1366,7 +1388,6 @@ execute(const apr_array_header_t *actions,
 
   SVN_ERR(mtcc_create(&mtcc,
                       anchor_url, base_revision, revprops,
-                      commit_callback, NULL,
                       ctx, pool, iterpool));
   editor = mtcc->editor;
   base_relpath = svn_uri_skip_ancestor(mtcc->repos_root_url, anchor_url, pool);
