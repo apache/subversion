@@ -1761,7 +1761,34 @@ def mixed_wc_to_url(sbox):
                                      'mkdir', Y_path)
 
   # Now copy local A/D/G to create new directory A/D/Z the repository.
-  svntest.actions.run_and_verify_svn(None, [],
+
+  expected_status = svntest.wc.State(G_path, {
+    ''                  : Item(status='  ', wc_rev='1'),
+    'X'                 : Item(status='A ', copied='+', wc_rev='-'),
+    'X/F'               : Item(status='  ', copied='+', wc_rev='-'),
+    'X/E'               : Item(status='  ', copied='+', wc_rev='-'),
+    'X/E/alpha'         : Item(status='D ', copied='+', wc_rev='-'),
+    'X/E/beta'          : Item(status='  ', copied='+', wc_rev='-'),
+    'X/lambda'          : Item(status='  ', copied='+', wc_rev='-'),
+    'Y'                 : Item(status='A ', wc_rev='-'),
+    'rho'               : Item(status='M ', wc_rev='3'),
+    'tau'               : Item(status='  ', wc_rev='1'),
+  })
+
+  svntest.actions.run_and_verify_status(G_path, expected_status)
+
+  expected_output = svntest.verify.UnorderedOutput([
+      'Adding copy of        %s\n' % sbox.ospath('A/D/G'),
+      'Adding copy of        %s\n' % sbox.ospath('A/D/G/X'),
+      'Deleting copy of      %s\n' % sbox.ospath('A/D/G/X/E/alpha'),
+      'Adding copy of        %s\n' % sbox.ospath('A/D/G/Y'),
+      'Deleting copy of      %s\n' % sbox.ospath('A/D/G/pi'),
+      'Replacing copy of     %s\n' % sbox.ospath('A/D/G/rho'),
+      'Transmitting file data .done\n',
+      'Committing transaction...\n',
+      'Committed revision 4.\n',
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'cp', '-m', "Make a copy.",
                                      G_path, Z_url)
   expected_output = svntest.verify.UnorderedOutput([
