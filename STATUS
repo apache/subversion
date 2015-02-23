@@ -95,6 +95,16 @@ Candidate changes:
    Votes:
      +0: rhuijben
 
+ * r1661570 and many others.
+   Fix analyzing a tree with one or a few deletes somewhere, as completely
+   deleted.
+   Justification:
+     Makes the update editor choose the wrong resolver strategy. Also the
+     reason why we so many 'delete-delete' tree conflicts, while in
+     practice this should be an uncommon kind.
+   Votes:
+     +0: rhuijben
+
 Veto-blocked changes:
 =====================
 
