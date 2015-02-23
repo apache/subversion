@@ -612,7 +612,6 @@ def replace_symlink_with_dir(sbox):
 # test for issue #1808: svn up deletes local symlink that obstructs
 # versioned file
 @Issue(1808)
-@SkipUnless(svntest.main.is_posix_os)
 def update_obstructing_symlink(sbox):
   "symlink obstructs incoming delete"
 
@@ -624,7 +623,7 @@ def update_obstructing_symlink(sbox):
 
   # delete A/mu and replace it with a symlink
   svntest.main.run_svn(None, 'rm', mu_path)
-  os.symlink(iota_path, mu_path)
+  sbox.simple_add_symlink(iota_path, 'mu')
 
   svntest.main.run_svn(None, 'rm', mu_url,
                        '-m', 'log msg')
@@ -633,10 +632,12 @@ def update_obstructing_symlink(sbox):
                        'up', wc_dir)
 
   # check that the symlink is still there
-  target = os.readlink(mu_path)
-  if target != iota_path:
-    raise svntest.Failure
-
+  if not os.path.exists(mu_path):
+      raise svntest.Failure("mu should be there")
+  if svntest.main.is_posix_os():
+    target = os.readlink(mu_path)
+    if target != iota_path:
+      raise svntest.Failure("mu no longer points to the same location")
 
 def warn_on_reserved_name(sbox):
   "warn when attempt operation on a reserved name"
