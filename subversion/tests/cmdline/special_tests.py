@@ -619,13 +619,15 @@ def update_obstructing_symlink(sbox):
   wc_dir = sbox.wc_dir
   mu_path = sbox.ospath('A/mu')
 
+  iota_abspath = os.path.abspath(iota_path)
+
   # delete mu and replace it with an (not-added) symlink
   sbox.simple_rm('A/mu')
-  sbox.simple_symlink(sbox.ospath('iota'), 'A/mu')
+  sbox.simple_symlink(iota_abspath, 'A/mu')
 
   # delete pi and replace it with an added symlink
   sbox.simple_rm('A/D/G/pi')
-  sbox.simple_add_symlink(sbox.ospath('iota'), 'A/D/G/pi')
+  sbox.simple_add_symlink(iota_abspath, 'A/D/G/pi')
 
   if not os.path.exists(mu_path):
       raise svntest.Failure("mu should be there")
@@ -672,7 +674,7 @@ def update_obstructing_symlink(sbox):
       raise svntest.Failure("mu should be there")
   if svntest.main.is_posix_os():
     target = os.readlink(mu_path)
-    if target != iota_path:
+    if target != iota_abspath:
       raise svntest.Failure("mu no longer points to the same location")
 
 def warn_on_reserved_name(sbox):
