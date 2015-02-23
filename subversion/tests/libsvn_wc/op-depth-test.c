@@ -1317,9 +1317,7 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
   SVN_ERR(check_db_rows(b, "", after));
 
   SVN_ERR(svn_wc__db_base_remove(b->wc_ctx->db, dir_abspath,
-                                 FALSE /* keep_as_Working */,
-                                 FALSE /* queue_deletes */,
-                                 FALSE, FALSE,
+                                 FALSE, FALSE, FALSE,
                                  SVN_INVALID_REVNUM,
                                  NULL, NULL, b->pool));
   SVN_ERR(svn_wc__wq_run(b->wc_ctx->db, dir_abspath,
@@ -7238,12 +7236,12 @@ move_away_delete_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "",   "normal", 2, ""},
       {0, "A",  "normal", 2, "A"},
       {0, "P",  "normal", 2, "P"},
-      {1, "C2", "normal", 1, "A/B/C"},
+      {1, "C2", "normal", 1, "A/B/C", MOVED_HERE},
       {1, "Q2", "normal", 1, "P/Q"},
 
       {2, "A/B",              "normal",       1, "A/B"},
-      {2, "A/B/C",            "normal",       1, "A/B/C", FALSE, "C2"},
-      {3, "A/B/C",            "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C",            "normal",       1, "A/B/C"},
+      {3, "A/B/C",            "base-deleted", NO_COPY_FROM, "C2"},
       {0}
     };
     conflict_info_t conflicts[] = {
@@ -8434,11 +8432,16 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
       /* Still conflicted */
       {1, "D",       "normal",       1, "A/B/A/D", MOVED_HERE },
 
+      {4, "A/B/A/C", "normal",       1, "A/A/A/C"},
+
+
       {0}
     };
     conflict_info_t conflicts[] = {
       {"A/B",     FALSE, FALSE, {svn_wc_conflict_action_edit,
                                  svn_wc_conflict_reason_replaced}},
+      {"A/B/A/C", FALSE, FALSE, {svn_wc_conflict_action_delete,
+                                 svn_wc_conflict_reason_edited}},
       {0}
     };
 
@@ -8453,7 +8456,7 @@ move_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
   {
     nodes_row_t nodes[] = {
 
-      {1, "D",       "normal",       2, "A/B/A/D", MOVED_HERE },
+      {1, "D",       "normal",       1, "A/B/A/D", MOVED_HERE },
 
       {0}
     };
@@ -8715,12 +8718,12 @@ move_update_parent_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A",        "normal",       2, "A"},
       {0, "A/B",      "normal",       2, "A/B"},
 
-      {2, "A/C",      "normal",       1, "A/B/C"},
+      {2, "A/C",      "normal",       1, "A/B/C", MOVED_HERE},
 
       {2, "A/B",      "normal",       1, "A/B"},
-      {2, "A/B/C",    "normal",       1, "A/B/C", FALSE, "A/C"},
+      {2, "A/B/C",    "normal",       1, "A/B/C", FALSE},
 
-      {3, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {3, "A/B/C",    "base-deleted", NO_COPY_FROM, "A/C"},
 
       {0}
     };
@@ -8741,10 +8744,10 @@ move_update_parent_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "",         "normal",       2, ""},
       {0, "A",        "normal",       2, "A"},
       {0, "A/B",      "normal",       2, "A/B"},
-      {2, "A/C",      "normal",       1, "A/B/C"},
+      {2, "A/C",      "normal",       1, "A/B/C", MOVED_HERE},
       {2, "A/B",      "normal",       1, "A/B"},
-      {2, "A/B/C",    "normal",       1, "A/B/C", FALSE, "A/C"},
-      {3, "A/B/C",    "base-deleted", NO_COPY_FROM},
+      {2, "A/B/C",    "normal",       1, "A/B/C", FALSE},
+      {3, "A/B/C",    "base-deleted", NO_COPY_FROM, "A/C"},
 
       {0}
     };
@@ -11508,7 +11511,7 @@ make_copy_and_delete_mixed(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   SVN_ERR(svn_wc__db_base_remove(b.wc_ctx->db, sbox_wc_path(&b, "A"),
-                                 TRUE, FALSE, TRUE, FALSE, 99,
+                                 TRUE, TRUE, FALSE, 99,
                                  NULL, NULL, pool));
 
   {
@@ -11544,7 +11547,7 @@ make_copy_and_delete_mixed(const svn_test_opts_t *opts, apr_pool_t *pool)
       {3, "A/N/O",        "normal",       3, "A/N/O"},
       {3, "A/N/P",        "normal",       NO_COPY_FROM},
       {4, "A/B/C/F",      "base-deleted", NO_COPY_FROM},
-      {4, "A/B/G/H",      "base-deleted", NO_COPY_FROM},
+      {4, "A/B/G/H",      "base-deleted", NO_COPY_FROM, "H"},
       {4, "A/B/G/J",      "normal",       NO_COPY_FROM},
 
       {0}
@@ -11707,7 +11710,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "move_parent_into_child (issue 4333)"),
     SVN_TEST_OPTS_PASS(move_depth_expand,
                        "move depth expansion"),
-    SVN_TEST_OPTS_PASS(move_retract,
+    SVN_TEST_OPTS_XFAIL(move_retract,
                        "move retract (issue 4336)"),
     SVN_TEST_OPTS_PASS(move_delete_file_externals,
                        "move/delete file externals (issue 4293)"),
@@ -11729,11 +11732,11 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "move twice and then delete"),
     SVN_TEST_OPTS_PASS(del4_update_edit_AAA,
                        "del4: edit AAA"),
-    SVN_TEST_OPTS_PASS(del4_update_delete_AAA,
+    SVN_TEST_OPTS_XFAIL(del4_update_delete_AAA,
                        "del4: delete AAA"),
-    SVN_TEST_OPTS_PASS(del4_update_add_AAA,
+    SVN_TEST_OPTS_XFAIL(del4_update_add_AAA,
                        "del4: add AAA"),
-    SVN_TEST_OPTS_PASS(del4_update_replace_AAA,
+    SVN_TEST_OPTS_XFAIL(del4_update_replace_AAA,
                        "del4: replace AAA"),
     SVN_TEST_OPTS_PASS(del4_update_delself_AAA,
                        "del4: delete self AAA"),
@@ -11741,11 +11744,11 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "del4: replace self AAA"),
     SVN_TEST_OPTS_PASS(move4_update_edit_AAA,
                        "move4: edit AAA"),
-    SVN_TEST_OPTS_PASS(move4_update_delete_AAA,
+    SVN_TEST_OPTS_XFAIL(move4_update_delete_AAA,
                        "move4: delete AAA"),
-    SVN_TEST_OPTS_PASS(move4_update_add_AAA,
+    SVN_TEST_OPTS_XFAIL(move4_update_add_AAA,
                        "move4: add AAA"),
-    SVN_TEST_OPTS_PASS(move4_update_replace_AAA,
+    SVN_TEST_OPTS_XFAIL(move4_update_replace_AAA,
                        "move4: replace AAA"),
     SVN_TEST_OPTS_PASS(move4_update_delself_AAA,
                        "move4: delete self AAA"),

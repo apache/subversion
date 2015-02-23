@@ -676,13 +676,15 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
                                      const svn_skel_t *work_items,
                                      apr_pool_t *scratch_pool);
 
+/* Remove a node and all its descendants from the BASE tree. This can
+   be done in two modes:
 
-/* Remove a node and all its descendants from the BASE tree. This handles
-   the deletion of a tree from the update editor and some file external
-   scenarios.
+    * Remove everything, scheduling wq operations to clean up
+      the working copy. (KEEP_WORKING = FALSE)
 
-   The node to remove is indicated by LOCAL_ABSPATH from the local
-   filesystem.
+    * Bump things to WORKING, so the BASE layer is free, but the working
+      copy unmodified, except that everything that was visible from
+      BASE is now a copy of what it used to be. (KEEP_WORKING = TRUE)
 
    This operation *installs* workqueue operations to update the local
    filesystem after the database operation.
@@ -692,15 +694,6 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
    results in there being no working node for LOCAL_ABSPATH then any
    actual node will be removed if the actual node does not mark a
    conflict.
-
-   If KEEP_AS_WORKING is TRUE, then the base tree is copied to higher
-   layers as a copy of itself before deleting the BASE nodes.
-
-   If KEEP_AS_WORKING is FALSE, and QUEUE_DELETES is TRUE, also queue
-   workqueue items to delete all in-wc representations that aren't
-   shadowed by higher layers.
-   (With KEEP_AS_WORKING TRUE, this is a no-op, as everything is
-    automatically shadowed by the created copy)
 
 
    If MARK_NOT_PRESENT or MARK_EXCLUDED is TRUE, install a marker
@@ -715,11 +708,10 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
-                       svn_boolean_t keep_as_working,
-                       svn_boolean_t queue_deletes,
+                       svn_boolean_t keep_working,
                        svn_boolean_t mark_not_present,
                        svn_boolean_t mark_excluded,
-                       svn_revnum_t not_present_revision,
+                       svn_revnum_t marker_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);

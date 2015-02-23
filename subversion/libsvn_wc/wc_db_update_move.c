@@ -1242,7 +1242,7 @@ tc_editor_delete(node_move_baton_t *nmb,
             * it is not the/an op-root. (or we can't make us a copy)
        */
 
-      SVN_ERR(svn_wc__db_op_make_copy_internal(b->wcroot, relpath,
+      SVN_ERR(svn_wc__db_op_make_copy_internal(b->wcroot, relpath, FALSE,
                                                NULL, NULL, scratch_pool));
 
       reason = svn_wc_conflict_reason_edited;
