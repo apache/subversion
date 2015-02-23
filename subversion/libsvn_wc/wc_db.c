@@ -2124,6 +2124,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   svn_boolean_t keep_working;
   int op_depth;
   svn_node_kind_t wrk_kind;
+  svn_boolean_t no_delete_wc = FALSE;
 
   SVN_ERR(svn_wc__db_base_get_info_internal(&status, &kind, &revision,
                                             &repos_relpath, &repos_id,
@@ -2153,9 +2154,12 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
       if (presence == svn_wc__db_status_base_deleted)
         {
           keep_working = FALSE;
+          no_delete_wc = TRUE;
         }
       else
-        keep_working = TRUE;
+        {
+          keep_working = TRUE;
+        }
     }
   else
     keep_working = FALSE;
@@ -2175,7 +2179,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
 
   /* Step 1: Create workqueue operations to remove files and dirs in the
      local-wc */
-  if (!keep_working)
+  if (!keep_working && !no_delete_wc)
     {
       svn_skel_t *work_item;
       const char *local_abspath;
