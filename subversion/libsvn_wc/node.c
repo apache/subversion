@@ -50,6 +50,7 @@
 #include "wc_db.h"
 
 #include "svn_private_config.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -260,25 +261,24 @@ walker_helper(svn_wc__db_t *db,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
 {
-  apr_hash_t *rel_children_info;
-  apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  apr_array_header_t *items;
+  int i;
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_read_children_walker_info(&rel_children_info, db,
-                                               dir_abspath, scratch_pool,
-                                               scratch_pool));
-
-
   iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, rel_children_info);
-       hi;
-       hi = apr_hash_next(hi))
+
+  SVN_ERR(svn_wc__db_read_children_walker_info(&items, db,
+                                               dir_abspath, scratch_pool,
+                                               iterpool));
+
+  for (i = 0; i < items->nelts; i++)
     {
-      const char *child_name = apr_hash_this_key(hi);
-      struct svn_wc__db_walker_info_t *wi = apr_hash_this_val(hi);
+      struct svn_wc__db_walker_info_t *wi =
+              APR_ARRAY_IDX(items, i, struct svn_wc__db_walker_info_t *);
+      const char *child_name = wi->name;
       svn_node_kind_t child_kind = wi->kind;
       svn_wc__db_status_t child_status = wi->status;
       const char *child_abspath;

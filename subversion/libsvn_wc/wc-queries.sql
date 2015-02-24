@@ -156,6 +156,7 @@ ORDER BY local_relpath DESC
 SELECT local_relpath, op_depth, presence, kind
 FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2
+ORDER BY local_relpath
 
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
 SELECT local_relpath, changelist, properties, conflict_data

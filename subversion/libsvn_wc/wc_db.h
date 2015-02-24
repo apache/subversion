@@ -2057,6 +2057,7 @@ svn_wc__db_read_single_info(const struct svn_wc__db_info_t **info,
 /* Structure returned by svn_wc__db_read_walker_info.  Only has the
    fields needed by svn_wc__internal_walk_children(). */
 struct svn_wc__db_walker_info_t {
+  const char *name;
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
 };
@@ -2117,11 +2118,10 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Return in *NODES a hash mapping name->struct svn_wc__db_walker_info_t for
-   the children of DIR_ABSPATH. "name" is the child's name relative to
-   DIR_ABSPATH, not an absolute path. */
+/* Return in *ITEMS an array of struct svn_wc__db_walker_info_t* for
+   the direct children of DIR_ABSPATH. */
 svn_error_t *
-svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
+svn_wc__db_read_children_walker_info(const apr_array_header_t **items,
                                      svn_wc__db_t *db,
                                      const char *dir_abspath,
                                      apr_pool_t *result_pool,
