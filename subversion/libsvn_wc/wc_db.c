@@ -6821,7 +6821,20 @@ op_revert_txn(void *baton,
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
       if (affected_rows)
         {
-          /* An actual only node can't have descendants so we're done */
+          /* Can't do non-recursive actual-only revert if actual-only
+             children exist. Raise an error to cancel the transaction.  */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_ACTUAL_HAS_CHILDREN));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          SVN_ERR(svn_sqlite__reset(stmt));
+          if (have_row)
+            return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
+                                     _("Can't revert '%s' without"
+                                       " reverting children"),
+                                     path_for_error_message(wcroot,
+                                                            local_relpath,
+                                                            scratch_pool));
           return SVN_NO_ERROR;
         }
 
