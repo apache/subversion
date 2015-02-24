@@ -88,6 +88,30 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1661934
+   Make 'svn cp WC URL' provide sane items in its template
+   Justification:
+     Makes creating backport logmessages much easier. Simple fix.
+   Votes:
+     +1: rhuijben
+
+ * ^/subversion/branches/1.9.x-commit-fixes
+   Make the commit logic properly remove locks and break moves.
+   Justification:
+     Without this patch an incomplete commit will make the database
+     inconsistent (leave half moves). Some commits may also leave lock
+     tokens that are no longer valid.
+     .
+     These move cases should not be possible when committing from
+     libsvn_client, (as these try to avoid these situations), but at least
+     the old libsvn_wc public apis allow corrupting the db, as these give
+     access to the wc side commit logic.
+   Notes:
+     Depends on, and is based of the ^/subversion/branches/1.9.x-db-verify
+     branch. Merges: r1660781,1661335,1661363,1661504,1661730,1661755
+   Votes:
+     +1: rhuijben
+
  * r1661664, r1661669, r1661673, r1661695, r1661682, r1661698
    Properly handle deletes that have local replacements as a plain delete
    Justification:
