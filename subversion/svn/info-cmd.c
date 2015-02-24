@@ -732,6 +732,45 @@ print_info(void *baton,
 }
 
 
+/* Helper for print_info_item(): Print the value TEXT for TARGET_PATH,
+   either of which may be NULL. Use POOL for temporary allocation. */
+static svn_error_t *
+print_info_item_string(const char *text, const char *target_path,
+                       apr_pool_t *pool)
+{
+  if (text)
+    {
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", text, target_path));
+      else
+        SVN_ERR(svn_cmdline_fputs(text, stdout, pool));
+    }
+  else if (target_path)
+    SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", "", target_path));
+
+  return SVN_NO_ERROR;
+}
+
+/* Helper for print_info_item(): Print the revision number REV, which
+   may be SVN_INVALID_REVNUM, for TARGET_PATH, which may be NULL. Use
+   POOL for temporary allocation. */
+static svn_error_t *
+print_info_item_revision(svn_revnum_t rev, const char *target_path,
+                         apr_pool_t *pool)
+{
+  if (SVN_IS_VALID_REVNUM(rev))
+    {
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10ld %s", rev, target_path));
+      else
+        SVN_ERR(svn_cmdline_printf(pool, "%-10ld", rev));
+    }
+  else if (target_path)
+    SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", "", target_path));
+
+  return SVN_NO_ERROR;
+}
+
 /* A callback of type svn_client_info_receiver2_t. */
 static svn_error_t *
 print_info_item(void *baton,
@@ -751,96 +790,54 @@ print_info_item(void *baton,
 
   switch (receiver_baton->print_what)
     {
-      const char *tmpstr;
-
     case info_item_kind:
-      tmpstr = svn_node_kind_to_word(info->kind);
-
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
-      else
-        SVN_ERR(svn_cmdline_fputs(tmpstr, stdout, pool));
+      SVN_ERR(print_info_item_string(svn_node_kind_to_word(info->kind),
+                                     target_path, pool));
       break;
 
     case info_item_url:
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", info->URL, target_path));
-      else
-        SVN_ERR(svn_cmdline_fputs(info->URL, stdout, pool));
+      SVN_ERR(print_info_item_string(info->URL, target_path, pool));
       break;
 
     case info_item_relative_url:
-      tmpstr = relative_url(info, pool);
-
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
-      else
-        SVN_ERR(svn_cmdline_fputs(tmpstr, stdout, pool));
+      SVN_ERR(print_info_item_string(relative_url(info, pool),
+                                     target_path, pool));
       break;
 
     case info_item_repos_root_url:
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s",
-                                   info->repos_root_URL, target_path));
-      else
-        SVN_ERR(svn_cmdline_fputs(info->repos_root_URL, stdout, pool));
+      SVN_ERR(print_info_item_string(info->repos_root_URL, target_path, pool));
       break;
 
     case info_item_repos_uuid:
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s",
-                                   info->repos_UUID, target_path));
-      else
-        SVN_ERR(svn_cmdline_fputs(info->repos_UUID, stdout, pool));
+      SVN_ERR(print_info_item_string(info->repos_UUID, target_path, pool));
       break;
 
     case info_item_revision:
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10ld %s", info->rev, target_path));
-      else
-        SVN_ERR(svn_cmdline_printf(pool, "%ld", info->rev));
+      SVN_ERR(print_info_item_revision(info->rev, target_path, pool));
       break;
 
     case info_item_last_changed_rev:
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10ld %s",
-                                   info->last_changed_rev, target_path));
-      else
-        SVN_ERR(svn_cmdline_printf(pool, "%ld", info->last_changed_rev));
+      SVN_ERR(print_info_item_revision(info->last_changed_rev,
+                                       target_path, pool));
       break;
 
     case info_item_last_changed_date:
-      tmpstr = svn_time_to_cstring(info->last_changed_date, pool);
-
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
-      else
-        SVN_ERR(svn_cmdline_fputs(tmpstr, stdout, pool));
+      SVN_ERR(print_info_item_string(
+                  (!info->last_changed_date ? NULL
+                   : svn_time_to_cstring(info->last_changed_date, pool)),
+                  target_path, pool));
       break;
 
     case info_item_last_changed_author:
-      if (target_path)
-        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s",
-                                   info->last_changed_author, target_path));
-      else
-        SVN_ERR(svn_cmdline_fputs(info->last_changed_author, stdout, pool));
+      SVN_ERR(print_info_item_string(info->last_changed_author,
+                                     target_path, pool));
       break;
 
     case info_item_wc_root:
-      /* FIXME: Consider just printing nothing if wc-root is not available. */
-      if (info->wc_info && info->wc_info->wcroot_abspath)
-        {
-          tmpstr = svn_dirent_local_style(info->wc_info->wcroot_abspath, pool);
-
-          if (target_path)
-            SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
-          else
-            SVN_ERR(svn_cmdline_fputs(tmpstr, stdout, pool));
-        }
-      else
-        return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                _("Can't print the working copy root of"
-                                  " something that is not in a working copy"));
+      SVN_ERR(print_info_item_string(
+                  (info->wc_info && info->wc_info->wcroot_abspath
+                   ? info->wc_info->wcroot_abspath : NULL),
+                  target_path, pool));
       break;
 
     default:
