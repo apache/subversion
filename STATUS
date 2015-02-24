@@ -75,6 +75,19 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * ^/subversion/branches/1.9.x-db-verify
+   Make the db and entries-compat test create valid databases. This merge
+   fixes a lot of plumbing to bring in further db consistency fixes.
+   Notes:
+     While not a good backport suggestion by itself, other backports
+     will depend on this backport. As subset this is not to hard to
+     review (see logmessage on branch).
+     .
+     Merges: r1660587,1660610,1660633,1660641,1660659,1660671,1660687,
+              1660758,1660874,1660928,1660955,1660961
+   Votes:
+     +1: rhuijben
+
  * r1661664, r1661669, r1661673, r1661695, r1661682, r1661698
    Properly handle deletes that have local replacements as a plain delete
    Justification:
