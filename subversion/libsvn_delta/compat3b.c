@@ -891,14 +891,6 @@ svn_branch_branch(svn_editor3_t *editor,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
-  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("cannot branch from b%d e%d: "
-                                 "does not exist"),
-                               from_branch->sibling_defn->bid, from_eid);
-    }
-
   SVN_ERR(svn_branch_branch_subtree_r(NULL,
                                       from_branch, from_eid,
                                       to_outer_branch, to_outer_parent_eid,
