@@ -50,7 +50,6 @@
 #include "wc_db.h"
 
 #include "svn_private_config.h"
-#include "private/svn_sorts_private.h"
 #include "private/svn_wc_private.h"
 
 
