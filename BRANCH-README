@@ -21,8 +21,8 @@ as described in option 1. of issue #4556, as follows:
     requested item and the path or URL of the target:
 
         $ svn info ^/subversion/trunk -R --show-item=last-changed-rev
-        1660014 http://svn.apache.org/repos/asf/subversion/trunk
-        915036 https://svn.apache.org/repos/asf/subversion/trunk/BUGS
+        1660014    https://svn.apache.org/repos/asf/subversion/trunk
+        915036     https://svn.apache.org/repos/asf/subversion/trunk/BUGS
         ...
 
   - The --show-item option is incompatible with the --xml option
@@ -40,11 +40,12 @@ Branch Status
 
 TODO:
   - Add tests for 'svn info --show-item'.
-  - Modify --show-item output with multiple targets and/or recursive
-    mode to display both the requested item and the (relative) path
-    and/or URL it applies to.
+  - Resolve FIXME near 'case info_item_wc_root' in info-cmd.c:850.
 
 DONE:
   - Removed 'svn youngest' (already merged to trunk before 1.9.x branch).
   - Implemented 'svn info --show-item [--no-newline]' with output suitable
     for single targets.
+  - Modify --show-item output with multiple targets and/or recursive
+    mode to display both the requested item and the (relative) path
+    and/or URL it applies to.
