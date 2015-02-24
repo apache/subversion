@@ -754,9 +754,7 @@ print_info_item(void *baton,
       const char *tmpstr;
 
     case info_item_kind:
-      tmpstr = svn_cl__node_kind_str_xml(info->kind);
-      if (!tmpstr || !*tmpstr)
-        tmpstr = "unknown";
+      tmpstr = svn_node_kind_to_word(info->kind);
 
       if (target_path)
         SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
