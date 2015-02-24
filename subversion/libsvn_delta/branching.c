@@ -42,6 +42,9 @@
   ((branch1)->sibling_defn->family->fid \
    == (branch2)->sibling_defn->family->fid)
 
+#define SAME_BRANCH(branch1, branch2) \
+  ((branch1)->sibling_defn->family->fid \
+   == (branch2)->sibling_defn->family->fid)
 
 svn_branch_repos_t *
 svn_branch_repos_create(apr_pool_t *result_pool)
@@ -1266,11 +1269,26 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
   svn_branch_sibling_t *new_branch_def;
   svn_branch_instance_t *new_branch;
 
-  /* FROM_BRANCH must be an immediate child branch of OUTER_BRANCH. */
-  /* SVN_ERR_ASSERT(from_branch->sibling_defn->family->parent_family->fid
-                 == to_outer_branch->sibling_defn->family->fid); */
+  /* Source element must exist */
+  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("cannot branch from b%d e%d: "
+                                 "does not exist"),
+                               from_branch->sibling_defn->bid, from_eid);
+    }
 
-  /* SVN_ERR_ASSERT(...); */
+  /* FROM_BRANCH must be an immediate child branch of TO_OUTER_BRANCH. */
+  if (! SAME_BRANCH(from_branch->outer_branch, to_outer_branch))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("source and destination must be within same "
+                                 "outer branch; source is b%d inside b%d, "
+                                 "destination is in b%d"),
+                               from_branch->sibling_defn->bid,
+                               from_branch->outer_branch->sibling_defn->bid,
+                               to_outer_branch->sibling_defn->bid);
+    }
 
   /* assign new eid to root node (outer branch) */
   to_outer_eid
