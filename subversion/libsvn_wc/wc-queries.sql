@@ -344,7 +344,8 @@ ORDER BY local_relpath
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND (op_depth > ?3 OR (op_depth = ?3 AND presence != MAP_BASE_DELETED))
+  AND (op_depth > ?3 OR (op_depth = ?3
+                         AND presence IN (MAP_NORMAL, MAP_DELETED)))
 UNION ALL
 SELECT 1 FROM ACTUAL_NODE a
 WHERE wc_id = ?1 AND parent_relpath = ?2
@@ -1126,11 +1127,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 -- STMT_UPDATE_BASE_REPOS
 UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_ACTUAL_HAS_CHILDREN
-SELECT 1 FROM actual_node
-WHERE wc_id = ?1 AND parent_relpath = ?2
-LIMIT 1
 
 -- STMT_INSERT_EXTERNAL
 INSERT OR REPLACE INTO externals (
