@@ -34,6 +34,15 @@
 #include "svn_private_config.h"
 
 
+#define BRANCH_FAMILY_HAS_ELEMENT(branch, eid) \
+   ((eid) >= (branch)->sibling_defn->family->first_eid \
+    && (eid) < (branch)->sibling_defn->family->next_eid)
+
+#define BRANCHES_IN_SAME_FAMILY(branch1, branch2) \
+  ((branch1)->sibling_defn->family->fid \
+   == (branch2)->sibling_defn->family->fid)
+
+
 svn_branch_repos_t *
 svn_branch_repos_create(apr_pool_t *result_pool)
 {
@@ -371,8 +380,7 @@ branch_map_node_validate(const svn_branch_instance_t *branch,
     (eid == branch->sibling_defn->root_eid)
     ? (node->parent_eid == -1)
     : (node->parent_eid != eid
-       && node->parent_eid >= branch->sibling_defn->family->first_eid
-       && node->parent_eid < branch->sibling_defn->family->next_eid));
+       && BRANCH_FAMILY_HAS_ELEMENT(branch, node->parent_eid)));
 
   /* Node name must be given, and empty iff EID is the branch root. */
   SVN_ERR_ASSERT_NO_RETURN(
@@ -394,8 +402,7 @@ svn_branch_map_get(const svn_branch_instance_t *branch,
 {
   svn_branch_el_rev_content_t *node;
 
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->sibling_defn->family->first_eid
-                           && eid < branch->sibling_defn->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
 
   node = apr_hash_get(branch->e_map, &eid, sizeof(eid));
 
@@ -419,8 +426,7 @@ branch_map_set(svn_branch_instance_t *branch,
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
   int *eid_p = apr_pmemdup(map_pool, &eid, sizeof(eid));
 
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->sibling_defn->family->first_eid
-                           && eid < branch->sibling_defn->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
   if (node)
     branch_map_node_validate(branch, eid, node);
 
@@ -431,8 +437,7 @@ void
 svn_branch_map_delete(svn_branch_instance_t *branch,
                       int eid)
 {
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->sibling_defn->family->first_eid
-                           && eid < branch->sibling_defn->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
 
   branch_map_set(branch, eid, NULL);
 }
@@ -450,8 +455,7 @@ svn_branch_map_update(svn_branch_instance_t *branch,
                                        map_pool);
 
   /* EID must be a valid element id of the branch family */
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->sibling_defn->family->first_eid
-                           && eid < branch->sibling_defn->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
   /* NEW_CONTENT must be specified, either in full or by reference */
   SVN_ERR_ASSERT_NO_RETURN(new_content);
 
@@ -474,8 +478,7 @@ svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
                                        map_pool);
 
   /* EID must be a valid element id of the branch family */
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->sibling_defn->family->first_eid
-                           && eid < branch->sibling_defn->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
   branch_map_node_validate(branch, eid, node);
 
   /* We don't expect to be called more than once per eid. */
@@ -549,8 +552,7 @@ svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
   const char *path = "";
   svn_branch_el_rev_content_t *node;
 
-  SVN_ERR_ASSERT_NO_RETURN(eid >= branch->sibling_defn->family->first_eid
-                           && eid < branch->sibling_defn->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
 
   for (; eid != branch->sibling_defn->root_eid; eid = node->parent_eid)
     {
@@ -702,8 +704,7 @@ svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
 {
   apr_hash_index_t *hi;
 
-  SVN_ERR_ASSERT(from_branch->sibling_defn->family->fid
-                 == to_branch->sibling_defn->family->fid);
+  SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(from_branch, to_branch));
   SVN_ERR_ASSERT(from_branch != to_branch);
 
   /* The 'from' and 'to' nodes must exist. */
@@ -1377,12 +1378,8 @@ element_relpath_in_subtree(const svn_branch_el_rev_id_t *subtree,
   const char *element_path;
   const char *relpath = NULL;
 
-  SVN_ERR_ASSERT_NO_RETURN(
-    subtree->eid >= subtree->branch->sibling_defn->family->first_eid
-    && subtree->eid < subtree->branch->sibling_defn->family->next_eid);
-  SVN_ERR_ASSERT_NO_RETURN(
-    eid >= subtree->branch->sibling_defn->family->first_eid
-    && eid < subtree->branch->sibling_defn->family->next_eid);
+  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(subtree->branch, subtree->eid));
+  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(subtree->branch, eid));
 
   subtree_path = svn_branch_get_path_by_eid(subtree->branch, subtree->eid,
                                             scratch_pool);
@@ -1412,14 +1409,9 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
   /*SVN_DBG(("branch_element_differences(b%d r%ld, b%d r%ld, e%d)",
            left->branch->sibling->bid, left->rev,
            right->branch->sibling->bid, right->rev, right->eid));*/
-  SVN_ERR_ASSERT(left->branch->sibling_defn->family->fid
-                 == right->branch->sibling_defn->family->fid);
-  SVN_ERR_ASSERT_NO_RETURN(
-    left->eid >= left->branch->sibling_defn->family->first_eid
-    && left->eid < left->branch->sibling_defn->family->next_eid);
-  SVN_ERR_ASSERT_NO_RETURN(
-    right->eid >= left->branch->sibling_defn->family->first_eid
-    && right->eid < left->branch->sibling_defn->family->next_eid);
+  SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(left->branch, right->branch));
+  SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, left->eid));
+  SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, right->eid));
 
   first_eid = left->branch->sibling_defn->family->first_eid;
   next_eid = MAX(left->branch->sibling_defn->family->next_eid,
