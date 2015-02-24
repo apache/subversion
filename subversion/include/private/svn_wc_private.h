@@ -380,15 +380,13 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
-
 /**
  * Set @a *children to a new array of the immediate children of the working
  * node at @a dir_abspath.  The elements of @a *children are (const char *)
  * absolute paths.
  *
- * Include children that are scheduled for deletion.  Iff @a show_hidden
- * is true, also include children that are 'excluded' or 'server-excluded' or
- * 'not-present'.
+ * Include children that are scheduled for deletion, but not those that
+ * are excluded, server-excluded or not-present.
  *
  * Return every path that refers to a child of the working node at
  * @a dir_abspath.  Do not include a path just because it was a child of a
@@ -402,24 +400,20 @@ svn_error_t *
 svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
                                           svn_wc_context_t *wc_ctx,
                                           const char *dir_abspath,
-                                          svn_boolean_t show_hidden,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool);
 
 /**
- * Like svn_wc__node_get_children_of_working_node(), except also include any
- * path that was a child of a deleted directory that existed at
- * @a dir_abspath, even if that directory is now scheduled to be replaced by
- * the working node at @a dir_abspath.
+ * Gets the immediate 'not-present' children of a node.
+ *
+ * #### Needed during 'svn cp WC URL' to handle mixed revision cases
  */
 svn_error_t *
-svn_wc__node_get_children(const apr_array_header_t **children,
-                          svn_wc_context_t *wc_ctx,
-                          const char *dir_abspath,
-                          svn_boolean_t show_hidden,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
+svn_wc__node_get_not_present_children(const apr_array_header_t **children,
+                                      svn_wc_context_t *wc_ctx,
+                                      const char *dir_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 /**
  * Fetch the repository information for the working version
@@ -517,26 +511,6 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         svn_boolean_t scan_deleted,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
-
-/**
- * Set @a *deleted_ancestor_abspath to the root of the delete operation
- * that deleted @a local_abspath. If @a local_abspath itself was deleted
- * and has no deleted ancestor, @a *deleted_ancestor_abspath will equal
- * @a local_abspath. If @a local_abspath was not deleted,
- * set @a *deleted_ancestor_abspath to @c NULL.
- *
- * A node is considered 'deleted' if it is deleted or moved-away, and is
- * not replaced.
- *
- * @a *deleted_ancestor_abspath is allocated in @a result_pool.
- * Use @a scratch_pool for all temporary allocations.
- */
-svn_error_t *
-svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
 
 /**
  * Set @a *not_present to TRUE when @a local_abspath has status
@@ -943,15 +917,17 @@ svn_wc__get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
 
 /* Indicate in @a *is_modified whether the working copy has local
  * modifications, using context @a wc_ctx.
- * Use @a scratch_pool for temporary allocations.
  *
- * This function provides a subset of the functionality of
- * svn_wc_revision_status2() and is more efficient if the caller
- * doesn't need all information returned by svn_wc_revision_status2(). */
+ * If IGNORE_UNVERSIONED, unversioned paths inside the tree rooted by
+ * LOCAL_ABSPATH are not seen as a change, otherwise they are.
+ * (svn:ignored paths are always ignored)
+ *
+ * Use @a scratch_pool for temporary allocations. */
 svn_error_t *
 svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
+                       svn_boolean_t ignore_unversioned,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);

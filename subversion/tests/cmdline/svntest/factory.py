@@ -1035,7 +1035,7 @@ class TestFactory:
 
     make_py, prev_status = self.get_prev_status(wc)
 
-    actual_status = svntest.wc.State.from_status(output)
+    actual_status = svntest.wc.State.from_status(output, wc_dir=wc.realpath)
 
     # The tests currently compare SVNTreeNode trees, so let's do that too.
     prev_status_tree = prev_status.old_tree()

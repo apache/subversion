@@ -143,6 +143,25 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
   return OK;
 }
 
+static svn_error_t *
+malfunction_handler(svn_boolean_t can_return,
+                    const char *file, int line,
+                    const char *expr)
+{
+  if (expr)
+    ap_log_error(APLOG_MARK, APLOG_CRIT, 0, NULL,
+                 "mod_dav_svn: file '%s', line %d, assertion \"%s\" failed",
+                 file, line, expr);
+  else
+    ap_log_error(APLOG_MARK, APLOG_CRIT, 0, NULL,
+                 "mod_dav_svn: file '%s', line %d, internal malfunction",
+                 file, line);
+  abort();
+
+  /* Should not be reached. */
+  return SVN_NO_ERROR;
+}
+
 static int
 init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
 {
@@ -161,6 +180,8 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
       svn_error_clear(serr);
       return HTTP_INTERNAL_SERVER_ERROR;
     }
+
+  svn_error_set_malfunction_handler(malfunction_handler);
 
   return OK;
 }

@@ -577,17 +577,6 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc__node_get_repos_info() */
-svn_error_t *
-svn_wc__internal_get_repos_info(svn_revnum_t *revision,
-                                const char **repos_relpath,
-                                const char **repos_root_url,
-                                const char **repos_uuid,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
-
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
@@ -733,6 +722,7 @@ svn_wc__node_has_local_mods(svn_boolean_t *modified,
                             svn_boolean_t *all_edits_are_deletes,
                             svn_wc__db_t *db,
                             const char *local_abspath,
+                            svn_boolean_t ignore_unversioned,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);

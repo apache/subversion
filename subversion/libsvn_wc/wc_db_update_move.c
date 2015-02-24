@@ -1228,7 +1228,7 @@ tc_editor_delete(node_move_baton_t *nmb,
 
   local_abspath = svn_dirent_join(b->wcroot->abspath, relpath, scratch_pool);
   SVN_ERR(svn_wc__node_has_local_mods(&is_modified, &is_all_deletes,
-                                      nmb->umb->db, local_abspath,
+                                      nmb->umb->db, local_abspath, FALSE,
                                       NULL, NULL, scratch_pool));
   if (is_modified)
     {
@@ -1242,7 +1242,7 @@ tc_editor_delete(node_move_baton_t *nmb,
             * it is not the/an op-root. (or we can't make us a copy)
        */
 
-      SVN_ERR(svn_wc__db_op_make_copy_internal(b->wcroot, relpath,
+      SVN_ERR(svn_wc__db_op_make_copy_internal(b->wcroot, relpath, FALSE,
                                                NULL, NULL, scratch_pool));
 
       reason = svn_wc_conflict_reason_edited;

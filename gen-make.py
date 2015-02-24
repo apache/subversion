@@ -25,7 +25,9 @@
 
 
 import os
+import traceback
 import sys
+
 import getopt
 try:
   my_getopt = getopt.gnu_getopt
@@ -266,8 +268,10 @@ if __name__ == '__main__':
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")
-  except getopt.GetoptError, e:
-    _usage_exit(str(e))
+  except getopt.GetoptError:
+    typ, val, tb = sys.exc_info()
+    msg = ''.join(traceback.format_exception_only(typ, val))
+    _usage_exit(msg)
 
   conf = 'build.conf'
   skip = 0

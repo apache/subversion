@@ -204,7 +204,7 @@ svn_cl__make_log_msg_baton(void **baton,
                            apr_hash_t *config,
                            apr_pool_t *pool)
 {
-  struct log_msg_baton *lmb = apr_palloc(pool, sizeof(*lmb));
+  struct log_msg_baton *lmb = apr_pcalloc(pool, sizeof(*lmb));
 
   if (opt_state->filedata)
     {
@@ -237,8 +237,10 @@ svn_cl__make_log_msg_baton(void **baton,
                      SVN_CONFIG_OPTION_LOG_ENCODING,
                      NULL);
     }
+  else
+    lmb->message_encoding = NULL;
 
-  lmb->base_dir = base_dir ? base_dir : "";
+  lmb->base_dir = base_dir;
   lmb->tmpfile_left = NULL;
   lmb->config = config;
   lmb->keep_locks = opt_state->no_unlock;
@@ -390,14 +392,11 @@ svn_cl__get_log_message(const char **log_msg,
 
           if (! path)
             path = item->url;
-          else if (! *path)
-            path = ".";
-
-          if (! svn_path_is_url(path) && lmb->base_dir)
+          else if (lmb->base_dir)
             path = svn_dirent_is_child(lmb->base_dir, path, pool);
 
           /* If still no path, then just use current directory. */
-          if (! path)
+          if (! path || !*path)
             path = ".";
 
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
@@ -436,7 +435,8 @@ svn_cl__get_log_message(const char **log_msg,
       if (! lmb->non_interactive)
         {
           err = svn_cmdline__edit_string_externally(&msg_string, &lmb->tmpfile_left,
-                                                    lmb->editor_cmd, lmb->base_dir,
+                                                    lmb->editor_cmd,
+                                                    lmb->base_dir ? lmb->base_dir : "",
                                                     msg_string, "svn-commit",
                                                     lmb->config, TRUE,
                                                     lmb->message_encoding,

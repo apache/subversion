@@ -1060,7 +1060,7 @@ public class BasicTests extends SVNTests
         }
         client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    true, false, false, false, null, null, null, null);
+                    true, false, false, false, false, null, null, null, null);
 
         // Commit the changes, and check the state of the WC.
         checkCommitRevision(thisTest,
@@ -1077,7 +1077,7 @@ public class BasicTests extends SVNTests
                                         "A/B").getPath(), Revision.WORKING,
                                     Revision.WORKING));
         client.copy(wcSource, thisTest.getUrl() + "/parent/A/B",
-                    true, true, false, false, null, null,
+                    true, true, false, false, false, null, null,
                     new ConstMsg("Copy WC to URL"), null);
 
         // update the WC to get new folder and confirm the copy
@@ -1123,7 +1123,7 @@ public class BasicTests extends SVNTests
         List<CopySource> sources = new ArrayList<CopySource>(1);
         sources.add(new CopySource(thisTest.getWCPath() + "/A/B", null, null));
         String target = thisTest.getWCPath() + "/A/Bcopy";
-        client.copy(sources, target, true, false, false,
+        client.copy(sources, target, true, false, false, false,
                     true,       // pinExternals
                     null,       // externalsToPin
                     null, null, null);
@@ -1151,7 +1151,7 @@ public class BasicTests extends SVNTests
         List<CopySource> sources = new ArrayList<CopySource>(1);
         sources.add(new CopySource(thisTest.getWCPath() + "/A/B", null, null));
         String target = thisTest.getUrl() + "/A/Bcopy";
-        client.copy(sources, target, true, false, false,
+        client.copy(sources, target, true, false, false, false,
                     true,       // pinExternals
                     null,       // externalsToPin
                     null, new ConstMsg("Copy WC to REPO"), null);
@@ -1179,7 +1179,7 @@ public class BasicTests extends SVNTests
         List<CopySource> sources = new ArrayList<CopySource>(1);
         sources.add(new CopySource(thisTest.getUrl() + "/A/B", null, null));
         String target = thisTest.getWCPath() + "/A/Bcopy";
-        client.copy(sources, target, true, false, false,
+        client.copy(sources, target, true, false, false, false,
                     true,       // pinExternals
                     null,       // externalsToPin
                     null, null, null);
@@ -1207,7 +1207,7 @@ public class BasicTests extends SVNTests
         List<CopySource> sources = new ArrayList<CopySource>(1);
         sources.add(new CopySource(thisTest.getUrl() + "/A/B", null, null));
         String target = thisTest.getUrl() + "/A/Bcopy";
-        client.copy(sources, target, true, false, false,
+        client.copy(sources, target, true, false, false, false,
                     true,       // pinExternals
                     null,       // externalsToPin
                     null, new ConstMsg("Copy WC to REPO"), null);
@@ -1242,7 +1242,7 @@ public class BasicTests extends SVNTests
         List<CopySource> sources = new ArrayList<CopySource>(1);
         sources.add(new CopySource(sourceUrl, null, null));
         String target = thisTest.getUrl() + "/A/Bcopy";
-        client.copy(sources, target, true, false, false,
+        client.copy(sources, target, true, false, false, false,
                     true,       // pinExternals
                     externalsToPin,
                     null, new ConstMsg("Copy WC to REPO"), null);
@@ -3175,7 +3175,7 @@ public class BasicTests extends SVNTests
         srcs.add(new CopySource(thisTest.getUrl() + "/A", Revision.HEAD,
                                 Revision.HEAD));
         client.copy(srcs, thisTest.getUrl() + "/branches/A",
-                    true, false, false, false, null, null,
+                    true, false, false, false, false, null, null,
                     new ConstMsg("create A branch"), null);
 
         // update the WC (to r3) so that it has the branches folder

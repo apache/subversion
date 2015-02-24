@@ -1005,8 +1005,7 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'pi' : Item(status='A ',  wc_rev='0', entry_rev='1'),
-    # And from the foreign repository
+    'pi'            : Item(status='A ', wc_rev='0'),
     'E'             : Item(status='A ', wc_rev='0'),
     'E/beta'        : Item(status='A ', wc_rev='0'),
     'E/alpha'       : Item(status='A ', wc_rev='0'),
@@ -1762,7 +1761,34 @@ def mixed_wc_to_url(sbox):
                                      'mkdir', Y_path)
 
   # Now copy local A/D/G to create new directory A/D/Z the repository.
-  svntest.actions.run_and_verify_svn(None, [],
+
+  expected_status = svntest.wc.State(G_path, {
+    ''                  : Item(status='  ', wc_rev='1'),
+    'X'                 : Item(status='A ', copied='+', wc_rev='-'),
+    'X/F'               : Item(status='  ', copied='+', wc_rev='-'),
+    'X/E'               : Item(status='  ', copied='+', wc_rev='-'),
+    'X/E/alpha'         : Item(status='D ', copied='+', wc_rev='-'),
+    'X/E/beta'          : Item(status='  ', copied='+', wc_rev='-'),
+    'X/lambda'          : Item(status='  ', copied='+', wc_rev='-'),
+    'Y'                 : Item(status='A ', wc_rev='-'),
+    'rho'               : Item(status='M ', wc_rev='3'),
+    'tau'               : Item(status='  ', wc_rev='1'),
+  })
+
+  svntest.actions.run_and_verify_status(G_path, expected_status)
+
+  expected_output = svntest.verify.UnorderedOutput([
+      'Adding copy of        %s\n' % sbox.ospath('A/D/G'),
+      'Adding copy of        %s\n' % sbox.ospath('A/D/G/X'),
+      'Deleting copy of      %s\n' % sbox.ospath('A/D/G/X/E/alpha'),
+      'Adding copy of        %s\n' % sbox.ospath('A/D/G/Y'),
+      'Deleting copy of      %s\n' % sbox.ospath('A/D/G/pi'),
+      'Replacing copy of     %s\n' % sbox.ospath('A/D/G/rho'),
+      'Transmitting file data .done\n',
+      'Committing transaction...\n',
+      'Committed revision 4.\n',
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'cp', '-m', "Make a copy.",
                                      G_path, Z_url)
   expected_output = svntest.verify.UnorderedOutput([
@@ -5430,6 +5456,13 @@ def copy_and_move_conflicts(sbox):
                          'D/G/pi',
                          'D/G/rho',
                          'D/G/tau')
+  expected_status.tweak('B', moved_from='../A/B')
+  expected_status.tweak('D', moved_from='../A/D')
+  expected_status.tweak('H', moved_from='D/H')
+  expected_status.tweak('Q', moved_from='../A/Q')
+  expected_status.tweak('D/H', moved_to='H')
+  expected_status.tweak('alpha', moved_from='B/E/alpha')
+  expected_status.tweak('B/E/alpha', moved_to='alpha')
   svntest.actions.run_and_verify_status(wc('move-dest'), expected_status)
 
   expected_disk = svntest.wc.State('', {

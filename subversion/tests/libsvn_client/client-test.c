@@ -1157,7 +1157,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   APR_ARRAY_PUSH(copy_sources, svn_client_copy_source_t *) = &copy_source;
   A_copy_url = apr_pstrcat(pool, repos_url, "/A_copy", SVN_VA_NULL);
   SVN_ERR(svn_client_copy7(copy_sources, A_copy_url, FALSE, FALSE,
-                           FALSE, TRUE, externals_to_pin,
+                           FALSE, FALSE, TRUE, externals_to_pin,
                            NULL, NULL, NULL, ctx, pool));
 
   /* Verify that externals were pinned as expected. */

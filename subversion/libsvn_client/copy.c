@@ -177,6 +177,47 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+/* Quote a string if it would be handled as multiple or different tokens
+   during externals parsing */
+static const char *
+maybe_quote(const char *value,
+            apr_pool_t *result_pool)
+{
+  apr_status_t status;
+  char **argv;
+
+  status = apr_tokenize_to_argv(value, &argv, result_pool);
+
+  if (!status && argv[0] && !argv[1] && strcmp(argv[0], value) == 0)
+    return apr_pstrdup(result_pool, value);
+
+  {
+    svn_stringbuf_t *sb = svn_stringbuf_create_empty(result_pool);
+    const char *c;
+
+    svn_stringbuf_appendbyte(sb, '\"');
+
+    for (c = value; *c; c++)
+      {
+        if (*c == '\\' || *c == '\"' || *c == '\'')
+          svn_stringbuf_appendbyte(sb, '\\');
+
+        svn_stringbuf_appendbyte(sb, *c);
+      }
+
+    svn_stringbuf_appendbyte(sb, '\"');
+
+#ifdef SVN_DEBUG
+    status = apr_tokenize_to_argv(sb->data, &argv, result_pool);
+
+    SVN_ERR_ASSERT_NO_RETURN(!status && argv[0] && !argv[1]
+                             && !strcmp(argv[0], value));
+#endif
+
+    return sb->data;
+  }
+}
+
 /* In *NEW_EXTERNALS_DESCRIPTION, return a new external description for
  * use as a line in an svn:externals property, based on the external item
  * ITEM and the additional parser information in INFO. Pin the external
@@ -211,7 +252,9 @@ make_external_description(const char **new_external_description,
           }
 
         *new_external_description =
-          apr_psprintf(pool, "%s %s%s\n", item->target_dir, rev_str, item->url);
+          apr_psprintf(pool, "%s %s%s\n", maybe_quote(item->target_dir, pool),
+                                          rev_str,
+                                          maybe_quote(item->url, pool));
         break;
 
       case svn_wc__external_description_format_2:
@@ -239,8 +282,11 @@ make_external_description(const char **new_external_description,
           }
 
         *new_external_description =
-          apr_psprintf(pool, "%s%s%s %s\n", rev_str, item->url, peg_rev_str,
-                       item->target_dir);
+          apr_psprintf(pool, "%s%s %s\n", rev_str,
+                       maybe_quote(apr_psprintf(pool, "%s%s", item->url,
+                                                peg_rev_str),
+                                   pool),
+                       maybe_quote(item->target_dir, pool));
         break;
 
       default:
@@ -431,7 +477,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                              SVN_PROP_EXTERNALS);
 
                   SVN_ERR(svn_wc__has_local_mods(&is_modified, ctx->wc_ctx,
-                                                 external_abspath,
+                                                 external_abspath, TRUE,
                                                  ctx->cancel_func,
                                                  ctx->cancel_baton,
                                                  iterpool));
@@ -609,6 +655,7 @@ static svn_error_t *
 do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
                                    const apr_array_header_t *copy_pairs,
                                    const char *dst_parent,
+                                   svn_boolean_t metadata_only,
                                    svn_boolean_t pin_externals,
                                    const apr_hash_t *externals_to_pin,
                                    svn_client_ctx_t *ctx,
@@ -650,7 +697,7 @@ do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
                                     iterpool);
       *timestamp_sleep = TRUE;
       err = svn_wc_copy3(ctx->wc_ctx, pair->src_abspath_or_url, dst_abspath,
-                         FALSE /* metadata_only */,
+                         metadata_only,
                          ctx->cancel_func, ctx->cancel_baton,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
       if (err)
@@ -692,6 +739,7 @@ do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
 static svn_error_t *
 do_wc_to_wc_copies(svn_boolean_t *timestamp_sleep,
                    const apr_array_header_t *copy_pairs,
+                   svn_boolean_t metadata_only,
                    svn_boolean_t pin_externals,
                    const apr_hash_t *externals_to_pin,
                    svn_client_ctx_t *ctx,
@@ -707,8 +755,8 @@ do_wc_to_wc_copies(svn_boolean_t *timestamp_sleep,
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
     do_wc_to_wc_copies_with_write_lock(timestamp_sleep, copy_pairs, dst_parent,
-                                       pin_externals, externals_to_pin,
-                                       ctx, pool),
+                                       metadata_only, pin_externals,
+                                       externals_to_pin, ctx, pool),
     ctx->wc_ctx, dst_parent_abspath, FALSE, pool);
 
   return SVN_NO_ERROR;
@@ -1328,9 +1376,7 @@ queue_externals_change_path_infos(apr_array_header_t *new_path_infos,
           info->src_url = svn_path_url_add_component2(
                                 parent_info->src_url, dst_relpath,
                                 result_pool);
-          info->src_path = svn_relpath_join(parent_info->src_path,
-                                            dst_relpath,
-                                            result_pool);
+          info->src_path = NULL; /* Only needed on copied dirs */
           info->dst_path = svn_relpath_join(parent_info->dst_path,
                                             dst_relpath,
                                             result_pool);
@@ -1631,7 +1677,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
 
       /* More info for our INFO structure.  */
-      info->src_path = src_rel;
+      info->src_path = src_rel; /* May be NULL, if outside RA session scope */
       info->dst_path = dst_rel;
 
       svn_hash_sets(action_hash, info->dst_path, info);
@@ -3009,9 +3055,10 @@ try_copy(svn_boolean_t *timestamp_sleep,
       else
         {
           /* We ignore these values, so assert the default value */
-          SVN_ERR_ASSERT(allow_mixed_revisions && !metadata_only);
+          SVN_ERR_ASSERT(allow_mixed_revisions);
           return svn_error_trace(do_wc_to_wc_copies(timestamp_sleep,
                                                     copy_pairs,
+                                                    metadata_only,
                                                     pin_externals,
                                                     externals_to_pin,
                                                     ctx, pool));
@@ -3049,6 +3096,7 @@ svn_client_copy7(const apr_array_header_t *sources,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
                  svn_boolean_t ignore_externals,
+                 svn_boolean_t metadata_only,
                  svn_boolean_t pin_externals,
                  const apr_hash_t *externals_to_pin,
                  const apr_hash_t *revprop_table,
@@ -3069,7 +3117,7 @@ svn_client_copy7(const apr_array_header_t *sources,
                  sources, dst_path,
                  FALSE /* is_move */,
                  TRUE /* allow_mixed_revisions */,
-                 FALSE /* metadata_only */,
+                 metadata_only,
                  make_parents,
                  ignore_externals,
                  pin_externals,
@@ -3105,7 +3153,7 @@ svn_client_copy7(const apr_array_header_t *sources,
                      sources, dst_path,
                      FALSE /* is_move */,
                      TRUE /* allow_mixed_revisions */,
-                     FALSE /* metadata_only */,
+                     metadata_only,
                      make_parents,
                      ignore_externals,
                      pin_externals,
