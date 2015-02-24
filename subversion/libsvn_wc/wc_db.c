@@ -2073,7 +2073,7 @@ clear_moved_here(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_op_break_move_internal(svn_wc__db_wcroot_t *wcroot,
                                   const char *src_relpath,
-                                  int src_op_depth,
+                                  int delete_op_depth,
                                   const char *dst_relpath,
                                   const svn_skel_t *work_items,
                                   apr_pool_t *scratch_pool)
@@ -2084,7 +2084,7 @@ svn_wc__db_op_break_move_internal(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_CLEAR_MOVED_TO_RELPATH));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, src_relpath,
-                            src_op_depth));
+                            delete_op_depth));
   SVN_ERR(svn_sqlite__update(&affected, stmt));
 
   if (affected != 1)
@@ -6577,15 +6577,15 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
 
 /* The body of svn_wc__db_op_mark_resolved().
  */
-static svn_error_t *
-db_op_mark_resolved(svn_wc__db_wcroot_t *wcroot,
-                    const char *local_relpath,
-                    svn_wc__db_t *db,
-                    svn_boolean_t resolved_text,
-                    svn_boolean_t resolved_props,
-                    svn_boolean_t resolved_tree,
-                    const svn_skel_t *work_items,
-                    apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_op_mark_resolved_internal(svn_wc__db_wcroot_t *wcroot,
+                                     const char *local_relpath,
+                                     svn_wc__db_t *db,
+                                     svn_boolean_t resolved_text,
+                                     svn_boolean_t resolved_props,
+                                     svn_boolean_t resolved_tree,
+                                     const svn_skel_t *work_items,
+                                     apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -6683,7 +6683,8 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_WC__DB_WITH_TXN(
-    db_op_mark_resolved(wcroot, local_relpath, db,
+    svn_wc__db_op_mark_resolved_internal(
+                        wcroot, local_relpath, db,
                         resolved_text, resolved_props, resolved_tree,
                         work_items, scratch_pool),
     wcroot);
@@ -6751,6 +6752,7 @@ op_revert_txn(void *baton,
   int affected_rows;
   const char *moved_to;
   int op_depth_increased = 0;
+  int op_depth_below;
   svn_skel_t *conflict;
 
   /* ### Similar structure to op_revert_recursive_txn, should they be
@@ -6798,6 +6800,13 @@ op_revert_txn(void *baton,
   op_depth = svn_sqlite__column_int(stmt, 0);
   moved_here = svn_sqlite__column_boolean(stmt, 15);
   moved_to = svn_sqlite__column_text(stmt, 17, scratch_pool);
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    op_depth_below = svn_sqlite__column_int(stmt, 0);
+  else
+    op_depth_below = -1;
+
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (moved_to)
@@ -6885,7 +6894,7 @@ op_revert_txn(void *baton,
               || reason == svn_wc_conflict_reason_replaced)
             {
               SVN_ERR(svn_wc__db_op_raise_moved_away_internal(
-                          wcroot, local_relpath, op_depth+1, db,
+                          wcroot, local_relpath, op_depth_below, db,
                           operation, action,
                           (locations && locations->nelts > 0)
                             ? APR_ARRAY_IDX(locations, 0,

@@ -1382,15 +1382,15 @@ check_tree_conflict(svn_skel_t **pconflict,
           }
         else
           {
-            /* The node is locally replaced but could also be moved-away. */
-            SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, NULL,
-                                             &move_src_op_root_abspath,
-                                             eb->db, local_abspath,
-                                             scratch_pool, scratch_pool));
-            if (move_src_op_root_abspath)
-              reason = svn_wc_conflict_reason_moved_away;
-            else
-              reason = svn_wc_conflict_reason_replaced;
+            /* The node is locally replaced but could also be moved-away,
+               but we can't report that it is moved away and replaced.
+
+               And we wouldn't be able to store that each of a dozen
+               descendants was moved to other locations...
+
+               Replaced is what actually happened... */
+
+            reason = svn_wc_conflict_reason_replaced;
           }
         break;
 

@@ -3422,41 +3422,24 @@ svn_wc__db_vacuum(svn_wc__db_t *db,
    comment in resolve_conflict_on_node about combining with another
    function. */
 svn_error_t *
-svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
-                                           const char *local_abspath,
-                                           svn_wc_notify_func2_t notify_func,
-                                           void *notify_baton,
-                                           apr_pool_t *scratch_pool);
+svn_wc__db_op_raise_moved_away(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               svn_wc_notify_func2_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *scratch_pool);
 
-/* Like svn_wc__db_resolve_delete_raise_moved_away this should be
-   combined.
-
-   ### LOCAL_ABSPATH specifies the move origin, but the move origin
-   ### is not necessary unique enough. This function needs an op_root_abspath
-   ### argument to differentiate between different origins.
-
-   ### See move_tests.py: move_many_update_delete for an example case.
-   */
+/* Breaks all moves of nodes that exist at or below LOCAL_ABSPATH as
+   shadowed (read: deleted) by the opration rooted at
+   delete_op_root_abspath.
+ */
 svn_error_t *
-svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
-                                    const char *local_abspath,
-                                    const char *src_op_root_abspath,
-                                    svn_wc_notify_func2_t notify_func,
-                                    void *notify_baton,
-                                    apr_pool_t *scratch_pool);
-
-/* Break moves for all moved-away children of LOCAL_ABSPATH, within
- * a single transaction.
- *
- * ### Like svn_wc__db_resolve_delete_raise_moved_away this should be
- * combined. */
-svn_error_t *
-svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
-                                             const char *local_abspath,
-                                             const char *src_op_root_abspath,
-                                             svn_wc_notify_func2_t notify_func,
-                                             void *notify_baton,
-                                             apr_pool_t *scratch_pool);
+svn_wc__db_op_break_moved_away(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const char *delete_op_root_abspath,
+                               svn_boolean_t mark_tc_resolved,
+                               svn_wc_notify_func2_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *scratch_pool);
 
 /* Set *REQUIRED_ABSPATH to the path that should be locked to ensure
  * that the lock covers all paths affected by resolving the conflicts
