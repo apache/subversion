@@ -2248,14 +2248,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       /* Parse arguments -- converting local style to internal style,
        * repos-relative URLs to regular URLs, etc. */
-      SVN_ERR(svn_client_args_to_target_array2(&action_args, opts, action_args,
-                                               ctx, FALSE, pool));
-
-      if ((err = parse_actions(&actions,
-                               action_args,
-                               pool))
-          || (err = execute(actions, anchor_url, revprops,
-                            base_revision, ctx, pool)))
+      err = svn_client_args_to_target_array2(&action_args, opts, action_args,
+                                             ctx, FALSE, pool);
+      if (! err)
+        err = parse_actions(&actions, action_args, pool);
+      if (! err)
+        err = execute(actions, anchor_url, revprops, base_revision, ctx, pool);
+      if (err)
         {
           if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
             err = svn_error_quick_wrap(err,
