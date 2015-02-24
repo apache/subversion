@@ -112,33 +112,29 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1661664, r1661669, r1661673, r1661695, r1661682, r1661698
-   Properly handle deletes that have local replacements as a plain delete
+ * ^/subversion/branches/1.9.x-update-tc-detection
+   Improve tree conflict detection in the update editor.
    Justification:
-     Avoids loosing work. This scenario needs to raise tree conflicts in
-     the update editor.
+     Without this patch the update editor in many cases doesn't see local
+     unversioned items, and continues as if they aren't there. This includes
+     items that were deleted and then replaced (but not added yet). These
+     limitations affect how we record and handle these situations.
    Notes:
-     More backports or a backport branch might be necessary.
-     Contains change to public api, so 1.9.0 only
-     (And otherwise performance hit)
+     This changes a public api (svn_wc_status3_t), so can't be released
+     in this form after 1.9.0
+     .
+     Depends on, and is based of the ^/subversion/branches/1.9.x-db-verify
+     branch. Merges: r1661570,1661654,1661664,1661669,1661673,1661695,1661698
+     .
+     Recommended way to review: check branch.
    Votes:
-     +0: rhuijben (Fixes actual user bugs)
+     +1: rhuijben
 
  * r1661718 and many others
    Fix invalid database state (moves) on incoming deletes during update
    Justification:
      Fixes database corruption. A huge catch-up merge is probably easier
      than a backport.
-   Votes:
-     +0: rhuijben
-
- * r1661570 and many others.
-   Fix analyzing a tree with one or a few deletes somewhere, as completely
-   deleted.
-   Justification:
-     Makes the update editor choose the wrong resolver strategy. Also the
-     reason why we so many 'delete-delete' tree conflicts, while in
-     practice this should be an uncommon kind.
    Votes:
      +0: rhuijben
 
