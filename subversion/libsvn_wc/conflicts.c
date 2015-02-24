@@ -3100,8 +3100,8 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
 
       for (; hi && !err; hi = apr_hash_next(hi))
         {
-          svn_pool_clear(iterpool);
           const char *relpath;
+          svn_pool_clear(iterpool);
 
           tc_abspath = apr_hash_this_key(hi);
 
