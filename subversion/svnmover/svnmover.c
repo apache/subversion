@@ -787,10 +787,12 @@ svn_branch_diff_e(svn_editor3_t *editor,
                   svn_branch_el_rev_id_t *left,
                   svn_branch_el_rev_id_t *right,
                   const char *prefix,
+                  const char *header,
                   apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff_yca_tgt;
   int first_eid, next_eid, eid;
+  svn_boolean_t printed_header = FALSE;
 
   if (left->branch->sibling_defn->family->fid
       != right->branch->sibling_defn->family->fid)
@@ -838,6 +840,13 @@ svn_branch_diff_e(svn_editor3_t *editor,
             {
               status_mod = e0 ? 'D' : 'A';
             }
+
+          if (header && ! printed_header)
+            {
+              printf("%s%s", prefix, header);
+              printed_header = TRUE;
+            }
+
           printf("%s%c%c%c e%d  %s%s%s\n",
                  prefix,
                  status_mod, status_reparent, status_rename,
@@ -881,6 +890,7 @@ svn_branch_diff(svn_editor3_t *editor,
                 svn_branch_el_rev_id_t *left,
                 svn_branch_el_rev_id_t *right,
                 const char *prefix,
+                const char *header,
                 apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff_yca_tgt;
@@ -972,6 +982,9 @@ svn_branch_diff(svn_editor3_t *editor,
 
   svn_sort__array(diff_changes, diff_ordering);
 
+  if (header && diff_changes->nelts)
+    printf("%s%s", prefix, header);
+
   for (i = 0; i < diff_changes->nelts; i++)
     {
       diff_item_t *item = APR_ARRAY_IDX(diff_changes, i, void *);
@@ -1018,10 +1031,11 @@ get_subbranches(svn_branch_instance_t *branch,
 
 typedef svn_error_t *
 svn_branch_diff_func_t(svn_editor3_t *editor,
-                svn_branch_el_rev_id_t *left,
-                svn_branch_el_rev_id_t *right,
-                const char *prefix,
-                apr_pool_t *scratch_pool);
+                       svn_branch_el_rev_id_t *left,
+                       svn_branch_el_rev_id_t *right,
+                       const char *prefix,
+                       const char *header,
+                       apr_pool_t *scratch_pool);
 
 /* Display differences, referring to paths, recursing into sub-branches */
 static svn_error_t *
@@ -1032,6 +1046,7 @@ svn_branch_diff_r(svn_editor3_t *editor,
                   const char *prefix,
                   apr_pool_t *scratch_pool)
 {
+  const char *header;
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
   apr_hash_index_t *hi;
 
@@ -1040,23 +1055,28 @@ svn_branch_diff_r(svn_editor3_t *editor,
 
   if (!left)
     {
-      printf("--- branch added, family %d, at '/%s'\n",
-             right->branch->sibling_defn->family->fid,
-             svn_branch_get_root_rrpath(right->branch, scratch_pool));
+      header = apr_psprintf(scratch_pool,
+                 "--- branch added, family %d, at '/%s'\n",
+                 right->branch->sibling_defn->family->fid,
+                 svn_branch_get_root_rrpath(right->branch, scratch_pool));
+      printf("%s%s", prefix, header);
     }
   else if (!right)
     {
-      printf("--- branch deleted, family %d, at '/%s'\n",
-             left->branch->sibling_defn->family->fid,
-             svn_branch_get_root_rrpath(left->branch, scratch_pool));
+      header = apr_psprintf(scratch_pool,
+                 "--- branch deleted, family %d, at '/%s'\n",
+                 left->branch->sibling_defn->family->fid,
+                 svn_branch_get_root_rrpath(left->branch, scratch_pool));
+      printf("%s%s", prefix, header);
     }
   else
     {
-      printf("--- branch diff, family %d, at left '/%s' right '/%s'\n",
-             right->branch->sibling_defn->family->fid,
-             svn_branch_get_root_rrpath(left->branch, scratch_pool),
-             svn_branch_get_root_rrpath(right->branch, scratch_pool));
-      SVN_ERR(diff_func(editor, left, right, prefix, scratch_pool));
+      header = apr_psprintf(scratch_pool,
+                 "--- branch diff, family %d, at left '/%s' right '/%s'\n",
+                 right->branch->sibling_defn->family->fid,
+                 svn_branch_get_root_rrpath(left->branch, scratch_pool),
+                 svn_branch_get_root_rrpath(right->branch, scratch_pool));
+      SVN_ERR(diff_func(editor, left, right, prefix, header, scratch_pool));
     }
 
   subbranches_l = get_subbranches(left ? left->branch : NULL,
