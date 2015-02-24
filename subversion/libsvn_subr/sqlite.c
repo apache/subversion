@@ -1516,13 +1516,6 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
   struct function_wrapper_baton_t *fwb = apr_pcalloc(db->state_pool,
                                                      sizeof(*fwb));
 
-  /* If we create our scratch pool in db->state pool it is cleared
-     before the database is closed. This breaks using queries
-     before we close the database :(
-
-     We create a subpool in the global pool and only destroy it
-     when we want it to be destroyed */
-
   fwb->func = func;
   fwb->baton = baton;
 
