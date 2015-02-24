@@ -57,6 +57,27 @@ svn_cl__info_print_time(apr_time_t atime,
 }
 
 
+/* Return a string represenation of KIND. */
+static const char *
+kind_str(svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_file:
+      return "file";
+
+    case svn_node_dir:
+      return "directory";
+
+    case svn_node_none:
+      return "none";
+
+    case svn_node_unknown:
+    default:
+      return "unknown";
+    }
+}
+
 /* Return string representation of SCHEDULE */
 static const char *
 schedule_str(svn_wc_schedule_t schedule)
@@ -153,9 +174,14 @@ typedef struct print_info_baton_t
   /* Which item to print. */
   info_item_t print_what;
 
-  /* Do we print the trailing newline? */
-  svn_boolean_t print_newline;
+  /* Do we expect to show info for multiple targets? */
+  svn_boolean_t multiple_targets;
 
+  /* TRUE iff the current is a local path. */
+  svn_boolean_t target_is_path;
+
+  /* Did we already print a line of output? */
+  svn_boolean_t start_new_line;
 } print_info_baton_t;
 
 
@@ -735,71 +761,103 @@ print_info_item(void *baton,
                   apr_pool_t *pool)
 {
   print_info_baton_t *const receiver_baton = baton;
+  const char *const target_path =
+    (!receiver_baton->multiple_targets ? NULL
+     : (!receiver_baton->target_is_path ? info->URL
+        : svn_cl__local_style_skip_ancestor(
+            receiver_baton->path_prefix, target, pool)));
+
+  if (receiver_baton->start_new_line)
+    SVN_ERR(svn_cmdline_fputs("\n", stdout, pool));
 
   switch (receiver_baton->print_what)
     {
+      const char *tmpstr;
+
     case info_item_kind:
-      switch (info->kind)
-        {
-        case svn_node_file:
-          SVN_ERR(svn_cmdline_fputs("file", stdout, pool));
-          break;
+      tmpstr = kind_str(info->kind);
 
-        case svn_node_dir:
-          SVN_ERR(svn_cmdline_fputs("directory", stdout, pool));
-          break;
-
-        case svn_node_none:
-          SVN_ERR(svn_cmdline_fputs("none", stdout, pool));
-          break;
-
-        case svn_node_unknown:
-        default:
-          SVN_ERR(svn_cmdline_fputs("unknown", stdout, pool));
-          break;
-        }
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
+      else
+        SVN_ERR(svn_cmdline_fputs(tmpstr, stdout, pool));
+      break;
 
     case info_item_url:
-      SVN_ERR(svn_cmdline_fputs(info->URL, stdout, pool));
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", info->URL, target_path));
+      else
+        SVN_ERR(svn_cmdline_fputs(info->URL, stdout, pool));
       break;
 
     case info_item_relative_url:
-      SVN_ERR(svn_cmdline_fputs(relative_url(info, pool), stdout, pool));
+      tmpstr = relative_url(info, pool);
+
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
+      else
+        SVN_ERR(svn_cmdline_fputs(tmpstr, stdout, pool));
       break;
 
     case info_item_repos_root_url:
-      SVN_ERR(svn_cmdline_fputs(info->repos_root_URL, stdout, pool));
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s",
+                                   info->repos_root_URL, target_path));
+      else
+        SVN_ERR(svn_cmdline_fputs(info->repos_root_URL, stdout, pool));
       break;
 
     case info_item_repos_uuid:
-      SVN_ERR(svn_cmdline_fputs(info->repos_UUID, stdout, pool));
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s",
+                                   info->repos_UUID, target_path));
+      else
+        SVN_ERR(svn_cmdline_fputs(info->repos_UUID, stdout, pool));
       break;
 
     case info_item_revision:
-      SVN_ERR(svn_cmdline_printf(pool, "%ld", info->rev));
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10ld %s", info->rev, target_path));
+      else
+        SVN_ERR(svn_cmdline_printf(pool, "%ld", info->rev));
       break;
 
     case info_item_last_changed_rev:
-      SVN_ERR(svn_cmdline_printf(pool, "%ld", info->last_changed_rev));
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10ld %s",
+                                   info->last_changed_rev, target_path));
+      else
+        SVN_ERR(svn_cmdline_printf(pool, "%ld", info->last_changed_rev));
       break;
 
     case info_item_last_changed_date:
-      SVN_ERR(svn_cmdline_fputs(
-                  svn_time_to_cstring(info->last_changed_date, pool),
-                  stdout, pool));
+      tmpstr = svn_time_to_cstring(info->last_changed_date, pool);
+
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
+      else
+        SVN_ERR(svn_cmdline_fputs(tmpstr, stdout, pool));
       break;
 
     case info_item_last_changed_author:
-      SVN_ERR(svn_cmdline_fputs(info->last_changed_author, stdout, pool));
+      if (target_path)
+        SVN_ERR(svn_cmdline_printf(pool, "%-10s %s",
+                                   info->last_changed_author, target_path));
+      else
+        SVN_ERR(svn_cmdline_fputs(info->last_changed_author, stdout, pool));
       break;
 
     case info_item_wc_root:
       /* FIXME: Consider just printing nothing if wc-root is not available. */
       if (info->wc_info && info->wc_info->wcroot_abspath)
-        SVN_ERR(svn_cmdline_fputs(svn_dirent_local_style(
-                                      info->wc_info->wcroot_abspath,
-                                      pool),
-                                  stdout, pool));
+        {
+          tmpstr = svn_dirent_local_style(info->wc_info->wcroot_abspath, pool);
+
+          if (target_path)
+            SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
+          else
+            SVN_ERR(svn_cmdline_fputs(tmpstr, stdout, pool));
+        }
       else
         return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                 _("Can't print the working copy root of"
@@ -810,9 +868,7 @@ print_info_item(void *baton,
       SVN_ERR_MALFUNCTION();
     }
 
-  if (receiver_baton->print_newline)
-    SVN_ERR(svn_cmdline_fputs("\n", stdout, pool));
-
+  receiver_baton->start_new_line = TRUE;
   return SVN_NO_ERROR;
 }
 
@@ -869,9 +925,10 @@ svn_cl__info(apr_getopt_t *os,
                                 _("the 'incremental' option is only valid"
                                   " in XML mode"));
 
-      SVN_ERR(find_print_what(opt_state->show_item,
-                              &receiver_baton, pool));
-      receiver_baton.print_newline = !opt_state->no_newline;
+      SVN_ERR(find_print_what(opt_state->show_item, &receiver_baton, pool));
+      receiver_baton.multiple_targets = (opt_state->depth > svn_depth_empty
+                                         || targets->nelts > 1);
+      receiver_baton.start_new_line = FALSE;
     }
   else
     {
@@ -908,10 +965,12 @@ svn_cl__info(apr_getopt_t *os,
         {
           if (peg_revision.kind == svn_opt_revision_unspecified)
             peg_revision.kind = svn_opt_revision_head;
+          receiver_baton.target_is_path = FALSE;
         }
       else
         {
           SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
+          receiver_baton.target_is_path = TRUE;
         }
 
       err = svn_client_info4(truepath,
@@ -948,6 +1007,9 @@ svn_cl__info(apr_getopt_t *os,
 
   if (opt_state->xml && (! opt_state->incremental))
     SVN_ERR(svn_cl__xml_print_footer("info", pool));
+  else if (opt_state->show_item && !opt_state->no_newline
+           && receiver_baton.start_new_line)
+    SVN_ERR(svn_cmdline_fputs("\n", stdout, pool));
 
   if (seen_nonexistent_target)
     return svn_error_create(
