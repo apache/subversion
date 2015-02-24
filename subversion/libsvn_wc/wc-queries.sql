@@ -1677,26 +1677,6 @@ WHERE wc_id = ?1
   AND moved_to IS NOT NULL
   AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
-/* This statement is very similar to STMT_SELECT_MOVED_DESCENDANTS_SRC
-   but the passed op-depth is the depth of the shadowing node.
-
-   This version is slightly more efficient as the most inner query is
-   only executed once, but the Sqlite page cache makes the difference
-   not really measurable */
--- STMT_SELECT_MOVED_DESCENDANTS_SHD
-SELECT n.op_depth, n.local_relpath, n.kind, n.repos_path, s.moved_to
-FROM nodes s
-JOIN nodes n ON n.wc_id = ?1 AND n.local_relpath = s.local_relpath
- AND n.op_depth=(SELECT MAX(d.op_depth)
-                 FROM nodes d
-                 WHERE d.wc_id = ?1 AND d.local_relpath = ?2
-                   AND d.op_depth < ?3)
-WHERE s.wc_id = ?1 AND s.op_depth = ?3
-  AND (s.local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2))
-  AND s.moved_to IS NOT NULL
-
-/* This statement is very similar to STMT_SELECT_MOVED_DESCENDANTS_SHD,
-   but the passed op-depth is the depth of the node as it originally existed */
 -- STMT_SELECT_MOVED_DESCENDANTS_SRC
 SELECT s.op_depth, n.local_relpath, n.kind, n.repos_path, s.moved_to
 FROM nodes n

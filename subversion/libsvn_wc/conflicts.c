@@ -2537,19 +2537,31 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
             {
               /* Break moves for any children moved out of this directory,
                * and leave this directory deleted. */
-              SVN_ERR(svn_wc__db_resolve_break_moved_away_children(
-                        db, local_abspath, src_op_root_abspath,
-                        notify_func, notify_baton,
-                        scratch_pool));
+
+              if (action != svn_wc_conflict_action_delete)
+                {
+                  SVN_ERR(svn_wc__db_op_break_moved_away(
+                                  db, local_abspath, src_op_root_abspath, TRUE,
+                                  notify_func, notify_baton,
+                                  scratch_pool));
+                  *did_resolve = TRUE;
+                  return SVN_NO_ERROR; /* Marked resolved by function*/
+                }
+              /* else # The move is/moves are already broken */
+
+
               *did_resolve = TRUE;
             }
           else if (conflict_choice == svn_wc_conflict_choose_mine_conflict)
             {
-              /* Raised moved-away conflicts on any children moved out of
-               * this directory, and leave this directory deleted.
+              svn_skel_t *new_conflicts;
+
+              /* Raise moved-away conflicts on any children moved out of
+               * this directory, and leave this directory as-is.
+               *
                * The newly conflicted moved-away children will be updated
                * if they are resolved with 'mine_conflict' as well. */
-              err = svn_wc__db_resolve_delete_raise_moved_away(
+              err = svn_wc__db_op_raise_moved_away(
                         db, local_abspath, notify_func, notify_baton,
                         scratch_pool);
 
@@ -2569,8 +2581,44 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
 
                   return SVN_NO_ERROR; /* Retry after other conflicts */
                 }
-              else
-                *did_resolve = TRUE;
+
+              /* We might now have a moved-away on *this* path, let's
+                 try to resolve that directly if that is the case */
+              SVN_ERR(svn_wc__db_read_conflict(&new_conflicts, NULL,
+                                               db, local_abspath,
+                                               scratch_pool, scratch_pool));
+
+              if (new_conflicts)
+                SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, NULL, NULL,
+                                                   &tree_conflicted,
+                                                   db, local_abspath,
+                                                   new_conflicts,
+                                                   scratch_pool,
+                                                   scratch_pool));
+
+              if (!new_conflicts || !tree_conflicted)
+                {
+                  /* TC is marked resolved by calling
+                     svn_wc__db_resolve_delete_raise_moved_away */
+                  *did_resolve = TRUE;
+                  return SVN_NO_ERROR;
+                }
+
+              SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
+                                                          &src_op_root_abspath,
+                                                          db, local_abspath,
+                                                          new_conflicts,
+                                                          scratch_pool,
+                                                          scratch_pool));
+
+              if (reason != svn_wc_conflict_reason_moved_away)
+                {
+                  *did_resolve = TRUE;
+                  return SVN_NO_ERROR; /* We fixed one, but... */
+                }
+
+              conflicts = new_conflicts;
+              /* Fall through in moved_away handling */
             }
           else
             return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
@@ -2581,8 +2629,9 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                                      svn_dirent_local_style(local_abspath,
                                                             scratch_pool));
         }
-      else if (reason == svn_wc_conflict_reason_moved_away
-               && action == svn_wc_conflict_action_edit)
+
+      if (reason == svn_wc_conflict_reason_moved_away
+           && action == svn_wc_conflict_action_edit)
         {
           /* After updates, we can resolve local moved-away
            * vs. any incoming change, either by updating the
@@ -2622,15 +2671,12 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                * working copy state instead of updating the move.
                * Else the move would be left in an invalid state. */
 
-              /* ### This breaks the move but leaves the conflict
-                 ### involving the move until
-                 ### svn_wc__db_op_mark_resolved. */
-              SVN_ERR(svn_wc__db_resolve_break_moved_away(db, local_abspath,
-                                                          src_op_root_abspath,
-                                                          notify_func,
-                                                          notify_baton,
-                                                          scratch_pool));
+              SVN_ERR(svn_wc__db_op_break_moved_away(db, local_abspath,
+                                                     src_op_root_abspath, TRUE,
+                                                     notify_func, notify_baton,
+                                                     scratch_pool));
               *did_resolve = TRUE;
+              return SVN_NO_ERROR; /* Conflict is marked resolved */
             }
           else
             return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
@@ -2768,6 +2814,7 @@ struct conflict_status_walker_baton
   void *cancel_baton;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
+  svn_boolean_t resolved_one;
   apr_hash_t *resolve_later;
 };
 
@@ -2943,6 +2990,9 @@ conflict_status_walker(void *baton,
                                            iterpool),
                       iterpool);
 
+  if (resolved)
+    cswb->resolved_one = TRUE;
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -3008,6 +3058,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   cswb.notify_func = notify_func;
   cswb.notify_baton = notify_baton;
 
+  cswb.resolved_one = FALSE;
   cswb.resolve_later = (depth != svn_depth_empty)
                           ? apr_hash_make(scratch_pool)
                           : NULL;
@@ -3030,10 +3081,12 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                            cancel_func, cancel_baton,
                            scratch_pool);
 
+  /* If we got new tree conflicts (or delayed conflicts) during the initial
+     walk, we now walk them one by one as closure. */
   while (!err && cswb.resolve_later && apr_hash_count(cswb.resolve_later))
     {
       apr_hash_index_t *hi;
-      svn_boolean_t cleared_one = FALSE;
+      svn_wc_status3_t *status = NULL;
       const char *tc_abspath = NULL;
 
       if (iterpool)
@@ -3043,31 +3096,64 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
 
       hi = apr_hash_first(scratch_pool, cswb.resolve_later);
       cswb.resolve_later = apr_hash_make(scratch_pool);
+      cswb.resolved_one = FALSE;
 
       for (; hi && !err; hi = apr_hash_next(hi))
         {
-          tc_abspath = apr_hash_this_key(hi);
           svn_pool_clear(iterpool);
+          const char *relpath;
 
-          /* ### TODO: Check if tc_abspath falls within selected depth */
+          tc_abspath = apr_hash_this_key(hi);
 
-          err = svn_wc_walk_status(wc_ctx, tc_abspath, svn_depth_empty,
-                                   FALSE, FALSE, TRUE, NULL,
-                                   conflict_status_walker, &cswb,
-                                   cancel_func, cancel_baton,
-                                   iterpool);
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
 
-          if (!err && !svn_hash_gets(cswb.resolve_later, tc_abspath))
-            cleared_one = TRUE;
+          relpath = svn_dirent_skip_ancestor(local_abspath,
+                                             tc_abspath);
+
+          if (!relpath
+              || (depth >= svn_depth_empty
+                  && depth < svn_depth_infinity
+                  && strchr(relpath, '/')))
+            {
+              continue;
+            }
+
+          SVN_ERR(svn_wc_status3(&status, wc_ctx, tc_abspath,
+                                 iterpool, iterpool));
+
+          if (depth == svn_depth_files
+              && status->kind == svn_node_dir)
+            continue;
+
+          err = svn_error_trace(conflict_status_walker(&cswb, tc_abspath,
+                                                       status, scratch_pool));
         }
 
-      if (!cleared_one && !err)
+      /* None of the remaining conflicts got resolved, and non did provide
+         an error...
+
+         We can fix that if we disable the 'resolve_later' option...
+       */
+      if (!cswb.resolved_one && !err && tc_abspath
+          && apr_hash_count(cswb.resolve_later))
         {
-          /* Return the error on one of the paths: The last one. */
+          /* Run the last resolve operation again. We still have status
+             and tc_abspath for that one. */
+
+          cswb.resolve_later = NULL; /* Produce proper error! */
+
+          /* Recreate the error */
+          err = svn_error_trace(conflict_status_walker(&cswb, tc_abspath,
+                                                       status, scratch_pool));
+
+          SVN_ERR_ASSERT(err != NULL);
+
           err = svn_error_createf(
-                    SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                    SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
                     _("Unable to resolve pending conflict on '%s'"),
                     svn_dirent_local_style(tc_abspath, scratch_pool));
+          break;
         }
     }
 

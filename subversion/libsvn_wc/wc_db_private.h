@@ -487,16 +487,27 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_op_break_move_internal(svn_wc__db_wcroot_t *wcroot,
                                   const char *src_relpath,
-                                  int src_op_depth,
+                                  int delete_op_depth,
                                   const char *dst_relpath,
                                   const svn_skel_t *work_items,
                                   apr_pool_t *scratch_pool);
 
 svn_error_t *
+svn_wc__db_op_mark_resolved_internal(svn_wc__db_wcroot_t *wcroot,
+                                     const char *local_relpath,
+                                     svn_wc__db_t *db,
+                                     svn_boolean_t resolved_text,
+                                     svn_boolean_t resolved_props,
+                                     svn_boolean_t resolved_tree,
+                                     const svn_skel_t *work_items,
+                                     apr_pool_t *scratch_pool);
+
+/* op_depth is the depth at which the node is added. */
+svn_error_t *
 svn_wc__db_op_raise_moved_away_internal(
                         svn_wc__db_wcroot_t *wcroot,
                         const char *local_relpath,
-                        int delete_op_depth,
+                        int op_depth,
                         svn_wc__db_t *db,
                         svn_wc_operation_t operation,
                         svn_wc_conflict_action_t action,

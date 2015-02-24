@@ -128,6 +128,7 @@ typedef struct conflict_info_t {
 #define NO_COPY_FROM SVN_INVALID_REVNUM, NULL, FALSE
 #define MOVED_HERE FALSE, NULL, TRUE
 #define NOT_MOVED  FALSE, NULL, FALSE
+#define FILE_EXTERNAL TRUE
 
 /* Return a comma-separated list of the prop names in PROPS, in lexically
  * ascending order, or NULL if PROPS is empty or NULL.  (Here, we don't
@@ -176,13 +177,17 @@ print_row(const nodes_row_t *row,
   else
     moved_to_str = "";
 
-  if (row->moved_here)
+  if (row->moved_here && !row->file_external && !row->moved_to)
     moved_here_str = ", MOVED_HERE";
+  else if (row->moved_to)
+    moved_here_str = ", TRUE";
   else
     moved_here_str = "";
 
   if (row->file_external)
-    file_external_str = ", file-external";
+    file_external_str = ", FILE_EXTERNAL";
+  else if (row->moved_to || row->props)
+    file_external_str = ", FALSE";
   else
     file_external_str = "";
 
@@ -194,14 +199,14 @@ print_row(const nodes_row_t *row,
   if (row->repo_revnum == SVN_INVALID_REVNUM)
     return apr_psprintf(result_pool, "%d, %-20s%-15s NO_COPY_FROM%s%s%s%s",
                         row->op_depth, relpath_str, presence_str,
-                        moved_here_str, moved_to_str,
-                        file_external_str, props);
+                        file_external_str, moved_here_str, moved_to_str,
+                        props);
   else
     return apr_psprintf(result_pool, "%d, %-20s%-15s %d, \"%s\"%s%s%s%s",
                         row->op_depth, relpath_str, presence_str,
                         (int)row->repo_revnum, row->repo_relpath,
-                        moved_here_str, moved_to_str,
-                        file_external_str, props);
+                        file_external_str, moved_here_str, moved_to_str,
+                        props);
 }
 /* A baton to pass through svn_hash_diff() to compare_nodes_rows(). */
 typedef struct comparison_baton_t {
@@ -9645,8 +9650,14 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
     SVN_ERR(check_db_conflicts(&b, "", conflicts));
   }
+  /* This breaks the move A/A/A -> AAA_1 */
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty, svn_wc_conflict_choose_merged));
+  /* This breaks the move B -> A */
+  SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty, svn_wc_conflict_choose_merged));
+  /* This breaks the move C/A/A -> A/A */
+  SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty, svn_wc_conflict_choose_merged));
   /* This breaks the move from D/A/A -> A/A/A */
-  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "D/A/A", svn_depth_empty, svn_wc_conflict_choose_merged));
 
   {
     nodes_row_t nodes[] = {
@@ -9669,12 +9680,12 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "D/A/A/A",   "normal",       2, "D/A/A/A", NOT_MOVED, "key"},
       {1, "A",         "normal",       1, "B"},
       {1, "A/A",       "normal",       1, "B/A"},
-      {1, "A/A/A",     "normal",       1, "B/A/A", FALSE, "AAA_1"},
+      {1, "A/A/A",     "normal",       1, "B/A/A", FALSE},
       {1, "A/A/A/A",   "normal",       1, "B/A/A/A"},
-      {1, "AAA_1",     "normal",       1, "A/A/A", MOVED_HERE},
-      {1, "AAA_1/A",   "normal",       1, "A/A/A/A", MOVED_HERE},
-      {1, "AAA_2",     "normal",       1, "B/A/A"},
-      {1, "AAA_2/A",   "normal",       1, "B/A/A/A"},
+      {1, "AAA_1",     "normal",       1, "A/A/A"},
+      {1, "AAA_1/A",   "normal",       1, "A/A/A/A"},
+      {1, "AAA_2",     "normal",       1, "B/A/A", MOVED_HERE},
+      {1, "AAA_2/A",   "normal",       1, "B/A/A/A", MOVED_HERE},
       {1, "AAA_3",     "normal",       1, "C/A/A", MOVED_HERE},
       {1, "AAA_3/A",   "normal",       1, "C/A/A/A", MOVED_HERE},
       {1, "B",         "base-deleted", NO_COPY_FROM},
@@ -9682,7 +9693,7 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "B/A/A",     "base-deleted", NO_COPY_FROM},
       {1, "B/A/A/A",   "base-deleted", NO_COPY_FROM},
       {2, "A/A",       "normal",       1, "C/A"},
-      {2, "A/A/A",     "normal",       1, "C/A/A"},
+      {2, "A/A/A",     "normal",       1, "C/A/A", FALSE, "AAA_2"},
       {2, "A/A/A/A",   "normal",       1, "C/A/A/A"},
       {2, "C/A",       "base-deleted", NO_COPY_FROM},
       {2, "C/A/A",     "base-deleted", NO_COPY_FROM},
@@ -10336,7 +10347,7 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
       conflict_info_t conflicts[] = {
         {"A", FALSE, FALSE,   { svn_wc_conflict_action_edit,
-                                svn_wc_conflict_reason_moved_away, "A"}},
+                                svn_wc_conflict_reason_replaced}},
         {"B", FALSE, FALSE,   { svn_wc_conflict_action_edit,
                                 svn_wc_conflict_reason_moved_away, "B"}},
         {"C/A", FALSE, FALSE, { svn_wc_conflict_action_edit,
