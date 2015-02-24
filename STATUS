@@ -126,7 +126,7 @@ Candidate changes:
      Depends on, and is based of the ^/subversion/branches/1.9.x-db-verify
      branch. Merges: r1661570,1661654,1661664,1661669,1661673,1661695,1661698
      .
-     Recommended way to review: check branch.
+     Recommended way to review: check branch and its log message.
    Votes:
      +1: rhuijben
 
@@ -144,6 +144,25 @@ Candidate changes:
      .
      Another reason to backport this, is that it fixes how we use the
      database operations that remove nodes.
+     .
+     Recommended way to review: check branch and its log message.
+   Votes:
+     +1: rhuijben
+
+ * ^/subversion/branches/1.9.x-update-delete
+   Fix the creation of 'copies' when during update BASE is deleted, but
+   local changes exists.
+   Justification:
+     Without this patch copies of mixed-revision working copies miss
+     the not-present nodes in the intermediate layers, and moves are
+     not properly moved to the copy and/or broken.
+   Notes:
+     This feature depends on and is based of the
+     ^/subversion/branches/1.9.x-commit-fixes branch. The
+     1.9.x-update-tc-detection touches some of the same tests and either
+     might need rebasing depending on which of the branches is merged first.
+     .
+     Recommended way to review: check branch and its log message.
    Votes:
      +1: rhuijben
 
