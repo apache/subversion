@@ -57,27 +57,6 @@ svn_cl__info_print_time(apr_time_t atime,
 }
 
 
-/* Return a string represenation of KIND. */
-static const char *
-kind_str(svn_node_kind_t kind)
-{
-  switch (kind)
-    {
-    case svn_node_file:
-      return "file";
-
-    case svn_node_dir:
-      return "directory";
-
-    case svn_node_none:
-      return "none";
-
-    case svn_node_unknown:
-    default:
-      return "unknown";
-    }
-}
-
 /* Return string representation of SCHEDULE */
 static const char *
 schedule_str(svn_wc_schedule_t schedule)
@@ -775,7 +754,9 @@ print_info_item(void *baton,
       const char *tmpstr;
 
     case info_item_kind:
-      tmpstr = kind_str(info->kind);
+      tmpstr = svn_cl__node_kind_str_xml(info->kind);
+      if (!tmpstr || !*tmpstr)
+        tmpstr = "unknown";
 
       if (target_path)
         SVN_ERR(svn_cmdline_printf(pool, "%-10s %s", tmpstr, target_path));
