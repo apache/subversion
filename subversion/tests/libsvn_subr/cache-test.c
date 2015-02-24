@@ -354,6 +354,74 @@ test_memcache_long_key(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_membuffer_cache_clearing(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+  svn_membuffer_t *membuffer;
+  svn_boolean_t found;
+  svn_revnum_t *value;
+  svn_revnum_t valueA = 12345;
+  svn_revnum_t valueB = 67890;
+
+  /* Create a simple cache for strings, keyed by strings. */
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, 0,
+                                            TRUE, TRUE, pool));
+  SVN_ERR(svn_cache__create_membuffer_cache(&cache,
+                                            membuffer,
+                                            serialize_revnum,
+                                            deserialize_revnum,
+                                            APR_HASH_KEY_STRING,
+                                            "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE,
+                                            pool, pool));
+
+  /* Initially, the cache is empty. */
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key A", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key B", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key C", pool));
+  SVN_TEST_ASSERT(!found);
+
+  /* Add entries. */
+  SVN_ERR(svn_cache__set(cache, "key A", &valueA, pool));
+  SVN_ERR(svn_cache__set(cache, "key B", &valueB, pool));
+
+  /* Added entries should be cached (too small to get evicted already). */
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key A", pool));
+  SVN_TEST_ASSERT(found);
+  SVN_TEST_ASSERT(*value == valueA);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key B", pool));
+  SVN_TEST_ASSERT(found);
+  SVN_TEST_ASSERT(*value == valueB);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key C", pool));
+  SVN_TEST_ASSERT(!found);
+
+  /* Clear the cache. */
+  SVN_ERR(svn_cache__membuffer_clear(membuffer));
+
+  /* The cache is empty again. */
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key A", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key B", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key C", pool));
+  SVN_TEST_ASSERT(!found);
+
+  /* But still functional: */
+  SVN_ERR(svn_cache__set(cache, "key B", &valueB, pool));
+  SVN_ERR(svn_cache__has_key(&found, cache, "key A", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__has_key(&found, cache, "key B", pool));
+  SVN_TEST_ASSERT(found);
+  SVN_ERR(svn_cache__has_key(&found, cache, "key C", pool));
+  SVN_TEST_ASSERT(!found);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -372,6 +440,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "basic membuffer svn_cache test"),
     SVN_TEST_PASS2(test_membuffer_serializer_error_handling,
                    "test for error handling in membuffer svn_cache"),
+    SVN_TEST_PASS2(test_membuffer_cache_clearing,
+                   "test clearing a membuffer svn_cache"),
     SVN_TEST_NULL
   };
 

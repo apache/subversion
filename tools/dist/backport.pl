@@ -3,6 +3,8 @@ use warnings;
 use strict;
 use feature qw/switch say/;
 
+#no warnings 'experimental::smartmatch';
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -97,6 +99,7 @@ unless (defined $AVAILID) {
 my $STATUS = './STATUS';
 my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
+my $TRUNK = '^/subversion/trunk';
 $ENV{LC_ALL} = "C";  # since we parse 'svn info' output and use isprint()
 
 # Globals.
@@ -178,12 +181,30 @@ to open a shell, and manually run 'svn commit' therein; or set \$MAY_COMMIT=1
 in the environment before running the script, in which case answering 'y'
 to the first prompt will not only run the merge but also commit it.
 
-There is also a batch mode (normally used only by cron jobs and buildbot tasks,
-rather than interactively): when \$YES and \$MAY_COMMIT are defined to '1' in
-the environment, this script will iterate the "Approved:" section, and merge
-and commit each entry therein.  If only \$YES is defined, the script will
-merge every nomination (including unapproved and vetoed ones), and complain
-to stderr if it notices any conflicts.
+There are two batch modes.  The first mode is used by the nightly svn-role
+mergebot.  It is enabled by setting \$YES and \$MAY_COMMIT to '1' in the
+environment.  In this mode, the script will iterate the "Approved changes:"
+section and merge and commit each entry therein.  To prevent an entry from
+being auto-merged, veto it or move it to a new section named "Approved, but
+merge manually:".
+
+The second batch mode is used by the hourly conflicts detector bot.  It is
+triggered by having \$YES defined in the environment to '1' and \$MAY_COMMIT
+undefined.  In this mode, the script will locally merge every nomination
+(including unapproved and vetoed ones), and complain to stderr if the merge
+failed due to a conflict.  This mode never commits anything.
+
+The hourly conflicts detector bot turns red if any entry produced a merge
+conflict.  When entry A depends on entry B for a clean merge, put a "Depends:"
+header on entry A to instruct the bot not to turn red due to A.  (The header
+is not parsed; only its presence or absence matters.)
+
+Both batch modes also perform a basic sanity-check on entries that declare
+backport branches (via the "Branch:" header): if a backport branch is used, but
+at least one of the revisions enumerated in the entry title had not been merged
+from $TRUNK to the branch root, the hourly bot will turn red and 
+nightly bot will skip the entry and email its admins.  (The nightly bot does
+not email the list on failure, since it doesn't use buildbot.)
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
@@ -286,7 +307,7 @@ sub shell_escape {
 
 sub shell_safe_path_or_url($) {
   local $_ = shift;
-  return m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/;
+  return (m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/);
 }
 
 # Shell-safety-validating wrapper for File::Temp::tempfile
@@ -810,6 +831,37 @@ sub exit_stage_left {
   exit scalar keys %ERRORS;
 }
 
+# Given an ENTRY, check whether all ENTRY->{revisions} have been merged
+# into ENTRY->{branch}, if it has one.  If revisions are missing, record
+# a warning in $ERRORS.  Return TRUE If the entry passed the validation
+# and FALSE otherwise.
+sub validate_branch_contains_named_revisions {
+  my %entry = @_;
+  return 1 unless defined $entry{branch};
+  my %present;
+
+  return "Why are you running so old versions?" # true in boolean context
+    if $SVNvsn < 1_005_000;     # doesn't have the 'mergeinfo' subcommand
+
+  my $shell_escaped_branch = shell_escape($entry{branch});
+  %present = do {
+    my @present = `$SVN mergeinfo --show-revs=merged -- $TRUNK $BRANCHES/$shell_escaped_branch`;
+    chomp @present;
+    @present = map /(\d+)/g, @present;
+    map +($_ => 1), @present;
+  };
+
+  my @absent = grep { not exists $present{$_} } @{$entry{revisions}};
+
+  if (@absent) {
+    $ERRORS{$entry{id}} //= [\%entry,
+      sprintf("Revisions '%s' nominated but not included in branch",
+              (join ", ", map { "r$_" } @absent)),
+    ];
+  }
+  return @absent ? 0 : 1;
+}
+
 sub handle_entry {
   my $in_approved = shift;
   my $approved = shift;
@@ -829,9 +881,15 @@ sub handle_entry {
     unless (@vetoes) {
       if ($MAY_COMMIT and $in_approved) {
         # svn-role mode
-        merge %entry;
+        merge %entry if validate_branch_contains_named_revisions %entry;
       } elsif (!$MAY_COMMIT) {
         # Scan-for-conflicts mode
+
+        # First, sanity-check the entry.  We ignore the result; even if it
+        # failed, we do want to check for conflicts, in the remainder of this
+        # block.
+        validate_branch_contains_named_revisions %entry;
+
         merge %entry;
 
         my $output = `$SVN status`;
@@ -892,6 +950,7 @@ sub handle_entry {
     given (prompt 'Run a merge? [y,l,v,±1,±0,q,e,a, ,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
+        #validate_branch_contains_named_revisions %entry;
         merge %entry;
         while (1) {
           given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {

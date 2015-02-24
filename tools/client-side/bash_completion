@@ -781,7 +781,9 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive \
-	       --trust-server-cert --force-interactive"
+	       --trust-server-cert --trust-unknown-ca --trust-cn-mismatch \
+	       --trust-expired --trust-not-yet-valid --trust-other-failure \
+	       --force-interactive"
 	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
 	rOpts="-r --revision"
 	qOpts="-q --quiet"
@@ -869,7 +871,7 @@ _svn()
 		         --incremental --xml $qOpts -l --limit -c --change \
                          $gOpts --with-all-revprops --with-revprop --depth \
 		         --diff --diff-cmd -x --extensions --internal-diff \
-		         --with-no-revprops --search --search-and --auto-moves"
+		         --with-no-revprops --search --search-and"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
