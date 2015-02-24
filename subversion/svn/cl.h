@@ -249,6 +249,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_newline;        /* do not output the trailing newline */
   svn_boolean_t show_passwords;    /* show cached passwords */
   svn_boolean_t pin_externals;     /* pin externals to last-changed revisions */
+  const char *show_item;           /* print only the given item */
 } svn_cl__opt_state_t;
 
 

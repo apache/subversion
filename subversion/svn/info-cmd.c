@@ -89,6 +89,150 @@ relative_url(const svn_client_info2_t *info, apr_pool_t *pool)
 }
 
 
+/* The kinds of items for print_info_item(). */
+typedef enum
+{
+  /* Entry kind */
+  info_item_kind,
+
+  /* Repository location. */
+  info_item_url,
+  info_item_relative_url,
+  info_item_repos_root_url,
+  info_item_repos_uuid,
+
+  /* Working copy revision or repository HEAD revision */
+  info_item_revision,
+
+  /* Commit details. */
+  info_item_last_changed_rev,
+  info_item_last_changed_date,
+  info_item_last_changed_author,
+
+  /* Working copy information */
+  info_item_wc_root
+} info_item_t;
+
+/* Mapping between option keywords and info_item_t. */
+typedef struct info_item_map_t
+{
+  const svn_string_t keyword;
+  const info_item_t print_what;
+} info_item_map_t;
+
+#define MAKE_STRING(x) { x, sizeof(x) - 1 }
+static const info_item_map_t info_item_map[] =
+  {
+    { MAKE_STRING("kind"),                info_item_kind },
+    { MAKE_STRING("url"),                 info_item_url },
+    { MAKE_STRING("relative-url"),        info_item_relative_url },
+    { MAKE_STRING("repos-root-url"),      info_item_repos_root_url },
+    { MAKE_STRING("repos-uuid"),          info_item_repos_uuid },
+    { MAKE_STRING("revision"),            info_item_revision },
+    { MAKE_STRING("last-changed-rev"),    info_item_last_changed_rev },
+    { MAKE_STRING("last-changed-date"),   info_item_last_changed_date },
+    { MAKE_STRING("last-changed-author"), info_item_last_changed_author },
+    { MAKE_STRING("wc-root"),             info_item_wc_root }
+  };
+#undef MAKE_STRING
+
+static const apr_size_t info_item_map_len =
+  (sizeof(info_item_map) / sizeof(info_item_map[0]));
+
+
+/* The baton type used by the info receiver functions. */
+typedef struct print_info_baton_t
+{
+  /* The path prefix that output paths should be normalized to. */
+  const char *path_prefix;
+
+  /*
+   * The following fields are used by print_info_item().
+   */
+
+  /* Which item to print. */
+  info_item_t print_what;
+
+  /* Do we print the trailing newline? */
+  svn_boolean_t print_newline;
+
+} print_info_baton_t;
+
+
+/* Find the appropriate info_item_t for KEYWORD and initialize
+ * RECEIVER_BATON for print_info_item(). Use SCRATCH_POOL for
+ * temporary allocation.
+ */
+static svn_error_t *
+find_print_what(const char *keyword,
+                print_info_baton_t *receiver_baton,
+                apr_pool_t *scratch_pool)
+{
+  svn_cl__simcheck_t **keywords = apr_palloc(
+      scratch_pool, info_item_map_len * sizeof(svn_cl__simcheck_t*));
+  svn_cl__simcheck_t *kwbuf = apr_palloc(
+      scratch_pool, info_item_map_len * sizeof(svn_cl__simcheck_t));
+  apr_size_t i;
+
+  for (i = 0; i < info_item_map_len; ++i)
+    {
+      keywords[i] = &kwbuf[i];
+      kwbuf[i].token.data = info_item_map[i].keyword.data;
+      kwbuf[i].token.len = info_item_map[i].keyword.len;
+      kwbuf[i].data = &info_item_map[i];
+    }
+
+  switch (svn_cl__similarity_check(keyword, keywords,
+                                   info_item_map_len, scratch_pool))
+    {
+      const info_item_map_t *kw0;
+      const info_item_map_t *kw1;
+      const info_item_map_t *kw2;
+
+    case 0:                     /* Exact match. */
+      kw0 = keywords[0]->data;
+      receiver_baton->print_what = kw0->print_what;
+      return SVN_NO_ERROR;
+
+    case 1:
+      /* The best alternative isn't good enough */
+      return svn_error_createf(
+          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+          _("'%s' is not a valid value for the 'show-item' option."),
+          keyword);
+
+    case 2:
+      /* There is only one good candidate */
+      kw0 = keywords[0]->data;
+      return svn_error_createf(
+          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+          _("'%s' is not a valid value for the 'show-item' option;"
+            " did you mean '%s'?"),
+          keyword, kw0->keyword.data);
+
+    case 3:
+      /* Suggest a list of the most likely candidates */
+      kw0 = keywords[0]->data;
+      kw1 = keywords[1]->data;
+      return svn_error_createf(
+          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+          _("'%s' is not a valid value for the 'show-item' option;"
+            " did you mean '%s' or '%s'?"),
+          keyword, kw0->keyword.data, kw1->keyword.data);
+
+    default:
+      /* Never suggest more than three candidates */
+      kw0 = keywords[0]->data;
+      kw1 = keywords[1]->data;
+      kw2 = keywords[2]->data;
+      return svn_error_createf(
+          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+          _("'%s' is not a valid value for the 'show-item' option;"
+            " did you mean '%s', '%s' or '%s'?"),
+          keyword, kw0->keyword.data, kw1->keyword.data, kw2->keyword.data);
+    }
+}
+
 /* A callback of type svn_client_info_receiver2_t.
    Prints svn info in xml mode to standard out */
 static svn_error_t *
@@ -99,7 +243,7 @@ print_info_xml(void *baton,
 {
   svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   const char *rev_str;
-  const char *path_prefix = baton;
+  print_info_baton_t *const receiver_baton = baton;
 
   if (SVN_IS_VALID_REVNUM(info->rev))
     rev_str = apr_psprintf(pool, "%ld", info->rev);
@@ -109,7 +253,7 @@ print_info_xml(void *baton,
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                         "path", svn_cl__local_style_skip_ancestor(
-                                  path_prefix, target, pool),
+                                  receiver_baton->path_prefix, target, pool),
                         "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
                         SVN_VA_NULL);
@@ -269,11 +413,11 @@ print_info(void *baton,
            const svn_client_info2_t *info,
            apr_pool_t *pool)
 {
-  const char *path_prefix = baton;
+  print_info_baton_t *const receiver_baton = baton;
 
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
                              svn_cl__local_style_skip_ancestor(
-                               path_prefix, target, pool)));
+                               receiver_baton->path_prefix, target, pool)));
 
   /* ### remove this someday:  it's only here for cmdline output
      compatibility with svn 1.1 and older.  */
@@ -394,14 +538,14 @@ print_info(void *baton,
       if (info->wc_info->moved_from_abspath)
         SVN_ERR(svn_cmdline_printf(pool, _("Moved From: %s\n"),
                                    svn_cl__local_style_skip_ancestor(
-                                      path_prefix,
+                                      receiver_baton->path_prefix,
                                       info->wc_info->moved_from_abspath,
                                       pool)));
 
       if (info->wc_info->moved_to_abspath)
         SVN_ERR(svn_cmdline_printf(pool, _("Moved To: %s\n"),
                                    svn_cl__local_style_skip_ancestor(
-                                      path_prefix,
+                                      receiver_baton->path_prefix,
                                       info->wc_info->moved_to_abspath,
                                       pool)));
     }
@@ -449,21 +593,24 @@ print_info(void *baton,
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Previous Base File: %s\n"),
                                 svn_cl__local_style_skip_ancestor(
-                                        path_prefix, conflict->base_abspath,
+                                        receiver_baton->path_prefix,
+                                        conflict->base_abspath,
                                         pool)));
 
                     if (conflict->my_abspath)
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Previous Working File: %s\n"),
                                 svn_cl__local_style_skip_ancestor(
-                                        path_prefix, conflict->my_abspath,
+                                        receiver_baton->path_prefix,
+                                        conflict->my_abspath,
                                         pool)));
 
                     if (conflict->their_abspath)
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Current Base File: %s\n"),
                                 svn_cl__local_style_skip_ancestor(
-                                        path_prefix, conflict->their_abspath,
+                                        receiver_baton->path_prefix,
+                                        conflict->their_abspath,
                                         pool)));
                   break;
 
@@ -472,7 +619,7 @@ print_info(void *baton,
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Properties File: %s\n"),
                                 svn_cl__local_style_skip_ancestor(
-                                        path_prefix,
+                                        receiver_baton->path_prefix,
                                         conflict->prop_reject_abspath,
                                         pool)));
                     printed_prop_conflict_file = TRUE;
@@ -580,6 +727,96 @@ print_info(void *baton,
 }
 
 
+/* A callback of type svn_client_info_receiver2_t. */
+static svn_error_t *
+print_info_item(void *baton,
+                  const char *target,
+                  const svn_client_info2_t *info,
+                  apr_pool_t *pool)
+{
+  print_info_baton_t *const receiver_baton = baton;
+
+  switch (receiver_baton->print_what)
+    {
+    case info_item_kind:
+      switch (info->kind)
+        {
+        case svn_node_file:
+          SVN_ERR(svn_cmdline_fputs("file", stdout, pool));
+          break;
+
+        case svn_node_dir:
+          SVN_ERR(svn_cmdline_fputs("directory", stdout, pool));
+          break;
+
+        case svn_node_none:
+          SVN_ERR(svn_cmdline_fputs("none", stdout, pool));
+          break;
+
+        case svn_node_unknown:
+        default:
+          SVN_ERR(svn_cmdline_fputs("unknown", stdout, pool));
+          break;
+        }
+
+    case info_item_url:
+      SVN_ERR(svn_cmdline_fputs(info->URL, stdout, pool));
+      break;
+
+    case info_item_relative_url:
+      SVN_ERR(svn_cmdline_fputs(relative_url(info, pool), stdout, pool));
+      break;
+
+    case info_item_repos_root_url:
+      SVN_ERR(svn_cmdline_fputs(info->repos_root_URL, stdout, pool));
+      break;
+
+    case info_item_repos_uuid:
+      SVN_ERR(svn_cmdline_fputs(info->repos_UUID, stdout, pool));
+      break;
+
+    case info_item_revision:
+      SVN_ERR(svn_cmdline_printf(pool, "%ld", info->rev));
+      break;
+
+    case info_item_last_changed_rev:
+      SVN_ERR(svn_cmdline_printf(pool, "%ld", info->last_changed_rev));
+      break;
+
+    case info_item_last_changed_date:
+      SVN_ERR(svn_cmdline_fputs(
+                  svn_time_to_cstring(info->last_changed_date, pool),
+                  stdout, pool));
+      break;
+
+    case info_item_last_changed_author:
+      SVN_ERR(svn_cmdline_fputs(info->last_changed_author, stdout, pool));
+      break;
+
+    case info_item_wc_root:
+      /* FIXME: Consider just printing nothing if wc-root is not available. */
+      if (info->wc_info && info->wc_info->wcroot_abspath)
+        SVN_ERR(svn_cmdline_fputs(svn_dirent_local_style(
+                                      info->wc_info->wcroot_abspath,
+                                      pool),
+                                  stdout, pool));
+      else
+        return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                                _("Can't print the working copy root of"
+                                  " something that is not in a working copy"));
+      break;
+
+    default:
+      SVN_ERR_MALFUNCTION();
+    }
+
+  if (receiver_baton->print_newline)
+    SVN_ERR(svn_cmdline_fputs("\n", stdout, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__info(apr_getopt_t *os,
@@ -595,7 +832,7 @@ svn_cl__info(apr_getopt_t *os,
   svn_boolean_t seen_nonexistent_target = FALSE;
   svn_opt_revision_t peg_revision;
   svn_client_info_receiver2_t receiver;
-  const char *path_prefix;
+  print_info_baton_t receiver_baton = { 0 };
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -608,11 +845,33 @@ svn_cl__info(apr_getopt_t *os,
     {
       receiver = print_info_xml;
 
+      if (opt_state->show_item)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("the 'show-item' option is not valid"
+                                  " in XML mode"));
+      if (opt_state->no_newline)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("the 'no-newline' option is only valid"
+                                  " with the 'show-item' option"));
+
       /* If output is not incremental, output the XML header and wrap
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
         SVN_ERR(svn_cl__xml_print_header("info", pool));
+    }
+  else if (opt_state->show_item)
+    {
+      receiver = print_info_item;
+
+      if (opt_state->incremental)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("the 'incremental' option is only valid"
+                                  " in XML mode"));
+
+      SVN_ERR(find_print_what(opt_state->show_item,
+                              &receiver_baton, pool));
+      receiver_baton.print_newline = !opt_state->no_newline;
     }
   else
     {
@@ -620,14 +879,18 @@ svn_cl__info(apr_getopt_t *os,
 
       if (opt_state->incremental)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("'incremental' option only valid in XML "
-                                  "mode"));
+                                _("the 'incremental' option is only valid"
+                                  " in XML mode"));
+      if (opt_state->no_newline)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("the 'no-newline' option is only valid"
+                                  " with the 'show-item' option"));
     }
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
-  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", pool));
+  SVN_ERR(svn_dirent_get_absolute(&receiver_baton.path_prefix, "", pool));
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -658,7 +921,7 @@ svn_cl__info(apr_getopt_t *os,
                              TRUE /* fetch_actual_only */,
                              opt_state->include_externals,
                              opt_state->changelists,
-                             receiver, (void *) path_prefix,
+                             receiver, &receiver_baton,
                              ctx, subpool);
 
       if (err)

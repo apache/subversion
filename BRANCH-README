@@ -4,20 +4,47 @@ the problem described in issue #4299 in order to solve issue #4556.
 Instead of 'svn youngest', we'll implement an extension to 'svn info',
 as described in option 1. of issue #4556, as follows:
 
-  - Add a --detail=FIELD option to 'svn info' that will cause it to
+  - The 'svn youngest' command will be removed.
+
+  - Add a --show-item=FIELD option to 'svn info' that will cause it to
     display only the value of FIELD and nothing else; for example:
 
-        $ svn info ^/subversion/trunk --detail=revision
+        $ svn info ^/subversion/trunk --show-item=revision
         1660035
-        $ svn info ^/subversion/trunk --detail=last-changed-rev
+        $ svn info ^/subversion/trunk --show-item=last-changed-rev
         1660014
 
     and so on.
 
-  - The --detail option is incompatible with the --xml option
+    When the 'svn info' command is invoked on multiple targets or
+    in recursive mode, the output will be modified to print the
+    requested item and the path or URL of the target:
+
+        $ svn info ^/subversion/trunk -R --show-item=last-changed-rev
+        1660014 http://svn.apache.org/repos/asf/subversion/trunk
+        915036 https://svn.apache.org/repos/asf/subversion/trunk/BUGS
+        ...
+
+  - The --show-item option is incompatible with the --xml option
+
+  - As was the case with the now defunct 'svn youngest' subcommand,
+    it's possible to use --no-newline with --show-item.
 
   - Initially, only a few field values will be supported with
-    --detail; revision, last-changed-rev, url, relative-url,
+    --show-item; revision, last-changed-rev, url, relative-url,
       repository-root; maybe a few more.
 
-  - The 'svn youngest' command will be removed.
+
+Branch Status
+=============
+
+TODO:
+  - Add tests for 'svn info --show-item'.
+  - Modify --show-item output with multiple targets and/or recursive
+    mode to display both the requested item and the (relative) path
+    and/or URL it applies to.
+
+DONE:
+  - Removed 'svn youngest' (already merged to trunk before 1.9.x branch).
+  - Implemented 'svn info --show-item [--no-newline]' with output suitable
+    for single targets.
