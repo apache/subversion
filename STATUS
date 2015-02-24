@@ -130,13 +130,22 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1661718 and many others
-   Fix invalid database state (moves) on incoming deletes during update
+ * ^/subversion/branches/1.9.x-crop-safety
+   Make 'svn update --set-depth X' safe, in that it won't just move your
+   changes to /dev/null
    Justification:
-     Fixes database corruption. A huge catch-up merge is probably easier
-     than a backport.
+     Improves usability of the crop/exclude features. Avoids losing
+     things that shouldn't get lost.
+   Notes:
+     This feature uses code introduced in the
+     ^/subversion/branches/1.9.x-update-tc-detection
+     branch, to detect what can safely be deleted. As such it depends on
+     and is based on this branch.
+     .
+     Another reason to backport this, is that it fixes how we use the
+     database operations that remove nodes.
    Votes:
-     +0: rhuijben
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
