@@ -345,7 +345,8 @@ ORDER BY local_relpath
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND (op_depth > ?3 OR (op_depth = ?3 AND presence != MAP_BASE_DELETED))
+  AND (op_depth > ?3 OR (op_depth = ?3
+                         AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)))
 UNION ALL
 SELECT 1 FROM ACTUAL_NODE a
 WHERE wc_id = ?1 AND parent_relpath = ?2
