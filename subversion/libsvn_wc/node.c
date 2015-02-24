@@ -261,7 +261,7 @@ walker_helper(svn_wc__db_t *db,
               apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  apr_array_header_t *items;
+  const apr_array_header_t *items;
   int i;
 
   if (depth == svn_depth_empty)
