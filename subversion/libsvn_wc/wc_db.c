@@ -9785,7 +9785,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
 }
 
 svn_error_t *
-svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
+svn_wc__db_read_children_walker_info(const apr_array_header_t **items,
                                      svn_wc__db_t *db,
                                      const char *dir_abspath,
                                      apr_pool_t *result_pool,
@@ -9795,6 +9795,7 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
   const char *dir_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  apr_array_header_t *nodes;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
@@ -9808,16 +9809,18 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, dir_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  *nodes = apr_hash_make(result_pool);
+  nodes = apr_array_make(result_pool, 16,
+                          sizeof(struct svn_wc__db_walker_info_t *));
   while (have_row)
     {
       struct svn_wc__db_walker_info_t *child;
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      const char *name = svn_relpath_basename(child_relpath, NULL);
+      const char *name = svn_relpath_basename(child_relpath, result_pool);
       int op_depth = svn_sqlite__column_int(stmt, 1);
       svn_error_t *err;
 
       child = apr_palloc(result_pool, sizeof(*child));
+      child->name = name;
       child->status = svn_sqlite__column_token(stmt, 2, presence_map);
       if (op_depth > 0)
         {
@@ -9826,12 +9829,15 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
             SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
         }
       child->kind = svn_sqlite__column_token(stmt, 3, kind_map);
-      svn_hash_sets(*nodes, apr_pstrdup(result_pool, name), child);
+
+      APR_ARRAY_PUSH(nodes, struct svn_wc__db_walker_info_t *) = child;
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  *items = nodes;
 
   return SVN_NO_ERROR;
 }
