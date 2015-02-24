@@ -400,6 +400,7 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_op_make_copy_internal(svn_wc__db_wcroot_t *wcroot,
                                  const char *local_relpath,
+                                 svn_boolean_t move_move_info,
                                  const svn_skel_t *conflicts,
                                  const svn_skel_t *work_items,
                                  apr_pool_t *scratch_pool);
