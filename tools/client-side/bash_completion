@@ -829,7 +829,7 @@ _svn()
 		;;
 	copy|cp)
 		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts --parents \
-		         --ignore-externals"
+		         --ignore-externals --pin-externals"
 		;;
 	delete|del|remove|rm)
 		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts \
