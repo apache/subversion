@@ -28,6 +28,7 @@
 #include "svn_dirent_uri.h"
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
+#include "svn_pools.h"
 
 #include "ra_cache.h"
 #include "private/svn_debug.h"
@@ -91,6 +92,9 @@ typedef struct cache_entry_t
 
   /* The actual RA session. */
   svn_ra_session_t *session;
+
+  /* POOL for this RA session and cache entry. */
+  apr_pool_t *session_pool;
 
   /* POOL that owns this session. NULL if session is not used. */
   apr_pool_t *owner_pool;
@@ -409,12 +413,13 @@ close_ra_session(void *data)
           --ra_cache->inactive_count;
         }
 
-      /* Close and invalidate the session. */
-      cache_entry->session = NULL;
-      svn_ra__close(session);
-
       RA_CACHE_LOG(("SESSION(%d): Closed\n", cache_entry->id));
       RA_CACHE_STATS(++ra_cache->stat.close);
+
+      /* Close and invalidate the session. */
+      svn_pool_destroy(cache_entry->session_pool);
+      cache_entry->session = NULL;
+      cache_entry->session_pool = NULL;
     }
   else
     {
@@ -438,15 +443,9 @@ remove_inactive_entry(svn_client__ra_cache_t *ra_cache,
                       cache_entry_t *cache_entry,
                       svn_boolean_t expired)
 {
-  svn_ra_session_t *const session = cache_entry->session;
-
   APR_RING_REMOVE(cache_entry, freelist);
   APR_RING_ELEM_INIT(cache_entry, freelist);
   --ra_cache->inactive_count;
-
-  /* Close and invalidate the session. */
-  cache_entry->session = NULL;
-  svn_ra__close(session);
 
   RA_CACHE_LOG(("SESSION(%d): Closed (%s)\n", cache_entry->id,
                 (expired ? "expired" : "expunged")));
@@ -455,6 +454,11 @@ remove_inactive_entry(svn_client__ra_cache_t *ra_cache,
         ++ra_cache->stat.expire;
       else
         ++ra_cache->stat.expunge);
+
+  /* Close and invalidate the session. */
+  svn_pool_destroy(cache_entry->session_pool);
+  cache_entry->session = NULL;
+  cache_entry->session_pool = NULL;
 }
 
 /* Limit the size of the inactive session list in RA_CACHE and remove
@@ -527,6 +531,71 @@ find_session_by_url(cache_entry_t **cache_entry_p,
     }
 
   *cache_entry_p = found_entry;
+  return SVN_NO_ERROR;
+}
+
+/* Helper for svn_client__ra_cache_open_session(). Allocates new
+   *CACHE_ENTRY_P and opens new RA session using BASE_URL, UUID,
+   CBTABLE and CALLBACK_BATON arguments. RA session and CACHE_ENTRY
+   will be allocated from SESSION_POOL and linked lifetime of
+   OWNER_POOL. */
+static svn_error_t *
+open_new_session(cache_entry_t **cache_entry_p,
+                 const char **corrected_p,
+                 svn_client__ra_cache_t *ra_cache,
+                 const char *base_url,
+                 const char *uuid,
+                 svn_ra_callbacks2_t *cbtable,
+                 void *callback_baton,
+                 apr_pool_t *session_pool,
+                 apr_pool_t *owner_pool)
+{
+  cache_entry_t *cache_entry;
+  svn_ra_callbacks2_t *ra_callbacks;
+  svn_ra_session_t *session;
+
+  cache_entry = apr_pcalloc(session_pool, sizeof(*cache_entry));
+  APR_RING_ELEM_INIT(cache_entry, freelist);
+  cache_entry->session_pool = session_pool;
+
+  SVN_ERR(svn_ra_create_callbacks(&ra_callbacks, session_pool));
+  ra_callbacks->open_tmp_file = open_tmp_file;
+  ra_callbacks->get_wc_prop = get_wc_prop;
+  ra_callbacks->set_wc_prop = set_wc_prop;
+  ra_callbacks->push_wc_prop = push_wc_prop;
+  ra_callbacks->invalidate_wc_props = invalidate_wc_props;
+  ra_callbacks->auth_baton = cbtable->auth_baton; /* new-style */
+  ra_callbacks->progress_func = progress_func;
+  ra_callbacks->progress_baton = cache_entry;
+  ra_callbacks->cancel_func = cancel_func;
+  ra_callbacks->get_client_string = get_client_string;
+  ra_callbacks->get_wc_contents = get_wc_contents;
+  ra_callbacks->check_tunnel_func = check_tunnel_func;
+  ra_callbacks->open_tunnel_func = open_tunnel_func;
+  ra_callbacks->tunnel_baton = cache_entry;
+
+  cache_entry->owner_pool = owner_pool;
+  cache_entry->cb_table = cbtable;
+  cache_entry->cb_baton = callback_baton;
+  cache_entry->id = ra_cache->next_id;
+
+  SVN_ERR(svn_ra_open4(&session, corrected_p, base_url, uuid,
+                       ra_callbacks, cache_entry,
+                       ra_cache->config, session_pool));
+
+  if (corrected_p && *corrected_p)
+    {
+      /* Caller is ready to follow redirection and we got redirection.
+         Just return corrected URL without RA session. */
+      return SVN_NO_ERROR;
+    }
+
+  cache_entry->session = session;
+
+  SVN_ERR(svn_ra_get_repos_root2(session, &cache_entry->root_url,
+                                 session_pool));
+
+  *cache_entry_p = cache_entry;
   return SVN_NO_ERROR;
 }
 
@@ -604,48 +673,29 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
   else
     {
       /* No existing RA session found. Open new one. */
-      svn_ra_callbacks2_t *ra_callbacks;
-      svn_ra_session_t *session;
+      svn_error_t *err;
+      apr_pool_t *session_pool = svn_pool_create(ra_cache->pool);
 
-      cache_entry = apr_pcalloc(ra_cache->pool, sizeof(*cache_entry));
-      APR_RING_ELEM_INIT(cache_entry, freelist);
-
-      SVN_ERR(svn_ra_create_callbacks(&ra_callbacks, ra_cache->pool));
-      ra_callbacks->open_tmp_file = open_tmp_file;
-      ra_callbacks->get_wc_prop = get_wc_prop;
-      ra_callbacks->set_wc_prop = set_wc_prop;
-      ra_callbacks->push_wc_prop = push_wc_prop;
-      ra_callbacks->invalidate_wc_props = invalidate_wc_props;
-      ra_callbacks->auth_baton = cbtable->auth_baton; /* new-style */
-      ra_callbacks->progress_func = progress_func;
-      ra_callbacks->progress_baton = cache_entry;
-      ra_callbacks->cancel_func = cancel_func;
-      ra_callbacks->get_client_string = get_client_string;
-      ra_callbacks->get_wc_contents = get_wc_contents;
-      ra_callbacks->check_tunnel_func = check_tunnel_func;
-      ra_callbacks->open_tunnel_func = open_tunnel_func;
-      ra_callbacks->tunnel_baton = cache_entry;
-
-      cache_entry->owner_pool = result_pool;
-      cache_entry->cb_table = cbtable;
-      cache_entry->cb_baton = callback_baton;
-      cache_entry->id = ra_cache->next_id;
-
-      SVN_ERR(svn_ra_open4(&session, corrected_p, base_url, uuid,
-                           ra_callbacks, cache_entry,
-                           ra_cache->config, ra_cache->pool));
+      err = open_new_session(&cache_entry, corrected_p, ra_cache,
+                             base_url, uuid, cbtable, callback_baton,
+                             session_pool, result_pool);
+      if (err)
+        {
+          svn_pool_destroy(session_pool);
+          return svn_error_trace(err);
+        }
 
       if (corrected_p && *corrected_p)
         {
+          /* Copy corrected url to RESULT_POOL before cleaning
+             SESSION_POOL. */
+          *corrected_p = apr_pstrdup(result_pool, *corrected_p);
+
+          svn_pool_destroy(session_pool);
           /* Caller is ready to follow redirection and we got redirection.
              Just return corrected URL without RA session. */
           return SVN_NO_ERROR;
         }
-
-      cache_entry->session = session;
-
-      SVN_ERR(svn_ra_get_repos_root2(session, &cache_entry->root_url,
-                                     ra_cache->pool));
 
       RA_CACHE_LOG(("SESSION(%d): Open('%s')\n", cache_entry->id, base_url));
       RA_CACHE_STATS(++ra_cache->stat.open);

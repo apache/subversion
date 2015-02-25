@@ -228,14 +228,6 @@ check_ra_version(const svn_version_t *ra_version, const char *scheme)
 
 /* -------------------------------------------------------------- */
 
-/*** Private Inter-Library Interfaces ***/
-void
-svn_ra__close(svn_ra_session_t *session)
-{
-  if (session && session->pool)
-    apr_pool_destroy(session->pool);
-}
-
 /* -------------------------------------------------------------- */
 
 /*** Public Interfaces ***/
