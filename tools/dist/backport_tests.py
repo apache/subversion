@@ -74,38 +74,38 @@ class BackportTest(object):
     """Return a decorator that: builds TEST_FUNC's sbox, creates
     ^/subversion/trunk, and calls TEST_FUNC, then compare its output to the
     expected dump file named after TEST_FUNC."""
-  
+
     # .wraps() propagates the wrappee's docstring to the wrapper.
-    @functools.wraps(test_func) 
+    @functools.wraps(test_func)
     def wrapped_test_func(sbox):
       expected_dump_file = './%s.dump' % (test_func.func_name,)
 
       sbox.build()
-  
+
       # r2: prepare ^/subversion/ tree
       sbox.simple_mkdir('subversion', 'subversion/trunk')
       sbox.simple_mkdir('subversion/tags', 'subversion/branches')
       sbox.simple_move('A', 'subversion/trunk')
       sbox.simple_move('iota', 'subversion/trunk')
       sbox.simple_commit(message='Create trunk')
-  
+
       # r3: branch
       sbox.simple_copy('subversion/trunk', 'branch')
       sbox.simple_append('branch/STATUS', '')
       sbox.simple_add('branch/STATUS')
       sbox.simple_commit(message='Create branch, with STATUS file')
-  
+
       # r4: random change on trunk
       sbox.simple_append('subversion/trunk/iota', 'First change\n')
       sbox.simple_commit(message='First change')
-  
+
       # r5: random change on trunk
       sbox.simple_append('subversion/trunk/A/mu', 'Second change\n')
       sbox.simple_commit(message='Second change')
-  
+
       # Do the work.
       test_func(sbox)
-  
+
       # Verify it.
       verify_backport(sbox, expected_dump_file, self.uuid)
     return wrapped_test_func
@@ -139,7 +139,7 @@ def serialize_entry(entry):
 
     # notes
     '   Notes: %s\n' % (entry['notes'],) if entry['notes'] else '',
-     
+
     # branch
     '   Branch: %s\n' % (entry['branch'],) if entry['branch'] else '',
 
@@ -210,12 +210,12 @@ def verify_backport(sbox, expected_dump_file, uuid):
   # mirror repository in preparation for the comparison dump.
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   for revnum in range(0, 1+int(sbox.youngest())):
-    svntest.actions.run_and_verify_svnadmin(None, [], [],
+    svntest.actions.run_and_verify_svnadmin([], [],
       "delrevprop", "-r", revnum, sbox.repo_dir, "svn:date")
 
   # Create a dump file from the mirror repository.
   dest_dump = open(expected_dump_file).readlines()
-  svntest.actions.run_and_verify_svnadmin(None, None, [],
+  svntest.actions.run_and_verify_svnadmin(None, [],
                                           'setuuid', '--', sbox.repo_dir, uuid)
   src_dump = svntest.actions.run_and_verify_dump(sbox.repo_dir)
 
@@ -265,7 +265,7 @@ def backport_two_approveds(sbox):
 
   # Now back up and do three entries.
   # r9: revert r7, r8
-  svntest.actions.run_and_verify_svnlook(None, ["8\n"], [],
+  svntest.actions.run_and_verify_svnlook(["8\n"], [],
                                          'youngest', sbox.repo_dir)
   sbox.simple_update()
   svntest.main.run_svn(None, 'merge', '-r8:6',
@@ -294,7 +294,7 @@ def backport_accept(sbox):
   # r6: conflicting change on branch
   sbox.simple_append('branch/iota', 'Conflicts with first change\n')
   sbox.simple_commit(message="Conflicting change on iota")
-  
+
   # r7: nominate r4 with --accept (because of r6)
   approved_entries = [
     make_entry([4], notes="Merge with --accept=theirs-conflict."),
@@ -318,7 +318,7 @@ def backport_branches(sbox):
   # r6: conflicting change on branch
   sbox.simple_append('branch/iota', 'Conflicts with first change')
   sbox.simple_commit(message="Conflicting change on iota")
-  
+
   # r7: backport branch
   sbox.simple_update()
   sbox.simple_copy('branch', 'subversion/branches/r4')
@@ -341,6 +341,8 @@ def backport_branches(sbox):
 
   # Run it.
   run_backport(sbox)
+
+  # This also serves as the 'success mode' part of backport_branch_contains().
 
 
 #----------------------------------------------------------------------
@@ -367,7 +369,7 @@ def backport_conflicts_detection(sbox):
   # r6: conflicting change on branch
   sbox.simple_append('branch/iota', 'Conflicts with first change\n')
   sbox.simple_commit(message="Conflicting change on iota")
-  
+
   # r7: nominate r4, but without the requisite --accept
   approved_entries = [
     make_entry([4], notes="This will conflict."),
@@ -399,6 +401,60 @@ def backport_conflicts_detection(sbox):
 
 
 #----------------------------------------------------------------------
+@BackportTest(None) # would be 000000000007
+def backport_branch_contains(sbox):
+  "branch must contain the revisions"
+
+  # r6: conflicting change on branch
+  sbox.simple_append('branch/iota', 'Conflicts with first change')
+  sbox.simple_commit(message="Conflicting change on iota")
+
+  # r7: backport branch
+  sbox.simple_update()
+  sbox.simple_copy('branch', 'subversion/branches/r4')
+  sbox.simple_commit(message='Create a backport branch')
+
+  # r8: merge into backport branch
+  sbox.simple_update()
+  svntest.main.run_svn(None, 'merge', '--record-only', '-c4',
+                       '^/subversion/trunk', sbox.ospath('subversion/branches/r4'))
+  sbox.simple_mkdir('subversion/branches/r4/A_resolved')
+  sbox.simple_append('subversion/branches/r4/iota', "resolved\n", truncate=1)
+  sbox.simple_commit(message='Conflict resolution via mkdir')
+
+  # r9: nominate r4,r5 with branch that contains not all of them
+  approved_entries = [
+    make_entry([4,5], branch="r4")
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_commit(message='Nominate r4')
+
+  # Run it.
+  exit_code, output, errput = run_backport(sbox, error_expected=True)
+
+  # Verify the error message.
+  expected_errput = svntest.verify.RegexOutput(
+    ".*Revisions 'r5' nominated but not included in branch",
+    match_all=False,
+  )
+  svntest.verify.verify_outputs(None, output, errput,
+                                [], expected_errput)
+  svntest.verify.verify_exit_code(None, exit_code, 1)
+
+  # Verify no commit occurred.
+  svntest.actions.run_and_verify_svnlook(["9\n"], [],
+                                         'youngest', sbox.repo_dir)
+
+  # Verify the working copy has been reverted.
+  svntest.actions.run_and_verify_svn([], [], 'status', '-q',
+                                     sbox.repo_dir)
+
+  # The sibling test backport_branches() verifies the success mode.
+
+
+
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -411,6 +467,7 @@ test_list = [ None,
               backport_branches,
               backport_multirevisions,
               backport_conflicts_detection,
+              backport_branch_contains,
               # When adding a new test, include the test number in the last
               # 6 bytes of the UUID.
              ]

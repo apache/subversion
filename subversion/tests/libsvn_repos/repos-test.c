@@ -3562,6 +3562,56 @@ test_repos_fs_type(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+deprecated_access_context_api(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_access_t *access;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  const char *conflict;
+  svn_revnum_t new_rev;
+  const char *hook;
+
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_repos(&repos,
+                                 "test-repo-deprecated-access-context-api",
+                                 opts, pool));
+
+  /* Set an empty pre-commit hook. */
+#ifdef WIN32
+  hook = apr_pstrcat(pool, svn_repos_pre_commit_hook(repos, pool), ".bat",
+                     SVN_VA_NULL);
+  SVN_ERR(svn_io_file_create(hook,
+                             "exit 0" APR_EOL_STR,
+                             pool));
+#else
+  hook = svn_repos_pre_commit_hook(repos, pool);
+  SVN_ERR(svn_io_file_create(hook,
+                             "#!/bin/sh" APR_EOL_STR "exit 0" APR_EOL_STR,
+                             pool));
+  SVN_ERR(svn_io_set_file_executable(hook, TRUE, FALSE, pool));
+#endif
+
+  /* Set some access context using svn_fs_access_add_lock_token(). */
+  SVN_ERR(svn_fs_create_access(&access, "jrandom", pool));
+  SVN_ERR(svn_fs_access_add_lock_token(access, "opaquelocktoken:abc"));
+  SVN_ERR(svn_fs_set_access(svn_repos_fs(repos), access));
+
+  /* Commit a new revision. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&txn, repos, 0,
+                                             apr_hash_make(pool), pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(root, "/whatever", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(&conflict, repos, &new_rev, txn, pool));
+
+  SVN_TEST_STRING_ASSERT(conflict, NULL);
+  SVN_TEST_ASSERT(new_rev == 1);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 4;
@@ -3615,6 +3665,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos__config_pool_*"),
     SVN_TEST_OPTS_PASS(test_repos_fs_type,
                        "test test_repos_fs_type"),
+    SVN_TEST_OPTS_PASS(deprecated_access_context_api,
+                       "test deprecated access context api"),
     SVN_TEST_NULL
   };
 

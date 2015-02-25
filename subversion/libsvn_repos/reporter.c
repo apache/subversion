@@ -495,8 +495,8 @@ get_revision_info(report_baton_t *b,
       /* Create a result object */
       info = apr_palloc(b->pool, sizeof(*info));
       info->rev = rev;
-      info->date = cdate ? svn_string_dup(cdate, b->pool) : NULL;
-      info->author = author ? svn_string_dup(author, b->pool) : NULL;
+      info->date = svn_string_dup(cdate, b->pool);
+      info->author = svn_string_dup(author, b->pool);
 
       /* Cache it */
       apr_hash_set(b->revision_infos, &info->rev, sizeof(info->rev), info);

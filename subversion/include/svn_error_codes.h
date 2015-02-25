@@ -150,6 +150,8 @@ extern "C" {
                                          + (22 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_MALFUNC_CATEGORY_START  (APR_OS_START_USERERR \
                                          + (23 * SVN_ERR_CATEGORY_SIZE))
+#define SVN_ERR_X509_CATEGORY_START     (APR_OS_START_USERERR \
+                                         + (24 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -1616,6 +1618,90 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_ASSERTION_ONLY_TRACING_LINKS,
              SVN_ERR_MALFUNC_CATEGORY_START + 1,
              "No non-tracing links found in the error chain")
+
+  /* X509 parser errors.
+   * Names of these error codes are based on tropicssl error codes.
+   * @since New in 1.9 */
+
+  SVN_ERRDEF(SVN_ERR_ASN1_OUT_OF_DATA,
+             SVN_ERR_X509_CATEGORY_START + 0,
+             "Unexpected end of ASN1 data")
+
+  SVN_ERRDEF(SVN_ERR_ASN1_UNEXPECTED_TAG,
+             SVN_ERR_X509_CATEGORY_START + 1,
+             "Unexpected ASN1 tag")
+
+  SVN_ERRDEF(SVN_ERR_ASN1_INVALID_LENGTH,
+             SVN_ERR_X509_CATEGORY_START + 2,
+             "Invalid ASN1 length")
+
+  SVN_ERRDEF(SVN_ERR_ASN1_LENGTH_MISMATCH,
+             SVN_ERR_X509_CATEGORY_START + 3,
+             "ASN1 length mismatch")
+
+  SVN_ERRDEF(SVN_ERR_ASN1_INVALID_DATA,
+             SVN_ERR_X509_CATEGORY_START + 4,
+             "Invalid ASN1 data")
+
+  SVN_ERRDEF(SVN_ERR_X509_FEATURE_UNAVAILABLE,
+             SVN_ERR_X509_CATEGORY_START + 5,
+             "Unavailable X509 feature")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_PEM,
+             SVN_ERR_X509_CATEGORY_START + 6,
+             "Invalid PEM certificate")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_FORMAT,
+             SVN_ERR_X509_CATEGORY_START + 7,
+             "Invalid certificate format")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_VERSION,
+             SVN_ERR_X509_CATEGORY_START + 8,
+             "Invalid certificate version")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_SERIAL,
+             SVN_ERR_X509_CATEGORY_START + 9,
+             "Invalid certificate serial number")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_ALG,
+             SVN_ERR_X509_CATEGORY_START + 10,
+             "Found invalid algorithm in certificate")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_NAME,
+             SVN_ERR_X509_CATEGORY_START + 11,
+             "Found invalid name in certificate")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_DATE,
+             SVN_ERR_X509_CATEGORY_START + 12,
+             "Found invalid date in certificate")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_PUBKEY,
+             SVN_ERR_X509_CATEGORY_START + 13,
+             "Found invalid public key in certificate")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_SIGNATURE,
+             SVN_ERR_X509_CATEGORY_START + 14,
+             "Found invalid signature in certificate")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_INVALID_EXTENSIONS,
+             SVN_ERR_X509_CATEGORY_START + 15,
+             "Found invalid extensions in certificate")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_UNKNOWN_VERSION,
+             SVN_ERR_X509_CATEGORY_START + 16,
+             "Unknown certificate version")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_UNKNOWN_PK_ALG,
+             SVN_ERR_X509_CATEGORY_START + 17,
+             "Certificate uses unknown public key algorithm")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_SIG_MISMATCH,
+             SVN_ERR_X509_CATEGORY_START + 18,
+             "Certificate signature mismatch")
+
+  SVN_ERRDEF(SVN_ERR_X509_CERT_VERIFY_FAILED,
+             SVN_ERR_X509_CATEGORY_START + 19,
+             "Certficate verification failed")
 
 SVN_ERROR_END
 

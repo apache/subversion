@@ -232,7 +232,8 @@ static svn_error_t *
 create_getlock_body(serf_bucket_t **body_bkt,
                     void *baton,
                     serf_bucket_alloc_t *alloc,
-                    apr_pool_t *pool)
+                    apr_pool_t *pool /* request pool */,
+                    apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
 
@@ -255,7 +256,8 @@ create_getlock_body(serf_bucket_t **body_bkt,
 static svn_error_t*
 setup_getlock_headers(serf_bucket_t *headers,
                       void *baton,
-                      apr_pool_t *pool)
+                      apr_pool_t *pool /* request pool */,
+                      apr_pool_t *scratch_pool)
 {
   serf_bucket_headers_setn(headers, "Depth", "0");
 
@@ -289,20 +291,21 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
                                            NULL, locks_closed, NULL,
                                            lock_ctx,
                                            scratch_pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, locks_expected_status,
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx,
+                                              locks_expected_status,
                                               scratch_pool);
 
   handler->method = "PROPFIND";
   handler->path = req_url;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   handler->body_delegate = create_getlock_body;
   handler->body_delegate_baton = lock_ctx;
 
   handler->header_delegate = setup_getlock_headers;
   handler->header_delegate_baton = lock_ctx;
+
+  handler->no_dav_headers = TRUE;
 
   lock_ctx->inner_handler = handler->response_handler;
   lock_ctx->inner_baton = handler->response_baton;
@@ -318,8 +321,8 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
     return svn_error_trace(
              svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
                               _("Server does not support locking features")));
-  else if (err)
-    return svn_error_trace(err);
+  else if (svn_error_find_cause(err, SVN_ERR_FS_NOT_FOUND))
+    svn_error_clear(err); /* Behave like the other RA layers */
   else if (handler->sline.code != 207)
     return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 

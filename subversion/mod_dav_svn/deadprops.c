@@ -638,16 +638,14 @@ static void get_name(dav_db *db, dav_prop_name *pname)
     }
   else
     {
-      const void *name;
-
-      apr_hash_this(db->hi, &name, NULL, NULL);
+      const char *name = apr_hash_this_key(db->hi);
 
 #define PREFIX_LEN (sizeof(SVN_PROP_PREFIX) - 1)
       if (strncmp(name, SVN_PROP_PREFIX, PREFIX_LEN) == 0)
 #undef PREFIX_LEN
         {
           pname->ns = SVN_DAV_PROP_NS_SVN;
-          pname->name = (const char *)name + 4;
+          pname->name = name + 4;
         }
       else
         {

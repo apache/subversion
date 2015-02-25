@@ -79,7 +79,7 @@ create_greek_repo(svn_repos_t **repos,
 
 static svn_error_t *
 verify_representation_stats(const svn_fs_fs__representation_stats_t *stats,
-                            apr_int64_t expected_count)
+                            apr_uint64_t expected_count)
 {
   /* Small items, no packing (but inefficiency due to packing attempt). */
   SVN_TEST_ASSERT(stats->total.count == expected_count);
@@ -110,7 +110,7 @@ verify_representation_stats(const svn_fs_fs__representation_stats_t *stats,
 
 static svn_error_t *
 verify_node_stats(const svn_fs_fs__node_stats_t *node_stats,
-                  apr_int64_t expected_count)
+                  apr_uint64_t expected_count)
 {
   SVN_TEST_ASSERT(node_stats->count == expected_count);
   SVN_TEST_ASSERT(   node_stats->size > 100 * node_stats->count
@@ -162,8 +162,8 @@ verify_large_change(const svn_fs_fs__large_change_info_t *change,
 static svn_error_t *
 verify_histogram(const svn_fs_fs__histogram_t *histogram)
 {
-  apr_int64_t sum_count = 0;
-  apr_int64_t sum_size = 0;
+  apr_uint64_t sum_count = 0;
+  apr_uint64_t sum_size = 0;
 
   int i;
   for (i = 0; i < 64; ++i)

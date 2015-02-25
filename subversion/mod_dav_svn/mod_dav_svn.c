@@ -143,6 +143,25 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
   return OK;
 }
 
+static svn_error_t *
+malfunction_handler(svn_boolean_t can_return,
+                    const char *file, int line,
+                    const char *expr)
+{
+  if (expr)
+    ap_log_error(APLOG_MARK, APLOG_CRIT, 0, NULL,
+                 "mod_dav_svn: file '%s', line %d, assertion \"%s\" failed",
+                 file, line, expr);
+  else
+    ap_log_error(APLOG_MARK, APLOG_CRIT, 0, NULL,
+                 "mod_dav_svn: file '%s', line %d, internal malfunction",
+                 file, line);
+  abort();
+
+  /* Should not be reached. */
+  return SVN_NO_ERROR;
+}
+
 static int
 init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
 {
@@ -161,6 +180,8 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
       svn_error_clear(serr);
       return HTTP_INTERNAL_SERVER_ERROR;
     }
+
+  svn_error_set_malfunction_handler(malfunction_handler);
 
   return OK;
 }
@@ -249,7 +270,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   newconf->revprop_cache = INHERIT_VALUE(parent, child, revprop_cache);
-  newconf->block_read = INHERIT_VALUE(parent, child, block_read);  
+  newconf->block_read = INHERIT_VALUE(parent, child, block_read);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
   newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
 
@@ -662,9 +683,10 @@ dav_svn__get_fs_parent_path(request_rec *r)
 
 
 AP_MODULE_DECLARE(dav_error *)
-dav_svn_get_repos_path(request_rec *r,
-                       const char *root_path,
-                       const char **repos_path)
+dav_svn_get_repos_path2(request_rec *r,
+                        const char *root_path,
+                        const char **repos_path,
+                        apr_pool_t *pool)
 {
 
   const char *fs_path;
@@ -692,19 +714,26 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Split the svn URI to get the name of the repository below
      the parent path. */
-  derr = dav_svn_split_uri(r, r->uri, root_path,
-                           &ignored_cleaned_uri, &ignored_had_slash,
-                           &repos_name,
-                           &ignored_relative, &ignored_path_in_repos);
+  derr = dav_svn_split_uri2(r, r->uri, root_path,
+                            &ignored_cleaned_uri, &ignored_had_slash,
+                            &repos_name,
+                            &ignored_relative, &ignored_path_in_repos, pool);
   if (derr)
     return derr;
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_dirent_join(fs_parent_path, repos_name, pool);
   return NULL;
 }
 
+AP_MODULE_DECLARE(dav_error *)
+dav_svn_get_repos_path(request_rec *r,
+                       const char *root_path,
+                       const char **repos_path)
+{
+  return dav_svn_get_repos_path2(r, root_path, repos_path, r->pool);
+}
 
 const char *
 dav_svn__get_repo_name(request_rec *r)
@@ -1324,8 +1353,8 @@ static const command_rec cmds[] =
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
                 RSRC_CONF,
                 "specifies the maximum size in kB per process of Subversion's "
-                "in-memory object cache (default value is 16384; 0 deactivates "
-                "the cache)."),
+                "in-memory object cache (default value is 16384; 0 switches "
+                "to dynamically sized caches)."),
   /* per server */
   AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,
                 RSRC_CONF,

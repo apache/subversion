@@ -46,11 +46,11 @@ svn_cl__help(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state;
 
   char help_header[] =
-  N_("usage: svn-bench <subcommand> [options] [args]\n"
+  N_("usage: svnbench <subcommand> [options] [args]\n"
      "Subversion benchmarking tool.\n"
-     "Type 'svn-bench help <subcommand>' for help on a specific subcommand.\n"
-     "Type 'svn-bench --version' to see the program version and RA modules\n"
-     "  or 'svn-bench --version --quiet' to see just the version number.\n"
+     "Type 'svnbench help <subcommand>' for help on a specific subcommand.\n"
+     "Type 'svnbench --version' to see the program version and RA modules\n"
+     "  or 'svnbench --version --quiet' to see just the version number.\n"
      "\n"
      "Most subcommands take file and/or directory arguments, recursing\n"
      "on the directories.  If no arguments are supplied to such a\n"
@@ -76,7 +76,7 @@ svn_cl__help(apr_getopt_t *os,
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
   return svn_opt_print_help4(os,
-                             "svn-bench",   /* ### erm, derive somehow? */
+                             "svnbench",   /* ### erm, derive somehow? */
                              opt_state ? opt_state->version : FALSE,
                              opt_state ? opt_state->quiet : FALSE,
                              opt_state ? opt_state->verbose : FALSE,

@@ -667,7 +667,7 @@ test_parse_property_diff(apr_pool_t *pool)
   prop_patch = apr_hash_get(patch->prop_patches, "prop_add",
                             APR_HASH_KEY_STRING);
 
-  SVN_TEST_ASSERT(!strcmp("prop_add", prop_patch->name));
+  SVN_TEST_STRING_ASSERT(prop_patch->name, "prop_add");
   SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_added);
   hunks = prop_patch->hunks;
 

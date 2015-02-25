@@ -619,7 +619,8 @@ svn_ra_serf__setup_error_parsing(svn_ra_serf__server_error_t **server_err,
                                                      ms_baton,
                                                      ms_baton->pool);
 
-  tmp_handler = svn_ra_serf__create_expat_handler(ms_baton->xmlctx,
+  tmp_handler = svn_ra_serf__create_expat_handler(handler->session,
+                                                  ms_baton->xmlctx,
                                                   expected_status,
                                                   result_pool);
 

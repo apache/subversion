@@ -344,7 +344,7 @@ svn_cl__diff(apr_getopt_t *os,
     {
       ignore_content_type = TRUE;
     }
-  else
+  else if (ctx->config)
     {
       SVN_ERR(svn_config_get_bool(svn_hash_gets(ctx->config,
                                                 SVN_CONFIG_CATEGORY_CONFIG),
@@ -352,6 +352,10 @@ svn_cl__diff(apr_getopt_t *os,
                                   SVN_CONFIG_SECTION_MISCELLANY,
                                   SVN_CONFIG_OPTION_DIFF_IGNORE_CONTENT_TYPE,
                                   FALSE));
+    }
+  else
+    {
+      ignore_content_type = FALSE;
     }
 
   svn_opt_push_implicit_dot_target(targets, pool);

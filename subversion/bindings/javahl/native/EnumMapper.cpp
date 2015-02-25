@@ -32,32 +32,6 @@
 #include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
-/**
- * Map a C commit state flag constant to the Java constant.
- * @param state     the C commit state flage constant
- * @returns the Java constant
- */
-jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
-{
-  jint jstateFlags = 0;
-  if (flags & SVN_CLIENT_COMMIT_ITEM_ADD)
-    jstateFlags |=
-      org_apache_subversion_javahl_CommitItemStateFlags_Add;
-  if (flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-    jstateFlags |=
-      org_apache_subversion_javahl_CommitItemStateFlags_Delete;
-  if (flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
-    jstateFlags |=
-      org_apache_subversion_javahl_CommitItemStateFlags_TextMods;
-  if (flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
-    jstateFlags |=
-      org_apache_subversion_javahl_CommitItemStateFlags_PropMods;
-  if (flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-    jstateFlags |=
-      org_apache_subversion_javahl_CommitItemStateFlags_IsCopy;
-  return jstateFlags;
-}
-
 jobject EnumMapper::mapChangePathAction(const char action)
 {
   switch (action)

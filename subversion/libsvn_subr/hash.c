@@ -597,14 +597,14 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
 
 /*** Optimized hash function ***/
 
-/* apr_hashfunc_t optimized for the key that we use in SVN: paths and 
+/* apr_hashfunc_t optimized for the key that we use in SVN: paths and
  * property names.  Its primary goal is speed for keys of known length.
- * 
+ *
  * Since strings tend to spawn large value spaces (usually differ in many
  * bits with differences spanning a larger section of the key), we can be
  * quite sloppy extracting a hash value.  The more keys there are in a
  * hash container, the more bits of the value returned by this function
- * will be used.  For a small number of string keys, choosing bits from any 
+ * will be used.  For a small number of string keys, choosing bits from any
  * any fix location close to the tail of those keys would usually be good
  * enough to prevent high collision rates.
  */

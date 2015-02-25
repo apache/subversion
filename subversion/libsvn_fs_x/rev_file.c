@@ -37,7 +37,7 @@ static svn_fs_x__revision_file_t *
 create_revision_file(svn_fs_t *fs,
                      apr_pool_t *result_pool)
 {
-  fs_x_data_t *ffd = fs->fsap_data;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__revision_file_t *file = apr_palloc(result_pool, sizeof(*file));
 
   file->is_packed = FALSE;
@@ -162,7 +162,7 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
 
       /* We may have to *temporarily* enable write access. */
       err = writable ? auto_make_writable(path, result_pool, scratch_pool)
-                     : SVN_NO_ERROR; 
+                     : SVN_NO_ERROR;
 
       /* open the revision file in buffered r/o or r/w mode */
       if (!err)

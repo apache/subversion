@@ -997,6 +997,35 @@ svn_repos_load_fs(svn_repos_t *repos,
 }
 
 svn_error_t *
+svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_revnum_t start_rev,
+                               svn_revnum_t end_rev,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool)
+{
+  SVN_ERR(svn_repos_get_fs_build_parser5(callbacks, parse_baton,
+                                         repos,
+                                         start_rev, end_rev,
+                                         use_history,
+                                         validate_props,
+                                         uuid_action,
+                                         parent_dir,
+                                         FALSE, FALSE, /*hooks */
+                                         FALSE /*ignore_dates*/,
+                                         notify_func,
+                                         notify_baton,
+                                         pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,

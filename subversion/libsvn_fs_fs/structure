@@ -560,8 +560,7 @@ defined:
   props     "<rev> <item_index> <length> <size> <digest>" for props rep
             <rev> and <item_index> give location of rep
             <length> gives length of rep, sans header and trailer
-            <size> gives size of expanded rep; for props only, it may be 0
-             if equal to the length
+            <size> gives size of expanded rep (*)
             <digest> gives hex MD5 digest of expanded rep
             ### in formats >=4, also present:
             <sha1-digest> gives hex SHA1 digest of expanded rep
@@ -572,6 +571,15 @@ defined:
   minfo-cnt The number of nodes under (and including) this node
              which have svn:mergeinfo.
   minfo-here Exists if this node itself has svn:mergeinfo.
+
+(*) Earlier versions of this document would state that <size> may be 0
+    if the actual value matches <length>.  This is only true for property
+    and directory representations and should be avoided in general.  File
+    representations may not be handled correctly by SVN before 1.7.20,
+    1.8.12 and 1.9.0, if they have 0 <size> fields for non-empty contents.
+    Releases 1.8.0 through 1.8.11 may have falsely created instances of
+    that (see issue #4554).  Finally, 0 <size> fields are NEVER legal for
+    DELTA representations.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of

@@ -142,10 +142,10 @@ public class NativeResources
     private static final void init()
     {
         version = new Version();
-        if (!version.isAtLeast(1, 9, 0))
+        if (!version.isAtLeast(1, 10, 0))
         {
             throw new LinkageError("Native library version must be at least " +
-                                   "1.9.0, but is only " + version);
+                                   "1.10.0, but is only " + version);
         }
 
         runtimeVersion = new RuntimeVersion();

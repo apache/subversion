@@ -544,7 +544,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
   svn_boolean_t is_match;
   apr_off_t lines = 0;
-  svn_boolean_t had_cr;
   svn_boolean_t had_nl;
   apr_size_t i;
 
@@ -685,7 +684,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
 
           /* We skipped some bytes, so there are no closing EOLs */
           had_nl = FALSE;
-          had_cr = FALSE;
         }
 
       /* The > min_curp[i] check leaves at least one final byte for checking
@@ -712,7 +710,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
      one file reaches its end. */
   do
     {
-      had_cr = FALSE;
+      svn_boolean_t had_cr = FALSE;
       while (!is_one_at_eof(file_for_suffix, file_len)
              && *file_for_suffix[0].curp != '\n'
              && *file_for_suffix[0].curp != '\r')

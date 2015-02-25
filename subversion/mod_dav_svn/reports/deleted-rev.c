@@ -56,6 +56,9 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
   dav_error *derr = NULL;
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,

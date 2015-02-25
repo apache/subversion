@@ -165,12 +165,15 @@ checksum_create_without_digest(svn_checksum_kind_t kind,
   return checksum;
 }
 
+/* Return a checksum object, allocated in POOL.  The checksum will be of
+ * type KIND and contain the given DIGEST.
+ */
 static svn_checksum_t *
 checksum_create(svn_checksum_kind_t kind,
-                apr_size_t digest_size,
                 const unsigned char *digest,
                 apr_pool_t *pool)
 {
+  apr_size_t digest_size = DIGESTSIZE(kind);
   svn_checksum_t *checksum = checksum_create_without_digest(kind, digest_size,
                                                             pool);
   memcpy((unsigned char *)checksum->digest, digest, digest_size);
@@ -206,32 +209,28 @@ svn_checksum_t *
 svn_checksum__from_digest_md5(const unsigned char *digest,
                               apr_pool_t *result_pool)
 {
-  return checksum_create(svn_checksum_md5, APR_MD5_DIGESTSIZE, digest,
-                         result_pool);
+  return checksum_create(svn_checksum_md5, digest, result_pool);
 }
 
 svn_checksum_t *
 svn_checksum__from_digest_sha1(const unsigned char *digest,
                                apr_pool_t *result_pool)
 {
-  return checksum_create(svn_checksum_sha1, APR_SHA1_DIGESTSIZE, digest,
-                         result_pool);
+  return checksum_create(svn_checksum_sha1, digest, result_pool);
 }
 
 svn_checksum_t *
 svn_checksum__from_digest_fnv1a_32(const unsigned char *digest,
                                    apr_pool_t *result_pool)
 {
-  return checksum_create(svn_checksum_fnv1a_32, sizeof(digest), digest,
-                         result_pool);
+  return checksum_create(svn_checksum_fnv1a_32, digest, result_pool);
 }
 
 svn_checksum_t *
 svn_checksum__from_digest_fnv1a_32x4(const unsigned char *digest,
                                      apr_pool_t *result_pool)
 {
-  return checksum_create(svn_checksum_fnv1a_32x4, sizeof(digest), digest,
-                         result_pool);
+  return checksum_create(svn_checksum_fnv1a_32x4, digest, result_pool);
 }
 
 svn_error_t *
@@ -428,10 +427,7 @@ svn_checksum_dup(const svn_checksum_t *checksum,
       case svn_checksum_sha1:
       case svn_checksum_fnv1a_32:
       case svn_checksum_fnv1a_32x4:
-        return checksum_create(checksum->kind,
-                               digest_sizes[checksum->kind],
-                               checksum->digest,
-                               pool);
+        return checksum_create(checksum->kind, checksum->digest, pool);
 
       default:
         SVN_ERR_MALFUNCTION_NO_RETURN();
@@ -492,10 +488,7 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
       case svn_checksum_sha1:
       case svn_checksum_fnv1a_32:
       case svn_checksum_fnv1a_32x4:
-        return checksum_create(kind,
-                               digest_sizes[kind],
-                               empty_string_digests[kind],
-                               pool);
+        return checksum_create(kind, empty_string_digests[kind], pool);
 
       default:
         /* We really shouldn't get here, but if we do... */

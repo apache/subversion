@@ -104,12 +104,12 @@ svn commit -m "copy dir, then make a change"
 printf "\x00\x01\x02\x03\x04\n" > file11
 svn add file11
 svn ps svn:mime-type application/octect-stream file11
-svn ps prop2 -F file11 file9 
+svn ps prop2 -F file11 file9
 svn commit -m "add binary file"
 
 # change the binary file and set property to non binary value
 printf "\x20\x01\x02\x20\n" > file11
-svn ps prop2 propval2 file9 
+svn ps prop2 propval2 file9
 svn commit -m "change binary file"
 
 # tweak the commit dates to known quantities

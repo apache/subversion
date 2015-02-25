@@ -202,12 +202,6 @@ is($ed->{trunk}{props}{'dir-prop'}, 'frob', 'replay: dir-prop');
 is($ed->{'trunk/filea'}{props}{'binary-prop'}, $BINARY_DATA,
    'replay: binary-prop');
 
-END {
-diag "cleanup";
-rmtree($repospath);
-}
-
-
 package MockEditor;
 
 sub new { bless {}, shift }

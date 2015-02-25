@@ -220,8 +220,8 @@ cleanup_callback(svn_boolean_t *delete_cred,
 {
   svn_auth_baton_t *b = walk_baton;
 
-  SVN_TEST_ASSERT(strcmp(cred_kind, SVN_AUTH_CRED_SIMPLE) == 0);
-  SVN_TEST_ASSERT(strcmp(realmstring, "<http://my.host> My realm") == 0);
+  SVN_TEST_STRING_ASSERT(cred_kind, SVN_AUTH_CRED_SIMPLE);
+  SVN_TEST_STRING_ASSERT(realmstring, "<http://my.host> My realm");
 
   SVN_ERR(svn_auth_forget_credentials(b, cred_kind, realmstring, scratch_pool));
 
@@ -272,7 +272,7 @@ test_auth_clear(apr_pool_t *pool)
                                      pool));
 
   creds = credentials;
-  SVN_TEST_ASSERT(strcmp(creds->username, "jrandom") == 0);
+  SVN_TEST_STRING_ASSERT(creds->username, "jrandom");
   SVN_TEST_ASSERT(creds->may_save);
 
   /* And tell that they are ok and can be saved */
@@ -292,7 +292,7 @@ test_auth_clear(apr_pool_t *pool)
 
   SVN_TEST_ASSERT(credentials);
   creds = credentials;
-  SVN_TEST_ASSERT(strcmp(creds->username, "jrandom") == 0);
+  SVN_TEST_STRING_ASSERT(creds->username, "jrandom");
   SVN_TEST_ASSERT(creds->may_save);
 
   /* Use our walker function to delete credentials (and forget them

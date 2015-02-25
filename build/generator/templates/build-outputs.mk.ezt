@@ -112,7 +112,7 @@ $([target.varname]_OBJECTS): $([target.varname]_SRC)
 	$(JAR) cf [target.jar_path] -C [target.classes][for target.packages] [target.packages][end][end][end]
 [else][is target.type "i18n"][target.varname]_DEPS =[for target.add_deps] [target.add_deps][end][for target.objects] [target.objects][end][for target.deps] [target.deps][end]
 [target.name]: $([target.varname]_DEPS)
-[else][target.varname]_DEPS =[for target.add_deps] [target.add_deps][end][for target.objects] [target.objects][end][for target.deps] [target.deps][end]
+[else][target.varname]_DEPS =[for target.add_deps] [target.add_deps][end][for target.objdeps] [target.objdeps][end][for target.deps] [target.deps][end]
 [target.varname]_OBJECTS =[for target.objnames] [target.objnames][end]
 [target.filename]: $([target.varname]_DEPS)
 	[if-any target.when]if $([target.when]) ; then [else][end]cd [target.path] && [target.link_cmd] $([target.varname]_LDFLAGS) -o [target.basename] [target.undefined_flag] $([target.varname]_OBJECTS)[for target.libs] [target.libs][end] $(LIBS)[if-any target.when] ; else echo "fake" > [target.filename] ; fi[else][end]

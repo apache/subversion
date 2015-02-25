@@ -306,7 +306,7 @@ svn__fnv1a_32(const void *input, apr_size_t len);
 /**
  * Return a 32 bit modified FNV-1a checksum for the first @a len bytes in
  * @a input.
- * 
+ *
  * @note This is a proprietary checksumming algorithm based FNV-1a with
  *       approximately the same strength.  It is up to 4 times faster
  *       than plain FNV-1a for longer data blocks.
@@ -416,7 +416,7 @@ typedef struct svn_hash__entry_t
 /** Reads a single key-value pair from @a stream and returns it in the
  * caller-provided @a *entry (members don't need to be pre-initialized).
  * @a pool is used to allocate members of @a *entry and for tempoaries.
- * 
+ *
  * @see #svn_hash_read2 for more details.
  *
  * @since New in 1.9.
@@ -652,7 +652,7 @@ svn_config__get_default_config(apr_hash_t **cfg_hash,
  */
 
 /* This opaque data struct is an alternative to an INT->VOID hash.
- * 
+ *
  * Technically, it is an automatically growing packed bit array.
  * All indexes not previously set are implicitly 0 and setting it will
  * grow the array as needed.

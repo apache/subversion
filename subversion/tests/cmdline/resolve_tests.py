@@ -70,13 +70,12 @@ def automatic_conflict_resolution(sbox):
   # Make a change on the A_COPY branch such that a subsequent merge
   # conflicts.
   svntest.main.file_write(psi_COPY_path, "Branch content.\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'commit', '-m', 'log msg', wc_dir)
   def do_text_conflicting_merge():
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, [],
                                        'revert', '--recursive', A_COPY_path)
     svntest.actions.run_and_verify_svn(
-      None,
       expected_merge_output([[3]], [
         "C    %s\n" % psi_COPY_path,
         " U   %s\n" % A_COPY_path],
@@ -126,10 +125,10 @@ def prop_conflict_resolution(sbox):
   psi_path   = os.path.join(wc_dir, "A", "D", "H", "psi")
 
   # r2 - Set property 'propname:propval' on iota, A/mu, and A/D/gamma.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'propname', 'propval',
                                      iota_path, mu_path, gamma_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+  svntest.actions.run_and_verify_svn(None, [], 'commit',
                                      '-m', 'create some new properties',
                                      wc_dir)
 
@@ -138,15 +137,15 @@ def prop_conflict_resolution(sbox):
   #   iota      : Delete property 'propname'
   #   A/mu      : Change property 'propname' to 'incoming-conflict'
   #   A/D/gamma : Change property 'propname' to 'incoming-no-conflict'
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'pd', 'propname', iota_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'propname', 'incoming-conflict',
                                      mu_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'propname', 'incoming-no-conflict',
                                      gamma_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'commit', '-m', 'delete a property',
                                      wc_dir)
 
@@ -178,28 +177,28 @@ def prop_conflict_resolution(sbox):
     both follow the rules for the expected_stdout arg to
     run_and_verify_svn2()"""
 
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, [],
                                        'revert', '--recursive', wc_dir)
-    svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r2', wc_dir)
+    svntest.actions.run_and_verify_svn(None, [], 'up', '-r2', wc_dir)
 
     # Set some properties that will conflict when we update.
-    svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+    svntest.actions.run_and_verify_svn(None, [], 'ps',
                                        'propname', 'local_edit',
                                        iota_path, mu_path)
 
     # Set a property that should always merge cleanly with the update.
-    svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+    svntest.actions.run_and_verify_svn(None, [], 'ps',
                                        'propname', 'incoming-no-conflict',
                                        gamma_path)
 
     # Set a property that has no update coming.
-    svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+    svntest.actions.run_and_verify_svn(None, [], 'ps',
                                        'newprop', 'new-val-no-incoming',
                                        psi_path,
                                        iota_path)
 
     # Update, postponing all conflict resolution.
-    svntest.actions.run_and_verify_svn(None, None, [], 'up',
+    svntest.actions.run_and_verify_svn(None, [], 'up',
                                        '--accept=postpone', wc_dir)
     svntest.actions.run_and_verify_resolve([iota_path, mu_path], '-R',
                                            '--accept', resolve_accept, wc_dir)
@@ -209,25 +208,15 @@ def prop_conflict_resolution(sbox):
       expected_deleted_stderr = '.*W200017: Property.*not found'
 
     svntest.actions.run_and_verify_svn(
-      'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '
-      'not resolved as expected;',
       resolved_deleted_prop_val_output, expected_deleted_stderr,
       'pg', 'propname', iota_path)
     svntest.actions.run_and_verify_svn(
-      'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '
-      'not resolved as expected;',
       ['new-val-no-incoming\n'], [], 'pg', 'newprop', iota_path)
     svntest.actions.run_and_verify_svn(
-      'svn revolve -R --accept=' + resolve_accept + ' of prop conflict '
-      'not resolved as expected;',
       resolved_edited_prop_val_output, [], 'pg', 'propname', mu_path)
     svntest.actions.run_and_verify_svn(
-      'svn revolve -R --accept=' + resolve_accept + ' modified a '
-      'non-conflicted property',
       ['incoming-no-conflict\n'], [], 'pg', 'propname', gamma_path)
     svntest.actions.run_and_verify_svn(
-      'svn revolve -R --accept=' + resolve_accept + ' modified a '
-      'non-conflicted property',
       ['new-val-no-incoming\n'], [], 'pg', 'newprop', psi_path)
 
   # Test how svn resolve deals with prop conflicts and other local
@@ -300,7 +289,7 @@ def resolved_on_wc_root(sbox):
   # Commit mods
   svntest.main.file_append(i, "changed iota.\n")
   svntest.main.file_append(g, "changed gamma.\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'foo', 'foo-val', B)
 
   expected_output = svntest.wc.State(wc, {
@@ -335,7 +324,7 @@ def resolved_on_wc_root(sbox):
 
   # Deletions so that the item becomes unversioned and
   # will have a tree-conflict upon update.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', i, B, g)
 
   # Update so that conflicts appear
@@ -391,7 +380,7 @@ def resolved_on_deleted_item(sbox):
   A2_url = sbox.repo_url + '/A2'
 
   # make a copy of A
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', A_url, A2_url, '-m', 'm')
 
   expected_output = svntest.wc.State(wc, {
@@ -467,7 +456,7 @@ def resolved_on_deleted_item(sbox):
   # Create some conflicts...
 
   # Modify the paths in the one directory.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'foo', 'foo-val', B)
   svntest.main.file_append(g, "Modified gamma.\n")
 
@@ -485,7 +474,7 @@ def resolved_on_deleted_item(sbox):
                                         wc)
 
   # Delete the paths in the second directory.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', B2, g2)
 
   expected_output = svntest.wc.State(wc, {

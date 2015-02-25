@@ -170,13 +170,6 @@
                   svn_swig_rb_get_commit_log_func)
 #endif
 
-#ifdef SWIGRUBY
-%callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
-                  ,
-                  ,
-                  svn_swig_rb_cancel_func)
-#endif
-
 %callback_typemap(svn_client_blame_receiver_t receiver, void *receiver_baton,
                   svn_swig_py_client_blame_receiver_func,
                   svn_swig_pl_blame_func,

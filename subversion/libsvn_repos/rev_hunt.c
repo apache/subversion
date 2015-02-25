@@ -1386,7 +1386,7 @@ send_path_revision(struct path_revision *path_rev,
   /* Compute and send delta if client asked for it.
      Note that this was initialized to NULL, so if !contents_changed,
      no deltas will be computed. */
-  if (delta_handler)
+  if (delta_handler && delta_handler != svn_delta_noop_window_handler)
     {
       /* Get the content delta. */
       SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
@@ -1558,6 +1558,18 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   apr_hash_t *duplicate_path_revs;
   struct send_baton sb;
   int mainline_pos, merged_pos;
+
+  if (!SVN_IS_VALID_REVNUM(start)
+      || !SVN_IS_VALID_REVNUM(end))
+    {
+      svn_revnum_t youngest_rev;
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, repos->fs, scratch_pool));
+
+      if (!SVN_IS_VALID_REVNUM(start))
+        start = youngest_rev;
+      if (!SVN_IS_VALID_REVNUM(end))
+        end = youngest_rev;
+    }
 
   if (end < start)
     {

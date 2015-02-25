@@ -17,7 +17,7 @@
 #    under the License.
 # ====================================================================
 #
-# Script to build all the dependencies for Subversion on Windows 
+# Script to build all the dependencies for Subversion on Windows
 # It's been written for Windows 8 and Visual Studio 2012, but
 # it's entirely possible it will work with older versions of both.
 
@@ -27,7 +27,7 @@
 # Subversion and quickly get up a development environment.
 
 # Prerequisites:
-# Perl: http://www.activestate.com/activeperl/downloads 
+# Perl: http://www.activestate.com/activeperl/downloads
 # Python: http://www.activestate.com/activepython/downloads
 # 7-Zip: http://www.7-zip.org/download.html
 # CMake: http://www.cmake.org/cmake/resources/software.html
@@ -42,7 +42,7 @@
 # available.
 #
 # TODO:
-# Find some way to work around the lack of devenv in Express (msbuild will help some) 
+# Find some way to work around the lack of devenv in Express (msbuild will help some)
 # Include a package target that zips everything up.
 # Perl script that runs the Subversion get-make.py tool with the right args.
 # Alternatively update gen-make.py with an arg that knows about our layout.
@@ -54,7 +54,7 @@
 # Allow selection of Arch (x86 and x64)
 # ZLib support for OpenSSL (have to patch openssl)
 # Use CMake zlib build instead.
-# Assembler support for OpenSSL. 
+# Assembler support for OpenSSL.
 # Add more specific commands to the command line (e.g. build-httpd)
 
 ###################################
@@ -208,10 +208,10 @@ my $PERL = $Config{perlpath};
 
 # Directory constants that we setup for convenience, but that
 # shouldn't be changed since they are assumed in the build systems
-# of the various dependencies. 
+# of the various dependencies.
 my $HTTPD; # Where httpd gets built
 my $BDB; # Where bdb gets built
-my $BINDIR; # where binaries are installed 
+my $BINDIR; # where binaries are installed
 my $LIBDIR; # where libraries are installed
 my $INCDIR; # where headers are installed
 my $SRCLIB; # httpd's srclib dir
@@ -274,7 +274,7 @@ sub system_or_die {
 }
 
 # Like perl -pi.orig the second arg is a reference to a
-# function that does whatever line processing you want. 
+# function that does whatever line processing you want.
 # Note that $_ is used for the input and output of the
 # function.  So modifying $_ changes the line in the file.
 # bak can be passed to set the backup extension.  If the
@@ -345,7 +345,7 @@ sub prepare_structure {
 sub clean_structure {
   # ignore errors in this function the paths may not exist
   my $real_clean = shift;
-  
+
   if ($real_clean) {
     rmtree($SRCDIR);
   }
@@ -478,7 +478,7 @@ sub extract_dependencies {
   extract_file($API_FILE, $SRCLIB,
                "$SRCLIB\\apr-iconv-$API_VER", "$SRCLIB\\apr-iconv");
   # We fix the line endings before putting the non-Apache deps in place since it
-  # touches everything under httpd and there's no point in doing other things. 
+  # touches everything under httpd and there's no point in doing other things.
   httpd_fix_lineends();
   extract_file($ZLIB_FILE, $SRCLIB,
                "$SRCLIB\\zlib-$ZLIB_VER", "$SRCLIB\\zlib");
@@ -507,7 +507,7 @@ sub build_pcre {
   my $pcre_options = '-DPCRE_NO_RECURSE:BOOL=ON';
   my $pcre_shared_libs = '-DBUILD_SHARED_LIBS:BOOL=ON';
   my $pcre_install_prefix = "-DCMAKE_INSTALL_PREFIX:PATH=$INSTDIR";
-  my $cmake_cmd = qq("$CMAKE" -G "$pcre_generator" "$pcre_build_type" "$pcre_shared_libs" "$pcre_install_prefix" "$pcre_options" .); 
+  my $cmake_cmd = qq("$CMAKE" -G "$pcre_generator" "$pcre_build_type" "$pcre_shared_libs" "$pcre_install_prefix" "$pcre_options" .);
   system_or_die("Failure generating pcre Makefiles", $cmake_cmd);
   system_or_die("Failure building pcre", qq("$NMAKE"));
   system_or_die("Failure testing pcre", qq("$NMAKE" test));
@@ -521,7 +521,7 @@ sub build_zlib {
   chdir_or_die("$SRCLIB\\zlib");
   $ENV{CC_OPTS} = $DEBUG ? '/MDd /Gm /ZI /Od /GZ /D_DEBUG' : '/MD /02 /Zi';
   $ENV{COMMON_CC_OPTS} = '/nologo /W3 /DWIN32 /D_WINDOWS';
-  
+
   system_or_die("Failure building zilb", qq("$NMAKE" /nologo -f win32\\Makefile.msc STATICLIB=zlibstat.lib all));
 
   delete $ENV{CC_OPTS};
@@ -533,14 +533,14 @@ sub build_zlib {
 sub build_openssl {
   chdir_or_die("$SRCLIB\\openssl");
 
-  # We're building openssl without an assembler.  If someone wants to 
+  # We're building openssl without an assembler.  If someone wants to
   # use this for production they should probably download NASM and
   # remove the no-asm below and use ms\do_nasm.bat instead.
-  
+
   # TODO: Enable openssl to use zlib.  openssl needs some patching to do
   # this since it wants to look for zlib as zlib1.dll and as the httpd
   # build instructions note you probably don't want to dynamic link zlib.
-  
+
   # TODO: OpenSSL requires perl on the path since it uses perl without a full
   # path in the batch file and the makefiles.  Probably should determine
   # if PERL is on the path and add it here if not.
@@ -599,7 +599,7 @@ sub httpd_fix_lineends {
   chdir_or_die($TOPDIR);
 }
 
-# The httpd makefile in 2.4.4 doesn't know about .vcxproj files and 
+# The httpd makefile in 2.4.4 doesn't know about .vcxproj files and
 # still thinks it's got an older version of Visual Studio because
 # .vcproj files have become .vcxproj.
 sub httpd_fix_makefile {
@@ -607,8 +607,8 @@ sub httpd_fix_makefile {
 
   modify_file_in_place($file, sub {
       s/\.vcproj/.vcxproj/i;
-      # below fixes that installd breaks when trying to install pcre because 
-      # dll is named pcred.dll when a Debug build. 
+      # below fixes that installd breaks when trying to install pcre because
+      # dll is named pcred.dll when a Debug build.
       s/^(\s*copy srclib\\pcre\\pcre\.\$\(src_dll\)\s+"\$\(inst_dll\)"\s+<\s*\.y\s*)$/!IF EXISTS("srclib\\pcre\\pcre\.\$(src_dll)")\n$1!ENDIF\n!IF EXISTS("srclib\\pcre\\pcred\.\$(src_dll)")\n\tcopy srclib\\pcre\\pcred.\$(src_dll)\t\t\t"\$(inst_dll)" <.y\n!ENDIF\n/;
     });
 }
@@ -797,8 +797,8 @@ sub build_httpd {
 sub build_bdb {
   chdir_or_die($BDB);
 
-   print(cwd(),$/); 
-  my $sln = 'build_windows\Berkeley_DB_vs2010.sln'; 
+   print(cwd(),$/);
+  my $sln = 'build_windows\Berkeley_DB_vs2010.sln';
   upgrade_solution($sln);
 
   my $platform = $DEBUG ? 'Debug|Win32' : 'Release|Win32';
@@ -834,7 +834,7 @@ sub build_serf {
       s/^(INTDIR = Debug)$/$1\nOPENSSL_OUT_SUFFIX = .dbg/;
       s/(\$\(OPENSSL_SRC\)\\out32(?:dll)?)/$1\$(OPENSSL_OUT_SUFFIX)/g;
     }, '.debug');
-  
+
   chdir_or_die($TOPDIR);
 }
 

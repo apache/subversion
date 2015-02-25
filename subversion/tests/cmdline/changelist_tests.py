@@ -930,23 +930,23 @@ def tree_conflicts_and_changelists_on_commit2(sbox):
   expected_output = svntest.verify.RegexOutput(
                                      "Deleting.*" + re.escape(C),
                                      False)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'commit', '-m', 'delete A/C', C)
 
   expected_output = svntest.verify.RegexOutput(
                                      "A.*" + re.escape(C), False)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'update', C, "-r1")
 
   expected_output = svntest.verify.RegexOutput(
                                      ".*'propname' set on '"
                                      + re.escape(C) + "'", False)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propset', 'propname', 'propval', C)
 
   expected_output = svntest.verify.RegexOutput(
                                      "   C " + re.escape(C), False)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'update', wc_dir)
 
 
@@ -1031,7 +1031,7 @@ def move_added_keeps_changelist(sbox):
   svntest.main.run_svn(None, "rename", kappa_path, kappa2_path)
 
   # kappa not under version control
-  svntest.actions.run_and_verify_svnversion(None, kappa_path, repo_url,
+  svntest.actions.run_and_verify_svnversion(kappa_path, repo_url,
                                             [], ".*doesn't exist.*")
   # kappa2 in a changelist
   expected_infos = [
@@ -1054,17 +1054,17 @@ def change_to_dir(sbox):
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu visible in changelist
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'changelist', 'qq', sbox.ospath('A/mu'))
   expected_infos = [{'Name' : 'mu', 'Changelist' : 'qq'}]
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu still visible after delete
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/mu'))
+  svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.ospath('A/mu'))
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu removed from changelist after replace with directory
-  svntest.actions.run_and_verify_svn(None, '^A|' + _re_cl_rem_pattern, [],
+  svntest.actions.run_and_verify_svn('^A|' + _re_cl_rem_pattern, [],
                                      'mkdir', sbox.ospath('A/mu'))
   expected_infos = [{'Changelist' : None}] # No Name for directories?
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
@@ -1078,7 +1078,7 @@ def change_to_dir(sbox):
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu visible in changelist
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'changelist', 'qq', sbox.ospath('A/mu'))
   expected_infos = [{'Name' : 'mu', 'Changelist' : 'qq'}]
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
@@ -1101,26 +1101,26 @@ def revert_deleted_in_changelist(sbox):
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu visible in changelist
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'changelist', 'qq', sbox.ospath('A/mu'))
   expected_infos = [{'Name' : 'mu', 'Changelist' : 'qq'}]
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu still visible after delete
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/mu'))
+  svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.ospath('A/mu'))
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu still visible after revert
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'revert', sbox.ospath('A/mu'))
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu still visible after parent delete
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A'))
+  svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.ospath('A'))
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu still visible after revert
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'revert', '-R', sbox.ospath('A'))
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
@@ -1135,11 +1135,11 @@ def add_remove_non_existent_target(sbox):
                  re.escape(os.path.abspath(bogus_path)) + \
                  "' was not found"
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'changelist', 'testlist',
                                      bogus_path)
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'changelist', bogus_path,
                                       '--remove')
 
@@ -1154,11 +1154,11 @@ def add_remove_unversioned_target(sbox):
                  re.escape(os.path.abspath(unversioned)) + \
                  "' was not found"
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'changelist', 'testlist',
                                      unversioned)
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'changelist', unversioned,
                                       '--remove')
 
@@ -1171,7 +1171,7 @@ def readd_after_revert(sbox):
   svntest.main.file_write(dummy, "dummy contents")
 
   sbox.simple_add('dummy')
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'changelist', 'testlist',
                                      dummy)
 
@@ -1179,7 +1179,7 @@ def readd_after_revert(sbox):
 
   svntest.main.file_write(dummy, "dummy contents")
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'add', dummy)
 
 

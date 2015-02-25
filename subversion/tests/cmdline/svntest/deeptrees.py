@@ -123,13 +123,13 @@ def deep_trees_leaf_edit(base):
   main.file_append(F, "More text for file alpha.\n")
   main.file_append(DF, "More text for file beta.\n")
   main.file_append(DDF, "More text for file gamma.\n")
-  run_and_verify_svn(None, verify.AnyOutput, [],
+  run_and_verify_svn(verify.AnyOutput, [],
                      'propset', 'prop1', '1', F, DF, DDF)
 
   D   = j(base, 'D', 'D1')
   DD  = j(base, 'DD', 'D1', 'D2')
   DDD = j(base, 'DDD', 'D1', 'D2', 'D3')
-  run_and_verify_svn(None, verify.AnyOutput, [],
+  run_and_verify_svn(verify.AnyOutput, [],
                      'propset', 'prop1', '1', D, DD, DDD)
   D   = j(base, 'D', 'D1', 'delta')
   DD  = j(base, 'DD', 'D1', 'D2', 'epsilon')
@@ -137,7 +137,7 @@ def deep_trees_leaf_edit(base):
   main.file_append(D, "This is the file 'delta'.\n")
   main.file_append(DD, "This is the file 'epsilon'.\n")
   main.file_append(DDD, "This is the file 'zeta'.\n")
-  run_and_verify_svn(None, verify.AnyOutput, [],
+  run_and_verify_svn(verify.AnyOutput, [],
                      'add', D, DD, DDD)
 
 # deep trees state after a call to deep_trees_leaf_edit
