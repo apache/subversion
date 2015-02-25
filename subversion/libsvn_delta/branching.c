@@ -1256,6 +1256,15 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
  * ========================================================================
  */
 
+static svn_error_t *
+svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
+                            svn_branch_instance_t *from_branch,
+                            int from_eid,
+                            svn_branch_instance_t *to_outer_branch,
+                            svn_editor3_eid_t to_outer_eid,
+                             svn_branch_sibling_t *new_branch_def,
+                            apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             svn_branch_instance_t *from_branch,
@@ -1267,7 +1276,6 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
 {
   int to_outer_eid;
   svn_branch_sibling_t *new_branch_def;
-  svn_branch_instance_t *new_branch;
 
   /* Source element must exist */
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
@@ -1296,11 +1304,41 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
   svn_branch_map_update_as_subbranch_root(to_outer_branch, to_outer_eid,
                                           to_outer_parent_eid, new_name);
 
-  /* create new inner branch sibling & instance */
-  /* ### On sub-branches, should not add new branch sibling, only instance. */
+  /* create new inner branch sibling-defn (for the top-level branching only,
+     not for any nested branches, as their sibling-defns already exist) */
   new_branch_def
     = svn_branch_family_add_new_branch_sibling(from_branch->sibling_defn->family,
                                                from_eid);
+
+  SVN_ERR(svn_branch_branch_subtree_r2(new_branch_p,
+                                       from_branch, from_eid,
+                                       to_outer_branch, to_outer_eid,
+                                       new_branch_def,
+                                       scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Make a new branch of FROM_BRANCH, selecting only the subtree at FROM_EID,
+ * at existing branch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
+ */
+static svn_error_t *
+svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
+                             svn_branch_instance_t *from_branch,
+                             int from_eid,
+                             svn_branch_instance_t *to_outer_branch,
+                             svn_editor3_eid_t to_outer_eid,
+                             svn_branch_sibling_t *new_branch_def,
+                             apr_pool_t *scratch_pool)
+{
+  svn_branch_instance_t *new_branch;
+
+  /* Source element must exist */
+  SVN_ERR_ASSERT(svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool));
+  /* FROM_BRANCH must be an immediate child branch of TO_OUTER_BRANCH. */
+  SVN_ERR_ASSERT(SAME_BRANCH(from_branch->outer_branch, to_outer_branch));
+
+  /* create new inner branch instance */
   new_branch = svn_branch_add_new_branch_instance(to_outer_branch, to_outer_eid,
                                                   new_branch_def, scratch_pool);
 
@@ -1321,7 +1359,6 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                                          scratch_pool));
 
   /* branch any subbranches under FROM_BRANCH:FROM_EID */
-#if 0 /* ### Later. */
   {
     apr_array_header_t *subbranches;
     int i;
@@ -1332,18 +1369,16 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
       {
         svn_branch_instance_t *subbranch
           = APR_ARRAY_IDX(subbranches, i, void *);
-        int new_parent_eid /* = ### */;
-        const char *new_name /* = ### */;
 
         /* branch this subbranch into NEW_BRANCH (recursing) */
-        SVN_ERR(svn_branch_branch_subtree_r(NULL,
-                                            subbranch,
-                                            subbranch->sibling_defn->root_eid,
-                                            new_branch, new_parent_eid, new_name,
-                                            scratch_pool));
+        SVN_ERR(svn_branch_branch_subtree_r2(NULL,
+                                             subbranch,
+                                             subbranch->sibling_defn->root_eid,
+                                             new_branch, subbranch->outer_eid,
+                                             subbranch->sibling_defn,
+                                             scratch_pool));
       }
   }
-#endif
 
   if (new_branch_p)
     *new_branch_p = new_branch;
