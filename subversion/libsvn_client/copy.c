@@ -418,6 +418,8 @@ pin_externals_prop(svn_string_t **pinned_externals,
               SVN_ERR(svn_ra_get_latest_revnum(external_ra_session,
                                                &latest_revnum,
                                                iterpool));
+              SVN_ERR(svn_client__ra_session_release(ctx,
+                                                     external_ra_session));
 
               external_pegrev.kind = svn_opt_revision_number;
               external_pegrev.value.number = latest_revnum;
