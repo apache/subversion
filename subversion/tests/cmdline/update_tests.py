@@ -2445,11 +2445,14 @@ def update_wc_on_windows_drive(sbox):
     expected_disk.tweak('A/mu', contents = expected_disk.desc['A/mu'].contents
                         + '\nAppended text for mu')
 
-    # Use .old_tree() for status to avoid the entries validation
+    # Create expected status with 'H:iota' style paths
+    expected_status_relative = svntest.wc.State('', {})
+    expected_status_relative.add_state(wc_dir, expected_status, strict=True)
+
     svntest.actions.run_and_verify_update(wc_dir,
                                           expected_output,
                                           expected_disk,
-                                          expected_status.old_tree())
+                                          expected_status_relative)
 
   finally:
     os.chdir(was_cwd)

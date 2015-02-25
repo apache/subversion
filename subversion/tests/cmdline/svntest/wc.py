@@ -141,12 +141,14 @@ class State:
 
     self.desc.update(more_desc)
 
-  def add_state(self, parent, state):
+  def add_state(self, parent, state, strict=False):
     "Import state items from a State object, reparent the items to PARENT."
     assert isinstance(state, State)
 
     for path, item in state.desc.items():
-      if path == '':
+      if strict:
+        path = parent + path
+      elif path == '':
         path = parent
       else:
         path = parent + '/' + path
@@ -355,6 +357,11 @@ class State:
         # and everything in these working copies
         elif item.status == 'X ' or item.prev_status == 'X ':
           del self.desc[path]
+          for p, i in self.desc.copy().items():
+            if p.startswith(path + '/'):
+              del self.desc[p]
+        elif item.entry_kind == 'file':
+          # A file has no descendants in svn_wc_entry_t
           for p, i in self.desc.copy().items():
             if p.startswith(path + '/'):
               del self.desc[p]
@@ -680,14 +687,22 @@ class State:
           })
 
     desc = { }
-    dot_svn = svntest.main.get_admin_name()
-
     dump_data = svntest.main.run_entriesdump_tree(base)
 
     if not dump_data:
       # Probably 'svn status' run on an actual only node
       # ### Improve!
       return cls('', desc)
+
+    dirent_join = repos_join
+    if len(base) == 2 and base[1:]==':' and sys.platform=='win32':
+      # We have a win32 drive relative path... Auch. Fix joining
+      def drive_join(a, b):
+        if len(a) == 2:
+          return a+b
+        else:
+          return repos_join(a,b)
+      dirent_join = drive_join
 
     for parent, entries in sorted(dump_data.items()):
 
@@ -710,11 +725,11 @@ class State:
           # that we can't put the status as "! " because that gets tweaked
           # out of our expected tree.
           item = StateItem(status='  ', wc_rev='?')
-          desc[repos_join(parent, name)] = item
+          desc[dirent_join(parent, name)] = item
           continue
         item = StateItem.from_entry(entry)
         if name:
-          desc[repos_join(parent, name)] = item
+          desc[dirent_join(parent, name)] = item
           implied_url = repos_join(parent_url, svn_uri_quote(name))
         else:
           item._url = entry.url  # attach URL to directory StateItems
@@ -745,7 +760,7 @@ class StateItem:
   """
 
   def __init__(self, contents=None, props=None,
-               status=None, verb=None, wc_rev=None,
+               status=None, verb=None, wc_rev=None, entry_kind=None,
                entry_rev=None, entry_status=None, entry_copied=None,
                locked=None, copied=None, switched=None, writelocked=None,
                treeconflict=None, moved_from=None, moved_to=None,
@@ -772,6 +787,9 @@ class StateItem:
     self.prev_verb = prev_verb
     # The base revision number of the node in the WC, as a string.
     self.wc_rev = wc_rev
+    # If 'file' specifies that the node is a file, and as such has no svn_wc_entry_t
+    # descendants
+    self.entry_kind = None
     # These will be set when we expect the wc_rev/status to differ from those
     # found in the entries code.
     self.entry_rev = entry_rev
