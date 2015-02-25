@@ -2487,7 +2487,7 @@ static svn_error_t *
 break_moved_away(svn_wc__db_wcroot_t *wcroot,
                  svn_wc__db_t *db,
                  const char *local_relpath,
-                 int src_op_depth,
+                 int parent_src_op_depth,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -2501,7 +2501,7 @@ break_moved_away(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_MOVED_DESCENDANTS_SRC));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
-                                         src_op_depth));
+                            parent_src_op_depth));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   iterpool = svn_pool_create(scratch_pool);
