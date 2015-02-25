@@ -129,7 +129,7 @@ svn_cl__conflict_stats_resolved(svn_cl__conflict_stats_t *conflict_stats,
 static const char *
 remaining_str(apr_pool_t *pool, int n_remaining)
 {
-  return apr_psprintf(pool, Q_("%d remaining", 
+  return apr_psprintf(pool, Q_("%d remaining",
                                "%d remaining",
                                n_remaining),
                       n_remaining);

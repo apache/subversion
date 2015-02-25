@@ -49,7 +49,7 @@ extern "C" {
  * and return the start offsets of the index data in *L2P_OFFSET and
  * *P2L_OFFSET, respectively.  Also, return the expected checksums in
  * in *L2P_CHECKSUM and *P2L_CHECKSUM.
- * 
+ *
  * Note that REV is only used to construct nicer error objects that
  * mention this revision.  Allocate the checksums in RESULT_POOL.
  */
@@ -160,7 +160,7 @@ svn_fs_x__read_rep_header(svn_fs_x__rep_header_t **header,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-/* Write the representation HEADER to STREAM. 
+/* Write the representation HEADER to STREAM.
  * Use SCRATCH_POOL for allocations. */
 svn_error_t *
 svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,

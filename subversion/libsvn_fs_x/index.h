@@ -61,7 +61,7 @@ typedef struct svn_fs_x__p2l_entry_t
 {
   /* offset of the first byte that belongs to the item */
   apr_off_t offset;
-  
+
   /* length of the item in bytes */
   apr_off_t size;
 
@@ -110,7 +110,7 @@ svn_fs_x__l2p_proto_index_add_revision(apr_file_t *proto_index,
  * (OFFSET, SUB_ITEM) may be (-1, 0) to mark 'invalid' item indexes but
  * that is already implied for all item indexes not explicitly given a
  * mapping.
- * 
+ *
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
@@ -123,7 +123,7 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
 /* Use the proto index file stored at PROTO_FILE_NAME, construct the final
  * log-to-phys index and append it to INDEX_FILE.  The first revision will
  * be REVISION, entries to the next revision will be assigned to REVISION+1
- * and so forth.  
+ * and so forth.
  *
  * Return the MD5 checksum of the on-disk index data in *CHECKSUM, allocated
  * in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.

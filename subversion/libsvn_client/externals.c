@@ -171,7 +171,7 @@ switch_dir_external(const char *local_abspath,
   if (revision->kind == svn_opt_revision_number)
     external_rev = revision->value.number;
 
-  /* 
+  /*
    * The code below assumes existing versioned paths are *not* part of
    * the external's defining working copy.
    * The working copy library does not support registering externals
@@ -242,6 +242,20 @@ switch_dir_external(const char *local_abspath,
                                                   FALSE, FALSE, FALSE, TRUE,
                                                   FALSE, TRUE,
                                                   ra_session, ctx, subpool));
+
+              /* We just decided that this existing directory is an external,
+                 so update the external registry with this information, like
+                 when checking out an external */
+              SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
+                                    defining_abspath,
+                                    local_abspath, svn_node_dir,
+                                    repos_root_url, repos_uuid,
+                                    svn_uri_skip_ancestor(repos_root_url,
+                                                          url, pool),
+                                    external_peg_rev,
+                                    external_rev,
+                                    pool));
+
               svn_pool_destroy(subpool);
               goto cleanup;
             }

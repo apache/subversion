@@ -4386,12 +4386,12 @@ def tree_conflicts_on_update_2_2(sbox):
   expected_output = deep_trees_conflict_output
 
   expected_disk = svntest.wc.State('', {
+    'DDF/D1/D2'       : Item(),
     'F'               : Item(),
     'D'               : Item(),
-    'DF'              : Item(),
-    'DD'              : Item(),
-    'DDF'             : Item(),
-    'DDD'             : Item(),
+    'DF/D1'           : Item(),
+    'DD/D1'           : Item(),
+    'DDD/D1/D2'       : Item(),
   })
 
   expected_status = svntest.deeptrees.deep_trees_virginal_state.copy()
@@ -4410,20 +4410,16 @@ def tree_conflicts_on_update_2_2(sbox):
   # Expect the incoming tree deletes and the local leaf deletes to mean
   # that all deleted paths are *really* gone, not simply scheduled for
   # deletion.
-  expected_status.tweak('F/alpha',
-                        'D/D1',
-                        'DD/D1',
-                        'DF/D1',
-                        'DDD/D1',
-                        'DDF/D1',
-                        status='! ', wc_rev=None)
-  # Remove from expected status and disk everything below the deleted paths.
-  expected_status.remove('DD/D1/D2',
-                         'DF/D1/beta',
-                         'DDD/D1/D2',
-                         'DDD/D1/D2/D3',
-                         'DDF/D1/D2',
-                         'DDF/D1/D2/gamma',)
+  expected_status.tweak('DD/D1', 'DF/D1', 'DDF/D1', 'DDD/D1',
+                        status='A ', copied='+', treeconflict='C',
+                        wc_rev='-')
+  expected_status.tweak('DDF/D1/D2', 'DDD/D1/D2',
+                        copied='+', wc_rev='-')
+  expected_status.tweak('DD/D1/D2',  'DF/D1/beta', 'DDD/D1/D2/D3',
+                        'DDF/D1/D2/gamma',
+                        status='D ', copied='+', wc_rev='-')
+  expected_status.tweak('F/alpha', 'D/D1',
+                        status='! ', treeconflict='C', wc_rev=None)
 
   expected_info = {
     'F/alpha' : {
@@ -4434,13 +4430,13 @@ def tree_conflicts_on_update_2_2(sbox):
     },
     'DF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete or move upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DF/D1@2'
         + ' Source right: .none.*(/DF/D1@3)?$',
     },
     'DDF/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete or move upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDF/D1@2'
         + ' Source right: .none.*(/DDF/D1@3)?$',
     },
@@ -4452,13 +4448,13 @@ def tree_conflicts_on_update_2_2(sbox):
     },
     'DD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete or move upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DD/D1@2'
         + ' Source right: .none.*(/DD/D1@3)?$',
     },
     'DDD/D1' : {
       'Tree conflict' :
-        '^local dir delete, incoming dir delete or move upon update'
+        '^local dir edit, incoming dir delete or move upon update'
         + ' Source  left: .dir.*/DDD/D1@2'
         + ' Source right: .none.*(/DDD/D1@3)?$',
     },
@@ -6697,6 +6693,146 @@ def update_child_below_add(sbox):
                                         None, None, None,
                                         sbox.ospath('A/B/E'))
 
+def update_conflict_details(sbox):
+  "update conflict details"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/B/E/new', 'new\n')
+  sbox.simple_add('A/B/E/new')
+  sbox.simple_append('A/B/E/alpha', '\nextra\nlines\n')
+  sbox.simple_rm('A/B/E/beta', 'A/B/F')
+  sbox.simple_propset('key', 'VAL', 'A/B/E', 'A/B')
+  sbox.simple_mkdir('A/B/E/new-dir1')
+  sbox.simple_mkdir('A/B/E/new-dir2')
+  sbox.simple_mkdir('A/B/E/new-dir3')
+  sbox.simple_rm('A/B/lambda')
+  sbox.simple_mkdir('A/B/lambda')
+  sbox.simple_commit()
+
+  sbox.simple_update('', 1)
+
+  sbox.simple_propset('key', 'vAl', 'A/B')
+  sbox.simple_move('A/B/E/beta', 'beta')
+  sbox.simple_propset('a', 'b', 'A/B/F', 'A/B/lambda')
+  sbox.simple_append('A/B/E/alpha', 'other\nnew\nlines')
+  sbox.simple_mkdir('A/B/E/new')
+  sbox.simple_mkdir('A/B/E/new-dir1')
+  sbox.simple_append('A/B/E/new-dir2', 'something')
+  sbox.simple_append('A/B/E/new-dir3', 'something')
+  sbox.simple_add('A/B/E/new-dir3')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/B/E/new'         : Item(status='R ', treeconflict='C', wc_rev='2'),
+    'A/B/E/new-dir2'    : Item(status='D ', treeconflict='C', wc_rev='2'),
+    'A/B/E/new-dir3'    : Item(status='R ', treeconflict='C', wc_rev='2'),
+    'A/B/E/new-dir1'    : Item(status='  ', wc_rev='2'),
+    'A/C'               : Item(status='  ', wc_rev='2'),
+    'iota'              : Item(status='  ', wc_rev='2'),
+    'beta'              : Item(status='A ', copied='+', wc_rev='-')
+  })
+  expected_status.tweak('A/B', status=' C', wc_rev='2')
+  expected_status.tweak('A/B/E/alpha', status='C ', wc_rev='2')
+  expected_status.tweak('A/B/E/beta', status='! ', treeconflict='C', wc_rev=None)
+  expected_status.tweak('A/B/F', status='A ', copied='+', treeconflict='C', wc_rev='-')
+  expected_status.tweak('A/B/lambda', status='RM', copied='+', treeconflict='C', wc_rev='-')
+  expected_status.tweak('A/mu', status='  ', wc_rev='2')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'               : Item(status=' C'),
+    'A/B/E'             : Item(status=' U'),
+    'A/B/E/new'         : Item(status='  ', treeconflict='C'),
+    'A/B/E/beta'        : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha'       : Item(status='C '),
+    'A/B/E/new-dir2'    : Item(status='  ', treeconflict='C'),
+    'A/B/E/new-dir3'    : Item(status='  ', treeconflict='C'),
+    'A/B/E/new-dir1'    : Item(status='E '),
+    'A/B/F'             : Item(status='  ', treeconflict='C'),
+    # ### 2 tree conflict reports; one for delete; one for add...
+    'A/B/lambda'        : Item(status='  ', treeconflict='A',
+                               prev_status='  ', prev_treeconflict='C'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        None, expected_status)
+
+  # Update can't pass source as none at a specific URL@revision,
+  # because it doesn't know... the working copy could be mixed
+  # revision or may have excluded parts...
+  expected_info = [
+    {
+      "Path" : re.escape(sbox.ospath('A/B')),
+
+      "Conflict Properties File" :
+            re.escape(sbox.ospath('A/B/dir_conflicts.prej')) + '.*',
+      "Conflict Details": re.escape(
+            'incoming dir edit upon update' +
+            ' Source  left: (dir) ^/A/B@1' +
+            ' Source right: (dir) ^/A/B@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/E')),
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/E/alpha')),
+      "Conflict Previous Base File" : '.*alpha.*',
+      "Conflict Previous Working File" : '.*alpha.*',
+      "Conflict Current Base File": '.*alpha.*',
+      "Conflict Details": re.escape(
+          'incoming file edit upon update' +
+          ' Source  left: (file) ^/A/B/E/alpha@1' +
+          ' Source right: (file) ^/A/B/E/alpha@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/E/beta')),
+      "Tree conflict": re.escape(
+          'local file moved away, incoming file delete or move upon update' +
+          ' Source  left: (file) ^/A/B/E/beta@1' +
+          ' Source right: (none) ^/A/B/E/beta@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/E/new')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming file add upon update' +
+          ' Source  left: (none)' +
+          ' Source right: (file) ^/A/B/E/new@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/E/new-dir1')),
+      # No tree conflict. Existing directory taken over
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/E/new-dir2')),
+      "Tree conflict": re.escape(
+          'local file unversioned, incoming dir add upon update' +
+          ' Source  left: (none)' +
+          ' Source right: (dir) ^/A/B/E/new-dir2@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/E/new-dir3')),
+      "Tree conflict": re.escape(
+          'local file add, incoming dir add upon update' +
+          ' Source  left: (none)' +
+          ' Source right: (dir) ^/A/B/E/new-dir3@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/F')),
+      "Tree conflict": re.escape(
+          'local dir edit, incoming dir delete or move upon update' +
+          ' Source  left: (dir) ^/A/B/F@1' +
+          ' Source right: (none) ^/A/B/F@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('A/B/lambda')),
+      "Tree conflict": re.escape(
+          'local file edit, incoming replace with dir upon update' +
+          ' Source  left: (file) ^/A/B/lambda@1' +
+          ' Source right: (dir) ^/A/B/lambda@2')
+    },
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B'),
+                                      '--depth', 'infinity')
 
 #######################################################################
 # Run the tests
@@ -6783,6 +6919,7 @@ test_list = [ None,
               update_moved_away,
               bump_below_tree_conflict,
               update_child_below_add,
+              update_conflict_details,
              ]
 
 if __name__ == '__main__':

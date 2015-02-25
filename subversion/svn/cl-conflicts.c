@@ -337,6 +337,27 @@ svn_cl__get_human_readable_tree_conflict_description(
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_cl__get_human_readable_action_description(
+        const char **desc,
+        svn_wc_conflict_action_t action,
+        svn_wc_operation_t operation,
+        svn_node_kind_t kind,
+        apr_pool_t *pool)
+{
+  const char *action_s, *operation_s;
+
+  action_s = incoming_action_str(kind, action);
+  operation_s = operation_str(operation);
+
+  SVN_ERR_ASSERT(operation_s);
+
+  *desc = apr_psprintf(pool, _("%s %s"),
+                       action_s, operation_s);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Helper for svn_cl__append_tree_conflict_info_xml().
  * Appends the attributes of the given VERSION to ATT_HASH.

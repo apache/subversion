@@ -90,7 +90,7 @@ typedef struct fs_txn_root_data_t
 {
   /* TXN_ID value from the main struct but as a struct instead of a string */
   svn_fs_fs__id_part_t txn_id;
-  
+
   /* Cache of txn DAG nodes (without their nested noderevs, because
    * it's mutable). Same keys/values as ffd->rev_node_cache. */
   svn_cache__t *txn_node_cache;
@@ -574,7 +574,7 @@ root_txn_id(svn_fs_root_t *root)
 {
   fs_txn_root_data_t *frd = root->fsap_data;
   assert(root->is_txn_root);
-  
+
   return &frd->txn_id;
 }
 
@@ -2095,7 +2095,7 @@ merge_changes(dag_node_t *ancestor_node,
   dag_node_t *txn_root_node;
   svn_fs_t *fs = txn->fs;
   const svn_fs_fs__id_part_t *txn_id = svn_fs_fs__txn_get_id(txn);
-  
+
   SVN_ERR(svn_fs_fs__dag_txn_root(&txn_root_node, fs, txn_id, pool));
 
   if (ancestor_node == NULL)
@@ -2905,7 +2905,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
      cb->target_string. */
   SVN_ERR(tb->interpreter(window, tb->interpreter_baton));
 
-  /* Is the window NULL?  If so, we're done.  The stream has already been 
+  /* Is the window NULL?  If so, we're done.  The stream has already been
      closed by the interpreter. */
   if (! window)
     SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,

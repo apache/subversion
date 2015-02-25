@@ -1449,7 +1449,6 @@ def update_dir_with_not_present(sbox):
   run_and_verify_svn(None, [],
                      'ci', '-m', '', wc_dir)
 
-@XFail()
 def update_delete_mixed_rev(sbox):
   "update that deletes mixed-rev"
 
@@ -1484,6 +1483,10 @@ def update_delete_mixed_rev(sbox):
                         status='A ', copied='+', treeconflict='C', wc_rev='-')
   expected_status.tweak('A/B/F', 'A/B/E', 'A/B/E/beta', 'A/B/lambda',
                         copied='+', wc_rev='-')
+
+  # The entries world doesn't see a changed revision as another add
+  # while the WC-NG world does...
+  expected_status.tweak('A/B/E', status='A ', entry_status='  ')
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
                         None, None, None, None, None, 1,

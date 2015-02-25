@@ -97,6 +97,7 @@ static const int slow_statements[] =
 
   /* Full temporary table read */
   STMT_INSERT_ACTUAL_EMPTIES,
+  STMT_INSERT_ACTUAL_EMPTIES_FILES,
   STMT_SELECT_REVERT_LIST_RECURSIVE,
   STMT_SELECT_DELETE_LIST,
   STMT_SELECT_UPDATE_MOVE_LIST,
@@ -302,13 +303,20 @@ parse_explanation_item(struct explanation_item **parsed_item,
       item->search = TRUE; /* Search or scan */
       token = apr_strtok(NULL, " ", &last);
 
-      if (!MATCH_TOKEN(token, "TABLE"))
+      if (MATCH_TOKEN(token, "TABLE"))
+        {
+          item->table = apr_strtok(NULL, " ", &last);
+        }
+      else if (MATCH_TOKEN(token, "SUBQUERY"))
+        {
+          item->table = apr_psprintf(result_pool, "SUBQUERY-%s",
+                                     apr_strtok(NULL, " ", &last));
+        }
+      else
         {
           printf("DBG: Expected 'TABLE', got '%s' in '%s'\n", token, text);
           return SVN_NO_ERROR; /* Nothing to parse */
         }
-
-      item->table = apr_strtok(NULL, " ", &last);
 
       token = apr_strtok(NULL, " ", &last);
 
@@ -976,6 +984,59 @@ test_schema_statistics(apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+/* An SQLite application defined function that allows SQL queries to
+   use "relpath_depth(local_relpath)".  */
+static void relpath_depth_sqlite(sqlite3_context* context,
+                                 int argc,
+                                 sqlite3_value* values[])
+{
+  SVN_ERR_MALFUNCTION_NO_RETURN(); /* STUB! */
+}
+
+/* Parse all verify/check queries */
+static svn_error_t *
+test_verify_parsable(apr_pool_t *scratch_pool)
+{
+  sqlite3 *sdb;
+  int i;
+
+  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+
+  SQLITE_ERR(sqlite3_create_function(sdb, "relpath_depth", 1, SQLITE_ANY, NULL,
+                                     relpath_depth_sqlite, NULL, NULL));
+
+  for (i=STMT_VERIFICATION_TRIGGERS; wc_queries[i]; i++)
+    {
+      sqlite3_stmt *stmt;
+      const char *text = wc_queries[i];
+
+      /* Some of our statement texts contain multiple queries. We prepare
+         them all. */
+      while (*text != '\0')
+        {
+          const char *tail;
+          int r = sqlite3_prepare_v2(sdb, text, -1, &stmt, &tail);
+
+          if (r != SQLITE_OK)
+            return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
+                                     "Preparing %s failed: %s\n%s",
+                                     wc_query_info[i][0],
+                                     sqlite3_errmsg(sdb),
+                                     text);
+
+          SQLITE_ERR(sqlite3_finalize(stmt));
+
+          /* Continue after the current statement */
+          text = tail;
+        }
+    }
+
+  SQLITE_ERR(sqlite3_close(sdb)); /* Close the DB if ok; otherwise leaked */
+
+  return SVN_NO_ERROR;
+}
+
+
 static int max_threads = 1;
 
 static struct svn_test_descriptor_t test_funcs[] =
@@ -991,6 +1052,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test query duplicates"),
     SVN_TEST_PASS2(test_schema_statistics,
                    "test schema statistics"),
+    SVN_TEST_PASS2(test_verify_parsable,
+                   "verify queries are parsable"),
     SVN_TEST_NULL
   };
 
