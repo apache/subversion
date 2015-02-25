@@ -878,13 +878,13 @@ svn_cl__info(apr_getopt_t *os,
       receiver = print_info_xml;
 
       if (opt_state->show_item)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("the 'show-item' option is not valid"
-                                  " in XML mode"));
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--show-item is not valid in --xml mode"));
       if (opt_state->no_newline)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("the 'no-newline' option is only valid"
-                                  " with the 'show-item' option"));
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--no-newline' is only valid with --show-item"));
 
       /* If output is not incremental, output the XML header and wrap
          everything in a top-level element. This makes the output in
@@ -897,13 +897,19 @@ svn_cl__info(apr_getopt_t *os,
       receiver = print_info_item;
 
       if (opt_state->incremental)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("the 'incremental' option is only valid"
-                                  " in XML mode"));
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--incremental is only valid in --xml mode"));
 
-      SVN_ERR(find_print_what(opt_state->show_item, &receiver_baton, pool));
       receiver_baton.multiple_targets = (opt_state->depth > svn_depth_empty
                                          || targets->nelts > 1);
+      if (receiver_baton.multiple_targets && opt_state->no_newline)
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--no-newline is only available for single-target,"
+              " non-recursive info operations"));
+
+      SVN_ERR(find_print_what(opt_state->show_item, &receiver_baton, pool));
       receiver_baton.start_new_line = FALSE;
     }
   else
@@ -911,13 +917,13 @@ svn_cl__info(apr_getopt_t *os,
       receiver = print_info;
 
       if (opt_state->incremental)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("the 'incremental' option is only valid"
-                                  " in XML mode"));
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--incremental is only valid in --xml mode"));
       if (opt_state->no_newline)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("the 'no-newline' option is only valid"
-                                  " with the 'show-item' option"));
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--no-newline' is only valid with --show-item"));
     }
 
   if (opt_state->depth == svn_depth_unknown)
