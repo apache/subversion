@@ -642,8 +642,8 @@ def info_item_simple(sbox):
   sbox.build(read_only=True)
   svntest.actions.run_and_verify_svn(
     '1', [],
-    'info', '--show-item=revision',
-    '--no-newline', sbox.ospath(''))
+    'info', '--show-item=revision', '--no-newline',
+    sbox.ospath(''))
 
 
 def info_item_simple_multiple(sbox):
@@ -722,14 +722,29 @@ def info_item_failures(sbox):
   sbox.build(read_only=True)
 
   svntest.actions.run_and_verify_svn(
-    None, r".*E205000: .*('svn help info'|; did you mean 'wc-root'\?).*",
+    None, r'.*E200009:.*',
+    'info', '--show-item=revision',
+    sbox.ospath('not-there'))
+
+  svntest.actions.run_and_verify_svn(
+    None, r".*E205000: .*; did you mean 'wc-root'\?",
     'info', '--show-item=root',
     sbox.ospath(''))
 
   svntest.actions.run_and_verify_svn(
-    None, r'.*(W155010|E200009):.*',
-    'info', '--show-item=revision',
-    sbox.ospath('not-there'))
+    None, (r".*E205000: --show-item is not valid in --xml mode"),
+    'info', '--show-item=revision', '--xml',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --incremental is only valid in --xml mode"),
+    'info', '--show-item=revision', '--incremental',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --no-newline is only available.*"),
+    'info', '--show-item=revision', '--no-newline',
+    sbox.ospath('A'), sbox.ospath('iota'))
 
 
 ########################################################################
