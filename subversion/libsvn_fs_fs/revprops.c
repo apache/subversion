@@ -111,7 +111,7 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
                                               scratch_pool);
-  
+
   /* delete the non-packed revprops shards afterwards */
   for (shard = 0; shard < first_unpacked_shard; ++shard)
     {
@@ -208,7 +208,9 @@ parse_revprop(apr_hash_t **properties,
   svn_stream_t *stream = svn_stream_from_string(content, scratch_pool);
   *properties = apr_hash_make(pool);
 
-  SVN_ERR(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR_W(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR, pool),
+            apr_psprintf(scratch_pool, "Failed to parse revprops for r%ld.",
+                         revision));
 
   return SVN_NO_ERROR;
 }

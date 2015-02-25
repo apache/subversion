@@ -85,11 +85,11 @@ def basic_entries(sbox):
   iota2_path = os.path.join(wc_dir, 'A', 'B', 'E', 'iota2')
 
   # Remove 'alpha'. When it is committed, it will be marked DELETED.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', alpha_path)
 
   # Tweak 'beta' in order to bump its revision to ensure the replacement
   # gets the new revision (2), not the value from the parent (1).
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'random-prop', 'propvalue',
                                      beta_path)
 
@@ -106,7 +106,7 @@ def basic_entries(sbox):
                                         alpha_path, beta_path)
 
   # bump 'G' and iota another revision (3) for later testing
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'random-prop', 'propvalue',
                                      G_path, iota_path)
 
@@ -124,16 +124,16 @@ def basic_entries(sbox):
   open(alpha_path, 'w').write('New alpha contents\n')
 
   # Delete 'beta', then add a file over it. Should be schedule-replace.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', beta_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', beta_path)
   open(beta_path, 'w').write('New beta contents\n')
 
   # Plain old add. Should have revision == 0.
   open(added_path, 'w').write('Added file contents\n')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'add',
+  svntest.actions.run_and_verify_svn(None, [], 'add',
                                      alpha_path, beta_path, added_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+  svntest.actions.run_and_verify_svn(None, [], 'cp',
                                      iota_path, iota2_path)
 
   entries = svntest.main.run_entriesdump(os.path.join(wc_dir, 'A', 'B', 'E'))
@@ -153,7 +153,7 @@ def basic_entries(sbox):
   validate(entries['iota2'], schedule=SCHEDULE_ADD, revision=1, copied=True,
            copyfrom_rev=3)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', G_path, G2_path)
+  svntest.actions.run_and_verify_svn(None, [], 'cp', G_path, G2_path)
 
   entries = svntest.main.run_entriesdump(G2_path)
   check_names(entries, 'pi', 'rho', 'tau')
@@ -210,7 +210,7 @@ def deletion_details(sbox):
 
   # blast iota, then verify the now-deleted entry still contains much of
   # the same information.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', iota_path)
   entries = svntest.main.run_entriesdump(wc_dir)
   check_names(entries, 'iota')
   validate(entries['iota'], revision=iota.revision,
@@ -219,8 +219,8 @@ def deletion_details(sbox):
   # even deleted nodes have a URL
   validate(entries['iota'], url='%s/iota' % sbox.repo_url)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', D_path, D2_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', D2_G_path)
+  svntest.actions.run_and_verify_svn(None, [], 'cp', D_path, D2_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', D2_G_path)
 
   entries = svntest.main.run_entriesdump(D2_path)
   check_names(entries, 'gamma', 'G')
@@ -244,8 +244,8 @@ def deletion_details(sbox):
   ### for now... this test case is done. just return
   return
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', E_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', H_path, E_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', E_path)
+  svntest.actions.run_and_verify_svn(None, [], 'cp', H_path, E_path)
 
   entries = svntest.main.run_entriesdump(E_path)
   check_names(entries, 'chi', 'omega', 'psi', 'alpha', 'beta')

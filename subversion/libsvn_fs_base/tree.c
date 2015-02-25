@@ -1237,7 +1237,7 @@ base_node_prop(svn_string_t **value_p,
   args.propname = propname;
   SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_prop, &args,
                                  FALSE, scratch_pool));
-  *value_p = value ? svn_string_dup(value, pool) : NULL;
+  *value_p = svn_string_dup(value, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }

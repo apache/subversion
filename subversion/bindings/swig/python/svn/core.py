@@ -191,8 +191,9 @@ class Stream:
     svn_stream_write(self._stream, buf)
 
   def close(self):
-    svn_stream_close(self._stream)
-    self._stream = None
+    if self._stream is not None:
+      svn_stream_close(self._stream)
+      self._stream = None
 
 def secs_from_timestr(svn_datetime, pool=None):
   """Convert a Subversion datetime string into seconds since the Epoch."""

@@ -178,7 +178,7 @@ Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_get_1yna(
                   ctx.m_config, &value,
                   ctx.m_section.c_str(), ctx.m_option.c_str(),
                   default_value.c_str()),
-              NULL);              
+              NULL);
   return JNIUtil::makeJString(value);
 }
 

@@ -907,13 +907,15 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  *
  * Allocate the table, keys, and values in @a pool.
  *
- * Use @a parent_directory only in constructing error strings.
+ * @a defining_directory is the path or URL of the directory on which
+ * the svn:externals property corresponding to @a desc is set.
+ * @a defining_directory is only used when constructing error strings.
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
-                                    const char *parent_directory,
+                                    const char *defining_directory,
                                     const char *desc,
                                     svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool);
@@ -2183,6 +2185,14 @@ typedef struct svn_wc_conflict_result_t
       NULL) in the user's working copy. */
   svn_boolean_t save_merged;
 
+  /** If not NULL, this is the new merged property, used when choosing
+   * #svn_wc_conflict_choose_merged. This value is prefered over using
+   * merged_file.
+   *
+   * @since New in 1.9.
+   */
+  const svn_string_t *merged_value;
+
 } svn_wc_conflict_result_t;
 
 
@@ -2192,7 +2202,8 @@ typedef struct svn_wc_conflict_result_t
  *
  * Set the @c choice field of the structure to @a choice, @c merged_file
  * to @a merged_file, and @c save_merged to false.  Make only a shallow
- * copy of the pointer argument @a merged_file.
+ * copy of the pointer argument @a merged_file. @a merged_file may be
+ * NULL if setting merged_file is not needed.
  *
  * @since New in 1.5.
  */
@@ -3823,6 +3834,13 @@ typedef struct svn_wc_status3_t
   /** @c TRUE iff the item is a file brought in by an svn:externals definition.
    * @since New in 1.8. */
   svn_boolean_t file_external;
+
+
+  /** The actual kind of the node in the working copy. May differ from kind
+   * on obstructions, deletes, etc. svn_node_unknown if unavailable.
+   *
+   * @since New in 1.9 */
+  svn_node_kind_t actual_kind;
 
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
@@ -7537,6 +7555,10 @@ svn_wc_relocate(const char *path,
  * If @a clear_changelists is TRUE, then changelist information for the
  * paths is cleared.
  *
+ * If @a metadata_only is TRUE, the working copy files are untouched, but
+ * if there are conflict marker files attached to these files these
+ * markers are removed.
+ *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
  * error (typically #SVN_ERR_CANCELLED), return that error
@@ -7562,6 +7584,7 @@ svn_wc_revert5(svn_wc_context_t *wc_ctx,
                svn_boolean_t use_commit_times,
                const apr_array_header_t *changelist_filter,
                svn_boolean_t clear_changelists,
+               svn_boolean_t metadata_only,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -7569,7 +7592,7 @@ svn_wc_revert5(svn_wc_context_t *wc_ctx,
                apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_revert5() but with @a clear_changelists always set to
- * FALSE.
+ * FALSE and @a metadata_only set to FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.

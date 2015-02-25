@@ -71,13 +71,26 @@ public class ConflictDescriptor
      */
     private ConflictVersion srcRightVersion;
 
-    /** This constructor should only be called from JNI code. */
-    public ConflictDescriptor(String path, Kind conflictKind, NodeKind nodeKind,
+    // Information about property conflicts. New in 1.9
+    private String propRejectAbspath;
+    private byte[] propValueBase;
+    private byte[] propValueWorking;
+    private byte[] propValueIncomingOld;
+    private byte[] propValueIncomingNew;
+
+
+    // Private constructor, only called from the JNI code.
+    private ConflictDescriptor(String path, Kind conflictKind, NodeKind nodeKind,
                        String propertyName, boolean isBinary, String mimeType,
                        Action action, Reason reason, Operation operation,
                        String basePath, String theirPath,
                        String myPath, String mergedPath,
-                       ConflictVersion srcLeft, ConflictVersion srcRight)
+                       ConflictVersion srcLeft, ConflictVersion srcRight,
+                       String propRejectAbspath, byte[] propValueBase,
+                       byte[] propValueWorking,
+                       byte[] propValueIncomingOld,
+                       byte[] propValueIncomingNew)
+
     {
         this.path = path;
         this.conflictKind = conflictKind;
@@ -94,6 +107,28 @@ public class ConflictDescriptor
         this.operation = operation;
         this.srcLeftVersion = srcLeft;
         this.srcRightVersion = srcRight;
+        this.propRejectAbspath = propRejectAbspath;
+        this.propValueBase = propValueBase;
+        this.propValueWorking = propValueWorking;
+        this.propValueIncomingOld = propValueIncomingOld;
+        this.propValueIncomingNew = propValueIncomingNew;
+    }
+
+    /**
+     * This constructor should only be called from JNI code.
+     * @deprecated
+     */
+    @Deprecated
+    public ConflictDescriptor(String path, Kind conflictKind, NodeKind nodeKind,
+                       String propertyName, boolean isBinary, String mimeType,
+                       Action action, Reason reason, Operation operation,
+                       String basePath, String theirPath,
+                       String myPath, String mergedPath,
+                       ConflictVersion srcLeft, ConflictVersion srcRight)
+    {
+        this(path, conflictKind, nodeKind, propertyName, isBinary, mimeType,
+             action, reason, operation, basePath, theirPath, myPath, mergedPath,
+             srcLeft, srcRight, null, null, null, null, null);
     }
 
     public String getPath()
@@ -170,6 +205,32 @@ public class ConflictDescriptor
     {
         return srcRightVersion;
     }
+
+    public String getPropRejectAbspath()
+    {
+        return propRejectAbspath;
+    }
+
+    public byte[] getPropValueBase()
+    {
+        return propValueBase;
+    }
+
+    public byte[] getPropValueWorking()
+    {
+        return propValueWorking;
+    }
+
+    public byte[] getPropValueIncomingOld()
+    {
+        return propValueIncomingOld;
+    }
+
+    public byte[] getPropValueIncomingNew()
+    {
+        return propValueIncomingNew;
+    }
+
 
     /**
      * Rich man's enum for <code>svn_wc_conflict_kind_t</code>.

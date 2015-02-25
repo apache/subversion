@@ -299,17 +299,20 @@ progress_func(apr_off_t progress,
               apr_pool_t *pool)
 {
   callback_baton_t *b = baton;
-  svn_client_ctx_t *ctx = b->ctx;
+  svn_client_ctx_t *public_ctx = b->ctx;
+  svn_client__private_ctx_t *private_ctx =
+    svn_client__get_private_ctx(public_ctx);
 
-  ctx->progress += (progress - b->last_progress);
+  private_ctx->total_progress += (progress - b->last_progress);
   b->last_progress = progress;
 
-  if (ctx->progress_func)
+  if (public_ctx->progress_func)
     {
       /* All RA implementations currently provide -1 for total. So it doesn't
          make sense to develop some complex logic to combine total across all
          RA sessions. */
-      ctx->progress_func(ctx->progress, -1, ctx->progress_baton, pool);
+      public_ctx->progress_func(private_ctx->total_progress, -1,
+                                public_ctx->progress_baton, pool);
     }
 }
 
@@ -703,7 +706,7 @@ repos_locations(const char **start_url,
           || (SVN_IS_VALID_REVNUM(end_revnum) && (end_revnum > youngest_rev)))
         return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                  _("No such revision %ld"),
-                                 (start_revnum > youngest_rev) 
+                                 (start_revnum > youngest_rev)
                                         ? start_revnum : end_revnum);
 
       if (start_url)

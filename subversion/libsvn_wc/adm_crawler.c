@@ -162,6 +162,7 @@ static svn_error_t *
 restore_node(svn_wc__db_t *db,
              const char *local_abspath,
              svn_node_kind_t kind,
+             svn_boolean_t mark_resolved_text_conflict,
              svn_boolean_t use_commit_times,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -173,7 +174,7 @@ restore_node(svn_wc__db_t *db,
     {
       /* Recreate file from text-base; mark any text conflict as resolved */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
-                           TRUE /*mark_resolved_text_conflict*/,
+                           mark_resolved_text_conflict,
                            cancel_func, cancel_baton,
                            scratch_pool));
     }
@@ -384,12 +385,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
           svn_wc__db_status_t wrk_status;
           svn_node_kind_t wrk_kind;
           const svn_checksum_t *checksum;
+          svn_boolean_t conflicted;
 
           SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        &checksum, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, &conflicted,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
                                        db, this_abspath, iterpool, iterpool));
 
           if ((wrk_status == svn_wc__db_status_normal
@@ -408,7 +410,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
               if (dirent_kind == svn_node_none)
                 {
                   SVN_ERR(restore_node(db, this_abspath, wrk_kind,
-                                       use_commit_times,
+                                       conflicted, use_commit_times,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton, iterpool));
                 }
@@ -718,12 +720,13 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       svn_wc__db_status_t wrk_status;
       svn_node_kind_t wrk_kind;
       const svn_checksum_t *checksum;
+      svn_boolean_t conflicted;
 
       err = svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, &checksum, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL,
+                                 NULL, &conflicted, NULL, NULL, NULL, NULL,
+                                 NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -743,7 +746,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           && (wrk_kind == svn_node_dir || checksum))
         {
           SVN_ERR(restore_node(wc_ctx->db, local_abspath,
-                               wrk_kind, use_commit_times,
+                               wrk_kind, conflicted, use_commit_times,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool));

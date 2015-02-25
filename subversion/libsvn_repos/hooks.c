@@ -522,10 +522,19 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
       const char *token = apr_hash_this_key(hi);
       const char *path = apr_hash_this_val(hi);
 
+      if (path == (const char *) 1)
+        {
+          /* Special handling for svn_fs_access_t * created by using deprecated
+             svn_fs_access_add_lock_token() function. */
+          path = "";
+        }
+      else
+        {
+          path = svn_path_uri_autoescape(path, pool);
+        }
+
       svn_stringbuf_appendstr(lock_str,
-        svn_stringbuf_createf(pool, "%s|%s\n",
-                              svn_path_uri_autoescape(path, pool),
-                              token));
+          svn_stringbuf_createf(pool, "%s|%s\n", path, token));
     }
 
   svn_stringbuf_appendcstr(lock_str, "\n");

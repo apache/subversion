@@ -144,7 +144,8 @@ typedef enum svn_cl__longopt_t {
   opt_remove_unversioned,
   opt_remove_ignored,
   opt_no_newline,
-  opt_show_passwords
+  opt_show_passwords,
+  opt_pin_externals,
 } svn_cl__longopt_t;
 
 
@@ -418,6 +419,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
   {"no-newline", opt_no_newline, 0, N_("do not output the trailing newline")},
   {"show-passwords", opt_show_passwords, 0, N_("show cached passwords")},
+  {"pin-externals", opt_pin_externals, 0,
+                       N_("pin externals with no explicit revision to their\n"
+                          "                             "
+                          "current revision (recommended when tagging)")},
 
   /* Long-opt Aliases
    *
@@ -498,16 +503,31 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     "  expand them.\n"),
     { opt_remove, opt_show_passwords },
     { {opt_remove, N_("remove matching authentication credentials")} }
-    
+
     },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
-    ("Output the content of specified files or\n"
-     "URLs with revision and author information in-line.\n"
-     "usage: blame TARGET[@REV]...\n"
+    ("Show when each line of a file was last (or\n"
+     "next) changed.\n"
+     "usage: blame [-rM:N] TARGET[@REV]...\n"
+     "\n"
+     "  Annotate each line of a file with the revision number and author of the\n"
+     "  last change (or optionally the next change) to that line.\n"
+     "\n"
+     "  With no revision range (same as -r0:REV), or with '-r M:N' where M < N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the last revision at or before rN that changed or added the line,\n"
+     "  looking back no further than rM.\n"
+     "\n"
+     "  With a reverse revision range '-r M:N' where M > N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the next revision after rN that changed or deleted the line,\n"
+     "  looking forward no further than rM.\n"
      "\n"
      "  If specified, REV determines in which revision the target is first\n"
-     "  looked up.\n"),
+     "  looked up.\n"
+     "\n"
+     "  Write the annotated result to standard output.\n"),
     {'r', 'v', 'g', opt_incremental, opt_xml, 'x', opt_force} },
 
   { "cat", svn_cl__cat, {0}, N_
@@ -608,7 +628,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  contact the repository.  As such, they may not, by default, be able\n"
      "  to propagate merge tracking information from the source of the copy\n"
      "  to the destination.\n"),
-    {'r', 'q', opt_ignore_externals, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
+    {'r', 'q', opt_ignore_externals, opt_parents, SVN_CL__LOG_MSG_OPTIONS,
+     opt_pin_externals} },
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
     ("Remove files and directories from version control.\n"
@@ -1300,7 +1321,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  1. Removes versioned props in working copy.\n"
      "  2. Removes unversioned remote prop on repos revision.\n"
-     "     TARGET only determines which repository to access.\n"),
+     "     TARGET only determines which repository to access.\n"
+     "\n"
+     "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
     {'q', 'R', opt_depth, 'r', opt_revprop, opt_changelist} },
 
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
@@ -1312,7 +1335,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Edits unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"
      "\n"
-     "  See 'svn help propset' for more on setting properties.\n"),
+     "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
     {'r', opt_revprop, SVN_CL__LOG_MSG_OPTIONS, opt_force} },
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
@@ -1333,7 +1356,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  By default, an extra newline is printed after the property value so that\n"
      "  the output looks pretty.  With a single TARGET, depth 'empty' and without\n"
      "  --show-inherited-props, you can use the --strict option to disable this\n"
-     "  (useful when redirecting a binary property value to a file, for example).\n"),
+     "  (useful when redirecting a binary property value to a file, for example).\n"
+     "\n"
+     "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
     {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
      opt_changelist, opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
@@ -1350,7 +1375,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     TARGET only determines which repository to access.\n"
      "\n"
      "  With --verbose, the property values are printed as well, like 'svn propget\n"
-     "  --verbose'.  With --quiet, the paths are not printed.\n"),
+     "  --verbose'.  With --quiet, the paths are not printed.\n"
+     "\n"
+     "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
     {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist,
      opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
@@ -1710,14 +1737,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Local modifications are preserved.\n"),
     { 'q' } },
-
-  { "youngest", svn_cl__youngest, {0}, N_
-    ("Print the youngest revision number of a target's repository.\n"
-     "usage: youngest [TARGET]\n"
-     "\n"
-     "  Print the revision number of the youngest revision in the repository\n"
-     "  with which TARGET is associated.\n"),
-    { opt_no_newline } },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -2383,6 +2402,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_show_passwords:
         opt_state.show_passwords = TRUE;
+        break;
+      case opt_pin_externals:
+        opt_state.pin_externals = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

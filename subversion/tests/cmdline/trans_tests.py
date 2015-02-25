@@ -191,7 +191,7 @@ def setup_working_copy(wc_dir, value_len):
 # Set the property keyword for PATH.  Turn on all possible keywords.
 ### todo: Later, take list of keywords to set.
 def keywords_on(path):
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+  svntest.actions.run_and_verify_svn(None, [], 'propset',
                                      "svn:keywords",
                                      "Author Rev Date URL Id Header",
                                      path)
@@ -199,7 +199,7 @@ def keywords_on(path):
 # Delete property NAME from versioned PATH in the working copy.
 ### todo: Later, take list of keywords to remove from the propval?
 def keywords_off(path):
-  svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
+  svntest.actions.run_and_verify_svn(None, [], 'propdel',
                                      "svn:keywords", path)
 
 
@@ -462,7 +462,7 @@ def update_modified_with_translation(sbox):
   # Replace contents of rho and set eol translation to 'native'
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n5\n6\n7\n8\n9\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:eol-style', 'native',
                                      rho_path)
 
@@ -570,16 +570,16 @@ def eol_change_is_text_mod(sbox):
   f.close()
 
   # commit the file
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', foo_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [], 'add', foo_path)
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg',
                                      foo_path)
 
   if svntest.main.windows:
-    svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+    svntest.actions.run_and_verify_svn(None, [], 'propset',
                                        'svn:eol-style', 'LF', foo_path)
   else:
-    svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+    svntest.actions.run_and_verify_svn(None, [], 'propset',
                                        'svn:eol-style', 'CRLF', foo_path)
 
   # check 1: did new contents get transmitted?
@@ -587,7 +587,7 @@ def eol_change_is_text_mod(sbox):
                      "Transmitting file data .done\n",
                      "Committing transaction...\n",
                      "Committed revision 3.\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'ci', '-m', 'log msg', foo_path)
 
   # check 2: do the files have the right contents now?
@@ -617,20 +617,20 @@ def keyword_expanded_on_checkout(sbox):
   # The bug didn't occur if there were multiple files in the
   # directory, so setup an empty directory.
   Z_path = os.path.join(wc_dir, 'Z')
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', Z_path)
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir', Z_path)
 
   # Add the file that has the keyword to be expanded
   url_path = os.path.join(Z_path, 'url')
   svntest.main.file_append(url_path, "$URL$")
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', url_path)
+  svntest.actions.run_and_verify_svn(None, [], 'add', url_path)
   keywords_on(url_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg', wc_dir)
 
   other_wc_dir = sbox.add_wc_path('other')
   other_url_path = os.path.join(other_wc_dir, 'Z', 'url')
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
                                      sbox.repo_url,
                                      other_wc_dir)
 
@@ -657,7 +657,7 @@ def cat_keyword_expansion(sbox):
 
   # Set up A/mu to do $Rev$ keyword expansion
   svntest.main.file_append(mu_path , "$Rev$\n$Author$")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:keywords', 'Rev Author',
                                      mu_path)
 
@@ -674,18 +674,18 @@ def cat_keyword_expansion(sbox):
   full_author = "x" * 400
   key_author = "x" * 244
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', '--revprop', '-r2',
                                      'svn:author', full_author,
                                      sbox.wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ full_author ], [],
+  svntest.actions.run_and_verify_svn([ full_author ], [],
                                      'propget', '--revprop', '-r2',
                                      'svn:author', '--strict',
                                      sbox.wc_dir)
 
   # Make another commit so that the last changed revision for A/mu is
   # not HEAD.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'foo', 'bar', lambda_path)
   expected_output = wc.State(wc_dir, {
     'A/B/lambda' : Item(verb='Sending'),
@@ -697,8 +697,7 @@ def cat_keyword_expansion(sbox):
 
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
-  svntest.actions.run_and_verify_svn(None,
-                                     [ "This is the file 'mu'.\n",
+  svntest.actions.run_and_verify_svn([ "This is the file 'mu'.\n",
                                        "$Rev: 2 $\n",
                                        "$Author: " + key_author + " $"], [],
                                      'cat', '-r', 'HEAD', mu_path)
@@ -714,8 +713,8 @@ def copy_propset_commit(sbox):
   mu2_path = os.path.join(wc_dir, 'A', 'mu2')
 
   # Copy and propset
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy', mu_path, mu2_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [], 'copy', mu_path, mu2_path)
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:eol-style', 'native',
                                      mu2_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -757,7 +756,7 @@ def propset_commit_checkout_nocrash(sbox):
                                         None, wc_dir)
 
   # Set property to do keyword expansion on A/mu, commit.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:keywords', 'Rev', mu_path)
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
@@ -772,7 +771,7 @@ def propset_commit_checkout_nocrash(sbox):
   other_wc_dir = sbox.add_wc_path('other')
   mu_other_path = os.path.join(other_wc_dir, 'A', 'mu')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
                                      sbox.repo_url,
                                      other_wc_dir)
 
@@ -795,14 +794,14 @@ def propset_revert_noerror(sbox):
   # Set the Rev keyword for the mu file
   # could use the keywords_on()/keywords_off() functions to
   # set/del all svn:keywords
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:keywords', 'Rev', mu_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status=' M')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Revert the propset
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', mu_path)
+  svntest.actions.run_and_verify_svn(None, [], 'revert', mu_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -917,11 +916,11 @@ def autoprops_inconsistent_eol(sbox):
   sbox.simple_add_text(text, 'add.c')
   sbox.simple_add_text(text, 'add-force.c')
 
-  svntest.actions.run_and_verify_svn(None, None, '.*inconsistent newlines.*',
+  svntest.actions.run_and_verify_svn(None, '.*inconsistent newlines.*',
                                      'ps', 'svn:eol-style', 'native',
                                      sbox.ospath('add.c'))
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'svn:eol-style', 'native', '--force',
                                      sbox.ospath('add.c'))
 
@@ -943,7 +942,7 @@ def autoprops_inconsistent_eol(sbox):
   expected_output = ['A         %s\n' % sbox.ospath('auto.c')]
 
   # Fails with svn: E200009: File '.*auto.c' has inconsistent newlines
-  svntest.actions.run_and_verify_svn(None, expected_output,
+  svntest.actions.run_and_verify_svn(expected_output,
                                      [], 'add', sbox.ospath('auto.c'))
 
 @XFail()
@@ -962,7 +961,7 @@ def autoprops_inconsistent_mime(sbox):
   expected_output = ['A         %s\n' % sbox.ospath('c.iota.c')]
 
   # Fails with svn: E200009: File '.*c.iota.c' has binary mime type property
-  svntest.actions.run_and_verify_svn(None, expected_output,
+  svntest.actions.run_and_verify_svn(expected_output,
                                      [], 'add', sbox.ospath('c.iota.c'))
 
 

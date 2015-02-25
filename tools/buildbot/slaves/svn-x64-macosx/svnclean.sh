@@ -24,4 +24,4 @@ scripts=$(cd $(dirname "$0") && pwd)
 
 . ${scripts}/setenv.sh
 
-${scripts}/rmramdisk.sh ${volume_name}
+${scripts}/rmramdisk.sh ${volume_name} ${ramconf}

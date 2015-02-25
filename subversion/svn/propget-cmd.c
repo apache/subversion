@@ -490,7 +490,7 @@ svn_cl__propget(apr_getopt_t *os,
             {
               svn_error_t *err;
               err = svn_error_createf(SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-                                      _("Property '%s' not found on '%s'"), 
+                                      _("Property '%s' not found on '%s'"),
                                       pname_utf8, target);
               svn_handle_warning2(stderr, err, "svn: ");
               svn_error_clear(err);

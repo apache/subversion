@@ -627,16 +627,41 @@ public class UtilTests extends SVNTests
     private static final String util_cred_ssl_server =
         "K 10\n" +
         "ascii_cert\n" +
-        "V 12\n" +
-        "NotTelling==\n" +
+        "V 1616\n" +
+        "MIIEtzCCA5+gAwIBAgIQWGBOrapkezd+BWVsAtmtmTANBgkqhkiG9w0BAQsFADA8" +
+        "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMVGhhd3RlLCBJbmMuMRYwFAYDVQQDEw1U" +
+        "aGF3dGUgU1NMIENBMB4XDTE0MDQxMTAwMDAwMFoXDTE2MDQwNzIzNTk1OVowgYsx" +
+        "CzAJBgNVBAYTAlVTMREwDwYDVQQIEwhNYXJ5bGFuZDEUMBIGA1UEBxQLRm9yZXN0" +
+        "IEhpbGwxIzAhBgNVBAoUGkFwYWNoZSBTb2Z0d2FyZSBGb3VuZGF0aW9uMRcwFQYD" +
+        "VQQLFA5JbmZyYXN0cnVjdHVyZTEVMBMGA1UEAxQMKi5hcGFjaGUub3JnMIIBIjAN" +
+        "BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA+Tq4mH+stRoxe4xth8tUCgLt+P4L" +
+        "D/JWZz4a2IecaaAk57vIlTxEyP16fUShUfxVJnD0KV11zv2qaEUXNaA6hKd4H/oB" +
+        "u2OyGev+quRM+aFCjWqASkXt7fLGsIkHAwP3XwBVBpARbcXJeCjCBxqaYrQqS8LT" +
+        "wfPUD9eYncGlQ+ixb3Bosy7TmkWKeLsRdS90cAO/rdgQ8OI7kLT/1tr5GpF9RmXo" +
+        "RnVqMP+U0zGd/BNNSneg7emb7TxLzxeMKZ7QbF4MZi8RRN11spvx8/f92CiYrGGu" +
+        "y67VdOGPaomYc+VZ2syLwduHGK40ADrEK3+MQpsRFB0dM08j9bhpr5A44wIDAQAB" +
+        "o4IBYzCCAV8wFwYDVR0RBBAwDoIMKi5hcGFjaGUub3JnMAkGA1UdEwQCMAAwQgYD" +
+        "VR0gBDswOTA3BgpghkgBhvhFAQc2MCkwJwYIKwYBBQUHAgEWG2h0dHBzOi8vd3d3" +
+        "LnRoYXd0ZS5jb20vY3BzLzAOBgNVHQ8BAf8EBAMCBaAwHwYDVR0jBBgwFoAUp6KD" +
+        "uzRFQD381TBPErk+oQGf9tswOgYDVR0fBDMwMTAvoC2gK4YpaHR0cDovL3N2ci1v" +
+        "di1jcmwudGhhd3RlLmNvbS9UaGF3dGVPVi5jcmwwHQYDVR0lBBYwFAYIKwYBBQUH" +
+        "AwEGCCsGAQUFBwMCMGkGCCsGAQUFBwEBBF0wWzAiBggrBgEFBQcwAYYWaHR0cDov" +
+        "L29jc3AudGhhd3RlLmNvbTA1BggrBgEFBQcwAoYpaHR0cDovL3N2ci1vdi1haWEu" +
+        "dGhhd3RlLmNvbS9UaGF3dGVPVi5jZXIwDQYJKoZIhvcNAQELBQADggEBAF52BLvl" +
+        "x5or9/aO7+cPhxuPxwiNRgbvHdCakD7n8vzjNyct9fKp6/XxB6GQiTZ0nZPJOyIu" +
+        "Pi1QDLKOXvaPeLKDBilL/+mrn/ev3s/aRQSrUsieKDoQnqtmlxEHc/T3+Ni/RZob" +
+        "PD4GzPuNKpK3BIc0fk/95T8R1DjBSQ5/clvkzOKtcl3VffAwnHiE9TZx9js7kZwO" +
+        "b9nOKX8DFao3EpQcS7qn63Ibzbq5A6ry8ZNRQSIJK/xlCAWoyUd1uxnqGFnus8wb" +
+        "9RVZJQe8YvyytBjgbE3QjnfPOxoEJA3twupnPmH+OCTM6V3TZqpRZj/sZ5rtIQ++" +
+        "hI5FdJWUWVSgnSw=\n" +
         "K 8\n" +
         "failures\n" +
         "V 1\n" +
         "8\n" +
         "K 15\n" +
         "svn:realmstring\n" +
-        "V 27\n" +
-        "https://svn.example.com:443\n" +
+        "V 26\n" +
+        "https://svn.apache.org:443\n" +
         "END\n";
 
     private static final String util_cred_ssl_client_passphrase =
@@ -717,9 +742,12 @@ public class UtilTests extends SVNTests
         /* one SSL server trust credential */
         cred = SVNUtil.getCredential(configDir,
                                      SVNUtil.Credential.Kind.sslServer,
-                                     "https://svn.example.com:443");
+                                     "https://svn.apache.org:443");
         assertNotNull(cred);
-        assertEquals(cred.getServerCertInfo().getDER(), "NotTelling==");
+        assertEquals(cred.getServerCertInfo().getSubject(),
+                     "C=US, ST=Maryland, L=Forest Hill, " +
+                     "O=Apache Software Foundation, OU=Infrastructure, " +
+                     "CN=*.apache.org");
 
         /* one SSL client passphrase credential */
         cred = SVNUtil.getCredential(configDir,
@@ -764,10 +792,16 @@ public class UtilTests extends SVNTests
         assertNotNull(creds);
         assertEquals(creds.size(), 2);
 
+        /* search with match on subvject */
+        creds = SVNUtil.searchCredentials(configDir, null,
+                                          null, null, "\\*.apache.org", null);
+        assertNotNull(creds);
+        assertEquals(creds.size(), 1);
+
         /* search with match on realm */
         creds = SVNUtil.searchCredentials(configDir, null,
                                           "*example*", null, null, null);
         assertNotNull(creds);
-        assertEquals(creds.size(), 4);
+        assertEquals(creds.size(), 3);
     }
 }

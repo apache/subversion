@@ -465,13 +465,19 @@ typedef struct svn_client_commit_item3_t
 {
   /* IMPORTANT: If you extend this structure, add new fields to the end. */
 
-  /** absolute working-copy path of item */
+  /** absolute working-copy path of item. Always set during normal commits
+   * (and copies from a working copy) to the repository. Can only be NULL
+   * when stub commit items are created for operations that only involve
+   * direct repository operations. During WC->REPOS copy operations, this
+   * path is the WC source path of the operation. */
   const char *path;
 
   /** node kind (dir, file) */
   svn_node_kind_t kind;
 
-  /** commit URL for this item */
+  /** commit URL for this item. Points to the repository location of PATH
+   * during commits, or to the final URL of the item when copying from the
+   * working copy to the repository. */
   const char *url;
 
   /** revision of textbase */
@@ -1013,11 +1019,6 @@ typedef struct svn_client_ctx_t
    *
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
-
-  /** Total number of bytes transferred over network.
-   *
-   * @since New in 1.9. */
-  apr_off_t progress;
 
   /** Check-tunnel callback
    *
@@ -2723,7 +2724,7 @@ svn_client_status(svn_revnum_t *result_rev,
  *
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
- * 
+ *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
  * (i.e. retrieve none if the array is empty).
@@ -4288,6 +4289,10 @@ svn_client_relocate(const char *dir,
  * If @a clear_changelists is TRUE, then changelist information for the
  * paths is cleared while reverting.
  *
+ * If @a metadata_only is TRUE, the files and directories aren't changed
+ * by the operation. If there are conflict marker files attached to the
+ * targets these are removed.
+ *
  * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
  * the reverted item.
@@ -4303,11 +4308,12 @@ svn_client_revert3(const apr_array_header_t *paths,
                    svn_depth_t depth,
                    const apr_array_header_t *changelists,
                    svn_boolean_t clear_changelists,
+                   svn_boolean_t metadata_only,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /** Similar to svn_client_revert2, but with @a clear_changelists set to
- * FALSE.
+ * FALSE and @a metadata_only set to FALSE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.8 API.
@@ -4486,6 +4492,41 @@ typedef struct svn_client_copy_source_t
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
+ * If @a metadata_only is @c TRUE and copying a file in a working copy,
+ * everything in the metadata is updated as if the node is moved, but the
+ * actual disk copy operation is not performed. This feature is useful for
+ * clients that want to keep the working copy in sync while the actual working
+ * copy is updated by some other task.
+ *
+ * If @a pin_externals is set, pin URLs in copied externals definitions
+ * to their current revision unless they were already pinned to a
+ * particular revision. A pinned external uses a URL which points at a
+ * fixed revision, rather than the HEAD revision. Externals in the copy
+ * destination are pinned to either a working copy base revision or the
+ * HEAD revision of a repository (as of the time the copy operation is
+ * performed), depending on the type of the copy source:
+ <pre>
+    copy source: working copy (WC)       REPOS
+   ------------+------------------------+---------------------------+
+    copy    WC | external's WC BASE rev | external's repos HEAD rev |
+    dest:      |------------------------+---------------------------+
+         REPOS | external's WC BASE rev | external's repos HEAD rev |
+   ------------+------------------------+---------------------------+
+ </pre>
+ * If the copy source is a working copy, then all externals must be checked
+ * out, be at a single-revision, contain no local modifications, and contain
+ * no switched subtrees. Else, #SVN_ERR_WC_PATH_UNEXPECTED_STATUS is returned.
+ *
+ * If non-NULL, @a externals_to_pin restricts pinning to a subset of externals.
+ * It is a hash table keyed by either a local absolute path or a URL at which
+ * an svn:externals property is set. The hash table contains apr_array_header_t*
+ * elements as returned by svn_wc_parse_externals_description3(). These arrays
+ * contain elements of type svn_wc_external_item2_t*, each of which corresponds
+ * to a single line of an svn:externals definition. Externals corresponding to
+ * these items will be pinned, other externals will not be pinned.
+ * If @a externals_to_pin is @c NULL then all externals are pinned.
+ * If @a pin_externals is @c FALSE then @a externals_to_pin is ignored.
+ *
  * If non-NULL, @a revprop_table is a hash table holding additional,
  * custom revision properties (<tt>const char *</tt> names mapped to
  * <tt>svn_string_t *</tt> values) to be set on the new revision in
@@ -4504,8 +4545,32 @@ typedef struct svn_client_copy_source_t
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
  * the commit.
  *
- * @since New in 1.7.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_client_copy7(const apr_array_header_t *sources,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_boolean_t make_parents,
+                 svn_boolean_t ignore_externals,
+                 svn_boolean_t metadata_only,
+                 svn_boolean_t pin_externals,
+                 const apr_hash_t *externals_to_pin,
+                 const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_copy7(), but doesn't support meta_data_only
+ * and cannot pin externals.
+ * 
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy6(const apr_array_header_t *sources,
                  const char *dst_path,

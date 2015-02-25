@@ -61,7 +61,7 @@ typedef struct svn_fs_x__p2l_entry_t
 {
   /* offset of the first byte that belongs to the item */
   apr_off_t offset;
-  
+
   /* length of the item in bytes */
   apr_off_t size;
 
@@ -77,14 +77,14 @@ typedef struct svn_fs_x__p2l_entry_t
   apr_uint32_t item_count;
 
   /* List of items in that block / container */
-  svn_fs_x__id_part_t *items;
+  svn_fs_x__id_t *items;
 } svn_fs_x__p2l_entry_t;
 
-/* Return a (deep) copy of ENTRY, allocated in POOL.
+/* Return a (deep) copy of ENTRY, allocated in RESULT_POOL.
  */
 svn_fs_x__p2l_entry_t *
 svn_fs_x__p2l_entry_dup(const svn_fs_x__p2l_entry_t *entry,
-                        apr_pool_t *pool);
+                        apr_pool_t *result_pool);
 
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX allocated in
@@ -110,7 +110,7 @@ svn_fs_x__l2p_proto_index_add_revision(apr_file_t *proto_index,
  * (OFFSET, SUB_ITEM) may be (-1, 0) to mark 'invalid' item indexes but
  * that is already implied for all item indexes not explicitly given a
  * mapping.
- * 
+ *
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
@@ -123,7 +123,7 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
 /* Use the proto index file stored at PROTO_FILE_NAME, construct the final
  * log-to-phys index and append it to INDEX_FILE.  The first revision will
  * be REVISION, entries to the next revision will be assigned to REVISION+1
- * and so forth.  
+ * and so forth.
  *
  * Return the MD5 checksum of the on-disk index data in *CHECKSUM, allocated
  * in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.
@@ -220,7 +220,7 @@ svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Use the phys-to-log mapping files in FS to return the svn_fs_x__id_part_t
+/* Use the phys-to-log mapping files in FS to return the svn_fs_x__id_t
  * for the SUB_ITEM of the container starting at global OFFSET in the rep /
  * pack file containing REVISION in *ITEM, allocated in RESULT_POOL.  Sets
  * *ITEM to NULL if no element starts at exactly that offset or if it
@@ -229,7 +229,7 @@ svn_fs_x__p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry,
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_fs_x__p2l_item_lookup(svn_fs_x__id_part_t **item,
+svn_fs_x__p2l_item_lookup(svn_fs_x__id_t **item,
                           svn_fs_t *fs,
                           svn_fs_x__revision_file_t *rev_file,
                           svn_revnum_t revision,
@@ -254,7 +254,7 @@ svn_fs_x__item_offset(apr_off_t *absolute_position,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
                       svn_fs_x__revision_file_t *rev_file,
-                      const svn_fs_x__id_part_t *item_id,
+                      const svn_fs_x__id_t *item_id,
                       apr_pool_t *scratch_pool);
 
 /* Use the log-to-phys indexes in FS to determine the maximum item indexes

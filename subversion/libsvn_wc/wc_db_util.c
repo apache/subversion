@@ -83,7 +83,7 @@ static svn_error_t *
 relpath_depth_sqlite(svn_sqlite__context_t *sctx,
                      int argc,
                      svn_sqlite__value_t *values[],
-                     apr_pool_t *scratch_pool)
+                     void *baton)
 {
   const char *path = NULL;
   apr_int64_t depth;

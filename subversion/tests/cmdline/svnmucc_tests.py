@@ -43,7 +43,7 @@ def reject_bogus_mergeinfo(sbox):
 
   # At present this tests the server, but if we ever make svnmucc
   # validate the mergeinfo up front then it will only test the client
-  svntest.actions.run_and_verify_svnmucc(None, [], expected_error,
+  svntest.actions.run_and_verify_svnmucc([], expected_error,
                                          'propset', 'svn:mergeinfo', '/B:0',
                                          '-m', 'log msg',
                                          sbox.repo_url + '/A')
@@ -340,20 +340,20 @@ def basic_svnmucc(sbox):
 
 def propset_root_internal(sbox, target):
   ## propset on ^/
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                                          '-m', 'log msg',
                                          'propset', 'foo', 'bar',
                                          target)
-  svntest.actions.run_and_verify_svn(None, 'bar', [],
+  svntest.actions.run_and_verify_svn('bar', [],
                                      'propget', '--strict', 'foo',
                                      target)
 
   ## propdel on ^/
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                                          '-m', 'log msg',
                                          'propdel', 'foo',
                                          target)
-  svntest.actions.run_and_verify_svn(None, [],
+  svntest.actions.run_and_verify_svn([],
                                      '.*W200017: Property.*not found',
                                      'propget', '--strict', 'foo',
                                      target)
@@ -416,14 +416,14 @@ def nested_replaces(sbox):
 
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                            '-U', repo_url, '-m', 'r2: create tree',
                            'rm', 'A',
                            'rm', 'iota',
                            'mkdir', 'A', 'mkdir', 'A/B', 'mkdir', 'A/B/C',
                            'mkdir', 'M', 'mkdir', 'M/N', 'mkdir', 'M/N/O',
                            'mkdir', 'X', 'mkdir', 'X/Y', 'mkdir', 'X/Y/Z')
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                            '-U', repo_url, '-m', 'r3: nested replaces',
                            *("""
 rm A rm M rm X
@@ -449,7 +449,7 @@ rm A/B/C/Y
   ]) + [
     '^-', '^r3', '^-', '^Changed paths:',
   ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr3', repo_url)
 
 

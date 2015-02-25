@@ -2071,7 +2071,7 @@ create_tempfile(HANDLE *hFile,
 
       if (h == INVALID_HANDLE_VALUE)
         {
-          apr_status_t status = apr_get_os_error();;
+          apr_status_t status = apr_get_os_error();
           if (i > 1000)
             return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                            svn_error_wrap_apr(status, NULL),

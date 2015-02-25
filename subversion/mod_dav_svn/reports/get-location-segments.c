@@ -123,6 +123,9 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   struct location_segment_baton location_segment_baton;
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {

@@ -2130,7 +2130,7 @@ svn_client__mergeinfo_log(svn_boolean_t finding_merged,
         svn_rangelist__initialize(youngest_range->end - 1,
                                   youngest_range->end,
                                   youngest_range->inheritable,
-                                  scratch_pool);;
+                                  scratch_pool);
 
       for (hi = apr_hash_first(scratch_pool, source_history);
            hi;

@@ -222,7 +222,7 @@ execute(const apr_array_header_t *actions,
                                 mtcc, iterpool);
 
   svn_pool_destroy(iterpool);
-  return svn_error_trace(err);;
+  return svn_error_trace(err);
 }
 
 static svn_error_t *

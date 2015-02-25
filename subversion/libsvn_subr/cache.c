@@ -102,6 +102,11 @@ svn_cache__has_key(svn_boolean_t *found,
                    apr_pool_t *scratch_pool)
 {
   *found = FALSE;
+#ifdef SVN_DEBUG
+  if (cache->pretend_empty)
+    return SVN_NO_ERROR;
+#endif
+
   return handle_error(cache,
                       (cache->vtable->has_key)(found,
                                                cache->cache_internal,
@@ -259,15 +264,15 @@ svn_cache__format_info(const svn_cache__info_t *info,
 
       int i;
       int count = sizeof(info->histogram) / sizeof(info->histogram[0]);
-      for (i = 0; i < count; ++i)
+      for (i = count - 1; i >= 0; --i)
         if (info->histogram[i] > 0 || text->len > 0)
           text = svn_stringbuf_createf(result_pool,
                                        i == count - 1
-                                         ? "%12" APR_UINT64_T_FMT
-                                           " buckets with >%d entries\n%s"
-                                         : "%12" APR_UINT64_T_FMT
-                                           " buckets with %d entries\n%s",
-                                        info->histogram[i], i, text->data);
+                                         ? "%s%12" APR_UINT64_T_FMT
+                                           " buckets with >%d entries\n"
+                                         : "%s%12" APR_UINT64_T_FMT
+                                           " buckets with %d entries\n",
+                                       text->data, info->histogram[i], i);
 
       histogram = text->data;
     }

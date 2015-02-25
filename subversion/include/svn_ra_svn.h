@@ -287,6 +287,12 @@ svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn);
  *
  * Upon successful completion of the edit, the editor will invoke @a callback
  * with @a callback_baton as an argument.
+ *
+ * @note The @c copyfrom_path parameter passed to the @c add_file and
+ * @c add_directory methods of the returned editor may be either a URL or a
+ * relative path, and is transferred verbatim to the receiving end of the
+ * connection. See svn_ra_svn_drive_editor2() for information on the
+ * receiving end of the connection.
  */
 void
 svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
@@ -302,6 +308,13 @@ svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
  * if @a for_replay is TRUE.
  *
  * @since New in 1.4.
+ *
+ * @note The @c copyfrom_path parameter passed to the @c add_file and
+ * @c add_directory methods of the receiving editor will be canonicalized
+ * either as a URL or as a relative path (starting with a slash) according
+ * to which kind was sent by the driving end of the connection. See
+ * svn_ra_svn_get_editor() for information on the driving end of the
+ * connection.
  */
 svn_error_t *
 svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,

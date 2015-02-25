@@ -140,7 +140,7 @@ svn_cl__null_list(apr_getopt_t *os,
              don't bail out.  Just warn and move on to the next target. */
           if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
               err->apr_err == SVN_ERR_FS_NOT_FOUND)
-              svn_handle_warning2(stderr, err, "svn-bench: ");
+              svn_handle_warning2(stderr, err, "svnbench: ");
           else
               return svn_error_trace(err);
 
