@@ -954,6 +954,14 @@ SELECT local_dir_relpath FROM wc_lock
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_dir_relpath, ?2)
 
+-- STMT_FIND_CONFLICT_DESCENDANT
+SELECT 1 FROM actual_node
+WHERE wc_id = ?1
+  AND local_relpath > (?2 || '/')
+  AND local_relpath < (?2 || '0') /* '0' = ascii('/') +1 */
+  AND conflict_data IS NOT NULL
+LIMIT 1
+
 -- STMT_DELETE_WC_LOCK_ORPHAN
 DELETE FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath = ?2

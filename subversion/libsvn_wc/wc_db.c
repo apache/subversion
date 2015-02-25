@@ -9113,6 +9113,27 @@ is_wclocked(svn_boolean_t *locked,
             const char *dir_relpath,
             apr_pool_t *scratch_pool);
 
+/* Helper for read_children_info and single variant */
+static svn_error_t *
+find_conflict_descendants(svn_boolean_t *conflict_exists,
+                          svn_wc__db_wcroot_t *wcroot,
+                          const char *local_relpath,
+                          apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  /* Only used on files, so certainly not wcroot*/
+  assert(local_relpath[0] != '\0');
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_FIND_CONFLICT_DESCENDANT));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(conflict_exists, stmt));
+
+  return svn_error_trace(svn_sqlite__reset(stmt));
+}
+
 /* What we really want to store about a node.  This relies on the
    offset of svn_wc__db_info_t being zero. */
 struct read_children_info_item_t
@@ -9120,6 +9141,7 @@ struct read_children_info_item_t
   struct svn_wc__db_info_t info;
   int op_depth;
   int nr_layers;
+  svn_boolean_t was_dir;
 };
 
 /* Implementation of svn_wc__db_read_children_info */
@@ -9169,7 +9191,7 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
       op_depth = svn_sqlite__column_int(stmt, 0);
 
       /* Do we have new or better information? */
-      if (new_child || op_depth > child_item->op_depth)
+      if (new_child)
         {
           struct svn_wc__db_info_t *child = &child_item->info;
           child_item->op_depth = op_depth;
@@ -9250,6 +9272,8 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
             child->depth = svn_depth_unknown;
           else
             {
+              child->has_descendants = TRUE;
+              child_item->was_dir = TRUE;
               child->depth = svn_sqlite__column_token_null(stmt, 11, depth_map,
                                                            svn_depth_unknown);
               if (new_child)
@@ -9291,6 +9315,17 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
 
           if (new_child)
             svn_hash_sets(nodes, apr_pstrdup(result_pool, name), child);
+        }
+      else if (!child_item->was_dir
+               && svn_sqlite__column_token(stmt, 4, kind_map) == svn_node_dir)
+        {
+          child_item->was_dir = TRUE;
+
+          err = find_conflict_descendants(&child_item->info.has_descendants,
+                                          wcroot, child_relpath,
+                                          scratch_pool);
+          if (err)
+            SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
         }
 
       if (op_depth == 0)
@@ -9599,6 +9634,12 @@ read_single_info(const struct svn_wc__db_info_t **info,
 
   if (!base_tree_only && mtb->kind == svn_node_dir)
     SVN_ERR(is_wclocked(&mtb->locked, wcroot, local_relpath, scratch_pool));
+
+  if (mtb->kind == svn_node_dir)
+    mtb->has_descendants = TRUE;
+  else
+    SVN_ERR(find_conflict_descendants(&mtb->has_descendants,
+                                      wcroot, local_relpath, scratch_pool));
 
   *info = mtb;
 

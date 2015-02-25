@@ -2180,6 +2180,96 @@ def status_move_missing_direct_base(sbox):
   svntest.actions.run_and_verify_svn(expected_output, [], 'status',
                                      sbox.ospath('Q/ZB/E'), '--depth', 'empty')
 
+def status_missing_conflicts(sbox):
+  "status missing certain conflicts"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_propset('q', 'r', 'A/B/E/alpha', 'A/B/E/beta')
+  sbox.simple_commit()
+
+  sbox.simple_move('A/B/E/alpha', 'alpha')
+  sbox.simple_move('A/B/E/beta', 'beta')
+
+  sbox.simple_rm('A/B/E')
+
+  sbox.simple_update('A/B/E', revision=1)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', status='D ', treeconflict='C', wc_rev=1)
+  expected_status.tweak('A/B/E/alpha', status='D ', treeconflict='C', wc_rev=1,
+                        moved_to='alpha')
+  expected_status.tweak('A/B/E/beta', status='D ', treeconflict='C', wc_rev=1,
+                        moved_to='beta')
+  expected_status.add({
+    'alpha' : Item(status='A ', copied='+', moved_from='A/B/E/alpha', wc_rev='-'),
+    'beta'  : Item(status='A ', copied='+', moved_from='A/B/E/beta', wc_rev='-')
+  })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_info = [
+    {
+        'Tree conflict': 'local file moved away, incoming file edit upon update.*'
+    },
+    {
+        'Tree conflict': 'local file moved away, incoming file edit upon update.*'
+    }
+  ]
+  svntest.actions.run_and_verify_info(expected_info,
+                                      sbox.ospath('A/B/E/alpha'),
+                                      sbox.ospath('A/B/E/beta'))
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'resolve', '--accept=mine-conflict',
+                                     '--depth=empty', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', treeconflict=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now replace with directory
+  sbox.simple_mkdir('A/B/E')
+  expected_status.tweak('A/B/E', status='R ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_info(expected_info,
+                                      sbox.ospath('A/B/E/alpha'),
+                                      sbox.ospath('A/B/E/beta'))
+
+  #Recreate scenario for file
+  sbox.simple_rm('A/B/E', 'alpha', 'beta')
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'revert', '-R', sbox.ospath('A/B/E'))
+
+  sbox.simple_update('A/B/E', revision=2)
+
+  sbox.simple_move('A/B/E/alpha', 'alpha')
+  sbox.simple_move('A/B/E/beta', 'beta')
+
+  sbox.simple_rm('A/B/E')
+  sbox.simple_update('A/B/E', revision=1)
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'resolve', '--accept=mine-conflict',
+                                     '--depth=empty', sbox.ospath('A/B/E'))
+
+  sbox.simple_append('A/B/E', 'something')
+  expected_status.tweak('A/B/E', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  sbox.simple_add('A/B/E')
+
+  # In the entries world A/B/E doesn't have children..
+  expected_status.tweak('A/B/E', status='R ', entry_kind='file')
+
+  # Tree conflicts still in db
+  svntest.actions.run_and_verify_info(expected_info,
+                                      sbox.ospath('A/B/E/alpha'),
+                                      sbox.ospath('A/B/E/beta'))
+
+  # But not in status!
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2230,6 +2320,7 @@ test_list = [ None,
               status_path_handling,
               status_move_missing_direct,
               status_move_missing_direct_base,
+              status_missing_conflicts,
              ]
 
 if __name__ == '__main__':
