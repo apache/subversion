@@ -1626,10 +1626,9 @@ def revert_obstructing_wc(sbox):
     # A is not versioned but exists
   })
 
-  # Use expected_status.old_tree() to avoid doing an entries comparion
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None,
-                                        expected_status.old_tree(),
+                                        expected_status,
                                         None, None, None,
                                         None, None, None,
                                         wc_dir, '--set-depth', 'infinity')

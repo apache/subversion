@@ -1510,16 +1510,13 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
 # This function always passes '-q' to the status command, which
 # suppresses the printing of any unversioned or nonexistent items.
-def run_and_verify_status(wc_dir_name, status_tree,
-                          singleton_handler_a = None,
-                          a_baton = None,
-                          singleton_handler_b = None,
-                          b_baton = None):
+def run_and_verify_status(wc_dir_name, status_tree):
   """Run 'status' on WC_DIR_NAME and compare it with the
-  expected STATUS_TREE.  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will
-  be passed to tree.compare_trees - see that function's doc string for
-  more details.
+  expected STATUS_TREE.
   Returns on success, raises on failure."""
+
+  if not isinstance(status_tree, wc.State):
+    raise TypeError('wc.State tree expected')
 
   exit_code, output, errput = main.run_svn(None, 'status', '-v', '-u', '-q',
                                            wc_dir_name)
@@ -1527,36 +1524,26 @@ def run_and_verify_status(wc_dir_name, status_tree,
   actual_status = svntest.wc.State.from_status(output, wc_dir=wc_dir_name)
 
   # Verify actual output against expected output.
-  if isinstance(status_tree, wc.State):
-    try:
-      status_tree.compare_and_display('status', actual_status)
-    except tree.SVNTreeError:
-      _log_tree_state("ACTUAL STATUS TREE:", actual_status.old_tree(),
-                                             wc_dir_name)
-      raise
-  else:
-    actual_status = actual_status.old_tree()
-    try:
-      tree.compare_trees("status", actual_status, status_tree,
-                         singleton_handler_a, a_baton,
-                         singleton_handler_b, b_baton)
-    except tree.SVNTreeError:
-      verify.display_trees(None, 'STATUS OUTPUT TREE', status_tree, actual_status)
-      _log_tree_state("ACTUAL STATUS TREE:", actual_status, wc_dir_name)
-      raise
+  try:
+    status_tree.compare_and_display('status', actual_status)
+  except tree.SVNTreeError:
+    _log_tree_state("ACTUAL STATUS TREE:", actual_status.old_tree(),
+                                           wc_dir_name)
+    raise
 
   # if we have an output State, and we can/are-allowed to create an
   # entries-based State, then compare the two.
-  if isinstance(status_tree, wc.State):
-    actual_entries = wc.State.from_entries(wc_dir_name)
-    if actual_entries:
-      tweaked = status_tree.copy()
-      tweaked.tweak_for_entries_compare()
-      try:
-        tweaked.compare_and_display('entries', actual_entries)
-      except tree.SVNTreeUnequal:
-        ### do something more
-        raise
+  actual_entries = wc.State.from_entries(wc_dir_name)
+  if actual_entries:
+    tweaked = status_tree.copy()
+    tweaked.tweak_for_entries_compare()
+    try:
+      tweaked.compare_and_display('entries', actual_entries)
+    except tree.SVNTreeUnequal:
+      ### do something more
+      _log_tree_state("ACTUAL ENTRY TREE:", actual_entries.old_tree(),
+                                           wc_dir_name)
+      raise
 
 
 # A variant of previous func, but doesn't pass '-q'.  This allows us
@@ -1566,27 +1553,21 @@ def run_and_verify_unquiet_status(wc_dir_name, status_tree):
   expected STATUS_TREE.
   Returns on success, raises on failure."""
 
+  if not isinstance(status_tree, wc.State):
+    raise TypeError('wc.State tree expected')
+
   exit_code, output, errput = main.run_svn(None, 'status', '-v',
                                            '-u', wc_dir_name)
 
   actual_status = svntest.wc.State.from_status(output, wc_dir=wc_dir_name)
 
   # Verify actual output against expected output.
-  if isinstance(status_tree, wc.State):
-    try:
-      status_tree.compare_and_display('unquiet status', actual_status)
-    except tree.SVNTreeError:
-      _log_tree_state("ACTUAL STATUS TREE:",
-                      actual_status.normalize().old_tree(), wc_dir_name)
-      raise
-  else:
-    actual_status = actual_status.old_tree()
-    try:
-      tree.compare_trees("UNQUIET STATUS", actual_status, status_tree)
-    except tree.SVNTreeError:
-      _log_tree_state("ACTUAL UNQUIET STATUS TREE:", actual_status,
-                                                     wc_dir_name)
-      raise
+  try:
+    status_tree.compare_and_display('unquiet status', actual_status)
+  except tree.SVNTreeError:
+    _log_tree_state("ACTUAL STATUS TREE:",
+                    actual_status.normalize().old_tree(), wc_dir_name)
+    raise
 
 def run_and_verify_status_xml(expected_entries = [],
                               *args):
