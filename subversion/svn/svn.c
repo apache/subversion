@@ -110,7 +110,7 @@ typedef enum svn_cl__longopt_t {
   opt_remove,
   opt_revprop,
   opt_stop_on_copy,
-  opt_strict,
+  opt_strict,                   /* ### DEPRECATED */
   opt_targets,
   opt_depth,
   opt_set_depth,
@@ -232,7 +232,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "'empty', 'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
-  {"strict",        opt_strict, 0, N_("use strict semantics")},
+  {"strict",        opt_strict, 0, N_("DEPRECATED")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
                     N_("do not cross copies while traversing history")},
   {"no-ignore",     opt_no_ignore, 0,
@@ -1355,14 +1355,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  By default, an extra newline is printed after the property value so that\n"
      "  the output looks pretty.  With a single TARGET, depth 'empty' and without\n"
-     "  --show-inherited-props, you can use the --strict option to disable this\n"
+     "  --show-inherited-props, you can use the --no-newline option to disable this\n"
      "  (useful when redirecting a binary property value to a file, for example).\n"
      "\n"
      "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
-    {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
+    {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_no_newline, opt_xml,
      opt_changelist, opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
-     {opt_strict, N_("don't print an extra newline")}} },
+     {opt_strict, N_("(deprecated; use --no-newline)")}} },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
@@ -2154,9 +2154,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_stop_on_copy:
         opt_state.stop_on_copy = TRUE;
         break;
-      case opt_strict:
-        opt_state.strict = TRUE;
-        break;
       case opt_no_ignore:
         opt_state.no_ignore = TRUE;
         break;
@@ -2398,6 +2395,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.remove_ignored = TRUE;
         break;
       case opt_no_newline:
+      case opt_strict:          /* ### DEPRECATED */
         opt_state.no_newline = TRUE;
         break;
       case opt_show_passwords:

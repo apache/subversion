@@ -2611,7 +2611,7 @@ def peg_rev_base_working(sbox):
   sbox.simple_commit(message='r2')
   svntest.actions.set_prop('cardinal', 'nine\n', sbox.ospath('iota'))
   svntest.actions.run_and_verify_svn(['ninth\n'], [],
-                                     'propget', '--strict', 'ordinal',
+                                     'propget', '--no-newline', 'ordinal',
                                      sbox.ospath('iota') + '@BASE')
 
 @Issue(4415)
@@ -2644,7 +2644,7 @@ def xml_unsafe_author(sbox):
   # a single property value which skips creating the creator-displayname property
   svntest.actions.run_and_verify_svn(['foo\bbar'], [],
                                      'propget', '--revprop', '-r', '1',
-                                     'svn:author', '--strict', wc_dir)
+                                     'svn:author', '--no-newline', wc_dir)
 
   # Ensure a stable date
   svntest.actions.run_and_verify_svn(None, [],
