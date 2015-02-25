@@ -680,7 +680,7 @@ def cat_keyword_expansion(sbox):
                                      sbox.wc_dir)
   svntest.actions.run_and_verify_svn([ full_author ], [],
                                      'propget', '--revprop', '-r2',
-                                     'svn:author', '--strict',
+                                     'svn:author', '--no-newline',
                                      sbox.wc_dir)
 
   # Make another commit so that the last changed revision for A/mu is
