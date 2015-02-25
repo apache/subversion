@@ -2019,6 +2019,7 @@ struct svn_wc__db_info_t {
   svn_boolean_t moved_here;     /* Only on op-roots. */
 
   svn_boolean_t file_external;
+  svn_boolean_t has_descendants; /* Is dir, or has tc descendants */
 };
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for
