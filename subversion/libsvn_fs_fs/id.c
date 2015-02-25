@@ -232,7 +232,7 @@ svn_fs_fs__id_txn_unparse(const svn_fs_fs__id_part_t *txn_id,
 {
   char string[2 * SVN_INT64_BUFFER_SIZE + 1];
   char *p = string;
-  
+
   p += svn__i64toa(p, txn_id->revision);
   *(p++) = '-';
   p += svn__ui64tobase36(p, txn_id->number);
@@ -418,7 +418,7 @@ svn_fs_fs__id_txn_create_root(const svn_fs_fs__id_part_t *txn_id,
   fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
   /* node ID and copy ID are "0" */
-  
+
   id->private_id.txn_id = *txn_id;
   id->private_id.rev_item.revision = SVN_INVALID_REVNUM;
 
@@ -598,7 +598,7 @@ svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
                         const svn_fs_id_t * const *in)
 {
   const fs_fs__id_t *id = (const fs_fs__id_t *)*in;
-  
+
   /* nothing to do for NULL ids */
   if (id == NULL)
     return;

@@ -267,7 +267,7 @@ typedef struct svn_fs_x__data_t
 
   /* Rev / pack file granularity covered by phys-to-log index pages */
   apr_int64_t p2l_page_size;
-  
+
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 

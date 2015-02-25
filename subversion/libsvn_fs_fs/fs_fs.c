@@ -401,7 +401,7 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Be sure to use the correct lock ordering as documented in
-     fs_fs_shared_data_t.  The lock chain is being created in 
+     fs_fs_shared_data_t.  The lock chain is being created in
      innermost (last to acquire) -> outermost (first to acquire) order. */
   with_lock_baton_t *lock_baton
     = create_lock_baton(fs, write_lock, body, baton, pool);
@@ -1144,7 +1144,7 @@ create_file_ignore_eexist(const char *file,
   return svn_error_trace(err);
 }
 
-/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying 
+/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying
  * parameters over between them. */
 struct upgrade_baton_t
 {
@@ -1287,7 +1287,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs,
   baton.notify_baton = notify_baton;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
-  
+
   return svn_fs_fs__with_all_locks(fs, upgrade_body, (void *)&baton, pool);
 }
 
@@ -1556,7 +1556,7 @@ svn_fs_fs__file_checksum(svn_checksum_t **checksum,
     {
       svn_checksum_t temp;
       temp.kind = kind;
-      
+
       switch(kind)
         {
           case svn_checksum_md5:

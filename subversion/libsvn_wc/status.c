@@ -275,58 +275,15 @@ get_repos_root_url_relpath(const char **repos_relpath,
       *repos_root_url = apr_pstrdup(result_pool, parent_repos_root_url);
       *repos_uuid = apr_pstrdup(result_pool, parent_repos_uuid);
     }
-  else if (info->status == svn_wc__db_status_added)
-    {
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
-                                       repos_relpath, repos_root_url,
-                                       repos_uuid, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
-                                       result_pool, scratch_pool));
-    }
-  else if (info->status == svn_wc__db_status_deleted
-           && !info->have_more_work
-           && info->have_base)
-    {
-      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, repos_relpath,
-                                       repos_root_url, repos_uuid, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       db, local_abspath,
-                                       result_pool, scratch_pool));
-    }
-  else if (info->status == svn_wc__db_status_deleted)
-    {
-      const char *work_del_abspath;
-      const char *add_abspath;
-
-      /* Handles working DELETE and the special case where there is just
-         svn_wc__db_status_not_present in WORKING */
-
-      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, &work_del_abspath, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-
-      /* The parent of what has been deleted must be added */
-      add_abspath = svn_dirent_dirname(work_del_abspath, scratch_pool);
-
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, repos_relpath,
-                                       repos_root_url, repos_uuid, NULL,
-                                       NULL, NULL, NULL,
-                                       db, add_abspath,
-                                       result_pool, scratch_pool));
-
-      *repos_relpath = svn_relpath_join(*repos_relpath,
-                                        svn_dirent_skip_ancestor(
-                                              add_abspath,
-                                              local_abspath),
-                                        result_pool);
-    }
   else
     {
-      *repos_relpath = NULL;
-      *repos_root_url = NULL;
-      *repos_uuid = NULL;
+      SVN_ERR(svn_wc__db_read_repos_info(NULL,
+                                         repos_relpath, repos_root_url,
+                                         repos_uuid,
+                                         db, local_abspath,
+                                         result_pool, scratch_pool));
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -378,9 +335,6 @@ assemble_status(svn_wc_status3_t **status,
   svn_boolean_t copied = FALSE;
   svn_boolean_t conflicted;
   const char *moved_from_abspath = NULL;
-  svn_filesize_t filesize = (dirent && (dirent->kind == svn_node_file))
-                                ? dirent->filesize
-                                : SVN_INVALID_FILESIZE;
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind node_status = svn_wc_status_normal;
@@ -644,7 +598,21 @@ assemble_status(svn_wc_status3_t **status,
         stat->kind = svn_node_unknown;
     }
   stat->depth = info->depth;
-  stat->filesize = filesize;
+  if (dirent)
+    {
+      stat->filesize = (dirent->kind == svn_node_file)
+                            ? dirent->filesize
+                            : SVN_INVALID_FILESIZE;
+      stat->actual_kind = dirent->special ? svn_node_symlink
+                                          : dirent->kind;
+    }
+  else
+    {
+      stat->filesize = SVN_INVALID_FILESIZE;
+      stat->actual_kind = ignore_text_mods ? svn_node_unknown
+                                           : svn_node_none;
+    }
+
   stat->node_status = node_status;
   stat->text_status = text_status;
   stat->prop_status = prop_status;
@@ -733,9 +701,20 @@ assemble_unversioned(svn_wc_status3_t **status,
   /*stat->versioned = FALSE;*/
   stat->kind = svn_node_unknown; /* not versioned */
   stat->depth = svn_depth_unknown;
-  stat->filesize = (dirent && dirent->kind == svn_node_file)
-                        ? dirent->filesize
-                        : SVN_INVALID_FILESIZE;
+  if (dirent)
+    {
+      stat->actual_kind = dirent->special ? svn_node_symlink
+                                           : dirent->kind;
+      stat->filesize = (dirent->kind == svn_node_file)
+                            ? dirent->filesize
+                            : SVN_INVALID_FILESIZE;
+    }
+  else
+    {
+       stat->actual_kind = svn_node_none;
+       stat->filesize = SVN_INVALID_FILESIZE;
+    }
+
   stat->node_status = svn_wc_status_none;
   stat->text_status = svn_wc_status_none;
   stat->prop_status = svn_wc_status_none;

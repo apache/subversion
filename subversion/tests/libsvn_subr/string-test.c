@@ -849,7 +849,7 @@ test_string_matching(apr_pool_t *pool)
       SVN_TEST_ASSERT(match_len == test->match_len);
       SVN_TEST_ASSERT(rmatch_len == test->rmatch_len);
     }
-  
+
   return SVN_NO_ERROR;
 }
 

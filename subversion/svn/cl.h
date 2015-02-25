@@ -248,6 +248,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t remove_ignored;    /* remove ignored items */
   svn_boolean_t no_newline;        /* do not output the trailing newline */
   svn_boolean_t show_passwords;    /* show cached passwords */
+  svn_boolean_t pin_externals;     /* pin externals to last-changed revisions */
 } svn_cl__opt_state_t;
 
 
@@ -296,8 +297,7 @@ svn_opt_subcommand_t
   svn_cl__switch,
   svn_cl__unlock,
   svn_cl__update,
-  svn_cl__upgrade,
-  svn_cl__youngest;
+  svn_cl__upgrade;
 
 
 /* See definition in svn.c for documentation. */

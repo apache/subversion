@@ -1385,7 +1385,7 @@ handle_response(serf_request_t *request,
       return svn_error_trace(
                 svn_ra_serf__handle_server_error(handler->server_error,
                                                  handler,
-                                                 request, response, 
+                                                 request, response,
                                                  serf_status,
                                                  scratch_pool));
     }

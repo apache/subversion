@@ -58,7 +58,7 @@ get_locks_callback(void *baton,
     {
       apr_hash_set(b->locks, lock_path->data, lock_path->len,
                    svn_lock_dup(lock, hash_pool));
-      return SVN_NO_ERROR; 
+      return SVN_NO_ERROR;
     }
   else
     {

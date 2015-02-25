@@ -26,6 +26,7 @@
 import os
 import re
 import sys
+import traceback
 
 __all__ = ['Parser', 'Result']
 
@@ -64,8 +65,10 @@ def svn_extractor(parser, include_file):
 
   try:
     r = p.parse(include_file)
-  except IOError, e:
-    usage_and_exit(str(e))
+  except IOError:
+    typ, val, tb = sys.exc_info()
+    msg = ''.join(traceback.format_exception_only(typ, val))
+    usage_and_exit(msg)
   sys.stdout.write("%d.%d.%d" % (r.major, r.minor, r.patch))
 
 
@@ -75,8 +78,10 @@ def sqlite_extractor(parser, include_file):
 
   try:
     r = p.parse(include_file)
-  except IOError, e:
-    usage_and_exit(str(e))
+  except IOError:
+    typ, val, tb = sys.exc_info()
+    msg = ''.join(traceback.format_exception_only(typ, val))
+    usage_and_exit(msg)
   major = r.version / 1000000
   minor = (r.version - (major * 1000000)) / 1000
   micro = (r.version - (major * 1000000) - (minor * 1000))

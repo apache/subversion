@@ -906,7 +906,7 @@ repos_notify_handler(void *baton,
           if (b->error_summary && notify->revision != SVN_INVALID_REVNUM)
             {
               struct verification_error *verr;
-              
+
               verr = apr_palloc(b->result_pool, sizeof(*verr));
               verr->rev = notify->revision;
               verr->err = svn_error_dup(notify->err);
@@ -1880,7 +1880,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           struct verification_error *verr;
           svn_error_t *err;
           const char *rev_str;
-          
+
           svn_pool_clear(iterpool);
 
           verr = APR_ARRAY_IDX(notify_baton.error_summary, i,
@@ -1892,7 +1892,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
             {
               char buf[512];
               const char *message;
-              
+
               message = svn_err_best_message(err, buf, sizeof(buf));
               svn_error_clear(svn_stream_printf(notify_baton.feedback_stream,
                                                 iterpool,

@@ -289,7 +289,7 @@ typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
  * This function will be called when the pool that owns the tunnel
  * connection is cleared or destroyed.
  *
- * @a tunnel_context is the baton as returned from the 
+ * @a tunnel_context is the baton as returned from the
  * svn_ra_open_tunnel_func_t.
  *
  * @a tunnel_baton was returned by the open-tunnel callback.

@@ -180,8 +180,8 @@ or if you're running an individual test,
 
 $ ./basic_tests.py --url=svn://localhost --enable-sasl 3
 
-Note that to do this you'll have to have a subversion.conf file in your
-SASL lib dir (i.e. something like /usr/lib/sasl2/subversion.conf), it
+Note that to do this you'll have to have a svn.conf file in your
+SASL lib dir (i.e. something like /usr/lib/sasl2/svn.conf), it
 should contain something like:
 
 pwcheck_method: auxprop
@@ -194,6 +194,16 @@ $ saslpasswd2 -c -u svntest jrandom
 $ saslpasswd2 -c -u svntest jconstant
 
 As usual, both users should use the password 'rayjandom'.
+
+To enable DUMP_LOAD_CROSS_CHECK to work a third user is required,
+
+$ saslpasswd2 -c -u svntest __dumpster__
+
+with password '__loadster__'.
+
+The user running the tests will need read access to the sasl database
+and on some systems this can be arranged by adding the user to the sasl
+group.
 
 There are 'make svnserveautocheck' and ./svnserveautocheck.sh commands,
 analogous to davautocheck.sh documented above.

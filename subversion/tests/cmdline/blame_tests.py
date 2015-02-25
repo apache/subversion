@@ -748,7 +748,7 @@ def blame_output_after_merge(sbox):
   # Next test with the -g option with -rN:M
   expected_output = [ "       -          - New version of file 'mu'.\n",
                       "       -          - 2nd line in file 'mu'.\n",
-                      "G      -          - new 3rd line in file 'mu'.\n",
+                      "G      5    jrandom new 3rd line in file 'mu'.\n",
                       "G      6    jrandom add 3.5 line in file 'mu'.\n",
                       "       -          - 4th line in file 'mu'.\n",
                       "       -          - 5th line in file 'mu'.\n",
@@ -950,22 +950,114 @@ def blame_youngest_to_oldest(sbox):
   orig_line = open(iota).read()
   line = "New contents for iota\n"
   svntest.main.file_append(iota, line)
-  sbox.simple_commit()
-  
+  sbox.simple_commit() #r2
+
   # Move the file, to check that the operation will peg correctly.
   iota_moved = sbox.ospath('iota_moved')
   sbox.simple_move('iota', 'iota_moved')
-  sbox.simple_commit()
-  
+  sbox.simple_commit() #r3
+
   # Delete a line.
   open(iota_moved, 'w').write(line)
-  sbox.simple_commit()
+  sbox.simple_commit() #r4
 
   expected_output = [
-        '     %d    jrandom %s\n' % (3, orig_line[:-1]),
+        '     %d    jrandom %s\n' % (4, orig_line[:-1]),
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-r4:1', iota_moved)
+
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:1', iota_moved)
+
+  expected_output = [
+        '     %d    jrandom %s\n' % (2, line[:-1]),
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r1:HEAD', iota_moved)
+
+@Issue(4467)
+def blame_reverse_no_change(sbox):
+  "blame reverse towards a revision with no change"
+
+  sbox.build()
+
+  # Introduce a revision where iota doesn't change!
+  sbox.simple_propset('a', 'b', 'A')
+  sbox.simple_commit('') #r2
+
+  sbox.simple_append('iota', 'new line\n')
+  sbox.simple_commit('') #r3
+
+  sbox.simple_append('iota', 'another new line\n')
+  sbox.simple_commit('') #r4
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     3    jrandom new line\n',
+    '     4    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r2:HEAD', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+  ]
+  # This used to trigger an assertion on 1.9.x before 1.9.0
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:2', sbox.ospath('iota'))
+
+  # Drop the middle line
+  sbox.simple_append('iota', 'This is the file \'iota\'.\n'
+                             'another new line\n', truncate=True)
+  sbox.simple_commit('') #r5
+
+  # Back to start
+  sbox.simple_append('iota', 'This is the file \'iota\'.\n', truncate=True)
+  sbox.simple_commit('') #r6
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:2', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     5    jrandom new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:3', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     5    jrandom new line\n',
+    '     6    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:4', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     6    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:5', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:6', sbox.ospath('iota'))
+
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     5    jrandom new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r5:3', sbox.ospath('iota'))
+
 
 ########################################################################
 # Run the tests
@@ -991,6 +1083,7 @@ test_list = [ None,
               blame_multiple_targets,
               blame_eol_handling,
               blame_youngest_to_oldest,
+              blame_reverse_no_change,
              ]
 
 if __name__ == '__main__':

@@ -462,17 +462,6 @@ svn_error_t *svn_client__get_all_auto_props(apr_hash_t **autoprops,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool);
 
-/* Get a list of ignore patterns defined by the svn:global-ignores
-   properties set on, or inherited by, PATH_OR_URL.  Store the collected
-   patterns as const char * elements in the array *IGNORES.  Allocate
-   *IGNORES and its contents in RESULT_POOL.  Use  SCRATCH_POOL for
-   temporary allocations. */
-svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
-                                               const char *path_or_url,
-                                               svn_client_ctx_t *ctx,
-                                               apr_pool_t *result_pool,
-                                               apr_pool_t *scratch_pool);
-
 /* The main logic for client deletion from a working copy. Deletes PATH
    from CTX->WC_CTX.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE or KEEP_LOCAL
@@ -966,11 +955,6 @@ svn_client__get_copy_committables(svn_client__committables_t **committables,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* A qsort()-compatible sort routine for sorting an array of
-   svn_client_commit_item_t *'s by their URL member. */
-int svn_client__sort_commit_item_urls(const void *a, const void *b);
-
-
 /* Rewrite the COMMIT_ITEMS array to be sorted by URL.  Also, discover
    a common *BASE_URL for the items in the array, and rewrite those
    items' URLs to be relative to that *BASE_URL.
@@ -1214,6 +1198,41 @@ svn_client__arbitrary_nodes_diff(const char **root_relpath,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
+
+/* Helper for the remote case of svn_client_propget.
+ *
+ * If PROPS is not null, then get the value of property PROPNAME in
+ * REVNUM, using RA_SESSION.  Store the value ('svn_string_t *') in
+ * PROPS, under the path key "TARGET_PREFIX/TARGET_RELATIVE"
+ * ('const char *').
+ *
+ * If INHERITED_PROPS is not null, then set *INHERITED_PROPS to a
+ * depth-first ordered array of svn_prop_inherited_item_t * structures
+ * representing the PROPNAME properties inherited by the target.  If
+ * INHERITABLE_PROPS in not null and no inheritable properties are found,
+ * then set *INHERITED_PROPS to an empty array.
+ *
+ * Recurse according to DEPTH, similarly to svn_client_propget3().
+ *
+ * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
+ * Yes, caller passes this; it makes the recursion more efficient :-).
+ *
+ * Allocate PROPS and *INHERITED_PROPS in RESULT_POOL, but do all temporary
+ * work in SCRATCH_POOL.  The two pools can be the same; recursive
+ * calls may use a different SCRATCH_POOL, however.
+ */
+svn_error_t *
+svn_client__remote_propget(apr_hash_t *props,
+                           apr_array_header_t **inherited_props,
+                           const char *propname,
+                           const char *target_prefix,
+                           const char *target_relative,
+                           svn_node_kind_t kind,
+                           svn_revnum_t revnum,
+                           svn_ra_session_t *ra_session,
+                           svn_depth_t depth,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

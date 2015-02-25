@@ -612,31 +612,70 @@ def replace_symlink_with_dir(sbox):
 # test for issue #1808: svn up deletes local symlink that obstructs
 # versioned file
 @Issue(1808)
-@SkipUnless(svntest.main.is_posix_os)
 def update_obstructing_symlink(sbox):
   "symlink obstructs incoming delete"
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  mu_url = sbox.repo_url + '/A/mu'
-  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = sbox.ospath('A/mu')
 
-  # delete A/mu and replace it with a symlink
-  svntest.main.run_svn(None, 'rm', mu_path)
-  os.symlink(iota_path, mu_path)
+  iota_abspath = os.path.abspath(sbox.ospath('iota'))
 
-  svntest.main.run_svn(None, 'rm', mu_url,
-                       '-m', 'log msg')
+  # delete mu and replace it with an (not-added) symlink
+  sbox.simple_rm('A/mu')
+  sbox.simple_symlink(iota_abspath, 'A/mu')
 
-  svntest.main.run_svn(None,
-                       'up', wc_dir)
+  # delete pi and replace it with an added symlink
+  sbox.simple_rm('A/D/G/pi')
+  sbox.simple_add_symlink(iota_abspath, 'A/D/G/pi')
+
+  if not os.path.exists(mu_path):
+      raise svntest.Failure("mu should be there")
+
+  # Now remove mu and pi in the repository
+  svntest.main.run_svn(None, 'rm', '-m', 'log msg',
+                       sbox.repo_url + '/A/mu',
+                       sbox.repo_url + '/A/D/G/pi')
+
+  # We expect tree conflicts
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu':         Item(status='  ', treeconflict='C'),
+    'A/D/G/pi':     Item(status='  ', treeconflict='C')
+  })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/mu', status='? ', treeconflict='C',
+                        wc_rev=None)
+
+  expected_status.tweak('A/D/G/pi', status='A ',treeconflict='C',
+                        wc_rev='-')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, None,
+                                        expected_status)
+
+  expected_info = [
+    {
+      'Path': re.escape(sbox.ospath('A/D/G/pi')),
+      'Tree conflict': 'local file replace, incoming file delete or move.*'
+    },
+    {
+      'Path': re.escape(sbox.ospath('A/mu')),
+      'Tree conflict': 'local file delete, incoming file delete or move.*'
+    }
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info,
+                                      sbox.ospath('A/D/G/pi'),
+                                      sbox.ospath('A/mu'))
 
   # check that the symlink is still there
-  target = os.readlink(mu_path)
-  if target != iota_path:
-    raise svntest.Failure
-
+  if not os.path.exists(mu_path):
+      raise svntest.Failure("mu should be there")
+  if svntest.main.is_posix_os():
+    target = os.readlink(mu_path)
+    if target != iota_abspath:
+      raise svntest.Failure("mu no longer points to the same location")
 
 def warn_on_reserved_name(sbox):
   "warn when attempt operation on a reserved name"
