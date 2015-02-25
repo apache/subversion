@@ -662,7 +662,7 @@ def checkout_peg_rev_date(sbox):
   ## Get svn:date.
   exit_code, output, errput = svntest.main.run_svn(None, 'propget', 'svn:date',
                                                    '--revprop', '-r1',
-                                                   '--strict',
+                                                   '--no-newline',
                                                    sbox.repo_url)
   if exit_code or errput != [] or len(output) != 1:
     raise svntest.Failure("svn:date propget failed")

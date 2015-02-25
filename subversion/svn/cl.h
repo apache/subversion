@@ -167,7 +167,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t version;         /* print version information */
   svn_boolean_t verbose;         /* be verbose */
   svn_boolean_t update;          /* contact the server for the full story */
-  svn_boolean_t strict;          /* do strictly what was requested */
   svn_stringbuf_t *filedata;     /* contents of file used as option data
                                     (not converted to UTF-8) */
   const char *encoding;          /* the locale/encoding of 'message' and of

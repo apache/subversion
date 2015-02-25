@@ -705,7 +705,7 @@ def propvalue_normalized(sbox):
   # Property value should be SVN_PROP_BOOLEAN_TRUE
   expected_propval = ['*']
   svntest.actions.run_and_verify_svn(expected_propval, [],
-                                     'propget', '--strict', 'svn:special',
+                                     'propget', '--no-newline', 'svn:special',
                                      iota2_path)
 
   # Commit and check again.
@@ -722,7 +722,7 @@ def propvalue_normalized(sbox):
 
   svntest.main.run_svn(None, 'update', wc_dir)
   svntest.actions.run_and_verify_svn(expected_propval, [],
-                                     'propget', '--strict', 'svn:special',
+                                     'propget', '--no-newline', 'svn:special',
                                      iota2_path)
 
 
