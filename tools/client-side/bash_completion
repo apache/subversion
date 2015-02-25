@@ -781,7 +781,7 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive \
-	       --trust-server-cert --trust-unknown-ca --trust-cn-mismatch \
+	       --trust-unknown-ca --trust-cn-mismatch \
 	       --trust-expired --trust-not-yet-valid --trust-other-failure \
 	       --force-interactive"
 	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
@@ -876,7 +876,7 @@ _svn()
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
 		         $pOpts --ignore-ancestry -c --change -x --extensions \
-                         --record-only --accept --reintegrate \
+                         --record-only --accept \
 		         --allow-mixed-revisions -v --verbose"
 		;;
 	mergeinfo)
@@ -905,7 +905,7 @@ _svn()
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		;;
 	propget|pget|pg)
-	        cmdOpts="-v --verbose -R --recursive $rOpts --strict \
+	        cmdOpts="-v --verbose -R --recursive $rOpts --no-newline \
 		         $pOpts $cOpts --depth --xml --show-inherited-props"
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
