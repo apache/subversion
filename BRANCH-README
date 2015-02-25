@@ -38,14 +38,13 @@ as described in option 1. of issue #4556, as follows:
 Branch Status
 =============
 
-TODO:
-  - Add tests for 'svn info --show-item'.
-  - Resolve FIXME near 'case info_item_wc_root' in info-cmd.c:850.
+TODO: none
 
 DONE:
   - Removed 'svn youngest' (already merged to trunk before 1.9.x branch).
   - Implemented 'svn info --show-item [--no-newline]' with output suitable
     for single targets.
-  - Modify --show-item output with multiple targets and/or recursive
+  - Modified --show-item output with multiple targets and/or recursive
     mode to display both the requested item and the (relative) path
     and/or URL it applies to.
+  - Added tests for 'svn info --show-item'.
