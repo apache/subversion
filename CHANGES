@@ -13,7 +13,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * resolve: improve interactive conflict resolution menus
     * blame: support showing prospective as well as previous changes
     * svn auth: new subcommand to manage cached credentials and certs
-    * svn youngest: new remote version of svnlook youngest (issue #4299)
     * new experimental filesystem fsx (faster, smaller)
     * svnserve: cache config, authz and repos to lower resource usage and
       be able to serve large numbers of connections with a limited number
@@ -139,6 +138,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       file or SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE env variable (r1572916)
     * store human readable info about SSL certs in auth store (r1573625)
     * new '--pin-externals' option for svn copy (issue #1258)
+    * the '--strict' was replaced by '--no-newline' (rr1662224)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
