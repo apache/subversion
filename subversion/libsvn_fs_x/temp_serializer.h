@@ -37,22 +37,6 @@ svn_fs_x__combine_number_and_string(apr_int64_t number,
                                     apr_pool_t *result_pool);
 
 /**
- * Serialize a @a noderev_p within the serialization @a context.
- */
-void
-svn_fs_x__noderev_serialize(struct svn_temp_serializer__context_t *context,
-                            svn_fs_x__noderev_t * const *noderev_p);
-
-/**
- * Deserialize a @a noderev_p within the @a buffer and associate it with
- * @a pool.
- */
-void
-svn_fs_x__noderev_deserialize(void *buffer,
-                              svn_fs_x__noderev_t **noderev_p,
-                              apr_pool_t *pool);
-
-/**
  * Serialize APR array @a *a within the serialization @a context.
  * The elements within the array must not contain pointers.
  */
