@@ -345,23 +345,6 @@ svn_wc__db_mark_conflict_internal(svn_wc__db_wcroot_t *wcroot,
 
 /* Transaction handling */
 
-/* A callback which supplies WCROOTs and LOCAL_RELPATHs. */
-typedef svn_error_t *(*svn_wc__db_txn_callback_t)(void *baton,
-                                          svn_wc__db_wcroot_t *wcroot,
-                                          const char *local_relpath,
-                                          apr_pool_t *scratch_pool);
-
-
-/* Run CB_FUNC in a SQLite transaction with CB_BATON, using WCROOT and
-   LOCAL_RELPATH.  If callbacks require additional information, they may
-   provide it using CB_BATON. */
-svn_error_t *
-svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
-                    const char *local_relpath,
-                    svn_wc__db_txn_callback_t cb_func,
-                    void *cb_baton,
-                    apr_pool_t *scratch_pool);
-
 /* Evaluate the expression EXPR within a transaction.
  *
  * Begin a transaction in WCROOT's DB; evaluate the expression EXPR, which would

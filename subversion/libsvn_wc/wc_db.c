@@ -3007,6 +3007,11 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
   return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 }
 
+/* A callback which supplies WCROOTs and LOCAL_RELPATHs. */
+typedef svn_error_t *(*svn_wc__db_txn_callback_t)(void *baton,
+                                          svn_wc__db_wcroot_t *wcroot,
+                                          const char *local_relpath,
+                                          apr_pool_t *scratch_pool);
 
 /* Baton for passing args to with_triggers(). */
 struct with_triggers_baton_t {
@@ -3083,8 +3088,13 @@ with_finalization(svn_wc__db_wcroot_t *wcroot,
   svn_error_t *err1;
   svn_error_t *err2;
 
-  err1 = svn_wc__db_with_txn(wcroot, local_relpath, txn_cb, txn_baton,
-                             scratch_pool);
+  err1 = svn_sqlite__begin_savepoint(wcroot->sdb);
+  if (!err1)
+    {
+      err1 = txn_cb(txn_baton, wcroot, local_relpath, scratch_pool);
+
+      err1 = svn_sqlite__finish_savepoint(wcroot->sdb, err1);
+    }
 
   if (err1 == NULL && notify_func != NULL)
     {
