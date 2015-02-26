@@ -261,7 +261,7 @@ static const action_defn_t action_defn[] =
   {ACTION_RM,               "rm", 1},
 };
 
-struct action {
+typedef struct action_t {
   action_code_t action;
 
   /* revision (copy-from-rev of path[0] for cp) */
@@ -282,8 +282,8 @@ struct action {
    * cp        source   target
    * rm        target
    */
-  const char *path[3];
-};
+  const char *relpath[3];
+} action_t;
 
 /* ====================================================================== */
 
@@ -1356,31 +1356,31 @@ commit_callback(const svn_commit_info_t *commit_info,
   if (el_rev[i]->rev == SVN_INVALID_REVNUM)                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
                              _("%s: '%s': revision number required"),   \
-                             op, action->path[i]);
+                             op, action->relpath[i]);
 
 #define VERIFY_REV_UNSPECIFIED(op, i)                                   \
   if (el_rev[i]->rev != SVN_INVALID_REVNUM)                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
                              _("%s: '%s@...': revision number not allowed"), \
-                             op, action->path[i]);
+                             op, action->relpath[i]);
 
 #define VERIFY_EID_NONEXISTENT(op, i)                                   \
   if (el_rev[i]->eid != -1)                                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
                              _("%s: Path '%s' already exists"),         \
-                             op, action->path[i]);
+                             op, action->relpath[i]);
 
 #define VERIFY_EID_EXISTS(op, i)                                        \
   if (el_rev[i]->eid == -1)                                             \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
                              _("%s: Path '%s' not found"),              \
-                             op, action->path[i]);
+                             op, action->relpath[i]);
 
 #define VERIFY_PARENT_EID_EXISTS(op, i)                                 \
   if (parent_el_rev[i]->eid == -1)                                      \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
                              _("%s: Path '%s' not found"),              \
-                             op, svn_relpath_dirname(action->path[i], pool));
+                             op, svn_relpath_dirname(action->relpath[i], pool));
 
 static svn_error_t *
 execute(const apr_array_header_t *actions,
@@ -1407,7 +1407,7 @@ execute(const apr_array_header_t *actions,
 
   for (i = 0; i < actions->nelts; ++i)
     {
-      struct action *action = APR_ARRAY_IDX(actions, i, struct action *);
+      action_t *action = APR_ARRAY_IDX(actions, i, action_t *);
       int j;
       svn_revnum_t revnum[3] = { -1, -1, -1 };
       const char *path_name[3] = { NULL, NULL, NULL };
@@ -1417,7 +1417,7 @@ execute(const apr_array_header_t *actions,
 
       for (j = 0; j < 3; j++)
         {
-          if (action->path[j])
+          if (action->relpath[j])
             {
               const char *rrpath, *parent_rrpath;
 
@@ -1433,9 +1433,9 @@ execute(const apr_array_header_t *actions,
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                          "'%s@...': revision specifier "
                                          "must be a number or 'head'",
-                                         action->path[j]);
+                                         action->relpath[j]);
 
-              rrpath = svn_relpath_join(base_relpath, action->path[j], pool);
+              rrpath = svn_relpath_join(base_relpath, action->relpath[j], pool);
               parent_rrpath = svn_relpath_dirname(rrpath, pool);
 
               path_name[j] = svn_relpath_basename(rrpath, NULL);
@@ -1512,7 +1512,7 @@ execute(const apr_array_header_t *actions,
                                     el_rev[1]->branch, parent_el_rev[1]->eid,
                                     path_name[1],
                                     iterpool));
-          notify("A+   (br) %s", action->path[1]);
+          notify("A+   (br) %s", action->relpath[1]);
           made_changes = TRUE;
           break;
         case ACTION_MKBRANCH:
@@ -1533,7 +1533,7 @@ execute(const apr_array_header_t *actions,
                                          parent_el_rev[0]->branch, new_eid,
                                          iterpool));
           }
-          notify("A    (br) %s", action->path[0]);
+          notify("A    (br) %s", action->relpath[0]);
           made_changes = TRUE;
           break;
         case ACTION_BRANCHIFY:
@@ -1542,7 +1542,7 @@ execute(const apr_array_header_t *actions,
           SVN_ERR(svn_branch_branchify(editor,
                                        el_rev[0]->branch, el_rev[0]->eid,
                                        iterpool));
-          notify("R    (br) %s", action->path[0]);
+          notify("R    (br) %s", action->relpath[0]);
           made_changes = TRUE;
           break;
         case ACTION_DISSOLVE:
@@ -1566,7 +1566,7 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_MV:
-          if (svn_relpath_skip_ancestor(action->path[0], action->path[1]))
+          if (svn_relpath_skip_ancestor(action->relpath[0], action->relpath[1]))
             return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                      _("mv: cannot move to child of self"));
           VERIFY_REV_UNSPECIFIED("mv", 0);
@@ -1576,7 +1576,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_PARENT_EID_EXISTS("mv", 1);
           SVN_ERR(do_move(editor, el_rev[0], parent_el_rev[1], path_name[1],
                           pool));
-          notify("V    %s (from %s)", action->path[1], action->path[0]);
+          notify("V    %s (from %s)", action->relpath[1], action->relpath[0]);
           made_changes = TRUE;
           break;
         case ACTION_CP:
@@ -1590,7 +1590,7 @@ execute(const apr_array_header_t *actions,
                                         el_rev[0],
                                         parent_el_rev[1]->branch,
                                         parent_el_rev[1]->eid, path_name[1]));
-          notify("A+   %s (from %s)", action->path[1], action->path[0]);
+          notify("A+   %s (from %s)", action->relpath[1], action->relpath[0]);
           made_changes = TRUE;
           break;
         case ACTION_RM:
@@ -1615,7 +1615,7 @@ execute(const apr_array_header_t *actions,
                                     parent_el_rev[0]->eid, path_name[0],
                                     content));
           }
-          notify("A    %s", action->path[0]);
+          notify("A    %s", action->relpath[0]);
           made_changes = TRUE;
           break;
         case ACTION_PUT_FILE:
@@ -1639,8 +1639,8 @@ execute(const apr_array_header_t *actions,
             {
               svn_stream_t *src;
 
-              if (strcmp(action->path[0], "-") != 0)
-                SVN_ERR(svn_stream_open_readonly(&src, action->path[0],
+              if (strcmp(action->relpath[0], "-") != 0)
+                SVN_ERR(svn_stream_open_readonly(&src, action->relpath[0],
                                                  pool, iterpool));
               else
                 SVN_ERR(svn_stream_for_stdin(&src, pool));
@@ -1666,7 +1666,7 @@ execute(const apr_array_header_t *actions,
                                         content));
               }
           }
-          notify("A    %s", action->path[1]);
+          notify("A    %s", action->relpath[1]);
           made_changes = TRUE;
           break;
         default:
@@ -1896,13 +1896,13 @@ parse_actions(apr_array_header_t **actions,
 {
   int i;
 
-  *actions = apr_array_make(pool, 1, sizeof(struct action *));
+  *actions = apr_array_make(pool, 1, sizeof(action_t *));
 
   for (i = 0; i < action_args->nelts; ++i)
     {
       int j, num_url_args;
       const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
-      struct action *action = apr_pcalloc(pool, sizeof(*action));
+      action_t *action = apr_pcalloc(pool, sizeof(*action));
       const char *cp_from_rev = NULL;
 
       /* First, parse the action. */
@@ -1966,10 +1966,10 @@ parse_actions(apr_array_header_t **actions,
                                        "Argument '%s' is not a relative path "
                                        "or a URL", path);
             }
-          action->path[j] = path;
+          action->relpath[j] = path;
         }
 
-      APR_ARRAY_PUSH(*actions, struct action *) = action;
+      APR_ARRAY_PUSH(*actions, action_t *) = action;
     }
 
   return SVN_NO_ERROR;
