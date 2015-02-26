@@ -517,7 +517,8 @@ x_change_node_prop(svn_fs_root_t *root,
     return SVN_FS__NOT_TXN(root);
   txn_id = svn_fs_x__root_txn_id(root);
 
-  SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool));
+  SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool,
+                                 subpool));
 
   /* Check (non-recursively) to see if path is locked; if so, check
      that we can use it. */
@@ -1395,7 +1396,7 @@ x_make_dir(svn_fs_root_t *root,
 
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path,
                                  svn_fs_x__dag_path_last_optional,
-                                 TRUE, subpool));
+                                 TRUE, subpool, subpool));
 
   /* Check (recursively) to see if some lock is 'reserving' a path at
      that location, or even some child-path; if so, check that we can
@@ -1450,7 +1451,8 @@ x_delete_node(svn_fs_root_t *root,
     return SVN_FS__NOT_TXN(root);
 
   txn_id = svn_fs_x__root_txn_id(root);
-  SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool));
+  SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool,
+                                 subpool));
   kind = svn_fs_x__dag_node_kind(dag_path->node);
 
   /* We can't remove the root of the filesystem.  */
@@ -1550,7 +1552,7 @@ copy_helper(svn_fs_root_t *from_root,
      make one there. */
   SVN_ERR(svn_fs_x__get_dag_path(&to_dag_path, to_root, to_path,
                                  svn_fs_x__dag_path_last_optional, TRUE,
-                                 scratch_pool));
+                                 scratch_pool, scratch_pool));
 
   /* Check to see if path (or any child thereof) is locked; if so,
      check that we can use the existing lock(s). */
@@ -1733,7 +1735,7 @@ x_make_file(svn_fs_root_t *root,
 
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path,
                                  svn_fs_x__dag_path_last_optional,
-                                 TRUE, subpool));
+                                 TRUE, subpool, subpool));
 
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
@@ -1919,7 +1921,7 @@ apply_textdelta(void *baton,
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, tb->root, tb->path, 0, TRUE,
-                                 scratch_pool));
+                                 scratch_pool, scratch_pool));
 
   /* Check (non-recursively) to see if path is locked; if so, check
      that we can use it. */
@@ -2086,7 +2088,7 @@ apply_text(void *baton,
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, tb->root, tb->path, 0, TRUE,
-                                 scratch_pool));
+                                 scratch_pool, scratch_pool));
 
   /* Check (non-recursively) to see if path is locked; if so, check
      that we can use it. */
@@ -2427,7 +2429,7 @@ x_closest_copy(svn_fs_root_t **root_p,
   *path_p = NULL;
 
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, FALSE,
-                                 scratch_pool));
+                                 scratch_pool, scratch_pool));
 
   /* Find the youngest copyroot in the path of this node-rev, which
      will indicate the target of the innermost copy affecting the
@@ -2446,7 +2448,7 @@ x_closest_copy(svn_fs_root_t **root_p,
   SVN_ERR(svn_fs_x__revision_root(&copy_dst_root, fs, copy_dst_rev, pool));
   SVN_ERR(svn_fs_x__get_dag_path(&copy_dst_dag_path, copy_dst_root, path,
                                  svn_fs_x__dag_path_allow_null, FALSE,
-                                 scratch_pool));
+                                 scratch_pool, scratch_pool));
   if (copy_dst_dag_path == NULL)
     {
       svn_pool_destroy(scratch_pool);
@@ -2550,7 +2552,7 @@ history_prev(svn_fs_history_t **prev_history,
   /* Open PATH/REVISION, and get its node and a bunch of other
      goodies.  */
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, FALSE,
-                                 scratch_pool));
+                                 scratch_pool, scratch_pool));
   node = dag_path->node;
   commit_path = svn_fs_x__dag_get_created_path(node);
   commit_rev = svn_fs_x__dag_get_revision(node);
@@ -2903,7 +2905,7 @@ get_mergeinfo_for_path_internal(svn_mergeinfo_t *mergeinfo,
   svn_string_t *mergeinfo_string;
 
   SVN_ERR(svn_fs_x__get_dag_path(&dag_path, rev_root, path, 0, FALSE,
-                                 scratch_pool));
+                                 scratch_pool, scratch_pool));
 
   if (inherit == svn_mergeinfo_nearest_ancestor && ! dag_path->parent)
     return SVN_NO_ERROR;
