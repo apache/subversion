@@ -247,7 +247,7 @@ static const action_defn_t action_defn[] =
   {ACTION_DIFF,             "diff", 2},
   {ACTION_DIFF_E,           "diff-e", 2},
   {ACTION_LOG,              "log", 2},
-  {ACTION_LIST_BRANCHES,    "ls-br", 0},
+  {ACTION_LIST_BRANCHES,    "branches", 1},
   {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0},
   {ACTION_BRANCH,           "branch", 2},
   {ACTION_MKBRANCH,         "mkbranch", 1},
@@ -351,7 +351,7 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
     }
   else
     {
-      printf("branch roots in family %d:\n",
+      printf("branches in family %d:\n",
              family->fid);
     }
 
@@ -1069,9 +1069,6 @@ svn_branch_diff_r(svn_editor3_t *editor,
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
   apr_hash_index_t *hi;
 
-  /* ### TODO: Allow LEFT or RIGHT to be null, so we can recurse and show
-     branch addition or deletion. */
-
   if (!left)
     {
       header = apr_psprintf(scratch_pool,
@@ -1486,10 +1483,7 @@ execute(const apr_array_header_t *actions,
           break;
         case ACTION_LIST_BRANCHES:
           {
-            SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[0], editor, SVN_INVALID_REVNUM, base_relpath,
-                      pool, pool));
-
+            VERIFY_EID_EXISTS("branches", 0);
             SVN_ERR(family_list_branch_instances(
                       el_rev[0]->branch->rev_root,
                       el_rev[0]->branch->sibling_defn->family,
@@ -1509,6 +1503,7 @@ execute(const apr_array_header_t *actions,
           }
           break;
         case ACTION_BRANCH:
+          VERIFY_EID_EXISTS("branch", 0);
           VERIFY_REV_UNSPECIFIED("branch", 1);
           VERIFY_EID_NONEXISTENT("branch", 1);
           VERIFY_PARENT_EID_EXISTS("branch", 1);
@@ -1723,8 +1718,9 @@ usage(FILE *stream, apr_pool_t *pool)
       "  Store move tracking metadata either in local files or in revprops.\n"
       "\n"
       "Actions:\n"
-      "  ls-br                  : list all branches in this family\n"
+      "  branches PATH          : list all branches in the same family as that at PATH\n"
       "  ls-br-r                : list all branches, recursively\n"
+      "  log FROM@REV TO@REV    : show per-revision diffs between FROM and TO\n"
       "  branch SRC DST         : branch the branch-root or branch-subtree at SRC\n"
       "                           to make a new branch at DST\n"
       "  mkbranch ROOT          : make a directory that's the root of a new branch\n"
@@ -1963,6 +1959,12 @@ parse_actions(apr_array_header_t **actions,
               return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                        "Argument '%s' is a URL; use "
                                        "--root-url (-U) instead", path);
+            }
+          if (! svn_relpath_is_canonical(path))
+            {
+              return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                       "Argument '%s' is not a relative path "
+                                       "or a URL", path);
             }
           action->path[j] = path;
         }
