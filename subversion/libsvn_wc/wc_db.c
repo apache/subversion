@@ -3967,14 +3967,14 @@ get_moved_to(const char **moved_to_relpath_p,
 /* The body of svn_wc__db_scan_deletion().
  */
 static svn_error_t *
-scan_deletion_txn(const char **base_del_relpath,
-                  const char **moved_to_relpath,
-                  const char **work_del_relpath,
-                  const char **moved_to_op_root_relpath,
-                  svn_wc__db_wcroot_t *wcroot,
-                  const char *local_relpath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+scan_deletion(const char **base_del_relpath,
+              const char **moved_to_relpath,
+              const char **work_del_relpath,
+              const char **moved_to_op_root_relpath,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   const char *current_relpath = local_relpath;
   svn_sqlite__stmt_t *stmt;
@@ -4119,6 +4119,25 @@ scan_deletion_txn(const char **base_del_relpath,
 }
 
 svn_error_t *
+svn_wc__db_scan_deletion_internal(
+              const char **base_del_relpath,
+              const char **moved_to_relpath,
+              const char **work_del_relpath,
+              const char **moved_to_op_root_relpath,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            scan_deletion(base_del_relpath, moved_to_relpath, work_del_relpath,
+                          moved_to_op_root_relpath,
+                          wcroot, local_relpath,
+                          result_pool, scratch_pool));
+}
+
+
+svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
@@ -4140,9 +4159,9 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_WC__DB_WITH_TXN(
-    scan_deletion_txn(&base_del_relpath, &moved_to_relpath,
-                      &work_del_relpath, &moved_to_op_root_relpath,
-                      wcroot, local_relpath, result_pool, scratch_pool),
+    scan_deletion(&base_del_relpath, &moved_to_relpath,
+                  &work_del_relpath, &moved_to_op_root_relpath,
+                  wcroot, local_relpath, result_pool, scratch_pool),
     wcroot);
 
   if (base_del_abspath)
@@ -4240,10 +4259,10 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     {
       const char *base_del_relpath, *work_del_relpath;
 
-      SVN_ERR(scan_deletion_txn(&base_del_relpath, NULL,
-                                &work_del_relpath,
-                                NULL, src_wcroot, local_relpath,
-                                scratch_pool, scratch_pool));
+      SVN_ERR(scan_deletion(&base_del_relpath, NULL,
+                            &work_del_relpath,
+                            NULL, src_wcroot, local_relpath,
+                            scratch_pool, scratch_pool));
       if (work_del_relpath)
         {
           const char *op_root_relpath;
@@ -10016,12 +10035,12 @@ db_read_repos_info(svn_revnum_t *revision,
           const char *base_del_relpath;
           const char *work_del_relpath;
 
-          SVN_ERR(scan_deletion_txn(&base_del_relpath, NULL,
-                                    &work_del_relpath,
-                                    NULL, wcroot,
-                                    local_relpath,
-                                    scratch_pool,
-                                    scratch_pool));
+          SVN_ERR(scan_deletion(&base_del_relpath, NULL,
+                                &work_del_relpath,
+                                NULL, wcroot,
+                                local_relpath,
+                                scratch_pool,
+                                scratch_pool));
 
           if (work_del_relpath)
             {
@@ -11248,11 +11267,11 @@ relocate_txn(svn_wc__db_wcroot_t *wcroot,
         {
           const char *work_del_relpath;
 
-          SVN_ERR(scan_deletion_txn(NULL, NULL,
-                                    &work_del_relpath, NULL,
-                                    wcroot, local_dir_relpath,
-                                    scratch_pool,
-                                    scratch_pool));
+          SVN_ERR(scan_deletion(NULL, NULL,
+                                &work_del_relpath, NULL,
+                                wcroot, local_dir_relpath,
+                                scratch_pool,
+                                scratch_pool));
           if (work_del_relpath)
             {
               /* Deleted within a copy/move */
@@ -12795,6 +12814,27 @@ scan_addition(svn_wc__db_status_t *status,
 #endif
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_scan_addition_internal(
+              svn_wc__db_status_t *status,
+              const char **op_root_relpath_p,
+              const char **repos_relpath,
+              apr_int64_t *repos_id,
+              const char **original_repos_relpath,
+              apr_int64_t *original_repos_id,
+              svn_revnum_t *original_revision,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+      scan_addition(status, op_root_relpath_p, repos_relpath, repos_id,
+                    original_repos_relpath, original_repos_id,
+                    original_revision, NULL, NULL, NULL,
+                    wcroot, local_relpath, result_pool, scratch_pool));
 }
 
 svn_error_t *

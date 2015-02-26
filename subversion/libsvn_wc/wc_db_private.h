@@ -313,6 +313,32 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_scan_addition_internal(
+              svn_wc__db_status_t *status,
+              const char **op_root_relpath_p,
+              const char **repos_relpath,
+              apr_int64_t *repos_id,
+              const char **original_repos_relpath,
+              apr_int64_t *original_repos_id,
+              svn_revnum_t *original_revision,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_scan_deletion_internal(
+                  const char **base_del_relpath,
+                  const char **moved_to_relpath,
+                  const char **work_del_relpath,
+                  const char **moved_to_op_root_relpath,
+                  svn_wc__db_wcroot_t *wcroot,
+                  const char *local_relpath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+
 /* Look up REPOS_ID in WCROOT->SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID
    to its root URL and UUID respectively.  If REPOS_ID is INVALID_REPOS_ID,
    use NULL for both URL and UUID.  Either or both output parameters may be

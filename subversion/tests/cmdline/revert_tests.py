@@ -1628,16 +1628,10 @@ def revert_obstructing_wc(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None,
-                                        None,
+                                        expected_status,
                                         None, None, None,
                                         None, None, None,
                                         wc_dir, '--set-depth', 'infinity')
-
-  # The entries tree currently doesn't return the expected data. It just
-  # walks into the obstructing WC, while it should just construct the right
-  # parent stub from the parent dir
-  svntest.actions.run_and_verify_status(wc_dir, expected_status,
-                                        no_entries=True)
 
   # Revert should do nothing (no local changes), and report the obstruction
   # (reporting the obstruction is nice for debugging, but not really required
