@@ -1766,6 +1766,14 @@ svn_branch_get_all_sub_branches(const svn_branch_instance_t *branch,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
+/* Return the subbranch instance rooted at BRANCH:EID, or NULL if that is
+ * not a subbranch root.
+ */
+svn_branch_instance_t *
+svn_branch_get_subbranch_at_eid(svn_branch_instance_t *branch,
+                                int eid,
+                                apr_pool_t *scratch_pool);
+
 /* element */
 /*
 typedef struct svn_branch_element_t
@@ -1942,6 +1950,18 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             svn_editor3_eid_t to_outer_parent_eid,
                             const char *new_name,
                             apr_pool_t *scratch_pool);
+
+/* Instantiate a new branch of FROM_BRANCH, selecting only the subtree at
+ * FROM_EID, at existing branch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
+ */
+svn_error_t *
+svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
+                             svn_branch_instance_t *from_branch,
+                             int from_eid,
+                             svn_branch_instance_t *to_outer_branch,
+                             svn_editor3_eid_t to_outer_eid,
+                             svn_branch_sibling_t *new_branch_def,
+                             apr_pool_t *scratch_pool);
 
 /* Copy a subtree.
  *
