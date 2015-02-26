@@ -752,13 +752,13 @@ parent_path_path(svn_fs_x__dag_path_t *dag_path,
    the inheritance method is copy_id_inherit_new, also return a
    *COPY_SRC_PATH on which to base the new copy ID (else return NULL
    for that path).  CHILD must have a parent (it cannot be the root
-   node).  Allocations are taken from POOL. */
+   node).  Temporary allocations are taken from SCRATCH_POOL. */
 static svn_error_t *
 get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
                      const char **copy_src_path,
                      svn_fs_t *fs,
                      svn_fs_x__dag_path_t *child,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   svn_fs_x__id_t child_copy_id, parent_copy_id;
   const char *id_path = NULL;
@@ -806,9 +806,10 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
   svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path, child->node);
-  SVN_ERR(svn_fs_x__revision_root(&copyroot_root, fs, copyroot_rev, pool));
+  SVN_ERR(svn_fs_x__revision_root(&copyroot_root, fs, copyroot_rev, 
+                                  scratch_pool));
   SVN_ERR(svn_fs_x__get_temp_dag_node(&copyroot_node, copyroot_root,
-                                      copyroot_path, pool));
+                                      copyroot_path, scratch_pool));
 
   if (!svn_fs_x__dag_related_node(copyroot_node, child->node))
     return SVN_NO_ERROR;
@@ -816,7 +817,7 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
   /* Determine if we are looking at the child via its original path or
      as a subtree item of a copied tree. */
   id_path = svn_fs_x__dag_get_created_path(child->node);
-  if (strcmp(id_path, parent_path_path(child, pool)) == 0)
+  if (strcmp(id_path, parent_path_path(child, scratch_pool)) == 0)
     {
       *inherit_p = svn_fs_x__copy_id_inherit_self;
       return SVN_NO_ERROR;
@@ -1060,7 +1061,7 @@ svn_error_t *
 svn_fs_x__get_temp_dag_node(dag_node_t **node_p,
                             svn_fs_root_t *root,
                             const char *path,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   svn_string_t normalized;
 
@@ -1069,7 +1070,7 @@ svn_fs_x__get_temp_dag_node(dag_node_t **node_p,
 
   /* If it is not there, walk the DAG and fill the cache. */
   if (! *node_p)
-    SVN_ERR(walk_dag_path(node_p, root, &normalized, pool));
+    SVN_ERR(walk_dag_path(node_p, root, &normalized, scratch_pool));
 
   return SVN_NO_ERROR;
 }
