@@ -1510,7 +1510,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
 # This function always passes '-q' to the status command, which
 # suppresses the printing of any unversioned or nonexistent items.
-def run_and_verify_status(wc_dir_name, status_tree):
+def run_and_verify_status(wc_dir_name, status_tree, no_entries=False):
   """Run 'status' on WC_DIR_NAME and compare it with the
   expected STATUS_TREE.
   Returns on success, raises on failure."""
@@ -1530,6 +1530,9 @@ def run_and_verify_status(wc_dir_name, status_tree):
     _log_tree_state("ACTUAL STATUS TREE:", actual_status.old_tree(),
                                            wc_dir_name)
     raise
+
+  if no_entries:
+    return
 
   # if we have an output State, and we can/are-allowed to create an
   # entries-based State, then compare the two.
