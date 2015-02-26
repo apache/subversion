@@ -1079,13 +1079,14 @@ svn_error_t *
 svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
                        svn_fs_root_t *root,
                        const char *path,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   dag_node_t *node = NULL;
-  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, pool));
+  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
 
   /* We want the returned node to live in POOL. */
-  *dag_node_p = svn_fs_x__dag_dup(node, pool);
+  *dag_node_p = svn_fs_x__dag_dup(node, result_pool);
 
   return SVN_NO_ERROR;
 }

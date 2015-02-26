@@ -601,7 +601,7 @@ x_props_changed(svn_boolean_t *changed_p,
       (SVN_ERR_FS_GENERAL, NULL,
        _("Cannot compare property value between two different filesystems"));
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node1, root1, path1, subpool));
+  SVN_ERR(svn_fs_x__get_dag_node(&node1, root1, path1, subpool, subpool));
   SVN_ERR(svn_fs_x__get_temp_dag_node(&node2, root2, path2, subpool));
   SVN_ERR(svn_fs_x__dag_things_different(changed_p, NULL, node1, node2,
                                          strict, subpool));
@@ -616,9 +616,12 @@ x_props_changed(svn_boolean_t *changed_p,
 
 /* Set *NODE to the root node of ROOT.  */
 static svn_error_t *
-get_root(dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
+get_root(dag_node_t **node,
+         svn_fs_root_t *root,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
 {
-  return svn_fs_x__get_dag_node(node, root, "/", pool);
+  return svn_fs_x__get_dag_node(node, root, "/", result_pool, scratch_pool);
 }
 
 
@@ -1186,7 +1189,8 @@ svn_fs_x__commit_txn(const char **conflict_p,
          note that the youngest rev may have changed by then -- that's
          why we're careful to get this root in its own bdb txn
          here). */
-      SVN_ERR(get_root(&youngish_root_node, youngish_root, iterpool));
+      SVN_ERR(get_root(&youngish_root_node, youngish_root, iterpool,
+                       iterpool));
 
       /* Try to merge.  If the merge succeeds, the base root node of
          TARGET's txn will become the same as youngish_root_node, so
@@ -1287,10 +1291,10 @@ x_merge(const char **conflict_p,
   */
 
   /* Get the ancestor node. */
-  SVN_ERR(get_root(&ancestor, ancestor_root, pool));
+  SVN_ERR(get_root(&ancestor, ancestor_root, pool, pool));
 
   /* Get the source node. */
-  SVN_ERR(get_root(&source, source_root, pool));
+  SVN_ERR(get_root(&source, source_root, pool, pool));
 
   /* Open a txn for the txn root into which we're merging. */
   SVN_ERR(svn_fs_x__open_txn(&txn, ancestor_root->fs, target_root->txn,
@@ -1545,7 +1549,7 @@ copy_helper(svn_fs_root_t *from_root,
 
   /* Get the NODE for FROM_PATH in FROM_ROOT.*/
   SVN_ERR(svn_fs_x__get_dag_node(&from_node, from_root, from_path,
-                                 scratch_pool));
+                                 scratch_pool, scratch_pool));
 
   /* Build up the parent path from TO_PATH in TO_ROOT.  If the last
      component does not exist, it's not that big a deal.  We'll just
@@ -1621,7 +1625,7 @@ copy_helper(svn_fs_root_t *from_root,
 
       /* Make a record of this modification in the changes table. */
       SVN_ERR(svn_fs_x__get_dag_node(&new_node, to_root, to_path,
-                                     scratch_pool));
+                                     scratch_pool, scratch_pool));
       SVN_ERR(add_change(to_root->fs, txn_id, to_path,
                          svn_fs_x__dag_get_id(new_node), kind, FALSE,
                          FALSE, FALSE, svn_fs_x__dag_node_kind(from_node),
@@ -2183,7 +2187,7 @@ x_contents_changed(svn_boolean_t *changed_p,
         (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
   }
 
-  SVN_ERR(svn_fs_x__get_dag_node(&node1, root1, path1, subpool));
+  SVN_ERR(svn_fs_x__get_dag_node(&node1, root1, path1, subpool, subpool));
   SVN_ERR(svn_fs_x__get_temp_dag_node(&node2, root2, path2, subpool));
   SVN_ERR(svn_fs_x__dag_things_different(NULL, changed_p, node1, node2,
                                          strict, subpool));
@@ -2209,7 +2213,7 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
   if (source_root && source_path)
     SVN_ERR(svn_fs_x__get_dag_node(&source_node, source_root, source_path,
-                                   scratch_pool));
+                                   scratch_pool, scratch_pool));
   else
     source_node = NULL;
   SVN_ERR(svn_fs_x__get_temp_dag_node(&target_node, target_root, target_path,
