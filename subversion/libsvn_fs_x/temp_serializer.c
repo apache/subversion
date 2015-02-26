@@ -326,9 +326,12 @@ deserialize_dir(void *buffer, dir_data_t *dir_data, apr_pool_t *pool)
   return result;
 }
 
-void
-svn_fs_x__noderev_serialize(svn_temp_serializer__context_t *context,
-                            svn_fs_x__noderev_t * const *noderev_p)
+/**
+ * Serialize a NODEREV_P within the serialization CONTEXT.
+ */
+static void
+noderev_serialize(svn_temp_serializer__context_t *context,
+                  svn_fs_x__noderev_t * const *noderev_p)
 {
   const svn_fs_x__noderev_t *noderev = *noderev_p;
   if (noderev == NULL)
@@ -351,11 +354,13 @@ svn_fs_x__noderev_serialize(svn_temp_serializer__context_t *context,
   svn_temp_serializer__pop(context);
 }
 
-
-void
-svn_fs_x__noderev_deserialize(void *buffer,
-                              svn_fs_x__noderev_t **noderev_p,
-                              apr_pool_t *pool)
+/**
+ * Deserialize a NODEREV_P within the BUFFER and associate it with.
+ */
+static void
+noderev_deserialize(void *buffer,
+                    svn_fs_x__noderev_t **noderev_p,
+                    apr_pool_t *pool)
 {
   svn_fs_x__noderev_t *noderev;
 
@@ -661,7 +666,7 @@ svn_fs_x__serialize_node_revision(void **buffer,
                                 pool);
 
   /* serialize the noderev */
-  svn_fs_x__noderev_serialize(context, &noderev);
+  noderev_serialize(context, &noderev);
 
   /* return serialized data */
   serialized = svn_temp_serializer__get(context);
@@ -681,7 +686,7 @@ svn_fs_x__deserialize_node_revision(void **item,
   svn_fs_x__noderev_t *noderev = (svn_fs_x__noderev_t *)buffer;
 
   /* fixup of all pointers etc. */
-  svn_fs_x__noderev_deserialize(noderev, &noderev, pool);
+  noderev_deserialize(noderev, &noderev, pool);
 
   /* done */
   *item = noderev;
