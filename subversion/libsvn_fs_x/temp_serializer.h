@@ -29,12 +29,12 @@
 /**
  * Prepend the @a number to the @a string in a space efficient way such that
  * no other (number,string) combination can produce the same result.
- * Allocate temporaries as well as the result from @a pool.
+ * Allocate the result from @a result_pool.
  */
 const char*
 svn_fs_x__combine_number_and_string(apr_int64_t number,
                                     const char *string,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *result_pool);
 
 /**
  * Serialize a @a noderev_p within the serialization @a context.

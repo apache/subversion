@@ -71,13 +71,13 @@ encode_number(apr_int64_t number, char *key_buffer)
 const char*
 svn_fs_x__combine_number_and_string(apr_int64_t number,
                                     const char *string,
-                                    apr_pool_t *pool)
+                                    apr_pool_t *result_pool)
 {
   apr_size_t len = strlen(string);
 
   /* number part requires max. 10x7 bits + 1 space.
    * Add another 1 for the terminal 0 */
-  char *key_buffer = apr_palloc(pool, len + 12);
+  char *key_buffer = apr_palloc(result_pool, len + 12);
   const char *key = key_buffer;
 
   /* Prepend the number to the string and separate them by space. No other
