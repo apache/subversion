@@ -92,10 +92,11 @@ typedef struct svn_fs_x__dag_path_t
 
 } svn_fs_x__dag_path_t;
 
-/* Open the node identified by PATH in ROOT, allocating in POOL.  Set
-   *DAG_PATH_P to a path from the node up to ROOT.  The resulting
+/* Open the node identified by PATH in ROOT, allocating in RESULT_POOL.
+   Set *DAG_PATH_P to a path from the node up to ROOT.  The resulting
    **DAG_PATH_P value is guaranteed to contain at least one element,
-   for the root directory.  PATH must be in canonical form.
+   for the root directory.  PATH must be in canonical form.  Allocate
+   temporaries from SCRATCH_POOL.
 
    If resulting *PARENT_PATH_P will eventually be made mutable and
    modified, or if copy ID inheritance information is otherwise needed,
@@ -123,7 +124,8 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
                        const char *path,
                        int flags,
                        svn_boolean_t is_txn_path,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Make the node referred to by PARENT_PATH mutable, if it isn't already,
    allocating from RESULT_POOL.  ROOT must be the root from which

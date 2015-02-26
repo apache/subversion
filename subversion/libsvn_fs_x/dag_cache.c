@@ -856,17 +856,19 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
                        const char *fs_path,
                        int flags,
                        svn_boolean_t is_txn_path,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_fs_t *fs = root->fs;
   dag_node_t *here = NULL; /* The directory we're currently looking at.  */
   svn_fs_x__dag_path_t *dag_path; /* The path from HERE up to the root. */
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   svn_fs_x__change_set_t change_set = svn_fs_x__root_change_set(root);
   const char *entry;
   svn_string_t path;
-  svn_stringbuf_t *entry_buffer = svn_stringbuf_create_ensure(64, pool);
+  svn_stringbuf_t *entry_buffer = svn_stringbuf_create_ensure(64,
+                                                              scratch_pool);
   apr_size_t path_len;
 
   /* Normalize the FS_PATH to be compatible with our DAG walk utils. */
@@ -874,7 +876,7 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
 
   /* Make a DAG_PATH for the root node, using its own current copy id.  */
   SVN_ERR(get_root_node(&here, root, change_set, iterpool));
-  dag_path = make_parent_path(here, entry_buffer, NULL, pool);
+  dag_path = make_parent_path(here, entry_buffer, NULL, result_pool);
   dag_path->copy_inherit = svn_fs_x__copy_id_inherit_self;
 
   path_len = path.len;
@@ -901,7 +903,8 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
           if ((flags & svn_fs_x__dag_path_last_optional)
               && (path_len == path.len))
             {
-              dag_path = make_parent_path(NULL, entry_buffer, dag_path, pool);
+              dag_path = make_parent_path(NULL, entry_buffer, dag_path,
+                                          result_pool);
               break;
             }
           else if (flags & svn_fs_x__dag_path_allow_null)
@@ -918,16 +921,12 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
         }
 
       /* Now, make a parent_path item for CHILD. */
-      dag_path = make_parent_path(here, entry_buffer, dag_path, pool);
+      dag_path = make_parent_path(here, entry_buffer, dag_path, result_pool);
       if (is_txn_path)
         {
-          svn_fs_x__copy_id_inherit_t inherit;
-          const char *copy_path = NULL;
-          SVN_ERR(get_copy_inheritance(&inherit, &copy_path, fs,
-                                       dag_path, iterpool));
-
-          dag_path->copy_inherit = inherit;
-          dag_path->copy_src_path = apr_pstrdup(pool, copy_path);
+          SVN_ERR(get_copy_inheritance(&dag_path->copy_inherit,
+                                       &dag_path->copy_src_path,
+                                       fs, dag_path, iterpool));
         }
     }
 
