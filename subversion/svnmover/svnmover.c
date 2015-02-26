@@ -697,6 +697,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
       else if (e_tgt)
         {
           notify("D    <e%d> %s", eid, e_yca->name);
+          /* ### Currently svn_editor3_delete() finds & deletes nested branches
+             which is wrong here: we're working on a transient state */
           SVN_ERR(svn_editor3_delete(editor, tgt->rev, tgt->branch, eid));
         }
       else if (result)
@@ -1186,6 +1188,8 @@ do_move(svn_editor3_t *editor,
                                          editor, el_rev->branch, el_rev->eid,
                                          scratch_pool, scratch_pool));
           SVN_ERR_ASSERT(old_node);
+          /* ### Currently svn_editor3_delete() finds & deletes nested branches.
+             We need to move them too. */
           SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
                                      el_rev->branch, el_rev->eid));
           SVN_ERR(svn_editor3_instantiate(editor,
@@ -1198,11 +1202,11 @@ do_move(svn_editor3_t *editor,
 
   /* Move by copy-and-delete */
   if (el_rev->branch->sibling_defn->family->fid
-      != to_parent_el_rev->branch->sibling_defn->family->fid)
+      != to_parent_el_rev->branch->sibling_defn->family->fid) /* ### always */
     {
       printf("mv: moving by copy-and-delete to a different branch family\n");
     }
-  else
+  else /* ### never */
     {
       printf("mv: moving by copy-and-delete\n");
     }
@@ -1615,6 +1619,8 @@ execute(const apr_array_header_t *actions,
                 branch = el_rev[0]->branch->outer_branch;
               }
 
+            /* ### Currently svn_editor3_delete() finds & deletes nested
+               branches, which is what we want in this case. */
             SVN_ERR(svn_editor3_delete(editor, el_rev[0]->rev,
                                        branch, eid));
           }
