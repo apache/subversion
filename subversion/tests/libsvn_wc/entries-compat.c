@@ -417,6 +417,8 @@ test_stubs(apr_pool_t *pool)
      subdir baton with ADM_ACCESS.  */
   SVN_ERR(svn_wc_entry(&stub_entry, local_relpath, adm_access, TRUE, pool));
   SVN_TEST_STRING_ASSERT(stub_entry->name, "M");
+  /* Schedule add in parent-wc. Schedule normal in obstructing working copy */
+  SVN_TEST_ASSERT(stub_entry->schedule == svn_wc_schedule_add);
 
   SVN_ERR(svn_wc_adm_open3(&subdir_access,
                            adm_access,
