@@ -701,7 +701,16 @@ branch_merge_subtree_r(svn_editor3_t *editor,
         }
       else if (result)
         {
-          notify("A    <e%d> %s", eid, result->name);
+          svn_branch_instance_t *subbranch
+            = svn_branch_get_subbranch_at_eid(src->branch, eid, scratch_pool);
+
+          if (subbranch)
+            notify("A    <e%d> %s (subbranch b%d e%d)",
+                   eid, result->name,
+                   subbranch->sibling_defn->bid,
+                   subbranch->sibling_defn->root_eid);
+          else
+            notify("A    <e%d> %s", eid, result->name);
 
           /* In BRANCH, create an instance of the element EID with new content.
            *
@@ -713,6 +722,16 @@ branch_merge_subtree_r(svn_editor3_t *editor,
           SVN_ERR(svn_editor3_instantiate(editor, tgt->branch, eid,
                                           result->parent_eid, result->name,
                                           result->content));
+
+          if (subbranch)
+            {
+              SVN_ERR(svn_branch_branch_subtree_r2(
+                        NULL,
+                        subbranch, subbranch->sibling_defn->root_eid,
+                        tgt->branch, eid,
+                        subbranch->sibling_defn,
+                        scratch_pool));
+            }
         }
     }
 
@@ -1202,30 +1221,6 @@ do_move(svn_editor3_t *editor,
                           old_node->content));
 
   return SVN_NO_ERROR;
-}
-
-/*  */
-static svn_branch_instance_t *
-svn_branch_get_subbranch_at_eid(svn_branch_instance_t *branch,
-                                int eid,
-                                apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *subbranches;
-  int i;
-
-  subbranches = svn_branch_get_all_sub_branches(branch,
-                                                scratch_pool, scratch_pool);
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *subbranch = APR_ARRAY_IDX(subbranches, i, void *);
-
-      if (subbranch->outer_eid == eid)
-        {
-          return subbranch;
-        }
-    }
-
-  return NULL;
 }
 
 /*  */

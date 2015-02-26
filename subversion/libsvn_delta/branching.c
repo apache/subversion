@@ -805,6 +805,30 @@ svn_branch_get_all_sub_branches(const svn_branch_instance_t *branch,
 }
 
 svn_branch_instance_t *
+svn_branch_get_subbranch_at_eid(svn_branch_instance_t *branch,
+                                int eid,
+                                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *subbranches;
+  int i;
+
+  /* TODO: more efficient to search in branch->rev_root->branch_instances */
+  subbranches = svn_branch_get_all_sub_branches(branch,
+                                                scratch_pool, scratch_pool);
+  for (i = 0; i < subbranches->nelts; i++)
+    {
+      svn_branch_instance_t *subbranch = APR_ARRAY_IDX(subbranches, i, void *);
+
+      if (subbranch->outer_eid == eid)
+        {
+          return subbranch;
+        }
+    }
+
+  return NULL;
+}
+
+svn_branch_instance_t *
 svn_branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
                                    int outer_eid,
                                    svn_branch_sibling_t *branch_sibling,
@@ -1256,15 +1280,6 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
  * ========================================================================
  */
 
-static svn_error_t *
-svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
-                            svn_branch_instance_t *from_branch,
-                            int from_eid,
-                            svn_branch_instance_t *to_outer_branch,
-                            svn_editor3_eid_t to_outer_eid,
-                             svn_branch_sibling_t *new_branch_def,
-                            apr_pool_t *scratch_pool);
-
 svn_error_t *
 svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             svn_branch_instance_t *from_branch,
@@ -1319,10 +1334,7 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
   return SVN_NO_ERROR;
 }
 
-/* Make a new branch of FROM_BRANCH, selecting only the subtree at FROM_EID,
- * at existing branch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
- */
-static svn_error_t *
+svn_error_t *
 svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
                              svn_branch_instance_t *from_branch,
                              int from_eid,
@@ -1335,8 +1347,11 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
 
   /* Source element must exist */
   SVN_ERR_ASSERT(svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool));
-  /* FROM_BRANCH must be an immediate child branch of TO_OUTER_BRANCH. */
-  SVN_ERR_ASSERT(SAME_BRANCH(from_branch->outer_branch, to_outer_branch));
+  /* When creating a new branch-sibling in same outer branch, TO_OUTER_BRANCH
+     is the parent of FROM_BRANCH. When instantiating the same branch-sibling
+     into a different outer-branch, TO_OUTER_BRANCH is in the same family as
+     the parent of FROM_BRANCH. We require only the latter. */
+  SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(from_branch->outer_branch, to_outer_branch));
 
   /* create new inner branch instance */
   new_branch = svn_branch_add_new_branch_instance(to_outer_branch, to_outer_eid,
