@@ -69,7 +69,6 @@ typedef struct svn_wc__internal_status_t
   svn_wc_status3_t s; /* First member; same pointer*/
 
   svn_boolean_t has_descendants;
-  svn_boolean_t op_root; /* Allows filtering non op-root deletes */
 
   /* Make sure to update hash_stash() when adding values here */
 } svn_wc__internal_status_t;
@@ -607,7 +606,6 @@ assemble_status(svn_wc__internal_status_t **status,
   inner_stat = apr_pcalloc(result_pool, sizeof(*inner_stat));
   stat = &inner_stat->s;
   inner_stat->has_descendants = info->has_descendants;
-  /*inner_stat->op_root = info->op_root;*/
 
   switch (info->kind)
     {
@@ -623,8 +621,6 @@ assemble_status(svn_wc__internal_status_t **status,
         stat->kind = svn_node_unknown;
     }
   stat->depth = info->depth;
-  if (info->kind == svn_node_dir)
-    assert(inner_stat->has_descendants);
 
   if (dirent)
     {
