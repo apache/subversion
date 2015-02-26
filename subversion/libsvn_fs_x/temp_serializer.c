@@ -359,8 +359,7 @@ noderev_serialize(svn_temp_serializer__context_t *context,
  */
 static void
 noderev_deserialize(void *buffer,
-                    svn_fs_x__noderev_t **noderev_p,
-                    apr_pool_t *pool)
+                    svn_fs_x__noderev_t **noderev_p)
 {
   svn_fs_x__noderev_t *noderev;
 
@@ -686,7 +685,7 @@ svn_fs_x__deserialize_node_revision(void **item,
   svn_fs_x__noderev_t *noderev = (svn_fs_x__noderev_t *)buffer;
 
   /* fixup of all pointers etc. */
-  noderev_deserialize(noderev, &noderev, pool);
+  noderev_deserialize(noderev, &noderev);
 
   /* done */
   *item = noderev;
@@ -1093,8 +1092,7 @@ serialize_change(svn_temp_serializer__context_t *context,
  */
 static void
 deserialize_change(void *buffer,
-                   svn_fs_x__change_t **change_p,
-                   apr_pool_t *pool)
+                   svn_fs_x__change_t **change_p)
 {
   svn_fs_x__change_t * change;
 
@@ -1180,8 +1178,7 @@ svn_fs_x__deserialize_changes(void **out,
   /* de-serialize each entry and add it to the array */
   for (i = 0; i < changes->count; ++i)
     deserialize_change(changes->changes,
-                       (svn_fs_x__change_t **)&changes->changes[i],
-                       pool);
+                       (svn_fs_x__change_t **)&changes->changes[i]);
 
   /* Use the changes buffer as the array's data buffer
    * (DATA remains valid for at least as long as POOL). */
