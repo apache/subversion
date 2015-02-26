@@ -761,14 +761,11 @@ family_is_child(svn_branch_family_t *parent_family,
   return FALSE;
 }
 
-/* Return an array of pointers to the branch instances that are immediate
- * sub-branches of BRANCH at or below EID.
- */
-static apr_array_header_t *
-branch_get_sub_branches(const svn_branch_instance_t *branch,
-                        int eid,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+apr_array_header_t *
+svn_branch_get_subbranches(const svn_branch_instance_t *branch,
+                           int eid,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_branch_family_t *family = branch->sibling_defn->family;
   const char *top_rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
@@ -800,7 +797,7 @@ svn_branch_get_all_sub_branches(const svn_branch_instance_t *branch,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
-  return branch_get_sub_branches(branch, branch->sibling_defn->root_eid,
+  return svn_branch_get_subbranches(branch, branch->sibling_defn->root_eid,
                                  result_pool, scratch_pool);
 }
 
@@ -844,6 +841,52 @@ svn_branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
     = branch_instance;
 
   return branch_instance;
+}
+
+/* Remove branch-instance BRANCH from the list of branches in REV_ROOT.
+ */
+static void
+svn_branch_revision_root_delete_branch_instance(
+                                svn_branch_revision_root_t *rev_root,
+                                svn_branch_instance_t *branch,
+                                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *rev_branches = rev_root->branch_instances;
+  int i;
+
+  SVN_ERR_ASSERT_NO_RETURN(branch->rev_root == rev_root);
+
+  for (i = 0; i < rev_branches->nelts; i++)
+    {
+      svn_branch_instance_t *b = APR_ARRAY_IDX(rev_branches, i, void *);
+
+      if (b == branch)
+        {
+          SVN_DBG(("deleting branch-instance b%d e%d", b->sibling_defn->bid, b->sibling_defn->root_eid));
+          svn_sort__array_delete(rev_branches, i, 1);
+          break;
+        }
+    }
+}
+
+void
+svn_branch_delete_branch_instance_r(svn_branch_instance_t *branch,
+                                    apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *subbranches;
+  int i;
+
+  subbranches = svn_branch_get_all_sub_branches(branch,
+                                                scratch_pool, scratch_pool);
+  for (i = 0; i < subbranches->nelts; i++)
+    {
+      svn_branch_instance_t *subbranch = APR_ARRAY_IDX(subbranches, i, void *);
+
+      svn_branch_delete_branch_instance_r(subbranch, scratch_pool);
+    }
+
+  svn_branch_revision_root_delete_branch_instance(branch->outer_branch->rev_root,
+                                                  branch, scratch_pool);
 }
 
 
@@ -1378,7 +1421,7 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
     apr_array_header_t *subbranches;
     int i;
 
-    subbranches = branch_get_sub_branches(from_branch, from_eid,
+    subbranches = svn_branch_get_subbranches(from_branch, from_eid,
                                           scratch_pool, scratch_pool);
     for (i = 0; i < subbranches->nelts; i++)
       {

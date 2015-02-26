@@ -1067,7 +1067,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
                       svn_editor3_eid_t new_parent_eid,
                       const char *new_name);
 
-/** Delete the existing element identified by @a eid.
+/** Delete the existing element of @a branch identified by @a eid.
  *
  * The delete is not explicitly recursive. However, unless otherwise
  * specified, the caller may assume that each element that has element
@@ -1075,7 +1075,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
  * recursively.
  *
  * If the element @a eid is a subbranch root, then delete that subbranch
- * (recursively).
+ * (recursively). The element @a eid is not the root element of @a branch.
  *
  * @a since_rev specifies the base revision on which this deletion was
  * performed: the server can consider the change "out of date" if a commit
@@ -1751,12 +1751,33 @@ svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
 
 /* Create a new branch instance at OUTER_BRANCH:OUTER_EID, of the branch class
  * BRANCH_SIBLING, with no elements (not even a root element).
+ *
+ * Do not require that a subbranch root element exists in OUTER_BRANCH,
+ * nor create one.
  */
 svn_branch_instance_t *
 svn_branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
                                    int outer_eid,
                                    svn_branch_sibling_t *branch_sibling,
                                    apr_pool_t *scratch_pool);
+
+/* Delete the branch instance BRANCH, and any subbranches recursively.
+ *
+ * Do not require that a subbranch root element exists in its outer branch,
+ * nor delete it if it does exist.
+ */
+void
+svn_branch_delete_branch_instance_r(svn_branch_instance_t *branch,
+                                    apr_pool_t *scratch_pool);
+
+/* Return an array of pointers to the branch instances that are immediate
+ * sub-branches of BRANCH at or below EID.
+ */
+apr_array_header_t *
+svn_branch_get_subbranches(const svn_branch_instance_t *branch,
+                           int eid,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Return an array of pointers to the branch instances that are immediate
  * sub-branches of BRANCH.
