@@ -432,6 +432,7 @@ test_stubs(apr_pool_t *pool)
   /* Ensure we get the real entry.  */
   SVN_ERR(svn_wc_entry(&entry, local_relpath, subdir_access, TRUE, pool));
   SVN_TEST_STRING_ASSERT(entry->name, "");
+  SVN_TEST_ASSERT(entry->schedule == svn_wc_schedule_normal);
 
   /* Ensure that we get the SAME entry, even using the parent baton.  */
   SVN_ERR(svn_wc_entry(&test_entry, local_relpath, adm_access, TRUE, pool));
