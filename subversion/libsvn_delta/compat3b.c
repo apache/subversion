@@ -1041,12 +1041,26 @@ editor3_delete(void *baton,
                    svn_editor3_eid_t eid,
                    apr_pool_t *scratch_pool)
 {
-  SVN_DBG(("delete(e%d)",
-           /*branch->sibling_defn->bid,*/ eid));
+  apr_array_header_t *subbranches;
+  int i;
 
+  SVN_DBG(("delete(b%d e%d)",
+           branch->sibling_defn->bid, eid));
+
+  /* Delete nested branches. ### Shouldn't GC/purge-orphans take care of it? */
+  subbranches = svn_branch_get_subbranches(branch, eid,
+                                           scratch_pool, scratch_pool);
+  for (i = 0; i < subbranches->nelts; i++)
+    {
+      svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
+
+      SVN_DBG(("delete subbranch-tree (b%d) found at outer e%d",
+               b->sibling_defn->bid, b->outer_eid));
+      svn_branch_delete_branch_instance_r(b, scratch_pool);
+    }
+
+  /* Delete the specified element */
   svn_branch_map_delete(branch, eid /* ### , since_rev? */);
-
-  /* ### TODO: Delete nested branches. */
 
   return SVN_NO_ERROR;
 }

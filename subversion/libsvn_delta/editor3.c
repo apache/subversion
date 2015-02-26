@@ -382,6 +382,7 @@ svn_editor3_delete(svn_editor3_t *editor,
                    svn_editor3_eid_t eid)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
+  SVN_ERR_ASSERT(eid != branch->sibling_defn->root_eid);
   /* TODO: verify this element exists (in initial state) */
 
   DO_CALLBACK(editor, cb_delete,

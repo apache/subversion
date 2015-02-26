@@ -1382,6 +1382,9 @@ commit_callback(const svn_commit_info_t *commit_info,
                              _("%s: Path '%s' not found"),              \
                              op, svn_relpath_dirname(action->relpath[i], pool));
 
+#define is_branch_root_element(branch, eid) \
+  ((branch)->sibling_defn->root_eid == (eid))
+
 static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor_url,
@@ -1596,8 +1599,26 @@ execute(const apr_array_header_t *actions,
         case ACTION_RM:
           VERIFY_REV_UNSPECIFIED("rm", 0);
           VERIFY_EID_EXISTS("rm", 0);
-          SVN_ERR(svn_editor3_delete(editor, el_rev[0]->rev,
-                                     el_rev[0]->branch, el_rev[0]->eid));
+          {
+            svn_branch_instance_t *branch = el_rev[0]->branch;
+            int eid = el_rev[0]->eid;
+
+            /* If given a branch root element, look instead at the
+               subbranch-root element within the outer branch. */
+            if (is_branch_root_element(branch, eid))
+              {
+                if (! branch->outer_branch)
+                  return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                     _("rm: cannot remove the repository root"));
+
+                eid = el_rev[0]->branch->outer_eid;
+                branch = el_rev[0]->branch->outer_branch;
+              }
+
+            SVN_ERR(svn_editor3_delete(editor, el_rev[0]->rev,
+                                       branch, eid));
+          }
+          notify("D    %s", action->relpath[0]);
           made_changes = TRUE;
           break;
         case ACTION_MKDIR:
