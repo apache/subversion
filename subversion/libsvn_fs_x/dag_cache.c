@@ -773,18 +773,19 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
   child_copy_id = *svn_fs_x__dag_get_copy_id(child->node);
   parent_copy_id = *svn_fs_x__dag_get_copy_id(child->parent->node);
 
+  /* By default, there is no copy source. */
+  *copy_src_path = NULL;
+
   /* If this child is already mutable, we have nothing to do. */
   if (svn_fs_x__dag_check_mutable(child->node))
     {
       *inherit_p = svn_fs_x__copy_id_inherit_self;
-      *copy_src_path = NULL;
       return SVN_NO_ERROR;
     }
 
   /* From this point on, we'll assume that the child will just take
      its copy ID from its parent. */
   *inherit_p = svn_fs_x__copy_id_inherit_parent;
-  *copy_src_path = NULL;
 
   /* Special case: if the child's copy ID is '0', use the parent's
      copy ID. */
