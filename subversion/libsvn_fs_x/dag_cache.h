@@ -152,14 +152,16 @@ svn_fs_x__get_temp_dag_node(dag_node_t **node_p,
                             apr_pool_t *scratch_pool);
 
 /* Open the node identified by PATH in ROOT.  Set *DAG_NODE_P to the
-   node we find, allocated in POOL.  Return the error
-   SVN_ERR_FS_NOT_FOUND if this node doesn't exist.
+   node we find, allocated in RESULT_POOL.  Return the error
+   SVN_ERR_FS_NOT_FOUND if this node doesn't exist.  Use SCRATCH_POOL
+   for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__get_dag_node(dag_node_t **dag_node_p,
                        svn_fs_root_t *root,
                        const char *path,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Add / update the NODE in the node cache. */
 void
