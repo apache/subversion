@@ -1646,8 +1646,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1)
+                                       check_props=True)
 
   # Commit the merge.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1701,7 +1700,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status, expected_skip,
-                                       None, None, None, None, None, 1)
+                                       check_props=True)
 
   # Commit the merge.
   expected_output = svntest.wc.State(wc_dir, {

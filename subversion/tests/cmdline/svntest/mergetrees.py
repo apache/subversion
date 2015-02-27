@@ -197,7 +197,7 @@ def set_up_dir_replace(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       check_props=True)
   # Commit merge of foo onto C, creating r3.
   expected_output = wc.State(wc_dir, {
     'A/C'        : Item(verb='Sending'),

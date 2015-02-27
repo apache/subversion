@@ -153,8 +153,7 @@ def delete_file_and_dir(sbox):
                                        expected_disk,
                                        expected_status2,
                                        expected_skip,
-                                       None, None, None, None, None,
-                                       True)
+                                       check_props=True)
 
 #----------------------------------------------------------------------
 # This is a regression for issue #1176.
@@ -252,7 +251,7 @@ def merge_catches_nonexistent_target(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, True)
+                                       check_props=True)
 
   expected_status.add({
     'newfile' : Item(status='! ', treeconflict='C'),
@@ -327,8 +326,7 @@ def merge_tree_deleted_in_target(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None,
-                                       1, 0)
+                                       check_props=True)
   expected_status.add({
     'E' : Item(status='! ', treeconflict='C'),
     })
@@ -416,8 +414,8 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None,
-                                       1, 0, '--allow-mixed-revisions', A_path)
+                                       [], True, False,
+                                       '--allow-mixed-revisions', A_path)
 
 #----------------------------------------------------------------------
 # Issue #2515
@@ -475,9 +473,7 @@ def merge_added_dir_to_deleted_in_target(sbox):
                                        expected_elision_output,
                                        expected_disk,
                                        None,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       0, 0)
+                                       expected_skip)
 
 #----------------------------------------------------------------------
 # Issue 2584
@@ -636,8 +632,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None,
-                                       1, 1)
+                                       [], True, True)
 
 #----------------------------------------------------------------------
 def del_differing_file(sbox):
@@ -1526,7 +1521,7 @@ def merge_replace_setup(sbox):
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # ACTIONS ON THE MERGE SOURCE (branch)
   # various deletes of files and dirs
@@ -1570,7 +1565,7 @@ def merge_replace_setup(sbox):
   expected_status.tweak(wc_rev='3')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # replacements.
   # file-with-file

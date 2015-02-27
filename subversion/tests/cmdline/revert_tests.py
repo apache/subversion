@@ -1598,13 +1598,13 @@ def revert_obstructing_wc(sbox):
   # Checkout wc as depth empty
   svntest.actions.run_and_verify_checkout(sbox.repo_url, wc_dir,
                                           expected_output, expected_disk,
-                                          None, None, None, None,
+                                          [],
                                           '--depth', 'empty')
 
   # And create an obstructing working copy as A
   svntest.actions.run_and_verify_checkout(sbox.repo_url, wc_dir + '/A',
                                           expected_output, expected_disk,
-                                          None, None, None, None,
+                                          [],
                                           '--depth', 'empty')
 
   # Now try to fetch the entire wc, which will find an obstruction
@@ -1621,8 +1621,7 @@ def revert_obstructing_wc(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, None,
+                                        [], False,
                                         wc_dir, '--set-depth', 'infinity')
 
   # Revert should do nothing (no local changes), and report the obstruction

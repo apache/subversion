@@ -735,7 +735,7 @@ use-commit-times = yes
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
   svntest.actions.run_and_verify_update(other_wc, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         other_wc, '--config-dir', config_dir)
   iota_text_timestamp = get_text_timestamp(other_iota_path)
   if (iota_text_timestamp[17] != ':' or
@@ -1159,7 +1159,7 @@ def status_update_with_incoming_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], True,
                                         '-r', '1', wc_dir)
 
   # Can't use run_and_verify_status here because the out-of-date
@@ -1263,7 +1263,7 @@ def status_update_verbose_with_incoming_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], True,
                                         '-r', '1', wc_dir)
 
   # Can't use run_and_verify_status here because the out-of-date
@@ -1339,7 +1339,7 @@ def status_nonrecursive_update(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 0,
+                                        [], False,
                                         '-r', '1', wc_dir)
 
   # Check the remote status of folder A (non-recursively)

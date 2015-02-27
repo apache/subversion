@@ -194,8 +194,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1)
+                                       check_props=True)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
   #
@@ -270,8 +269,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
   # Merge r5:7 into the restricted WC's A_COPY_3.
   #
@@ -335,8 +333,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
   svntest.actions.run_and_verify_svn(None, [], 'revert', '--recursive',
                                      wc_restricted)
 
@@ -379,8 +376,8 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, '-c5', '-c8',
+                                       [], True, False,
+                                       '-c5', '-c8',
                                        A_COPY_2_H_path)
 
   # Test issue #2829 'Improve handling for skipped paths encountered
@@ -436,8 +433,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
   # Merge -r4:9 to the restricted WC's A_COPY_2/D/H.
   #
@@ -483,8 +479,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(2876)
@@ -731,8 +726,7 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True, True,
+                                       [], True, True,
                                        '--reintegrate', A_path)
 
 def diff_unauth_parent(sbox):

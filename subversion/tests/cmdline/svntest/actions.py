@@ -482,11 +482,8 @@ def run_and_verify_svnauthz(expected_stdout, expected_stderr,
 
 def run_and_verify_checkout2(do_remove,
                              URL, wc_dir_name, output_tree, disk_tree,
-                             singleton_handler_a = None,
-                             a_baton = None,
-                             singleton_handler_b = None,
-                             b_baton = None,
-                             *args):
+                             expected_stderr=[],
+                             *args, **kw):
   """Checkout the URL into a new directory WC_DIR_NAME. *ARGS are any
   extra optional args to the checkout subcommand.
 
@@ -512,8 +509,9 @@ def run_and_verify_checkout2(do_remove,
   # Checkout and make a tree of the output, using l:foo/p:bar
   ### todo: svn should not be prompting for auth info when using
   ### repositories with no auth/auth requirements
-  exit_code, output, errput = main.run_svn(None, 'co',
-                                           URL, wc_dir_name, *args)
+  exit_code, output, errput = run_and_verify_svn(None, expected_stderr,
+                                                 'co', URL, wc_dir_name,
+                                                 *args)
   actual = tree.build_tree_from_checkout(output)
 
   # Verify actual output against expected output.
@@ -524,16 +522,11 @@ def run_and_verify_checkout2(do_remove,
     raise
 
   if disk_tree:
-    verify_disk(wc_dir_name, disk_tree, False,
-                singleton_handler_a, a_baton,
-                singleton_handler_b, b_baton)
+    verify_disk(wc_dir_name, disk_tree, False, **kw)
 
 def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
-                            singleton_handler_a = None,
-                            a_baton = None,
-                            singleton_handler_b = None,
-                            b_baton = None,
-                            *args):
+                            expected_stderr=[],
+                            *args, **kw):
   """Same as run_and_verify_checkout2(), but without the DO_REMOVE arg.
   WC_DIR_NAME is deleted if present unless the '--force' option is passed
   in *ARGS."""
@@ -544,11 +537,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   # of obstructing paths.
   return run_and_verify_checkout2(('--force' not in args),
                                   URL, wc_dir_name, output_tree, disk_tree,
-                                  singleton_handler_a,
-                                  a_baton,
-                                  singleton_handler_b,
-                                  b_baton,
-                                  *args)
+                                  expected_stderr, *args, **kw)
 
 
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
@@ -780,11 +769,8 @@ def verify_update(actual_output,
                   elision_output_tree,
                   disk_tree,
                   status_tree,
-                  singleton_handler_a=None,
-                  a_baton=None,
-                  singleton_handler_b=None,
-                  b_baton=None,
-                  check_props=False):
+                  check_props=False,
+                  extra_files=None):
   """Verify update of WC_DIR_NAME.
 
   The subcommand output (found in ACTUAL_OUTPUT, ACTUAL_MERGEINFO_OUTPUT,
@@ -847,8 +833,7 @@ def verify_update(actual_output,
   # Create a tree by scanning the working copy, and verify it
   if disk_tree:
     verify_disk(wc_dir_name, disk_tree, check_props,
-                singleton_handler_a, a_baton,
-                singleton_handler_b, b_baton)
+                extra_files=extra_files)
 
   # Verify via 'status' command too, if possible.
   if status_tree:
@@ -856,11 +841,21 @@ def verify_update(actual_output,
 
 
 def verify_disk(wc_dir_name, disk_tree, check_props=False,
-                singleton_handler_a = None, a_baton = None,
-                singleton_handler_b = None, b_baton = None):
+                extra_files=None):
   """Verify WC_DIR_NAME against DISK_TREE.  If CHECK_PROPS is set,
   the comparison will examin props.  Returns if successful, raises on
   failure."""
+
+  singleton_handler_a = None
+  a_baton = None,
+  singleton_handler_b = None
+  b_baton = None
+  done_a = None
+
+  if extra_files:
+    singleton_handler_a = svntest.tree.detect_conflict_files
+    done_a = svntest.tree.detect_conflict_files_done
+    a_baton = extra_files
 
   if isinstance(disk_tree, wc.State):
     disk_tree = disk_tree.old_tree()
@@ -875,18 +870,15 @@ def verify_disk(wc_dir_name, disk_tree, check_props=False,
     _log_tree_state("ACTUAL DISK TREE:", actual_disk)
     raise
 
-
+  if done_a:
+    done_a(a_baton)
 
 
 def run_and_verify_update(wc_dir_name,
                           output_tree, disk_tree, status_tree,
-                          error_re_string = None,
-                          singleton_handler_a = None,
-                          a_baton = None,
-                          singleton_handler_b = None,
-                          b_baton = None,
+                          expected_stderr=[],
                           check_props = False,
-                          *args):
+                          *args, **kw):
 
   """Update WC_DIR_NAME.  *ARGS are any extra optional args to the
   update subcommand.  NOTE: If *ARGS is specified at all, explicit
@@ -904,38 +896,20 @@ def run_and_verify_update(wc_dir_name,
   None, the 'svn status' output will be verified against STATUS_TREE.
   (This is a good way to check that revision numbers were bumped.)
 
-  For the DISK_TREE verification, SINGLETON_HANDLER_A and
-  SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
-  function's doc string for more details.
-
   If CHECK_PROPS is set, then disk comparison will examine props.
 
   Return if successful, raise on failure."""
 
   # Update and make a tree of the output.
-  if len(args):
-    exit_code, output, errput = main.run_svn(error_re_string, 'up', *args)
-  else:
-    exit_code, output, errput = main.run_svn(error_re_string,
-                                             'up', wc_dir_name,
-                                             *args)
+  if len(args) == 0:
+    args = (wc_dir_name,)
 
-  if error_re_string:
-    rm = re.compile(error_re_string)
-    match = None
-    for line in errput:
-      match = rm.search(line)
-      if match:
-        break
-    if not match:
-      raise main.SVNUnmatchedError
+  exit_code, output, errput = run_and_verify_svn(None, expected_stderr, 'up', *args)
 
   actual = wc.State.from_checkout(output)
   verify_update(actual, None, None, wc_dir_name,
                 output_tree, None, None, disk_tree, status_tree,
-                singleton_handler_a, a_baton,
-                singleton_handler_b, b_baton,
-                check_props)
+                check_props, **kw)
 
 
 def run_and_parse_info(*args):
@@ -1047,13 +1021,9 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
                          elision_output_tree,
                          disk_tree, status_tree, skip_tree,
                          error_re_string = None,
-                         singleton_handler_a = None,
-                         a_baton = None,
-                         singleton_handler_b = None,
-                         b_baton = None,
                          check_props = False,
                          dry_run = True,
-                         *args):
+                         *args, **kw):
   """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
   (for a three-way merge between URLs and WC).
 
@@ -1216,9 +1186,7 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
   verify_update(actual_diff, actual_mergeinfo, actual_elision, dir,
                 output_tree, mergeinfo_output_tree, elision_output_tree,
                 disk_tree, status_tree,
-                singleton_handler_a, a_baton,
-                singleton_handler_b, b_baton,
-                check_props)
+                check_props, **kw)
 
 
 def run_and_verify_patch(dir, patch_path,
@@ -1226,7 +1194,7 @@ def run_and_verify_patch(dir, patch_path,
                          error_re_string=None,
                          check_props=False,
                          dry_run=True,
-                         *args):
+                         *args, **kw):
   """Run 'svn patch patch_path DIR'.
 
   If ERROR_RE_STRING, 'svn patch' must exit with error, and the error
@@ -1318,7 +1286,7 @@ def run_and_verify_patch(dir, patch_path,
 
   verify_update(mytree, None, None, dir,
                 output_tree, None, None, disk_tree, status_tree,
-                check_props=check_props)
+                check_props=check_props, **kw)
 
 
 def run_and_verify_mergeinfo(error_re_string = None,
@@ -1361,20 +1329,11 @@ def run_and_verify_switch(wc_dir_name,
                           wc_target,
                           switch_url,
                           output_tree, disk_tree, status_tree,
-                          error_re_string = None,
-                          singleton_handler_a = None,
-                          a_baton = None,
-                          singleton_handler_b = None,
-                          b_baton = None,
+                          expected_stderr = [],
                           check_props = False,
-                          *args):
+                          *args, **kw):
 
   """Switch WC_TARGET (in working copy dir WC_DIR_NAME) to SWITCH_URL.
-
-  If ERROR_RE_STRING, the switch must exit with error, and the error
-  message must match regular expression ERROR_RE_STRING.
-
-  Else if ERROR_RE_STRING is None, then:
 
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
@@ -1382,33 +1341,19 @@ def run_and_verify_switch(wc_dir_name,
   compared.  (This is a good way to check that revision numbers were
   bumped.)
 
-  For the DISK_TREE verification, SINGLETON_HANDLER_A and
-  SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
-  function's doc string for more details.
-
   If CHECK_PROPS is set, then disk comparison will examine props.
 
   Return if successful, raise on failure."""
 
   # Update and make a tree of the output.
-  exit_code, output, errput = main.run_svn(error_re_string, 'switch',
-                                           switch_url, wc_target, *args)
-
-  if error_re_string:
-    if not error_re_string.startswith(".*"):
-      error_re_string = ".*(" + error_re_string + ")"
-    expected_err = verify.RegexOutput(error_re_string, match_all=False)
-    verify.verify_outputs(None, None, errput, None, expected_err)
-  elif errput:
-    raise verify.SVNUnexpectedStderr(err)
-
+  exit_code, output, errput = run_and_verify_svn(None, expected_stderr,
+                                                 'switch', switch_url,
+                                                 wc_target, *args)
   actual = wc.State.from_checkout(output)
 
   verify_update(actual, None, None, wc_dir_name,
                 output_tree, None, None, disk_tree, status_tree,
-                singleton_handler_a, a_baton,
-                singleton_handler_b, b_baton,
-                check_props)
+                check_props, **kw)
 
 def process_output_for_commit(output, error_re_string):
   """Helper for run_and_verify_commit(), also used in the factory."""
@@ -1466,7 +1411,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   be compared.  (This is a good way to check that revision numbers
   were bumped.)
 
-  EXPECTED_STDERR is handled as run_and_verify_svn()
+  EXPECTED_STDERR is handled as in run_and_verify_svn()
 
   Return if successful, raise on failure."""
 
@@ -2256,7 +2201,7 @@ def build_greek_tree_conflicts(sbox):
   expected_disk = main.greek_state
   expected_status = get_virginal_state(wc_dir, 1)
   run_and_verify_update(wc_dir, expected_output, expected_disk,
-                        expected_status, None, None, None, None, None, False,
+                        expected_status, [], False,
                         '-r', '1', wc_dir)
 
   # Make local changes
