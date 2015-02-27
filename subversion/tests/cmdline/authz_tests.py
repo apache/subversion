@@ -83,7 +83,7 @@ def authz_open_root(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         None,
-                                        None,
+                                        [],
                                         mu_path)
 
 #----------------------------------------------------------------------
@@ -119,9 +119,7 @@ def authz_open_directory(sbox):
   # Commit the working copy.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        None,
-                                        None,
-                                        wc_dir)
+                                        None)
 
 @Skip(svntest.main.is_ra_type_file)
 @SkipDumpLoadCrossCheck()
@@ -770,7 +768,7 @@ def authz_locking(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         [],
-                                        None,
+                                        [],
                                         mu_path)
 
   # Lock two paths one of which fails. First add read access to '/' so
@@ -1135,7 +1133,7 @@ def case_sensitive_authz(sbox):
     })
 
   # error messages
-  expected_error_for_commit = "Commit failed"
+  expected_error_for_commit = ".*Commit failed.*"
 
   if sbox.repo_url.startswith("http"):
     expected_error_for_cat = ".*[Ff]orbidden.*"
@@ -1204,7 +1202,7 @@ def case_sensitive_authz(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         None,
-                                        None,
+                                        [],
                                         mu_path)
 
 @Skip(svntest.main.is_ra_type_file)

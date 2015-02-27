@@ -102,7 +102,7 @@ def basic_entries(sbox):
   expected_status.tweak('A/B/E/beta', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None,
+                                        [],
                                         alpha_path, beta_path)
 
   # bump 'G' and iota another revision (3) for later testing
@@ -117,7 +117,7 @@ def basic_entries(sbox):
   expected_status.tweak('A/D/G', 'iota', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None,
+                                        [],
                                         G_path, iota_path)
 
   # Add a file over the DELETED 'alpha'. It should be schedule-add.

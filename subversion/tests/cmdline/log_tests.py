@@ -1474,7 +1474,7 @@ def retrieve_revprops(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         '-m', msg2,
                                         omega_path)
 
@@ -1661,8 +1661,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                   'A_COPY/D/H/omega',
                   'A_COPY/D/H/psi',
                   wc_rev=7)
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
-                                        None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status)
   wc_disk.tweak("A_COPY/D",
                 props={SVN_PROP_MERGEINFO : '/A/D:2-6'})
   wc_disk.tweak("A_COPY/D/G/rho", "A_COPY/D/H/omega", "A_COPY/D/H/psi",
@@ -1712,8 +1711,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   wc_status.tweak('A_COPY/D/H',
                   'A_COPY/D/H/psi',
                   wc_rev=8)
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
-                                        None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status)
   wc_disk.tweak("A_COPY/D/H",
                 props={SVN_PROP_MERGEINFO : '/A/D:2,4-6'})
   wc_disk.tweak("A_COPY/D/G/rho", "A_COPY/D/H/omega", "A_COPY/D/H/psi",

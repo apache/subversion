@@ -164,10 +164,7 @@ def set_up_dir_replace(sbox):
     'A/B/F/foo/new file'    : Item(status='  ', wc_rev=2),
     'A/B/F/foo/new file 2'  : Item(status='  ', wc_rev=2),
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # Merge foo onto C
   expected_output = wc.State(C_path, {
@@ -217,10 +214,7 @@ def set_up_dir_replace(sbox):
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),
 
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # Delete foo on F, creating r4.
   actions.run_and_verify_svn(None, [], 'rm', foo_path)
@@ -234,10 +228,7 @@ def set_up_dir_replace(sbox):
     'A/C/foo/new file'      : Item(status='  ', wc_rev=3),
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
 #----------------------------------------------------------------------
 def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
@@ -333,11 +324,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                                                     dest_name))
 
     expected_output = wc.State(wc_dir, {dest_name : Item(verb='Adding')})
-    actions.run_and_verify_commit(wc_dir,
-                                          expected_output,
-                                          expected_status,
-                                          None,
-                                          wc_dir)
+    actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   for i in range(nbr_of_branches):
     if i == 0:
       copy_A('A_COPY', i + 2)
@@ -354,8 +341,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
   expected_status.tweak('A/D/H/psi', wc_rev=nbr_of_branches + 2)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/H/psi', contents="New content")
 
   # r(nbr_of_branches + 3) - modify and commit A/D/G/rho
@@ -363,8 +349,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/G/rho' : Item(verb='Sending')})
   expected_status.tweak('A/D/G/rho', wc_rev=nbr_of_branches + 3)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/G/rho', contents="New content")
 
   # r(nbr_of_branches + 4) - modify and commit A/B/E/beta
@@ -372,8 +357,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/B/E/beta' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/beta', wc_rev=nbr_of_branches + 4)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/B/E/beta', contents="New content")
 
   # r(nbr_of_branches + 5) - modify and commit A/D/H/omega
@@ -381,8 +365,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/omega' : Item(verb='Sending')})
   expected_status.tweak('A/D/H/omega', wc_rev=nbr_of_branches + 5)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/H/omega', contents="New content")
 
   return expected_disk, expected_status

@@ -61,8 +61,7 @@ def relocate_deleted_missing_copied(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Remove A/B/F to create a missing entry
   svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'F'))
@@ -141,8 +140,7 @@ def relocate_deleted_missing_copied(sbox):
                         status='  ', wc_rev='3', copied=None)
   expected_status.remove('A/D2/G', 'A/D2/G/pi', 'A/D2/G/rho', 'A/D2/G/tau')
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -245,8 +243,7 @@ def relocate_and_propset(sbox):
   # Commit the deletion of gamma and verify.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Now gamma should be marked as `deleted' under the hood, at
   # revision 2.  Meanwhile, A/D is still lagging at revision 1.
@@ -258,8 +255,7 @@ def relocate_and_propset(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "[Oo]ut.of.date",
-                                        wc_dir)
+                                        ".*[Oo]ut of date.*")
 
 #----------------------------------------------------------------------
 
@@ -330,8 +326,7 @@ def relocate_with_switched_children(sbox):
 
   # This won't actually do a commit, because nothing should be modified.
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Check the URLs of various nodes.
   info_output = {

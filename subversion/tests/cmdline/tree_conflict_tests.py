@@ -444,7 +444,7 @@ def ensure_tree_conflict(sbox, operation,
       # For switch/merge, there is no such precondition.
       if operation == 'update':
         logger.debug("--- Trying to commit (expecting 'out-of-date' error)")
-        run_and_verify_commit(".", None, None, "Commit failed",
+        run_and_verify_commit(".", None, None, ".*Commit failed.*",
                               target_path)
 
       if modaction.startswith('f'):
@@ -824,8 +824,7 @@ def force_del_tc_inside(sbox):
   expected_status.remove('A/C')
 
   run_and_verify_commit(wc_dir,
-                        expected_output, expected_status, None,
-                        wc_dir)
+                        expected_output, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -904,8 +903,7 @@ def force_del_tc_is_target(sbox):
   expected_output = wc.State(wc_dir, {})
 
   run_and_verify_commit(wc_dir,
-                        expected_output, expected_status, None,
-                        wc_dir)
+                        expected_output, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -1504,8 +1502,7 @@ def update_delete_mixed_rev(sbox):
                         'A/B/E/beta', 'A/B/lambda',
                         status='  ', wc_rev=4, copied=None, treeconflict=None)
   run_and_verify_commit(wc_dir,
-                        expected_output, expected_status, None,
-                        wc_dir)
+                        expected_output, expected_status)
 
   expected_info = {
     'Name': 'alpha2',

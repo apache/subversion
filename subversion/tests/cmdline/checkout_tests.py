@@ -807,7 +807,7 @@ def co_with_obstructing_local_adds(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create various paths scheduled for addition which will obstruct
   # the adds coming from the repos.

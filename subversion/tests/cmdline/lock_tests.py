@@ -176,9 +176,7 @@ def commit_file_unlock(sbox):
   # Make sure both iota an mu are unlocked, but only mu is bumped
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def commit_propchange(sbox):
@@ -896,7 +894,7 @@ def lock_uri_encoded(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         file_path)
 
   svntest.actions.run_and_verify_svn(".*locked by user", [], 'lock',
@@ -1215,9 +1213,7 @@ def info_moved_path(sbox):
   expected_status.remove("iota")
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Create a new, unrelated iota, creating r3.
   svntest.main.file_append(fname, "Another iota")
@@ -1231,9 +1227,7 @@ def info_moved_path(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Lock the new iota.
   svntest.actions.run_and_verify_svn(".*locked by user", [],
@@ -1274,9 +1268,7 @@ def ls_url_encoded(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Lock the file.
   svntest.actions.run_and_verify_svn(".*locked by user",
@@ -1343,7 +1335,7 @@ def examine_lock_encoded_recurse(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         file_path)
 
   # lock the file and validate the contents
@@ -1838,8 +1830,7 @@ def commit_stolen_lock(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         [],
                                         expected_status,
-                                        err_re,
-                                        wc_dir)
+                                        err_re)
 
 # When removing directories, the locks of contained files were not
 # correctly removed from the working copy database, thus they later
@@ -1863,9 +1854,7 @@ def drop_locks_on_parent_deletion(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         [],
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # now re-add entities to the deleted pathes.
   sbox.simple_mkdir('A/B')
@@ -1886,9 +1875,7 @@ def drop_locks_on_parent_deletion(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         [],
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 
 def copy_with_lock(sbox):
@@ -1917,9 +1904,7 @@ def copy_with_lock(sbox):
   # copy source and so the commit fails.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 def lock_hook_messages(sbox):
   "verify (un)lock message is transferred correctly"
@@ -2338,8 +2323,7 @@ def lock_commit_bump(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # We explicitly check both the Revision and Last Changed Revision.
   expected_infos = [ {

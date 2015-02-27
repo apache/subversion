@@ -133,9 +133,7 @@ def commit_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 
 
@@ -169,16 +167,14 @@ def update_props(sbox):
 
   # Commit property mods
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Add more properties
   sbox.simple_propset('blue2', 'azul2', 'A/mu')
   sbox.simple_propset('red2', 'rojo2', 'A/D/H')
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=3, status='  ')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -243,8 +239,7 @@ def downdate_props(sbox):
 
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Make some mod (something to commit)
   svntest.main.file_append(mu_path, "some mod")
@@ -261,8 +256,7 @@ def downdate_props(sbox):
 
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
@@ -313,8 +307,7 @@ def remove_props(sbox):
 
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 
@@ -404,8 +397,7 @@ def commit_conflict_dirprops(sbox):
   sbox.simple_propset('foo', 'eek', '')
 
   svntest.actions.run_and_verify_commit(wc_dir, None, None,
-                                        "[oO]ut[- ]of[- ]date",
-                                        wc_dir)
+                                        ".*[oO]ut[- ]of[- ]date.*")
 
 #----------------------------------------------------------------------
 
@@ -464,8 +456,7 @@ def commit_replacement_props(sbox):
   expected_status.tweak('A/B/lambda', wc_rev=3, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 
@@ -1001,9 +992,7 @@ def binary_props(sbox):
   # Commit the propsets.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Create expected output, disk, and status trees for an update of
   # the wc_backup.
@@ -1268,8 +1257,7 @@ def update_props_on_wc_root(sbox):
 
   # Commit the working copy
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
  # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -1527,8 +1515,7 @@ def remove_custom_ns_props(sbox):
 
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected trees for the update.
   expected_output = svntest.wc.State(wc_backup, {
@@ -2316,7 +2303,7 @@ def file_matching_dir_prop_reject(sbox):
     'A/dir_conflicts' : Item(status='  ', wc_rev=2),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Modify/commit property change
   sbox.simple_propset('prop', 'val2', 'A/dir_conflicts')
@@ -2327,7 +2314,7 @@ def file_matching_dir_prop_reject(sbox):
       })
   expected_status.tweak('A', 'A/dir_conflicts', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Local property mod
   sbox.simple_propset('prop', 'val3', 'A/dir_conflicts')
@@ -2728,8 +2715,7 @@ def dir_prop_conflict_details(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        '.*[Oo]ut of date.*',
-                                        wc_dir)
+                                        '.*[Oo]ut of date.*')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A'                 : Item(status=' C'),

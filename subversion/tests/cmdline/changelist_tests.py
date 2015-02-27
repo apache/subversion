@@ -442,7 +442,7 @@ def commit_one_changelist(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir,
                                         "--changelist",
                                         "a")
@@ -483,7 +483,7 @@ def commit_multiple_changelists(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir,
                                         "--changelist", "a",
                                         "--changelist", "i")
@@ -907,7 +907,7 @@ def tree_conflicts_and_changelists_on_commit1(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir,
                                         "--changelist",
                                         "list")
@@ -980,7 +980,7 @@ def tree_conflicts_and_changelists_on_commit2(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir,
                                         "--changelist",
                                         "list")

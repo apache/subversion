@@ -127,7 +127,7 @@ def update_binary_file(sbox):
 
   # Commit the new binary file, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Make a backup copy of the working copy.
   wc_backup = sbox.add_wc_path('backup')
@@ -151,7 +151,7 @@ def update_binary_file(sbox):
 
   # Commit original working copy again, creating revision 3.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Now start working in the backup working copy:
 
@@ -249,7 +249,7 @@ def update_binary_file_2(sbox):
 
   # Commit the new binary filea, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
@@ -272,7 +272,7 @@ def update_binary_file_2(sbox):
 
   # Commit original working copy again, creating revision 3.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update to rev 2.
   expected_output = svntest.wc.State(wc_dir, {
@@ -340,7 +340,7 @@ def update_binary_file_3(sbox):
 
   # Commit the new binary file, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
@@ -359,7 +359,7 @@ def update_binary_file_3(sbox):
 
   # Commit modified working copy, creating revision 3.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Now we locally modify the file back to the old version.
   svntest.main.file_write(theta_path, theta_contents, 'wb')
@@ -581,7 +581,7 @@ def receive_overlapping_same_change(sbox):
 
   # Commit the change, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Expected output tree for update of other_wc.
   expected_output = svntest.wc.State(other_wc, {
@@ -644,7 +644,7 @@ def update_to_resolve_text_conflicts(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -822,7 +822,7 @@ def update_after_add_rm_deleted(sbox):
   expected_status.remove('A/B/F')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # alpha and F are now in state "deleted", next we add a new ones
   svntest.main.file_append(alpha_path, "new alpha")
@@ -962,7 +962,7 @@ def update_replace_dir(sbox):
   expected_status.remove('A/B/F')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Add replacement directory
   svntest.actions.run_and_verify_svn(None, [], 'mkdir', F_path)
@@ -976,7 +976,7 @@ def update_replace_dir(sbox):
   expected_status.tweak('A/B/F', wc_rev=3)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Update to HEAD
   expected_output = svntest.wc.State(wc_dir, {
@@ -1030,7 +1030,7 @@ def update_single_file(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # At one stage 'svn up file' failed with a parent lock error
   was_cwd = os.getcwd()
@@ -1073,7 +1073,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Commit the change, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   svntest.main.run_svn(None, 'rm', other_iota_path)
 
@@ -1233,8 +1233,7 @@ def another_hudson_problem(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Delete directory G from the repository
   svntest.actions.run_and_verify_svn(['Committing transaction...\n',
@@ -1300,8 +1299,7 @@ def update_deleted_targets(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Explicit update must not remove the 'deleted=true' entries
   svntest.actions.run_and_verify_svn(exp_noop_up_out(2), [],
@@ -1388,8 +1386,7 @@ def non_recursive_update(sbox):
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Update back to revision 1
   expected_output = svntest.wc.State(wc_dir, {
@@ -1689,7 +1686,7 @@ def update_xml_unsafe_dir(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # chdir into the funky path, and update from there.
   os.chdir(test_path)
@@ -1767,7 +1764,7 @@ def conflict_markers_matching_eol(sbox):
 
     # Commit the original change and note the 'base' revision number
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          expected_status, None, wc_dir)
+                                          expected_status)
     cur_rev = cur_rev + 1
     base_rev = cur_rev
 
@@ -2051,7 +2048,7 @@ def forced_update(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Make a local mod to mu that will merge cleanly.
   backup_mu_path = os.path.join(wc_backup, 'A', 'mu')
@@ -2166,7 +2163,7 @@ def forced_update_failures(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create an unversioned dir A/B/F/nu that will obstruct the file of the
   # same name coming from the repository.  Create an unversioned file A/C/I
@@ -2372,7 +2369,7 @@ def update_wc_on_windows_drive(sbox):
     })
 
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          expected_status, None,
+                                          expected_status, [],
                                           wc_dir, zeta_path)
 
     # Non recursive commit
@@ -2394,7 +2391,7 @@ def update_wc_on_windows_drive(sbox):
       })
 
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          expected_status, None,
+                                          expected_status, [],
                                           '-N',
                                           wc_dir,
                                           dir1_path, file1_path)
@@ -2675,7 +2672,7 @@ def update_with_obstructing_additions(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create various paths scheduled for addition which will obstruct
   # the adds coming from the repos.
@@ -2979,7 +2976,7 @@ def update_conflicted(sbox):
   expected_status.tweak('iota', 'A/mu', 'A/B/lambda', 'A/D', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Do another change to each path that we will need later.
   # Also, change a file below A/D in the path.
@@ -2998,7 +2995,7 @@ def update_conflicted(sbox):
     'A/D/G/pi': Item(verb='Sending')})
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Go back to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -3154,9 +3151,7 @@ def mergeinfo_update_elision(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Make some changes under A/B
 
@@ -3168,7 +3163,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak('A/B/E/beta', wc_rev=3)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # r4 - modify and commit A/B/lambda
   svntest.main.file_write(lambda_path, "New content")
@@ -3178,7 +3173,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak('A/B/lambda', wc_rev=4)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # r5 - modify and commit A/B/E/alpha
   svntest.main.file_write(alpha_path, "New content")
@@ -3188,7 +3183,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak('A/B/E/alpha', wc_rev=5)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Merge r2:5 into A/B_COPY
   expected_output = wc.State(B_COPY_path, {
@@ -3248,7 +3243,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak('A/B_COPY/lambda',  wc_rev=6)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Update WC back to r5, A/COPY_B is at it's pre-merge state again
   expected_output = wc.State(wc_dir,
@@ -3342,7 +3337,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak('A/B/E/alpha', 'A/B_COPY/E/alpha', status='  ',
                         wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Update A to get all paths to the same working revision.
   svntest.actions.run_and_verify_svn(exp_noop_up_out(7), [],
@@ -3399,7 +3394,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak('A/B_COPY/E', 'A/B_COPY/E/alpha', wc_rev=8)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Update A/COPY_B/E back to r7
   expected_output = wc.State(wc_dir, {
@@ -3548,7 +3543,7 @@ def update_copied_from_replaced_and_changed(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Modify fn2.
   fn2_final_contents = "I have new contents for the middle file."
@@ -3567,7 +3562,7 @@ def update_copied_from_replaced_and_changed(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Go back to r1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -3635,7 +3630,7 @@ def update_copied_and_deleted_prop(sbox):
   expected_status_mixed.tweak('iota', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status_mixed, None, wc_dir)
+                                        expected_status_mixed)
 
   # Copy iota to iota2 and delete the property on it.
   svntest.actions.run_and_verify_svn(None, [],
@@ -3653,7 +3648,7 @@ def update_copied_and_deleted_prop(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status_mixed, None, wc_dir)
+                                        expected_status_mixed)
 
   # Update the whole wc, verifying disk as well.
   expected_output = svntest.wc.State(wc_dir, { })
@@ -3803,7 +3798,7 @@ def update_accept_conflicts(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Now we'll update each of our 5 files in wc_backup; each one will get
   # conflicts, and we'll handle each with a different --accept option.
@@ -3996,7 +3991,7 @@ def restarted_update_should_delete_dir_prop(sbox):
   expected_status.tweak('A', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create a second working copy.
   ### Does this hack still work with wc-ng?
@@ -4023,7 +4018,7 @@ def restarted_update_should_delete_dir_prop(sbox):
     })
 
   svntest.actions.run_and_verify_commit(other_wc, expected_output,
-                                        expected_status, None, other_wc)
+                                        expected_status)
 
   # Back in the first working copy, create an obstructing path and
   # update. The update will flag a tree conflict.
@@ -4752,7 +4747,7 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
       })
 
   run_and_verify_commit(wc_dir, expected_output, expected_status,
-                        None, wc_dir, '-m', 'commit resolved tree')
+                        [], wc_dir, '-m', 'commit resolved tree')
 
 
 # Issue #3334: a delete-onto-modified tree conflict should leave the node

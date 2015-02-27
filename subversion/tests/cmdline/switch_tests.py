@@ -664,8 +664,7 @@ def obstructed_switch(sbox):
   expected_status = actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha')
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # echo "hello" >> A/B/E/alpha
   main.file_append(A_B_E_alpha, 'hello')
@@ -763,7 +762,7 @@ def commit_mods_below_switch(sbox):
   # with "'A/C/E' is missing or not locked"
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, C_path, D_path)
+                                        [], C_path, D_path)
 
 #----------------------------------------------------------------------
 # Issue 2306.
@@ -801,7 +800,7 @@ def refresh_read_only_attribute(sbox):
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, mu_path)
+                                        [], mu_path)
 
   # The file on which svn:needs-lock was set is now expected to be read-only.
   if os.access(mu_path, os.W_OK):
@@ -1391,9 +1390,7 @@ def mergeinfo_switch_elision(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Make some changes under A/B
 
@@ -1403,7 +1400,7 @@ def mergeinfo_switch_elision(sbox):
                                      {'A/B/E/beta' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/beta', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # r4 - modify and commit A/B/E/alpha
   svntest.main.file_write(alpha_path, "New content")
@@ -1411,7 +1408,7 @@ def mergeinfo_switch_elision(sbox):
                                      {'A/B/E/alpha' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/alpha', wc_rev=4)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Merge r2:4 into A/B_COPY_1
   expected_output = svntest.wc.State(B_COPY_1_path, {
@@ -1463,7 +1460,7 @@ def mergeinfo_switch_elision(sbox):
   expected_status.tweak('A/B_COPY_1/E/beta',  wc_rev=5)
   expected_status.tweak('A/B_COPY_1/lambda',  wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Merge r2:4 into A/B_COPY_2/E
   expected_output = svntest.wc.State(E_COPY_2_path, {
