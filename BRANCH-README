@@ -1,0 +1,6 @@
+This branch will be used to add httpd-2.4-style expression support
+to the SVNPath and SVNParentPath directives of mod_dav_svn.
+
+See the mail thread starting at:
+
+    http://mail-archives.apache.org/mod_mbox/subversion-dev/201502.mbox/%3C20A45C12-763A-4EBC-A8FF-BE5678BF511D%40sharp.fm%3E
