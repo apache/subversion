@@ -499,7 +499,9 @@ def basic_update_corruption(sbox):
                                         fail_output,
                                         expected_disk,
                                         fail_status,
-                                        "svn: E155017: Checksum", other_wc)
+                                        "svn: E155017: Checksum",
+                                        None, None, None, None,
+                                        None, other_wc)
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
