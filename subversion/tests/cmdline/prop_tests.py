@@ -2597,7 +2597,7 @@ def almost_known_prop_names(sbox):
   svntest.actions.set_prop('svn:foobar', 'x', iota_path,
                            "svn: E195011: 'svn:foobar'"
                            " is not a valid svn: property name;"
-                           " re-run with '--force' to set it")
+                           " use '--force' to set it")
 
 @Issue(3231)
 def peg_rev_base_working(sbox):
