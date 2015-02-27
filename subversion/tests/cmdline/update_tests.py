@@ -2210,8 +2210,8 @@ def forced_update_failures(sbox):
 
   expected_disk = svntest.wc.State(wc_dir, {})
 
-  actions.run_and_verify_checkout2(False, url_A_C_I, backup_A_C_I,
-                                   expected_output, expected_disk)
+  actions.run_and_verify_checkout(url_A_C_I, backup_A_C_I,
+                                  expected_output, expected_disk)
 
   # svn up --force wc_dir_backup/A/C
   expected_output = svntest.wc.State(wc_dir_backup, {

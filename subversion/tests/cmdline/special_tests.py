@@ -491,7 +491,8 @@ def checkout_repo_with_symlinks(sbox):
 
   svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
                                                'special_tests_data',
-                                               'symlink.dump'))
+                                               'symlink.dump'),
+                            create_wc=False)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'from': Item(status='A '),
@@ -557,7 +558,8 @@ def checkout_repo_with_unknown_special_type(sbox):
 
   svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
                                                'special_tests_data',
-                                               'bad-special-type.dump'))
+                                               'bad-special-type.dump'),
+                            create_wc=False)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'special': Item(status='A '),
@@ -575,7 +577,8 @@ def replace_symlink_with_dir(sbox):
 
   svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
                                                'special_tests_data',
-                                               'symlink.dump'))
+                                               'symlink.dump'),
+                            create_wc=False)
 
   wc_dir = sbox.wc_dir
   from_path = os.path.join(wc_dir, 'from')

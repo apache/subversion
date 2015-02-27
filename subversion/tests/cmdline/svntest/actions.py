@@ -430,7 +430,7 @@ def run_and_verify_svnsync2(expected_stdout, expected_stderr,
 
 
 def load_repo(sbox, dumpfile_path = None, dump_str = None,
-              bypass_prop_validation = False):
+              bypass_prop_validation = False,create_wc=True):
   "Loads the dumpfile into sbox"
   if not dump_str:
     dump_str = open(dumpfile_path, "rb").read()
@@ -443,7 +443,8 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None,
   # Load the mergetracking dumpfile into the repos, and check it out the repo
   run_and_verify_load(sbox.repo_dir, dump_str.splitlines(True),
                       bypass_prop_validation)
-  run_and_verify_svn(None, [], "co", sbox.repo_url, sbox.wc_dir)
+  if create_wc:
+    run_and_verify_svn(None, [], "co", sbox.repo_url, sbox.wc_dir)
 
   return dump_str
 
@@ -480,10 +481,9 @@ def run_and_verify_svnauthz(expected_stdout, expected_stderr,
 #
 
 
-def run_and_verify_checkout2(do_remove,
-                             URL, wc_dir_name, output_tree, disk_tree,
-                             expected_stderr=[],
-                             *args, **kw):
+def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
+                            expected_stderr=[],
+                            *args, **kw):
   """Checkout the URL into a new directory WC_DIR_NAME. *ARGS are any
   extra optional args to the checkout subcommand.
 
@@ -499,12 +499,6 @@ def run_and_verify_checkout2(do_remove,
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
-
-  # Remove dir if it's already there, unless this is a forced checkout.
-  # In that case assume we want to test a forced checkout's toleration
-  # of obstructing paths.
-  if do_remove:
-    main.safe_rmtree(wc_dir_name)
 
   # Checkout and make a tree of the output, using l:foo/p:bar
   ### todo: svn should not be prompting for auth info when using
@@ -523,22 +517,6 @@ def run_and_verify_checkout2(do_remove,
 
   if disk_tree:
     verify_disk(wc_dir_name, disk_tree, False, **kw)
-
-def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
-                            expected_stderr=[],
-                            *args, **kw):
-  """Same as run_and_verify_checkout2(), but without the DO_REMOVE arg.
-  WC_DIR_NAME is deleted if present unless the '--force' option is passed
-  in *ARGS."""
-
-
-  # Remove dir if it's already there, unless this is a forced checkout.
-  # In that case assume we want to test a forced checkout's toleration
-  # of obstructing paths.
-  return run_and_verify_checkout2(('--force' not in args),
-                                  URL, wc_dir_name, output_tree, disk_tree,
-                                  expected_stderr, *args, **kw)
-
 
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                           *args):
