@@ -119,14 +119,6 @@ svn_fs_x__open_pack_or_rev_file_writable(svn_fs_x__revision_file_t **file,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
-/* If the footer data in FILE has not been read, yet, do so now.
- * Index locations will only be read upon request as we assume they get
- * cached and the FILE is usually used for REP data access only.
- * Hence, the separate step.
- */
-svn_error_t *
-svn_fs_x__auto_read_footer(svn_fs_x__revision_file_t *file);
-
 /* Open the proto-rev file of transaction TXN_ID in FS and return it in *FILE.
  * Allocate *FILE in RESULT_POOL use and SCRATCH_POOL for temporaries.. */
 svn_error_t *

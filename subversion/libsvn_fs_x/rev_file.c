@@ -230,8 +230,13 @@ svn_fs_x__open_pack_or_rev_file_writable(svn_fs_x__revision_file_t** file,
                                                result_pool, scratch_pool));
 }
 
-svn_error_t *
-svn_fs_x__auto_read_footer(svn_fs_x__revision_file_t *file)
+/* If the footer data in FILE has not been read, yet, do so now.
+ * Index locations will only be read upon request as we assume they get
+ * cached and the FILE is usually used for REP data access only.
+ * Hence, the separate step.
+ */
+static svn_error_t *
+auto_read_footer(svn_fs_x__revision_file_t *file)
 {
   if (file->l2p_info.start == -1)
     {
@@ -309,7 +314,7 @@ svn_fs_x__rev_file_l2p_index(svn_fs_x__packed_number_stream_t **stream,
 {
   if (file->l2p_stream == NULL)
     {
-      SVN_ERR(svn_fs_x__auto_read_footer(file));
+      SVN_ERR(auto_read_footer(file));
       SVN_ERR(svn_fs_x__packed_stream_open(&file->l2p_stream,
                                            file->file,
                                            file->l2p_info.start,
@@ -330,7 +335,7 @@ svn_fs_x__rev_file_p2l_index(svn_fs_x__packed_number_stream_t **stream,
 {
   if (file->p2l_stream== NULL)
     {
-      SVN_ERR(svn_fs_x__auto_read_footer(file));
+      SVN_ERR(auto_read_footer(file));
       SVN_ERR(svn_fs_x__packed_stream_open(&file->p2l_stream,
                                            file->file,
                                            file->p2l_info.start,
@@ -349,7 +354,7 @@ svn_error_t *
 svn_fs_x__rev_file_l2p_info(svn_fs_x__index_info_t *info,
                             svn_fs_x__revision_file_t *file)
 {
-  SVN_ERR(svn_fs_x__auto_read_footer(file));
+  SVN_ERR(auto_read_footer(file));
   *info = file->l2p_info;
 
   return SVN_NO_ERROR;
@@ -359,7 +364,7 @@ svn_error_t *
 svn_fs_x__rev_file_p2l_info(svn_fs_x__index_info_t *info,
                             svn_fs_x__revision_file_t *file)
 {
-  SVN_ERR(svn_fs_x__auto_read_footer(file));
+  SVN_ERR(auto_read_footer(file));
   *info = file->p2l_info;
 
   return SVN_NO_ERROR;
