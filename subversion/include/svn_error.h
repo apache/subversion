@@ -177,6 +177,8 @@ svn_error_quick_wrap(svn_error_t *child,
  * printf-style error message produced by passing @a fmt, using
  * apr_psprintf(), before throwing it up the stack.  (It uses all of the
  * @a child's fields.)
+ *
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_error_quick_wrapf(svn_error_t *child,
