@@ -416,6 +416,17 @@ svn_editor3_alter(svn_editor3_t *editor,
 }
 
 svn_error_t *
+svn_editor3_sequence_point(svn_editor3_t *editor)
+{
+  SHOULD_NOT_BE_FINISHED(editor);
+
+  DO_CALLBACK(editor, cb_sequence_point,
+              0());
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_editor3_complete(svn_editor3_t *editor)
 {
   SHOULD_NOT_BE_FINISHED(editor);
@@ -911,6 +922,17 @@ wrap_alter(void *baton,
 }
 
 static svn_error_t *
+wrap_sequence_point(void *baton,
+                    apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  dbg(eb, scratch_pool, "sequence_point()");
+  SVN_ERR(svn_editor3_sequence_point(eb->wrapped_editor));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 wrap_complete(void *baton,
               apr_pool_t *scratch_pool)
 {
@@ -952,6 +974,7 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
     wrap_copy_tree,
     wrap_delete,
     wrap_alter,
+    wrap_sequence_point,
     wrap_complete,
     wrap_abort
   };

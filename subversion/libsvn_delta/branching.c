@@ -513,17 +513,46 @@ svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
               svn_branch_el_rev_content_t *parent_node
                 = svn_branch_map_get(branch, this_node->parent_eid);
 
-              /* Purge if parent is deleted or is a subbranch-root node */
-              if (! parent_node || ! parent_node->content)
+              /* Purge if parent is deleted */
+              if (! parent_node)
                 {
                   SVN_DBG(("purge orphan: e%d", this_eid));
                   svn_branch_map_delete(branch, this_eid);
                   changed = TRUE;
                 }
+              else
+                SVN_ERR_ASSERT_NO_RETURN(parent_node->content);
             }
         }
     }
   while (changed);
+}
+
+void
+svn_branch_purge_r(svn_branch_instance_t *branch,
+                   apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *subbranches
+    = svn_branch_get_all_sub_branches(branch, scratch_pool, scratch_pool);
+  int i;
+
+  /* first, remove elements that have no parent element */
+  svn_branch_map_purge_orphans(branch, scratch_pool);
+
+  /* second, remove subbranches that have no subbranch-root element */
+  for (i = 0; i < subbranches->nelts; i++)
+    {
+      svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
+
+      if (svn_branch_map_get(branch, b->outer_eid))
+        {
+          svn_branch_purge_r(b, scratch_pool);
+        }
+      else
+        {
+          svn_branch_delete_branch_instance_r(b, scratch_pool);
+        }
+    }
 }
 
 const char *
@@ -797,8 +826,22 @@ svn_branch_get_all_sub_branches(const svn_branch_instance_t *branch,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
-  return svn_branch_get_subbranches(branch, branch->sibling_defn->root_eid,
-                                 result_pool, scratch_pool);
+  apr_array_header_t *subbranches = apr_array_make(result_pool, 0,
+                                                   sizeof(void *));
+  int i;
+
+  for (i = 0; i < branch->rev_root->branch_instances->nelts; i++)
+    {
+      svn_branch_instance_t *b
+        = APR_ARRAY_IDX(branch->rev_root->branch_instances, i, void *);
+
+      /* Is it an immediate child? */
+      if (b->outer_branch == branch)
+        {
+          APR_ARRAY_PUSH(subbranches, void *) = b;
+        }
+    }
+  return subbranches;
 }
 
 svn_branch_instance_t *
