@@ -303,9 +303,7 @@ def resolved_on_wc_root(sbox):
 
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc)
+                                        expected_status)
 
   # Go back to rev 1
   expected_output = svntest.wc.State(wc, {
@@ -469,9 +467,7 @@ def resolved_on_deleted_item(sbox):
 
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc)
+                                        expected_status)
 
   # Delete the paths in the second directory.
   svntest.actions.run_and_verify_svn(None, [],
@@ -490,7 +486,7 @@ def resolved_on_deleted_item(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         A2)
 
   # Now merge A to A2, creating conflicts...

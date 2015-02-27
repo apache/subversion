@@ -72,8 +72,7 @@ def svnversion_test(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   if svntest.actions.run_and_verify_commit(wc_dir,
-                                           expected_output, expected_status,
-                                           None, wc_dir):
+                                           expected_output, expected_status):
     raise svntest.Failure
 
   # Unmodified, mixed
@@ -189,8 +188,7 @@ ext-file -r 1 %s/A/D/H/omega
   expected_status.tweak('A/C', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)

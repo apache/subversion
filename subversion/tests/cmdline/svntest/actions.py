@@ -1456,7 +1456,7 @@ def process_output_for_commit(output, error_re_string):
 
 
 def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
-                          error_re_string = None,
+                          expected_stderr=[],
                           *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
@@ -1466,9 +1466,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   be compared.  (This is a good way to check that revision numbers
   were bumped.)
 
-  If ERROR_RE_STRING is None, the commit must not exit with error.  If
-  ERROR_RE_STRING is a string, the commit must exit with error, and
-  the error message must match regular expression ERROR_RE_STRING.
+  EXPECTED_STDERR is handled as run_and_verify_svn()
 
   Return if successful, raise on failure."""
 
@@ -1476,21 +1474,15 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     output_tree = output_tree.old_tree()
 
   # Commit.
+  if len(args) == 0:
+    args = (wc_dir_name,)
   if '-m' not in args and '-F' not in args:
     args = list(args) + ['-m', 'log msg']
-  exit_code, output, errput = main.run_svn(error_re_string, 'ci',
-                                           *args)
-
-  if error_re_string:
-    if not error_re_string.startswith(".*"):
-      error_re_string = ".*(" + error_re_string + ")"
-    expected_err = verify.RegexOutput(error_re_string, match_all=False)
-    verify.verify_outputs(None, None, errput, None, expected_err)
-
-  # Else not expecting error:
+  exit_code, output, errput = run_and_verify_svn(None, expected_stderr,
+                                                 'ci', *args)
 
   # Convert the output into a tree.
-  output = process_output_for_commit(output, error_re_string)
+  output = process_output_for_commit(output, expected_stderr)
   actual = tree.build_tree_from_commit(output)
 
   # Verify actual output against expected output.
@@ -2150,7 +2142,7 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
   if expected_status:
     expected_status.tweak(state_path, wc_rev=merged_rev)
   run_and_verify_commit(wc_dir, expected_output, expected_status,
-                        None, file_path)
+                        [], file_path)
 
   # Backdate the file.
   exit_code, output, errput = main.run_svn(None, "up", "-r", str(prev_rev),
@@ -2252,7 +2244,7 @@ def build_greek_tree_conflicts(sbox):
   expected_status = get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/pi', wc_rev='2')
   expected_status.remove('A/D/G/rho', 'A/D/G/tau')
-  run_and_verify_commit(wc_dir, expected_output, expected_status, None,
+  run_and_verify_commit(wc_dir, expected_output, expected_status, [],
                         '-m', 'Incoming changes.', wc_dir )
 
   # Update back to the pristine state ("time-warp").

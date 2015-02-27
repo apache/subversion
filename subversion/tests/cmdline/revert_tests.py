@@ -91,8 +91,7 @@ def revert_replacement_with_props(sbox, wc_copy):
   expected_status.tweak('A/D/G/rho', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Bring wc into sync
   svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
@@ -303,8 +302,8 @@ def revert_reexpand_keyword(sbox):
 
   # This commit fails because newfile2_path is missing, but only after
   # we call svn_wc__internal_file_modified_p() on new_file.
-  svntest.actions.run_and_verify_commit(wc_dir, None, None, "2' is scheduled"+
-                                        " for addition, but is missing",
+  svntest.actions.run_and_verify_commit(wc_dir, None, None, ".*2' is scheduled"+
+                                        " for addition, but is missing.*",
                                         newfile_path, newfile2_path,
                                         '-m', "Shouldn't be committed")
 
@@ -339,7 +338,7 @@ def revert_replaced_file_without_props(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # delete file1
   svntest.actions.run_and_verify_svn(None, [], 'rm', file1_path)
@@ -444,8 +443,7 @@ def revert_file_merge_replace_with_history(sbox):
   # Commit rev 2
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
   # create new rho file
   svntest.main.file_write(rho_path, "new rho\n")
 
@@ -463,7 +461,7 @@ def revert_file_merge_replace_with_history(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # Update working copy
   expected_output = svntest.wc.State(wc_dir, {})
@@ -713,8 +711,7 @@ def revert_replaced_with_history_file_1(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # update the working copy
   svntest.main.run_svn(None, 'up', wc_dir)
@@ -754,8 +751,7 @@ def revert_replaced_with_history_file_1(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Verify the content of 'mu'
   svntest.actions.run_and_verify_svn(text_r1, [], 'cat', mu_path)
@@ -821,8 +817,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # copy A/D/G from A/B/E and commit
   E_path = os.path.join(wc_dir, "A", "B", "E")
@@ -837,8 +832,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # update the working copy
   svntest.main.run_svn(None, 'up', wc_dir)
@@ -928,8 +922,7 @@ def revert_replaced_with_history_file_2(sbox):
   expected_status.tweak('A/mu', status='  ', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 
@@ -1170,8 +1163,7 @@ def revert_permissions_only(sbox):
   expected_status.tweak('A/B/E/beta',  wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   os.chmod(sbox.ospath('A/B/E/alpha'), 0666)  # not read-only
   is_writable(sbox.ospath('A/B/E/alpha'))

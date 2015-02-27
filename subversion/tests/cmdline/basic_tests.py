@@ -140,9 +140,7 @@ def basic_commit(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 
 #----------------------------------------------------------------------
@@ -176,7 +174,7 @@ def basic_update(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -406,8 +404,7 @@ def basic_commit_corruption(sbox):
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         None, # expected_status,
-                                        "svn: E200014: Checksum",
-                                        wc_dir)
+                                        "svn: E200014: Checksum")
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
@@ -419,7 +416,7 @@ def basic_commit_corruption(sbox):
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def basic_update_corruption(sbox):
@@ -463,7 +460,7 @@ def basic_update_corruption(sbox):
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the other_wc.
   expected_output = wc.State(other_wc, {
@@ -558,7 +555,7 @@ def basic_merging_update(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir)
 
   # Make a backup copy of the working copy
@@ -584,7 +581,7 @@ def basic_merging_update(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir)
 
   # Make local mods to wc_backup by recreating mu and rho
@@ -665,7 +662,7 @@ def basic_conflict(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -1292,8 +1289,7 @@ def basic_checkout_deleted(sbox):
                          'A/D/gamma')
 
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Now try to checkout revision 1 of A/D.
   url = sbox.repo_url + '/A/D'
@@ -1335,8 +1331,7 @@ def basic_node_kind_change(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', status='  ', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Try and fail to create a directory (file deleted)
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
@@ -1681,9 +1676,7 @@ def basic_add_parents(sbox):
   # Commit and verify
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   svntest.actions.run_and_verify_svn(None, [],
                                      'rm', X_path, '--keep-local')
@@ -1852,9 +1845,7 @@ def info_nonhead(sbox):
   expected_status.remove("iota")
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
   # Get info for old iota at r1.
   expected_infos = [
       { 'URL' : '.*' },
@@ -1883,8 +1874,7 @@ def ls_nonhead(sbox):
   expected_status.remove('A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',)
 
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Check that we can list a file in A/D/G at revision 1.
   rho_url = sbox.repo_url + "/A/D/G/rho"
@@ -1951,9 +1941,7 @@ def delete_keep_local(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Update working copy to check disk state still greek tree
   expected_disk = svntest.main.greek_state.copy()
@@ -2208,7 +2196,7 @@ def automatic_conflict_resolution(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -2689,9 +2677,7 @@ def delete_and_add_same_file(sbox):
   # not found".
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 def delete_child_parent_update(sbox):
   "rm child, commit, rm parent"
@@ -2710,9 +2696,7 @@ def delete_child_parent_update(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E'))
   expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')

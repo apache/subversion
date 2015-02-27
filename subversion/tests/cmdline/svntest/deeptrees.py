@@ -525,8 +525,7 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
         x_status.wc_dir = base
 
       run_and_verify_commit(base, None, x_status,
-                            test_case.commit_block_string,
-                            base)
+                            test_case.commit_block_string)
     except:
       logger.warn("ERROR IN: Tests scheme for update: "
           + "while checking commit-blocking in '%s'", test_case.name)
@@ -771,8 +770,7 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
         x_status.wc_dir = local
 
       run_and_verify_commit(local, None, x_status,
-                            test_case.commit_block_string,
-                            local)
+                            test_case.commit_block_string)
     except:
       logger.warn("ERROR IN: Tests scheme for switch: "
           + "while checking commit-blocking in '%s'", test_case.name)
@@ -984,8 +982,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
           x_status.wc_dir = local
 
         run_and_verify_commit(local, None, x_status,
-                              test_case.commit_block_string,
-                              local)
+                              test_case.commit_block_string)
       except:
         logger.warn("ERROR IN: Tests scheme for merge: "
             + "while checking commit-blocking in '%s'", test_case.name)
@@ -1147,8 +1144,7 @@ def commit_routine_switching(wc_dir, verify):
   # same URL.  We don't allow this.
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
-    "svn: E195003: Cannot commit both .* as they refer to the same URL$",
-    wc_dir)
+    "svn: E195003: Cannot commit both .* as they refer to the same URL$")
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and
   # move along.  Afterward, we should be okay to commit.  (Sorry,
@@ -1176,8 +1172,7 @@ def commit_routine_switching(wc_dir, verify):
   if verify:
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
-                                          expected_status,
-                                          None, wc_dir)
+                                          expected_status)
   else:
     svntest.main.run_svn(None,
                          'ci', '-m', 'log msg', wc_dir)

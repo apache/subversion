@@ -395,7 +395,7 @@ def mergeinfo_and_skipped_paths(sbox):
   expected_output = wc.State(wc_dir, {'A/D/H/zeta' : Item(verb='Adding')})
   wc_status.add({'A/D/H/zeta' : Item(status='  ', wc_rev=9)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        wc_status, None, wc_dir)
+                                        wc_status)
 
   # Merge -r7:9 to the restricted WC's A_COPY_2/D/H.
   #
@@ -526,7 +526,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 
   # Commit the new content
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   svntest.actions.run_and_verify_svn(None, [], 'cp', A_url, Acopy_url,
                                      '-m', 'create a new copy of A')
@@ -566,7 +566,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Delete A/D/gamma from working copy
   svntest.actions.run_and_verify_svn(None, [], 'delete', gamma_path)
@@ -580,7 +580,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir, wc_dir)
   svntest.actions.run_and_verify_svn(
     expected_merge_output([[3,4]],
@@ -640,7 +640,7 @@ def reintegrate_fails_if_no_root_access(sbox):
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
   expected_status.tweak('A_COPY/mu', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   expected_disk.tweak('A_COPY/mu', contents='Changed on the branch.')
 
   # Update the WC.
