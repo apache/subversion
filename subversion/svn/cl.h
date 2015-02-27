@@ -248,6 +248,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_newline;        /* do not output the trailing newline */
   svn_boolean_t show_passwords;    /* show cached passwords */
   svn_boolean_t pin_externals;     /* pin externals to last-changed revisions */
+  const char *show_item;           /* print only the given item */
 } svn_cl__opt_state_t;
 
 
@@ -853,6 +854,48 @@ svn_cl__deprecated_merge_reintegrate(const char *source_path_or_url,
                                      const apr_array_header_t *merge_options,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
+
+
+/* Forward declaration of the similarity check context. */
+typedef struct svn_cl__simcheck_context_t svn_cl__simcheck_context_t;
+
+/* Token definition for the similarity check. */
+typedef struct svn_cl__simcheck_t
+{
+  /* The token we're checking for similarity. */
+  svn_string_t token;
+
+  /* User data associated with this token. */
+  const void *data;
+
+  /*
+   * The following fields are populated by svn_cl__similarity_check.
+   */
+
+  /* Similarity score [0..SVN_STRING__SIM_RANGE_MAX] */
+  apr_size_t score;
+
+  /* Number of characters of difference from the key. */
+  apr_size_t diff;
+
+  /* Similarity check context (private) */
+  svn_cl__simcheck_context_t *context;
+} svn_cl__simcheck_t;
+
+/* Find the entries in TOKENS that are most similar to KEY.
+ * TOKEN_COUNT is the number of entries in the (mutable) TOKENS array.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * On return, the TOKENS array will be sorted according to similarity
+ * to KEY, in descending order. The return value will be zero if the
+ * first token is an exact match; otherwise, it will be one more than
+ * the number of tokens that are at least two-thirds similar to KEY.
+ */
+apr_size_t
+svn_cl__similarity_check(const char *key,
+                         svn_cl__simcheck_t **tokens,
+                         apr_size_t token_count,
+                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
