@@ -38,6 +38,20 @@
 typedef struct svn_fs_x__packed_number_stream_t
   svn_fs_x__packed_number_stream_t;
 
+/* Location and content meta data for an index. */
+typedef struct svn_fs_x__index_info_t
+{
+  /* Offset within the pack / rev file at which the index data starts. */
+  apr_off_t start;
+
+  /* First offset behind the index data. */
+  apr_off_t end;
+
+  /* MD5 checksum on the whole on-disk representation of the index. */
+  svn_checksum_t *checksum;
+
+} svn_fs_x__index_info_t;
+
 /* Data file, including indexes data, and associated properties for
  * START_REVISION.  As the FILE is kept open, background pack operations
  * will not cause access to this file to fail.
@@ -67,28 +81,13 @@ typedef struct svn_fs_x__revision_file_t
    * use aligned seek() without having the FS handy. */
   apr_off_t block_size;
 
-  /* Offset within FILE at which the rev data ends and the L2P index
-   * data starts. Less than P2L_OFFSET. -1 if svn_fs_fs__auto_read_footer
-   * has not been called, yet. */
-  apr_off_t l2p_offset;
+  /* Info on the L2P index within FILE.
+   * Elements are -1 / NULL until svn_fs_x__auto_read_footer gets called. */
+  svn_fs_x__index_info_t l2p_info;
 
-  /* MD5 checksum on the whole on-disk representation of the L2P index.
-   * NULL if svn_fs_fs__auto_read_footer has not been called, yet. */
-  svn_checksum_t *l2p_checksum;
-
-  /* Offset within FILE at which the L2P index ends and the P2L index
-   * data starts. Greater than L2P_OFFSET. -1 if svn_fs_fs__auto_read_footer
-   * has not been called, yet. */
-  apr_off_t p2l_offset;
-
-  /* MD5 checksum on the whole on-disk representation of the P2L index.
-   * NULL if svn_fs_fs__auto_read_footer has not been called, yet. */
-  svn_checksum_t *p2l_checksum;
-
-  /* Offset within FILE at which the P2L index ends and the footer starts.
-   * Greater than P2L_OFFSET. -1 if svn_fs_fs__auto_read_footer has not
-   * been called, yet. */
-  apr_off_t footer_offset;
+  /* Info on the P2L index within FILE.
+   * Elements are -1 / NULL until svn_fs_x__auto_read_footer gets called. */
+  svn_fs_x__index_info_t p2l_info;
 
   /* pool containing this object */
   apr_pool_t *pool;
@@ -161,6 +160,18 @@ svn_fs_x__rev_file_l2p_index(svn_fs_x__packed_number_stream_t **stream,
 svn_error_t *
 svn_fs_x__rev_file_p2l_index(svn_fs_x__packed_number_stream_t **stream,
                              svn_fs_x__revision_file_t *file);
+
+/* Copy the L2P index info for FILE into *INFO.
+ */
+svn_error_t *
+svn_fs_x__rev_file_l2p_info(svn_fs_x__index_info_t *info,
+                            svn_fs_x__revision_file_t *file);
+
+/* Copy the P2L index info for FILE into *INFO.
+ */
+svn_error_t *
+svn_fs_x__rev_file_p2l_info(svn_fs_x__index_info_t *info,
+                            svn_fs_x__revision_file_t *file);
 
 /* Close all files and streams in FILE.
  */

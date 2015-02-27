@@ -1243,12 +1243,15 @@ get_l2p_header_body(l2p_header_t **header,
   apr_array_header_t *expanded_values
     = apr_array_make(scratch_pool, 16, sizeof(apr_uint64_t));
   svn_fs_x__packed_number_stream_t *stream;
+  svn_fs_x__index_info_t index_info;
 
   svn_fs_x__pair_cache_key_t key;
   key.revision = rev_file->start_revision;
   key.second = rev_file->is_packed;
 
+  /* Access the L2P index stream. */
   SVN_ERR(svn_fs_x__rev_file_l2p_index(&stream, rev_file));
+  SVN_ERR(svn_fs_x__rev_file_l2p_info(&index_info, rev_file));
   packed_stream_seek(stream, 0);
 
   /* Read the table sizes.  Check the data for plausibility and
@@ -1277,7 +1280,7 @@ get_l2p_header_body(l2p_header_t **header,
   if (page_count < result->revision_count)
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                             _("Fewer L2P index pages than revisions"));
-  if (page_count > (rev_file->p2l_offset - rev_file->l2p_offset) / 2)
+  if (page_count > (index_info.end - index_info.start) / 2)
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                             _("L2P index page count implausibly large"));
 
@@ -2444,6 +2447,7 @@ get_p2l_header(p2l_header_t **header,
   p2l_header_t *result;
   svn_boolean_t is_cached = FALSE;
   svn_fs_x__packed_number_stream_t *stream;
+  svn_fs_x__index_info_t l2p_index_info;
 
   /* look for the header data in our cache */
   svn_fs_x__pair_cache_key_t key;
@@ -2458,6 +2462,7 @@ get_p2l_header(p2l_header_t **header,
   /* not found -> must read it from disk.
    * Open index file or position read pointer to the begin of the file */
   SVN_ERR(svn_fs_x__rev_file_p2l_index(&stream, rev_file));
+  SVN_ERR(svn_fs_x__rev_file_l2p_info(&l2p_index_info, rev_file));
   packed_stream_seek(stream, 0);
 
   /* allocate result data structure */
@@ -2472,7 +2477,7 @@ get_p2l_header(p2l_header_t **header,
 
   SVN_ERR(packed_stream_get(&value, stream));
   result->file_size = value;
-  if (result->file_size != (apr_uint64_t)rev_file->l2p_offset)
+  if (result->file_size != (apr_uint64_t)l2p_index_info.start)
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                    _("Index offset and rev / pack file size do not match"));
 
