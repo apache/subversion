@@ -449,9 +449,6 @@ def keywords_from_birth(sbox):
 # This is a slight rewrite of his test, to use the run_and_verify_* API.
 # This is for issue #631.
 
-def do_nothing(x, y):
-  return 0
-
 @Issue(631)
 def update_modified_with_translation(sbox):
   "update modified file with eol-style 'native'"
@@ -533,11 +530,13 @@ def update_modified_with_translation(sbox):
 
   # Updating back to revision 1 should not error; the merge should
   # work, with eol-translation turned on.
+  extra_files = ['rho.r1', 'rho.r3', 'rho.mine']
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         None, None,
-                                        do_nothing, None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files,
                                         None, None,
                                         0, '-r', '1', wc_dir)
 
