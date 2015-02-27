@@ -1417,16 +1417,12 @@ get_l2p_header(l2p_header_t **header,
   return SVN_NO_ERROR;
 }
 
-/* From the log-to-phys index file starting at START_REVISION in FS, read
- * the mapping page identified by TABLE_ENTRY and return it in *PAGE.
- * Use REV_FILE to access on-disk files.
- * Use RESULT_POOL for allocations.
+/* From the log-to-phys index in REV_FILE, read the mapping page identified
+ * by TABLE_ENTRY and return it in *PAGE, allocated in RESULT_POOL.
  */
 static svn_error_t *
 get_l2p_page(l2p_page_t **page,
              svn_fs_x__revision_file_t *rev_file,
-             svn_fs_t *fs,
-             svn_revnum_t start_revision,
              l2p_page_table_entry_t *table_entry,
              apr_pool_t *result_pool)
 {
@@ -1654,9 +1650,8 @@ get_l2p_page_table(apr_array_header_t *pages,
 /* Utility function.  Read the l2p index pages for REVISION in FS from
  * STREAM and put them into the cache.  Skip page number EXLCUDED_PAGE_NO
  * (use -1 for 'skip none') and pages outside the MIN_OFFSET, MAX_OFFSET
- * range in the l2p index file.  The index is being identified by
- * FIRST_REVISION.  PAGES is a scratch container provided by the caller.
- * SCRATCH_POOL is used for temporary allocations.
+ * range in the l2p index file.  PAGES is a scratch container provided by
+ * the caller.  SCRATCH_POOL is used for temporary allocations.
  *
  * This function may be a no-op if the header cache lookup fails / misses.
  */
@@ -1664,7 +1659,6 @@ static svn_error_t *
 prefetch_l2p_pages(svn_boolean_t *end,
                    svn_fs_t *fs,
                    svn_fs_x__revision_file_t *rev_file,
-                   svn_revnum_t first_revision,
                    svn_revnum_t revision,
                    apr_array_header_t *pages,
                    int exlcuded_page_no,
@@ -1733,8 +1727,7 @@ prefetch_l2p_pages(svn_boolean_t *end,
           /* no in cache -> read from stream (data already buffered in APR)
            * and cache the result */
           l2p_page_t *page = NULL;
-          SVN_ERR(get_l2p_page(&page, rev_file, fs, first_revision,
-                               entry, iterpool));
+          SVN_ERR(get_l2p_page(&page, rev_file, entry, iterpool));
 
           SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page,
                                  iterpool));
@@ -1805,8 +1798,7 @@ l2p_index_lookup(apr_off_t *offset,
       apr_off_t min_offset = max_offset - ffd->block_size;
 
       /* read the relevant page */
-      SVN_ERR(get_l2p_page(&page, rev_file, fs, info_baton.first_revision,
-                           &info_baton.entry, scratch_pool));
+      SVN_ERR(get_l2p_page(&page, rev_file, &info_baton.entry, scratch_pool));
 
       /* cache the page and extract the result we need */
       SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page, scratch_pool));
@@ -1827,7 +1819,6 @@ l2p_index_lookup(apr_off_t *offset,
           svn_pool_clear(iterpool);
 
           SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
-                                     info_baton.first_revision,
                                      prefetch_revision, pages,
                                      excluded_page_no, min_offset,
                                      max_offset, iterpool));
@@ -1841,7 +1832,6 @@ l2p_index_lookup(apr_off_t *offset,
           svn_pool_clear(iterpool);
 
           SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
-                                     info_baton.first_revision,
                                      prefetch_revision, pages, -1,
                                      min_offset, max_offset, iterpool));
         }
