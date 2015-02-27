@@ -856,7 +856,8 @@ _svn()
 		;;
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive --depth \
-                         --include-externals --incremental --xml $cOpts"
+                         --include-externals --incremental --xml \
+                         --show-item --no-newline $cOpts"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
