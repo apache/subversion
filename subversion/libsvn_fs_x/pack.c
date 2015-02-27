@@ -1722,18 +1722,19 @@ pack_range(pack_context_t *context,
     {
       apr_off_t offset = 0;
       svn_fs_x__revision_file_t *rev_file;
+      svn_fs_x__index_info_t l2p_index_info;
 
       /* Get the rev file dimensions (mainly index locations). */
       SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, context->fs,
                                               revision, revpool, iterpool));
-      SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
+      SVN_ERR(svn_fs_x__rev_file_l2p_info(&l2p_index_info, rev_file));
 
       /* store the indirect array index */
       APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps->nelts;
   
       /* read the phys-to-log index file until we covered the whole rev file.
        * That index contains enough info to build both target indexes from it. */
-      while (offset < rev_file->l2p_offset)
+      while (offset < l2p_index_info.start)
         {
           /* read one cluster */
           int i;
@@ -1757,7 +1758,7 @@ pack_range(pack_context_t *context,
 
               /* process entry while inside the rev file */
               offset = entry->offset;
-              if (offset < rev_file->l2p_offset)
+              if (offset < l2p_index_info.start)
                 {
                   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset,
                                            iterpool));

@@ -143,21 +143,19 @@ verify_rep_cache(svn_fs_t *fs,
 static svn_error_t *
 verify_index_checksum(apr_file_t *file,
                       const char *name,
-                      apr_off_t start,
-                      apr_off_t end,
-                      svn_checksum_t *expected,
+                      svn_fs_x__index_info_t *index_info,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       apr_pool_t *scratch_pool)
 {
   unsigned char buffer[SVN__STREAM_CHUNK_SIZE];
-  apr_off_t size = end - start;
+  apr_off_t size = index_info->end - index_info->start;
   svn_checksum_t *actual;
   svn_checksum_ctx_t *context
     = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
 
   /* Calculate the index checksum. */
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &start, scratch_pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &index_info->start, scratch_pool));
   while (size > 0)
     {
       apr_size_t to_read = size > sizeof(buffer)
@@ -175,12 +173,13 @@ verify_index_checksum(apr_file_t *file,
   SVN_ERR(svn_checksum_final(&actual, context, scratch_pool));
 
   /* Verify that it matches the expected checksum. */
-  if (!svn_checksum_match(expected, actual))
+  if (!svn_checksum_match(index_info->checksum, actual))
     {
       const char *file_name;
 
       SVN_ERR(svn_io_file_name_get(&file_name, file, scratch_pool));
-      SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+      SVN_ERR(svn_checksum_mismatch_err(index_info->checksum, actual,
+                                        scratch_pool, 
                                         _("%s checksum mismatch in file %s"),
                                         name, file_name));
     }
@@ -201,20 +200,19 @@ verify_index_checksums(svn_fs_t *fs,
                        apr_pool_t *scratch_pool)
 {
   svn_fs_x__revision_file_t *rev_file;
+  svn_fs_x__index_info_t l2p_index_info;
+  svn_fs_x__index_info_t p2l_index_info;
 
   /* Open the rev / pack file and read the footer */
   SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start,
                                           scratch_pool, scratch_pool));
-  SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
+  SVN_ERR(svn_fs_x__rev_file_l2p_info(&l2p_index_info, rev_file));
+  SVN_ERR(svn_fs_x__rev_file_p2l_info(&p2l_index_info, rev_file));
 
   /* Verify the index contents against the checksum from the footer. */
-  SVN_ERR(verify_index_checksum(rev_file->file, "L2P index",
-                                rev_file->l2p_offset, rev_file->p2l_offset,
-                                rev_file->l2p_checksum,
+  SVN_ERR(verify_index_checksum(rev_file->file, "L2P index", &l2p_index_info,
                                 cancel_func, cancel_baton, scratch_pool));
-  SVN_ERR(verify_index_checksum(rev_file->file, "P2L index",
-                                rev_file->p2l_offset, rev_file->footer_offset,
-                                rev_file->p2l_checksum,
+  SVN_ERR(verify_index_checksum(rev_file->file, "P2L index", &p2l_index_info,
                                 cancel_func, cancel_baton, scratch_pool));
 
   /* Done. */
@@ -588,22 +586,23 @@ compare_p2l_to_rev(svn_fs_t *fs,
   apr_off_t max_offset;
   apr_off_t offset = 0;
   svn_fs_x__revision_file_t *rev_file;
+  svn_fs_x__index_info_t l2p_index_info;
 
   /* open the pack / rev file that is covered by the p2l index */
   SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, fs, start, scratch_pool,
                                           iterpool));
 
   /* check file size vs. range covered by index */
-  SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
+  SVN_ERR(svn_fs_x__rev_file_l2p_info(&l2p_index_info, rev_file));
   SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, rev_file, start,
                                        scratch_pool));
 
-  if (rev_file->l2p_offset != max_offset)
+  if (l2p_index_info.start != max_offset)
     return svn_error_createf(SVN_ERR_FS_INDEX_INCONSISTENT, NULL,
                              _("File size of %s for revision r%ld does "
                                "not match p2l index size of %s"),
                              apr_off_t_toa(scratch_pool,
-                                           rev_file->l2p_offset),
+                                           l2p_index_info.start),
                              start,
                              apr_off_t_toa(scratch_pool,
                                            max_offset));

@@ -48,11 +48,12 @@ create_revision_file(svn_fs_t *fs,
   file->p2l_stream = NULL;
   file->l2p_stream = NULL;
   file->block_size = ffd->block_size;
-  file->l2p_offset = -1;
-  file->l2p_checksum = NULL;
-  file->p2l_offset = -1;
-  file->p2l_checksum = NULL;
-  file->footer_offset = -1;
+  file->l2p_info.start = -1;
+  file->l2p_info.end = -1;
+  file->l2p_info.checksum = NULL;
+  file->p2l_info.start = -1;
+  file->p2l_info.end = -1;
+  file->p2l_info.checksum = NULL;
   file->pool = result_pool;
 
   return file;
@@ -232,7 +233,7 @@ svn_fs_x__open_pack_or_rev_file_writable(svn_fs_x__revision_file_t** file,
 svn_error_t *
 svn_fs_x__auto_read_footer(svn_fs_x__revision_file_t *file)
 {
-  if (file->l2p_offset == -1)
+  if (file->l2p_info.start == -1)
     {
       apr_off_t filesize = 0;
       unsigned char footer_length;
@@ -258,11 +259,14 @@ svn_fs_x__auto_read_footer(svn_fs_x__revision_file_t *file)
       footer->data[footer->len] = '\0';
 
       /* Extract index locations. */
-      SVN_ERR(svn_fs_x__parse_footer(&file->l2p_offset, &file->l2p_checksum,
-                                     &file->p2l_offset, &file->p2l_checksum,
+      SVN_ERR(svn_fs_x__parse_footer(&file->l2p_info.start,
+                                     &file->l2p_info.checksum,
+                                     &file->p2l_info.start,
+                                     &file->p2l_info.checksum,
                                      footer, file->start_revision,
                                      file->pool));
-      file->footer_offset = filesize - footer_length - 1;
+      file->l2p_info.end = file->p2l_info.start;
+      file->p2l_info.end = filesize - footer_length - 1;
     }
 
   return SVN_NO_ERROR;
@@ -308,8 +312,8 @@ svn_fs_x__rev_file_l2p_index(svn_fs_x__packed_number_stream_t **stream,
       SVN_ERR(svn_fs_x__auto_read_footer(file));
       SVN_ERR(svn_fs_x__packed_stream_open(&file->l2p_stream,
                                            file->file,
-                                           file->l2p_offset,
-                                           file->p2l_offset,
+                                           file->l2p_info.start,
+                                           file->l2p_info.end,
                                            SVN_FS_X__L2P_STREAM_PREFIX,
                                            (apr_size_t)file->block_size,
                                            file->pool,
@@ -329,8 +333,8 @@ svn_fs_x__rev_file_p2l_index(svn_fs_x__packed_number_stream_t **stream,
       SVN_ERR(svn_fs_x__auto_read_footer(file));
       SVN_ERR(svn_fs_x__packed_stream_open(&file->p2l_stream,
                                            file->file,
-                                           file->p2l_offset,
-                                           file->footer_offset,
+                                           file->p2l_info.start,
+                                           file->p2l_info.end,
                                            SVN_FS_X__P2L_STREAM_PREFIX,
                                            (apr_size_t)file->block_size,
                                            file->pool,
@@ -338,6 +342,26 @@ svn_fs_x__rev_file_p2l_index(svn_fs_x__packed_number_stream_t **stream,
     }
 
   *stream = file->p2l_stream;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__rev_file_l2p_info(svn_fs_x__index_info_t *info,
+                            svn_fs_x__revision_file_t *file)
+{
+  SVN_ERR(svn_fs_x__auto_read_footer(file));
+  *info = file->l2p_info;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__rev_file_p2l_info(svn_fs_x__index_info_t *info,
+                            svn_fs_x__revision_file_t *file)
+{
+  SVN_ERR(svn_fs_x__auto_read_footer(file));
+  *info = file->p2l_info;
+
   return SVN_NO_ERROR;
 }
 
