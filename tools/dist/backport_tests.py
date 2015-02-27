@@ -480,7 +480,6 @@ def backport_branch_contains(sbox):
 
 
 #----------------------------------------------------------------------
-@XFail()
 @BackportTest(None) # would be 000000000008
 def backport_double_conflict(sbox):
   "two-revisioned entry with two conflicts"
@@ -531,6 +530,25 @@ def backport_double_conflict(sbox):
   svntest.verify.verify_outputs(None, output, errput,
                                 expected_output, expected_errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
+  if any("Warning summary" in line for line in errput):
+    raise svntest.verify.SVNUnexpectedStderr(errput)
+
+  ## Now, let's ensure this does get detected if not silenced.
+  # r9: Re-nominate
+  approved_entries = [
+    make_entry([4,7]) # no depends=
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries), truncate=True)
+  sbox.simple_commit(message='Re-nominate the r4 group')
+
+  exit_code, output, errput = run_backport(sbox, True, ["MAY_COMMIT=0"])
+
+  # [1-9]\d+ matches non-zero exit codes
+  expected_errput = r'r4 .*: subshell exited with code (?:[1-9]\d+)'
+  svntest.verify.verify_exit_code(None, exit_code, 1)
+  svntest.verify.verify_outputs(None, output, errput,
+                                svntest.verify.AnyOutput, expected_errput)
+
 
 
 #----------------------------------------------------------------------
