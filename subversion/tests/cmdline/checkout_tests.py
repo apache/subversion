@@ -206,8 +206,8 @@ def checkout_with_obstructions(sbox):
     'A/B/lambda', 'A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
     'A/D/H', 'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi', 'A/D/gamma', 'A/C')
 
-  actions.run_and_verify_checkout2(False, url, wc_dir, expected_output,
-                                   expected_disk)
+  actions.run_and_verify_checkout(url, wc_dir, expected_output,
+                                  expected_disk)
 
   # svn status
   expected_status = actions.get_virginal_state(wc_dir, 1)
@@ -578,7 +578,8 @@ def checkout_broken_eol(sbox):
 
   svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
                                                'update_tests_data',
-                                               'checkout_broken_eol.dump'))
+                                               'checkout_broken_eol.dump'),
+                            create_wc=False)
 
   URL = sbox.repo_url
 
