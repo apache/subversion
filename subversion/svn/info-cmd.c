@@ -203,7 +203,7 @@ find_print_what(const char *keyword,
       /* The best alternative isn't good enough */
       return svn_error_createf(
           SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-          _("'%s' is not a valid value for the 'show-item' option."),
+          _("'%s' is not a valid value for --show-item"),
           keyword);
 
     case 2:
@@ -211,7 +211,7 @@ find_print_what(const char *keyword,
       kw0 = keywords[0]->data;
       return svn_error_createf(
           SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-          _("'%s' is not a valid value for the 'show-item' option;"
+          _("'%s' is not a valid value for --show-item;"
             " did you mean '%s'?"),
           keyword, kw0->keyword.data);
 
@@ -221,7 +221,7 @@ find_print_what(const char *keyword,
       kw1 = keywords[1]->data;
       return svn_error_createf(
           SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-          _("'%s' is not a valid value for the 'show-item' option;"
+          _("'%s' is not a valid value for --show-item;"
             " did you mean '%s' or '%s'?"),
           keyword, kw0->keyword.data, kw1->keyword.data);
 
@@ -232,7 +232,7 @@ find_print_what(const char *keyword,
       kw2 = keywords[2]->data;
       return svn_error_createf(
           SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-          _("'%s' is not a valid value for the 'show-item' option;"
+          _("'%s' is not a valid value for --show-item;"
             " did you mean '%s', '%s' or '%s'?"),
           keyword, kw0->keyword.data, kw1->keyword.data, kw2->keyword.data);
     }
