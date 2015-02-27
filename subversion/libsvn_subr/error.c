@@ -578,10 +578,6 @@ svn_handle_error2(svn_error_t *err,
   apr_array_header_t *empties;
   svn_error_t *tmp_err;
 
-  /* ### The rest of this file carefully avoids using svn_pool_*(),
-     preferring apr_pool_*() instead.  I can't remember why -- it may
-     be an artifact of r843793, or it may be for some deeper reason --
-     but I'm playing it safe and using apr_pool_*() here too. */
   subpool = svn_pool_create(err->pool);
   empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
 
