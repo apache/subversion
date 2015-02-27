@@ -652,12 +652,12 @@ def info_item_simple_multiple(sbox):
   sbox.build(read_only=True)
 
   svntest.actions.run_and_verify_svn(
-    r'^jrandom\s+\S+/info_tests-\d+(/[^/]+)?$', [],
+    r'^jrandom\s+\S+(/|\\)info_tests-\d+((/|\\)[^/\\]+)?$', [],
     'info', '--show-item=last-changed-author',
     '--depth=immediates', sbox.ospath(''))
 
   svntest.actions.run_and_verify_svn(
-    r'^1\s+\S+/info_tests-\d+/[^/]+$', [],
+    r'^1\s+\S+(/|\\)info_tests-\d+(/|\\)[^/\\]+$', [],
     'info', '--show-item=last-changed-rev',
     sbox.ospath('A'), sbox.ospath('iota'))
 
@@ -706,12 +706,12 @@ def info_item_uncommmitted(sbox):
     sbox.ospath('newdir'))
 
   svntest.actions.run_and_verify_svn(
-    r'\s+\S+/new(file|dir)', [],
+    r'\s+\S+(/|\\)new(file|dir)', [],
     'info', '--show-item=last-changed-date',
     sbox.ospath('newfile'), sbox.ospath('newdir'))
 
   svntest.actions.run_and_verify_svn(
-    r'\^/new(file|dir)\s+\S+/new(file|dir)', [],
+    r'\^/new(file|dir)\s+\S+(/|\\)new(file|dir)', [],
     'info', '--show-item=relative-url',
     sbox.ospath('newfile'), sbox.ospath('newdir'))
 
