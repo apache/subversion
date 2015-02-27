@@ -53,6 +53,28 @@
 #define SVN_FS_X__ITEM_TYPE_REPS_CONT    10  /* item is a representations
                                                  container */
 
+/* We put this string in front of the L2P index header. */
+#define SVN_FS_X__L2P_STREAM_PREFIX "L2P-INDEX\n"
+
+/* We put this string in front of the P2L index header. */
+#define SVN_FS_X__P2L_STREAM_PREFIX "P2L-INDEX\n"
+
+
+/* Create and open a packed number stream reading from offsets START to
+ * END in FILE and return it in *STREAM.  Access the file in chunks of
+ * BLOCK_SIZE bytes.  Expect the stream to be prefixed by STREAM_PREFIX.
+ * Allocate *STREAM in RESULT_POOL and use SCRATCH_POOL for temporaries.
+ */
+svn_error_t *
+svn_fs_x__packed_stream_open(svn_fs_x__packed_number_stream_t **stream,
+                             apr_file_t *file,
+                             apr_off_t start,
+                             apr_off_t end,
+                             const char *stream_prefix,
+                             apr_size_t block_size,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 /* (user visible) entry in the phys-to-log index.  It describes a section
  * of some packed / non-packed rev file as containing a specific item.
  * There must be no overlapping / conflicting entries.

@@ -300,6 +300,48 @@ svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
 }
 
 svn_error_t *
+svn_fs_x__rev_file_l2p_index(svn_fs_x__packed_number_stream_t **stream,
+                             svn_fs_x__revision_file_t *file)
+{
+  if (file->l2p_stream == NULL)
+    {
+      SVN_ERR(svn_fs_x__auto_read_footer(file));
+      SVN_ERR(svn_fs_x__packed_stream_open(&file->l2p_stream,
+                                           file->file,
+                                           file->l2p_offset,
+                                           file->p2l_offset,
+                                           SVN_FS_X__L2P_STREAM_PREFIX,
+                                           (apr_size_t)file->block_size,
+                                           file->pool,
+                                           file->pool));
+    }
+
+  *stream = file->l2p_stream;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__rev_file_p2l_index(svn_fs_x__packed_number_stream_t **stream,
+                             svn_fs_x__revision_file_t *file)
+{
+  if (file->p2l_stream== NULL)
+    {
+      SVN_ERR(svn_fs_x__auto_read_footer(file));
+      SVN_ERR(svn_fs_x__packed_stream_open(&file->p2l_stream,
+                                           file->file,
+                                           file->p2l_offset,
+                                           file->footer_offset,
+                                           SVN_FS_X__P2L_STREAM_PREFIX,
+                                           (apr_size_t)file->block_size,
+                                           file->pool,
+                                           file->pool));
+    }
+
+  *stream = file->p2l_stream;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_x__close_revision_file(svn_fs_x__revision_file_t *file)
 {
   if (file->stream)

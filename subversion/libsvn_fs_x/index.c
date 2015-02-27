@@ -61,15 +61,9 @@ const apr_uint64_t off_t_max = (sizeof(apr_off_t) == sizeof(apr_int64_t))
  */
 #define P2L_PROTO_INDEX_ENTRY_SIZE (6 * sizeof(apr_uint64_t))
 
-/* We put this string in front of the L2P index header. */
-#define L2P_STREAM_PREFIX "L2P-INDEX\n"
-
-/* We put this string in front of the P2L index header. */
-#define P2L_STREAM_PREFIX "P2L-INDEX\n"
-
 /* Size of the buffer that will fit the index header prefixes. */
-#define STREAM_PREFIX_LEN MAX(sizeof(L2P_STREAM_PREFIX), \
-                              sizeof(P2L_STREAM_PREFIX))
+#define STREAM_PREFIX_LEN MAX(sizeof(SVN_FS_X__L2P_STREAM_PREFIX), \
+                              sizeof(SVN_FS_X__P2L_STREAM_PREFIX))
 
 /* Page tables in the log-to-phys index file exclusively contain entries
  * of this type to describe position and size of a given page.
@@ -348,20 +342,15 @@ packed_stream_read(svn_fs_x__packed_number_stream_t *stream)
   return SVN_NO_ERROR;
 }
 
-/* Create and open a packed number stream reading from offsets START to
- * END in FILE and return it in *STREAM.  Access the file in chunks of
- * BLOCK_SIZE bytes.  Expect the stream to be prefixed by STREAM_PREFIX.
- * Allocate *STREAM in RESULT_POOL and use SCRATCH_POOL for temporaries.
- */
-static svn_error_t *
-packed_stream_open(svn_fs_x__packed_number_stream_t **stream,
-                   apr_file_t *file,
-                   apr_off_t start,
-                   apr_off_t end,
-                   const char *stream_prefix,
-                   apr_size_t block_size,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+svn_error_t *
+svn_fs_x__packed_stream_open(svn_fs_x__packed_number_stream_t **stream,
+                             apr_file_t *file,
+                             apr_off_t start,
+                             apr_off_t end,
+                             const char *stream_prefix,
+                             apr_size_t block_size,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   char buffer[STREAM_PREFIX_LEN + 1] = { 0 };
   apr_size_t len = strlen(stream_prefix);
@@ -1038,7 +1027,7 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
 
 
   /* write header info */
-  SVN_ERR(svn_stream_puts(stream, L2P_STREAM_PREFIX));
+  SVN_ERR(svn_stream_puts(stream, SVN_FS_X__L2P_STREAM_PREFIX));
   SVN_ERR(stream_write_encoded(stream, revision));
   SVN_ERR(stream_write_encoded(stream, page_counts->nelts));
   SVN_ERR(stream_write_encoded(stream, ffd->l2p_page_size));
@@ -1231,35 +1220,6 @@ expand_rle(apr_array_header_t *values,
   return SVN_NO_ERROR;
 }
 
-/* If REV_FILE->L2P_STREAM is NULL, create a new stream for the log-to-phys
- * index for REVISION in FS using the rev / pack file provided by REV_FILE.
- * Return the open stream in *STREAM.
- */
-static svn_error_t *
-auto_open_l2p_index(svn_fs_x__packed_number_stream_t **stream,
-                    svn_fs_x__revision_file_t *rev_file,
-                    svn_fs_t *fs,
-                    svn_revnum_t revision)
-{
-  if (rev_file->l2p_stream == NULL)
-    {
-      svn_fs_x__data_t *ffd = fs->fsap_data;
-
-      SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
-      SVN_ERR(packed_stream_open(&rev_file->l2p_stream,
-                                 rev_file->file,
-                                 rev_file->l2p_offset,
-                                 rev_file->p2l_offset,
-                                 L2P_STREAM_PREFIX,
-                                 (apr_size_t)ffd->block_size,
-                                 rev_file->pool,
-                                 rev_file->pool));
-    }
-
-  *stream = rev_file->l2p_stream;
-  return SVN_NO_ERROR;
-}
-
 /* Read the header data structure of the log-to-phys index for REVISION
  * in FS and return it in *HEADER, allocated in RESULT_POOL.  Use REV_FILE
  * to access on-disk data.  Use SCRATCH_POOL for temporary allocations.
@@ -1288,7 +1248,7 @@ get_l2p_header_body(l2p_header_t **header,
   key.revision = rev_file->start_revision;
   key.second = rev_file->is_packed;
 
-  SVN_ERR(auto_open_l2p_index(&stream, rev_file, fs, revision));
+  SVN_ERR(svn_fs_x__rev_file_l2p_index(&stream, rev_file));
   packed_stream_seek(stream, 0);
 
   /* Read the table sizes.  Check the data for plausibility and
@@ -1478,7 +1438,7 @@ get_l2p_page(l2p_page_t **page,
   svn_fs_x__packed_number_stream_t *stream;
 
   /* open index file and select page */
-  SVN_ERR(auto_open_l2p_index(&stream, rev_file, fs, start_revision));
+  SVN_ERR(svn_fs_x__rev_file_l2p_index(&stream, rev_file));
   packed_stream_seek(stream, table_entry->offset);
 
   /* initialize the page content */
@@ -2363,7 +2323,7 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
                                    result_pool);
 
   /* write the start revision, file size and page size */
-  SVN_ERR(svn_stream_puts(stream, P2L_STREAM_PREFIX));
+  SVN_ERR(svn_stream_puts(stream, SVN_FS_X__P2L_STREAM_PREFIX));
   SVN_ERR(stream_write_encoded(stream, revision));
   SVN_ERR(stream_write_encoded(stream, file_size));
   SVN_ERR(stream_write_encoded(stream, page_size));
@@ -2383,35 +2343,6 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
   svn_pool_destroy(iterpool);
   svn_pool_destroy(local_pool);
 
-  return SVN_NO_ERROR;
-}
-
-/* If REV_FILE->P2L_STREAM is NULL, create a new stream for the phys-to-log
- * index for REVISION in FS using the rev / pack file provided by REV_FILE.
- * Return the open stream in *STREAM.
- */
-static svn_error_t *
-auto_open_p2l_index(svn_fs_x__packed_number_stream_t **stream,
-                    svn_fs_x__revision_file_t *rev_file,
-                    svn_fs_t *fs,
-                    svn_revnum_t revision)
-{
-  if (rev_file->p2l_stream == NULL)
-    {
-      svn_fs_x__data_t *ffd = fs->fsap_data;
-
-      SVN_ERR(svn_fs_x__auto_read_footer(rev_file));
-      SVN_ERR(packed_stream_open(&rev_file->p2l_stream,
-                                 rev_file->file,
-                                 rev_file->p2l_offset,
-                                 rev_file->footer_offset,
-                                 P2L_STREAM_PREFIX,
-                                 (apr_size_t)ffd->block_size,
-                                 rev_file->pool,
-                                 rev_file->pool));
-    }
-
-  *stream = rev_file->p2l_stream;
   return SVN_NO_ERROR;
 }
 
@@ -2536,7 +2467,7 @@ get_p2l_header(p2l_header_t **header,
 
   /* not found -> must read it from disk.
    * Open index file or position read pointer to the begin of the file */
-  SVN_ERR(auto_open_p2l_index(&stream, rev_file, fs, key.revision));
+  SVN_ERR(svn_fs_x__rev_file_p2l_index(&stream, rev_file));
   packed_stream_seek(stream, 0);
 
   /* allocate result data structure */
@@ -2743,7 +2674,7 @@ get_p2l_page(apr_array_header_t **entries,
   svn_fs_x__packed_number_stream_t *stream;
 
   /* open index and navigate to page start */
-  SVN_ERR(auto_open_p2l_index(&stream, rev_file, fs, start_revision));
+  SVN_ERR(svn_fs_x__rev_file_p2l_index(&stream, rev_file));
   packed_stream_seek(stream, start_offset);
 
   /* read rev file offset of the first page entry (all page entries will

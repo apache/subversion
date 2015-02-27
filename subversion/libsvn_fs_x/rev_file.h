@@ -146,6 +146,22 @@ svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
                              apr_file_t *temp_file,
                              apr_pool_t *result_pool);
 
+/* Access functions */
+
+/* Set *STREAM to the shared L2P data stream of FILE.  Initializes the
+ * stream on demand.
+ */
+svn_error_t *
+svn_fs_x__rev_file_l2p_index(svn_fs_x__packed_number_stream_t **stream,
+                             svn_fs_x__revision_file_t *file);
+
+/* Set *STREAM to the shared P2L data stream of FILE.  Initializes the
+ * stream on demand.
+ */
+svn_error_t *
+svn_fs_x__rev_file_p2l_index(svn_fs_x__packed_number_stream_t **stream,
+                             svn_fs_x__revision_file_t *file);
+
 /* Close all files and streams in FILE.
  */
 svn_error_t *
