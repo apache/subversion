@@ -146,6 +146,7 @@ typedef enum svn_cl__longopt_t {
   opt_no_newline,
   opt_show_passwords,
   opt_pin_externals,
+  opt_show_item,
 } svn_cl__longopt_t;
 
 
@@ -423,6 +424,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("pin externals with no explicit revision to their\n"
                           "                             "
                           "current revision (recommended when tagging)")},
+  {"show-item", opt_show_item, 1,
+                       N_("print only the item identified by ARG")},
 
   /* Long-opt Aliases
    *
@@ -736,9 +739,24 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Print information about each TARGET (default: '.').\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
-     "  determines in which revision the target is first looked up.\n"),
+     "  determines in which revision the target is first looked up.\n"
+     "\n"
+     "  With --show-item, print only the value of one item of information\n"
+     "  about TARGET. One of the following items can be selected:\n"
+     "     kind                  the kind of TARGET\n"
+     "     url                   the URL of TARGET in the repository\n"
+     "     relative-url          the repository-relative URL\n"
+     "     repos-root-url        the repository root URL\n"
+     "     repos-uuid            the repository UUID\n"
+     "     revision              the revision of TARGET (defaults to BASE\n"
+     "                           for working copy paths and HEAD for URLs)\n"
+     "     last-changed-rev      the most recent revision in which TARGET\n"
+     "                           was changed\n"
+     "     last-changed-date     the date of the last-changed revision\n"
+     "     last-changed-author   the author of the last-changed revision\n"
+     "     wc-root               the root of TARGET's working copy"),
     {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
-     opt_changelist, opt_include_externals}
+     opt_changelist, opt_include_externals, opt_show_item, opt_no_newline}
   },
 
   { "list", svn_cl__list, {"ls"}, N_
@@ -2403,6 +2421,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_pin_externals:
         opt_state.pin_externals = TRUE;
+        break;
+      case opt_show_item:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        opt_state.show_item = utf8_opt_arg;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

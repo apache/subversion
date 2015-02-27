@@ -636,6 +636,117 @@ def node_hidden_info(sbox):
                                       sbox.ospath('E/beta'))
 
 
+def info_item_simple(sbox):
+  "show one info item"
+
+  sbox.build(read_only=True)
+  svntest.actions.run_and_verify_svn(
+    '1', [],
+    'info', '--show-item=revision', '--no-newline',
+    sbox.ospath(''))
+
+
+def info_item_simple_multiple(sbox):
+  "show one info item with multiple targets"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    r'^jrandom\s+\S+/info_tests-\d+(/[^/]+)?$', [],
+    'info', '--show-item=last-changed-author',
+    '--depth=immediates', sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    r'^1\s+\S+/info_tests-\d+/[^/]+$', [],
+    'info', '--show-item=last-changed-rev',
+    sbox.ospath('A'), sbox.ospath('iota'))
+
+
+def info_item_url(sbox):
+  "show one info item with URL targets"
+
+  sbox.build(create_wc=False, read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    '1', [],
+    'info', '--show-item=last-changed-rev',
+    sbox.repo_url)
+
+
+  svntest.actions.run_and_verify_svn(
+    r'^1\s+[^/:]+://.+/repos/[^/]+$', [],
+    'info', '--show-item=last-changed-rev',
+    sbox.repo_url + '/A', sbox.repo_url + '/iota')
+
+
+  # Empty working copy root on URL targets
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=wc-root',
+    sbox.repo_url)
+
+
+def info_item_uncommmitted(sbox):
+  "show one info item on uncommitted targets"
+
+  sbox.build()
+
+  svntest.main.file_write(sbox.ospath('newfile'), 'newfile')
+  sbox.simple_add('newfile')
+  sbox.simple_mkdir('newdir')
+
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=last-changed-rev',
+    sbox.ospath('newfile'))
+
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=last-changed-author',
+    sbox.ospath('newdir'))
+
+  svntest.actions.run_and_verify_svn(
+    r'\s+\S+/new(file|dir)', [],
+    'info', '--show-item=last-changed-date',
+    sbox.ospath('newfile'), sbox.ospath('newdir'))
+
+  svntest.actions.run_and_verify_svn(
+    r'\^/new(file|dir)\s+\S+/new(file|dir)', [],
+    'info', '--show-item=relative-url',
+    sbox.ospath('newfile'), sbox.ospath('newdir'))
+
+
+def info_item_failures(sbox):
+  "failure modes of 'svn info --show-item'"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    None, r'.*E200009:.*',
+    'info', '--show-item=revision',
+    sbox.ospath('not-there'))
+
+  svntest.actions.run_and_verify_svn(
+    None, r".*E205000: .*; did you mean 'wc-root'\?",
+    'info', '--show-item=root',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --show-item is not valid in --xml mode"),
+    'info', '--show-item=revision', '--xml',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --incremental is only valid in --xml mode"),
+    'info', '--show-item=revision', '--incremental',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --no-newline is only available.*"),
+    'info', '--show-item=revision', '--no-newline',
+    sbox.ospath('A'), sbox.ospath('iota'))
+
+
 ########################################################################
 # Run the tests
 
@@ -652,6 +763,11 @@ test_list = [ None,
               binary_tree_conflict,
               relpath_escaping,
               node_hidden_info,
+              info_item_simple,
+              info_item_simple_multiple,
+              info_item_url,
+              info_item_uncommmitted,
+              info_item_failures,
              ]
 
 if __name__ == '__main__':
