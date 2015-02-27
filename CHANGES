@@ -1,5 +1,5 @@
 Version 1.9.0
-(?? ??? 2014, from /branches/1.9.x)
+(?? ??? 2015, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
  User-visible changes:
@@ -12,6 +12,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * membuffer: quadruple the maximum cacheable directory size (r1545948 et al)
     * resolve: improve interactive conflict resolution menus
     * blame: support showing prospective as well as previous changes
+    * info: support printing of individual values with --show-item (r1662620)
     * svn auth: new subcommand to manage cached credentials and certs
     * new experimental filesystem fsx (faster, smaller)
     * svnserve: cache config, authz and repos to lower resource usage and
@@ -138,7 +139,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       file or SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE env variable (r1572916)
     * store human readable info about SSL certs in auth store (r1573625)
     * new '--pin-externals' option for svn copy (issue #1258)
-    * the '--strict' was replaced by '--no-newline' (rr1662224)
+    * the '--strict' option was replaced by '--no-newline' (r1662224)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
