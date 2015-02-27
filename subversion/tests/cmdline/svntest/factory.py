@@ -634,13 +634,13 @@ class TestFactory:
       py += pychdir
       py += ("actions.run_and_verify_update(" + wc.py + ", " +
              "expected_output, expected_disk, expected_status, " +
-             "None, None, None, None, None, False")
+             "[], False")
     else:
       # write a test that expects error
       py = "expected_error = " + self.strlist2py(err) + "\n\n"
       py += pychdir
       py += ("actions.run_and_verify_update(" + wc.py + ", None, None, " +
-             "None, expected_error, None, None, None, None, False")
+             "None, expected_error")
 
     if len(pyargs) > 0:
       py += ', ' + ', '.join(pyargs)
@@ -700,14 +700,14 @@ class TestFactory:
       py += ("actions.run_and_verify_switch(" + wc.py + ", " +
              wc_arg.pyarg + ", " + url_arg.pyarg + ", " +
              "expected_output, expected_disk, expected_status, " +
-             "None, None, None, None, None, False")
+             "[], False")
     else:
       # write a test that expects error
       py = "expected_error = " + self.strlist2py(err) + "\n\n"
       py += pychdir
       py += ("actions.run_and_verify_switch(" + wc.py + ", " +
              wc_arg.pyarg + ", " + url_arg.pyarg + ", " +
-             "None, None, None, expected_error, None, None, None, None, False")
+             "None, None, None, expected_error, False")
 
     if len(pyargs) > 0:
       py += ', ' + ', '.join(pyargs)
@@ -765,7 +765,7 @@ class TestFactory:
 
       py += ("actions.run_and_verify_checkout(" +
              url_arg.pyarg + ", " + wc_arg.pyarg +
-             ", expected_output, expected_disk, None, None, None, None")
+             ", expected_output, expected_disk")
     else:
       # write a test that expects failure
       pylist = self.strlist2py(err)

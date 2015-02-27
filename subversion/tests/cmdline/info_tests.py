@@ -516,7 +516,7 @@ def binary_tree_conflict(sbox):
   })
   svntest.actions.run_and_verify_update(iota,
                                         expected_output, None, expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         iota, '-r', '2')
 
   expected_info = [{

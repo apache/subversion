@@ -496,9 +496,7 @@ def basic_update_corruption(sbox):
                                         fail_output,
                                         expected_disk,
                                         fail_status,
-                                        "svn: E155017: Checksum",
-                                        None, None, None, None,
-                                        None, other_wc)
+                                        "svn: E155017: Checksum")
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
@@ -706,9 +704,7 @@ def basic_conflict(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
+                                        extra_files=extra_files)
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
@@ -976,7 +972,7 @@ def basic_switch(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
   ### Switch the directory `A/D/H' to `A/D/G'.
@@ -1036,7 +1032,7 @@ def basic_switch(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
@@ -1409,8 +1405,7 @@ def basic_import(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        [], True)
 
 #----------------------------------------------------------------------
 
@@ -2275,21 +2270,7 @@ def automatic_conflict_resolution(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
-
-  # verify that the extra_files list is now empty.
-  if len(extra_files) != 0:
-    # Because we want to be a well-behaved test, we silently raise if
-    # the test fails.  However, these two print statements would
-    # probably reveal the cause for the failure, if they were
-    # uncommented:
-    #
-    # logger.warn("Not all extra reject files have been accounted for:")
-    # logger.warn(extra_files)
-    ### we should raise a less generic error here. which?
-    raise svntest.Failure
+                                        extra_files=extra_files)
 
   # So now lambda, mu and rho are all in a "conflicted" state.  Run 'svn
   # resolve' with the respective "--accept[mine|orig|repo]" flag.
@@ -2377,9 +2358,7 @@ def automatic_conflict_resolution(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
+                                        extra_files=extra_files)
 
 def info_nonexisting_file(sbox):
   "get info on a file not in the repo"

@@ -534,11 +534,10 @@ def update_modified_with_translation(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        None, None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files,
-                                        None, None,
-                                        0, '-r', '1', wc_dir)
+                                        None,
+                                        [], False,
+                                        '-r', '1', wc_dir,
+                                        extra_files=extra_files)
 
 
 #----------------------------------------------------------------------
@@ -850,9 +849,7 @@ def props_only_file_update(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         None, None, expected_status,
-                                        None,
-                                        None, None, None, None,
-                                        False,
+                                        [], False,
                                         wc_dir, '-r', '2')
 
   if open(iota_path).read() != ''.join(content_expanded):
@@ -865,11 +862,7 @@ def props_only_file_update(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
 
   svntest.actions.run_and_verify_update(wc_dir,
-                                        None, expected_disk, expected_status,
-                                        None,
-                                        None, None, None, None,
-                                        False,
-                                        wc_dir)
+                                        None, expected_disk, expected_status)
 
   if open(iota_path).read() != ''.join(content):
     raise svntest.Failure("$Author$ is not contracted in 'iota'")

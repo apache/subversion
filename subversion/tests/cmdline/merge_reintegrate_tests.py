@@ -98,8 +98,7 @@ def run_and_verify_reintegrate(tgt_dir, src_url,
                     tgt_dir, None, None, src_url, None,
                     output_tree, mergeinfo_output_tree, elision_output_tree,
                     disk_tree, status_tree, skip_tree,
-                    error_re_string,
-                    None, None, None, None, check_props, dry_run,
+                    error_re_string, check_props, dry_run,
                     '--reintegrate', tgt_dir)
 
 
@@ -130,7 +129,7 @@ def basic_reintegrate(sbox):
   expected_status.tweak(wc_rev='7')
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
   # Merge from trunk to branch (ie, r3-6), using normal cherry-harvest.
   A_COPY_path = sbox.ospath('A_COPY')
@@ -196,8 +195,7 @@ def basic_reintegrate(sbox):
                                        k_expected_disk,
                                        k_expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True)
+                                       [], True)
   expected_disk.tweak('A_COPY', props={SVN_PROP_MERGEINFO: '/A:2-7'})
   expected_disk.tweak('A_COPY/B/E/beta', contents="New content")
   expected_disk.tweak('A_COPY/D/G/rho', contents="New content")
@@ -222,7 +220,7 @@ def basic_reintegrate(sbox):
   expected_status.tweak(wc_rev='8')
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
 
   # *finally*, actually run merge --reintegrate in trunk with the
@@ -351,7 +349,7 @@ def reintegrate_with_rename(sbox):
   expected_status.tweak(wc_rev='7')
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
   # Merge from trunk to branch (ie, r3-6), using normal cherry-harvest.
   A_COPY_path = sbox.ospath('A_COPY')
@@ -417,8 +415,7 @@ def reintegrate_with_rename(sbox):
                                        k_expected_disk,
                                        k_expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True)
+                                       [], True)
   expected_disk.tweak('A_COPY', props={SVN_PROP_MERGEINFO: '/A:2-7'})
   expected_disk.tweak('A_COPY/B/E/beta', contents="New content")
   expected_disk.tweak('A_COPY/D/G/rho', contents="New content")
@@ -474,7 +471,7 @@ def reintegrate_with_rename(sbox):
   expected_status.tweak(wc_rev='8')
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
   # Make another change on the branch: copy tau to tauprime.  Commit
   # in r9.
@@ -500,7 +497,7 @@ def reintegrate_with_rename(sbox):
   expected_status.tweak(wc_rev='9')
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
   # *finally*, actually run merge --reintegrate in trunk with the
   # branch URL.  This should bring in the mu change and the tauprime
@@ -592,7 +589,7 @@ def reintegrate_branch_never_merged_to(sbox):
   expected_status.tweak(wc_rev='7')
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
   # Make another change on the branch: copy tau to tauprime.  Commit
   # in r8.
@@ -617,7 +614,7 @@ def reintegrate_branch_never_merged_to(sbox):
   expected_status.tweak(wc_rev='8')
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
   # *finally*, actually run merge --reintegrate in trunk with the
   # branch URL.  This should bring in the mu change and the tauprime
@@ -806,7 +803,7 @@ def reintegrate_fail_on_switched_wc(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
   sbox.simple_update() # avoid mixed-revision error
   run_and_verify_reintegrate(
@@ -1998,8 +1995,8 @@ def reintegrate_with_subtree_merges(sbox):
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_A_disk, expected_A_status,
-                                       expected_A_skip, None, None, None,
-                                       None, None, True, False, A_path)
+                                       expected_A_skip,
+                                       [], True, False, A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
@@ -2350,8 +2347,7 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 1)
+                                       [], True, True)
 
 #----------------------------------------------------------------------
 # Test for issue #3867 'reintegrate merges create mergeinfo for

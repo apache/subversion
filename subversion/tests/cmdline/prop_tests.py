@@ -197,7 +197,7 @@ def update_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], 1,
                                         '-r', '2', wc_backup)
 
   # This adds properties to nodes that have properties
@@ -210,7 +210,7 @@ def update_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], 1,
                                         '-r', '3', wc_backup)
 
 
@@ -275,7 +275,7 @@ def downdate_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], 1,
                                         '-r', '1', wc_dir)
 
 #----------------------------------------------------------------------
@@ -355,14 +355,8 @@ def update_conflict_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files,
-                                        None, None, 1)
-
-  if len(extra_files) != 0:
-    logger.warn("didn't get expected conflict files")
-    raise svntest.verify.SVNUnexpectedOutput
+                                        check_props=True,
+                                        extra_files=extra_files)
 
   # Resolve the conflicts
   svntest.actions.run_and_verify_resolved([mu_path, A_path])
@@ -520,8 +514,7 @@ def revert_replacement_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 @Issues(920,2065)
@@ -1010,8 +1003,7 @@ def binary_props(sbox):
   svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None, 0)
+                                        expected_status)
 
   # Now, check those properties.
   svntest.actions.check_prop('prop_zb', B_path_bak, [prop_zb])
@@ -1277,7 +1269,7 @@ def update_props_on_wc_root(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        check_props=True)
 
 # test for issue 2743
 @Issue(2743)
@@ -1530,7 +1522,7 @@ def remove_custom_ns_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        check_props=True)
 
 def props_over_time(sbox):
   "property retrieval with peg and operative revs"
@@ -2339,13 +2331,9 @@ def file_matching_dir_prop_reject(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files,
-                                        None, None, True, '-r', '2', wc_dir)
-  if len(extra_files) != 0:
-    logger.warn("didn't get expected conflict files")
-    raise svntest.verify.SVNUnexpectedOutput
+                                        [], True,
+                                        '-r', '2', wc_dir,
+                                        extra_files=extra_files)
 
   # Revert and update to check that conflict files are removed
   svntest.actions.run_and_verify_svn(None, [], 'revert', '-R', wc_dir)
@@ -2362,7 +2350,7 @@ def file_matching_dir_prop_reject(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
 def pristine_props_listed(sbox):
   "check if pristine properties are visible"
@@ -2727,8 +2715,7 @@ def dir_prop_conflict_details(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None, None, None, None, None, 1,
-                                        wc_dir)
+                                        check_props=True)
 
   # The conflict properties file line was shown for previous versions, but the
   # conflict source urls are new since 1.8.

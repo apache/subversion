@@ -930,8 +930,7 @@ def update_symlink(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 @Issue(4091)
@@ -1204,7 +1203,6 @@ def incoming_symlink_changes(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None, None, None, None, None,
                                         check_props=True)
 
   # Update back to r2, to prepare some local changes
@@ -1221,8 +1219,7 @@ def incoming_symlink_changes(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True,
+                                        [], True,
                                         wc_dir, '-r', '2')
 
   # Ok, now add a property on all of them to make future symlinkness changes
@@ -1246,8 +1243,7 @@ def incoming_symlink_changes(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 @Issue(4479)

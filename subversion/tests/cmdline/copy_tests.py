@@ -3951,9 +3951,9 @@ def path_move_and_copy_between_wcs_2475(sbox):
 
   # Do a checkout, and verify the resulting output and disk contents.
   svntest.actions.run_and_verify_checkout(repo_url2,
-                          wc2_dir,
-                          expected_output,
-                          expected_wc)
+                                          wc2_dir,
+                                          expected_output,
+                                          expected_wc)
 
   # Copy a file from wc to wc2
   mu_path = sbox.ospath('A/mu')
@@ -4697,8 +4697,7 @@ def mixed_rev_copy_del(sbox):
   expected_status.tweak('A/B/E/beta', wc_rev=1)
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None,
-                                        expected_status, [],
-                                        None, None, None, None, None,
+                                        expected_status, [], False,
                                         '-r1',
                                         sbox.ospath('A/B/E/alpha'),
                                         sbox.ospath('A/B/E/beta'))
@@ -5010,7 +5009,7 @@ def copy_wc_url_with_absent(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         wc_dir, '--set-depth', 'infinity')
 
   # Except for A/no, the 3 directories should now have the same children

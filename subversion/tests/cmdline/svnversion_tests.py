@@ -102,7 +102,7 @@ def svnversion_test(sbox):
                                            expected_output,
                                            expected_disk,
                                            expected_status,
-                                           None, None, None, None, None,
+                                           [],
                                            False, '--ignore-ancestry'):
     raise svntest.Failure
 
@@ -151,8 +151,7 @@ def svnversion_test(sbox):
     })
   svntest.actions.run_and_verify_checkout(repo_url + "/A", A_A_path,
                                           expected_output, expected_disk,
-                                          None, None, None, None,
-                                          "--depth=files")
+                                          [], "--depth=files")
 
   # Partial (sparse) checkout
   svntest.actions.run_and_verify_svnversion(A_A_path,

@@ -317,7 +317,7 @@ def resolved_on_wc_root(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '-r1', wc)
 
   # Deletions so that the item becomes unversioned and
@@ -349,7 +349,7 @@ def resolved_on_wc_root(sbox):
                                         expected_output,
                                         expected_disk,
                                         None,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         wc)
   svntest.actions.run_and_verify_unquiet_status(wc, expected_status)
 
@@ -448,7 +448,7 @@ def resolved_on_deleted_item(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         wc)
 
   # Create some conflicts...

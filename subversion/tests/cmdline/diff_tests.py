@@ -729,8 +729,7 @@ def dont_diff_binary_file(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        1)  # verify props, too.
+                                        check_props=True)
 
   # Make a local mod to the binary file.
   svntest.main.file_append(theta_path, "some extra junk")
@@ -4418,8 +4417,8 @@ def diff_missing_tree_conflict_victim(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, None,
-                                       False, '--ignore-ancestry', wc_dir)
+                                       [], False, False,
+                                       '--ignore-ancestry', wc_dir)
 
   # 'svn diff' should show no change for the working copy
   # This currently fails because svn errors out with a 'node not found' error
