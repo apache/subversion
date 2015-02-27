@@ -1249,24 +1249,6 @@ svn_branch_revision_root_find_branch_by_id(const svn_branch_revision_root_t *rev
 }
 
 /*  */
-static const char *
-svn_branch_instance_get_id(svn_branch_instance_t *branch,
-                           apr_pool_t *result_pool)
-{
-  const char *id = "";
-
-  while (branch->outer_branch)
-    {
-      id = apr_psprintf(result_pool, ".%d%s",
-                        branch->outer_eid, id);
-      branch = branch->outer_branch;
-    }
-  id = apr_psprintf(result_pool, "^%s", id);
-  SVN_DBG(("branch full id: '%s'", id));
-  return id;
-}
-
-/*  */
 static svn_branch_el_rev_id_t *
 svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t *old_el_rev,
                                    apr_pool_t *result_pool)

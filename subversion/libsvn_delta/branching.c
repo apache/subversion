@@ -22,6 +22,7 @@
  */
 
 #include <stddef.h>
+#include <assert.h>
 
 #include "svn_types.h"
 #include "svn_error.h"
@@ -34,17 +35,29 @@
 #include "svn_private_config.h"
 
 
+#define FAMILY_HAS_BID(family, bid) \
+  ((bid) >= (family)->first_bid && (bid) < (family)->next_bid)
+
+#define FAMILY_HAS_ELEMENT(family, eid) \
+  ((eid) >= (family)->first_eid && (eid) < (family)->next_eid)
+
 #define BRANCH_FAMILY_HAS_ELEMENT(branch, eid) \
-   ((eid) >= (branch)->sibling_defn->family->first_eid \
-    && (eid) < (branch)->sibling_defn->family->next_eid)
+   FAMILY_HAS_ELEMENT((branch)->sibling_defn->family, (eid))
 
 #define BRANCHES_IN_SAME_FAMILY(branch1, branch2) \
   ((branch1)->sibling_defn->family->fid \
    == (branch2)->sibling_defn->family->fid)
 
-#define SAME_BRANCH(branch1, branch2) \
-  ((branch1)->sibling_defn->family->fid \
-   == (branch2)->sibling_defn->family->fid)
+/* Is BRANCH1 the same branch as BRANCH2? Compare by full branch-ids; don't
+   require identical branch-instance objects. */
+#define BRANCH_IS_SAME_BRANCH(branch1, branch2, scratch_pool) \
+  (strcmp(svn_branch_instance_get_id(branch1, scratch_pool), \
+          svn_branch_instance_get_id(branch2, scratch_pool)) == 0)
+
+/* Is BRANCH1 an immediate child of BRANCH2? Compare by full branch-ids; don't
+   require identical branch-instance objects. */
+#define BRANCH_IS_CHILD_OF_BRANCH(branch1, branch2, scratch_pool) \
+  BRANCH_IS_SAME_BRANCH((branch1)->outer_branch, branch2, scratch_pool)
 
 svn_branch_repos_t *
 svn_branch_repos_create(apr_pool_t *result_pool)
@@ -99,6 +112,16 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
   return rev_root;
 }
 
+/* Assert FAMILY satisfies all its invariants.
+ */
+static void
+assert_branch_family_invariants(const svn_branch_family_t *family)
+{
+  assert(family->branch_siblings);
+  assert(family->sub_families);
+  /* ### ... */
+}
+
 svn_branch_family_t *
 svn_branch_family_create(svn_branch_repos_t *repos,
                          int fid,
@@ -119,6 +142,7 @@ svn_branch_family_create(svn_branch_repos_t *repos,
   f->first_eid = first_eid;
   f->next_eid = next_eid;
   f->pool = result_pool;
+  assert_branch_family_invariants(f);
   return f;
 }
 
@@ -127,6 +151,7 @@ svn_branch_family_add_new_element(svn_branch_family_t *family)
 {
   int eid = family->next_eid++;
 
+  assert_branch_family_invariants(family);
   return eid;
 }
 
@@ -145,6 +170,8 @@ svn_branch_family_add_new_subfamily(svn_branch_family_t *outer_family)
   repos_register_family(repos, family);
   APR_ARRAY_PUSH(outer_family->sub_families, void *) = family;
 
+  assert_branch_family_invariants(outer_family);
+  assert_branch_family_invariants(family);
   return family;
 }
 
@@ -167,6 +194,7 @@ family_create_branch_sibling(svn_branch_family_t *family,
   /* Register the branch */
   APR_ARRAY_PUSH(family->branch_siblings, void *) = branch_sibling;
 
+  assert_branch_family_invariants(family);
   return branch_sibling;
 }
 
@@ -218,6 +246,7 @@ svn_branch_family_add_new_branch_sibling(svn_branch_family_t *family,
   svn_branch_sibling_t *branch_sibling
     = family_create_branch_sibling(family, bid, root_eid);
 
+  assert_branch_family_invariants(family);
   return branch_sibling;
 }
 
@@ -251,6 +280,17 @@ svn_branch_family_get_branch_instances(
   return fam_branch_instances;
 }
 
+/* Assert SIBLING satisfies all its invariants.
+ */
+static void
+assert_branch_sibling_invariants(const svn_branch_sibling_t *sibling,
+                                 apr_pool_t *scratch_pool)
+{
+  assert(sibling->family);
+  assert(FAMILY_HAS_BID(sibling->family, sibling->bid));
+  assert(FAMILY_HAS_ELEMENT(sibling->family, sibling->root_eid));
+}
+
 svn_branch_sibling_t *
 svn_branch_sibling_create(svn_branch_family_t *family,
                              int bid,
@@ -259,15 +299,36 @@ svn_branch_sibling_create(svn_branch_family_t *family,
 {
   svn_branch_sibling_t *b = apr_pcalloc(result_pool, sizeof(*b));
 
-  SVN_ERR_ASSERT_NO_RETURN(bid >= family->first_bid
-                           && bid < family->next_bid);
-  SVN_ERR_ASSERT_NO_RETURN(root_eid >= family->first_eid
-                           && root_eid < family->next_eid);
+  assert(FAMILY_HAS_BID(family, bid));
+  assert(FAMILY_HAS_ELEMENT(family, root_eid));
 
   b->family = family;
   b->bid = bid;
   b->root_eid = root_eid;
+  assert_branch_sibling_invariants(b, result_pool);
   return b;
+}
+
+/* Assert BRANCH satisfies all its invariants.
+ */
+static void
+assert_branch_instance_invariants(const svn_branch_instance_t *branch,
+                                  apr_pool_t *scratch_pool)
+{
+  assert(branch->sibling_defn);
+  assert(branch->rev_root);
+  if (branch->outer_branch)
+    {
+      assert(branch->outer_eid != -1);
+      assert(FAMILY_HAS_ELEMENT(branch->outer_branch->sibling_defn->family, branch->outer_eid));
+      /* TODO: outer branch's family is parent of this branch's family */
+    }
+  else
+    {
+      assert(branch->outer_eid == -1);
+      assert(branch->sibling_defn->family->fid == 0);
+    }
+  assert(branch->e_map);
 }
 
 svn_branch_instance_t *
@@ -284,6 +345,7 @@ svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
   b->e_map = apr_hash_make(result_pool);
   b->outer_branch = outer_branch;
   b->outer_eid = outer_eid;
+  assert_branch_instance_invariants(b, result_pool);
   return b;
 }
 
@@ -434,6 +496,7 @@ branch_map_set(svn_branch_instance_t *branch,
     branch_map_node_validate(branch, eid, node);
 
   apr_hash_set(branch->e_map, eid_p, sizeof(*eid_p), node);
+  assert_branch_instance_invariants(branch, map_pool);
 }
 
 void
@@ -1366,6 +1429,23 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
  * ========================================================================
  */
 
+const char *
+svn_branch_instance_get_id(svn_branch_instance_t *branch,
+                           apr_pool_t *result_pool)
+{
+  const char *id = "";
+
+  while (branch->outer_branch)
+    {
+      id = apr_psprintf(result_pool, ".%d%s",
+                        branch->outer_eid, id);
+      branch = branch->outer_branch;
+    }
+  id = apr_psprintf(result_pool, "^%s", id);
+  SVN_DBG(("branch full id: '%s'", id));
+  return id;
+}
+
 svn_error_t *
 svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             svn_branch_instance_t *from_branch,
@@ -1388,7 +1468,7 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
     }
 
   /* FROM_BRANCH must be an immediate child branch of TO_OUTER_BRANCH. */
-  if (! SAME_BRANCH(from_branch->outer_branch, to_outer_branch))
+  if (! BRANCH_IS_CHILD_OF_BRANCH(from_branch, to_outer_branch, scratch_pool))
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                _("source and destination must be within same "

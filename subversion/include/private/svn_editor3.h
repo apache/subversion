@@ -2261,6 +2261,12 @@ svn_branch_branchify(svn_editor3_t *editor,
                      svn_editor3_eid_t outer_eid,
                      apr_pool_t *scratch_pool);
 
+/* Get the full id of branch BRANCH.
+ */
+const char *
+svn_branch_instance_get_id(svn_branch_instance_t *branch,
+                           apr_pool_t *result_pool);
+
 
 /* ====================================================================== */
 
