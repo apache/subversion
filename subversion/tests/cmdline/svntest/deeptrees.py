@@ -754,8 +754,13 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
         x_status.copy()
         x_status.wc_dir = local
 
+      if test_case.error_re_string == None:
+        expected_stderr = []
+      else:
+        expected_stderr = test_case.error_re_string
+
       run_and_verify_switch(local, local, incoming, x_out, x_disk, None,
-                            test_case.error_re_string, False,
+                            expected_stderr, False,
                             '--ignore-ancestry')
       run_and_verify_unquiet_status(local, x_status)
 
