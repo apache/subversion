@@ -173,6 +173,17 @@ svn_error_t *
 svn_error_quick_wrap(svn_error_t *child,
                      const char *new_msg);
 
+/** A quick n' easy way to create a wrapped exception with your own
+ * printf-style error message produced by passing @a fmt, using
+ * apr_psprintf(), before throwing it up the stack.  (It uses all of the
+ * @a child's fields.)
+ */
+svn_error_t *
+svn_error_quick_wrapf(svn_error_t *child,
+                      const char *fmt,
+                      ...)
+       __attribute__((format(printf, 2, 3)));
+
 /** Compose two errors, returning the composition as a brand new error
  * and consuming the original errors.  Either or both of @a err1 and
  * @a err2 may be @c SVN_NO_ERROR.  If both are not @c SVN_NO_ERROR,
@@ -256,6 +267,8 @@ svn_error__locate(const char *file,
   (svn_error__locate(__FILE__,__LINE__), (svn_error_wrap_apr))
 #define svn_error_quick_wrap \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
+#define svn_error_quick_wrapf \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrapf))
 #endif
 
 
