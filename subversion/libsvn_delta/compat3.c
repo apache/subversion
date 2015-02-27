@@ -2488,6 +2488,7 @@ svn_delta__ev3_from_delta_for_commit(
     editor3_rm,
     editor3_put,
     NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL,
     editor3_complete,
     editor3_abort
   };

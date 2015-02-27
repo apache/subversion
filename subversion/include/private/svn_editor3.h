@@ -1143,6 +1143,22 @@ svn_editor3_alter(svn_editor3_t *editor,
                   const char *new_name,
                   const svn_editor3_node_content_t *new_content);
 
+/** Register a sequence point.
+ *
+ * At a sequence point, elements are arranged in a tree hierarchy: each
+ * element has exactly one parent element, except the root, and so on.
+ * Translation between paths and element addressing is defined only at
+ * a sequence point.
+ *
+ * The other edit operations -- add, alter, delete, etc. -- result in a
+ * state that is not a sequence point.
+ *
+ * The beginning of an edit is a sequence point. Completion of an edit
+ * (svn_editor3_complete()) creates a sequence point.
+ */
+svn_error_t *
+svn_editor3_sequence_point(svn_editor3_t *editor);
+
 /** Drive @a editor's #svn_editor3_cb_complete_t callback.
  *
  * Send word that the edit has been completed successfully.
@@ -1312,6 +1328,12 @@ typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   const svn_editor3_node_content_t *new_content,
   apr_pool_t *scratch_pool);
 
+/** @see svn_editor3_sequence_point(), #svn_editor3_t
+ */
+typedef svn_error_t *(*svn_editor3_cb_sequence_point_t)(
+  void *baton,
+  apr_pool_t *scratch_pool);
+
 /** @see svn_editor3_complete(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_complete_t)(
@@ -1357,6 +1379,7 @@ typedef struct svn_editor3_cb_funcs_t
   svn_editor3_cb_delete_t cb_delete;
   svn_editor3_cb_alter_t cb_alter;
 
+  svn_editor3_cb_sequence_point_t cb_sequence_point;
   svn_editor3_cb_complete_t cb_complete;
   svn_editor3_cb_abort_t cb_abort;
 
@@ -1921,6 +1944,12 @@ svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
 void
 svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
                              apr_pool_t *scratch_pool);
+
+/* Purge orphaned elements and subbranches.
+ */
+void
+svn_branch_purge_r(svn_branch_instance_t *branch,
+                   apr_pool_t *scratch_pool);
 
 /* Branch a subtree.
  *

@@ -1041,25 +1041,9 @@ editor3_delete(void *baton,
                    svn_editor3_eid_t eid,
                    apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *subbranches;
-  int i;
-
   SVN_DBG(("delete(b%d e%d)",
            branch->sibling_defn->bid, eid));
 
-  /* Delete nested branches. ### Shouldn't GC/purge-orphans take care of it? */
-  subbranches = svn_branch_get_subbranches(branch, eid,
-                                           scratch_pool, scratch_pool);
-  for (i = 0; i < subbranches->nelts; i++)
-    {
-      svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
-
-      SVN_DBG(("delete subbranch-tree (b%d) found at outer e%d",
-               b->sibling_defn->bid, b->outer_eid));
-      svn_branch_delete_branch_instance_r(b, scratch_pool);
-    }
-
-  /* Delete the specified element */
   svn_branch_map_delete(branch, eid /* ### , since_rev? */);
 
   return SVN_NO_ERROR;
@@ -1104,7 +1088,8 @@ convert_branch_to_paths(apr_hash_t *paths,
 {
   apr_hash_index_t *hi;
 
-  svn_branch_map_purge_orphans(branch, scratch_pool);
+  /* assert(branch is at a sequence point); */
+
   for (hi = apr_hash_first(scratch_pool, branch->e_map);
        hi; hi = apr_hash_next(hi))
     {
@@ -1571,11 +1556,24 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
 
 /* An #svn_editor3_t method. */
 static svn_error_t *
+editor3_sequence_point(void *baton,
+                       apr_pool_t *scratch_pool)
+{
+  ev3_from_delta_baton_t *eb = baton;
+
+  svn_branch_purge_r(eb->edited_rev_root->root_branch, scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_editor3_t method. */
+static svn_error_t *
 editor3_complete(void *baton,
                  apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
   svn_error_t *err;
+
+  editor3_sequence_point(baton, scratch_pool);
 
   /* Drive the tree we've created. */
   err = drive_changes_branch(eb, scratch_pool);
@@ -1651,6 +1649,7 @@ svn_delta__ev3_from_delta_for_commit2(
     editor3_copy_tree,
     editor3_delete,
     editor3_alter,
+    editor3_sequence_point,
     editor3_complete,
     editor3_abort
   };
