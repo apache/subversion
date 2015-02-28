@@ -1311,8 +1311,7 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   err = svn_io_set_file_affected_time(finfo_before.mtime
                                               - apr_time_from_sec(2),
                                       tmpfile_name, pool);
-  if (err)
-    goto cleanup;
+  svn_error_clear(err);
 
   /* Stat it again to get the mtime we actually set. */
   err = svn_io_stat(&finfo_before, tmpfile_name,
