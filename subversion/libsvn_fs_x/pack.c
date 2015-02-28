@@ -567,6 +567,7 @@ copy_rep_to_temp(pack_context_t *context,
                  apr_pool_t *scratch_pool)
 {
   svn_fs_x__rep_header_t *rep_header;
+  svn_stream_t *stream;
   apr_off_t source_offset = entry->offset;
 
   /* create a copy of ENTRY, make it point to the copy destination and
@@ -577,7 +578,8 @@ copy_rep_to_temp(pack_context_t *context,
   add_item_rep_mapping(context, entry);
 
   /* read & parse the representation header */
-  SVN_ERR(svn_fs_x__read_rep_header(&rep_header, rev_file->stream,
+  SVN_ERR(svn_fs_x__rev_file_stream(&stream, rev_file));
+  SVN_ERR(svn_fs_x__read_rep_header(&rep_header, stream,
                                     scratch_pool, scratch_pool));
 
   /* if the representation is a delta against some other rep, link the two */
@@ -685,11 +687,13 @@ copy_node_to_temp(pack_context_t *context,
   path_order_t *path_order = apr_pcalloc(context->info_pool,
                                          sizeof(*path_order));
   svn_fs_x__noderev_t *noderev;
+  svn_stream_t *stream;
   const char *sort_path;
   apr_off_t source_offset = entry->offset;
 
   /* read & parse noderev */
-  SVN_ERR(svn_fs_x__read_noderev(&noderev, rev_file->stream, scratch_pool,
+  SVN_ERR(svn_fs_x__rev_file_stream(&stream, rev_file));
+  SVN_ERR(svn_fs_x__read_noderev(&noderev, stream, scratch_pool,
                                  scratch_pool));
 
   /* create a copy of ENTRY, make it point to the copy destination and
