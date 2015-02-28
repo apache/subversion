@@ -240,11 +240,11 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
 }
 
 svn_error_t *
-svn_fs_x__open_pack_or_rev_file(svn_fs_x__revision_file_t **file,
-                                 svn_fs_t *fs,
-                                 svn_revnum_t rev,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool)
+svn_fs_x__rev_file_open(svn_fs_x__revision_file_t **file,
+                        svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   *file = init_revision_file(fs, rev, result_pool);
   return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, FALSE,
@@ -252,11 +252,11 @@ svn_fs_x__open_pack_or_rev_file(svn_fs_x__revision_file_t **file,
 }
 
 svn_error_t *
-svn_fs_x__open_pack_or_rev_file_writable(svn_fs_x__revision_file_t** file,
-                                         svn_fs_t* fs,
-                                         svn_revnum_t rev,
-                                         apr_pool_t* result_pool,
-                                         apr_pool_t *scratch_pool)
+svn_fs_x__rev_file_open_writable(svn_fs_x__revision_file_t** file,
+                                 svn_fs_t* fs,
+                                 svn_revnum_t rev,
+                                 apr_pool_t* result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   *file = init_revision_file(fs, rev, result_pool);
   return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, TRUE,
@@ -311,11 +311,11 @@ auto_read_footer(svn_fs_x__revision_file_t *file)
 }
 
 svn_error_t *
-svn_fs_x__open_proto_rev_file(svn_fs_x__revision_file_t **file,
-                               svn_fs_t *fs,
-                               svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t* result_pool,
-                               apr_pool_t *scratch_pool)
+svn_fs_x__rev_file_open_proto_rev(svn_fs_x__revision_file_t **file,
+                                  svn_fs_t *fs,
+                                  svn_fs_x__txn_id_t txn_id,
+                                  apr_pool_t* result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   apr_file_t *apr_file;
   SVN_ERR(svn_io_file_open(&apr_file,
@@ -324,12 +324,12 @@ svn_fs_x__open_proto_rev_file(svn_fs_x__revision_file_t **file,
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                            result_pool));
 
-  return svn_error_trace(svn_fs_x__wrap_temp_rev_file(file, fs, apr_file,
+  return svn_error_trace(svn_fs_x__rev_file_wrap_temp(file, fs, apr_file,
                                                       result_pool));
 }
 
 svn_error_t *
-svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
+svn_fs_x__rev_file_wrap_temp(svn_fs_x__revision_file_t **file,
                              svn_fs_t *fs,
                              apr_file_t *temp_file,
                              apr_pool_t *result_pool)

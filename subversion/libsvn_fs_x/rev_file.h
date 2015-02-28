@@ -76,11 +76,11 @@ typedef struct svn_fs_x__revision_file_t svn_fs_x__revision_file_t;
  * file doesn't exist.  Allocate *FILE in RESULT_POOL and use SCRATCH_POOL
  * for temporaries. */
 svn_error_t *
-svn_fs_x__open_pack_or_rev_file(svn_fs_x__revision_file_t **file,
-                                svn_fs_t *fs,
-                                svn_revnum_t rev,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
+svn_fs_x__rev_file_open(svn_fs_x__revision_file_t **file,
+                        svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /* Open the correct revision file for REV with read and write access.
  * If necessary, temporarily reset the file's read-only state.  If the
@@ -90,26 +90,26 @@ svn_fs_x__open_pack_or_rev_file(svn_fs_x__revision_file_t **file,
  * Return SVN_ERR_FS_NO_SUCH_REVISION if the file doesn't exist.
  * Allocate *FILE in RESULT_POOL and use SCRATCH_POOLfor temporaries. */
 svn_error_t *
-svn_fs_x__open_pack_or_rev_file_writable(svn_fs_x__revision_file_t **file,
-                                         svn_fs_t *fs,
-                                         svn_revnum_t rev,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool);
+svn_fs_x__rev_file_open_writable(svn_fs_x__revision_file_t **file,
+                                 svn_fs_t *fs,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Open the proto-rev file of transaction TXN_ID in FS and return it in *FILE.
  * Allocate *FILE in RESULT_POOL use and SCRATCH_POOL for temporaries.. */
 svn_error_t *
-svn_fs_x__open_proto_rev_file(svn_fs_x__revision_file_t **file,
-                              svn_fs_t *fs,
-                              svn_fs_x__txn_id_t txn_id,
-                              apr_pool_t* result_pool,
-                              apr_pool_t *scratch_pool);
+svn_fs_x__rev_file_open_proto_rev(svn_fs_x__revision_file_t **file,
+                                  svn_fs_t *fs,
+                                  svn_fs_x__txn_id_t txn_id,
+                                  apr_pool_t* result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Wrap the TEMP_FILE, used in the context of FS, into a revision file
  * struct, allocated in RESULT_POOL, and return it in *FILE.
  */
 svn_error_t *
-svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
+svn_fs_x__rev_file_wrap_temp(svn_fs_x__revision_file_t **file,
                              svn_fs_t *fs,
                              apr_file_t *temp_file,
                              apr_pool_t *result_pool);
