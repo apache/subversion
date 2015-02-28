@@ -203,8 +203,9 @@ is not parsed; only its presence or absence matters.)
 
 Both batch modes also perform a basic sanity-check on entries that declare
 backport branches (via the "Branch:" header): if a backport branch is used, but
-at least one of the revisions enumerated in the entry title had not been merged
-from $TRUNK to the branch root, the hourly bot will turn red and 
+at least one of the revisions enumerated in the entry title had neither been
+merged from $TRUNK to the branch root, nor been committed
+directly to the backport branch, the hourly bot will turn red and 
 nightly bot will skip the entry and email its admins.  (The nightly bot does
 not email the list on failure, since it doesn't use buildbot.)
 
@@ -895,7 +896,8 @@ sub validate_branch_contains_named_revisions {
 
   my $shell_escaped_branch = shell_escape($entry{branch});
   %present = do {
-    my @present = `$SVN mergeinfo --show-revs=merged -- $TRUNK $BRANCHES/$shell_escaped_branch`;
+    my @present = `$SVN mergeinfo --show-revs=merged -- $TRUNK $BRANCHES/$shell_escaped_branch &&
+                   $SVN mergeinfo --show-revs=eligible -- $BRANCHES/$shell_escaped_branch`;
     chomp @present;
     @present = map /(\d+)/g, @present;
     map +($_ => 1), @present;

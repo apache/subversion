@@ -552,6 +552,44 @@ def backport_double_conflict(sbox):
 
 
 #----------------------------------------------------------------------
+@BackportTest('76cee987-25c9-4d6c-ad40-000000000009')
+def backport_branch_with_original_revision(sbox):
+  "branch with original revision"
+
+  # r6: conflicting change on branch
+  sbox.simple_append('branch/iota', 'Conflicts with first change')
+  sbox.simple_commit(message="Conflicting change on iota")
+
+  # r7: backport branch
+  sbox.simple_update()
+  sbox.simple_copy('branch', 'subversion/branches/r4')
+  sbox.simple_commit(message='Create a backport branch')
+
+  # r8: merge into backport branch
+  sbox.simple_update()
+  svntest.main.run_svn(None, 'merge', '--record-only', '-c4',
+                       '^/subversion/trunk', sbox.ospath('subversion/branches/r4'))
+  sbox.simple_mkdir('subversion/branches/r4/A_resolved')
+  sbox.simple_append('subversion/branches/r4/iota', "resolved\n", truncate=1)
+  sbox.simple_commit(message='Conflict resolution via mkdir')
+
+  # r9: original revision on branch
+  sbox.simple_update()
+  sbox.simple_mkdir('subversion/branches/r4/dir-created-on-backport-branch')
+  sbox.simple_commit(message='An original revision on the backport branch')
+
+  # r10: nominate the branch with r9 listed
+  approved_entries = [
+    make_entry([4, 9], branch="r4")
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_commit(message='Nominate r4+r9')
+
+  # r11, r12: Run it.
+  run_backport(sbox)
+
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -566,6 +604,7 @@ test_list = [ None,
               backport_conflicts_detection,
               backport_branch_contains,
               backport_double_conflict,
+              backport_branch_with_original_revision,
               # When adding a new test, include the test number in the last
               # 6 bytes of the UUID.
              ]
