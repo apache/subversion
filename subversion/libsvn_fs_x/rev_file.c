@@ -20,6 +20,8 @@
  * ====================================================================
  */
 
+#include "svn_pools.h"
+
 #include "rev_file.h"
 #include "fs_x.h"
 #include "index.h"
@@ -33,6 +35,9 @@
 
 struct svn_fs_x__revision_file_t
 {
+  /* the filesystem that this revision file belongs to */
+  svn_fs_t *fs;
+
   /* Meta-data to FILE. */
   svn_fs_x__rev_file_info_t file_info;
 
@@ -60,7 +65,7 @@ struct svn_fs_x__revision_file_t
    * Elements are -1 / NULL until svn_fs_x__auto_read_footer gets called. */
   svn_fs_x__index_info_t p2l_info;
 
-  /* pool containing this object */
+  /* Pool used for all sub-structure allocations (file, streams etc.). */
   apr_pool_t *pool;
 };
 
@@ -71,11 +76,13 @@ create_revision_file(svn_fs_t *fs,
                      apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
+
+  apr_pool_t *file_pool = svn_pool_create(result_pool);
   svn_fs_x__revision_file_t *file = apr_palloc(result_pool, sizeof(*file));
 
+  file->fs = fs;
   file->file_info.is_packed = FALSE;
   file->file_info.start_revision = SVN_INVALID_REVNUM;
-
   file->file = NULL;
   file->stream = NULL;
   file->p2l_stream = NULL;
@@ -87,7 +94,7 @@ create_revision_file(svn_fs_t *fs,
   file->p2l_info.start = -1;
   file->p2l_info.end = -1;
   file->p2l_info.checksum = NULL;
-  file->pool = result_pool;
+  file->pool = file_pool;
 
   return file;
 }
@@ -177,14 +184,13 @@ auto_make_writable(const char *path,
  */
 static svn_error_t *
 open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
                       svn_boolean_t writable,
-                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_boolean_t retry = FALSE;
+  svn_fs_t *fs = file->fs;
+  svn_revnum_t rev = file->file_info.start_revision;
 
   do
     {
@@ -195,19 +201,19 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
                         : APR_READ | APR_BUFFERED;
 
       /* We may have to *temporarily* enable write access. */
-      err = writable ? auto_make_writable(path, result_pool, scratch_pool)
+      err = writable ? auto_make_writable(path, file->pool, scratch_pool)
                      : SVN_NO_ERROR; 
 
       /* open the revision file in buffered r/o or r/w mode */
       if (!err)
         err = svn_io_file_open(&apr_file, path, flags, APR_OS_DEFAULT,
-                               result_pool);
+                               file->pool);
 
       if (!err)
         {
           file->file = apr_file;
           file->stream = svn_stream_from_aprfile2(apr_file, TRUE,
-                                                  result_pool);
+                                                  file->pool);
 
           return SVN_NO_ERROR;
         }
@@ -247,8 +253,7 @@ svn_fs_x__rev_file_open(svn_fs_x__revision_file_t **file,
                         apr_pool_t *scratch_pool)
 {
   *file = init_revision_file(fs, rev, result_pool);
-  return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, FALSE,
-                                               result_pool, scratch_pool));
+  return svn_error_trace(open_pack_or_rev_file(*file, FALSE, scratch_pool));
 }
 
 svn_error_t *
@@ -259,8 +264,7 @@ svn_fs_x__rev_file_open_writable(svn_fs_x__revision_file_t** file,
                                  apr_pool_t *scratch_pool)
 {
   *file = init_revision_file(fs, rev, result_pool);
-  return svn_error_trace(open_pack_or_rev_file(*file, fs, rev, TRUE,
-                                               result_pool, scratch_pool));
+  return svn_error_trace(open_pack_or_rev_file(*file, TRUE, scratch_pool));
 }
 
 /* If the footer data in FILE has not been read, yet, do so now.
@@ -467,11 +471,16 @@ svn_fs_x__rev_file_read(svn_fs_x__revision_file_t *file,
 svn_error_t *
 svn_fs_x__close_revision_file(svn_fs_x__revision_file_t *file)
 {
+  /* Close sub-objects properly */
   if (file->stream)
     SVN_ERR(svn_stream_close(file->stream));
   if (file->file)
     SVN_ERR(svn_io_file_close(file->file, file->pool));
 
+  /* Release the memory. */
+  svn_pool_clear(file->pool);
+
+  /* Reset pointers to objects previously allocated from FILE->POOL. */
   file->file = NULL;
   file->stream = NULL;
   file->l2p_stream = NULL;
