@@ -1323,7 +1323,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   apr_off_t start_offset;
   apr_off_t end_offset;
   apr_pool_t *iterpool;
-  svn_fs_x__revision_file_t *file = rs->sfile->rfile;
+  svn_fs_x__revision_file_t *file;
 
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
@@ -1338,6 +1338,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
 
   /* someone has to actually read the data from file.  Open it */
   SVN_ERR(auto_open_shared_file(rs->sfile));
+  file = rs->sfile->rfile;
 
   /* invoke the 'block-read' feature for non-txn data.
      However, don't do that if we are in the middle of some representation,
