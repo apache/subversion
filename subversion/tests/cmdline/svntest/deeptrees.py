@@ -972,9 +972,14 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       if ignore_ancestry:
         varargs = varargs + ('--ignore-ancestry',)
 
+      if test_case.error_re_string == None:
+        expected_stderr = []
+      else:
+        expected_stderr = test_case.error_re_string
+
       run_and_verify_merge(local, '0', 'HEAD', incoming, None,
                            x_out, None, None, x_disk, None, x_skip,
-                           test_case.error_re_string,
+                           expected_stderr,
                            False, False, *varargs)
       run_and_verify_unquiet_status(local, x_status)
     except:

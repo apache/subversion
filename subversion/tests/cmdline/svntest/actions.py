@@ -998,7 +998,7 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
                          mergeinfo_output_tree,
                          elision_output_tree,
                          disk_tree, status_tree, skip_tree,
-                         error_re_string = None,
+                         expected_stderr = [],
                          check_props = False,
                          dry_run = True,
                          *args, **kw):
@@ -1007,11 +1007,6 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
 
   If URL2 is None, run 'svn merge -rREV1:REV2 URL1 DIR'.  If both REV1
   and REV2 are None, leave off the '-r' argument.
-
-  If ERROR_RE_STRING, the merge must exit with error, and the error
-  message must match regular expression ERROR_RE_STRING.
-
-  Else if ERROR_RE_STRING is None, then:
 
   The subcommand output will be verified against OUTPUT_TREE.  Output
   related to mergeinfo notifications will be verified against
@@ -1052,8 +1047,8 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
     pre_disk = tree.build_tree_from_wc(dir)
     dry_run_command = merge_command + ('--dry-run',)
     dry_run_command = dry_run_command + args
-    exit_code, out_dry, err_dry = main.run_svn(error_re_string,
-                                               *dry_run_command)
+    exit_code, out_dry, err_dry = run_and_verify_svn(None, expected_stderr,
+                                                     *dry_run_command)
     post_disk = tree.build_tree_from_wc(dir)
     try:
       tree.compare_trees("disk", post_disk, pre_disk)
@@ -1066,16 +1061,7 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
 
   # Update and make a tree of the output.
   merge_command = merge_command + args
-  exit_code, out, err = main.run_svn(error_re_string, *merge_command)
-
-  if error_re_string:
-    if not error_re_string.startswith(".*"):
-      error_re_string = ".*(" + error_re_string + ")"
-    expected_err = verify.RegexOutput(error_re_string, match_all=False)
-    verify.verify_outputs(None, None, err, None, expected_err)
-    return
-  elif err:
-    raise verify.SVNUnexpectedStderr(err)
+  exit_code, out, err = run_and_verify_svn(None, expected_stderr, *merge_command)
 
   # Split the output into that related to application of the actual diff
   # and that related to the recording of mergeinfo describing the merge.
@@ -2109,13 +2095,15 @@ def inject_conflict_into_expected_state(state_path,
   if expected_status:
     expected_status.tweak(state_path, status='C ')
 
-def make_conflict_marker_text(wc_text, merged_text, prev_rev, merged_rev):
+def make_conflict_marker_text(wc_text, merged_text, prev_rev, merged_rev,
+                              old_text=''):
   """Return the conflict marker text described by WC_TEXT (the current
   text in the working copy, MERGED_TEXT (the conflicting text merged
   in), and MERGED_REV (the revision from whence the conflicting text
   came)."""
   return "<<<<<<< .working\n" + wc_text + \
-         "||||||| .merge-left.r" + str(prev_rev) +  "\n=======\n" + \
+         "||||||| .merge-left.r" + str(prev_rev) + '\n' + \
+         old_text + "=======\n" + \
          merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"
 
 

@@ -577,8 +577,7 @@ def replace_symlink_with_dir(sbox):
 
   svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
                                                'special_tests_data',
-                                               'symlink.dump'),
-                            create_wc=False)
+                                               'symlink.dump'))
 
   wc_dir = sbox.wc_dir
   from_path = os.path.join(wc_dir, 'from')

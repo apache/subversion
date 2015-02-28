@@ -2904,12 +2904,15 @@ def cherry_pick_text_conflict(sbox):
   expected_output = wc.State(A_path, {
     'mu'       : Item(status='C '),
     })
-  expected_mergeinfo_output = wc.State(A_path, {})
+  expected_mergeinfo_output = wc.State(A_path, {
+    ''          : Item(status=' G')
+    })
   expected_elision_output = wc.State(A_path, {
     })
   expected_disk = wc.State('', {
     'mu'        : Item("This is the file 'mu'.\n"
-                       + make_conflict_marker_text("r3\n" * 3, "r4\n" * 3, 3, 4)),
+                       + make_conflict_marker_text('', "r3\n" * 3 + "r4\n" * 3, 3, 4,
+                                                   old_text='r3\n' * 3)),
     'B'         : Item(),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/E'       : Item(),
@@ -2951,7 +2954,7 @@ def cherry_pick_text_conflict(sbox):
     })
   expected_status.tweak(wc_rev=2)
   expected_skip = wc.State('', { })
-  expected_error = "conflicts were produced while merging r3:4"
+  expected_error = ".*conflicts were produced while merging r3:4.*"
   svntest.actions.run_and_verify_merge(A_path, '3', '6', branch_A_url, None,
                                        expected_output,
                                        expected_mergeinfo_output,

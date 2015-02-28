@@ -86,7 +86,7 @@ def run_and_verify_reintegrate(tgt_dir, src_url,
                                mergeinfo_output_tree,
                                elision_output_tree,
                                disk_tree, status_tree, skip_tree,
-                               error_re_string = None,
+                               expected_stderr = [],
                                check_props = True,
                                dry_run = True):
   """Run 'svn merge --reintegrate SRC_URL TGT_DIR'. Raise an error if
@@ -98,7 +98,7 @@ def run_and_verify_reintegrate(tgt_dir, src_url,
                     tgt_dir, None, None, src_url, None,
                     output_tree, mergeinfo_output_tree, elision_output_tree,
                     disk_tree, status_tree, skip_tree,
-                    error_re_string, check_props, dry_run,
+                    expected_stderr, check_props, dry_run,
                     '--reintegrate', tgt_dir)
 
 
@@ -266,7 +266,7 @@ def basic_reintegrate(sbox):
                                        k_expected_disk,
                                        k_expected_status,
                                        expected_skip,
-                                       None, True, True)
+                                       [], True, True)
 
   # Test issue #3640:
   #
@@ -323,7 +323,7 @@ def basic_reintegrate(sbox):
                                        k_expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, True, True)
+                                       [], True, True)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -550,7 +550,7 @@ def reintegrate_with_rename(sbox):
                                        k_expected_disk,
                                        k_expected_status,
                                        expected_skip,
-                                       None, True, True)
+                                       [], True, True)
 
   # Finally, commit the result of the merge (r10).
   expected_output = wc.State(wc_dir, {
@@ -682,7 +682,7 @@ def reintegrate_branch_never_merged_to(sbox):
                                        k_expected_disk,
                                        k_expected_status,
                                        expected_skip,
-                                       None, True, True)
+                                       [], True, True)
 
   # Finally, commit the result of the merge (r9).
   expected_output = wc.State(wc_dir, {
@@ -714,10 +714,11 @@ def reintegrate_fail_on_modified_wc(sbox):
   sbox.simple_commit()
 
   svntest.main.file_write(mu_path, "Changed on 'trunk' (the merge target).")
+  expected_skip =  wc.State(wc_dir, {})
   sbox.simple_update() # avoid mixed-revision error
   run_and_verify_reintegrate(
     A_path, sbox.repo_url + '/A_COPY', None, None, None,
-    None, None, None,
+    None, None, expected_skip,
     ".*Cannot merge into a working copy that has local modifications.*",
     True, False)
 
@@ -738,10 +739,11 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
   expected_status.tweak('A/mu', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status)
+  expected_skip = wc.State(wc_dir, {})
   # Try merging into that same wc, expecting failure.
   run_and_verify_reintegrate(
     A_path, sbox.repo_url + '/A_COPY', None, None, None,
-    None, None, None,
+    None, None, expected_skip,
     ".*Cannot merge into mixed-revision working copy.*",
     True, False)
 
@@ -806,9 +808,10 @@ def reintegrate_fail_on_switched_wc(sbox):
                                         [],
                                         False, '--ignore-ancestry')
   sbox.simple_update() # avoid mixed-revision error
+  expected_skip = wc.State(wc_dir, {})
   run_and_verify_reintegrate(
     A_path, sbox.repo_url + '/A_COPY', None, None, None,
-    None, None, None,
+    None, None, expected_skip,
     ".*Cannot merge into a working copy with a switched subtree.*",
     True, False)
 
@@ -889,7 +892,7 @@ def reintegrate_on_shallow_wc(sbox):
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, 1, 1)
+                                       [], 1, 1)
 
   # Now revert the reintegrate and make a second change on the
   # branch in r4, but this time change a subtree that corresponds
@@ -926,7 +929,7 @@ def reintegrate_on_shallow_wc(sbox):
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, 1, 1)
+                                       [], 1, 1)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -1257,7 +1260,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, 1, 1)
+                                       [], 1, 1)
 
   # Make some more changes to A_COPY so that the same revisions have *not*
   # been uniformly applied from A to A_COPY.  In this case the reintegrate
@@ -1526,7 +1529,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        expected_A_disk,
                                        expected_A_status,
                                        expected_A_skip,
-                                       None, 1, 1)
+                                       [], 1, 1)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -1683,7 +1686,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, 1, 1)
+                                       [], 1, 1)
   svntest.actions.run_and_verify_svn(None, [], 'ci', '-m',
                                      "2nd Reintegrate feature branch back to 'A'",
                                      wc_dir)
@@ -1839,7 +1842,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, 1, 0)
+                                       [], 1, 0)
 
 #----------------------------------------------------------------------
 # Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'
@@ -1974,7 +1977,7 @@ def reintegrate_with_subtree_merges(sbox):
                              expected_A_disk,
                              expected_A_status,
                              expected_A_skip,
-                             None, 1, 1)
+                             [], 1, 1)
 
   # Test issue #4329.  Revert previous merge and commit a new edit to
   # A/D/H/psi. Attempt the same merge without the --reintegrate option.
@@ -2189,7 +2192,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, 1, 1)
+                                       [], 1, 1)
 
 #----------------------------------------------------------------------
 # Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
@@ -2434,7 +2437,7 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk, None, expected_skip,
-                                       None,
+                                       [],
                                        1, 1)
 
 
@@ -2560,7 +2563,7 @@ def no_source_subtree_mergeinfo(sbox):
                                        expected_output, expected_mergeinfo,
                                        expected_elision, expected_disk,
                                        None, expected_skip,
-                                       None,
+                                       [],
                                        1, 1)
 
 #----------------------------------------------------------------------
