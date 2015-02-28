@@ -16,6 +16,16 @@ Status of 1.9.0:
 Candidate changes:
 ==================
 
+ * r1663003
+   info --show-item: Change 'last-changed-rev' to 'last-changed-revision'.
+   Justification (for being a freeze exception):
+     API change.
+   Justification (general):
+     Longer-hand spelling is clearer and more self-explanatory.
+   Notes:
+     API change (can't be merged after 1.9.0).
+   Votes:
+     +1: danielsh
 
 Veto-blocked changes:
 =====================
