@@ -156,6 +156,7 @@ ORDER BY local_relpath DESC
 SELECT local_relpath, op_depth, presence, kind
 FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2
+ORDER BY local_relpath
 
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
 SELECT local_relpath, changelist, properties, conflict_data
@@ -183,16 +184,6 @@ INSERT OR REPLACE INTO nodes (
   inherited_props)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
         ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)
-
--- STMT_SELECT_BASE_PRESENT
-SELECT local_relpath, kind FROM nodes n
-WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
-  AND op_depth = 0
-  AND presence in (MAP_NORMAL, MAP_INCOMPLETE)
-  AND NOT EXISTS(SELECT 1 FROM NODES w
-                 WHERE w.wc_id = ?1 AND w.local_relpath = n.local_relpath
-                   AND op_depth > 0)
-ORDER BY local_relpath DESC
 
 -- STMT_SELECT_WORKING_PRESENT
 SELECT local_relpath, kind, checksum, translated_size, last_mod_time
@@ -232,6 +223,16 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
                    AND presence in (MAP_NORMAL, MAP_INCOMPLETE, MAP_NOT_PRESENT))
 
 -- STMT_DELETE_WORKING_BASE_DELETE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND presence = MAP_BASE_DELETED
+  AND op_depth > ?3
+  AND op_depth = (SELECT MIN(op_depth) FROM nodes n
+                    WHERE n.wc_id = ?1
+                      AND n.local_relpath = nodes.local_relpath
+                      AND op_depth > ?3)
+
+-- STMT_DELETE_WORKING_BASE_DELETE_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND presence = MAP_BASE_DELETED
@@ -344,7 +345,8 @@ ORDER BY local_relpath
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND (op_depth > ?3 OR (op_depth = ?3 AND presence != MAP_BASE_DELETED))
+  AND (op_depth > ?3 OR (op_depth = ?3
+                         AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)))
 UNION ALL
 SELECT 1 FROM ACTUAL_NODE a
 WHERE wc_id = ?1 AND parent_relpath = ?2
@@ -378,6 +380,7 @@ UPDATE NODES SET op_depth = 0,
                  revision = ?6,
                  dav_cache = NULL,
                  moved_here = NULL,
+                 moved_to = NULL,
                  presence = CASE presence
                               WHEN MAP_NORMAL THEN MAP_NORMAL
                               WHEN MAP_EXCLUDED THEN MAP_EXCLUDED
@@ -390,22 +393,30 @@ WHERE wc_id = ?1
 -- STMT_SELECT_NODE_CHILDREN
 /* Return all paths that are children of the directory (?1, ?2) in any
    op-depth, including children of any underlying, replaced directories. */
-SELECT local_relpath FROM nodes
+SELECT DISTINCT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
+ORDER BY local_relpath
 
 -- STMT_SELECT_WORKING_CHILDREN
 /* Return all paths that are children of the working version of the
    directory (?1, ?2).  A given path is not included just because it is a
    child of an underlying (replaced) directory, it has to be in the
    working version of the directory. */
-SELECT local_relpath FROM nodes
+SELECT DISTINCT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
   AND (op_depth > (SELECT MAX(op_depth) FROM nodes
                    WHERE wc_id = ?1 AND local_relpath = ?2)
        OR
        (op_depth = (SELECT MAX(op_depth) FROM nodes
                     WHERE wc_id = ?1 AND local_relpath = ?2)
-        AND presence != MAP_BASE_DELETED))
+        AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)))
+ORDER BY local_relpath
+
+-- STMT_SELECT_BASE_NOT_PRESENT_CHILDREN
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0
+  AND presence = MAP_NOT_PRESENT
+ORDER BY local_relpath
 
 -- STMT_SELECT_NODE_PROPS
 SELECT properties, presence FROM nodes
@@ -452,25 +463,13 @@ SELECT dav_cache FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_DELETION_INFO
-SELECT (SELECT b.presence FROM nodes AS b
-         WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),
-       work.presence, work.op_depth
-FROM nodes_current AS work
-WHERE work.wc_id = ?1 AND work.local_relpath = ?2 AND work.op_depth > 0
-LIMIT 1
-
--- STMT_SELECT_DELETION_INFO_SCAN
-/* ### FIXME.  moved.moved_to IS NOT NULL works when there is
- only one move but we need something else when there are several. */
-SELECT (SELECT b.presence FROM nodes AS b
-         WHERE b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0),
-       work.presence, work.op_depth, moved.moved_to
-FROM nodes_current AS work
-LEFT OUTER JOIN nodes AS moved
-  ON moved.wc_id = work.wc_id
- AND moved.local_relpath = work.local_relpath
- AND moved.moved_to IS NOT NULL
-WHERE work.wc_id = ?1 AND work.local_relpath = ?2 AND work.op_depth > 0
+SELECT b.presence, w.presence, w.op_depth, w.moved_to
+FROM nodes w
+LEFT JOIN nodes b ON b.wc_id = ?1 AND b.local_relpath = ?2 AND b.op_depth = 0
+WHERE w.wc_id = ?1 AND w.local_relpath = ?2
+  AND w.op_depth = (SELECT MAX(op_depth) FROM nodes d
+                    WHERE d.wc_id = ?1 AND d.local_relpath = ?2
+                      AND d.op_depth > 0)
 LIMIT 1
 
 -- STMT_SELECT_MOVED_TO_NODE
@@ -850,6 +849,7 @@ WHERE wc_id = ?1
 UPDATE nodes SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
   AND kind=MAP_DIR
+  AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)
 
 -- STMT_UPDATE_NODE_BASE_PRESENCE
 UPDATE nodes SET presence = ?3
@@ -954,6 +954,14 @@ SELECT local_dir_relpath FROM wc_lock
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_dir_relpath, ?2)
 
+-- STMT_FIND_CONFLICT_DESCENDANT
+SELECT 1 FROM actual_node
+WHERE wc_id = ?1
+  AND local_relpath > (?2 || '/')
+  AND local_relpath < (?2 || '0') /* '0' = ascii('/') +1 */
+  AND conflict_data IS NOT NULL
+LIMIT 1
+
 -- STMT_DELETE_WC_LOCK_ORPHAN
 DELETE FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath = ?2
@@ -1023,15 +1031,17 @@ WHERE wc_id = ?1
 ORDER BY local_relpath
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
-INSERT INTO nodes (
+INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
-    symlink_target )
+    symlink_target, moved_to )
 SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
     repos_path, revision, presence, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
-    last_mod_time, symlink_target
+    last_mod_time, symlink_target,
+    (SELECT moved_to FROM nodes
+     WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3) moved_to
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
@@ -1580,16 +1590,6 @@ WHERE wc_id = ?1
   AND repos_path IS NOT RELPATH_SKIP_JOIN(?2, ?3, local_relpath)
 LIMIT 1
 
--- STMT_SELECT_BASE_FILES_RECURSIVE
-SELECT local_relpath, translated_size, last_mod_time FROM nodes AS n
-WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND op_depth = 0
-  AND kind=MAP_FILE
-  AND presence=MAP_NORMAL
-  AND file_external IS NULL
-
 -- STMT_SELECT_MOVED_FROM_RELPATH
 SELECT local_relpath, op_depth FROM nodes
 WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth > 0
@@ -1685,26 +1685,6 @@ WHERE wc_id = ?1
   AND moved_to IS NOT NULL
   AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
-/* This statement is very similar to STMT_SELECT_MOVED_DESCENDANTS_SRC
-   but the passed op-depth is the depth of the shadowing node.
-
-   This version is slightly more efficient as the most inner query is
-   only executed once, but the Sqlite page cache makes the difference
-   not really measurable */
--- STMT_SELECT_MOVED_DESCENDANTS_SHD
-SELECT n.op_depth, n.local_relpath, n.kind, n.repos_path, s.moved_to
-FROM nodes s
-JOIN nodes n ON n.wc_id = ?1 AND n.local_relpath = s.local_relpath
- AND n.op_depth=(SELECT MAX(d.op_depth)
-                 FROM nodes d
-                 WHERE d.wc_id = ?1 AND d.local_relpath = ?2
-                   AND d.op_depth < ?3)
-WHERE s.wc_id = ?1 AND s.op_depth = ?3
-  AND IS_STRICT_DESCENDANT_OF(s.local_relpath, ?2)
-  AND s.moved_to IS NOT NULL
-
-/* This statement is very similar to STMT_SELECT_MOVED_DESCENDANTS_SHD,
-   but the passed op-depth is the depth of the node as it originally existed */
 -- STMT_SELECT_MOVED_DESCENDANTS_SRC
 SELECT s.op_depth, n.local_relpath, n.kind, n.repos_path, s.moved_to
 FROM nodes n
@@ -1715,7 +1695,7 @@ JOIN nodes s ON s.wc_id = n.wc_id AND s.local_relpath = n.local_relpath
                       AND d.local_relpath = s.local_relpath
                       AND d.op_depth > ?3)
 WHERE n.wc_id = ?1 AND n.op_depth = ?3
-  AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND (n.local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2))
   AND s.moved_to IS NOT NULL
 
 -- STMT_COMMIT_UPDATE_ORIGIN

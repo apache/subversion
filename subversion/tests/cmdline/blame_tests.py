@@ -213,7 +213,7 @@ def blame_in_xml(sbox):
     'iota' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # Retrieve last changed date from svn info
   exit_code, output, error = svntest.actions.run_and_verify_svn(
@@ -284,7 +284,7 @@ def blame_on_unknown_revision(sbox):
       'iota' : Item(verb='Sending'),
       })
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, wc_dir)
+                                          None)
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
     None, [],
@@ -355,13 +355,13 @@ def blame_eol_styles(sbox):
     for i in range(1,3):
       svntest.main.file_append(file_path, "Extra line %d" % (i) + "\n")
       svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                            None, None, wc_dir)
+                                            None)
 
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol,
                          file_path)
 
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, wc_dir)
+                                          None)
 
     exit_code, output, error = svntest.actions.run_and_verify_svn(
       None, [],
@@ -389,7 +389,7 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # commit only whitespace changes
   svntest.main.file_write(file_path,
@@ -400,7 +400,7 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # match the blame output, as defined in the blame code:
   # "%6ld %10s %s %s%s", rev, author ? author : "         -",
@@ -425,7 +425,7 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   expected_output = [
     "     2    jrandom  A  a   \n",
@@ -454,7 +454,7 @@ def blame_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # commit only eol changes
   svntest.main.file_write(file_path,
@@ -465,7 +465,7 @@ def blame_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   expected_output = [
     "     2    jrandom Aa\n",
@@ -652,7 +652,7 @@ def blame_output_after_merge(sbox):
     'trunk/A/mu' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # r4: create branches/br from trunk
   branches_br_url = sbox.repo_url + "/branches/br"
@@ -678,7 +678,7 @@ def blame_output_after_merge(sbox):
     'branches/br/A/mu' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # r6: Insert a single line in  branches/A/mu
   svntest.main.file_write(branch_mu_path,
@@ -694,7 +694,7 @@ def blame_output_after_merge(sbox):
     'branches/br/A/mu' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # r7: merge branches/br back to trunk
   trunk_path = os.path.join(wc_dir, "trunk")
@@ -706,7 +706,7 @@ def blame_output_after_merge(sbox):
     'trunk/A/mu' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # Now test blame, first without the -g option
   expected_output = [ "     3    jrandom New version of file 'mu'.\n",
@@ -748,7 +748,7 @@ def blame_output_after_merge(sbox):
   # Next test with the -g option with -rN:M
   expected_output = [ "       -          - New version of file 'mu'.\n",
                       "       -          - 2nd line in file 'mu'.\n",
-                      "G      -          - new 3rd line in file 'mu'.\n",
+                      "G      5    jrandom new 3rd line in file 'mu'.\n",
                       "G      6    jrandom add 3.5 line in file 'mu'.\n",
                       "       -          - 4th line in file 'mu'.\n",
                       "       -          - 5th line in file 'mu'.\n",
@@ -950,22 +950,114 @@ def blame_youngest_to_oldest(sbox):
   orig_line = open(iota).read()
   line = "New contents for iota\n"
   svntest.main.file_append(iota, line)
-  sbox.simple_commit()
+  sbox.simple_commit() #r2
 
   # Move the file, to check that the operation will peg correctly.
   iota_moved = sbox.ospath('iota_moved')
   sbox.simple_move('iota', 'iota_moved')
-  sbox.simple_commit()
+  sbox.simple_commit() #r3
 
   # Delete a line.
   open(iota_moved, 'w').write(line)
-  sbox.simple_commit()
+  sbox.simple_commit() #r4
 
   expected_output = [
-        '     %d    jrandom %s\n' % (3, orig_line[:-1]),
+        '     %d    jrandom %s\n' % (4, orig_line[:-1]),
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'blame', '-r4:1', iota_moved)
+
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:1', iota_moved)
+
+  expected_output = [
+        '     %d    jrandom %s\n' % (2, line[:-1]),
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r1:HEAD', iota_moved)
+
+@Issue(4467)
+def blame_reverse_no_change(sbox):
+  "blame reverse towards a revision with no change"
+
+  sbox.build()
+
+  # Introduce a revision where iota doesn't change!
+  sbox.simple_propset('a', 'b', 'A')
+  sbox.simple_commit('') #r2
+
+  sbox.simple_append('iota', 'new line\n')
+  sbox.simple_commit('') #r3
+
+  sbox.simple_append('iota', 'another new line\n')
+  sbox.simple_commit('') #r4
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     3    jrandom new line\n',
+    '     4    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r2:HEAD', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+  ]
+  # This used to trigger an assertion on 1.9.x before 1.9.0
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:2', sbox.ospath('iota'))
+
+  # Drop the middle line
+  sbox.simple_append('iota', 'This is the file \'iota\'.\n'
+                             'another new line\n', truncate=True)
+  sbox.simple_commit('') #r5
+
+  # Back to start
+  sbox.simple_append('iota', 'This is the file \'iota\'.\n', truncate=True)
+  sbox.simple_commit('') #r6
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:2', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     5    jrandom new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:3', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     5    jrandom new line\n',
+    '     6    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:4', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     6    jrandom another new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:5', sbox.ospath('iota'))
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-rHEAD:6', sbox.ospath('iota'))
+
+
+  expected_output = [
+    '     -          - This is the file \'iota\'.\n',
+    '     5    jrandom new line\n',
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'blame', '-r5:3', sbox.ospath('iota'))
+
 
 ########################################################################
 # Run the tests
@@ -991,6 +1083,7 @@ test_list = [ None,
               blame_multiple_targets,
               blame_eol_handling,
               blame_youngest_to_oldest,
+              blame_reverse_no_change,
              ]
 
 if __name__ == '__main__':

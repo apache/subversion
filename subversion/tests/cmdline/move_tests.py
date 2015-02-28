@@ -152,7 +152,7 @@ def move_file_test(sbox, source, dest, move_func, test):
     # update to start_rev
     svntest.actions.run_and_verify_update(wc_dir, test['start_output'],
                                           test['start_disk'], test['start_status'],
-                                          None, None, None, None, None, False,
+                                          [], False,
                                           '-r', test['start_rev'], wc_dir)
     # execute the move
     move_func(test['start_rev'])
@@ -162,7 +162,7 @@ def move_file_test(sbox, source, dest, move_func, test):
     # properties.
     svntest.actions.run_and_verify_update(wc_dir, test['up_output'],
                                           test['up_disk'], test['up_status'],
-                                          None, None, None, None, None, True,
+                                          [], True,
                                           '-r', test['end_rev'], wc_dir)
 
     revert_paths = None
@@ -1156,23 +1156,11 @@ def move_missing(sbox):
   expected_status.tweak('A/D/G', 'A/D/G/tau', 'A/D/G/pi', 'A/D/G/rho',
                         status='! ', entry_status='  ')
 
-  expected_status.add({
-    'R'                 : Item(status='! ', wc_rev='-',
-                               entry_status='A ', entry_copied='+'),
-    'R/pi'              : Item(status='! ', wc_rev='-',
-                               entry_status='  ', entry_copied='+'),
-    'R/tau'             : Item(status='! ', wc_rev='-',
-                               entry_status='  ', entry_copied='+'),
-    'R/rho'             : Item(status='! ', wc_rev='-',
-                               entry_status='  ', entry_copied='+'),
-  })
-
   # Verify that the status processing doesn't crash
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # The issue is a crash when the destination is present
   os.mkdir(sbox.ospath('R'))
-  expected_status.tweak('R', status='A ', copied='+')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1415,8 +1403,7 @@ def move_many_update_add(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, None,
+                                        [], False,
                                         wc_dir, '--accept', 'mine-conflict')
 
   # And another one
@@ -1446,8 +1433,7 @@ def move_many_update_add(sbox):
   # This currently triggers an assertion failure
   svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, None,
+                                        [], False,
                                         wc_dir, '--accept', 'mine-conflict')
 
 @Issue(4437)

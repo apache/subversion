@@ -1474,7 +1474,7 @@ def retrieve_revprops(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         '-m', msg2,
                                         omega_path)
 
@@ -1646,8 +1646,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1)
+                                       check_props=True)
 
   # Commit the merge.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1661,8 +1660,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                   'A_COPY/D/H/omega',
                   'A_COPY/D/H/psi',
                   wc_rev=7)
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
-                                        None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status)
   wc_disk.tweak("A_COPY/D",
                 props={SVN_PROP_MERGEINFO : '/A/D:2-6'})
   wc_disk.tweak("A_COPY/D/G/rho", "A_COPY/D/H/omega", "A_COPY/D/H/psi",
@@ -1702,7 +1700,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                                        expected_elision_output,
                                        expected_disk,
                                        expected_status, expected_skip,
-                                       None, None, None, None, None, 1)
+                                       check_props=True)
 
   # Commit the merge.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1712,8 +1710,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   wc_status.tweak('A_COPY/D/H',
                   'A_COPY/D/H/psi',
                   wc_rev=8)
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
-                                        None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status)
   wc_disk.tweak("A_COPY/D/H",
                 props={SVN_PROP_MERGEINFO : '/A/D:2,4-6'})
   wc_disk.tweak("A_COPY/D/G/rho", "A_COPY/D/H/omega", "A_COPY/D/H/psi",
@@ -2618,6 +2615,77 @@ def merge_sensitive_log_xml_reverse_merges(sbox):
   svntest.actions.run_and_verify_log_xml(expected_log_attrs=log_attrs,
                                          args=['-g', '-r8', D_COPY_path])
 
+def log_revision_move_copy(sbox):
+  "log revision handling over move/copy"
+
+  sbox.build()
+
+  sbox.simple_move('iota', 'iotb')
+  sbox.simple_append('iotb', 'new line\n')
+
+  sbox.simple_copy('A/mu', 'mutb')
+  sbox.simple_append('mutb', 'mutb\n')
+
+  sbox.simple_move('A/B/E', 'E')
+  sbox.simple_move('E/alpha', 'alpha')
+
+  #r2
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'rm', sbox.repo_url + '/A/D', '-mm')
+
+  sbox.simple_commit() #r3
+
+  # This introduces a copy and a move in r3, but check how the history
+  # of these nodes behaves in r2.
+
+  # This one might change behavior once we improve move handling
+  expected_output = [
+    '------------------------------------------------------------------------\n'
+  ]
+  expected_err = []
+  svntest.actions.run_and_verify_svn(expected_output, expected_err,
+                                     'log', '-v',sbox.ospath('iotb'),
+                                     '-r2')
+
+  # While this one
+  expected_output = []
+  expected_err = '.*E195012: Unable to find repository location.*'
+  svntest.actions.run_and_verify_svn(expected_output, expected_err,
+                                     'log', '-v', sbox.ospath('mutb'),
+                                     '-r2')
+
+  # And just for fun, do the same thing for blame
+  expected_output = [
+    '     1    jrandom This is the file \'iota\'.\n'
+  ]
+  expected_err = []
+  svntest.actions.run_and_verify_svn(expected_output, expected_err,
+                                     'blame', sbox.ospath('iotb'),
+                                     '-r2')
+
+  expected_output = None
+  expected_err = '.*E195012: Unable to find repository location.*'
+  svntest.actions.run_and_verify_svn(expected_output, expected_err,
+                                     'blame', sbox.ospath('mutb'),
+                                     '-r2')
+
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r3\ .*\n',
+    re.escape('Changed paths:\n'),
+    re.escape('   D /A/B/E\n'),
+    re.escape('   A /E (from /A/B/E:2)\n'), # Patched - Direct move
+    re.escape('   D /E/alpha\n'),
+    re.escape('   A /alpha (from /A/B/E/alpha:1)\n'), # Indirect move - Not patched
+    re.escape('   D /iota\n'),
+    re.escape('   A /iotb (from /iota:2)\n'), # Patched - Direct move
+    re.escape('   A /mutb (from /A/mu:1)\n'), # Copy (always r1)
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox.wc_dir,
+                                     '-c3')
+
 
 ########################################################################
 # Run the tests
@@ -2667,6 +2735,7 @@ test_list = [ None,
               log_multiple_revs_spanning_rename,
               mergeinfo_log,
               merge_sensitive_log_xml_reverse_merges,
+              log_revision_move_copy,
              ]
 
 if __name__ == '__main__':

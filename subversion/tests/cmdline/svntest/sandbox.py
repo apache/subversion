@@ -381,15 +381,18 @@ class Sandbox:
         raise Exception("Unexpected line '" + line + "' in proplist output" + str(out))
     return props
 
-  def simple_add_symlink(self, dest, target):
-    """Create a symlink TARGET pointing to DEST and add it to subversion"""
+  def simple_symlink(self, dest, target):
+    """Create a symlink TARGET pointing to DEST"""
     if svntest.main.is_posix_os():
       os.symlink(dest, self.ospath(target))
     else:
       svntest.main.file_write(self.ospath(target), "link %s" % dest)
+
+  def simple_add_symlink(self, dest, target, add=True):
+    """Create a symlink TARGET pointing to DEST and add it to subversion"""
+    self.simple_symlink(dest, target)
     self.simple_add(target)
-    if not svntest.main.is_posix_os():
-      # '*' is evaluated on Windows
+    if not svntest.main.is_posix_os():      # '*' is evaluated on Windows
       self.simple_propset('svn:special', 'X', target)
 
   def simple_add_text(self, text, *targets):
@@ -424,7 +427,7 @@ class Sandbox:
   def simple_append(self, dest, contents, truncate=False):
     """Append CONTENTS to file DEST, optionally truncating it first.
        DEST is a relpath relative to the WC."""
-    open(self.ospath(dest), truncate and 'w' or 'a').write(contents)
+    open(self.ospath(dest), truncate and 'wb' or 'ab').write(contents)
 
   def simple_lock(self, *targets):
     """Lock TARGETS in the WC.

@@ -110,7 +110,7 @@ typedef enum svn_cl__longopt_t {
   opt_remove,
   opt_revprop,
   opt_stop_on_copy,
-  opt_strict,
+  opt_strict,                   /* ### DEPRECATED */
   opt_targets,
   opt_depth,
   opt_set_depth,
@@ -146,6 +146,7 @@ typedef enum svn_cl__longopt_t {
   opt_no_newline,
   opt_show_passwords,
   opt_pin_externals,
+  opt_show_item,
 } svn_cl__longopt_t;
 
 
@@ -232,7 +233,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "'empty', 'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
-  {"strict",        opt_strict, 0, N_("use strict semantics")},
+  {"strict",        opt_strict, 0, N_("DEPRECATED")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
                     N_("do not cross copies while traversing history")},
   {"no-ignore",     opt_no_ignore, 0,
@@ -423,6 +424,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("pin externals with no explicit revision to their\n"
                           "                             "
                           "current revision (recommended when tagging)")},
+  {"show-item", opt_show_item, 1,
+                       N_("print only the item identified by ARG")},
 
   /* Long-opt Aliases
    *
@@ -507,12 +510,27 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
-    ("Output the content of specified files or\n"
-     "URLs with revision and author information in-line.\n"
-     "usage: blame TARGET[@REV]...\n"
+    ("Show when each line of a file was last (or\n"
+     "next) changed.\n"
+     "usage: blame [-rM:N] TARGET[@REV]...\n"
+     "\n"
+     "  Annotate each line of a file with the revision number and author of the\n"
+     "  last change (or optionally the next change) to that line.\n"
+     "\n"
+     "  With no revision range (same as -r0:REV), or with '-r M:N' where M < N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the last revision at or before rN that changed or added the line,\n"
+     "  looking back no further than rM.\n"
+     "\n"
+     "  With a reverse revision range '-r M:N' where M > N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the next revision after rN that changed or deleted the line,\n"
+     "  looking forward no further than rM.\n"
      "\n"
      "  If specified, REV determines in which revision the target is first\n"
-     "  looked up.\n"),
+     "  looked up.\n"
+     "\n"
+     "  Write the annotated result to standard output.\n"),
     {'r', 'v', 'g', opt_incremental, opt_xml, 'x', opt_force} },
 
   { "cat", svn_cl__cat, {0}, N_
@@ -721,9 +739,24 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Print information about each TARGET (default: '.').\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
-     "  determines in which revision the target is first looked up.\n"),
+     "  determines in which revision the target is first looked up.\n"
+     "\n"
+     "  With --show-item, print only the value of one item of information\n"
+     "  about TARGET. One of the following items can be selected:\n"
+     "     kind                  the kind of TARGET\n"
+     "     url                   the URL of TARGET in the repository\n"
+     "     relative-url          the repository-relative URL\n"
+     "     repos-root-url        the repository root URL\n"
+     "     repos-uuid            the repository UUID\n"
+     "     revision              the revision of TARGET (defaults to BASE\n"
+     "                           for working copy paths and HEAD for URLs)\n"
+     "     last-changed-rev      the most recent revision in which TARGET\n"
+     "                           was changed\n"
+     "     last-changed-date     the date of the last-changed revision\n"
+     "     last-changed-author   the author of the last-changed revision\n"
+     "     wc-root               the root of TARGET's working copy"),
     {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
-     opt_changelist, opt_include_externals}
+     opt_changelist, opt_include_externals, opt_show_item, opt_no_newline}
   },
 
   { "list", svn_cl__list, {"ls"}, N_
@@ -1340,14 +1373,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  By default, an extra newline is printed after the property value so that\n"
      "  the output looks pretty.  With a single TARGET, depth 'empty' and without\n"
-     "  --show-inherited-props, you can use the --strict option to disable this\n"
+     "  --show-inherited-props, you can use the --no-newline option to disable this\n"
      "  (useful when redirecting a binary property value to a file, for example).\n"
      "\n"
      "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
-    {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
+    {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_no_newline, opt_xml,
      opt_changelist, opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
-     {opt_strict, N_("don't print an extra newline")}} },
+     {opt_strict, N_("(deprecated; use --no-newline)")}} },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
@@ -2139,9 +2172,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_stop_on_copy:
         opt_state.stop_on_copy = TRUE;
         break;
-      case opt_strict:
-        opt_state.strict = TRUE;
-        break;
       case opt_no_ignore:
         opt_state.no_ignore = TRUE;
         break;
@@ -2383,6 +2413,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.remove_ignored = TRUE;
         break;
       case opt_no_newline:
+      case opt_strict:          /* ### DEPRECATED */
         opt_state.no_newline = TRUE;
         break;
       case opt_show_passwords:
@@ -2390,6 +2421,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_pin_externals:
         opt_state.pin_externals = TRUE;
+        break;
+      case opt_show_item:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        opt_state.show_item = utf8_opt_arg;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -3023,10 +3058,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
           || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          err = svn_error_quick_wrap(
-                  err, apr_psprintf(pool,
-                                    _("Try 'svn help %s' for more information"),
-                                    subcommand->name));
+          err = svn_error_quick_wrapf(
+                  err, _("Try 'svn help %s' for more information"),
+                  subcommand->name);
         }
       if (err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
         {

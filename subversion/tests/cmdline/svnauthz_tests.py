@@ -128,9 +128,8 @@ def svnauthz_validate_repo_test(sbox):
   expected_status.add({
     'A/authz'            :  Item(status='  ', wc_rev=2),
   })
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
 
   # Valid authz url (file stored in repo)
   authz_url = repo_url + '/A/authz'
@@ -174,9 +173,8 @@ def svnauthz_validate_txn_test(sbox):
   expected_status.add({
     'A/authz'            :  Item(status='  ', wc_rev=2),
   })
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   expected_data = ['Exit 0\n']
   verify_logfile(logfilepath, expected_data)
 
@@ -184,9 +182,8 @@ def svnauthz_validate_txn_test(sbox):
   svntest.main.file_append(authz_path, 'x')
   expected_output = wc.State(wc_dir, {'A/authz' : Item(verb='Sending')})
   expected_status.tweak('A/authz', status='  ', wc_rev=3)
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   expected_data = svntest.verify.RegexOutput(".*?Error parsing authz file: '.*?'",
                                              match_all=False)
   verify_logfile(logfilepath, expected_data, delete_log=False)
@@ -201,7 +198,7 @@ def svnauthz_validate_txn_test(sbox):
   svntest.main.file_append(authz_path, 'x')
   expected_status.tweak('A/authz', status='  ', wc_rev=4)
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
+                                           expected_status):
     raise svntest.Failure
   expected_data = svntest.verify.ExpectedOutput("Exit 2\n", match_all=False)
   verify_logfile(logfilepath, expected_data)
@@ -279,7 +276,7 @@ def svnauthz_accessof_repo_test(sbox):
     'A/authz'            :  Item(status='  ', wc_rev=2),
   })
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
+                                           expected_status):
     raise svntest.Failure
 
   # Anonymous access with no path, and no repository should be rw
@@ -412,9 +409,8 @@ def svnauthz_accessof_groups_repo_test(sbox):
     'A/groups'           :  Item(status='  ', wc_rev=2),
   })
 
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
 
   # Anonymous access with no path, and no repository should be no
   # since it returns the highest level of access granted anywhere.
@@ -628,9 +624,8 @@ def svnauthz_accessof_is_repo_test(sbox):
   expected_status.add({
     'A/authz'            :  Item(status='  ', wc_rev=2),
   })
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
 
   # Test an invalid --is option, should get an error message and exit code
   # of 2.
@@ -753,9 +748,8 @@ def svnauthz_accessof_is_repo_test(sbox):
   svntest.main.file_append(authz_path, "x\n")
   expected_output = wc.State(wc_dir, {'A/authz' : Item(verb='Sending')})
   expected_status.tweak('A/authz', wc_rev=3)
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
 
   # Check that --is returns 1 when the syntax is invalid with a url.
   expected_out = svntest.verify.RegexOutput(
@@ -797,9 +791,8 @@ def svnauthz_accessof_txn_test(sbox):
   expected_status.add({
     'A/authz'            :  Item(status='  ', wc_rev=2),
   })
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   expected_data = ['Exit 0\n']
   verify_logfile(logfilepath, expected_data)
 
@@ -812,18 +805,16 @@ def svnauthz_accessof_txn_test(sbox):
   expected_output = wc.State(wc_dir, {'A/authz' : Item(verb='Sending')})
   expected_status.tweak('A/authz', status='  ', wc_rev=3)
   svntest.main.file_append(authz_path, "groucho = r\n")
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   expected_data = svntest.verify.ExpectedOutput('Exit 3\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
   # break the authz file with a non-existent group and check for an exit 1.
   expected_status.tweak('A/authz', status='  ', wc_rev=4)
   svntest.main.file_append(authz_path, "@friends = rw\n")
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   expected_data = svntest.verify.ExpectedOutput('Exit 1\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
@@ -831,9 +822,8 @@ def svnauthz_accessof_txn_test(sbox):
   expected_output = wc.State(wc_dir, {'A/authz' : Item(verb='Deleting')})
   expected_status.remove('A/authz')
   svntest.main.run_svn(None, 'rm', authz_path)
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   expected_data = svntest.verify.ExpectedOutput('Exit 2\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
@@ -887,9 +877,8 @@ def svnauthz_compat_mode_repo_test(sbox):
   expected_status.add({
     'A/authz'            :  Item(status='  ', wc_rev=2),
   })
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   svntest.actions.run_and_verify_svnauthz(None, None, 0, True,
                                           authz_url)
 
@@ -897,9 +886,8 @@ def svnauthz_compat_mode_repo_test(sbox):
   svntest.main.file_append(authz_path, "x\n")
   expected_output = wc.State(wc_dir, {'A/authz' : Item(verb='Sending')})
   expected_status.tweak('A/authz', status='  ', wc_rev=3)
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status, None, wc_dir):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   svntest.actions.run_and_verify_svnauthz(None, None, 1, True,
                                           authz_path)
 

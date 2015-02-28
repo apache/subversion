@@ -5100,15 +5100,11 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev = 0;
   svn_error_t *err;
-  svn_boolean_t legacy_backend;
-  static const char contents[] = "foo\003bar";
 
-  /* The FS API wants \n to be permitted, but FSFS never implemented that,
-   * so for FSFS we expect errors rather than successes in some of the commits.
-   * Use a blacklist approach so that new FSes default to implementing the API
-   * as originally defined. */
-  legacy_backend = (!strcmp(opts->fs_type, SVN_FS_TYPE_FSFS));
-
+  /* The FS API wants \n to be permitted, but FSFS never implemented that.
+   * Moreover, formats like svn:mergeinfo and svn:externals don't support
+   * it either.  So, we can't have newlines in file names in any FS.
+   */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-filename-trailing-newline",
                               opts, pool));
 
@@ -5120,64 +5116,20 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
-  /* Attempt to copy /foo to "/bar\n". This should fail on FSFS. */
+  /* Attempt to copy /foo to "/bar\n". This should fail. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
   err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
-  if (!legacy_backend)
-    SVN_TEST_ASSERT(err == SVN_NO_ERROR);
-  else
-    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
-  /* Attempt to create a file /foo/baz\n. This should fail on FSFS. */
+  /* Attempt to create a file /foo/baz\n. This should fail. */
   err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
-  if (!legacy_backend)
-    SVN_TEST_ASSERT(err == SVN_NO_ERROR);
-  else
-    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
-
-  /* Create another file, with contents. */
-  if (!legacy_backend)
-    {
-      SVN_ERR(svn_fs_make_file(txn_root, "/bar\n/baz\n", subpool));
-      SVN_ERR(svn_test__set_file_contents(txn_root, "bar\n/baz\n",
-                                          contents, pool));
-    }
-
-  if (!legacy_backend)
-    {
-      svn_revnum_t after_rev;
-      static svn_test__tree_entry_t expected_entries[] = {
-        { "foo", NULL },
-        { "bar\n", NULL },
-        { "foo/baz\n", "" },
-        { "bar\n/baz\n", contents },
-        { NULL, NULL }
-      };
-      const char *expected_changed_paths[] = {
-        "/bar\n",
-        "/foo/baz\n",
-        "/bar\n/baz\n",
-        NULL
-      };
-      apr_hash_t *expected_changes = apr_hash_make(pool);
-      int i;
-
-      SVN_ERR(svn_fs_commit_txn(NULL, &after_rev, txn, subpool));
-      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
-
-      /* Validate the DAG. */
-      SVN_ERR(svn_fs_revision_root(&root, fs, after_rev, pool));
-      SVN_ERR(svn_test__validate_tree(root, expected_entries, 4, pool));
-
-      /* Validate changed-paths, where the problem originally occurred. */
-      for (i = 0; expected_changed_paths[i]; i++)
-        svn_hash_sets(expected_changes, expected_changed_paths[i],
-                      "undefined value");
-      SVN_ERR(svn_test__validate_changes(root, expected_changes, pool));
-    }
+  /* Attempt to create a directory /foo/bang\n. This should fail. */
+  err = svn_fs_make_dir(txn_root, "/foo/bang\n", subpool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
   return SVN_NO_ERROR;
 }

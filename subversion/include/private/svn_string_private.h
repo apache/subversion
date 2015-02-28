@@ -197,10 +197,17 @@ apr_uint64_t
 svn__base36toui64(const char **next, const char *source);
 
 /**
+ * The upper limit of the similarity range returned by
+ * svn_cstring__similarity() and svn_string__similarity().
+ */
+#define SVN_STRING__SIM_RANGE_MAX 1000000
+
+/**
  * Computes the similarity score of STRA and STRB. Returns the ratio
  * of the length of their longest common subsequence and the average
- * length of the strings, normalized to the range [0..1000].
- * The result is equivalent to Python's
+ * length of the strings, normalized to the range
+ * [0..SVN_STRING__SIM_RANGE_MAX]. The result is equivalent to
+ * Python's
  *
  *   difflib.SequenceMatcher.ratio
  *
@@ -225,7 +232,7 @@ svn__base36toui64(const char **next, const char *source);
  *    has O(strlen(STRA) * strlen(STRB)) worst-case performance,
  *    so do keep a rein on your enthusiasm.
  */
-unsigned int
+apr_size_t
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs);
 
@@ -233,7 +240,7 @@ svn_cstring__similarity(const char *stra, const char *strb,
  * Like svn_cstring__similarity, but accepts svn_string_t's instead
  * of NUL-terminated character strings.
  */
-unsigned int
+apr_size_t
 svn_string__similarity(const svn_string_t *stringa,
                        const svn_string_t *stringb,
                        svn_membuf_t *buffer, apr_size_t *rlcs);

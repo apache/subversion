@@ -102,7 +102,7 @@ def patch(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -377,7 +377,7 @@ def patch_offset(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -546,7 +546,7 @@ def patch_chopped_leading_spaces(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -716,7 +716,7 @@ def patch_strip1(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -869,7 +869,7 @@ def patch_no_index_line(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   unidiff_patch = [
     "--- A/D/gamma\t(revision 1)\n",
     "+++ A/D/gamma\t(working copy)\n",
@@ -1148,7 +1148,7 @@ def patch_reject(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   patch_file_path = make_patch_path(sbox)
 
@@ -1219,7 +1219,7 @@ def patch_keywords(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   patch_file_path = make_patch_path(sbox)
 
@@ -1308,7 +1308,7 @@ def patch_with_fuzz(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                      expected_status, None, wc_dir)
+                                      expected_status)
 
   unidiff_patch = [
     "Index: mu\n",
@@ -1444,7 +1444,7 @@ def patch_reverse(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -1943,7 +1943,7 @@ def patch_with_ignore_whitespace(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch with leading and trailing spaces removed and tabs transformed
   # to spaces. The patch should match and the hunks should be written to the
@@ -2077,7 +2077,7 @@ def patch_replace_locally_deleted_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Locally delete mu
   svntest.main.run_svn(None, 'rm', mu_path)
@@ -2143,7 +2143,7 @@ def patch_no_eol_at_eof(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   unidiff_patch = [
     "--- iota\t(revision 1)\n",
     "+++ iota\t(working copy)\n",
@@ -2213,7 +2213,7 @@ def patch_with_properties(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   # Apply patch
 
   unidiff_patch = [
@@ -2306,7 +2306,7 @@ def patch_same_twice(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -2491,7 +2491,7 @@ def patch_dir_properties(sbox):
   expected_status.tweak('', wc_rev=2)
   expected_status.tweak('A/B', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   # Apply patch
 
   unidiff_patch = [
@@ -2713,7 +2713,7 @@ def patch_prop_offset(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -2888,7 +2888,7 @@ def patch_prop_with_fuzz(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                      expected_status, None, wc_dir)
+                                      expected_status)
 
   unidiff_patch = [
     "Index: mu\n",
@@ -3072,7 +3072,7 @@ def patch_old_target_names(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -3198,7 +3198,7 @@ def patch_reverse_revert(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -3520,7 +3520,7 @@ def patch_moved_away(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Move mu away
   sbox.simple_move("A/mu", "A/mu2")
@@ -3681,7 +3681,7 @@ def patch_deletes_prop(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
   unidiff_patch = [
@@ -3828,7 +3828,7 @@ def patch_reversed_add_with_props2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'newfile' : Item(wc_rev=2, status='  ')})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Now, we'll try to reverse-apply the very diff we just created.  We
   # expect the original state of the working copy in r1 plus 'newfile'
@@ -4019,7 +4019,7 @@ def patch_target_no_eol_at_eof(sbox):
   expected_status.tweak('iota', wc_rev=2)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   unidiff_patch = [
     "Index: A/mu\n",
     "===================================================================\n",
@@ -4222,8 +4222,7 @@ def patch_change_symlink_target(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'link'       : Item(verb='Adding'),
   })
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None)
 
   patch_output = [
     'U         %s\n' % sbox.ospath('link'),
@@ -4236,8 +4235,7 @@ def patch_change_symlink_target(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'link'       : Item(verb='Sending'),
   })
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None)
 
   # r4 - Now as symlink
   sbox.simple_rm('link')
@@ -4245,8 +4243,7 @@ def patch_change_symlink_target(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'link'       : Item(verb='Replacing'),
   })
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None)
 
   svntest.actions.run_and_verify_svn(patch_output, [],
                                      'patch', patch_file_path, wc_dir)

@@ -110,7 +110,8 @@ class BackportTest(object):
       verify_backport(sbox, expected_dump_file, self.uuid)
     return wrapped_test_func
 
-def make_entry(revisions=None, logsummary=None, notes=None, branch=None, votes=None):
+def make_entry(revisions=None, logsummary=None, notes=None, branch=None,
+               depends=None, votes=None):
   assert revisions
   if logsummary is None:
     logsummary = "default logsummary"
@@ -122,6 +123,7 @@ def make_entry(revisions=None, logsummary=None, notes=None, branch=None, votes=N
     'logsummary': logsummary,
     'notes': notes,
     'branch': branch,
+    'depends': depends,
     'votes': votes,
   }
 
@@ -142,6 +144,9 @@ def serialize_entry(entry):
 
     # branch
     '   Branch: %s\n' % (entry['branch'],) if entry['branch'] else '',
+
+    # depends
+    '   Depends: %s\n' % (entry['depends'],) if entry['depends'] else '',
 
     # votes
     '   Votes:\n',
@@ -210,12 +215,12 @@ def verify_backport(sbox, expected_dump_file, uuid):
   # mirror repository in preparation for the comparison dump.
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   for revnum in range(0, 1+int(sbox.youngest())):
-    svntest.actions.run_and_verify_svnadmin(None, [], [],
+    svntest.actions.run_and_verify_svnadmin([], [],
       "delrevprop", "-r", revnum, sbox.repo_dir, "svn:date")
 
   # Create a dump file from the mirror repository.
   dest_dump = open(expected_dump_file).readlines()
-  svntest.actions.run_and_verify_svnadmin(None, None, [],
+  svntest.actions.run_and_verify_svnadmin(None, [],
                                           'setuuid', '--', sbox.repo_dir, uuid)
   src_dump = svntest.actions.run_and_verify_dump(sbox.repo_dir)
 
@@ -265,7 +270,7 @@ def backport_two_approveds(sbox):
 
   # Now back up and do three entries.
   # r9: revert r7, r8
-  svntest.actions.run_and_verify_svnlook(None, ["8\n"], [],
+  svntest.actions.run_and_verify_svnlook(["8\n"], [],
                                          'youngest', sbox.repo_dir)
   sbox.simple_update()
   svntest.main.run_svn(None, 'merge', '-r8:6',
@@ -342,6 +347,8 @@ def backport_branches(sbox):
   # Run it.
   run_backport(sbox)
 
+  # This also serves as the 'success mode' part of backport_branch_contains().
+
 
 #----------------------------------------------------------------------
 @BackportTest('76cee987-25c9-4d6c-ad40-000000000005')
@@ -380,7 +387,11 @@ def backport_conflicts_detection(sbox):
                                            # Choose conflicts mode:
                                            ["MAY_COMMIT=0"])
 
-  # Verify
+  # Verify the conflict is detected.
+  expected_output = svntest.verify.RegexOutput(
+    'Index: iota',
+    match_all=False,
+  )
   expected_errput = (
     r'(?ms)' # re.MULTILINE | re.DOTALL
     r'.*Warning summary.*'
@@ -394,8 +405,150 @@ def backport_conflicts_detection(sbox):
                       ],
                       match_all=False)
   svntest.verify.verify_outputs(None, output, errput,
-                                svntest.verify.AnyOutput, expected_errput)
+                                expected_output, expected_errput)
   svntest.verify.verify_exit_code(None, exit_code, 1)
+
+  ## Now, let's test the "Depends:" annotation silences the error.
+
+  # Re-nominate.
+  approved_entries = [
+    make_entry([4], depends="World peace."),
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries), truncate=True)
+  sbox.simple_commit(message='Re-nominate r4')
+
+  # Detect conflicts.
+  exit_code, output, errput = run_backport(sbox, extra_env=["MAY_COMMIT=0"])
+
+  # Verify stdout.  (exit_code and errput were verified by run_backport().)
+  svntest.verify.verify_outputs(None, output, errput,
+                                "Conflicts found.*, as expected.", [])
+
+
+#----------------------------------------------------------------------
+@BackportTest(None) # would be 000000000007
+def backport_branch_contains(sbox):
+  "branch must contain the revisions"
+
+  # r6: conflicting change on branch
+  sbox.simple_append('branch/iota', 'Conflicts with first change')
+  sbox.simple_commit(message="Conflicting change on iota")
+
+  # r7: backport branch
+  sbox.simple_update()
+  sbox.simple_copy('branch', 'subversion/branches/r4')
+  sbox.simple_commit(message='Create a backport branch')
+
+  # r8: merge into backport branch
+  sbox.simple_update()
+  svntest.main.run_svn(None, 'merge', '--record-only', '-c4',
+                       '^/subversion/trunk', sbox.ospath('subversion/branches/r4'))
+  sbox.simple_mkdir('subversion/branches/r4/A_resolved')
+  sbox.simple_append('subversion/branches/r4/iota', "resolved\n", truncate=1)
+  sbox.simple_commit(message='Conflict resolution via mkdir')
+
+  # r9: nominate r4,r5 with branch that contains not all of them
+  approved_entries = [
+    make_entry([4,5], branch="r4")
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_commit(message='Nominate r4')
+
+  # Run it.
+  exit_code, output, errput = run_backport(sbox, error_expected=True)
+
+  # Verify the error message.
+  expected_errput = svntest.verify.RegexOutput(
+    ".*Revisions 'r5' nominated but not included in branch",
+    match_all=False,
+  )
+  svntest.verify.verify_outputs(None, output, errput,
+                                [], expected_errput)
+  svntest.verify.verify_exit_code(None, exit_code, 1)
+
+  # Verify no commit occurred.
+  svntest.actions.run_and_verify_svnlook(["9\n"], [],
+                                         'youngest', sbox.repo_dir)
+
+  # Verify the working copy has been reverted.
+  svntest.actions.run_and_verify_svn([], [], 'status', '-q',
+                                     sbox.repo_dir)
+
+  # The sibling test backport_branches() verifies the success mode.
+
+
+
+
+#----------------------------------------------------------------------
+@BackportTest(None) # would be 000000000008
+def backport_double_conflict(sbox):
+  "two-revisioned entry with two conflicts"
+
+  # r6: conflicting change on branch
+  sbox.simple_append('branch/iota', 'Conflicts with first change')
+  sbox.simple_commit(message="Conflicting change on iota")
+
+  # r7: further conflicting change to same file
+  sbox.simple_update()
+  sbox.simple_append('subversion/trunk/iota', 'Third line\n')
+  sbox.simple_commit(message="iota's third line")
+
+  # r8: nominate
+  approved_entries = [
+    make_entry([4,7], depends="World peace.")
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_commit(message='Nominate the r4 group')
+
+  # Run it, in conflicts mode.
+  exit_code, output, errput = run_backport(sbox, True, ["MAY_COMMIT=0"])
+
+  # Verify the failure mode: "merge conflict" error on stderr, but backport.pl
+  # itself exits with code 0, since conflicts were confined to Depends:-ed
+  # entries.
+  #
+  # The error only happens with multi-pass merges where the first pass
+  # conflicts and the second pass touches the conflict victim.
+  #
+  # The error would be:
+  #    subversion/libsvn_client/merge.c:5499: (apr_err=SVN_ERR_WC_FOUND_CONFLICT)
+  #    svn: E155015: One or more conflicts were produced while merging r3:4
+  #    into '/tmp/stw/working_copies/backport_tests-8/branch' -- resolve all
+  #    conflicts and rerun the merge to apply the remaining unmerged revisions
+  #    ...
+  #    Warning summary
+  #    ===============
+  #    
+  #    r4 (default logsummary): subshell exited with code 256
+  # And backport.pl would exit with exit code 1.
+
+  expected_output = 'Conflicts found.*, as expected.'
+  expected_errput = svntest.verify.RegexOutput(
+      ".*svn: E155015:.*", # SVN_ERR_WC_FOUND_CONFLICT
+      match_all=False,
+  )
+  svntest.verify.verify_outputs(None, output, errput,
+                                expected_output, expected_errput)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+  if any("Warning summary" in line for line in errput):
+    raise svntest.verify.SVNUnexpectedStderr(errput)
+
+  ## Now, let's ensure this does get detected if not silenced.
+  # r9: Re-nominate
+  approved_entries = [
+    make_entry([4,7]) # no depends=
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries), truncate=True)
+  sbox.simple_commit(message='Re-nominate the r4 group')
+
+  exit_code, output, errput = run_backport(sbox, True, ["MAY_COMMIT=0"])
+
+  # [1-9]\d+ matches non-zero exit codes
+  expected_errput = r'r4 .*: subshell exited with code (?:[1-9]\d+)'
+  svntest.verify.verify_exit_code(None, exit_code, 1)
+  svntest.verify.verify_outputs(None, output, errput,
+                                svntest.verify.AnyOutput, expected_errput)
+
 
 
 #----------------------------------------------------------------------
@@ -411,6 +564,8 @@ test_list = [ None,
               backport_branches,
               backport_multirevisions,
               backport_conflicts_detection,
+              backport_branch_contains,
+              backport_double_conflict,
               # When adding a new test, include the test number in the last
               # 6 bytes of the UUID.
              ]

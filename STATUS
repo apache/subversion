@@ -1,6 +1,7 @@
       * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       *                                                     *
-      *  THIS RELEASE STREAM IS OPEN FOR STABILIZATION.     *
+      *  THIS RELEASE STREAM IS *CLOSED* FOR BETA.          *
+      *  RELEASE BLOCKERS ONLY, PLEASE.                     *
       *                                                     *
       * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -15,156 +16,6 @@ Status of 1.9.0:
 Candidate changes:
 ==================
 
- * r1660593
-   Fix recording last-* information on nodes copied from foreign repositories
-   Justification:
-     Recording revisions (and other details) of foreign repositories causes
-     incorrect status output and bugs when using -rCOMMITTED, -rPREV, etc.
-     Local fix.
-   Votes:
-     +1: rhuijben, philip
-
- * r1660646
-   Fix calculating the repository path of replaced directories on entry upgrade
-   Justification:
-     Simple fix that avoids recording invalid data in WC-NG.
-   Votes:
-     +1: rhuijben, philip
-
- * r1661131, r1661179
-   Reduce revision gaps on simple moves during commit.
-   Justification:
-     Simple fix that exposes some of our hard work on move support in 1.8-1.9.
-   Notes:
-     This implements only the very simplest case to avoid touching too much
-     code, but it should handle the most common move cases.
-   Votes:
-     +1: rhuijben
-
- * r1661247
-   Support Python 3 in autogen.sh / gen-make.py.
-   Justification:
-     Allow building with Python 3, since Python 2 is end-of-life:
-     https://www.python.org/dev/peps/pep-0373/#maintenance-releases
-   Votes:
-     +1: danielsh
-
- * r1661195,r1661208,r1661235,r1661236,r1661238,r1661253
-   More 'svn blame' fixes.
-   Justification:
-     Cleans up the 'Prospective blame' implementation to something usable.
-   Depends:
-     Requires that the already approved r1660969 group is merged.
-   Votes:
-     +1: rhuijben, philip
-
- * r1661451, r1661484, r1661511
-   Expose metadata_only option on svn_client_copy7()
-   Justification:
-     We revved this api in 1.9, and already expose this flag for move
-     and revert. The implementation is used by at least one Subversion
-     GUI since 1.8 (as the flag is available at the libsvn_wc level)
-   Votes:
-     +1: rhuijben, philip (not after 1.9.0)
-
- * r1661476, r1661480, r1661482
-   Fix a segfault when running 'svn info' on a WORKING exclude
-   Justification:
-     Optimizes url calculation through libsvn_wc and libsvn_client and
-     fixes a few real bugs. Makes not-present behavior in info explicit.
-   Votes:
-     +1: philip, rhuijben
-
- * ^/subversion/branches/1.9.x-db-verify
-   Make the db and entries-compat test create valid databases. This merge
-   fixes a lot of plumbing to bring in further db consistency fixes.
-   Notes:
-     While not a good backport suggestion by itself, other backports
-     will depend on this backport. As subset this is not to hard to
-     review (see logmessage on branch).
-     .
-     Merges: r1660587,1660610,1660633,1660641,1660659,1660671,1660687,
-              1660758,1660874,1660928,1660955,1660961
-   Votes:
-     +1: rhuijben
-
- * r1661934
-   Make 'svn cp WC URL' provide sane items in its template
-   Justification:
-     Makes creating backport logmessages much easier. Simple fix.
-   Votes:
-     +1: rhuijben
-
- * ^/subversion/branches/1.9.x-commit-fixes
-   Make the commit logic properly remove locks and break moves.
-   Justification:
-     Without this patch an incomplete commit will make the database
-     inconsistent (leave half moves). Some commits may also leave lock
-     tokens that are no longer valid.
-     .
-     These move cases should not be possible when committing from
-     libsvn_client, (as these try to avoid these situations), but at least
-     the old libsvn_wc public apis allow corrupting the db, as these give
-     access to the wc side commit logic.
-   Notes:
-     Depends on, and is based of the ^/subversion/branches/1.9.x-db-verify
-     branch. Merges: r1660781,1661335,1661363,1661504,1661730,1661755
-   Votes:
-     +1: rhuijben
-
- * ^/subversion/branches/1.9.x-update-tc-detection
-   Improve tree conflict detection in the update editor.
-   Justification:
-     Without this patch the update editor in many cases doesn't see local
-     unversioned items, and continues as if they aren't there. This includes
-     items that were deleted and then replaced (but not added yet). These
-     limitations affect how we record and handle these situations.
-   Notes:
-     This changes a public api (svn_wc_status3_t), so can't be released
-     in this form after 1.9.0
-     .
-     Depends on, and is based of the ^/subversion/branches/1.9.x-db-verify
-     branch. Merges: r1661570,1661654,1661664,1661669,1661673,1661695,1661698
-     .
-     Recommended way to review: check branch and its log message.
-   Votes:
-     +1: rhuijben
-
- * ^/subversion/branches/1.9.x-crop-safety
-   Make 'svn update --set-depth X' safe, in that it won't just move your
-   changes to /dev/null
-   Justification:
-     Improves usability of the crop/exclude features. Avoids losing
-     things that shouldn't get lost.
-   Notes:
-     This feature uses code introduced in the
-     ^/subversion/branches/1.9.x-update-tc-detection
-     branch, to detect what can safely be deleted. As such it depends on
-     and is based on this branch.
-     .
-     Another reason to backport this, is that it fixes how we use the
-     database operations that remove nodes.
-     .
-     Recommended way to review: check branch and its log message.
-   Votes:
-     +1: rhuijben
-
- * ^/subversion/branches/1.9.x-update-delete
-   Fix the creation of 'copies' when during update BASE is deleted, but
-   local changes exists.
-   Justification:
-     Without this patch copies of mixed-revision working copies miss
-     the not-present nodes in the intermediate layers, and moves are
-     not properly moved to the copy and/or broken.
-   Notes:
-     This feature depends on and is based of the
-     ^/subversion/branches/1.9.x-commit-fixes branch. The
-     1.9.x-update-tc-detection touches some of the same tests and either
-     might need rebasing depending on which of the branches is merged first.
-     .
-     Recommended way to review: check branch and its log message.
-   Votes:
-     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -173,13 +24,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1660969, r1660975, r1660991, r1661120, r1661121
-   Fix assertion reported as part of issue #4467,
-   Justification:
-     Fixing a few simple revision checks inside the blame handling allows the
-     'kidney blame' to work without assertions failing.
-   Notes:
-     r1661120 adds a regression test for this assertion problem, in which
-     it is required that the file doesn't change in the passed revision.
-   Votes:
-     +1: rhuijben, julianfoad, philip

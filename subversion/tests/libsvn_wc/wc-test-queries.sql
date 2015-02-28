@@ -44,8 +44,10 @@ DELETE FROM nodes;
 
 -- STMT_INSERT_NODE
 INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,
-                   revision, parent_relpath, wc_id, repos_id, kind, depth)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1,
+                   revision, parent_relpath, moved_to, moved_here,
+                   properties, wc_id, repos_id, kind,
+                   depth)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1,
                    CASE WHEN ?3 != 'base-deleted' THEN 1 END,
                    'dir',
                    CASE WHEN ?3 in ('normal', 'incomplete')
@@ -58,8 +60,18 @@ DELETE FROM actual_node;
 INSERT INTO actual_node (local_relpath, parent_relpath, changelist, wc_id)
                 VALUES (?1, ?2, ?3, 1)
 
+-- STMT_ENSURE_EMPTY_PRISTINE
+INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount)
+  VALUES ('$sha1$da39a3ee5e6b4b0d3255bfef95601890afd80709',
+          '$md5 $d41d8cd98f00b204e9800998ecf8427e',
+          0, 0)
+
 -- STMT_NODES_SET_FILE
-UPDATE nodes SET kind = 'file' WHERE wc_id = 1 and local_relpath = ?1
+UPDATE nodes
+   SET kind = 'file',
+       checksum = '$sha1$da39a3ee5e6b4b0d3255bfef95601890afd80709',
+       depth = NULL
+WHERE wc_id = 1 and local_relpath = ?1
 
 -- STMT_SELECT_ALL_ACTUAL
 SELECT local_relpath FROM actual_node WHERE wc_id = 1

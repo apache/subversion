@@ -441,6 +441,8 @@ default_warning_func(void *baton, svn_error_t *err)
 svn_error_t *
 svn_fs__path_valid(const char *path, apr_pool_t *pool)
 {
+  char *c;
+
   /* UTF-8 encoded string without NULs. */
   if (! svn_utf__cstring_is_valid(path))
     {
@@ -455,6 +457,18 @@ svn_fs__path_valid(const char *path, apr_pool_t *pool)
       return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
                                _("Path '%s' contains '.' or '..' element"),
                                path);
+    }
+
+  /* Raise an error if PATH contains a newline because svn:mergeinfo and
+     friends can't handle them.  Issue #4340 describes a similar problem
+     in the FSFS code itself.
+   */
+  c = strchr(path, '\n');
+  if (c)
+    {
+      return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+               _("Invalid control character '0x%02x' in path '%s'"),
+               (unsigned char)*c, svn_path_illegal_path_escape(path, pool));
     }
 
   /* That's good enough. */

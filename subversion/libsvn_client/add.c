@@ -768,59 +768,6 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_client__get_inherited_ignores(apr_array_header_t **ignores,
-                                               const char *path_or_url,
-                                               svn_client_ctx_t *ctx,
-                                               apr_pool_t *result_pool,
-                                               apr_pool_t *scratch_pool)
-{
-  svn_opt_revision_t rev;
-  apr_hash_t *explicit_ignores;
-  apr_array_header_t *inherited_ignores;
-  svn_boolean_t target_is_url = svn_path_is_url(path_or_url);
-  svn_string_t *explicit_prop;
-  int i;
-
-  if (target_is_url)
-    rev.kind = svn_opt_revision_head;
-  else
-    rev.kind = svn_opt_revision_working;
-
-  SVN_ERR(svn_client_propget5(&explicit_ignores, &inherited_ignores,
-                              SVN_PROP_INHERITABLE_IGNORES, path_or_url,
-                              &rev, &rev, NULL, svn_depth_empty, NULL, ctx,
-                              scratch_pool, scratch_pool));
-
-  explicit_prop = svn_hash_gets(explicit_ignores, path_or_url);
-
-  if (explicit_prop)
-    {
-      svn_prop_inherited_item_t *new_iprop =
-        apr_palloc(scratch_pool, sizeof(*new_iprop));
-      new_iprop->path_or_url = path_or_url;
-      new_iprop->prop_hash = apr_hash_make(scratch_pool);
-      svn_hash_sets(new_iprop->prop_hash, SVN_PROP_INHERITABLE_IGNORES,
-                    explicit_prop);
-      APR_ARRAY_PUSH(inherited_ignores,
-                     svn_prop_inherited_item_t *) = new_iprop;
-    }
-
-  *ignores = apr_array_make(result_pool, 16, sizeof(const char *));
-
-  for (i = 0; i < inherited_ignores->nelts; i++)
-    {
-      svn_prop_inherited_item_t *elt = APR_ARRAY_IDX(
-        inherited_ignores, i, svn_prop_inherited_item_t *);
-      svn_string_t *ignore_val = svn_hash_gets(elt->prop_hash,
-                                               SVN_PROP_INHERITABLE_IGNORES);
-      if (ignore_val)
-        svn_cstring_split_append(*ignores, ignore_val->data, "\n\r\t\v ",
-                                 FALSE, result_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* The main logic of the public svn_client_add5.
  *
  * EXISTING_PARENT_ABSPATH is the absolute path to the first existing

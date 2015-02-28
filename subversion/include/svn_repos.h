@@ -1522,7 +1522,8 @@ svn_repos_replay(svn_fs_root_t *root,
  * If @a commit_callback is non-NULL, then before @c close_edit returns (but
  * after the commit has succeeded) @c close_edit will invoke
  * @a commit_callback with a filled-in #svn_commit_info_t *, @a commit_baton,
- * and @a pool or some subpool thereof as arguments.  If @a commit_callback
+ * and @a pool or some subpool thereof as arguments.  The @c repos_root field
+ * of the #svn_commit_info_t is null.  If @a commit_callback
  * returns an error, that error will be returned from @c close_edit,
  * otherwise if there was a post-commit hook failure, then that error
  * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
@@ -1534,7 +1535,7 @@ svn_repos_replay(svn_fs_root_t *root,
  * NULL).  Callers who supply their own transactions are responsible
  * for cleaning them up (either by committing them, or aborting them).
  *
- * @since New in 1.5.
+ * @since New in 1.5. Since 1.6, @a commit_callback can be null.
  *
  * @note Yes, @a repos_url_decoded is a <em>decoded</em> URL.  We realize
  * that's sorta wonky.  Sorry about that.
@@ -2272,7 +2273,7 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  */
 svn_error_t *
 svn_repos_fs_lock_many(svn_repos_t *repos,
-                       apr_hash_t *targets,
+                       apr_hash_t *lock_targets,
                        const char *comment,
                        svn_boolean_t is_dav_comment,
                        apr_time_t expiration_date,
@@ -2324,7 +2325,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
  */
 svn_error_t *
 svn_repos_fs_unlock_many(svn_repos_t *repos,
-                         apr_hash_t *targets,
+                         apr_hash_t *unlock_targets,
                          svn_boolean_t break_lock,
                          svn_fs_lock_callback_t lock_callback,
                          void *lock_baton,

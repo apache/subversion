@@ -477,7 +477,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                              SVN_PROP_EXTERNALS);
 
                   SVN_ERR(svn_wc__has_local_mods(&is_modified, ctx->wc_ctx,
-                                                 external_abspath,
+                                                 external_abspath, TRUE,
                                                  ctx->cancel_func,
                                                  ctx->cancel_baton,
                                                  iterpool));
@@ -655,6 +655,7 @@ static svn_error_t *
 do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
                                    const apr_array_header_t *copy_pairs,
                                    const char *dst_parent,
+                                   svn_boolean_t metadata_only,
                                    svn_boolean_t pin_externals,
                                    const apr_hash_t *externals_to_pin,
                                    svn_client_ctx_t *ctx,
@@ -696,7 +697,7 @@ do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
                                     iterpool);
       *timestamp_sleep = TRUE;
       err = svn_wc_copy3(ctx->wc_ctx, pair->src_abspath_or_url, dst_abspath,
-                         FALSE /* metadata_only */,
+                         metadata_only,
                          ctx->cancel_func, ctx->cancel_baton,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
       if (err)
@@ -738,6 +739,7 @@ do_wc_to_wc_copies_with_write_lock(svn_boolean_t *timestamp_sleep,
 static svn_error_t *
 do_wc_to_wc_copies(svn_boolean_t *timestamp_sleep,
                    const apr_array_header_t *copy_pairs,
+                   svn_boolean_t metadata_only,
                    svn_boolean_t pin_externals,
                    const apr_hash_t *externals_to_pin,
                    svn_client_ctx_t *ctx,
@@ -753,8 +755,8 @@ do_wc_to_wc_copies(svn_boolean_t *timestamp_sleep,
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
     do_wc_to_wc_copies_with_write_lock(timestamp_sleep, copy_pairs, dst_parent,
-                                       pin_externals, externals_to_pin,
-                                       ctx, pool),
+                                       metadata_only, pin_externals,
+                                       externals_to_pin, ctx, pool),
     ctx->wc_ctx, dst_parent_abspath, FALSE, pool);
 
   return SVN_NO_ERROR;
@@ -3053,9 +3055,10 @@ try_copy(svn_boolean_t *timestamp_sleep,
       else
         {
           /* We ignore these values, so assert the default value */
-          SVN_ERR_ASSERT(allow_mixed_revisions && !metadata_only);
+          SVN_ERR_ASSERT(allow_mixed_revisions);
           return svn_error_trace(do_wc_to_wc_copies(timestamp_sleep,
                                                     copy_pairs,
+                                                    metadata_only,
                                                     pin_externals,
                                                     externals_to_pin,
                                                     ctx, pool));
@@ -3093,6 +3096,7 @@ svn_client_copy7(const apr_array_header_t *sources,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
                  svn_boolean_t ignore_externals,
+                 svn_boolean_t metadata_only,
                  svn_boolean_t pin_externals,
                  const apr_hash_t *externals_to_pin,
                  const apr_hash_t *revprop_table,
@@ -3113,7 +3117,7 @@ svn_client_copy7(const apr_array_header_t *sources,
                  sources, dst_path,
                  FALSE /* is_move */,
                  TRUE /* allow_mixed_revisions */,
-                 FALSE /* metadata_only */,
+                 metadata_only,
                  make_parents,
                  ignore_externals,
                  pin_externals,
@@ -3149,7 +3153,7 @@ svn_client_copy7(const apr_array_header_t *sources,
                      sources, dst_path,
                      FALSE /* is_move */,
                      TRUE /* allow_mixed_revisions */,
-                     FALSE /* metadata_only */,
+                     metadata_only,
                      make_parents,
                      ignore_externals,
                      pin_externals,
