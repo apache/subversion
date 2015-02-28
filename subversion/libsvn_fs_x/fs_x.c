@@ -850,6 +850,7 @@ write_revision_zero(svn_fs_t *fs,
   apr_array_header_t *index_entries;
   svn_fs_x__p2l_entry_t *entry;
   svn_fs_x__revision_file_t *rev_file;
+  apr_file_t *apr_file;
   const char *l2p_proto_index, *p2l_proto_index;
 
   /* Construct a skeleton r0 with no indexes. */
@@ -904,7 +905,8 @@ write_revision_zero(svn_fs_t *fs,
   SVN_ERR(svn_fs_x__l2p_index_from_p2l_entries(&l2p_proto_index, fs,
                                                index_entries,
                                                subpool, subpool));
-  SVN_ERR(svn_fs_x__add_index_data(fs, rev_file->file, l2p_proto_index,
+  SVN_ERR(svn_fs_x__rev_file_get(&apr_file, rev_file));
+  SVN_ERR(svn_fs_x__add_index_data(fs, apr_file, l2p_proto_index,
                                    p2l_proto_index, 0, subpool));
   SVN_ERR(svn_fs_x__close_revision_file(rev_file));
 

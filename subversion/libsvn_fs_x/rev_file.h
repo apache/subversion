@@ -151,6 +151,12 @@ svn_error_t *
 svn_fs_x__rev_file_stream(svn_stream_t **stream,
                           svn_fs_x__revision_file_t *file);
 
+/* Set *APR_FILE to the shared file object of FILE.
+ */
+svn_error_t *
+svn_fs_x__rev_file_get(apr_file_t **apr_file,
+                       svn_fs_x__revision_file_t *file);
+
 /* Set *STREAM to the shared L2P data stream of FILE.  Initializes the
  * stream on demand.
  */
