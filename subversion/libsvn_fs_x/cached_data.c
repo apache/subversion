@@ -1376,9 +1376,10 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   iterpool = svn_pool_create(scratch_pool);
   while (rs->chunk_index < this_chunk)
     {
-      apr_file_t *apr_file = file->file;
+      apr_file_t *apr_file;
       svn_pool_clear(iterpool);
 
+      SVN_ERR(svn_fs_x__rev_file_get(&apr_file, file));
       SVN_ERR(svn_txdelta_skip_svndiff_window(apr_file, rs->ver, iterpool));
       rs->chunk_index++;
       SVN_ERR(svn_fs_x__get_file_offset(&start_offset, apr_file, iterpool));

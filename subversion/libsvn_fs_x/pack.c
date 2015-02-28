@@ -478,16 +478,18 @@ copy_item_to_temp(pack_context_t *context,
                   svn_fs_x__p2l_entry_t *entry,
                   apr_pool_t *scratch_pool)
 {
+  apr_file_t *file;
   svn_fs_x__p2l_entry_t *new_entry
     = svn_fs_x__p2l_entry_dup(entry, context->info_pool);
 
   SVN_ERR(svn_fs_x__get_file_offset(&new_entry->offset, temp_file,
                                     scratch_pool));
   APR_ARRAY_PUSH(entries, svn_fs_x__p2l_entry_t *) = new_entry;
-  
-  SVN_ERR(copy_file_data(context, temp_file, rev_file->file, entry->size,
+
+  SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
+  SVN_ERR(copy_file_data(context, temp_file, file, entry->size,
                          scratch_pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -568,6 +570,7 @@ copy_rep_to_temp(pack_context_t *context,
 {
   svn_fs_x__rep_header_t *rep_header;
   svn_stream_t *stream;
+  apr_file_t *file;
   apr_off_t source_offset = entry->offset;
 
   /* create a copy of ENTRY, make it point to the copy destination and
@@ -597,8 +600,9 @@ copy_rep_to_temp(pack_context_t *context,
 
   /* copy the whole rep (including header!) to our temp file */
   SVN_ERR(svn_fs_x__rev_file_seek(rev_file, NULL, source_offset));
-  SVN_ERR(copy_file_data(context, context->reps_file, rev_file->file,
-                         entry->size, scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
+  SVN_ERR(copy_file_data(context, context->reps_file, file, entry->size,
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -688,6 +692,7 @@ copy_node_to_temp(pack_context_t *context,
                                          sizeof(*path_order));
   svn_fs_x__noderev_t *noderev;
   svn_stream_t *stream;
+  apr_file_t *file;
   const char *sort_path;
   apr_off_t source_offset = entry->offset;
 
@@ -705,8 +710,9 @@ copy_node_to_temp(pack_context_t *context,
 
   /* copy the noderev to our temp file */
   SVN_ERR(svn_fs_x__rev_file_seek(rev_file, NULL, source_offset));
-  SVN_ERR(copy_file_data(context, context->reps_file, rev_file->file,
-                         entry->size, scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
+  SVN_ERR(copy_file_data(context, context->reps_file, file, entry->size,
+                         scratch_pool));
 
   /* if the node has a data representation, make that the node's "base".
    * This will (often) cause the noderev to be placed right in front of
@@ -1844,6 +1850,7 @@ append_revision(pack_context_t *context,
   apr_off_t offset = 0;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_fs_x__revision_file_t *rev_file;
+  apr_file_t *file;
   apr_finfo_t finfo;
 
   /* Get the size of the file. */
@@ -1857,8 +1864,9 @@ append_revision(pack_context_t *context,
   SVN_ERR(svn_fs_x__open_pack_or_rev_file(&rev_file, context->fs,
                                           context->start_rev, scratch_pool,
                                           iterpool));
-  SVN_ERR(copy_file_data(context, context->pack_file, rev_file->file,
-                         finfo.size, iterpool));
+  SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
+  SVN_ERR(copy_file_data(context, context->pack_file, file, finfo.size,
+                         iterpool));
 
   /* mark the start of a new revision */
   SVN_ERR(svn_fs_x__l2p_proto_index_add_revision(context->proto_l2p_index,
