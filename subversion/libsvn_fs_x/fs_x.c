@@ -897,8 +897,8 @@ write_revision_zero(svn_fs_t *fs,
 
   /* Now re-open r0, create proto-index files from our entries and
       rewrite the index section of r0. */
-  SVN_ERR(svn_fs_x__open_pack_or_rev_file_writable(&rev_file, fs, 0,
-                                                   subpool, subpool));
+  SVN_ERR(svn_fs_x__rev_file_open_writable(&rev_file, fs, 0,
+                                           subpool, subpool));
   SVN_ERR(svn_fs_x__p2l_index_from_p2l_entries(&p2l_proto_index, fs,
                                                rev_file, index_entries,
                                                subpool, subpool));
