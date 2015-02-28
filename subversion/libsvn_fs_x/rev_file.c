@@ -318,6 +318,14 @@ svn_fs_x__rev_file_name(const char **filename,
 }
 
 svn_error_t *
+svn_fs_x__rev_file_stream(svn_stream_t **stream,
+                          svn_fs_x__revision_file_t *file)
+{
+  *stream = file->stream;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_x__rev_file_l2p_index(svn_fs_x__packed_number_stream_t **stream,
                              svn_fs_x__revision_file_t *file)
 {

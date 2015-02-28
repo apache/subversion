@@ -639,6 +639,8 @@ create_rep_state_body(rep_state_t **rep_state,
   /* read rep header, if necessary */
   if (!is_cached)
     {
+      svn_stream_t *stream;
+
       /* we will need the on-disk location for non-txn reps */
       apr_off_t offset;
       svn_boolean_t in_container = TRUE;
@@ -693,7 +695,8 @@ create_rep_state_body(rep_state_t **rep_state,
           SVN_ERR(svn_fs_x__rev_file_seek(rs->sfile->rfile, NULL, offset));
         }
 
-      SVN_ERR(svn_fs_x__read_rep_header(&rh, rs->sfile->rfile->stream,
+      SVN_ERR(svn_fs_x__rev_file_stream(&stream, rs->sfile->rfile));
+      SVN_ERR(svn_fs_x__read_rep_header(&rh, stream,
                                         result_pool, scratch_pool));
       SVN_ERR(svn_fs_x__rev_file_offset(&rs->start, rs->sfile->rfile));
 
@@ -1323,6 +1326,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   apr_off_t start_offset;
   apr_off_t end_offset;
   apr_pool_t *iterpool;
+  svn_stream_t *stream;
   svn_fs_x__revision_file_t *file;
 
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
@@ -1389,7 +1393,8 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   svn_pool_destroy(iterpool);
 
   /* Actually read the next window. */
-  SVN_ERR(svn_txdelta_read_svndiff_window(nwin, file->stream, rs->ver,
+  SVN_ERR(svn_fs_x__rev_file_stream(&stream, file));
+  SVN_ERR(svn_txdelta_read_svndiff_window(nwin, stream, rs->ver,
                                           result_pool));
   SVN_ERR(svn_fs_x__rev_file_offset(&end_offset, file));
   rs->current = end_offset - rs->start;
@@ -1651,16 +1656,17 @@ cache_windows(svn_filesize_t *fulltext_len,
       else
         {
           svn_txdelta_window_t *window;
+          svn_fs_x__revision_file_t *file = rs->sfile->rfile;
+          svn_stream_t *stream;
           apr_off_t start_offset = rs->start + rs->current;
           apr_off_t end_offset;
           apr_off_t block_start;
 
           /* navigate to & read the current window */
-          SVN_ERR(svn_fs_x__rev_file_seek(rs->sfile->rfile, &block_start,
-                                          start_offset));
-          SVN_ERR(svn_txdelta_read_svndiff_window(&window,
-                                                  rs->sfile->rfile->stream,
-                                                  rs->ver, iterpool));
+          SVN_ERR(svn_fs_x__rev_file_stream(&stream, file));
+          SVN_ERR(svn_fs_x__rev_file_seek(file, &block_start, start_offset));
+          SVN_ERR(svn_txdelta_read_svndiff_window(&window, stream, rs->ver,
+                                                  iterpool));
 
           /* aggregate expanded window size */
           *fulltext_len += window->tview_len;
@@ -1700,6 +1706,7 @@ read_rep_header(svn_fs_x__rep_header_t **rep_header,
                 apr_pool_t *pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
+  svn_stream_t *stream;
   svn_boolean_t is_cached = FALSE;
   
   if (ffd->rep_header_cache)
@@ -1710,7 +1717,8 @@ read_rep_header(svn_fs_x__rep_header_t **rep_header,
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_fs_x__read_rep_header(rep_header, file->stream, pool, pool));
+  SVN_ERR(svn_fs_x__rev_file_stream(&stream, file));
+  SVN_ERR(svn_fs_x__read_rep_header(rep_header, stream, pool, pool));
 
   if (ffd->rep_header_cache)
     SVN_ERR(svn_cache__set(ffd->rep_header_cache, key, *rep_header, pool));

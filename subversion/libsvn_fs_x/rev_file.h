@@ -145,6 +145,12 @@ svn_fs_x__rev_file_name(const char **filename,
                         svn_fs_x__revision_file_t *file,
                         apr_pool_t *result_pool);
 
+/* Set *STREAM to the shared stream object of FILE.
+ */
+svn_error_t *
+svn_fs_x__rev_file_stream(svn_stream_t **stream,
+                          svn_fs_x__revision_file_t *file);
+
 /* Set *STREAM to the shared L2P data stream of FILE.  Initializes the
  * stream on demand.
  */
