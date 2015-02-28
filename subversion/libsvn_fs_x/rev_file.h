@@ -139,6 +139,12 @@ svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
 
 /* Access functions */
 
+/* Convenience wrapper around svn_io_file_name_get. */
+svn_error_t *
+svn_fs_x__rev_file_name(const char **filename,
+                        svn_fs_x__revision_file_t *file,
+                        apr_pool_t *result_pool);
+
 /* Set *STREAM to the shared L2P data stream of FILE.  Initializes the
  * stream on demand.
  */
@@ -164,6 +170,25 @@ svn_fs_x__rev_file_l2p_info(svn_fs_x__index_info_t *info,
 svn_error_t *
 svn_fs_x__rev_file_p2l_info(svn_fs_x__index_info_t *info,
                             svn_fs_x__revision_file_t *file);
+
+/* File manipulation. */
+
+/* Convenience wrapper around svn_io_file_aligned_seek. */
+svn_error_t *
+svn_fs_x__rev_file_seek(svn_fs_x__revision_file_t *file,
+                        apr_off_t *buffer_start,
+                        apr_off_t offset);
+
+/* Convenience wrapper around svn_fs_x__get_file_offset. */
+svn_error_t *
+svn_fs_x__rev_file_offset(apr_off_t *offset,
+                          svn_fs_x__revision_file_t *file);
+
+/* Convenience wrapper around svn_io_file_read_full2. */
+svn_error_t *
+svn_fs_x__rev_file_read(svn_fs_x__revision_file_t *file,
+                        void *buf,
+                        apr_size_t nbytes);
 
 /* Close all files and streams in FILE.
  */
