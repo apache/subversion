@@ -594,8 +594,7 @@ copy_rep_to_temp(pack_context_t *context,
     }
 
   /* copy the whole rep (including header!) to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &source_offset,
-                           scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_seek(rev_file, NULL, source_offset));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file->file,
                          entry->size, scratch_pool));
 
@@ -697,12 +696,11 @@ copy_node_to_temp(pack_context_t *context,
    * store it in CONTEXT */
   entry = svn_fs_x__p2l_entry_dup(entry, context->info_pool);
   SVN_ERR(svn_fs_x__get_file_offset(&entry->offset, context->reps_file,
-                                     scratch_pool));
+                                    scratch_pool));
   add_item_rep_mapping(context, entry);
 
   /* copy the noderev to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &source_offset,
-                           scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_seek(rev_file, NULL, source_offset));
   SVN_ERR(copy_file_data(context, context->reps_file, rev_file->file,
                          entry->size, scratch_pool));
 
@@ -1760,8 +1758,7 @@ pack_range(pack_context_t *context,
               offset = entry->offset;
               if (offset < l2p_index_info.start)
                 {
-                  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset,
-                                           iterpool));
+                  SVN_ERR(svn_fs_x__rev_file_seek(rev_file, NULL, offset));
 
                   if (entry->type == SVN_FS_X__ITEM_TYPE_CHANGES)
                     SVN_ERR(copy_item_to_temp(context,

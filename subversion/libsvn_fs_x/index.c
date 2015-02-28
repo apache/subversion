@@ -3436,15 +3436,13 @@ calc_fnv1(svn_fs_x__p2l_entry_t *entry,
     }
 
   /* Read the block and feed it to the checksum calculator. */
-  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &entry->offset,
-                           scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_seek(rev_file, NULL, entry->offset));
   while (size > 0)
     {
       apr_size_t to_read = size > sizeof(buffer)
                          ? sizeof(buffer)
                          : (apr_size_t)size;
-      SVN_ERR(svn_io_file_read_full2(rev_file->file, buffer, to_read, NULL,
-                                     NULL, scratch_pool));
+      SVN_ERR(svn_fs_x__rev_file_read(rev_file, buffer, to_read));
       SVN_ERR(svn_checksum_update(context, buffer, to_read));
       size -= to_read;
     }
