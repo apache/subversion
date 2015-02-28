@@ -52,11 +52,8 @@ typedef struct svn_fs_x__index_info_t
 
 } svn_fs_x__index_info_t;
 
-/* Data file, including indexes data, and associated properties for
- * START_REVISION.  As the FILE is kept open, background pack operations
- * will not cause access to this file to fail.
- */
-typedef struct svn_fs_x__revision_file_t
+/* Location and content meta data for a revision / pack file. */
+typedef struct svn_fs_x__rev_file_info_t
 {
   /* first (potentially only) revision in the rev / pack file.
    * SVN_INVALID_REVNUM for txn proto-rev files. */
@@ -65,33 +62,13 @@ typedef struct svn_fs_x__revision_file_t
   /* the revision was packed when the first file / stream got opened */
   svn_boolean_t is_packed;
 
-  /* rev / pack file */
-  apr_file_t *file;
+} svn_fs_x__rev_file_info_t;
 
-  /* stream based on FILE and not NULL exactly when FILE is not NULL */
-  svn_stream_t *stream;
-
-  /* the opened P2L index stream or NULL.  Always NULL for txns. */
-  svn_fs_x__packed_number_stream_t *p2l_stream;
-
-  /* the opened L2P index stream or NULL.  Always NULL for txns. */
-  svn_fs_x__packed_number_stream_t *l2p_stream;
-
-  /* Copied from FS->FFD->BLOCK_SIZE upon creation.  It allows us to
-   * use aligned seek() without having the FS handy. */
-  apr_off_t block_size;
-
-  /* Info on the L2P index within FILE.
-   * Elements are -1 / NULL until svn_fs_x__auto_read_footer gets called. */
-  svn_fs_x__index_info_t l2p_info;
-
-  /* Info on the P2L index within FILE.
-   * Elements are -1 / NULL until svn_fs_x__auto_read_footer gets called. */
-  svn_fs_x__index_info_t p2l_info;
-
-  /* pool containing this object */
-  apr_pool_t *pool;
-} svn_fs_x__revision_file_t;
+/* Data file, including indexes data, and associated properties for
+ * START_REVISION.  As the FILE is kept open, background pack operations
+ * will not cause access to this file to fail.
+ */
+typedef struct svn_fs_x__revision_file_t svn_fs_x__revision_file_t;
 
 /* Open the correct revision file for REV.  If the filesystem FS has
  * been packed, *FILE will be set to the packed file; otherwise, set *FILE
@@ -138,6 +115,12 @@ svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
                              apr_pool_t *result_pool);
 
 /* Access functions */
+
+/* Copy the L2P index info for FILE into *INFO.
+ */
+svn_error_t *
+svn_fs_x__rev_file_info(svn_fs_x__rev_file_info_t *info,
+                        svn_fs_x__revision_file_t *file);
 
 /* Convenience wrapper around svn_io_file_name_get. */
 svn_error_t *
