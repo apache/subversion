@@ -539,7 +539,7 @@ def resolved_on_deleted_item(sbox):
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk, None, expected_skip,
-                                       None, dry_run = False)
+                                       [], dry_run = False)
   svntest.actions.run_and_verify_unquiet_status(A2, expected_status)
 
   # Now resolve by recursing on the working copy root.
