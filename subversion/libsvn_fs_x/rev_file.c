@@ -309,6 +309,15 @@ svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
 }
 
 svn_error_t *
+svn_fs_x__rev_file_name(const char **filename,
+                        svn_fs_x__revision_file_t *file,
+                        apr_pool_t *result_pool)
+{
+  return svn_error_trace(svn_io_file_name_get(filename, file->file,
+                                              result_pool));
+}
+
+svn_error_t *
 svn_fs_x__rev_file_l2p_index(svn_fs_x__packed_number_stream_t **stream,
                              svn_fs_x__revision_file_t *file)
 {
@@ -368,6 +377,34 @@ svn_fs_x__rev_file_p2l_info(svn_fs_x__index_info_t *info,
   *info = file->p2l_info;
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__rev_file_seek(svn_fs_x__revision_file_t *file,
+                        apr_off_t *buffer_start,
+                        apr_off_t offset)
+{
+  return svn_error_trace(svn_io_file_aligned_seek(file->file,
+                                                  file->block_size,
+                                                  buffer_start, offset,
+                                                  file->pool));
+}
+
+svn_error_t *
+svn_fs_x__rev_file_offset(apr_off_t *offset,
+                          svn_fs_x__revision_file_t *file)
+{
+  return svn_error_trace(svn_fs_x__get_file_offset(offset, file->file,
+                                                   file->pool));
+}
+
+svn_error_t *
+svn_fs_x__rev_file_read(svn_fs_x__revision_file_t *file,
+                        void *buf,
+                        apr_size_t nbytes)
+{
+  return svn_error_trace(svn_io_file_read_full2(file->file, buf, nbytes,
+                                                NULL, NULL, file->pool));
 }
 
 svn_error_t *
