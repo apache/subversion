@@ -253,7 +253,7 @@ svn_fs_x__rev_file_open(svn_fs_x__revision_file_t **file,
                         apr_pool_t *scratch_pool)
 {
   *file = init_revision_file(fs, rev, result_pool);
-  return svn_error_trace(open_pack_or_rev_file(*file, FALSE, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -265,6 +265,16 @@ svn_fs_x__rev_file_open_writable(svn_fs_x__revision_file_t** file,
 {
   *file = init_revision_file(fs, rev, result_pool);
   return svn_error_trace(open_pack_or_rev_file(*file, TRUE, scratch_pool));
+}
+
+/* If the revision file in FILE has not been opened, yet, do it now. */
+static svn_error_t *
+auto_open(svn_fs_x__revision_file_t *file)
+{
+  if (file->file == NULL)
+    SVN_ERR(open_pack_or_rev_file(file, FALSE, file->pool));
+
+  return SVN_NO_ERROR;
 }
 
 /* If the footer data in FILE has not been read, yet, do so now.
@@ -282,6 +292,7 @@ auto_read_footer(svn_fs_x__revision_file_t *file)
       svn_stringbuf_t *footer;
 
       /* Determine file size. */
+      SVN_ERR(auto_open(file));
       SVN_ERR(svn_io_file_seek(file->file, APR_END, &filesize, file->pool));
 
       /* Read last byte (containing the length of the footer). */
@@ -349,6 +360,8 @@ svn_error_t *
 svn_fs_x__rev_file_info(svn_fs_x__rev_file_info_t *info,
                         svn_fs_x__revision_file_t *file)
 {
+  SVN_ERR(auto_open(file));
+
   *info = file->file_info;
   return SVN_NO_ERROR;
 }
@@ -358,6 +371,8 @@ svn_fs_x__rev_file_name(const char **filename,
                         svn_fs_x__revision_file_t *file,
                         apr_pool_t *result_pool)
 {
+  SVN_ERR(auto_open(file));
+
   return svn_error_trace(svn_io_file_name_get(filename, file->file,
                                               result_pool));
 }
@@ -366,6 +381,8 @@ svn_error_t *
 svn_fs_x__rev_file_stream(svn_stream_t **stream,
                           svn_fs_x__revision_file_t *file)
 {
+  SVN_ERR(auto_open(file));
+
   *stream = file->stream;
   return SVN_NO_ERROR;
 }
@@ -374,6 +391,8 @@ svn_error_t *
 svn_fs_x__rev_file_get(apr_file_t **apr_file,
                        svn_fs_x__revision_file_t *file)
 {
+  SVN_ERR(auto_open(file));
+
   *apr_file = file->file;
   return SVN_NO_ERROR;
 }
@@ -445,6 +464,7 @@ svn_fs_x__rev_file_seek(svn_fs_x__revision_file_t *file,
                         apr_off_t *buffer_start,
                         apr_off_t offset)
 {
+  SVN_ERR(auto_open(file));
   return svn_error_trace(svn_io_file_aligned_seek(file->file,
                                                   file->block_size,
                                                   buffer_start, offset,
@@ -455,6 +475,7 @@ svn_error_t *
 svn_fs_x__rev_file_offset(apr_off_t *offset,
                           svn_fs_x__revision_file_t *file)
 {
+  SVN_ERR(auto_open(file));
   return svn_error_trace(svn_fs_x__get_file_offset(offset, file->file,
                                                    file->pool));
 }
@@ -464,6 +485,7 @@ svn_fs_x__rev_file_read(svn_fs_x__revision_file_t *file,
                         void *buf,
                         apr_size_t nbytes)
 {
+  SVN_ERR(auto_open(file));
   return svn_error_trace(svn_io_file_read_full2(file->file, buf, nbytes,
                                                 NULL, NULL, file->pool));
 }
@@ -486,5 +508,7 @@ svn_fs_x__close_revision_file(svn_fs_x__revision_file_t *file)
   file->l2p_stream = NULL;
   file->p2l_stream = NULL;
 
+  /* Cause any index data getters to re-read the footer. */
+  file->l2p_info.start = -1;
   return SVN_NO_ERROR;
 }
