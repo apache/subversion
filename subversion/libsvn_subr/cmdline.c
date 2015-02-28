@@ -1200,12 +1200,12 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   apr_file_t *tmp_file;
   const char *tmpfile_name;
   const char *tmpfile_native;
-  const char *tmpfile_apr, *base_dir_apr;
+  const char *base_dir_apr;
   svn_string_t *translated_contents;
-  apr_status_t apr_err, apr_err2;
+  apr_status_t apr_err;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
-  svn_error_t *err = SVN_NO_ERROR, *err2;
+  svn_error_t *err = SVN_NO_ERROR;
   char *old_cwd;
   int sys_err;
   svn_boolean_t remove_file = TRUE;
@@ -1288,49 +1288,36 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
        the file we just created!! ***/
 
   /* Dump initial CONTENTS to TMP_FILE. */
-  apr_err = apr_file_write_full(tmp_file, translated_contents->data,
-                                translated_contents->len, &written);
+  err = svn_io_file_write_full(tmp_file, translated_contents->data,
+                               translated_contents->len, &written,
+                               pool);
 
-  apr_err2 = apr_file_close(tmp_file);
-  if (! apr_err)
-    apr_err = apr_err2;
+  err = svn_error_compose_create(err, svn_io_file_close(tmp_file, pool));
 
   /* Make sure the whole CONTENTS were written, else return an error. */
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't write to '%s'"),
-                               tmpfile_name);
-      goto cleanup;
-    }
-
-  err = svn_path_cstring_from_utf8(&tmpfile_apr, tmpfile_name, pool);
   if (err)
     goto cleanup;
 
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
-  apr_err = apr_stat(&finfo_before, tmpfile_apr,
-                     APR_FINFO_MTIME, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_before, tmpfile_name, APR_FINFO_MTIME, pool);
+  if (err)
+    goto cleanup;
 
   /* Backdate the file a little bit in case the editor is very fast
      and doesn't change the size.  (Use two seconds, since some
      filesystems have coarse granularity.)  It's OK if this call
      fails, so we don't check its return value.*/
-  apr_file_mtime_set(tmpfile_apr, finfo_before.mtime - 2000, pool);
+  err = svn_io_set_file_affected_time(finfo_before.mtime - 2000,
+                                      tmpfile_name, pool);
+  if (err)
+    goto cleanup;
 
   /* Stat it again to get the mtime we actually set. */
-  apr_err = apr_stat(&finfo_before, tmpfile_apr,
-                     APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_before, tmpfile_name,
+                    APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  if (err)
+    goto cleanup;
 
   /* Prepare the editor command line.  */
   err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
@@ -1358,13 +1345,10 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     }
 
   /* Get information about the temporary file after the assumed editing. */
-  apr_err = apr_stat(&finfo_after, tmpfile_apr,
-                     APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_after, tmpfile_name,
+                    APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  if (err)
+    goto cleanup;
 
   /* If the file looks changed... */
   if ((finfo_before.mtime != finfo_after.mtime) ||
@@ -1402,13 +1386,9 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   if (remove_file)
     {
       /* Remove the file from disk.  */
-      err2 = svn_io_remove_file2(tmpfile_name, FALSE, pool);
-
-      /* Only report remove error if there was no previous error. */
-      if (! err && err2)
-        err = err2;
-      else
-        svn_error_clear(err2);
+      err = svn_error_compose_create(
+              err,
+              svn_io_remove_file2(tmpfile_name, FALSE, pool));
     }
 
  cleanup2:
