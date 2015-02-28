@@ -31,6 +31,39 @@
 #include "private/svn_io_private.h"
 #include "svn_private_config.h"
 
+struct svn_fs_x__revision_file_t
+{
+  /* Meta-data to FILE. */
+  svn_fs_x__rev_file_info_t file_info;
+
+  /* rev / pack file */
+  apr_file_t *file;
+
+  /* stream based on FILE and not NULL exactly when FILE is not NULL */
+  svn_stream_t *stream;
+
+  /* the opened P2L index stream or NULL.  Always NULL for txns. */
+  svn_fs_x__packed_number_stream_t *p2l_stream;
+
+  /* the opened L2P index stream or NULL.  Always NULL for txns. */
+  svn_fs_x__packed_number_stream_t *l2p_stream;
+
+  /* Copied from FS->FFD->BLOCK_SIZE upon creation.  It allows us to
+   * use aligned seek() without having the FS handy. */
+  apr_off_t block_size;
+
+  /* Info on the L2P index within FILE.
+   * Elements are -1 / NULL until svn_fs_x__auto_read_footer gets called. */
+  svn_fs_x__index_info_t l2p_info;
+
+  /* Info on the P2L index within FILE.
+   * Elements are -1 / NULL until svn_fs_x__auto_read_footer gets called. */
+  svn_fs_x__index_info_t p2l_info;
+
+  /* pool containing this object */
+  apr_pool_t *pool;
+};
+
 /* Return a new revision file instance, allocated in RESULT_POOL, for
  * filesystem FS.  Set its pool member to the provided RESULT_POOL. */
 static svn_fs_x__revision_file_t *
@@ -40,8 +73,8 @@ create_revision_file(svn_fs_t *fs,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__revision_file_t *file = apr_palloc(result_pool, sizeof(*file));
 
-  file->is_packed = FALSE;
-  file->start_revision = SVN_INVALID_REVNUM;
+  file->file_info.is_packed = FALSE;
+  file->file_info.start_revision = SVN_INVALID_REVNUM;
 
   file->file = NULL;
   file->stream = NULL;
@@ -69,8 +102,8 @@ init_revision_file(svn_fs_t *fs,
 {
   svn_fs_x__revision_file_t *file = create_revision_file(fs, result_pool);
 
-  file->is_packed = svn_fs_x__is_packed_rev(fs, revision);
-  file->start_revision = svn_fs_x__packed_base_rev(fs, revision);
+  file->file_info.is_packed = svn_fs_x__is_packed_rev(fs, revision);
+  file->file_info.start_revision = svn_fs_x__packed_base_rev(fs, revision);
 
   return file;
 }
@@ -192,7 +225,7 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
 
           /* We failed for the first time. Refresh cache & retry. */
           SVN_ERR(svn_fs_x__update_min_unpacked_rev(fs, scratch_pool));
-              file->start_revision = svn_fs_x__packed_base_rev(fs, rev);
+          file->file_info.start_revision = svn_fs_x__packed_base_rev(fs, rev);
 
           retry = TRUE;
         }
@@ -268,7 +301,7 @@ auto_read_footer(svn_fs_x__revision_file_t *file)
                                      &file->l2p_info.checksum,
                                      &file->p2l_info.start,
                                      &file->p2l_info.checksum,
-                                     footer, file->start_revision,
+                                     footer, file->file_info.start_revision,
                                      file->pool));
       file->l2p_info.end = file->p2l_info.start;
       file->p2l_info.end = filesize - footer_length - 1;
@@ -305,6 +338,14 @@ svn_fs_x__wrap_temp_rev_file(svn_fs_x__revision_file_t **file,
   (*file)->file = temp_file;
   (*file)->stream = svn_stream_from_aprfile2(temp_file, TRUE, result_pool);
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__rev_file_info(svn_fs_x__rev_file_info_t *info,
+                        svn_fs_x__revision_file_t *file)
+{
+  *info = file->file_info;
   return SVN_NO_ERROR;
 }
 

@@ -1243,11 +1243,14 @@ get_l2p_header_body(l2p_header_t **header,
   apr_array_header_t *expanded_values
     = apr_array_make(scratch_pool, 16, sizeof(apr_uint64_t));
   svn_fs_x__packed_number_stream_t *stream;
+  svn_fs_x__rev_file_info_t file_info;
   svn_fs_x__index_info_t index_info;
 
+  /* What to look for. */
   svn_fs_x__pair_cache_key_t key;
-  key.revision = rev_file->start_revision;
-  key.second = rev_file->is_packed;
+  SVN_ERR(svn_fs_x__rev_file_info(&file_info, rev_file));
+  key.revision = file_info.start_revision;
+  key.second = file_info.is_packed;
 
   /* Access the L2P index stream. */
   SVN_ERR(svn_fs_x__rev_file_l2p_index(&stream, rev_file));
@@ -1258,7 +1261,7 @@ get_l2p_header_body(l2p_header_t **header,
    * consistency with other bits. */
   SVN_ERR(packed_stream_get(&value, stream));
   result->first_revision = (svn_revnum_t)value;
-  if (result->first_revision != rev_file->start_revision)
+  if (result->first_revision != file_info.start_revision)
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                   _("Index rev / pack file revision numbers do not match"));
 
@@ -1403,11 +1406,13 @@ get_l2p_header(l2p_header_t **header,
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_boolean_t is_cached = FALSE;
+  svn_fs_x__rev_file_info_t file_info;
 
   /* first, try cache lookop */
   svn_fs_x__pair_cache_key_t key;
-  key.revision = rev_file->start_revision;
-  key.second = rev_file->is_packed;
+  SVN_ERR(svn_fs_x__rev_file_info(&file_info, rev_file));
+  key.revision = file_info.start_revision;
+  key.second = file_info.is_packed;
   SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->l2p_header_cache,
                          &key, result_pool));
   if (is_cached)
@@ -2447,12 +2452,14 @@ get_p2l_header(p2l_header_t **header,
   p2l_header_t *result;
   svn_boolean_t is_cached = FALSE;
   svn_fs_x__packed_number_stream_t *stream;
+  svn_fs_x__rev_file_info_t file_info;
   svn_fs_x__index_info_t l2p_index_info;
 
   /* look for the header data in our cache */
   svn_fs_x__pair_cache_key_t key;
-  key.revision = rev_file->start_revision;
-  key.second = rev_file->is_packed;
+  SVN_ERR(svn_fs_x__rev_file_info(&file_info, rev_file));
+  key.revision = file_info.start_revision;
+  key.second = file_info.is_packed;
 
   SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->p2l_header_cache,
                          &key, result_pool));
@@ -2471,7 +2478,7 @@ get_p2l_header(p2l_header_t **header,
   /* Read table sizes, check them for plausibility and allocate page array. */
   SVN_ERR(packed_stream_get(&value, stream));
   result->first_revision = (svn_revnum_t)value;
-  if (result->first_revision != rev_file->start_revision)
+  if (result->first_revision != file_info.start_revision)
     return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                   _("Index rev / pack file revision numbers do not match"));
 
