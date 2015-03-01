@@ -25,7 +25,7 @@ Candidate changes:
    Notes:
      API change (can't be merged after 1.9.0).
    Votes:
-     +1: danielsh
+     +1: danielsh, brane
 
 Veto-blocked changes:
 =====================
