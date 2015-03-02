@@ -26,11 +26,14 @@
 #include "svn_fs.h"
 #include "id.h"
 
-/* In format 7, index files must be read in sync with the respective
- * revision / pack file.  I.e. we must use packed index files for packed
- * rev files and unpacked ones for non-packed rev files.  So, the whole
- * point is to open them with matching "is packed" setting in case some
- * background pack process was run.
+/* In FSX, index data must be read in sync with the respective revision /
+ * pack file.  I.e. we must use packed index files for packed rev files and
+ * unpacked ones for non-packed rev files.  So, the whole point is to open
+ * them with matching "is packed" setting in case some background pack
+ * process was run.
+ *
+ * Another thing that this allows us is to lazily open the file, i.e. open
+ * it upon first access.
  */
 
 /* Opaque index stream type.
@@ -70,17 +73,16 @@ typedef struct svn_fs_x__rev_file_info_t
  */
 typedef struct svn_fs_x__revision_file_t svn_fs_x__revision_file_t;
 
-/* Open the correct revision file for REV.  If the filesystem FS has
- * been packed, *FILE will be set to the packed file; otherwise, set *FILE
- * to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
- * file doesn't exist.  Allocate *FILE in RESULT_POOL and use SCRATCH_POOL
- * for temporaries. */
+/* Initialize the revision / pack file access structure in *FILE for reading
+ * revision REV from filesystem FS.  The file will not be opened until the
+ * first call to any of the access functions.
+ *
+ * Allocate *FILE in RESULT_POOL. */
 svn_error_t *
-svn_fs_x__rev_file_open(svn_fs_x__revision_file_t **file,
+svn_fs_x__rev_file_init(svn_fs_x__revision_file_t **file,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
+                        apr_pool_t *result_pool);
 
 /* Open the correct revision file for REV with read and write access.
  * If necessary, temporarily reset the file's read-only state.  If the
@@ -140,15 +142,13 @@ svn_error_t *
 svn_fs_x__rev_file_get(apr_file_t **apr_file,
                        svn_fs_x__revision_file_t *file);
 
-/* Set *STREAM to the shared L2P data stream of FILE.  Initializes the
- * stream on demand.
+/* Set *STREAM to the shared L2P data stream of FILE.
  */
 svn_error_t *
 svn_fs_x__rev_file_l2p_index(svn_fs_x__packed_number_stream_t **stream,
                              svn_fs_x__revision_file_t *file);
 
-/* Set *STREAM to the shared P2L data stream of FILE.  Initializes the
- * stream on demand.
+/* Set *STREAM to the shared P2L data stream of FILE.
  */
 svn_error_t *
 svn_fs_x__rev_file_p2l_index(svn_fs_x__packed_number_stream_t **stream,
@@ -185,7 +185,8 @@ svn_fs_x__rev_file_read(svn_fs_x__revision_file_t *file,
                         void *buf,
                         apr_size_t nbytes);
 
-/* Close all files and streams in FILE.
+/* Close all files and streams in FILE.  They will be reopened automatically
+ * by any of the above access functions.
  */
 svn_error_t *
 svn_fs_x__close_revision_file(svn_fs_x__revision_file_t *file);

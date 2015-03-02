@@ -1733,8 +1733,8 @@ pack_range(pack_context_t *context,
       svn_fs_x__index_info_t l2p_index_info;
 
       /* Get the rev file dimensions (mainly index locations). */
-      SVN_ERR(svn_fs_x__rev_file_open(&rev_file, context->fs, revision,
-                                      revpool, iterpool));
+      SVN_ERR(svn_fs_x__rev_file_init(&rev_file, context->fs, revision,
+                                      revpool));
       SVN_ERR(svn_fs_x__rev_file_l2p_info(&l2p_index_info, rev_file));
 
       /* store the indirect array index */
@@ -1861,8 +1861,8 @@ append_revision(pack_context_t *context,
   SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, scratch_pool));
 
   /* Copy all the bits from the rev file to the end of the pack file. */
-  SVN_ERR(svn_fs_x__rev_file_open(&rev_file, context->fs, context->start_rev,
-                                  scratch_pool, iterpool));
+  SVN_ERR(svn_fs_x__rev_file_init(&rev_file, context->fs, context->start_rev,
+                                  scratch_pool));
   SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
   SVN_ERR(copy_file_data(context, context->pack_file, file, finfo.size,
                          iterpool));
