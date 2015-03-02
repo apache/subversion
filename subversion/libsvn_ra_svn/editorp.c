@@ -42,6 +42,7 @@
 #include "private/svn_atomic.h"
 #include "private/svn_fspath.h"
 #include "private/svn_editor.h"
+#include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 
 #include "ra_svn.h"
@@ -59,7 +60,7 @@ typedef struct ra_svn_edit_baton_t {
   svn_ra_svn_conn_t *conn;
   svn_ra_svn_edit_callback callback;    /* Called on successful completion. */
   void *callback_baton;
-  int next_token;
+  apr_uint64_t next_token;
   svn_boolean_t got_status;
 } ra_svn_edit_baton_t;
 
@@ -108,10 +109,17 @@ struct ra_svn_token_entry_t {
 
 /* --- CONSUMING AN EDITOR BY PASSING EDIT OPERATIONS OVER THE NET --- */
 
-static const char *make_token(char type, ra_svn_edit_baton_t *eb,
-                              apr_pool_t *pool)
+static const char *
+make_token(char type,
+           ra_svn_edit_baton_t *eb,
+           apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "%c%d", type, eb->next_token++);
+  apr_size_t len;
+  char buffer[1 + SVN_INT64_BUFFER_SIZE];
+  buffer[0] = type;
+  len = 1 + svn__ui64toa(&buffer[1], eb->next_token++);
+  
+  return apr_pstrmemdup(pool, buffer, len);
 }
 
 static ra_svn_baton_t *ra_svn_make_baton(svn_ra_svn_conn_t *conn,
