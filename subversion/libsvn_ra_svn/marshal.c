@@ -2538,6 +2538,49 @@ svn_error_t *svn_ra_svn__write_cmd_failure(svn_ra_svn_conn_t *conn,
   return writebuf_write_literal(conn, pool, ") ) ");
 }
 
+/* Initializer for static svn_string_t . */
+#define STATIC_SVN_STRING(x) { x, sizeof(x) - 1 }
+
+/* Return a pre-cooked serialized representation for the changed path
+   flags NODE_KIND, TEXT_MODIFIED and PROPS_MODIFIED.  If we don't
+   have a suitable pre-cooked string, return an empty string. */
+static const svn_string_t *
+changed_path_flags(svn_node_kind_t node_kind,
+                   svn_boolean_t text_modified,
+                   svn_boolean_t props_modified)
+{
+  const static svn_string_t file_flags[4]
+    = { STATIC_SVN_STRING(" ) ( 4:file false false ) ) "),
+        STATIC_SVN_STRING(" ) ( 4:file false true ) ) "),
+        STATIC_SVN_STRING(" ) ( 4:file true false ) ) "),
+        STATIC_SVN_STRING(" ) ( 4:file true true ) ) ") };
+
+  const static svn_string_t dir_flags[4]
+    = { STATIC_SVN_STRING(" ) ( 3:dir false false ) ) "),
+        STATIC_SVN_STRING(" ) ( 3:dir false true ) ) "),
+        STATIC_SVN_STRING(" ) ( 3:dir true false ) ) "),
+        STATIC_SVN_STRING(" ) ( 3:dir true true ) ) ") };
+
+  const static svn_string_t no_flags = STATIC_SVN_STRING("");
+
+  /* Select the array based on the NODE_KIND. */
+  const svn_string_t *flags;
+  if (node_kind == svn_node_file)
+    flags = file_flags;
+  else if (node_kind == svn_node_dir)
+    flags = dir_flags;
+  else
+    return &no_flags;
+
+  /* Select the correct array entry. */
+  if (text_modified)
+    flags += 2;
+  if (props_modified)
+    flags++;
+
+  return flags;
+}
+
 svn_error_t *
 svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
@@ -2549,21 +2592,79 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
                                         svn_boolean_t text_modified,
                                         svn_boolean_t props_modified)
 {
-  SVN_ERR(write_tuple_start_list(conn, pool));
+  apr_size_t path_len = strlen(path);
+  apr_size_t copyfrom_len = copyfrom_path ? strlen(copyfrom_path) : 0;
+  const svn_string_t *flags_str = changed_path_flags(node_kind,
+                                                     text_modified,
+                                                     props_modified);
 
-  SVN_ERR(write_tuple_cstring(conn, pool, path));
-  SVN_ERR(writebuf_writechar(conn, pool, action));
-  SVN_ERR(writebuf_writechar(conn, pool, ' '));
-  SVN_ERR(write_tuple_start_list(conn, pool));
-  SVN_ERR(write_tuple_cstring_opt(conn, pool, copyfrom_path));
-  SVN_ERR(write_tuple_revision_opt(conn, pool, copyfrom_rev));
-  SVN_ERR(write_tuple_end_list(conn, pool));
-  SVN_ERR(write_tuple_start_list(conn, pool));
-  SVN_ERR(write_tuple_cstring(conn, pool, svn_node_kind_to_word(node_kind)));
-  SVN_ERR(write_tuple_boolean(conn, pool, text_modified));
-  SVN_ERR(write_tuple_boolean(conn, pool, props_modified));
+  /* How much buffer space do we need (worst case)? */
+  apr_size_t needed = 2                 /* list start */
+                    + path_len + SVN_INT64_BUFFER_SIZE
+                                        /* path */
+                    + 2                 /* action */
+                    + 4 + copyfrom_len + 2 * SVN_INT64_BUFFER_SIZE
+                                        /* list with copy-from info */
+                    + 2                 /* list start */
+                    + flags_str->len    /* longest flag names */
+                    + 4;                /* close open lists*/
 
-  return writebuf_write_literal(conn, pool, ") ) ");
+  /* If the remaining buffer is big enough and we've got all parts,
+     directly copy into the buffer. */
+  if (   (conn->write_pos + needed <= sizeof(conn->write_buf))
+      && (flags_str->len > 0))
+    {
+      /* Quick path. */
+      /* Open list. */
+      char *p = conn->write_buf + conn->write_pos;
+      p[0] = '(';
+      p[1] = ' ';
+
+      /* Write path. */
+      p = write_ncstring_quick(p + 2, path, path_len);
+
+      /* Action */
+      p[0] = action;
+      p[1] = ' ';
+      p[2] = '(';
+
+      /* Copy-from info (if given) */
+      if (copyfrom_path)
+        {
+          p[3] = ' ';
+          p = write_ncstring_quick(p + 4, copyfrom_path, copyfrom_len);
+          p += svn__ui64toa(p, copyfrom_rev);
+        }
+      else
+        {
+          p += 3;
+        }
+
+      /* Close with flags. */
+      memcpy(p, flags_str->data, flags_str->len);
+      conn->write_pos = p + flags_str->len - conn->write_buf;
+    }
+  else
+    {
+      /* Standard code path (fallback). */
+      SVN_ERR(write_tuple_start_list(conn, pool));
+
+      SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, path, path_len));
+      SVN_ERR(writebuf_writechar(conn, pool, action));
+      SVN_ERR(writebuf_writechar(conn, pool, ' '));
+      SVN_ERR(write_tuple_start_list(conn, pool));
+      SVN_ERR(write_tuple_cstring_opt(conn, pool, copyfrom_path));
+      SVN_ERR(write_tuple_revision_opt(conn, pool, copyfrom_rev));
+      SVN_ERR(write_tuple_end_list(conn, pool));
+      SVN_ERR(write_tuple_start_list(conn, pool));
+      SVN_ERR(write_tuple_cstring(conn, pool, svn_node_kind_to_word(node_kind)));
+      SVN_ERR(write_tuple_boolean(conn, pool, text_modified));
+      SVN_ERR(write_tuple_boolean(conn, pool, props_modified));
+
+      SVN_ERR(writebuf_write_literal(conn, pool, ") ) "));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
