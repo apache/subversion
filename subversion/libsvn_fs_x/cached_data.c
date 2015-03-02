@@ -192,8 +192,7 @@ open_and_seek_revision(svn_fs_x__revision_file_t **file,
 
   SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
 
-  SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, rev, result_pool,
-                                  scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, rev, result_pool));
   SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev_file, id,
                                 scratch_pool));
   SVN_ERR(svn_fs_x__rev_file_seek(rev_file, NULL, offset));
@@ -313,8 +312,8 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
       svn_revnum_t revision = svn_fs_x__get_revnum(id->change_set);
       svn_fs_x__pair_cache_key_t key;
 
-      SVN_ERR(svn_fs_x__rev_file_open(&revision_file, fs, revision,
-                                      scratch_pool, scratch_pool));
+      SVN_ERR(svn_fs_x__rev_file_init(&revision_file, fs, revision,
+                                      scratch_pool));
 
       /* First, try a noderevs container cache lookup. */
       if (   svn_fs_x__is_packed_rev(fs, revision)
@@ -408,8 +407,8 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
       svn_revnum_t revision = svn_fs_x__get_revnum(id->change_set);
 
       svn_fs_x__revision_file_t *rev_file;
-      SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, revision,
-                                      scratch_pool, scratch_pool));
+      SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, revision,
+                                      scratch_pool));
 
       if (   svn_fs_x__is_packed_rev(fs, revision)
           && ffd->noderevs_container_cache)
@@ -495,9 +494,8 @@ static svn_error_t*
 auto_open_shared_file(shared_file_t *file)
 {
   if (file->rfile == NULL)
-    SVN_ERR(svn_fs_x__rev_file_open(&file->rfile, file->fs,
-                                    file->revision, file->pool,
-                                    file->pool));
+    SVN_ERR(svn_fs_x__rev_file_init(&file->rfile, file->fs,
+                                    file->revision, file->pool));
 
   return SVN_NO_ERROR;
 }
@@ -782,8 +780,7 @@ svn_fs_x__check_rep(svn_fs_x__representation_t *rep,
   svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
 
   svn_fs_x__revision_file_t *rev_file;
-  SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, revision,
-                                  scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, revision, scratch_pool));
 
   /* Does REP->ID refer to an actual item? Which one is it? */
   SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev_file, &rep->id,
@@ -2797,8 +2794,7 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
   /* Provide revision file. */
 
   SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
-  SVN_ERR(svn_fs_x__rev_file_open(&revision_file, fs, rev,
-                                  scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_init(&revision_file, fs, rev, scratch_pool));
 
   /* try cache lookup first */
 

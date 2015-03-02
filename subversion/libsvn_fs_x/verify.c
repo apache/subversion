@@ -203,8 +203,7 @@ verify_index_checksums(svn_fs_t *fs,
   svn_fs_x__index_info_t p2l_index_info;
 
   /* Open the rev / pack file and read the footer */
-  SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, start,
-                                  scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, start, scratch_pool));
   SVN_ERR(svn_fs_x__rev_file_l2p_info(&l2p_index_info, rev_file));
   SVN_ERR(svn_fs_x__rev_file_p2l_info(&p2l_index_info, rev_file));
 
@@ -239,8 +238,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
 
   /* common file access structure */
   svn_fs_x__revision_file_t *rev_file;
-  SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, start, scratch_pool,
-                                  iterpool));
+  SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, start, scratch_pool));
 
   /* determine the range of items to check for each revision */
   SVN_ERR(svn_fs_x__l2p_get_max_ids(&max_ids, fs, start, count, scratch_pool,
@@ -331,8 +329,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
 
   /* common file access structure */
   svn_fs_x__revision_file_t *rev_file;
-  SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, start, scratch_pool,
-                                  iterpool));
+  SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, start, scratch_pool));
 
   /* get the size of the rev / pack file as covered by the P2L index */
   SVN_ERR(svn_fs_x__p2l_get_max_offset(&max_offset, fs, rev_file, start,
@@ -584,8 +581,7 @@ compare_p2l_to_rev(svn_fs_t *fs,
   svn_fs_x__index_info_t l2p_index_info;
 
   /* open the pack / rev file that is covered by the p2l index */
-  SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, start, scratch_pool,
-                                  iterpool));
+  SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, start, scratch_pool));
 
   /* check file size vs. range covered by index */
   SVN_ERR(svn_fs_x__rev_file_l2p_info(&l2p_index_info, rev_file));

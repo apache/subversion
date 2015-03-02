@@ -1912,8 +1912,7 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
   apr_pool_t *header_pool = svn_pool_create(scratch_pool);
 
   /* read index master data structure for the index covering START_REV */
-  SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, start_rev,
-                                  header_pool, header_pool));
+  SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, start_rev, header_pool));
   SVN_ERR(get_l2p_header(&header, rev_file, fs, start_rev, header_pool,
                          header_pool));
   SVN_ERR(svn_fs_x__close_revision_file(rev_file));
@@ -1934,8 +1933,8 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
            * the number of items in a revision, i.e. there is no consistency
            * issue here. */
           svn_pool_clear(header_pool);
-          SVN_ERR(svn_fs_x__rev_file_open(&rev_file, fs, revision,
-                                          header_pool, header_pool));
+          SVN_ERR(svn_fs_x__rev_file_init(&rev_file, fs, revision,
+                                          header_pool));
           SVN_ERR(get_l2p_header(&header, rev_file, fs, revision,
                                  header_pool, header_pool));
           SVN_ERR(svn_fs_x__close_revision_file(rev_file));

@@ -246,11 +246,10 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
 }
 
 svn_error_t *
-svn_fs_x__rev_file_open(svn_fs_x__revision_file_t **file,
+svn_fs_x__rev_file_init(svn_fs_x__revision_file_t **file,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+                        apr_pool_t *result_pool)
 {
   *file = init_revision_file(fs, rev, result_pool);
   return SVN_NO_ERROR;
