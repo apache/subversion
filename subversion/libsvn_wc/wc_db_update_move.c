@@ -400,7 +400,7 @@ create_tree_conflict(svn_skel_t **conflict_p,
 
       if (conflict_operation != svn_wc_operation_update
           && conflict_operation != svn_wc_operation_switch)
-        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+        return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
                                  _("'%s' already in conflict"),
                                  path_for_error_message(wcroot, local_relpath,
                                                         scratch_pool));
@@ -424,7 +424,7 @@ create_tree_conflict(svn_skel_t **conflict_p,
                   && strcmp(move_src_op_root_relpath,
                             svn_dirent_skip_ancestor(wcroot->abspath,
                                                      existing_abspath))))
-            return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+            return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
                                      _("'%s' already in conflict"),
                                      path_for_error_message(wcroot,
                                                             local_relpath,
