@@ -3094,13 +3094,6 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   apr_pool_t *iterpool = NULL;
   svn_error_t *err;
 
-  /* ### the underlying code does NOT support resolving individual
-     ### properties. bail out if the caller tries it.  */
-  if (resolve_prop != NULL && *resolve_prop != '\0')
-    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                            U_("Resolving a single property is not (yet) "
-                               "supported."));
-
   /* ### Just a versioned check? */
   /* Conflicted is set to allow invoking on actual only nodes */
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
