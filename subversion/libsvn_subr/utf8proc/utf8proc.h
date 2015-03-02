@@ -71,18 +71,23 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #ifdef _MSC_VER
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef short int16_t;
-typedef unsigned short uint16_t;
-typedef int int32_t;
-#ifdef _WIN64
-#define ssize_t __int64
-#else
-#define ssize_t int
-#endif
-typedef unsigned char bool;
-enum {false, true};
+# if _MSC_VER >= 1900
+#   include <stdbool.h>
+#   include <stdint.h>
+# else
+    typedef signed char int8_t;
+    typedef unsigned char uint8_t;
+    typedef short int16_t;
+    typedef unsigned short uint16_t;
+    typedef int int32_t;
+    typedef unsigned char bool;
+    enum {false, true};
+# endif
+# ifdef _WIN64
+#   define ssize_t __int64
+# else
+#   define ssize_t int
+# endif
 #elif defined(HAVE_STDBOOL_H) && defined(HAVE_INTTYPES_H)
 #include <stdbool.h>
 #include <inttypes.h>
