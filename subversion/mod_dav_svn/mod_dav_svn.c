@@ -48,6 +48,9 @@
 #include "dav_svn.h"
 #include "mod_authz_svn.h"
 
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#include <ap_expr.h>
+#endif
 
 /* This is the default "special uri" used for SVN's special resources
    (e.g. working resources, activities) */
@@ -70,6 +73,14 @@ typedef struct server_conf_t {
 } server_conf_t;
 
 
+/* combination of path and expression */
+typedef struct path_expr_t {
+    const char *base;                /* base path */
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+    const ap_expr_info_t *expr;      /* expression suffix added to the base */
+#endif
+} path_expr_t;
+
 /* A tri-state enum used for per directory on/off flags.  Note that
    it's important that CONF_FLAG_DEFAULT is 0 to make
    merge_dir_config in mod_dav_svn do the right thing. */
@@ -89,10 +100,10 @@ enum path_authz_conf {
 
 /* per-dir configuration */
 typedef struct dir_conf_t {
-  const char *fs_path;               /* path to the SVN FS */
+  path_expr_t *fs_path;              /* path to the SVN FS */
   const char *repo_name;             /* repository name */
   const char *xslt_uri;              /* XSL transform URI */
-  const char *fs_parent_path;        /* path to parent of SVN FS'es  */
+  path_expr_t *fs_parent_path;       /* path to parent of SVN FS'es  */
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   dav_svn__bulk_upd_conf bulk_updates; /* whether bulk updates are allowed */
   enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
@@ -107,6 +118,9 @@ typedef struct dir_conf_t {
   enum conf_flag revprop_cache;      /* whether to enable revprop caching */
   enum conf_flag block_read;         /* whether to enable block read mode */
   const char *hooks_env;             /* path to hook script env config file */
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+  const ap_expr_info_t *root_expr;   /* expression for our top-level directory */
+#endif
 } dir_conf_t;
 
 
@@ -235,7 +249,7 @@ create_dir_config(apr_pool_t *p, char *dir)
   /* In subversion context dir is always considered to be coming from
      <Location /blah> directive. So we treat it as a urlpath. */
   if (dir)
-    conf->root_dir = svn_urlpath__canonicalize(dir, p);
+    conf->root_dir = dir;
   conf->bulk_updates = CONF_BULKUPD_DEFAULT;
   conf->v2_protocol = CONF_FLAG_DEFAULT;
   conf->hooks_env = NULL;
@@ -273,6 +287,9 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->block_read = INHERIT_VALUE(parent, child, block_read);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
   newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+  newconf->root_expr = INHERIT_VALUE(parent, child, root_expr);
+#endif
 
   if (parent->fs_path)
     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
@@ -469,28 +486,98 @@ SVNListParentPath_cmd(cmd_parms *cmd, void *config, int arg)
 
 
 static const char *
-SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
+SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
 {
   dir_conf_t *conf = config;
 
   if (conf->fs_parent_path != NULL)
     return "SVNPath cannot be defined at same time as SVNParentPath.";
 
-  conf->fs_path = svn_dirent_internal_style(arg1, cmd->pool);
+  conf->fs_path = apr_pcalloc(cmd->pool, sizeof(path_expr_t));
+  conf->fs_path->base = svn_dirent_internal_style(arg1, cmd->pool);
+
+  if (arg2)
+    {
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+      const char *expr_err = NULL;
+
+      conf->fs_path->expr = ap_expr_parse_cmd(cmd, arg2, AP_EXPR_FLAG_STRING_RESULT,
+              &expr_err, NULL);
+      if (expr_err)
+        {
+          return apr_pstrcat(cmd->temp_pool,
+                  "Cannot parse expression '", arg2, "' in SVNPath: ",
+                  expr_err, NULL);
+        }
+#else
+      return "Expressions require httpd v2.4.0 or higher"
+#endif
+    }
+
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+  if (!conf->root_expr)
+    {
+      const char *expr_err = NULL;
+
+      conf->root_expr = ap_expr_parse_cmd(cmd, conf->root_dir, AP_EXPR_FLAG_STRING_RESULT,
+              &expr_err, NULL);
+      if (expr_err)
+        {
+          return apr_pstrcat(cmd->temp_pool,
+                  "Cannot parse Location expression '", conf->root_dir, "': ",
+                  expr_err, NULL);
+        }
+    }
+#endif
 
   return NULL;
 }
 
 
 static const char *
-SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
+SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
 {
   dir_conf_t *conf = config;
 
   if (conf->fs_path != NULL)
     return "SVNParentPath cannot be defined at same time as SVNPath.";
 
-  conf->fs_parent_path = svn_dirent_internal_style(arg1, cmd->pool);
+  conf->fs_parent_path = apr_pcalloc(cmd->pool, sizeof(path_expr_t));
+  conf->fs_parent_path->base = svn_dirent_internal_style(arg1, cmd->pool);
+
+  if (arg2)
+    {
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+      const char *expr_err = NULL;
+
+      conf->fs_parent_path->expr = ap_expr_parse_cmd(cmd, arg2, AP_EXPR_FLAG_STRING_RESULT,
+              &expr_err, NULL);
+      if (expr_err)
+        {
+          return apr_pstrcat(cmd->temp_pool,
+                  "Cannot parse expression '", arg2, "'in SVNParentPath: ",
+                      expr_err, NULL);
+        }
+#else
+      return "Expressions require httpd v2.4.0 or higher"
+#endif
+    }
+
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+  if (!conf->root_expr)
+    {
+      const char *expr_err = NULL;
+
+      conf->root_expr = ap_expr_parse_cmd(cmd, conf->root_dir, AP_EXPR_FLAG_STRING_RESULT,
+              &expr_err, NULL);
+      if (expr_err)
+        {
+          return apr_pstrcat(cmd->temp_pool,
+                  "Cannot parse Location expression '", conf->root_dir, "': ",
+                  expr_err, NULL);
+        }
+    }
+#endif
 
   return NULL;
 }
@@ -668,7 +755,61 @@ dav_svn__get_fs_path(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->fs_path;
+
+  if (conf->fs_path)
+    {
+
+  #if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+      if (conf->fs_path->expr)
+        {
+          svn_error_t *serr;
+          svn_boolean_t under_root;
+          const char *err = NULL, *suffix;
+
+          suffix = ap_expr_str_exec(r, conf->fs_path->expr, &err);
+          if (!err)
+            {
+              serr = svn_dirent_is_under_root(&under_root,
+                      &suffix, conf->fs_path->base, suffix, r->pool);
+              if (!serr && under_root)
+                {
+                  return svn_dirent_join(conf->fs_path->base,
+                          svn_dirent_internal_style(suffix, r->pool), r->pool);
+                }
+              else if (serr)
+                {
+                  ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, r,
+                          "mod_dav_svn: SVNPath: '%s' not under '%s': '%s'",
+                          suffix, conf->fs_path->base,
+                          serr->message ? serr->message : "(no more info)");
+                  return NULL;
+                }
+              else
+                {
+                  ap_log_rerror(
+                          APLOG_MARK, APLOG_ERR, 0, r,
+                          "mod_dav_svn: SVNPath: '%s' not under '%s'",
+                          suffix, conf->fs_path->base);
+                  return NULL;
+                }
+            }
+          else
+            {
+              ap_log_rerror(
+                      APLOG_MARK, APLOG_ERR, 0, r, "mod_dav_svn: SVNPath: can't "
+                      "evaluate expression: %s", err);
+              return NULL;
+            }
+
+        }
+  #endif
+
+      return conf->fs_path->base;
+    }
+  else
+    {
+      return NULL;
+    }
 }
 
 
@@ -678,7 +819,61 @@ dav_svn__get_fs_parent_path(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->fs_parent_path;
+
+  if (conf->fs_parent_path)
+    {
+
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+      if (conf->fs_parent_path->expr)
+        {
+          svn_error_t *serr;
+          svn_boolean_t under_root;
+          const char *err = NULL, *suffix;
+
+          suffix = ap_expr_str_exec(r, conf->fs_parent_path->expr, &err);
+          if (!err)
+            {
+              serr = svn_dirent_is_under_root(&under_root,
+                      &suffix, conf->fs_parent_path->base, suffix, r->pool);
+              if (!serr && under_root)
+                {
+                  return svn_dirent_join(conf->fs_parent_path->base,
+                          svn_dirent_internal_style(suffix, r->pool), r->pool);
+                }
+              else if (serr)
+                {
+                  ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err, r,
+                          "mod_dav_svn: SVNParentPath: '%s' not under '%s': '%s'",
+                          suffix, conf->fs_parent_path->base,
+                          serr->message ? serr->message : "(no more info)");
+                  return NULL;
+                }
+              else
+                {
+                  ap_log_rerror(
+                          APLOG_MARK, APLOG_ERR, 0, r,
+                          "mod_dav_svn: SVNParentPath: '%s' not under '%s'",
+                          suffix, conf->fs_parent_path->base);
+                  return NULL;
+                }
+            }
+          else
+            {
+              ap_log_rerror(
+                      APLOG_MARK, APLOG_ERR, 0, r, "mod_dav_svn: SVNParentPath: can't "
+                      "evaluate expression: %s", err);
+              return NULL;
+            }
+
+        }
+#endif
+
+      return conf->fs_parent_path->base;
+    }
+  else
+    {
+      return NULL;
+    }
 }
 
 
@@ -751,7 +946,29 @@ dav_svn__get_root_dir(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->root_dir;
+
+#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+  if (conf->root_expr)
+    {
+      const char *err = NULL, *root_dir;
+
+      root_dir = ap_expr_str_exec(r, conf->root_expr, &err);
+      if (!err)
+        {
+          return svn_urlpath__canonicalize(root_dir, r->pool);
+        }
+      else
+        {
+          ap_log_rerror(
+                  APLOG_MARK, APLOG_ERR, 0, r, "mod_dav_svn: can't "
+                  "evaluate root directory expression: %s", err);
+        }
+
+    }
+  return NULL;
+#else
+  return svn_urlpath__canonicalize(conf->root_dir, r->pool);
+#endif
 }
 
 
@@ -1192,7 +1409,7 @@ static int dav_svn__translate_name(request_rec *r)
   else
     {
       /* Retrieve path to repo and within repo for the request */
-      dav_error *err = dav_svn_split_uri(r, r->uri, conf->root_dir,
+      dav_error *err = dav_svn_split_uri(r, r->uri, dav_svn__get_root_dir(r),
                                          &ignore_cleaned_uri,
                                          &ignore_had_slash, &repos_basename,
                                          &ignore_relative_path, &repos_path);
@@ -1205,12 +1422,18 @@ static int dav_svn__translate_name(request_rec *r)
 
   if (conf->fs_parent_path)
     {
-      fs_path = svn_dirent_join(conf->fs_parent_path, repos_basename,
-                                r->pool);
+      fs_path = dav_svn__get_fs_parent_path(r);
+      if (!fs_path)
+          return HTTP_INTERNAL_SERVER_ERROR;
+
+      fs_path = svn_dirent_join(fs_path, repos_basename,
+              r->pool);
     }
   else
     {
-      fs_path = conf->fs_path;
+      fs_path = dav_svn__get_fs_path(r);
+      if (!fs_path)
+          return HTTP_INTERNAL_SERVER_ERROR;
     }
 
   /* Avoid a trailing slash on the bogus path when repos_path is just "/" */
@@ -1254,9 +1477,10 @@ static int dav_svn__map_to_storage(request_rec *r)
 static const command_rec cmds[] =
 {
   /* per directory/location */
-  AP_INIT_TAKE1("SVNPath", SVNPath_cmd, NULL, ACCESS_CONF,
+  AP_INIT_TAKE12("SVNPath", SVNPath_cmd, NULL, ACCESS_CONF,
                 "specifies the location in the filesystem for a Subversion "
-                "repository's files."),
+                "repository's files. Add an optional suffix expression as"
+                "a second argument."),
 
   /* per server */
   AP_INIT_TAKE1("SVNSpecialURI", SVNSpecialURI_cmd, NULL, RSRC_CONF,
@@ -1273,9 +1497,11 @@ static const command_rec cmds[] =
                 "directory indexes"),
 
   /* per directory/location */
-  AP_INIT_TAKE1("SVNParentPath", SVNParentPath_cmd, NULL, ACCESS_CONF,
+  AP_INIT_TAKE12("SVNParentPath", SVNParentPath_cmd, NULL, ACCESS_CONF,
                 "specifies the location in the filesystem whose "
-                "subdirectories are assumed to be Subversion repositories."),
+                "subdirectories are assumed to be Subversion "
+                "repositories. Add an optional suffix expression as"
+                "a second argument."),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNAutoversioning", SVNAutoversioning_cmd, NULL,
