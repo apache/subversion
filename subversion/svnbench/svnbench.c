@@ -958,10 +958,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
           || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          err = svn_error_quick_wrap(
-                  err, apr_psprintf(pool,
-                                    _("Try 'svnbench help %s' for more information"),
-                                    subcommand->name));
+          err = svn_error_quick_wrapf(
+                  err, _("Try 'svnbench help %s' for more information"),
+                  subcommand->name);
         }
       if (err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
         {

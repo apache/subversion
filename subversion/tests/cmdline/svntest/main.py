@@ -151,7 +151,10 @@ os.environ['LC_ALL'] = 'C'
 def P(relpath,
       head=os.path.dirname(os.path.dirname(os.path.abspath('.')))
       ):
-  return os.path.join(head, relpath)
+  if sys.platform=='win32':
+    return os.path.join(head, relpath + '.exe')
+  else:
+    return os.path.join(head, relpath)
 svn_binary = P('svn/svn')
 svnadmin_binary = P('svnadmin/svnadmin')
 svnlook_binary = P('svnlook/svnlook')

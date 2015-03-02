@@ -2366,40 +2366,6 @@ is_old_wcroot(const char *local_abspath,
     svn_dirent_local_style(parent_abspath, scratch_pool));
 }
 
-/* Data for upgrade_working_copy_txn(). */
-typedef struct upgrade_working_copy_baton_t
-{
-  svn_wc__db_t *db;
-  const char *dir_abspath;
-  svn_wc_upgrade_get_repos_info_t repos_info_func;
-  void *repos_info_baton;
-  apr_hash_t *repos_cache;
-  const struct upgrade_data_t *data;
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
-  svn_wc_notify_func2_t notify_func;
-  void *notify_baton;
-  apr_pool_t *result_pool;
-} upgrade_working_copy_baton_t;
-
-
-/* Helper for svn_wc_upgrade. Implements svn_sqlite__transaction_callback_t */
-static svn_error_t *
-upgrade_working_copy_txn(void *baton,
-                         svn_sqlite__db_t *sdb,
-                         apr_pool_t *scratch_pool)
-{
-  upgrade_working_copy_baton_t *b = baton;
-
-  /* Upgrade the pre-wcng into a wcng in a temporary location. */
-  return(upgrade_working_copy(NULL, b->db, b->dir_abspath,
-                              b->repos_info_func, b->repos_info_baton,
-                              b->repos_cache, b->data,
-                              b->cancel_func, b->cancel_baton,
-                              b->notify_func, b->notify_baton,
-                              b->result_pool, scratch_pool));
-}
-
 svn_error_t *
 svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
@@ -2419,7 +2385,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   svn_wc_entry_t *this_dir;
   apr_hash_t *entries;
   const char *root_adm_abspath;
-  upgrade_working_copy_baton_t cb_baton;
   svn_error_t *err;
   int result_format;
   svn_boolean_t bumped_format;
@@ -2517,22 +2482,14 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_wclock_obtain(db, data.root_abspath, 0, FALSE,
                                    scratch_pool));
 
-  cb_baton.db = db;
-  cb_baton.dir_abspath = local_abspath;
-  cb_baton.repos_info_func = repos_info_func;
-  cb_baton.repos_info_baton = repos_info_baton;
-  cb_baton.repos_cache = repos_cache;
-  cb_baton.data = &data;
-  cb_baton.cancel_func = cancel_func;
-  cb_baton.cancel_baton = cancel_baton;
-  cb_baton.notify_func = notify_func;
-  cb_baton.notify_baton = notify_baton;
-  cb_baton.result_pool = scratch_pool;
-
-  SVN_ERR(svn_sqlite__with_lock(data.sdb,
-                                upgrade_working_copy_txn,
-                                &cb_baton,
-                                scratch_pool));
+  SVN_SQLITE__WITH_LOCK(
+    upgrade_working_copy(NULL, db, local_abspath,
+                         repos_info_func, repos_info_baton,
+                         repos_cache, &data,
+                         cancel_func, cancel_baton,
+                         notify_func, notify_baton,
+                         scratch_pool, scratch_pool),
+    data.sdb);
 
   /* A workqueue item to move the pristine dir into place */
   pristine_from = svn_wc__adm_child(data.root_abspath, PRISTINE_STORAGE_RELPATH,

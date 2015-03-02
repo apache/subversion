@@ -206,8 +206,7 @@ def externals_test_setup(sbox):
 
   svntest.actions.run_and_verify_commit(wc_init_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_init_dir)
+                                        expected_status)
 
   return external_url_for
 
@@ -567,8 +566,7 @@ def update_receive_change_under_external(sbox):
   expected_status.tweak('A/D/gamma', wc_rev=6)
   svntest.actions.run_and_verify_commit(other_wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, other_wc_dir)
+                                        expected_status)
 
   # Now update the regular wc to see if we get the change.  Note that
   # none of the module *properties* in this wc have been changed; only
@@ -603,8 +601,7 @@ def update_receive_change_under_external(sbox):
   expected_status.tweak('A/D/G/rho', wc_rev=7)
   svntest.actions.run_and_verify_commit(other_wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, other_wc_dir)
+                                        expected_status)
 
   expected_output = svntest.wc.State(sbox.ospath('A/C'), {
     'exdir_G/rho'       : Item(status='U '),
@@ -1099,8 +1096,7 @@ def cannot_move_or_remove_file_externals(sbox):
   })
 
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Bring the working copy up to date and check that the file the file
   # external is switched to still exists.
@@ -1208,7 +1204,7 @@ def binary_file_externals(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
 
   # Create a file external on the binary file A/theta
@@ -1248,8 +1244,7 @@ def binary_file_externals(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 
@@ -1293,8 +1288,7 @@ def update_lose_file_external(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
   # now remove the svn:external prop
   svntest.actions.run_and_verify_svn(None, [],
@@ -1309,7 +1303,7 @@ def update_lose_file_external(sbox):
   expected_status.tweak('A/C', wc_rev = 3)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # try to actually get rid of the external via an update
   expected_output = svntest.wc.State(wc_dir, {
@@ -1330,8 +1324,7 @@ def update_lose_file_external(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
   probe_paths_missing([sbox.ospath('A/C/external')])
 
@@ -1478,8 +1471,7 @@ def relegate_external(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 
@@ -1510,7 +1502,7 @@ def wc_repos_file_externals(sbox):
 
   # Commit the new file, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
 
   # Create a file external on the file A/theta
@@ -1546,8 +1538,7 @@ def wc_repos_file_externals(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
   # Copy A/C to a new tag in the repos
   tag_url = repo_url + '/A/I'
@@ -1580,8 +1571,7 @@ def wc_repos_file_externals(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 @SkipUnless(svntest.main.server_has_mergeinfo)
@@ -1660,8 +1650,7 @@ def update_modify_file_external(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
   # Modify A/mu
   svntest.main.file_append(sbox.ospath('A/mu'), 'appended mu text')
@@ -1671,9 +1660,7 @@ def update_modify_file_external(sbox):
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Update to modify the file external, this asserts in update_editor.c
   expected_output = svntest.wc.State(wc_dir, {
@@ -1690,8 +1677,7 @@ def update_modify_file_external(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        True)
+                                        check_props=True)
 
 # Test for issue #2267
 @Issue(2267)
@@ -1897,8 +1883,7 @@ def exclude_externals(sbox):
   # or register the file external as excluded (preferred behavior)
   svntest.actions.run_and_verify_update(sbox.ospath('A/B/gamma'),
                                         None, None, None,
-                                        '.*Cannot exclude.*',
-                                        None, None, None, None, False,
+                                        '.*Cannot exclude.*', False,
                                         '--set-depth', 'exclude',
                                         sbox.ospath('A/B/gamma'))
 
@@ -1906,8 +1891,7 @@ def exclude_externals(sbox):
   # or register the directory external as excluded (preferred behavior)
   svntest.actions.run_and_verify_update(sbox.ospath('A/C/exdir_G'),
                                         None, None, None,
-                                        '.*Cannot exclude.*',
-                                        None, None, None, None, False,
+                                        '.*Cannot exclude.*', False,
                                         '--set-depth', 'exclude',
                                         sbox.ospath('A/C/exdir_G'))
 
@@ -1964,8 +1948,8 @@ def exclude_externals(sbox):
       'A/D/x/y/z/blah/F'  : Item(status='  ', wc_rev='5'),
   })
   svntest.actions.run_and_verify_update(wc_dir,
-                                        None, None, expected_status, None,
-                                        None, None, None, None, False,
+                                        None, None, expected_status,
+                                        [], False,
                                         '--set-depth', 'infinity', wc_dir)
 
 def file_externals_different_url(sbox):
@@ -2008,7 +1992,7 @@ def file_externals_different_url(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None,
-                                        expected_status, None)
+                                        expected_status)
 
   # Verify that all file external URLs are descendants of r1_url
   for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
@@ -2026,7 +2010,7 @@ def file_externals_different_url(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None,
-                                        expected_status, None)
+                                        expected_status)
 
   # Verify that all file external URLs are descendants of r2_url
   for e in ['r1-e-1', 'r1-e-2', 'r2-e-1', 'r2-e-2', 'rr-e-1']:
@@ -2111,8 +2095,7 @@ def copy_file_externals(sbox):
     'X'                 : Item(status='  ', wc_rev='2'),
   })
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
@@ -2134,7 +2117,7 @@ def copy_file_externals(sbox):
   expected_status.tweak(wc_rev='2')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # have a commit on one of the files
   # echo mod >> X/xmu
@@ -2148,7 +2131,7 @@ def copy_file_externals(sbox):
   expected_status.tweak('X/xmu', wc_rev='3')
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, X_xmu)
+                                [], X_xmu)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
@@ -2161,7 +2144,7 @@ def copy_file_externals(sbox):
   expected_status.tweak(wc_rev='3')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # now perform the WC->WC copy
   # svn cp X X_copy
@@ -2179,8 +2162,7 @@ def copy_file_externals(sbox):
     'X_copy'            : Item(status='  ', wc_rev='4'),
   })
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # verify disk state, also verifying props
   expected_disk.add({
@@ -2209,7 +2191,7 @@ def copy_file_externals(sbox):
   expected_status.tweak(wc_rev='4')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, True, wc_dir)
+                                expected_status, check_props=True)
 
 def commit_include_externals(sbox):
   "commit --include-externals"
@@ -2284,8 +2266,7 @@ def commit_include_externals(sbox):
     'Xpegged'           : Item(status='  ', wc_rev='2'),
   })
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {})
@@ -2302,7 +2283,7 @@ def commit_include_externals(sbox):
   expected_status.tweak(wc_rev='2')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # svn ps svn:externals "^/Z xZ" A/D/H
   expected_stdout = ["property 'svn:externals' set on '" + A_D_H + "'\n"]
@@ -2389,8 +2370,7 @@ def commit_include_externals(sbox):
 
   expected_status.tweak('', 'A/D/H', wc_rev='3')
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
@@ -2459,7 +2439,7 @@ def commit_include_externals(sbox):
   expected_status.tweak('Xpegged/xiota', wc_rev='1')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # echo mod >> Xpegged/xE/alpha
   main.file_append(Xpegged_xE_alpha, 'mod\n')
@@ -2490,22 +2470,21 @@ def commit_include_externals(sbox):
   # svn ci
   expected_output = svntest.wc.State(wc_dir, {})
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # Expect no externals to be committed, because pegged
   # svn ci --include-externals Xpegged
   expected_output = svntest.wc.State(wc_dir, {})
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, '--include-externals', Xpegged)
+                                [], '--include-externals', Xpegged)
 
   # Expect no externals to be committed, because of depth
   # svn ci --depth=immediates --include-externals
   expected_output = svntest.wc.State(wc_dir, {})
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, '--depth=immediates', '--include-externals', wc_dir)
+    [], '--depth=immediates', '--include-externals', wc_dir)
 
   # Expect only unpegged externals to be committed (those in X/)
   # svn ci --include-externals
@@ -2524,7 +2503,7 @@ def commit_include_externals(sbox):
   expected_status.tweak('Xpegged/xE/alpha', status='M ')
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, '--include-externals', wc_dir)
+    [], '--include-externals', wc_dir)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
@@ -2556,7 +2535,7 @@ def commit_include_externals(sbox):
                         'Xpegged/xE/beta', wc_rev=1)
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # new mods to check more cases
   # echo mod >> X/xmu
@@ -2585,7 +2564,7 @@ def commit_include_externals(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, '--include-externals', '--depth=empty', X)
+    [], '--include-externals', '--depth=empty', X)
 
   # Expect only file external xmu to be committed, because of depth
   # svn ci --include-externals --depth=files X
@@ -2599,7 +2578,7 @@ def commit_include_externals(sbox):
                         'X/Y/xH/xZ/zeta', 'Xpegged/xE/alpha', status='M ')
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, '--include-externals', '--depth=files', X)
+    [], '--include-externals', '--depth=files', X)
 
   # svn status
   actions.run_and_verify_unquiet_status(wc_dir, expected_status)
@@ -2628,7 +2607,7 @@ def commit_include_externals(sbox):
   expected_status.tweak('X/Y/xH/chi', status='M ')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # echo mod >> X/xG/pi
   main.file_append(X_xG_pi, 'mod\n')
@@ -2649,7 +2628,7 @@ def commit_include_externals(sbox):
                         status='M ')
 
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, X_Y_xlambda, X_xG)
+    [], X_Y_xlambda, X_xG)
 
   # svn status
   actions.run_and_verify_unquiet_status(wc_dir, expected_status)
@@ -2700,8 +2679,7 @@ def include_immediate_dir_externals(sbox):
     'X'                 : Item(status='  ', wc_rev='2'),
   })
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {})
@@ -2714,7 +2692,7 @@ def include_immediate_dir_externals(sbox):
   expected_status.tweak(wc_rev='2')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # svn ps svn:externals "^/A/B/E X/XE" wc_dir
   expected_stdout = ["property 'svn:externals' set on '" + wc_dir + "'\n"]
@@ -2729,8 +2707,7 @@ def include_immediate_dir_externals(sbox):
 
   expected_status.tweak('', wc_rev='3')
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
@@ -2752,7 +2729,7 @@ def include_immediate_dir_externals(sbox):
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   sbox.simple_propset('some', 'change', 'X/XE')
 
@@ -2785,7 +2762,7 @@ def include_immediate_dir_externals(sbox):
   #
   #   >
   actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, '--include-externals', '--depth=immediates', X)
+    [], '--include-externals', '--depth=immediates', X)
 
 
 @Issue(4085)
@@ -2879,8 +2856,7 @@ def dir_external_with_dash_r_only(sbox):
   expected_status = actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E/alpha', wc_rev='2')
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # svn ps svn:externals ' -r1 ^/A/B/E E_ext' .
   expected_stdout = ["property 'svn:externals' set on '" + wc_dir + "'\n"]
@@ -2911,7 +2887,7 @@ def dir_external_with_dash_r_only(sbox):
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # svn info E_ext/alpha
   expected_info = { 'Revision': '1' }
@@ -3205,7 +3181,7 @@ def update_dir_external_shallow(sbox):
   })
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output, None, None,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '--set-depth=empty',
                                         sbox.ospath('A/B/E'))
 
@@ -3219,7 +3195,7 @@ def update_dir_external_shallow(sbox):
   })
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output, None, None,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '--set-depth=infinity',
                                         sbox.ospath('A/B/E'))
 
@@ -3537,7 +3513,7 @@ def replace_tree_with_foreign_external(sbox):
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None, expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], True,
                                         '-r', '2', wc_dir)
 
 
@@ -4040,7 +4016,7 @@ def copy_pin_externals_whitepace_dir(sbox):
     'branches/wc-wc/ext/A P R/about'        : Item(status='  ', wc_rev='4'),
   })
   svntest.actions.run_and_verify_update(wc_dir + '/branches', expected_output,
-                                        None, expected_status, [])
+                                        None, expected_status)
 
   # Now let's use our existing setup to perform some copies with dynamic
   # destinations

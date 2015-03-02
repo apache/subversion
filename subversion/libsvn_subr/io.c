@@ -1002,10 +1002,9 @@ svn_io_copy_perms(const char *src,
           svn_error_clear(err);
         else
           {
-            const char *message;
-            message = apr_psprintf(pool, _("Can't set permissions on '%s'"),
-                                   svn_dirent_local_style(dst, pool));
-            return svn_error_quick_wrap(err, message);
+            return svn_error_quick_wrapf(
+                     err, _("Can't set permissions on '%s'"),
+                     svn_dirent_local_style(dst, pool));
           }
       }
   }
@@ -5080,12 +5079,9 @@ svn_io_open_unique_file3(apr_file_t **file,
             svn_error_clear(err);
           else
             {
-              const char *message;
-              message = apr_psprintf(scratch_pool,
-                                     _("Can't set permissions on '%s'"),
-                                     svn_dirent_local_style(tempname,
-                                                            scratch_pool));
-              return svn_error_quick_wrap(err, message);
+              return svn_error_quick_wrapf(
+                       err, _("Can't set permissions on '%s'"),
+                       svn_dirent_local_style(tempname, scratch_pool));
             }
         }
     }

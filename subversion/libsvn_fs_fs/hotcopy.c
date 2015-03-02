@@ -855,7 +855,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                * ### so we have no way of just printing a warning via
                * ### the fs->warning() callback. */
 
-              const char *msg;
               const char *src_abspath;
               const char *dst_abspath;
               const char *config_relpath;
@@ -874,13 +873,12 @@ hotcopy_body(void *baton, apr_pool_t *pool)
               src_abspath = svn_dirent_dirname(src_abspath, pool);
               dst_abspath = svn_dirent_dirname(dst_abspath, pool);
 
-              msg = apr_psprintf(pool,
+              return svn_error_quick_wrapf(err,
                                  _("Failed to create hotcopy at '%s'. "
                                    "The file '%s' is missing from the source "
                                    "repository. Please create this file, for "
                                    "instance by running 'svnadmin upgrade %s'"),
                                  dst_abspath, config_relpath, src_abspath);
-              return svn_error_quick_wrap(err, msg);
             }
           else
             return svn_error_trace(err);

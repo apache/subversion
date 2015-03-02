@@ -686,10 +686,11 @@ test_string_similarity(apr_pool_t *pool)
     unsigned int score;
   } tests[] =
       {
-#define SCORE(lcs, len) ((2000 * (lcs) + (len)/2) / (len))
+#define SCORE(lcs, len) \
+   ((2 * SVN_STRING__SIM_RANGE_MAX * (lcs) + (len)/2) / (len))
 
         /* Equality */
-        {"",       "",          0, 1000},
+        {"",       "",          0, SVN_STRING__SIM_RANGE_MAX},
         {"quoth",  "quoth",     5, SCORE(5, 5+5)},
 
         /* Deletion at start */
@@ -743,17 +744,20 @@ test_string_similarity(apr_pool_t *pool)
   for (t = tests; t->stra; ++t)
     {
       apr_size_t lcs;
-      const unsigned int score =
+      const apr_size_t score =
         svn_cstring__similarity(t->stra, t->strb, &buffer, &lcs);
       /*
       fprintf(stderr,
-              "lcs %s ~ %s score %.3f (%"APR_SIZE_T_FMT
-              ") expected %.3f (%"APR_SIZE_T_FMT"))\n",
-              t->stra, t->strb, score/1000.0, lcs, t->score/1000.0, t->lcs);
+              "lcs %s ~ %s score %.6f (%"APR_SIZE_T_FMT
+              ") expected %.6f (%"APR_SIZE_T_FMT"))\n",
+              t->stra, t->strb, score/1.0/SVN_STRING__SIM_RANGE_MAX,
+              lcs, t->score/1.0/SVN_STRING__SIM_RANGE_MAX, t->lcs);
       */
       if (score != t->score)
-        return fail(pool, "%s ~ %s score %.3f <> expected %.3f",
-                    t->stra, t->strb, score/1000.0, t->score/1000.0);
+        return fail(pool, "%s ~ %s score %.6f <> expected %.6f",
+                    t->stra, t->strb,
+                    score/1.0/SVN_STRING__SIM_RANGE_MAX,
+                    t->score/1.0/SVN_STRING__SIM_RANGE_MAX);
 
       if (lcs != t->lcs)
         return fail(pool,
@@ -766,7 +770,8 @@ test_string_similarity(apr_pool_t *pool)
   {
     const svn_string_t foo = {"svn:foo", 4};
     const svn_string_t bar = {"svn:bar", 4};
-    if (1000 != svn_string__similarity(&foo, &bar, &buffer, NULL))
+    if (SVN_STRING__SIM_RANGE_MAX
+        != svn_string__similarity(&foo, &bar, &buffer, NULL))
       return fail(pool, "'%s'[:4] ~ '%s'[:4] found different",
                   foo.data, bar.data);
   }

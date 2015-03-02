@@ -67,6 +67,7 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #undef svn_error_create
 #undef svn_error_createf
 #undef svn_error_quick_wrap
+#undef svn_error_quick_wrapf
 #undef svn_error_wrap_apr
 
 /* Note: Although this is a "__" function, it was historically in the
@@ -222,6 +223,26 @@ svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
   return svn_error_create(child->apr_err,
                           child,
                           new_msg);
+}
+
+svn_error_t *
+svn_error_quick_wrapf(svn_error_t *child,
+                      const char *fmt,
+                      ...)
+{
+  svn_error_t *err;
+  va_list ap;
+
+  if (child == SVN_NO_ERROR)
+    return SVN_NO_ERROR;
+
+  err = make_error_internal(child->apr_err, child);
+
+  va_start(ap, fmt);
+  err->message = apr_pvsprintf(err->pool, fmt, ap);
+  va_end(ap);
+
+  return err;
 }
 
 /* Messages in tracing errors all point to this static string. */
@@ -557,10 +578,6 @@ svn_handle_error2(svn_error_t *err,
   apr_array_header_t *empties;
   svn_error_t *tmp_err;
 
-  /* ### The rest of this file carefully avoids using svn_pool_*(),
-     preferring apr_pool_*() instead.  I can't remember why -- it may
-     be an artifact of r843793, or it may be for some deeper reason --
-     but I'm playing it safe and using apr_pool_*() here too. */
   subpool = svn_pool_create(err->pool);
   empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
 
