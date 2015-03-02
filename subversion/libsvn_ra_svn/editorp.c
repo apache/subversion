@@ -69,7 +69,7 @@ typedef struct ra_svn_baton_t {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;
   ra_svn_edit_baton_t *eb;
-  const char *token;
+  svn_string_t *token;
 } ra_svn_baton_t;
 
 /* Forward declaration. */
@@ -109,7 +109,7 @@ struct ra_svn_token_entry_t {
 
 /* --- CONSUMING AN EDITOR BY PASSING EDIT OPERATIONS OVER THE NET --- */
 
-static const char *
+static svn_string_t *
 make_token(char type,
            ra_svn_edit_baton_t *eb,
            apr_pool_t *pool)
@@ -119,13 +119,13 @@ make_token(char type,
   buffer[0] = type;
   len = 1 + svn__ui64toa(&buffer[1], eb->next_token++);
   
-  return apr_pstrmemdup(pool, buffer, len);
+  return svn_string_ncreate(buffer, len, pool);
 }
 
 static ra_svn_baton_t *ra_svn_make_baton(svn_ra_svn_conn_t *conn,
                                          apr_pool_t *pool,
                                          ra_svn_edit_baton_t *eb,
-                                         const char *token)
+                                         svn_string_t *token)
 {
   ra_svn_baton_t *b;
 
@@ -187,7 +187,7 @@ static svn_error_t *ra_svn_open_root(void *edit_baton, svn_revnum_t rev,
                                      apr_pool_t *pool, void **root_baton)
 {
   ra_svn_edit_baton_t *eb = edit_baton;
-  const char *token = make_token('d', eb, pool);
+  svn_string_t *token = make_token('d', eb, pool);
 
   SVN_ERR(check_for_error(eb, pool));
   SVN_ERR(svn_ra_svn__write_cmd_open_root(eb->conn, pool, rev, token));
@@ -212,7 +212,7 @@ static svn_error_t *ra_svn_add_dir(const char *path, void *parent_baton,
                                    apr_pool_t *pool, void **child_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('d', b->eb, pool);
+  svn_string_t *token = make_token('d', b->eb, pool);
 
   SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
                  || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
@@ -228,7 +228,7 @@ static svn_error_t *ra_svn_open_dir(const char *path, void *parent_baton,
                                     void **child_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('d', b->eb, pool);
+  svn_string_t *token = make_token('d', b->eb, pool);
 
   SVN_ERR(check_for_error(b->eb, pool));
   SVN_ERR(svn_ra_svn__write_cmd_open_dir(b->conn, pool, path, b->token,
@@ -281,7 +281,7 @@ static svn_error_t *ra_svn_add_file(const char *path,
                                     void **file_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('c', b->eb, pool);
+  svn_string_t *token = make_token('c', b->eb, pool);
 
   SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
                  || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
@@ -299,7 +299,7 @@ static svn_error_t *ra_svn_open_file(const char *path,
                                      void **file_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('c', b->eb, pool);
+  svn_string_t *token = make_token('c', b->eb, pool);
 
   SVN_ERR(check_for_error(b->eb, b->pool));
   SVN_ERR(svn_ra_svn__write_cmd_open_file(b->conn, pool, path, b->token,
