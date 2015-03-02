@@ -46,10 +46,17 @@ static long debug_line = 0;
 static FILE * volatile debug_output = NULL;
 
 
-static svn_boolean_t
-quiet_mode(void)
+static svn_boolean_t _quiet_mode = FALSE;
+
+void svn_dbg__set_quiet_mode(svn_boolean_t quiet_mode)
 {
-  return getenv("SVN_DBG_QUIET") != NULL;
+  _quiet_mode = quiet_mode;
+}
+
+svn_boolean_t
+svn_dbg__quiet_mode(void)
+{
+  return _quiet_mode || getenv("SVN_DBG_QUIET") != NULL;
 }
 
 
@@ -58,7 +65,7 @@ svn_dbg__preamble(const char *file, long line, FILE *output)
 {
   debug_output = output;
 
-  if (output != NULL && !quiet_mode())
+  if (output != NULL && !svn_dbg__quiet_mode())
     {
       /* Quick and dirty basename() code.  */
       const char *slash = strrchr(file, '/');
@@ -84,7 +91,7 @@ debug_vprintf(const char *fmt, va_list ap)
   char *s = buffer;
   int n;
 
-  if (output == NULL || quiet_mode())
+  if (output == NULL || svn_dbg__quiet_mode())
     return;
 
   n = apr_snprintf(prefix, sizeof(prefix), DBG_FLAG "%s:%4ld: ",

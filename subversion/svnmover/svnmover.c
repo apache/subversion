@@ -2045,6 +2045,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
+  /* Suppress debug message unless '-v' given. */
+  svn_dbg__set_quiet_mode(TRUE);
+
   config_options = apr_array_make(pool, 0,
                                   sizeof(svn_cmdline__config_argument_t*));
 
@@ -2064,7 +2067,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       switch(opt)
         {
         case 'v':
-          svn__set_verbose(TRUE);
+          svn_dbg__set_quiet_mode(FALSE);
           break;
         case 'q':
           quiet = TRUE;
