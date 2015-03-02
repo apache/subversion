@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_wc_db.h
+ * @file wc_db.h
  * @brief The Subversion Working Copy Library - Metadata/Base-Text Support
  *
  * Requires:
