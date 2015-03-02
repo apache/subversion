@@ -3835,6 +3835,13 @@ typedef struct svn_wc_status3_t
    * @since New in 1.8. */
   svn_boolean_t file_external;
 
+
+  /** The actual kind of the node in the working copy. May differ from kind
+   * on obstructions, deletes, etc. svn_node_unknown if unavailable.
+   *
+   * @since New in 1.9 */
+  svn_node_kind_t actual_kind;
+
   /* NOTE! Please update svn_wc_dup_status3() when adding new fields here. */
 } svn_wc_status3_t;
 

@@ -422,7 +422,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
   if (log_params && sym_info->Flags & SYMFLAG_PARAMETER)
     {
       if (last_nr_of_frame == nr_of_frame)
-        fprintf(log_file, ", ", 2);
+        fprintf(log_file, ", ");
       else
         last_nr_of_frame = nr_of_frame;
 

@@ -10271,7 +10271,7 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
       svn_boolean_t is_modified;
 
       SVN_ERR(svn_wc__has_local_mods(&is_modified, ctx->wc_ctx,
-                                     target_abspath,
+                                     target_abspath, TRUE,
                                      ctx->cancel_func,
                                      ctx->cancel_baton,
                                      scratch_pool));

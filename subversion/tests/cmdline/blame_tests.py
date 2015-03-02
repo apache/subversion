@@ -213,7 +213,7 @@ def blame_in_xml(sbox):
     'iota' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # Retrieve last changed date from svn info
   exit_code, output, error = svntest.actions.run_and_verify_svn(
@@ -284,7 +284,7 @@ def blame_on_unknown_revision(sbox):
       'iota' : Item(verb='Sending'),
       })
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, wc_dir)
+                                          None)
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
     None, [],
@@ -355,13 +355,13 @@ def blame_eol_styles(sbox):
     for i in range(1,3):
       svntest.main.file_append(file_path, "Extra line %d" % (i) + "\n")
       svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                            None, None, wc_dir)
+                                            None)
 
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol,
                          file_path)
 
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, wc_dir)
+                                          None)
 
     exit_code, output, error = svntest.actions.run_and_verify_svn(
       None, [],
@@ -389,7 +389,7 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # commit only whitespace changes
   svntest.main.file_write(file_path,
@@ -400,7 +400,7 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # match the blame output, as defined in the blame code:
   # "%6ld %10s %s %s%s", rev, author ? author : "         -",
@@ -425,7 +425,7 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   expected_output = [
     "     2    jrandom  A  a   \n",
@@ -454,7 +454,7 @@ def blame_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # commit only eol changes
   svntest.main.file_write(file_path,
@@ -465,7 +465,7 @@ def blame_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   expected_output = [
     "     2    jrandom Aa\n",
@@ -652,7 +652,7 @@ def blame_output_after_merge(sbox):
     'trunk/A/mu' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # r4: create branches/br from trunk
   branches_br_url = sbox.repo_url + "/branches/br"
@@ -678,7 +678,7 @@ def blame_output_after_merge(sbox):
     'branches/br/A/mu' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # r6: Insert a single line in  branches/A/mu
   svntest.main.file_write(branch_mu_path,
@@ -694,7 +694,7 @@ def blame_output_after_merge(sbox):
     'branches/br/A/mu' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # r7: merge branches/br back to trunk
   trunk_path = os.path.join(wc_dir, "trunk")
@@ -706,7 +706,7 @@ def blame_output_after_merge(sbox):
     'trunk/A/mu' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # Now test blame, first without the -g option
   expected_output = [ "     3    jrandom New version of file 'mu'.\n",

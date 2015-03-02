@@ -676,13 +676,15 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
                                      const svn_skel_t *work_items,
                                      apr_pool_t *scratch_pool);
 
+/* Remove a node and all its descendants from the BASE tree. This can
+   be done in two modes:
 
-/* Remove a node and all its descendants from the BASE tree. This handles
-   the deletion of a tree from the update editor and some file external
-   scenarios.
+    * Remove everything, scheduling wq operations to clean up
+      the working copy. (KEEP_WORKING = FALSE)
 
-   The node to remove is indicated by LOCAL_ABSPATH from the local
-   filesystem.
+    * Bump things to WORKING, so the BASE layer is free, but the working
+      copy unmodified, except that everything that was visible from
+      BASE is now a copy of what it used to be. (KEEP_WORKING = TRUE)
 
    This operation *installs* workqueue operations to update the local
    filesystem after the database operation.
@@ -693,21 +695,11 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
    actual node will be removed if the actual node does not mark a
    conflict.
 
-   If KEEP_AS_WORKING is TRUE, then the base tree is copied to higher
-   layers as a copy of itself before deleting the BASE nodes.
 
-   If KEEP_AS_WORKING is FALSE, and QUEUE_DELETES is TRUE, also queue
-   workqueue items to delete all in-wc representations that aren't
-   shadowed by higher layers.
-   (With KEEP_AS_WORKING TRUE, this is a no-op, as everything is
-    automatically shadowed by the created copy)
-
-   If REMOVE_LOCKS is TRUE, all locks of this node and any subnodes
-   are also removed. This is to be done during commit of deleted nodes.
-
-   If NOT_PRESENT_REVISION specifies a valid revision a not-present
-   node is installed in BASE node with kind NOT_PRESENT_KIND after
-   deleting.
+   If MARK_NOT_PRESENT or MARK_EXCLUDED is TRUE, install a marker
+   of the specified type at the root of the now removed tree, with
+   either the specified revision (or in case of SVN_INVALID_REVNUM)
+   the original revision.
 
    If CONFLICT and/or WORK_ITEMS are passed they are installed as part
    of the operation, after the work items inserted by the operation
@@ -716,10 +708,10 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
-                       svn_boolean_t keep_as_working,
-                       svn_boolean_t queue_deletes,
-                       svn_boolean_t remove_locks,
-                       svn_revnum_t not_present_revision,
+                       svn_boolean_t keep_working,
+                       svn_boolean_t mark_not_present,
+                       svn_boolean_t mark_excluded,
+                       svn_revnum_t marker_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,
                        apr_pool_t *scratch_pool);
@@ -2027,6 +2019,7 @@ struct svn_wc__db_info_t {
   svn_boolean_t moved_here;     /* Only on op-roots. */
 
   svn_boolean_t file_external;
+  svn_boolean_t has_descendants; /* Is dir, or has tc descendants */
 };
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for
@@ -2065,6 +2058,7 @@ svn_wc__db_read_single_info(const struct svn_wc__db_info_t **info,
 /* Structure returned by svn_wc__db_read_walker_info.  Only has the
    fields needed by svn_wc__internal_walk_children(). */
 struct svn_wc__db_walker_info_t {
+  const char *name;
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
 };
@@ -2125,11 +2119,10 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Return in *NODES a hash mapping name->struct svn_wc__db_walker_info_t for
-   the children of DIR_ABSPATH. "name" is the child's name relative to
-   DIR_ABSPATH, not an absolute path. */
+/* Return in *ITEMS an array of struct svn_wc__db_walker_info_t* for
+   the direct children of DIR_ABSPATH. */
 svn_error_t *
-svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
+svn_wc__db_read_children_walker_info(const apr_array_header_t **items,
                                      svn_wc__db_t *db,
                                      const char *dir_abspath,
                                      apr_pool_t *result_pool,
@@ -2527,11 +2520,6 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
    CHANGED_AUTHOR is the (server-side) author of CHANGED_REVISION. It may be
    NULL if the revprop is missing on the revision.
 
-   One or both of NEW_CHECKSUM and NEW_CHILDREN should be NULL. For new:
-     files: NEW_CHILDREN should be NULL
-     dirs: NEW_CHECKSUM should be NULL
-     symlinks: both should be NULL
-
    WORK_ITEMS will be place into the work queue.
 */
 svn_error_t *
@@ -2542,7 +2530,6 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          apr_time_t changed_date,
                          const char *changed_author,
                          const svn_checksum_t *new_checksum,
-                         const apr_array_header_t *new_children,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
                          svn_boolean_t no_unlock,
@@ -3099,10 +3086,6 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
    This operation always recursively removes all nodes at and below
    LOCAL_ABSPATH from NODES and ACTUAL.
 
-   If NOT_PRESENT_REVISION specifies a valid revision, leave a not_present
-   BASE node at local_abspath of the specified status and kind.
-   (Requires an existing BASE node before removing)
-
    If DESTROY_WC is TRUE, this operation *installs* workqueue operations to
    update the local filesystem after the database operation. If DESTROY_CHANGES
    is FALSE, modified and unversioned files are left after running this
@@ -3120,9 +3103,6 @@ svn_wc__db_op_remove_node(svn_boolean_t *left_changes,
                           const char *local_abspath,
                           svn_boolean_t destroy_wc,
                           svn_boolean_t destroy_changes,
-                          svn_revnum_t not_present_revision,
-                          svn_wc__db_status_t not_present_status,
-                          svn_node_kind_t not_present_kind,
                           const svn_skel_t *conflict,
                           const svn_skel_t *work_items,
                           svn_cancel_func_t cancel_func,
@@ -3285,7 +3265,8 @@ svn_wc__db_get_not_present_descendants(const apr_array_header_t **descendants,
  *
  * Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
  * LOCAL_ABSPATH is sparse.
- * Indicate in *IS_MODIFIED whether the working copy has local modifications.
+ * Indicate in *IS_MODIFIED whether the working copy has local modifications
+ * recorded for it in DB.
  *
  * Indicate in *IS_SWITCHED whether any node beneath LOCAL_ABSPATH
  * is switched. If TRAIL_URL is non-NULL, use it to determine if LOCAL_ABSPATH
@@ -3306,8 +3287,6 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            const char *local_abspath,
                            const char *trail_url,
                            svn_boolean_t committed,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
                            apr_pool_t *scratch_pool);
 
 /* Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
@@ -3368,16 +3347,13 @@ svn_wc__db_get_excluded_subtrees(apr_hash_t **server_excluded_subtrees,
 /* Indicate in *IS_MODIFIED whether the working copy has local modifications,
  * using DB. Use SCRATCH_POOL for temporary allocations.
  *
- * This function provides a subset of the functionality of
- * svn_wc__db_revision_status() and is more efficient if the caller
- * doesn't need all information returned by svn_wc__db_revision_status(). */
+ * This function does not check the working copy state, but is a lot more
+ * efficient than a full status walk. */
 svn_error_t *
-svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
-                          apr_pool_t *scratch_pool);
+svn_wc__db_has_db_mods(svn_boolean_t *is_modified,
+                       svn_wc__db_t *db,
+                       const char *local_abspath,
+                       apr_pool_t *scratch_pool);
 
 
 /* Verify the consistency of metadata concerning the WC that contains
@@ -3447,41 +3423,24 @@ svn_wc__db_vacuum(svn_wc__db_t *db,
    comment in resolve_conflict_on_node about combining with another
    function. */
 svn_error_t *
-svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
-                                           const char *local_abspath,
-                                           svn_wc_notify_func2_t notify_func,
-                                           void *notify_baton,
-                                           apr_pool_t *scratch_pool);
+svn_wc__db_op_raise_moved_away(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               svn_wc_notify_func2_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *scratch_pool);
 
-/* Like svn_wc__db_resolve_delete_raise_moved_away this should be
-   combined.
-
-   ### LOCAL_ABSPATH specifies the move origin, but the move origin
-   ### is not necessary unique enough. This function needs an op_root_abspath
-   ### argument to differentiate between different origins.
-
-   ### See move_tests.py: move_many_update_delete for an example case.
-   */
+/* Breaks all moves of nodes that exist at or below LOCAL_ABSPATH as
+   shadowed (read: deleted) by the opration rooted at
+   delete_op_root_abspath.
+ */
 svn_error_t *
-svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
-                                    const char *local_abspath,
-                                    const char *src_op_root_abspath,
-                                    svn_wc_notify_func2_t notify_func,
-                                    void *notify_baton,
-                                    apr_pool_t *scratch_pool);
-
-/* Break moves for all moved-away children of LOCAL_ABSPATH, within
- * a single transaction.
- *
- * ### Like svn_wc__db_resolve_delete_raise_moved_away this should be
- * combined. */
-svn_error_t *
-svn_wc__db_resolve_break_moved_away_children(svn_wc__db_t *db,
-                                             const char *local_abspath,
-                                             const char *src_op_root_abspath,
-                                             svn_wc_notify_func2_t notify_func,
-                                             void *notify_baton,
-                                             apr_pool_t *scratch_pool);
+svn_wc__db_op_break_moved_away(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const char *delete_op_root_abspath,
+                               svn_boolean_t mark_tc_resolved,
+                               svn_wc_notify_func2_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *scratch_pool);
 
 /* Set *REQUIRED_ABSPATH to the path that should be locked to ensure
  * that the lock covers all paths affected by resolving the conflicts

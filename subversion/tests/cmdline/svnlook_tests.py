@@ -95,9 +95,7 @@ def test_misc(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
@@ -234,9 +232,7 @@ def delete_file_in_moved_dir(sbox):
   ### in order to get this commit working again.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   exit_code, output, errput = svntest.main.run_svnlook("dirs-changed",
                                                        repo_dir)
@@ -383,9 +379,7 @@ def changed_copy_info(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   exit_code, output, errput = svntest.main.run_svnlook("changed", repo_dir)
   if errput:
@@ -481,9 +475,7 @@ def diff_ignore_whitespace(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Check the output of 'svnlook diff -x --ignore-space-change' on mu.
   # It should not print anything.
@@ -536,9 +528,7 @@ def diff_ignore_eolstyle(sbox):
 
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
-                                          expected_status,
-                                          None,
-                                          wc_dir)
+                                          expected_status)
 
     # Grab the diff
     exit_code, expected_output, err = svntest.actions.run_and_verify_svn(

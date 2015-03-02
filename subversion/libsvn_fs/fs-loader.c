@@ -441,6 +441,8 @@ default_warning_func(void *baton, svn_error_t *err)
 svn_error_t *
 svn_fs__path_valid(const char *path, apr_pool_t *pool)
 {
+  char *c;
+
   /* UTF-8 encoded string without NULs. */
   if (! svn_utf__cstring_is_valid(path))
     {
@@ -455,6 +457,18 @@ svn_fs__path_valid(const char *path, apr_pool_t *pool)
       return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
                                _("Path '%s' contains '.' or '..' element"),
                                path);
+    }
+
+  /* Raise an error if PATH contains a newline because svn:mergeinfo and
+     friends can't handle them.  Issue #4340 describes a similar problem
+     in the FSFS code itself.
+   */
+  c = strchr(path, '\n');
+  if (c)
+    {
+      return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+               _("Invalid control character '0x%02x' in path '%s'"),
+               (unsigned char)*c, svn_path_illegal_path_escape(path, pool));
     }
 
   /* That's good enough. */
@@ -1622,20 +1636,24 @@ svn_fs_lock_many(svn_fs_t *fs,
                                     target->token, "opaquelocktoken");
 
           if (!err)
-            for (c = target->token; *c && !err; c++)
-              if (! svn_ctype_isascii(*c) || svn_ctype_iscntrl(*c))
-                err = svn_error_createf(
-                        SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                        _("Lock token '%s' is not ASCII or is a "
-                          "control character at byte %u"),
-                        target->token,
-                        (unsigned)(c - target->token));
+            {
+              for (c = target->token; *c && !err; c++)
+                if (! svn_ctype_isascii(*c) || svn_ctype_iscntrl(*c))
+                  err = svn_error_createf(
+                          SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                          _("Lock token '%s' is not ASCII or is a "
+                            "control character at byte %u"),
+                          target->token,
+                          (unsigned)(c - target->token));
 
-          /* strlen(token) == c - token. */
-          if (!err && !svn_xml_is_xml_safe(target->token, c - target->token))
-            err = svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                    _("Lock token URI '%s' is not XML-safe"),
-                                    target->token);
+              /* strlen(token) == c - token. */
+              if (!err && !svn_xml_is_xml_safe(target->token,
+                                               c - target->token))
+                err = svn_error_createf(
+                            SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                            _("Lock token URI '%s' is not XML-safe"),
+                            target->token);
+            }
         }
 
       if (err)

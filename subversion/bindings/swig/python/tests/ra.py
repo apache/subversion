@@ -298,13 +298,53 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     ra.get_file_revs(self.ra_ctx, "trunk/README.txt", 0, 10, rev_handler)
 
   def test_lock(self):
-    def callback(baton, path, do_lock, lock, ra_err, pool):
-      pass
-    # This test merely makes sure that the arguments can be wrapped
-    # properly. svn.ra.lock() currently fails because it is not possible
-    # to retrieve the username from the auth_baton yet.
-    self.assertRaises(core.SubversionException,
-      lambda: ra.lock(self.ra_ctx, {"": 0}, "sleutel", False, callback))
+
+    self.calls = 0
+    self.locks = 0
+    self.errors = 0
+    def callback(path, do_lock, lock, ra_err, pool):
+      self.calls += 1
+      self.assertEqual(path, "trunk/README2.txt")
+      if lock:
+        self.assertEqual(lock.owner, "jrandom")
+        self.locks += 1
+      if ra_err:
+        self.assert_(ra_err.apr_err == core.SVN_ERR_FS_PATH_ALREADY_LOCKED
+                     or ra_err.apr_err == core.SVN_ERR_FS_NO_SUCH_LOCK)
+        self.errors += 1
+
+    providers = [core.svn_auth_get_username_provider()]
+    self.callbacks.auth_baton = core.svn_auth_open(providers)
+    core.svn_auth_set_parameter(self.callbacks.auth_baton,
+                                core.SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                                "jrandom")
+    self.ra_ctx = ra.open2(self.repos_uri, self.callbacks, {})
+    rev = fs.youngest_rev(self.fs)
+    ra.lock(self.ra_ctx, {"trunk/README2.txt":rev}, "sleutel", False, callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.locks, 1)
+    self.assertEqual(self.errors, 0)
+
+    self.calls = 0
+    self.locks = 0
+    ra.lock(self.ra_ctx, {"trunk/README2.txt":rev}, "sleutel", False, callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.locks, 0)
+    self.assertEqual(self.errors, 1)
+
+    self.calls = 0
+    self.errors = 0
+    the_lock = fs.get_lock(self.fs, "/trunk/README2.txt")
+    ra.unlock(self.ra_ctx, {"trunk/README2.txt":the_lock.token}, False, callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.locks, 0)
+    self.assertEqual(self.errors, 0)
+
+    self.calls = 0
+    ra.unlock(self.ra_ctx, {"trunk/README2.txt":the_lock.token}, False, callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.locks, 0)
+    self.assertEqual(self.errors, 1)
 
   def test_get_log2(self):
     # Get an interesting commmit.
