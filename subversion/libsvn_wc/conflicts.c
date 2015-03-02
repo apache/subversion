@@ -2644,7 +2644,8 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                   const char *dup_abspath;
 
                   if (!resolve_later
-                      || err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
+                      || (err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE
+                          && err->apr_err != SVN_ERR_WC_FOUND_CONFLICT))
                     return svn_error_trace(err);
 
                   svn_error_clear(err);
@@ -2725,7 +2726,8 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                   const char *dup_abspath;
 
                   if (!resolve_later
-                      || err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE)
+                      || (err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE
+                          && err->apr_err != SVN_ERR_WC_FOUND_CONFLICT))
                     return svn_error_trace(err);
 
                   svn_error_clear(err);
