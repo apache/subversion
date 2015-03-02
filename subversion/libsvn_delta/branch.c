@@ -32,7 +32,6 @@
 
 #include "private/svn_element.h"
 #include "private/svn_branch.h"
-#include "private/svn_editor3e.h"
 #include "private/svn_sorts_private.h"
 #include "svn_private_config.h"
 
@@ -1664,95 +1663,6 @@ svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
   SVN_DBG(("cp subtree from e%d (%d/%s) to e%d (%d/%s)",
            from_el_rev->eid, old_content->parent_eid, old_content->name,
            to_eid, to_parent_eid, to_name));
-  return SVN_NO_ERROR;
-}
-
-/* Return the relative path to element EID within SUBTREE.
- *
- * Assumes the mapping is "complete" (has complete paths to SUBTREE and to EID).
- */
-static const char *
-element_relpath_in_subtree(const svn_branch_el_rev_id_t *subtree,
-                           int eid,
-                           apr_pool_t *scratch_pool)
-{
-  const char *subtree_path;
-  const char *element_path;
-  const char *relpath = NULL;
-
-  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(subtree->branch, subtree->eid));
-  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(subtree->branch, eid));
-
-  subtree_path = svn_branch_get_path_by_eid(subtree->branch, subtree->eid,
-                                            scratch_pool);
-  element_path = svn_branch_get_path_by_eid(subtree->branch, eid,
-                                            scratch_pool);
-
-  SVN_ERR_ASSERT_NO_RETURN(subtree_path);
-
-  if (element_path)
-    relpath = svn_relpath_skip_ancestor(subtree_path, element_path);
-
-  return relpath;
-}
-
-svn_error_t *
-svn_branch_subtree_differences(apr_hash_t **diff_p,
-                               svn_editor3_t *editor,
-                               const svn_branch_el_rev_id_t *left,
-                               const svn_branch_el_rev_id_t *right,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
-{
-  apr_hash_t *diff = apr_hash_make(result_pool);
-  int first_eid, next_eid;
-  int e;
-
-  /*SVN_DBG(("branch_element_differences(b%d r%ld, b%d r%ld, e%d)",
-           left->branch->sibling->bid, left->rev,
-           right->branch->sibling->bid, right->rev, right->eid));*/
-  SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(left->branch, right->branch));
-  SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, left->eid));
-  SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, right->eid));
-
-  first_eid = left->branch->sibling_defn->family->first_eid;
-  next_eid = MAX(left->branch->sibling_defn->family->next_eid,
-                 right->branch->sibling_defn->family->next_eid);
-
-  for (e = first_eid; e < next_eid; e++)
-    {
-      svn_branch_el_rev_content_t *content_left = NULL;
-      svn_branch_el_rev_content_t *content_right = NULL;
-
-      if (e < left->branch->sibling_defn->family->next_eid
-          && element_relpath_in_subtree(left, e, scratch_pool))
-        {
-          SVN_ERR(svn_editor3_el_rev_get(&content_left, editor,
-                                         left->branch, e,
-                                         result_pool, scratch_pool));
-        }
-      if (e < right->branch->sibling_defn->family->next_eid
-          && element_relpath_in_subtree(right, e, scratch_pool))
-        {
-          SVN_ERR(svn_editor3_el_rev_get(&content_right, editor,
-                                         right->branch, e,
-                                         result_pool, scratch_pool));
-        }
-
-      if (! svn_branch_el_rev_content_equal(content_left, content_right,
-                                            scratch_pool))
-        {
-          int *eid_stored = apr_pmemdup(result_pool, &e, sizeof(e));
-          svn_branch_el_rev_content_t **contents
-            = apr_palloc(result_pool, 2 * sizeof(void *));
-
-          contents[0] = content_left;
-          contents[1] = content_right;
-          apr_hash_set(diff, eid_stored, sizeof(*eid_stored), contents);
-        }
-    }
-
-  *diff_p = diff;
   return SVN_NO_ERROR;
 }
 
