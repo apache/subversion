@@ -42,9 +42,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-void svn__set_verbose(svn_boolean_t);
-svn_boolean_t svn__is_verbose(void);
-
 /*
  * ===================================================================
  * Versioning Model Assumed
