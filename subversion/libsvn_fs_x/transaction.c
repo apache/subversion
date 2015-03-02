@@ -1322,12 +1322,12 @@ create_txn(svn_fs_txn_t **txn_p,
 }
 
 /* Store the property list for transaction TXN_ID in PROPLIST.
-   Perform temporary allocations in POOL. */
+   Perform temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 get_txn_proplist(apr_hash_t *proplist,
                  svn_fs_t *fs,
                  svn_fs_x__txn_id_t txn_id,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
 
@@ -1340,11 +1340,13 @@ get_txn_proplist(apr_hash_t *proplist,
 
   /* Open the transaction properties file. */
   SVN_ERR(svn_stream_open_readonly(&stream,
-                                   svn_fs_x__path_txn_props(fs, txn_id, pool),
-                                   pool, pool));
+                                   svn_fs_x__path_txn_props(fs, txn_id,
+                                                            scratch_pool),
+                                   scratch_pool, scratch_pool));
 
   /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                         scratch_pool));
 
   return svn_stream_close(stream);
 }
