@@ -513,22 +513,65 @@ svn_ra_svn__write_number(svn_ra_svn_conn_t *conn,
   return write_number(conn, pool, number, ' ');
 }
 
+/* Write string S of length LEN to TARGET and return the first position
+   after the written data.
+
+   NOTE: This function assumes that TARGET has enough room for S, the LEN
+         prefix and the required separators.  The available buffer size
+         should be SVN_INT64_BUFFER_SIZE + LEN + 1 to avoid any chance of
+         overflow.
+ */
+static char *
+write_ncstring_quick(char *target,
+                     const char *s,
+                     apr_size_t len)
+{
+  /* Write string length. */
+  if (len < 10)
+    {
+      *target = (char)(len + '0');
+      target++;
+    }
+  else
+    {
+      target += svn__ui64toa(target, len);
+    }
+
+  /* Separator & contents. */
+  target[0] = ':';
+  memcpy(target + 1, s, len);
+  target[len + 1] = ' ';
+
+  /* First location after the string. */
+  return target + len + 2;
+}
+
+
 static svn_error_t *
 svn_ra_svn__write_ncstring(svn_ra_svn_conn_t *conn,
                            apr_pool_t *pool,
                            const char *s,
                            apr_size_t len)
 {
-  if (len < 10)
+  apr_size_t needed = SVN_INT64_BUFFER_SIZE + len + 1;
+
+  /* In most cases, there is enough left room in the WRITE_BUF
+     the we can serialize directly into it. */
+  if (conn->write_pos + needed < sizeof(conn->write_buf))
     {
-      SVN_ERR(writebuf_writechar(conn, pool, (char)(len + '0')));
-      SVN_ERR(writebuf_writechar(conn, pool, ':'));
+      /* Quick path. */
+      conn->write_pos = write_ncstring_quick(conn->write_buf
+                                               + conn->write_pos, s, len)
+                      - conn->write_buf;
     }
   else
-    SVN_ERR(write_number(conn, pool, len, ':'));
+    {
+      /* Slower fallback code. */
+      SVN_ERR(write_number(conn, pool, len, ':'));
 
-  SVN_ERR(writebuf_write(conn, pool, s, len));
-  SVN_ERR(writebuf_writechar(conn, pool, ' '));
+      SVN_ERR(writebuf_write(conn, pool, s, len));
+      SVN_ERR(writebuf_writechar(conn, pool, ' '));
+    }
 
   return SVN_NO_ERROR;
 }
