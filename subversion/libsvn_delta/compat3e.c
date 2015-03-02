@@ -1,5 +1,5 @@
 /*
- * compat3b.c : Ev3-to-Ev1 compatibility via element-based branching.
+ * compat3e.c : Ev3-to-Ev1 compatibility via element-based branching.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

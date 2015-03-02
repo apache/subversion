@@ -1,5 +1,5 @@
 /*
- * editor.c :  editing trees of versioned resources
+ * editor3e.c :  editing trees of versioned resources
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

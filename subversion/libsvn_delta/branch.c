@@ -1,5 +1,5 @@
 /*
- * branching.c : Element-Based Branching and Move Tracking.
+ * branch.c : Element-Based Branching and Move Tracking.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

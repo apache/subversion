@@ -1,5 +1,5 @@
 /*
- * compat3.c : Ev3-to-Ev1 compatibility.
+ * compat3p.c : Ev3-to-Ev1 compatibility.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

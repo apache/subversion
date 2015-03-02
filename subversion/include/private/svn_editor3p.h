@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_editor3paths.h
+ * @file svn_editor3p.h
  * @brief Tree editing
  *
  * @since New in 1.10.
