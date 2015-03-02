@@ -519,18 +519,18 @@ element_merge(svn_branch_el_rev_content_t **result_p,
         }
 
       /* merge the content */
-      if (svn_editor3_node_content_equal(side1->content, yca->content,
+      if (svn_element_content_equal(side1->content, yca->content,
                                          scratch_pool))
         {
           result->content = side2->content;
         }
-      else if (svn_editor3_node_content_equal(side2->content, yca->content,
+      else if (svn_element_content_equal(side2->content, yca->content,
                                               scratch_pool))
         {
           result->content = side1->content;
         }
       else if (policy->merge_double_modify
-               && svn_editor3_node_content_equal(side1->content, side2->content,
+               && svn_element_content_equal(side1->content, side2->content,
                                                  scratch_pool))
         {
           SVN_DBG(("e%d double modify: ... -> { ... | ... }",
@@ -1510,8 +1510,8 @@ execute(const apr_array_header_t *actions,
           VERIFY_PARENT_EID_EXISTS("mkbranch", 0);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
-            svn_editor3_node_content_t *content
-              = svn_editor3_node_content_create_dir(props, iterpool);
+            svn_element_content_t *content
+              = svn_element_content_create_dir(props, iterpool);
             int new_eid;
 
             SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
@@ -1613,8 +1613,8 @@ execute(const apr_array_header_t *actions,
           VERIFY_PARENT_EID_EXISTS("mkdir", 0);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
-            svn_editor3_node_content_t *content
-              = svn_editor3_node_content_create_dir(props, iterpool);
+            svn_element_content_t *content
+              = svn_element_content_create_dir(props, iterpool);
             int new_eid;
 
             SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
@@ -1631,7 +1631,7 @@ execute(const apr_array_header_t *actions,
           {
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_stringbuf_t *text;
-            svn_editor3_node_content_t *content;
+            svn_element_content_t *content;
 
             if (el_rev[1]->eid >= 0)
               {
@@ -1654,7 +1654,7 @@ execute(const apr_array_header_t *actions,
 
               svn_stringbuf_from_stream(&text, src, 0, iterpool);
             }
-            content = svn_editor3_node_content_create_file(props, text, iterpool);
+            content = svn_element_content_create_file(props, text, iterpool);
 
             if (el_rev[1]->eid >= 0)
               {

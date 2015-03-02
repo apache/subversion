@@ -30,6 +30,8 @@
 #include "svn_hash.h"
 #include "svn_props.h"
 
+#include "private/svn_element.h"
+#include "private/svn_branch.h"
 #include "private/svn_editor3.h"
 #include "private/svn_sorts_private.h"
 #include "svn_private_config.h"
@@ -364,9 +366,9 @@ svn_branch_el_rev_id_create(svn_branch_instance_t *branch,
 }
 
 svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_create(svn_editor3_eid_t parent_eid,
+svn_branch_el_rev_content_create(svn_branch_eid_t parent_eid,
                                  const char *name,
-                                 const svn_editor3_node_content_t *node_content,
+                                 const svn_element_content_t *node_content,
                                  apr_pool_t *result_pool)
 {
   svn_branch_el_rev_content_t *content
@@ -374,7 +376,7 @@ svn_branch_el_rev_content_create(svn_editor3_eid_t parent_eid,
 
   content->parent_eid = parent_eid;
   content->name = apr_pstrdup(result_pool, name);
-  content->content = svn_editor3_node_content_dup(node_content, result_pool);
+  content->content = svn_element_content_dup(node_content, result_pool);
   return content;
 }
 
@@ -386,7 +388,7 @@ svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
      = apr_pmemdup(result_pool, old, sizeof(*content));
 
   content->name = apr_pstrdup(result_pool, old->name);
-  content->content = svn_editor3_node_content_dup(old->content, result_pool);
+  content->content = svn_element_content_dup(old->content, result_pool);
   return content;
 }
 
@@ -412,7 +414,7 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
     {
       return FALSE;
     }
-  if (! svn_editor3_node_content_equal(content_left->content,
+  if (! svn_element_content_equal(content_left->content,
                                        content_right->content,
                                        scratch_pool))
     {
@@ -511,9 +513,9 @@ svn_branch_map_delete(svn_branch_instance_t *branch,
 void
 svn_branch_map_update(svn_branch_instance_t *branch,
                       int eid,
-                      svn_editor3_eid_t new_parent_eid,
+                      svn_branch_eid_t new_parent_eid,
                       const char *new_name,
-                      const svn_editor3_node_content_t *new_content)
+                      const svn_element_content_t *new_content)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
   svn_branch_el_rev_content_t *node
@@ -535,7 +537,7 @@ svn_branch_map_update(svn_branch_instance_t *branch,
 void
 svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
                                         int eid,
-                                        svn_editor3_eid_t new_parent_eid,
+                                        svn_branch_eid_t new_parent_eid,
                                         const char *new_name)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
@@ -725,26 +727,26 @@ svn_branch_get_eid_by_rrpath(svn_branch_instance_t *branch,
 /* Get an element's content (props, text, ...) in full or by reference.
  */
 static svn_error_t *
-copy_content_from(svn_editor3_node_content_t **content_p,
+copy_content_from(svn_element_content_t **content_p,
                   svn_branch_instance_t *from_branch,
                   int from_eid,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   svn_branch_el_rev_content_t *old_el = svn_branch_map_get(from_branch, from_eid);
-  svn_editor3_node_content_t *content = old_el->content;
+  svn_element_content_t *content = old_el->content;
 
   /* If content is unknown, then presumably this is a committed rev and
      so we can provide a reference to the committed content. */
   if (! content)
     {
-      svn_editor3_peg_path_t peg;
+      svn_pathrev_t peg;
 
       SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(from_branch->rev_root->rev));
       peg.rev = from_branch->rev_root->rev;
       peg.relpath = svn_branch_get_rrpath_by_eid(from_branch, from_eid,
                                                  scratch_pool);
-      content = svn_editor3_node_content_create_ref(peg, result_pool);
+      content = svn_element_content_create_ref(peg, result_pool);
     }
   *content_p = content;
   return SVN_NO_ERROR;
@@ -816,7 +818,7 @@ svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
 
       if (from_node->parent_eid == from_parent_eid)
         {
-          svn_editor3_node_content_t *this_content;
+          svn_element_content_t *this_content;
 
           SVN_ERR(copy_content_from(&this_content, from_branch, this_eid,
                                     scratch_pool, scratch_pool));
@@ -1085,13 +1087,13 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
         {
           const char *rrpath = svn_branch_get_rrpath_by_eid(branch_instance,
                                                             eid, scratch_pool);
-          svn_editor3_peg_path_t peg;
-          svn_editor3_node_content_t *content;
+          svn_pathrev_t peg;
+          svn_element_content_t *content;
 
           /* Specify the content by reference */
           peg.rev = rev_root->rev;
           peg.relpath = rrpath;
-          content = svn_editor3_node_content_create_ref(peg, scratch_pool);
+          content = svn_element_content_create_ref(peg, scratch_pool);
 
           svn_branch_map_update(branch_instance, eid,
                                 node->parent_eid, node->name, content);
@@ -1451,7 +1453,7 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             svn_branch_instance_t *from_branch,
                             int from_eid,
                             svn_branch_instance_t *to_outer_branch,
-                            svn_editor3_eid_t to_outer_parent_eid,
+                            svn_branch_eid_t to_outer_parent_eid,
                             const char *new_name,
                             apr_pool_t *scratch_pool)
 {
@@ -1505,7 +1507,7 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
                              svn_branch_instance_t *from_branch,
                              int from_eid,
                              svn_branch_instance_t *to_outer_branch,
-                             svn_editor3_eid_t to_outer_eid,
+                             svn_branch_eid_t to_outer_eid,
                              svn_branch_sibling_t *new_branch_def,
                              apr_pool_t *scratch_pool)
 {
@@ -1525,7 +1527,7 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
 
   /* Initialize the new (inner) branch root element */
   {
-    svn_editor3_node_content_t *old_content;
+    svn_element_content_t *old_content;
 
     SVN_ERR(copy_content_from(&old_content,
                               from_branch, from_eid,
@@ -1569,7 +1571,7 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
 svn_error_t *
 svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
                           svn_branch_instance_t *to_branch,
-                          svn_editor3_eid_t to_parent_eid,
+                          svn_branch_eid_t to_parent_eid,
                           const char *to_name,
                           apr_pool_t *scratch_pool)
 {
