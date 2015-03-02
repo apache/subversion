@@ -3339,6 +3339,11 @@ commit_body(void *baton,
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
 
+  /* We perform a sequence of (potentially) large allocations.
+     Keep the peak memory usage low by using a SUBPOOL and cleaning it
+     up frequently. */
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+
   /* Re-Read the current repository format.  All our repo upgrade and
      config evaluation strategies are such that existing information in
      FS and FFD remains valid.
@@ -3353,10 +3358,11 @@ commit_body(void *baton,
      mode for the final rev.  We must be sure to detect that cause because
      the failure would only manifest once the new revision got committed.
    */
-  SVN_ERR(svn_fs_x__read_format_file(cb->fs, scratch_pool));
+  SVN_ERR(svn_fs_x__read_format_file(cb->fs, subpool));
 
   /* Get the current youngest revision. */
-  SVN_ERR(svn_fs_x__youngest_rev(&old_rev, cb->fs, scratch_pool));
+  SVN_ERR(svn_fs_x__youngest_rev(&old_rev, cb->fs, subpool));
+  svn_pool_clear(subpool);
 
   /* Check to make sure this transaction is based off the most recent
      revision. */
@@ -3373,7 +3379,8 @@ commit_body(void *baton,
      previous svn_fs.h functions and svn_fs_commit_txn(), so we need
      to re-examine every changed-path in the txn and re-verify all
      discovered locks. */
-  SVN_ERR(verify_locks(cb->fs, txn_id, changed_paths, scratch_pool));
+  SVN_ERR(verify_locks(cb->fs, txn_id, changed_paths, subpool));
+  svn_pool_clear(subpool);
 
   /* We are going to be one better than this puny old revision. */
   new_rev = old_rev + 1;
@@ -3381,28 +3388,30 @@ commit_body(void *baton,
   /* Get a write handle on the proto revision file. */
   SVN_ERR(get_writable_proto_rev(&proto_file, &proto_file_lockcookie,
                                  cb->fs, txn_id, scratch_pool));
-  SVN_ERR(svn_fs_x__get_file_offset(&initial_offset, proto_file,
-                                    scratch_pool));
+  SVN_ERR(svn_fs_x__get_file_offset(&initial_offset, proto_file, subpool));
 
   /* Write out all the node-revisions and directory contents. */
   svn_fs_x__init_txn_root(&root_id, txn_id);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, &root_id,
                           initial_offset, cb->reps_to_cache, cb->reps_hash,
-                          cb->reps_pool, TRUE, scratch_pool));
+                          cb->reps_pool, TRUE, subpool));
+  svn_pool_clear(subpool);
 
   /* Write the changed-path information. */
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
                                         cb->fs, txn_id, changed_paths,
-                                        new_rev, scratch_pool));
+                                        new_rev, subpool));
+  svn_pool_clear(subpool);
 
   /* Append the index data to the rev file. */
   SVN_ERR(svn_fs_x__add_index_data(cb->fs, proto_file,
-                svn_fs_x__path_l2p_proto_index(cb->fs, txn_id, scratch_pool),
-                svn_fs_x__path_p2l_proto_index(cb->fs, txn_id, scratch_pool),
-                new_rev, scratch_pool));
+                      svn_fs_x__path_l2p_proto_index(cb->fs, txn_id, subpool),
+                      svn_fs_x__path_p2l_proto_index(cb->fs, txn_id, subpool),
+                      new_rev, subpool));
+  svn_pool_clear(subpool);
 
-  SVN_ERR(svn_io_file_flush_to_disk(proto_file, scratch_pool));
-  SVN_ERR(svn_io_file_close(proto_file, scratch_pool));
+  SVN_ERR(svn_io_file_flush_to_disk(proto_file, subpool));
+  SVN_ERR(svn_io_file_close(proto_file, subpool));
 
   /* We don't unlock the prototype revision file immediately to avoid a
      race with another caller writing to the prototype revision file
@@ -3416,32 +3425,30 @@ commit_body(void *baton,
       /* Create the revs shard. */
         {
           const char *new_dir
-            = svn_fs_x__path_rev_shard(cb->fs, new_rev, scratch_pool);
-          svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT,
-                                             scratch_pool);
+            = svn_fs_x__path_rev_shard(cb->fs, new_rev, subpool);
+          svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, subpool);
           if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
             return svn_error_trace(err);
           svn_error_clear(err);
           SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
                                                     PATH_REVS_DIR,
-                                                    scratch_pool),
-                                    new_dir, scratch_pool));
+                                                    subpool),
+                                    new_dir, subpool));
         }
 
       /* Create the revprops shard. */
       SVN_ERR_ASSERT(! svn_fs_x__is_packed_revprop(cb->fs, new_rev));
         {
           const char *new_dir
-            = svn_fs_x__path_revprops_shard(cb->fs, new_rev, scratch_pool);
-          svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT,
-                                             scratch_pool);
+            = svn_fs_x__path_revprops_shard(cb->fs, new_rev, subpool);
+          svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, subpool);
           if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
             return svn_error_trace(err);
           svn_error_clear(err);
           SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
                                                     PATH_REVPROPS_DIR,
-                                                    scratch_pool),
-                                    new_dir, scratch_pool));
+                                                    subpool),
+                                    new_dir, subpool));
         }
     }
 
@@ -3450,34 +3457,30 @@ commit_body(void *baton,
      ### This "breaks" the transaction by removing the protorev file
      ### but the revision is not yet complete.  If this commit does
      ### not complete for any reason the transaction will be lost. */
-  old_rev_filename = svn_fs_x__path_rev_absolute(cb->fs, old_rev,
-                                                 scratch_pool);
+  old_rev_filename = svn_fs_x__path_rev_absolute(cb->fs, old_rev, subpool);
 
-  rev_filename = svn_fs_x__path_rev(cb->fs, new_rev, scratch_pool);
-  proto_filename = svn_fs_x__path_txn_proto_rev(cb->fs, txn_id,
-                                                scratch_pool);
+  rev_filename = svn_fs_x__path_rev(cb->fs, new_rev, subpool);
+  proto_filename = svn_fs_x__path_txn_proto_rev(cb->fs, txn_id, subpool);
   SVN_ERR(svn_fs_x__move_into_place(proto_filename, rev_filename,
-                                    old_rev_filename, scratch_pool));
+                                    old_rev_filename, subpool));
 
   /* Now that we've moved the prototype revision file out of the way,
      we can unlock it (since further attempts to write to the file
      will fail as it no longer exists).  We must do this so that we can
      remove the transaction directory later. */
-  SVN_ERR(unlock_proto_rev(cb->fs, txn_id, proto_file_lockcookie,
-                           scratch_pool));
+  SVN_ERR(unlock_proto_rev(cb->fs, txn_id, proto_file_lockcookie, subpool));
 
   /* Move the revprops file into place. */
   SVN_ERR_ASSERT(! svn_fs_x__is_packed_revprop(cb->fs, new_rev));
-  SVN_ERR(write_final_revprop(&revprop_filename, cb->txn, txn_id,
-                              scratch_pool));
-  final_revprop = svn_fs_x__path_revprops(cb->fs, new_rev, scratch_pool);
+  SVN_ERR(write_final_revprop(&revprop_filename, cb->txn, txn_id, subpool));
+  final_revprop = svn_fs_x__path_revprops(cb->fs, new_rev, subpool);
   SVN_ERR(svn_fs_x__move_into_place(revprop_filename, final_revprop,
-                                    old_rev_filename, scratch_pool));
+                                    old_rev_filename, subpool));
+  svn_pool_clear(subpool);
 
   /* Update the 'current' file. */
-  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev,
-                                                      scratch_pool));
-  SVN_ERR(svn_fs_x__write_current(cb->fs, new_rev, scratch_pool));
+  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev, subpool));
+  SVN_ERR(svn_fs_x__write_current(cb->fs, new_rev, subpool));
 
   /* At this point the new revision is committed and globally visible
      so let the caller know it succeeded by giving it the new revision
@@ -3489,8 +3492,9 @@ commit_body(void *baton,
   ffd->youngest_rev_cache = new_rev;
 
   /* Remove this transaction directory. */
-  SVN_ERR(svn_fs_x__purge_txn(cb->fs, cb->txn->id, scratch_pool));
+  SVN_ERR(svn_fs_x__purge_txn(cb->fs, cb->txn->id, subpool));
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
