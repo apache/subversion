@@ -1649,9 +1649,10 @@ svn_fs_lock_many(svn_fs_t *fs,
               /* strlen(token) == c - token. */
               if (!err && !svn_xml_is_xml_safe(target->token,
                                                c - target->token))
-              err = svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                      _("Lock token URI '%s' is not XML-safe"),
-                                      target->token);
+                err = svn_error_createf(
+                            SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                            _("Lock token URI '%s' is not XML-safe"),
+                            target->token);
             }
         }
 
