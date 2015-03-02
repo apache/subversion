@@ -56,7 +56,7 @@
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_subr_private.h"
-#include "private/svn_editor3.h"
+#include "private/svn_editor3e.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_sorts_private.h"
