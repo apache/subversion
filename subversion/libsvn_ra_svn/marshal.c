@@ -799,6 +799,52 @@ write_tuple_string_opt(svn_ra_svn_conn_t *conn,
   return str ? svn_ra_svn__write_string(conn, pool, str) : SVN_NO_ERROR;
 }
 
+/* Optimized sending code for the "(s?)" pattern. */
+static svn_error_t *
+write_tuple_string_opt_list(svn_ra_svn_conn_t *conn,
+                            apr_pool_t *pool,
+                            const svn_string_t *str)
+{
+  apr_size_t needed;
+
+  /* Special case. */
+  if (!str)
+    return writebuf_write(conn, pool, "( ) ", 4);
+
+  /* If there is at least this much the room left in the WRITE_BUF,
+     we can serialize directly into it. */
+  needed = 2                       /* open list */
+         + SVN_INT64_BUFFER_SIZE   /* string length + separator */
+         + str->len                /* string contents */
+         + 2;                      /* close list */
+
+  if (conn->write_pos + needed <= sizeof(conn->write_buf))
+    {
+      /* Quick path. */
+      /* Open list. */
+      char *p = conn->write_buf + conn->write_pos;
+      p[0] = '(';
+      p[1] = ' ';
+
+      /* Write string. */
+      p = write_ncstring_quick(p + 2, str->data, str->len);
+
+      /* Close list. */
+      p[0] = ')';
+      p[1] = ' ';
+      conn->write_pos = p + 2 - conn->write_buf;
+    }
+  else
+    {
+      /* Standard code path (fallback). */
+      SVN_ERR(svn_ra_svn__start_list(conn, pool));
+      SVN_ERR(svn_ra_svn__write_string(conn, pool, str));
+      SVN_ERR(svn_ra_svn__end_list(conn, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 write_tuple_start_list(svn_ra_svn_conn_t *conn,
                        apr_pool_t *pool)
@@ -896,9 +942,7 @@ write_cmd_change_node_prop(svn_ra_svn_conn_t *conn,
 {
   SVN_ERR(write_tuple_string(conn, pool, token));
   SVN_ERR(write_tuple_cstring(conn, pool, name));
-  SVN_ERR(write_tuple_start_list(conn, pool));
-  SVN_ERR(write_tuple_string_opt(conn, pool, value));
-  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_string_opt_list(conn, pool, value));
 
   return SVN_NO_ERROR;
 }
@@ -2087,9 +2131,7 @@ svn_ra_svn__write_cmd_change_rev_prop2(svn_ra_svn_conn_t *conn,
   SVN_ERR(writebuf_write_literal(conn, pool, "( change-rev-prop2 ( "));
   SVN_ERR(write_tuple_revision(conn, pool, rev));
   SVN_ERR(write_tuple_cstring(conn, pool, name));
-  SVN_ERR(write_tuple_start_list(conn, pool));
-  SVN_ERR(write_tuple_string_opt(conn, pool, value));
-  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_string_opt_list(conn, pool, value));
   SVN_ERR(write_tuple_start_list(conn, pool));
   SVN_ERR(write_tuple_boolean(conn, pool, dont_care));
   SVN_ERR(write_tuple_string_opt(conn, pool, old_value));
@@ -2346,9 +2388,7 @@ svn_ra_svn__write_cmd_unlock(svn_ra_svn_conn_t *conn,
 {
   SVN_ERR(writebuf_write_literal(conn, pool, "( unlock ( "));
   SVN_ERR(write_tuple_cstring(conn, pool, path));
-  SVN_ERR(write_tuple_start_list(conn, pool));
-  SVN_ERR(write_tuple_string_opt(conn, pool, token));
-  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_string_opt_list(conn, pool, token));
   SVN_ERR(write_tuple_boolean(conn, pool, break_lock));
   SVN_ERR(writebuf_write_literal(conn, pool, ") ) "));
 
@@ -2538,15 +2578,9 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
                                  unsigned revprop_count)
 {
   SVN_ERR(write_tuple_revision(conn, pool, revision));
-  SVN_ERR(write_tuple_start_list(conn, pool));
-  SVN_ERR(write_tuple_string_opt(conn, pool, author));
-  SVN_ERR(write_tuple_end_list(conn, pool));
-  SVN_ERR(write_tuple_start_list(conn, pool));
-  SVN_ERR(write_tuple_string_opt(conn, pool, date));
-  SVN_ERR(write_tuple_end_list(conn, pool));
-  SVN_ERR(write_tuple_start_list(conn, pool));
-  SVN_ERR(write_tuple_string_opt(conn, pool, message));
-  SVN_ERR(write_tuple_end_list(conn, pool));
+  SVN_ERR(write_tuple_string_opt_list(conn, pool, author));
+  SVN_ERR(write_tuple_string_opt_list(conn, pool, date));
+  SVN_ERR(write_tuple_string_opt_list(conn, pool, message));
   SVN_ERR(write_tuple_boolean(conn, pool, has_children));
   SVN_ERR(write_tuple_boolean(conn, pool, invalid_revnum));
   SVN_ERR(svn_ra_svn__write_number(conn, pool, revprop_count));
