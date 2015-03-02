@@ -20,14 +20,14 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_editor3.h
+ * @file svn_editor3e.h
  * @brief Tree editing
  *
  * @since New in 1.10.
  */
 
-#ifndef SVN_EDITOR3_H
-#define SVN_EDITOR3_H
+#ifndef SVN_EDITOR3E_H
+#define SVN_EDITOR3E_H
 
 #include <apr_pools.h>
 
@@ -1225,4 +1225,4 @@ svn_editor3__insert_shims(
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_EDITOR3_H */
+#endif /* SVN_EDITOR3E_H */

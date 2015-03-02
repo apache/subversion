@@ -1,5 +1,5 @@
 /*
- * editor.c :  editing trees of versioned resources
+ * editor3p.c :  editing trees of versioned resources
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -29,8 +29,8 @@
 #include "svn_dirent_uri.h"
 #include "svn_props.h"
 
-#include "private/svn_editor3.h"
-#include "private/svn_editor3paths.h"
+#include "private/svn_editor3e.h"
+#include "private/svn_editor3p.h"
 #include "svn_private_config.h"
 
 #ifdef SVN_DEBUG
