@@ -29,7 +29,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_props.h"
 
-#include "private/svn_editor3.h"
+#include "private/svn_editor3e.h"
 #include "svn_private_config.h"
 
 #ifdef SVN_DEBUG
@@ -163,100 +163,6 @@ check_cancel(svn_editor3_t *editor)
 #define ARGS6(a1, a2, a3, a4, a5, a6)         a1, a2, a3, a4, a5, a6,
 #define ARGS7(a1, a2, a3, a4, a5, a6, a7)     a1, a2, a3, a4, a5, a6, a7,
 #define ARGS8(a1, a2, a3, a4, a5, a6, a7, a8) a1, a2, a3, a4, a5, a6, a7, a8,
-
-
-/*
- * ===================================================================
- * Editor for Commit (incremental tree changes; path-based addressing)
- * ===================================================================
- */
-
-svn_error_t *
-svn_editor3_mk(svn_editor3_t *editor,
-               svn_node_kind_t new_kind,
-               svn_editor3_txn_path_t parent_loc,
-               const char *new_name)
-{
-  /* SVN_ERR_ASSERT(...); */
-
-  DO_CALLBACK(editor, cb_mk,
-              3(new_kind, parent_loc, new_name));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_editor3_cp(svn_editor3_t *editor,
-#ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
-               svn_editor3_txn_path_t from_loc,
-#else
-               svn_pathrev_t from_loc,
-#endif
-               svn_editor3_txn_path_t parent_loc,
-               const char *new_name)
-{
-  /* SVN_ERR_ASSERT(...); */
-
-  DO_CALLBACK(editor, cb_cp,
-              3(from_loc, parent_loc, new_name));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_editor3_mv(svn_editor3_t *editor,
-               svn_pathrev_t from_loc,
-               svn_editor3_txn_path_t new_parent_loc,
-               const char *new_name)
-{
-  /* SVN_ERR_ASSERT(...); */
-
-  DO_CALLBACK(editor, cb_mv,
-              3(from_loc, new_parent_loc, new_name));
-
-  return SVN_NO_ERROR;
-}
-
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
-svn_error_t *
-svn_editor3_res(svn_editor3_t *editor,
-                svn_pathrev_t from_loc,
-                svn_editor3_txn_path_t parent_loc,
-                const char *new_name)
-{
-  /* SVN_ERR_ASSERT(...); */
-
-  DO_CALLBACK(editor, cb_res,
-              3(from_loc, parent_loc, new_name));
-
-  return SVN_NO_ERROR;
-}
-#endif
-
-svn_error_t *
-svn_editor3_rm(svn_editor3_t *editor,
-               svn_editor3_txn_path_t loc)
-{
-  /* SVN_ERR_ASSERT(...); */
-
-  DO_CALLBACK(editor, cb_rm,
-              1(loc));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_editor3_put(svn_editor3_t *editor,
-                svn_editor3_txn_path_t loc,
-                const svn_element_content_t *new_content)
-{
-  /* SVN_ERR_ASSERT(...); */
-
-  DO_CALLBACK(editor, cb_put,
-              2(loc, new_content));
-
-  return SVN_NO_ERROR;
-}
 
 
 /*
@@ -511,24 +417,6 @@ dbg(wrapper_baton_t *eb,
   svn_error_clear(svn_stream_puts(eb->debug_stream, "\n"));
 }
 
-/* Return a human-readable string representation of LOC. */
-static const char *
-peg_path_str(svn_pathrev_t loc,
-             apr_pool_t *result_pool)
-{
-  return apr_psprintf(result_pool, "%s@%ld",
-                      loc.relpath, loc.rev);
-}
-
-/* Return a human-readable string representation of LOC. */
-static const char *
-txn_path_str(svn_editor3_txn_path_t loc,
-             apr_pool_t *result_pool)
-{
-  return apr_psprintf(result_pool, "%s//%s",
-                      peg_path_str(loc.peg, result_pool), loc.relpath);
-}
-
 /* Return a human-readable string representation of EL_REV. */
 static const char *
 el_rev_str(const svn_branch_el_rev_id_t *el_rev,
@@ -544,109 +432,6 @@ eid_str(svn_branch_eid_t eid,
          apr_pool_t *result_pool)
 {
   return apr_psprintf(result_pool, "%d", eid);
-}
-
-static svn_error_t *
-wrap_mk(void *baton,
-        svn_node_kind_t new_kind,
-        svn_editor3_txn_path_t parent_loc,
-        const char *new_name,
-        apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  dbg(eb, scratch_pool, "mk(k=%s, p=%s, n=%s)",
-      svn_node_kind_to_word(new_kind),
-      txn_path_str(parent_loc, scratch_pool), new_name);
-  SVN_ERR(svn_editor3_mk(eb->wrapped_editor,
-                         new_kind, parent_loc, new_name));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-wrap_cp(void *baton,
-#ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
-        svn_editor3_txn_path_t from_loc,
-#else
-        svn_pathrev_t from_loc,
-#endif
-        svn_editor3_txn_path_t parent_loc,
-        const char *new_name,
-        apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  dbg(eb, scratch_pool, "cp(f=%s, p=%s, n=%s)",
-      peg_path_str(from_loc, scratch_pool),
-      txn_path_str(parent_loc, scratch_pool), new_name);
-  SVN_ERR(svn_editor3_cp(eb->wrapped_editor,
-                         from_loc, parent_loc, new_name));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-wrap_mv(void *baton,
-        svn_pathrev_t from_loc,
-        svn_editor3_txn_path_t new_parent_loc,
-        const char *new_name,
-        apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  dbg(eb, scratch_pool, "mv(f=%s, p=%s, n=%s)",
-      peg_path_str(from_loc, scratch_pool),
-      txn_path_str(new_parent_loc, scratch_pool), new_name);
-  SVN_ERR(svn_editor3_mv(eb->wrapped_editor,
-                         from_loc, new_parent_loc, new_name));
-  return SVN_NO_ERROR;
-}
-
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
-static svn_error_t *
-wrap_res(void *baton,
-         svn_pathrev_t from_loc,
-         svn_editor3_txn_path_t parent_loc,
-         const char *new_name,
-         apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  dbg(eb, scratch_pool, "res(f=%s, p=%s, n=%s)",
-      peg_path_str(from_loc, scratch_pool),
-      txn_path_str(parent_loc, scratch_pool), new_name);
-  SVN_ERR(svn_editor3_res(eb->wrapped_editor,
-                          from_loc, parent_loc, new_name));
-  return SVN_NO_ERROR;
-}
-#endif
-
-static svn_error_t *
-wrap_rm(void *baton,
-        svn_editor3_txn_path_t loc,
-        apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  dbg(eb, scratch_pool, "rm(%s)",
-      txn_path_str(loc, scratch_pool));
-  SVN_ERR(svn_editor3_rm(eb->wrapped_editor,
-                         loc));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-wrap_put(void *baton,
-         svn_editor3_txn_path_t loc,
-         const svn_element_content_t *new_content,
-         apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  dbg(eb, scratch_pool, "put(%s)",
-      txn_path_str(loc, scratch_pool));
-  SVN_ERR(svn_editor3_put(eb->wrapped_editor,
-                          loc, new_content));
-  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -807,14 +592,6 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
                               apr_pool_t *result_pool)
 {
   static const svn_editor3_cb_funcs_t wrapper_funcs = {
-    wrap_mk,
-    wrap_cp,
-    wrap_mv,
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
-    wrap_res,
-#endif
-    wrap_rm,
-    wrap_put,
     wrap_add,
     wrap_instantiate,
     wrap_copy_one,

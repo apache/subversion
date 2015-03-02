@@ -34,7 +34,7 @@
 #include "svn_delta.h"
 #include "svn_editor.h"
 #include "svn_io.h"
-#include "private/svn_editor3.h"
+#include "private/svn_editor3p.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -40,7 +40,7 @@
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "private/svn_diff_tree.h"
-#include "private/svn_editor3.h"
+#include "private/svn_editor3p.h"
 
 #ifdef __cplusplus
 extern "C" {

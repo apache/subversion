@@ -1567,14 +1567,6 @@ svn_delta__ev3_from_delta_for_commit2(
                         apr_pool_t *scratch_pool)
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
-    NULL,
-    NULL,
-    NULL,
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
-    NULL,
-#endif
-    NULL,
-    NULL,
     editor3_add,
     editor3_instantiate,
     editor3_copy_one,

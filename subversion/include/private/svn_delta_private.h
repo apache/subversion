@@ -33,7 +33,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_editor.h"
-#include "svn_editor3.h"
+#include "svn_editor3p.h"
 
 #ifdef __cplusplus
 extern "C" {
