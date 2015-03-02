@@ -691,7 +691,8 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
  * read operations only.
  */
 static apr_size_t
-encode_uint(unsigned char *p, apr_uint64_t value)
+encode_uint(unsigned char *p,
+            apr_uint64_t value)
 {
   unsigned char *start = p;
   while (value >= 0x80)
@@ -709,7 +710,8 @@ encode_uint(unsigned char *p, apr_uint64_t value)
  * This maps signed ints onto unsigned ones.
  */
 static apr_size_t
-encode_int(unsigned char *p, apr_int64_t value)
+encode_int(unsigned char *p,
+           apr_int64_t value)
 {
   return encode_uint(p, (apr_uint64_t)(value < 0 ? -1 - 2*value : 2*value));
 }
@@ -731,7 +733,9 @@ stream_write_encoded(svn_stream_t *stream,
  * Return the number of remaining entries in ARRAY after START.
  */
 static int
-rle_array(apr_array_header_t *array, int start, int end)
+rle_array(apr_array_header_t *array,
+          int start,
+          int end)
 {
   int i;
   int target = start;
@@ -1063,7 +1067,8 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
  * REVISION in FS.
  */
 static svn_revnum_t
-base_revision(svn_fs_t *fs, svn_revnum_t revision)
+base_revision(svn_fs_t *fs,
+              svn_revnum_t revision)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   return svn_fs_x__is_packed_rev(fs, revision)
@@ -2276,7 +2281,8 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
                                   encode_uint(encoded, entry.size),
                                   iterpool));
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
-                                  encode_uint(encoded, entry.type + entry.item_count * 16),
+                                  encode_uint(encoded, entry.type
+                                                     + entry.item_count * 16),
                                   iterpool));
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.fnv1_checksum),
@@ -3142,7 +3148,8 @@ svn_fs_x__p2l_index_lookup(apr_array_header_t **entries,
  * RHS.
  */
 static int
-compare_p2l_entry_offsets(const void *lhs, const void *rhs)
+compare_p2l_entry_offsets(const void *lhs,
+                          const void *rhs)
 {
   const svn_fs_x__p2l_entry_t *entry = (const svn_fs_x__p2l_entry_t *)lhs;
   apr_off_t offset = *(const apr_off_t *)rhs;
