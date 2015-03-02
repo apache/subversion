@@ -1496,8 +1496,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_REV_UNSPECIFIED("branch", 1);
           VERIFY_EID_NONEXISTENT("branch", 1);
           VERIFY_PARENT_EID_EXISTS("branch", 1);
-          SVN_ERR(svn_branch_branch(editor,
-                                    el_rev[0]->branch, el_rev[0]->eid,
+          SVN_ERR(svn_branch_branch(el_rev[0]->branch, el_rev[0]->eid,
                                     el_rev[1]->branch, parent_el_rev[1]->eid,
                                     path_name[1],
                                     iterpool));
@@ -1518,8 +1517,7 @@ execute(const apr_array_header_t *actions,
                                     parent_el_rev[0]->branch,
                                     parent_el_rev[0]->eid, path_name[0],
                                     content));
-            SVN_ERR(svn_branch_branchify(editor,
-                                         parent_el_rev[0]->branch, new_eid,
+            SVN_ERR(svn_branch_branchify(parent_el_rev[0]->branch, new_eid,
                                          iterpool));
           }
           notify("A    (br) %s", action->relpath[0]);
@@ -1528,8 +1526,7 @@ execute(const apr_array_header_t *actions,
         case ACTION_BRANCHIFY:
           VERIFY_REV_UNSPECIFIED("branchify", 0);
           VERIFY_EID_EXISTS("branchify", 0);
-          SVN_ERR(svn_branch_branchify(editor,
-                                       el_rev[0]->branch, el_rev[0]->eid,
+          SVN_ERR(svn_branch_branchify(el_rev[0]->branch, el_rev[0]->eid,
                                        iterpool));
           notify("R    (br) %s", action->relpath[0]);
           made_changes = TRUE;
