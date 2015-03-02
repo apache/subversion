@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file UpdateReporter.h
+ * @file StateReporter.h
  * @brief Interface of the class UpdateReporter
  */
 

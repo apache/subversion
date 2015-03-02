@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file EditorProxy.h
+ * @file EditorProxy.cpp
  * @brief Interface of all editor proxy classes
  */
 #include <apr_pools.h>
