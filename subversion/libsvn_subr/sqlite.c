@@ -1307,7 +1307,7 @@ svn_sqlite__finish_transaction(svn_sqlite__db_t *db,
       err2 = get_internal_statement(&stmt, db,
                                     STMT_INTERNAL_ROLLBACK_TRANSACTION);
       if (!err2)
-        err2 = svn_sqlite__step_done(stmt);
+        err2 = svn_error_trace(svn_sqlite__step_done(stmt));
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
         {
@@ -1330,14 +1330,14 @@ svn_sqlite__finish_transaction(svn_sqlite__db_t *db,
              help diagnosing the original error and help in finding where
              a reset statement is missing. */
 
-          err2 = reset_all_statements(db, err2);
+          err2 = svn_error_trace(reset_all_statements(db, err2));
           err2 = svn_error_compose_create(
-                      svn_sqlite__step_done(stmt),
+                      svn_error_trace(svn_sqlite__step_done(stmt)),
                       err2);
+
         }
 
-      return svn_error_compose_create(err,
-                                      err2);
+      return svn_error_compose_create(err, err2);
     }
 
   SVN_ERR(get_internal_statement(&stmt, db, STMT_INTERNAL_COMMIT_TRANSACTION));
@@ -1358,7 +1358,7 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
                                     STMT_INTERNAL_ROLLBACK_TO_SAVEPOINT_SVN);
 
       if (!err2)
-        err2 = svn_sqlite__step_done(stmt);
+        err2 = svn_error_trace(svn_sqlite__step_done(stmt));
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
         {
@@ -1368,8 +1368,10 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
              ### See huge comment in svn_sqlite__finish_transaction for
                  further details */
 
-          err2 = reset_all_statements(db, err2);
-          err2 = svn_error_compose_create(svn_sqlite__step_done(stmt), err2);
+          err2 = svn_error_trace(reset_all_statements(db, err2));
+          err2 = svn_error_compose_create(
+                      svn_error_trace(svn_sqlite__step_done(stmt)),
+                      err2);
         }
 
       err = svn_error_compose_create(err, err2);
@@ -1377,9 +1379,9 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
                                     STMT_INTERNAL_RELEASE_SAVEPOINT_SVN);
 
       if (!err2)
-        err2 = svn_sqlite__step_done(stmt);
+        err2 = svn_error_trace(svn_sqlite__step_done(stmt));
 
-      return svn_error_trace(svn_error_compose_create(err, err2));
+      return svn_error_compose_create(err, err2);
     }
 
   SVN_ERR(get_internal_statement(&stmt, db,
