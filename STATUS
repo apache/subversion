@@ -27,6 +27,16 @@ Candidate changes:
    Votes:
      +1: danielsh, brane
 
+ * r1663183, r1663184
+   Introduce build support for Visual Studio "2015"
+   Justification:
+     Unbreaks building with the VS version that should be released somewhere
+     later this year.
+   Notes:
+     Includes a few generator fixes, and compilation fixes of utf8proc.c
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
