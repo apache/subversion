@@ -61,7 +61,7 @@ svn_boolean_t svn__is_verbose(void)
 #ifdef SVN_DEBUG
 /* Return a human-readable string representation of LOC. */
 static const char *
-peg_path_str(svn_editor3_peg_path_t loc,
+peg_path_str(svn_pathrev_t loc,
              apr_pool_t *result_pool)
 {
   return apr_psprintf(result_pool, "%s@%ld",
@@ -796,14 +796,14 @@ apply_change(void **dir_baton,
 
 /*  */
 static svn_error_t *
-content_fetch(svn_editor3_node_content_t **content_p,
+content_fetch(svn_element_content_t **content_p,
               apr_hash_t **children_names,
               ev3_from_delta_baton_t *eb,
-              const svn_editor3_peg_path_t *path_rev,
+              const svn_pathrev_t *path_rev,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  svn_editor3_node_content_t *content
+  svn_element_content_t *content
     = apr_pcalloc(result_pool, sizeof (*content));
 
   SVN_ERR(eb->fetch_func(&content->kind,
@@ -887,7 +887,7 @@ svn_branch_branch(svn_editor3_t *editor,
                   svn_branch_instance_t *from_branch,
                   int from_eid,
                   svn_branch_instance_t *to_outer_branch,
-                  svn_editor3_eid_t to_outer_parent_eid,
+                  svn_branch_eid_t to_outer_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
@@ -903,7 +903,7 @@ svn_branch_branch(svn_editor3_t *editor,
 svn_error_t *
 svn_branch_branchify(svn_editor3_t *editor,
                      svn_branch_instance_t *outer_branch,
-                     svn_editor3_eid_t outer_eid,
+                     svn_branch_eid_t outer_eid,
                      apr_pool_t *scratch_pool)
 {
   /* ### TODO: First check the element is not already a branch root
@@ -953,12 +953,12 @@ svn_branch_branchify(svn_editor3_t *editor,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_add(void *baton,
-            svn_editor3_eid_t *eid_p,
+            svn_branch_eid_t *eid_p,
             svn_node_kind_t new_kind,
             svn_branch_instance_t *branch,
-            svn_editor3_eid_t new_parent_eid,
+            svn_branch_eid_t new_parent_eid,
             const char *new_name,
-            const svn_editor3_node_content_t *new_content,
+            const svn_element_content_t *new_content,
             apr_pool_t *scratch_pool)
 {
   int eid;
@@ -979,10 +979,10 @@ editor3_add(void *baton,
 static svn_error_t *
 editor3_instantiate(void *baton,
                     svn_branch_instance_t *branch,
-                    svn_editor3_eid_t eid,
-                    svn_editor3_eid_t new_parent_eid,
+                    svn_branch_eid_t eid,
+                    svn_branch_eid_t new_parent_eid,
                     const char *new_name,
-                    const svn_editor3_node_content_t *new_content,
+                    const svn_element_content_t *new_content,
                     apr_pool_t *scratch_pool)
 {
   SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
@@ -998,10 +998,10 @@ static svn_error_t *
 editor3_copy_one(void *baton,
                  const svn_branch_el_rev_id_t *src_el_rev,
                  svn_branch_instance_t *branch,
-                 svn_editor3_eid_t eid,
-                 svn_editor3_eid_t new_parent_eid,
+                 svn_branch_eid_t eid,
+                 svn_branch_eid_t new_parent_eid,
                  const char *new_name,
-                 const svn_editor3_node_content_t *new_content,
+                 const svn_element_content_t *new_content,
                  apr_pool_t *scratch_pool)
 {
   /* New content shall be the same as the source if NEW_CONTENT is null. */
@@ -1019,7 +1019,7 @@ static svn_error_t *
 editor3_copy_tree(void *baton,
                   const svn_branch_el_rev_id_t *src_el_rev,
                   svn_branch_instance_t *to_branch,
-                  svn_editor3_eid_t new_parent_eid,
+                  svn_branch_eid_t new_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
@@ -1038,7 +1038,7 @@ static svn_error_t *
 editor3_delete(void *baton,
                    svn_revnum_t since_rev,
                    svn_branch_instance_t *branch,
-                   svn_editor3_eid_t eid,
+                   svn_branch_eid_t eid,
                    apr_pool_t *scratch_pool)
 {
   SVN_DBG(("delete(b%d e%d)",
@@ -1054,10 +1054,10 @@ static svn_error_t *
 editor3_alter(void *baton,
               svn_revnum_t since_rev,
               svn_branch_instance_t *branch,
-              svn_editor3_eid_t eid,
-              svn_editor3_eid_t new_parent_eid,
+              svn_branch_eid_t eid,
+              svn_branch_eid_t new_parent_eid,
               const char *new_name,
-              const svn_editor3_node_content_t *new_content,
+              const svn_element_content_t *new_content,
               apr_pool_t *scratch_pool)
 {
   SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
@@ -1159,8 +1159,8 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
  * and have the same properties.
  */
 static svn_boolean_t
-props_equal(svn_editor3_node_content_t *initial_content,
-            svn_editor3_node_content_t *final_content,
+props_equal(svn_element_content_t *initial_content,
+            svn_element_content_t *final_content,
             apr_pool_t *scratch_pool)
 {
   apr_array_header_t *prop_diffs;
@@ -1179,8 +1179,8 @@ props_equal(svn_editor3_node_content_t *initial_content,
  * and have the same text.
  */
 static svn_boolean_t
-text_equal(svn_editor3_node_content_t *initial_content,
-           svn_editor3_node_content_t *final_content)
+text_equal(svn_element_content_t *initial_content,
+           svn_element_content_t *final_content)
 {
   if (!initial_content || !final_content
       || initial_content->kind != svn_node_file
@@ -1199,8 +1199,8 @@ text_equal(svn_editor3_node_content_t *initial_content,
  * ### Currently this is indicated by content-by-reference, which is
  *     an inadequate indication.
  */
-static svn_editor3_peg_path_t *
-get_copy_from(svn_editor3_node_content_t *final_content)
+static svn_pathrev_t *
+get_copy_from(svn_element_content_t *final_content)
 {
   if (final_content->ref.relpath)
     {
@@ -1273,15 +1273,15 @@ same_family_and_element(const svn_branch_el_rev_id_t *el_rev1,
  */
 static svn_error_t *
 drive_changes_r(const char *rrpath,
-                svn_editor3_peg_path_t *pred_loc,
+                svn_pathrev_t *pred_loc,
                 apr_hash_t *paths_final,
                 ev3_from_delta_baton_t *eb,
                 apr_pool_t *scratch_pool)
 {
   /* The el-rev-id of the element that will finally exist at RRPATH. */
   svn_branch_el_rev_id_t *final_el_rev = svn_hash_gets(paths_final, rrpath);
-  svn_editor3_node_content_t *final_content;
-  svn_editor3_peg_path_t *final_copy_from;
+  svn_element_content_t *final_content;
+  svn_pathrev_t *final_copy_from;
   svn_boolean_t succession;
 
   SVN_DBG(("rrpath '%s' current=%s, final=e%d)",
@@ -1318,7 +1318,7 @@ drive_changes_r(const char *rrpath,
                                    (which also implies the same kind) */
   if (pred_loc && final_copy_from)
     {
-      succession = svn_editor3_peg_path_equal(pred_loc, final_copy_from);
+      succession = svn_pathrev_equal(pred_loc, final_copy_from);
     }
   else if (pred_loc && final_el_rev)
     {
@@ -1359,7 +1359,7 @@ drive_changes_r(const char *rrpath,
      Or it's unchanged -- we do nothing in that case. */
   if (final_el_rev)
     {
-      svn_editor3_node_content_t *current_content = NULL;
+      svn_element_content_t *current_content = NULL;
       apr_hash_t *current_children = NULL;
       change_node_t *change = NULL;
 
@@ -1384,7 +1384,7 @@ drive_changes_r(const char *rrpath,
                                 scratch_pool, scratch_pool));
 
           /* If no changes to make, then skip this path */
-          if (svn_editor3_node_content_equal(current_content,
+          if (svn_element_content_equal(current_content,
                                              final_content, scratch_pool))
             {
               SVN_DBG(("ev1:no-op(%s)", rrpath));
@@ -1457,7 +1457,7 @@ drive_changes_r(const char *rrpath,
                                                          scratch_pool);
               svn_boolean_t child_in_current
                 = current_children && svn_hash_gets(current_children, name);
-              svn_editor3_peg_path_t *child_pred = NULL;
+              svn_pathrev_t *child_pred = NULL;
 
               if (child_in_current)
                 {
@@ -1520,7 +1520,7 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
                             scratch_pool, scratch_pool);
 
   {
-    svn_editor3_peg_path_t current = { -1, "" };
+    svn_pathrev_t current = { -1, "" };
 
     /* ### For now, assume based on youngest known rev. */
     current.rev = eb->edited_rev_root->repos->rev_roots->nelts - 1;

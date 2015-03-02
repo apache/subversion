@@ -190,7 +190,7 @@ svn_editor3_cp(svn_editor3_t *editor,
 #ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
                svn_editor3_txn_path_t from_loc,
 #else
-               svn_editor3_peg_path_t from_loc,
+               svn_pathrev_t from_loc,
 #endif
                svn_editor3_txn_path_t parent_loc,
                const char *new_name)
@@ -205,7 +205,7 @@ svn_editor3_cp(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_mv(svn_editor3_t *editor,
-               svn_editor3_peg_path_t from_loc,
+               svn_pathrev_t from_loc,
                svn_editor3_txn_path_t new_parent_loc,
                const char *new_name)
 {
@@ -220,7 +220,7 @@ svn_editor3_mv(svn_editor3_t *editor,
 #ifdef SVN_EDITOR3_WITH_RESURRECTION
 svn_error_t *
 svn_editor3_res(svn_editor3_t *editor,
-                svn_editor3_peg_path_t from_loc,
+                svn_pathrev_t from_loc,
                 svn_editor3_txn_path_t parent_loc,
                 const char *new_name)
 {
@@ -248,7 +248,7 @@ svn_editor3_rm(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_put(svn_editor3_t *editor,
                 svn_editor3_txn_path_t loc,
-                const svn_editor3_node_content_t *new_content)
+                const svn_element_content_t *new_content)
 {
   /* SVN_ERR_ASSERT(...); */
 
@@ -279,12 +279,12 @@ svn_editor3_put(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
-                svn_editor3_eid_t *local_eid_p,
+                svn_branch_eid_t *local_eid_p,
                 svn_node_kind_t new_kind,
                 svn_branch_instance_t *branch,
-                svn_editor3_eid_t new_parent_eid,
+                svn_branch_eid_t new_parent_eid,
                 const char *new_name,
-                const svn_editor3_node_content_t *new_content)
+                const svn_element_content_t *new_content)
 {
   int eid = -1;
 
@@ -312,10 +312,10 @@ svn_editor3_add(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_instantiate(svn_editor3_t *editor,
                         svn_branch_instance_t *branch,
-                        svn_editor3_eid_t local_eid,
-                        svn_editor3_eid_t new_parent_eid,
+                        svn_branch_eid_t local_eid,
+                        svn_branch_eid_t new_parent_eid,
                         const char *new_name,
-                        const svn_editor3_node_content_t *new_content)
+                        const svn_element_content_t *new_content)
 {
   SVN_ERR_ASSERT(VALID_EID(local_eid));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
@@ -335,10 +335,10 @@ svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
                      const svn_branch_el_rev_id_t *src_el_rev,
                      svn_branch_instance_t *branch,
-                     svn_editor3_eid_t local_eid,
-                     svn_editor3_eid_t new_parent_eid,
+                     svn_branch_eid_t local_eid,
+                     svn_branch_eid_t new_parent_eid,
                      const char *new_name,
-                     const svn_editor3_node_content_t *new_content)
+                     const svn_element_content_t *new_content)
 {
   SVN_ERR_ASSERT(VALID_EID(local_eid));
   SVN_ERR_ASSERT(VALID_EL_REV_ID(src_el_rev));
@@ -360,7 +360,7 @@ svn_error_t *
 svn_editor3_copy_tree(svn_editor3_t *editor,
                       const svn_branch_el_rev_id_t *src_el_rev,
                       svn_branch_instance_t *branch,
-                      svn_editor3_eid_t new_parent_eid,
+                      svn_branch_eid_t new_parent_eid,
                       const char *new_name)
 {
   SVN_ERR_ASSERT(VALID_EL_REV_ID(src_el_rev));
@@ -379,7 +379,7 @@ svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
                    svn_revnum_t since_rev,
                    svn_branch_instance_t *branch,
-                   svn_editor3_eid_t eid)
+                   svn_branch_eid_t eid)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
   SVN_ERR_ASSERT(eid != branch->sibling_defn->root_eid);
@@ -395,10 +395,10 @@ svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
                   svn_revnum_t since_rev,
                   svn_branch_instance_t *branch,
-                  svn_editor3_eid_t eid,
-                  svn_editor3_eid_t new_parent_eid,
+                  svn_branch_eid_t eid,
+                  svn_branch_eid_t new_parent_eid,
                   const char *new_name,
-                  const svn_editor3_node_content_t *new_content)
+                  const svn_element_content_t *new_content)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
@@ -455,169 +455,16 @@ svn_editor3_abort(svn_editor3_t *editor)
 
 /*
  * ===================================================================
- * Node content
- * ===================================================================
- */
-
-svn_editor3_node_content_t *
-svn_editor3_node_content_dup(const svn_editor3_node_content_t *old,
-                             apr_pool_t *result_pool)
-{
-  svn_editor3_node_content_t *new_content;
-
-  if (old == NULL)
-    return NULL;
-
-  new_content = apr_pmemdup(result_pool, old, sizeof(*new_content));
-  if (old->ref.relpath)
-    new_content->ref = svn_editor3_peg_path_dup(old->ref, result_pool);
-  if (old->props)
-    new_content->props = svn_prop_hash_dup(old->props, result_pool);
-  if (old->kind == svn_node_file && old->text)
-    new_content->text = svn_stringbuf_dup(old->text, result_pool);
-  if (old->kind == svn_node_symlink && old->target)
-    new_content->target = apr_pstrdup(result_pool, old->target);
-  return new_content;
-}
-
-svn_boolean_t
-svn_editor3_node_content_equal(const svn_editor3_node_content_t *left,
-                               const svn_editor3_node_content_t *right,
-                               apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *prop_diffs;
-
-  /* references are not supported */
-  SVN_ERR_ASSERT_NO_RETURN(! left->ref.relpath && ! right->ref.relpath);
-  SVN_ERR_ASSERT_NO_RETURN(left->kind != svn_node_unknown
-                           && right->kind != svn_node_unknown);
-
-  if (left->kind != right->kind)
-    {
-      return FALSE;
-    }
-
-  svn_error_clear(svn_prop_diffs(&prop_diffs,
-                                 left->props, right->props,
-                                 scratch_pool));
-
-  if (prop_diffs->nelts != 0)
-    {
-      return FALSE;
-    }
-  switch (left->kind)
-    {
-    case svn_node_dir:
-      break;
-    case svn_node_file:
-      if (! svn_stringbuf_compare(left->text, right->text))
-        {
-          return FALSE;
-        }
-      break;
-    case svn_node_symlink:
-      if (strcmp(left->target, right->target) != 0)
-        {
-          return FALSE;
-        }
-      break;
-    default:
-      break;
-    }
-
-  return TRUE;
-}
-
-svn_editor3_node_content_t *
-svn_editor3_node_content_create_ref(svn_editor3_peg_path_t ref,
-                                    apr_pool_t *result_pool)
-{
-  svn_editor3_node_content_t *new_content
-    = apr_pcalloc(result_pool, sizeof(*new_content));
-
-  new_content->kind = svn_node_unknown;
-  new_content->ref = svn_editor3_peg_path_dup(ref, result_pool);
-  return new_content;
-}
-
-svn_editor3_node_content_t *
-svn_editor3_node_content_create_dir(apr_hash_t *props,
-                                    apr_pool_t *result_pool)
-{
-  svn_editor3_node_content_t *new_content
-    = apr_pcalloc(result_pool, sizeof(*new_content));
-
-  new_content->kind = svn_node_dir;
-  new_content->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
-  return new_content;
-}
-
-svn_editor3_node_content_t *
-svn_editor3_node_content_create_file(apr_hash_t *props,
-                                     svn_stringbuf_t *text,
-                                     apr_pool_t *result_pool)
-{
-  svn_editor3_node_content_t *new_content
-    = apr_pcalloc(result_pool, sizeof(*new_content));
-
-  SVN_ERR_ASSERT_NO_RETURN(text);
-
-  new_content->kind = svn_node_file;
-  new_content->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
-  new_content->text = svn_stringbuf_dup(text, result_pool);
-  return new_content;
-}
-
-svn_editor3_node_content_t *
-svn_editor3_node_content_create_symlink(apr_hash_t *props,
-                                        const char *target,
-                                        apr_pool_t *result_pool)
-{
-  svn_editor3_node_content_t *new_content
-    = apr_pcalloc(result_pool, sizeof(*new_content));
-
-  SVN_ERR_ASSERT_NO_RETURN(target);
-
-  new_content->kind = svn_node_symlink;
-  new_content->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
-  new_content->target = apr_pstrdup(result_pool, target);
-  return new_content;
-}
-
-
-/*
- * ===================================================================
  * Minor data types
  * ===================================================================
  */
-
-svn_editor3_peg_path_t
-svn_editor3_peg_path_dup(svn_editor3_peg_path_t p,
-                         apr_pool_t *result_pool)
-{
-  /* The object P is passed by value so we can modify it in place */
-  p.relpath = apr_pstrdup(result_pool, p.relpath);
-  return p;
-}
-
-svn_boolean_t
-svn_editor3_peg_path_equal(svn_editor3_peg_path_t *peg_path1,
-                           svn_editor3_peg_path_t *peg_path2)
-{
-  if (peg_path1->rev != peg_path2->rev)
-    return FALSE;
-  if (strcmp(peg_path1->relpath, peg_path2->relpath) != 0)
-    return FALSE;
-
-  return TRUE;
-}
 
 svn_editor3_txn_path_t
 svn_editor3_txn_path_dup(svn_editor3_txn_path_t p,
                          apr_pool_t *result_pool)
 {
   /* The object P is passed by value so we can modify it in place */
-  p.peg = svn_editor3_peg_path_dup(p.peg, result_pool);
+  p.peg = svn_pathrev_dup(p.peg, result_pool);
   p.relpath = apr_pstrdup(result_pool, p.relpath);
   return p;
 }
@@ -666,7 +513,7 @@ dbg(wrapper_baton_t *eb,
 
 /* Return a human-readable string representation of LOC. */
 static const char *
-peg_path_str(svn_editor3_peg_path_t loc,
+peg_path_str(svn_pathrev_t loc,
              apr_pool_t *result_pool)
 {
   return apr_psprintf(result_pool, "%s@%ld",
@@ -693,7 +540,7 @@ el_rev_str(const svn_branch_el_rev_id_t *el_rev,
 
 /* Return a human-readable string representation of EID. */
 static const char *
-eid_str(svn_editor3_eid_t eid,
+eid_str(svn_branch_eid_t eid,
          apr_pool_t *result_pool)
 {
   return apr_psprintf(result_pool, "%d", eid);
@@ -721,7 +568,7 @@ wrap_cp(void *baton,
 #ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
         svn_editor3_txn_path_t from_loc,
 #else
-        svn_editor3_peg_path_t from_loc,
+        svn_pathrev_t from_loc,
 #endif
         svn_editor3_txn_path_t parent_loc,
         const char *new_name,
@@ -739,7 +586,7 @@ wrap_cp(void *baton,
 
 static svn_error_t *
 wrap_mv(void *baton,
-        svn_editor3_peg_path_t from_loc,
+        svn_pathrev_t from_loc,
         svn_editor3_txn_path_t new_parent_loc,
         const char *new_name,
         apr_pool_t *scratch_pool)
@@ -757,7 +604,7 @@ wrap_mv(void *baton,
 #ifdef SVN_EDITOR3_WITH_RESURRECTION
 static svn_error_t *
 wrap_res(void *baton,
-         svn_editor3_peg_path_t from_loc,
+         svn_pathrev_t from_loc,
          svn_editor3_txn_path_t parent_loc,
          const char *new_name,
          apr_pool_t *scratch_pool)
@@ -790,7 +637,7 @@ wrap_rm(void *baton,
 static svn_error_t *
 wrap_put(void *baton,
          svn_editor3_txn_path_t loc,
-         const svn_editor3_node_content_t *new_content,
+         const svn_element_content_t *new_content,
          apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -804,12 +651,12 @@ wrap_put(void *baton,
 
 static svn_error_t *
 wrap_add(void *baton,
-         svn_editor3_eid_t *local_eid,
+         svn_branch_eid_t *local_eid,
          svn_node_kind_t new_kind,
          svn_branch_instance_t *branch,
-         svn_editor3_eid_t new_parent_eid,
+         svn_branch_eid_t new_parent_eid,
          const char *new_name,
-         const svn_editor3_node_content_t *new_content,
+         const svn_element_content_t *new_content,
          apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -826,10 +673,10 @@ wrap_add(void *baton,
 static svn_error_t *
 wrap_instantiate(void *baton,
                  svn_branch_instance_t *branch,
-                 svn_editor3_eid_t local_eid,
-                 svn_editor3_eid_t new_parent_eid,
+                 svn_branch_eid_t local_eid,
+                 svn_branch_eid_t new_parent_eid,
                  const char *new_name,
-                 const svn_editor3_node_content_t *new_content,
+                 const svn_element_content_t *new_content,
                  apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -847,10 +694,10 @@ static svn_error_t *
 wrap_copy_one(void *baton,
               const svn_branch_el_rev_id_t *src_el_rev,
               svn_branch_instance_t *branch,
-              svn_editor3_eid_t local_eid,
-              svn_editor3_eid_t new_parent_eid,
+              svn_branch_eid_t local_eid,
+              svn_branch_eid_t new_parent_eid,
               const char *new_name,
-              const svn_editor3_node_content_t *new_content,
+              const svn_element_content_t *new_content,
               apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -869,7 +716,7 @@ static svn_error_t *
 wrap_copy_tree(void *baton,
                const svn_branch_el_rev_id_t *src_el_rev,
                svn_branch_instance_t *branch,
-               svn_editor3_eid_t new_parent_eid,
+               svn_branch_eid_t new_parent_eid,
                const char *new_name,
                apr_pool_t *scratch_pool)
 {
@@ -888,7 +735,7 @@ static svn_error_t *
 wrap_delete(void *baton,
             svn_revnum_t since_rev,
             svn_branch_instance_t *branch,
-            svn_editor3_eid_t eid,
+            svn_branch_eid_t eid,
             apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -904,10 +751,10 @@ static svn_error_t *
 wrap_alter(void *baton,
            svn_revnum_t since_rev,
            svn_branch_instance_t *branch,
-           svn_editor3_eid_t eid,
-           svn_editor3_eid_t new_parent_eid,
+           svn_branch_eid_t eid,
+           svn_branch_eid_t new_parent_eid,
            const char *new_name,
-           const svn_editor3_node_content_t *new_content,
+           const svn_element_content_t *new_content,
            apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;

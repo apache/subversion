@@ -584,10 +584,10 @@ duplicate_child_changes(apr_hash_t *changes,
  */
 
 /* Construct a peg-path-rev */
-static svn_editor3_peg_path_t
+static svn_pathrev_t
 pathrev(const char *repos_relpath, svn_revnum_t revision)
 {
-  svn_editor3_peg_path_t p;
+  svn_pathrev_t p;
 
   p.rev = revision;
   p.relpath = repos_relpath;
@@ -796,7 +796,7 @@ process_actions(struct ev3_edit_baton *eb,
 
   if (change->props || change->contents_changed)
     {
-      svn_editor3_node_content_t *new_content;
+      svn_element_content_t *new_content;
 
       if (change->kind == svn_node_file)
         {
@@ -819,12 +819,12 @@ process_actions(struct ev3_edit_baton *eb,
               text = svn_stringbuf_create_empty(scratch_pool);
             }
 
-          new_content = svn_editor3_node_content_create_file(
+          new_content = svn_element_content_create_file(
                           change->props, text, scratch_pool);
         }
       else if (change->kind == svn_node_dir)
         {
-          new_content = svn_editor3_node_content_create_dir(
+          new_content = svn_element_content_create_dir(
                           change->props, scratch_pool);
         }
       else
@@ -2176,7 +2176,7 @@ drive_changes(ev3_from_delta_baton_t *eb,
  */
 static const char *
 e3_pegged_path_in_txn(ev3_from_delta_baton_t *eb,
-                      svn_editor3_peg_path_t peg_loc,
+                      svn_pathrev_t peg_loc,
                       apr_pool_t *scratch_pool)
 {
   const char *p;
@@ -2242,7 +2242,7 @@ editor3_cp(void *baton,
 #ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
            svn_editor3_txn_path_t from_txn_loc,
 #else
-           svn_editor3_peg_path_t from_peg_loc,
+           svn_pathrev_t from_peg_loc,
 #endif
            svn_editor3_txn_path_t new_parent_loc,
            const char *new_name,
@@ -2253,7 +2253,7 @@ editor3_cp(void *baton,
 
   /* look up old path and new parent path in shadow txn */
 #ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
-  svn_editor3_peg_path_t from_peg_loc = from_txn_loc.peg;
+  svn_pathrev_t from_peg_loc = from_txn_loc.peg;
 #endif
   const char *new_parent_txnpath
     = e3_general_path_in_txn(eb, new_parent_loc, scratch_pool);
@@ -2288,7 +2288,7 @@ editor3_cp(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_mv(void *baton,
-           svn_editor3_peg_path_t from_loc,
+           svn_pathrev_t from_loc,
            svn_editor3_txn_path_t new_parent_loc,
            const char *new_name,
            apr_pool_t *scratch_pool)
@@ -2338,7 +2338,7 @@ editor3_mv(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_res(void *baton,
-            svn_editor3_peg_path_t from_loc,
+            svn_pathrev_t from_loc,
             svn_editor3_txn_path_t parent_loc,
             const char *new_name,
             apr_pool_t *scratch_pool)
@@ -2377,7 +2377,7 @@ editor3_rm(void *baton,
 static svn_error_t *
 editor3_put(void *baton,
             svn_editor3_txn_path_t loc,
-            const svn_editor3_node_content_t *new_content,
+            const svn_element_content_t *new_content,
             apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
