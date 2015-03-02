@@ -65,8 +65,12 @@ struct svn_fs_x__revision_file_t
    * Elements are -1 / NULL until svn_fs_x__auto_read_footer gets called. */
   svn_fs_x__index_info_t p2l_info;
 
-  /* Pool used for all sub-structure allocations (file, streams etc.). */
+  /* Pool used for all sub-structure allocations (file, streams etc.).
+     A sub-pool of OWNER. NULL until the lazily initilized. */
   apr_pool_t *pool;
+
+  /* Pool that this structure got allocated in. */
+  apr_pool_t *owner;
 };
 
 /* Return a new revision file instance, allocated in RESULT_POOL, for
@@ -77,9 +81,7 @@ create_revision_file(svn_fs_t *fs,
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
 
-  apr_pool_t *file_pool = svn_pool_create(result_pool);
   svn_fs_x__revision_file_t *file = apr_palloc(result_pool, sizeof(*file));
-
   file->fs = fs;
   file->file_info.is_packed = FALSE;
   file->file_info.start_revision = SVN_INVALID_REVNUM;
@@ -94,7 +96,8 @@ create_revision_file(svn_fs_t *fs,
   file->p2l_info.start = -1;
   file->p2l_info.end = -1;
   file->p2l_info.checksum = NULL;
-  file->pool = file_pool;
+  file->pool = NULL;
+  file->owner = result_pool;
 
   return file;
 }
@@ -178,6 +181,17 @@ auto_make_writable(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Return the pool to be used for allocations with FILE.
+   Lazily created that pool upon the first call. */
+static apr_pool_t *
+get_file_pool(svn_fs_x__revision_file_t *file)
+{
+  if (file->pool == NULL)
+    file->pool = svn_pool_create(file->owner);
+
+  return file->pool;
+}
+
 /* Core implementation of svn_fs_fs__open_pack_or_rev_file working on an
  * existing, initialized FILE structure.  If WRITABLE is TRUE, give write
  * access to the file - temporarily resetting the r/o state if necessary.
@@ -191,6 +205,7 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
   svn_boolean_t retry = FALSE;
   svn_fs_t *fs = file->fs;
   svn_revnum_t rev = file->file_info.start_revision;
+  apr_pool_t *file_pool = get_file_pool(file);
 
   do
     {
@@ -201,19 +216,19 @@ open_pack_or_rev_file(svn_fs_x__revision_file_t *file,
                         : APR_READ | APR_BUFFERED;
 
       /* We may have to *temporarily* enable write access. */
-      err = writable ? auto_make_writable(path, file->pool, scratch_pool)
+      err = writable ? auto_make_writable(path, file_pool, scratch_pool)
                      : SVN_NO_ERROR; 
 
       /* open the revision file in buffered r/o or r/w mode */
       if (!err)
         err = svn_io_file_open(&apr_file, path, flags, APR_OS_DEFAULT,
-                               file->pool);
+                               file_pool);
 
       if (!err)
         {
           file->file = apr_file;
           file->stream = svn_stream_from_aprfile2(apr_file, TRUE,
-                                                  file->pool);
+                                                  file_pool);
 
           return SVN_NO_ERROR;
         }
@@ -271,7 +286,7 @@ static svn_error_t *
 auto_open(svn_fs_x__revision_file_t *file)
 {
   if (file->file == NULL)
-    SVN_ERR(open_pack_or_rev_file(file, FALSE, file->pool));
+    SVN_ERR(open_pack_or_rev_file(file, FALSE, get_file_pool(file)));
 
   return SVN_NO_ERROR;
 }
@@ -499,7 +514,8 @@ svn_fs_x__close_revision_file(svn_fs_x__revision_file_t *file)
     SVN_ERR(svn_io_file_close(file->file, file->pool));
 
   /* Release the memory. */
-  svn_pool_clear(file->pool);
+  if (file->pool)
+    svn_pool_clear(file->pool);
 
   /* Reset pointers to objects previously allocated from FILE->POOL. */
   file->file = NULL;
