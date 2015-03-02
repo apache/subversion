@@ -3088,26 +3088,11 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t kind;
-  svn_boolean_t conflicted;
   struct conflict_status_walker_baton cswb;
   apr_pool_t *iterpool = NULL;
   svn_error_t *err;
 
-  /* ### Just a versioned check? */
-  /* Conflicted is set to allow invoking on actual only nodes */
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  /* When the implementation still used the entry walker, depth
-     unknown was translated to infinity. */
-  if (kind != svn_node_dir)
-    depth = svn_depth_empty;
-  else if (depth == svn_depth_unknown)
+  if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
   cswb.db = wc_ctx->db;
