@@ -16,17 +16,6 @@ Status of 1.9.0:
 Candidate changes:
 ==================
 
- * r1663003
-   info --show-item: Change 'last-changed-rev' to 'last-changed-revision'.
-   Justification (for being a freeze exception):
-     API change.
-   Justification (general):
-     Longer-hand spelling is clearer and more self-explanatory.
-   Notes:
-     API change (can't be merged after 1.9.0).
-   Votes:
-     +1: danielsh, brane
-
  * r1663183, r1663184
    Introduce build support for Visual Studio "2015"
    Justification:
@@ -37,6 +26,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1663338, r1663347
+   Properly record resolving of individual property conflicts.
+   Justification:
+     Fixes a few implementation bugs in the resolver code and exposes the
+     api for more users than those that pass a callback function.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
@@ -44,3 +41,13 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1663003
+   info --show-item: Change 'last-changed-rev' to 'last-changed-revision'.
+   Justification (for being a freeze exception):
+     API change.
+   Justification (general):
+     Longer-hand spelling is clearer and more self-explanatory.
+   Notes:
+     API change (can't be merged after 1.9.0).
+   Votes:
+     +1: danielsh, brane, rhuijben
