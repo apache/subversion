@@ -2603,11 +2603,9 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
                     + path_len + SVN_INT64_BUFFER_SIZE
                                         /* path */
                     + 2                 /* action */
-                    + 4 + copyfrom_len + 2 * SVN_INT64_BUFFER_SIZE
-                                        /* list with copy-from info */
-                    + 2                 /* list start */
-                    + flags_str->len    /* longest flag names */
-                    + 4;                /* close open lists*/
+                    + 2 + copyfrom_len + 2 * SVN_INT64_BUFFER_SIZE
+                                        /* list start + copy-from info */
+                    + flags_str->len;   /* flags and closing lists */
 
   /* If the remaining buffer is big enough and we've got all parts,
      directly copy into the buffer. */
