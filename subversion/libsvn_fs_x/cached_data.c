@@ -339,16 +339,13 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
 
       /* Not found or not applicable. Try a noderev cache lookup.
        * If that succeeds, we are done here. */
-      if (ffd->node_revision_cache)
-        {
-          SVN_ERR(svn_cache__get((void **) noderev_p,
-                                 &is_cached,
-                                 ffd->node_revision_cache,
-                                 &key,
-                                 result_pool));
-          if (is_cached)
-            return SVN_NO_ERROR;
-        }
+      SVN_ERR(svn_cache__get((void **) noderev_p,
+                             &is_cached,
+                             ffd->node_revision_cache,
+                             &key,
+                             result_pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
 
       /* block-read will parse the whole block and will also return
          the one noderev that we need right now. */
@@ -612,7 +609,7 @@ create_rep_state_body(rep_state_t **rep_state,
                      : NULL;
 
   /* cache lookup, i.e. skip reading the rep header if possible */
-  if (ffd->rep_header_cache && SVN_IS_VALID_REVNUM(revision))
+  if (SVN_IS_VALID_REVNUM(revision))
     SVN_ERR(svn_cache__get((void **) &rh, &is_cached,
                            ffd->rep_header_cache, &key, result_pool));
 
@@ -703,9 +700,8 @@ create_rep_state_body(rep_state_t **rep_state,
         {
           SVN_ERR(block_read(NULL, fs, &rs->rep_id, rs->sfile->rfile,
                              result_pool, scratch_pool));
-          if (ffd->rep_header_cache)
-            SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh,
-                                   scratch_pool));
+          SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh,
+                                 scratch_pool));
         }
     }
 
@@ -1422,24 +1418,21 @@ read_container_window(svn_stringbuf_t **nwin,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__pair_cache_key_t key;
   svn_revnum_t revision = svn_fs_x__get_revnum(rs->rep_id.change_set);
+  svn_boolean_t is_cached = FALSE;
+  svn_fs_x__reps_baton_t baton;
 
   SVN_ERR(auto_set_start_offset(rs, scratch_pool));
   key.revision = svn_fs_x__packed_base_rev(fs, revision);
   key.second = rs->start;
 
   /* already in cache? */
-  if (ffd->reps_container_cache)
-    {
-      svn_boolean_t is_cached = FALSE;
-      svn_fs_x__reps_baton_t baton;
-      baton.fs = fs;
-      baton.idx = rs->sub_item;
+  baton.fs = fs;
+  baton.idx = rs->sub_item;
 
-      SVN_ERR(svn_cache__get_partial((void**)&extractor, &is_cached,
-                                     ffd->reps_container_cache, &key,
-                                     svn_fs_x__reps_get_func, &baton,
-                                     result_pool));
-    }
+  SVN_ERR(svn_cache__get_partial((void**)&extractor, &is_cached,
+                                 ffd->reps_container_cache, &key,
+                                 svn_fs_x__reps_get_func, &baton,
+                                 result_pool));
 
   /* read from disk, if necessary */
   if (extractor == NULL)
@@ -1706,20 +1699,16 @@ read_rep_header(svn_fs_x__rep_header_t **rep_header,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
   svn_boolean_t is_cached = FALSE;
-  
-  if (ffd->rep_header_cache)
-    {
-      SVN_ERR(svn_cache__get((void**)rep_header, &is_cached,
-                             ffd->rep_header_cache, key, pool));
-      if (is_cached)
-        return SVN_NO_ERROR;
-    }
+
+  SVN_ERR(svn_cache__get((void**)rep_header, &is_cached,
+                          ffd->rep_header_cache, key, pool));
+  if (is_cached)
+    return SVN_NO_ERROR;
 
   SVN_ERR(svn_fs_x__rev_file_stream(&stream, file));
   SVN_ERR(svn_fs_x__read_rep_header(rep_header, stream, pool, pool));
 
-  if (ffd->rep_header_cache)
-    SVN_ERR(svn_cache__set(ffd->rep_header_cache, key, *rep_header, pool));
+  SVN_ERR(svn_cache__set(ffd->rep_header_cache, key, *rep_header, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2798,7 +2787,7 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
 
   /* try cache lookup first */
 
-  if (ffd->changes_container_cache && svn_fs_x__is_packed_rev(fs, rev))
+  if (svn_fs_x__is_packed_rev(fs, rev))
     {
       apr_off_t offset;
       apr_uint32_t sub_item;
@@ -2814,14 +2803,10 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
                                      svn_fs_x__changes_get_list_func,
                                      &sub_item, result_pool));
     }
-  else if (ffd->changes_cache)
+  else
     {
       SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
                              &rev, result_pool));
-    }
-  else
-    {
-      found = FALSE;
     }
 
   if (!found)
@@ -2939,14 +2924,12 @@ block_read_changes(apr_array_header_t **changes,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
   svn_revnum_t revision = svn_fs_x__get_revnum(entry->items[0].change_set);
-  if (!must_read && !ffd->changes_cache)
-    return SVN_NO_ERROR;
 
   /* we don't support containers, yet */
   SVN_ERR_ASSERT(entry->item_count == 1);
 
   /* already in cache? */
-  if (!must_read && ffd->changes_cache)
+  if (!must_read)
     {
       svn_boolean_t is_cached = FALSE;
       SVN_ERR(svn_cache__has_key(&is_cached, ffd->changes_cache, &revision,
@@ -3000,7 +2983,7 @@ block_read_changes_container(apr_array_header_t **changes,
   key.second = entry->offset;
 
   /* already in cache? */
-  if (!must_read && ffd->changes_container_cache)
+  if (!must_read)
     {
       svn_boolean_t is_cached = FALSE;
       SVN_ERR(svn_cache__has_key(&is_cached, ffd->changes_container_cache,
@@ -3022,9 +3005,8 @@ block_read_changes_container(apr_array_header_t **changes,
     SVN_ERR(svn_fs_x__changes_get_list(changes, container, sub_item,
                                        result_pool));
 
-  if (ffd->changes_container_cache)
-    SVN_ERR(svn_cache__set(ffd->changes_container_cache, &key, container,
-                           scratch_pool));
+  SVN_ERR(svn_cache__set(ffd->changes_container_cache, &key, container,
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3041,14 +3023,12 @@ block_read_noderev(svn_fs_x__noderev_t **noderev_p,
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
-  if (!must_read && !ffd->node_revision_cache)
-    return SVN_NO_ERROR;
 
   /* we don't support containers, yet */
   SVN_ERR_ASSERT(entry->item_count == 1);
 
   /* already in cache? */
-  if (!must_read && ffd->node_revision_cache)
+  if (!must_read)
     {
       svn_boolean_t is_cached = FALSE;
       SVN_ERR(svn_cache__has_key(&is_cached, ffd->node_revision_cache, key,
@@ -3063,9 +3043,8 @@ block_read_noderev(svn_fs_x__noderev_t **noderev_p,
 
   SVN_ERR(svn_fs_x__read_noderev(noderev_p, stream, result_pool,
                                  scratch_pool));
-  if (ffd->node_revision_cache)
-    SVN_ERR(svn_cache__set(ffd->node_revision_cache, key, *noderev_p,
-                           scratch_pool));
+  SVN_ERR(svn_cache__set(ffd->node_revision_cache, key, *noderev_p,
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3090,7 +3069,7 @@ block_read_noderevs_container(svn_fs_x__noderev_t **noderev_p,
   key.second = entry->offset;
 
   /* already in cache? */
-  if (!must_read && ffd->noderevs_container_cache)
+  if (!must_read)
     {
       svn_boolean_t is_cached = FALSE;
       SVN_ERR(svn_cache__has_key(&is_cached, ffd->noderevs_container_cache,
@@ -3110,9 +3089,8 @@ block_read_noderevs_container(svn_fs_x__noderev_t **noderev_p,
     SVN_ERR(svn_fs_x__noderevs_get(noderev_p, container, sub_item,
                                    result_pool));
 
-  if (ffd->noderevs_container_cache)
-    SVN_ERR(svn_cache__set(ffd->noderevs_container_cache, &key, container,
-                           scratch_pool));
+  SVN_ERR(svn_cache__set(ffd->noderevs_container_cache, &key, container,
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3137,7 +3115,7 @@ block_read_reps_container(svn_fs_x__rep_extractor_t **extractor,
   key.second = entry->offset;
 
   /* already in cache? */
-  if (!must_read && ffd->reps_container_cache)
+  if (!must_read)
     {
       svn_boolean_t is_cached = FALSE;
       SVN_ERR(svn_cache__has_key(&is_cached, ffd->reps_container_cache,
@@ -3158,9 +3136,8 @@ block_read_reps_container(svn_fs_x__rep_extractor_t **extractor,
     SVN_ERR(svn_fs_x__reps_get(extractor, fs, container, sub_item,
                                result_pool));
 
-  if (ffd->noderevs_container_cache)
-    SVN_ERR(svn_cache__set(ffd->reps_container_cache, &key, container,
-                           scratch_pool));
+  SVN_ERR(svn_cache__set(ffd->reps_container_cache, &key, container,
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3251,11 +3228,10 @@ block_read(void **result,
                     break;
 
                   case SVN_FS_X__ITEM_TYPE_NODEREV:
-                    if (ffd->node_revision_cache || is_result)
-                      SVN_ERR(block_read_noderev((svn_fs_x__noderev_t **)&item,
-                                                 fs, revision_file,
-                                                 entry, &key, is_result,
-                                                 pool, iterpool));
+                    SVN_ERR(block_read_noderev((svn_fs_x__noderev_t **)&item,
+                                               fs, revision_file,
+                                               entry, &key, is_result,
+                                               pool, iterpool));
                     break;
 
                   case SVN_FS_X__ITEM_TYPE_CHANGES:
