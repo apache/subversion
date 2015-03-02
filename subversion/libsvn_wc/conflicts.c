@@ -2400,6 +2400,9 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
     else
       old_props = their_old_props;
 
+  SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
+                                scratch_pool, scratch_pool));
+
   /* We currently handle *_conflict as *_full as this argument is currently
      always applied for all conflicts on a node at the same time. Giving
      an error would break some tests that assumed that this would just
@@ -2427,11 +2430,7 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
     case svn_wc_conflict_choose_merged:
       if ((merged_file || merged_value) && conflicted_propname[0] != '\0')
         {
-          apr_hash_t *actual_props;
-
-          SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
-                                        scratch_pool, scratch_pool));
-          resolve_from = actual_props;
+          resolve_from = apr_hash_copy(scratch_pool, actual_props);
 
           if (!merged_value)
             {
@@ -2456,8 +2455,6 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
     }
 
 
-  SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
-                                    scratch_pool, scratch_pool));
   if (resolve_from)
     {
       apr_hash_index_t *hi;
