@@ -1233,8 +1233,9 @@ get_and_increment_txn_key_body(void *baton,
 }
 
 /* Create a unique directory for a transaction in FS based on revision REV.
-   Return the ID for this transaction in *ID_P and *TXN_ID.  Use a sequence
-   value in the transaction ID to prevent reuse of transaction IDs. */
+   Return the ID for this transaction in *ID_P, allocated from RESULT_POOL
+   and *TXN_ID.  Use a sequence value in the transaction ID to prevent reuse
+   of transaction IDs.  Allocate temporaries from SCRATCH_POOL. */
 static svn_error_t *
 create_txn_dir(const char **id_p,
                svn_fs_x__txn_id_t *txn_id,
@@ -1464,8 +1465,8 @@ svn_fs_x__get_txn(svn_fs_x__transaction_t **txn_p,
   return SVN_NO_ERROR;
 }
 
-/* If it is supported by the format of file system FS, store the (ITEM_INDEX,
- * OFFSET) pair in the log-to-phys proto index file of transaction TXN_ID.
+/* Store the (ITEM_INDEX, OFFSET) pair in the log-to-phys proto index file
+ * of transaction TXN_ID in filesystem FS.
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
@@ -1485,9 +1486,8 @@ store_l2p_index_entry(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* If it is supported by the format of file system FS, store ENTRY in the
- * phys-to-log proto index file of transaction TXN_ID.
- * Use SCRATCH_POOL for temporary allocations.
+/* Store ENTRY in the phys-to-log proto index file of transaction TXN_ID
+ * in filesystem FS.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 store_p2l_index_entry(svn_fs_t *fs,
@@ -1977,8 +1977,7 @@ shards_spanned(int *spanned,
 /* Given a node-revision NODEREV in filesystem FS, return the
    representation in *REP to use as the base for a text representation
    delta if PROPS is FALSE.  If PROPS has been set, a suitable props
-   base representation will be returned.  Perform temporary allocations
-   in *POOL. */
+   base representation will be returned.  Perform allocations in POOL. */
 static svn_error_t *
 choose_delta_base(svn_fs_x__representation_t **rep,
                   svn_fs_t *fs,
@@ -1986,9 +1985,10 @@ choose_delta_base(svn_fs_x__representation_t **rep,
                   svn_boolean_t props,
                   apr_pool_t *pool)
 {
-  /* The zero-based index (counting from the "oldest" end), along NODEREVs line
-   * predecessors, of the node-rev we will use as delta base. */
+  /* The zero-based index (counting from the "oldest" end), along NODEREVs
+   * line predecessors, of the node-rev we will use as delta base. */
   int count;
+
   /* The length of the linear part of a delta chain.  (Delta chains use
    * skip-delta bits for the high-order bits and are linear in the low-order
    * bits.) */
@@ -2197,7 +2197,7 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
       header.type = svn_fs_x__rep_self_delta;
     }
   SVN_ERR(svn_fs_x__write_rep_header(&header, b->rep_stream,
-                                      b->local_pool));
+                                     b->local_pool));
 
   /* Now determine the offset of the actual svndiff data. */
   SVN_ERR(svn_fs_x__get_file_offset(&b->delta_start, file,
@@ -2531,7 +2531,8 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
     {
       svn_fs_x__txn_id_t txn_id
         = svn_fs_x__get_txn_id(noderev->noderev_id.change_set);
-      noderev->prop_rep = apr_pcalloc(scratch_pool, sizeof(*noderev->prop_rep));
+      noderev->prop_rep = apr_pcalloc(scratch_pool,
+                                      sizeof(*noderev->prop_rep));
       noderev->prop_rep->id.change_set = id->change_set;
       SVN_ERR(allocate_item_index(&noderev->prop_rep->id.number, fs,
                                   txn_id, scratch_pool));
