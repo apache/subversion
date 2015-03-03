@@ -42,7 +42,7 @@ Candidate changes:
      This regression was introduced in r1658194. Reverting this change
      is just as valid as backporting this fix.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1663671
    Improve obstructing working copy detection in the update editor
@@ -55,6 +55,13 @@ Candidate changes:
      This is not a regression against 1.8.x.
    Votes:
      +1: rhuijben
+
+ * r1663697
+   Set svn:date earlier when creating a BDB txn.
+   Justification:
+     Required for new-in-1.9 svn:client-date to work properly on BDB.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
