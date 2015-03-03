@@ -560,6 +560,13 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
 }
 
 
+void *
+svn_hash__gets(apr_hash_t *ht, const char *key)
+{
+  return apr_hash_get(ht, key, APR_HASH_KEY_STRING);
+}
+
+
 
 /*** Specialized getter APIs ***/
 
