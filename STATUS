@@ -57,12 +57,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1663697
+ * r1663697, r1663706
    Set svn:date earlier when creating a BDB txn.
    Justification:
      Required for new-in-1.9 svn:client-date to work properly on BDB.
+   Notes:
+     r1663697 is the fix for this problem, r1663706 adds a regression test.
    Votes:
-     +1: philip
+     +1: philip (without r1663706)
+     +1: kotkov
 
 Veto-blocked changes:
 =====================
