@@ -2381,8 +2381,15 @@ def delete_dir_with_lots_of_locked_files(sbox):
   svntest.actions.run_and_verify_svn(None, [], 'lock',
                                      '-m', 'All locks',
                                       *locked_paths)
-  # Locally delete A
+  # Locally delete A (regression against earlier versions, which
+  #                   always used a special non-standard request)
   sbox.simple_rm("A")
+
+  # But a further replacement never worked
+  sbox.simple_mkdir("A")
+  # And an additional propset didn't work either
+  # (but doesn't require all lock tokens recursively)
+  sbox.simple_propset("k", "v", "A")
 
   # Commit the deletion
   # XFAIL: As of 1.8.10, this commit fails with:
