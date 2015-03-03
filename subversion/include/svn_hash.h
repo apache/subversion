@@ -239,7 +239,6 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
                            const apr_array_header_t *keys,
                            apr_pool_t *pool);
 
-#ifdef SVN_DEBUG
 /* In debug builds, the svn_hash_gets macro forwards the parameters
  * through this function in order to have parameter type checking,
  * particularly for the key. The svn_hash_sets macro gets parameter
@@ -247,7 +246,6 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
  */
 void *
 svn_hash__gets(apr_hash_t *ht, const char *key);
-#endif
 
 /** Shortcut for apr_hash_get() with a const char * key.
  *
