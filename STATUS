@@ -43,6 +43,7 @@ Candidate changes:
      is just as valid as backporting this fix.
    Votes:
      +1: rhuijben, philip
+     -0: ivan (prefer r1658194 micro-optimization to be reverted)
 
  * r1663671
    Improve obstructing working copy detection in the update editor
