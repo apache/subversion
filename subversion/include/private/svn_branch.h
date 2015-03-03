@@ -697,7 +697,8 @@ svn_branch_revision_root_serialize(svn_stream_t *stream,
  * FROM_BRANCH must be an immediate sub-branch of TO_OUTER_BRANCH.
  */
 svn_error_t *
-svn_branch_branch(svn_branch_instance_t *from_branch,
+svn_branch_branch(svn_branch_instance_t **new_branch_p,
+                  svn_branch_instance_t *from_branch,
                   int from_eid,
                   svn_branch_instance_t *to_outer_branch,
                   svn_branch_eid_t to_outer_parent_eid,
@@ -706,6 +707,8 @@ svn_branch_branch(svn_branch_instance_t *from_branch,
 
 /* Change the existing simple sub-tree at OUTER_BRANCH:OUTER_EID into a
  * sub-branch in a new branch family.
+ *
+ * Set *NEW_BRANCH_P to the new branch.
  *
  * ### TODO: Also we must (in order to maintain correctness) branchify
  *     the corresponding subtrees in all other branches in this family.
@@ -718,14 +721,9 @@ svn_branch_branch(svn_branch_instance_t *from_branch,
  *     ?[unassign eid in outer branch (except root element)]
  *     assign a new eid in inner branch
  */
-/* The element-based version */
-/* ### Does this need to return the new branch? Certainly the caller needs
- *     some way to find out what branch was created there. Probably better
- *     to return it directly than have the caller use APIs that query the
- *     overall branching "state".
- */
 svn_error_t *
-svn_branch_branchify(svn_branch_instance_t *outer_branch,
+svn_branch_branchify(svn_branch_instance_t **new_branch_p,
+                     svn_branch_instance_t *outer_branch,
                      svn_branch_eid_t outer_eid,
                      apr_pool_t *scratch_pool);
 
