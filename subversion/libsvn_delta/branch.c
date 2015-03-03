@@ -1443,7 +1443,6 @@ svn_branch_instance_get_id(svn_branch_instance_t *branch,
       branch = branch->outer_branch;
     }
   id = apr_psprintf(result_pool, "^%s", id);
-  SVN_DBG(("branch full id: '%s'", id));
   return id;
 }
 
@@ -1568,14 +1567,15 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
 }
 
 svn_error_t *
-svn_branch_branch(svn_branch_instance_t *from_branch,
+svn_branch_branch(svn_branch_instance_t **new_branch_p,
+                  svn_branch_instance_t *from_branch,
                   int from_eid,
                   svn_branch_instance_t *to_outer_branch,
                   svn_branch_eid_t to_outer_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_branch_branch_subtree_r(NULL,
+  SVN_ERR(svn_branch_branch_subtree_r(new_branch_p,
                                       from_branch, from_eid,
                                       to_outer_branch, to_outer_parent_eid,
                                       new_name,
@@ -1585,7 +1585,8 @@ svn_branch_branch(svn_branch_instance_t *from_branch,
 }
 
 svn_error_t *
-svn_branch_branchify(svn_branch_instance_t *outer_branch,
+svn_branch_branchify(svn_branch_instance_t **new_branch_p,
+                     svn_branch_instance_t *outer_branch,
                      svn_branch_eid_t outer_eid,
                      apr_pool_t *scratch_pool)
 {
@@ -1630,6 +1631,8 @@ svn_branch_branchify(svn_branch_instance_t *outer_branch,
                                           old_content->parent_eid,
                                           old_content->name);
 
+  if (new_branch_p)
+    *new_branch_p = new_branch;
   return SVN_NO_ERROR;
 }
 

@@ -37,6 +37,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include <apr_lib.h>
 
@@ -79,7 +80,14 @@ check_lib_versions(void)
 
 static svn_boolean_t quiet = FALSE;
 
+/* Is BRANCH1 the same branch as BRANCH2? Compare by full branch-ids; don't
+   require identical branch-instance objects. */
+#define BRANCH_IS_SAME_BRANCH(branch1, branch2, scratch_pool) \
+  (strcmp(svn_branch_instance_get_id(branch1, scratch_pool), \
+          svn_branch_instance_get_id(branch2, scratch_pool)) == 0)
+
 /*  */
+__attribute__((format(printf, 1, 2)))
 static void
 notify(const char *fmt,
        ...)
@@ -327,6 +335,36 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
   return SVN_NO_ERROR;
 }
 
+/* Return a string suitable for appending to a displayed element name or
+ * element id to indicate that it is a subbranch root element for SUBBRANCH.
+ * Return "" if SUBBRANCH is null.
+ */
+static const char *
+branch_str(svn_branch_instance_t *subbranch,
+           apr_pool_t *result_pool)
+{
+  if (subbranch)
+    return apr_psprintf(result_pool,
+                      " (branch %s)",
+                      svn_branch_instance_get_id(subbranch, result_pool));
+  return "";
+}
+
+/* Return a string suitable for appending to a displayed element name or
+ * element id to indicate that BRANCH:EID is a subbranch root element.
+ * Return "" if the element is not a subbranch root element.
+ */
+static const char *
+subbranch_str(svn_branch_instance_t *branch,
+              int eid,
+              apr_pool_t *result_pool)
+{
+  svn_branch_instance_t *subbranch
+    = svn_branch_get_subbranch_at_eid(branch, eid, result_pool);
+
+  return branch_str(subbranch, result_pool);
+}
+
 /* List all branch instances in FAMILY.
  *
  * If RECURSIVE is true, include branches in nested families.
@@ -363,7 +401,8 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
 
       if (verbose)
         {
-          printf("  branch %d (root element %d -> '/%s')\n",
+          printf("  branch %s bid=%d root=e%d /%s\n",
+                 svn_branch_instance_get_id(branch, scratch_pool),
                  branch->sibling_defn->bid, branch->sibling_defn->root_eid,
                  svn_branch_get_root_rrpath(branch, scratch_pool));
           for (eid = family->first_eid; eid < family->next_eid; eid++)
@@ -374,17 +413,19 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
               if (rrpath)
                 {
                   const char *relpath
-                    = svn_relpath_skip_ancestor(
-                                                svn_branch_get_root_rrpath(branch, scratch_pool), rrpath);
+                    = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(
+                                                  branch, scratch_pool), rrpath);
 
-                  printf("    e%d -> %s\n",
-                         eid, relpath[0] ? relpath : ".");
+                  printf("    e%d %s%s\n",
+                         eid, relpath[0] ? relpath : ".",
+                         subbranch_str(branch, eid, scratch_pool));
                 }
             }
         }
       else
         {
-          printf("  /%s\n",
+          printf("  %s /%s\n",
+                 svn_branch_instance_get_id(branch, scratch_pool),
                  svn_branch_get_root_rrpath(branch, scratch_pool));
         }
     }
@@ -682,13 +723,14 @@ branch_merge_subtree_r(svn_editor3_t *editor,
 
       if (conflict)
         {
-          notify("!    <e%d> <conflict>", eid);
+          notify("!    e%d <conflict>", eid);
           had_conflict = TRUE;
         }
       else if (e_tgt && result)
         {
-          notify("M/V  <e%d> %s",
-                 eid, result->name);
+          notify("M/V  e%d %s%s",
+                 eid, result->name,
+                 subbranch_str(tgt->branch, eid, scratch_pool));
 
           SVN_ERR(svn_editor3_alter(editor, tgt->rev, tgt->branch, eid,
                                     result->parent_eid, result->name,
@@ -696,7 +738,9 @@ branch_merge_subtree_r(svn_editor3_t *editor,
         }
       else if (e_tgt)
         {
-          notify("D    <e%d> %s", eid, e_yca->name);
+          notify("D    e%d %s%s",
+                 eid, e_yca->name,
+                 subbranch_str(yca->branch, eid, scratch_pool));
           SVN_ERR(svn_editor3_delete(editor, tgt->rev, tgt->branch, eid));
         }
       else if (result)
@@ -705,12 +749,11 @@ branch_merge_subtree_r(svn_editor3_t *editor,
             = svn_branch_get_subbranch_at_eid(src->branch, eid, scratch_pool);
 
           if (subbranch)
-            notify("A    <e%d> %s (subbranch b%d e%d)",
+            notify("A    e%d %s%s",
                    eid, result->name,
-                   subbranch->sibling_defn->bid,
-                   subbranch->sibling_defn->root_eid);
+                   subbranch_str(src->branch, eid, scratch_pool));
           else
-            notify("A    <e%d> %s", eid, result->name);
+            notify("A    e%d %s", eid, result->name);
 
           /* In BRANCH, create an instance of the element EID with new content.
            *
@@ -866,12 +909,14 @@ svn_branch_diff_e(svn_editor3_t *editor,
               printed_header = TRUE;
             }
 
-          printf("%s%c%c%c e%d  %s%s%s\n",
+          printf("%s%c%c%c e%d  %s%s%s%s\n",
                  prefix,
                  status_mod, status_reparent, status_rename,
                  eid,
                  e1 ? apr_psprintf(scratch_pool, "e%d/%s",
                                    e1->parent_eid, e1->name) : "",
+                 subbranch_str(e0 ? left->branch : right->branch, eid,
+                               scratch_pool),
                  e0 && e1 ? " from " : "",
                  e0 ? apr_psprintf(scratch_pool, "e%d/%s",
                                    e0->parent_eid, e0->name) : "");
@@ -887,6 +932,7 @@ typedef struct diff_item_t
   char status_mod, status_reparent, status_rename;
   const char *major_path;
   const char *from;
+  const char *subbranch_str;
 } diff_item_t;
 
 /*  */
@@ -995,6 +1041,8 @@ svn_branch_diff(svn_editor3_t *editor,
             }
           item->major_path = (e1 ? path1 : path0);
           item->from = from;
+          item->subbranch_str = subbranch_str(e0 ? left->branch : right->branch,
+                                              eid, scratch_pool);
           APR_ARRAY_PUSH(diff_changes, void *) = item;
         }
     }
@@ -1008,10 +1056,11 @@ svn_branch_diff(svn_editor3_t *editor,
     {
       diff_item_t *item = APR_ARRAY_IDX(diff_changes, i, void *);
 
-      printf("%s%c%c%c %s%s\n",
+      printf("%s%c%c%c %s%s%s\n",
              prefix,
              item->status_mod, item->status_reparent, item->status_rename,
              item->major_path,
+             item->subbranch_str,
              item->from);
     }
 
@@ -1072,7 +1121,8 @@ svn_branch_diff_r(svn_editor3_t *editor,
   if (!left)
     {
       header = apr_psprintf(scratch_pool,
-                 "--- branch added, family %d, at '/%s'\n",
+                 "--- added branch %s, family %d, at /%s\n",
+                 svn_branch_instance_get_id(right->branch, scratch_pool),
                  right->branch->sibling_defn->family->fid,
                  svn_branch_get_root_rrpath(right->branch, scratch_pool));
       printf("%s%s", prefix, header);
@@ -1080,15 +1130,18 @@ svn_branch_diff_r(svn_editor3_t *editor,
   else if (!right)
     {
       header = apr_psprintf(scratch_pool,
-                 "--- branch deleted, family %d, at '/%s'\n",
+                 "--- deleted branch %s, family %d, at /%s\n",
+                 svn_branch_instance_get_id(left->branch, scratch_pool),
                  left->branch->sibling_defn->family->fid,
                  svn_branch_get_root_rrpath(left->branch, scratch_pool));
       printf("%s%s", prefix, header);
     }
   else
     {
+      assert(BRANCH_IS_SAME_BRANCH(left->branch, right->branch, scratch_pool));
       header = apr_psprintf(scratch_pool,
-                 "--- branch diff, family %d, at left '/%s' right '/%s'\n",
+                 "--- diff branch %s, family %d, at /%s : /%s\n",
+                 svn_branch_instance_get_id(left->branch, scratch_pool),
                  right->branch->sibling_defn->family->fid,
                  svn_branch_get_root_rrpath(left->branch, scratch_pool),
                  svn_branch_get_root_rrpath(right->branch, scratch_pool));
@@ -1496,11 +1549,17 @@ execute(const apr_array_header_t *actions,
           VERIFY_REV_UNSPECIFIED("branch", 1);
           VERIFY_EID_NONEXISTENT("branch", 1);
           VERIFY_PARENT_EID_EXISTS("branch", 1);
-          SVN_ERR(svn_branch_branch(el_rev[0]->branch, el_rev[0]->eid,
-                                    el_rev[1]->branch, parent_el_rev[1]->eid,
-                                    path_name[1],
-                                    iterpool));
-          notify("A+   (br) %s", action->relpath[1]);
+          {
+            svn_branch_instance_t *new_branch;
+
+            SVN_ERR(svn_branch_branch(&new_branch,
+                                      el_rev[0]->branch, el_rev[0]->eid,
+                                      el_rev[1]->branch, parent_el_rev[1]->eid,
+                                      path_name[1],
+                                      iterpool));
+            notify("A+   %s%s", action->relpath[1],
+                   branch_str(new_branch, iterpool));
+          }
           made_changes = TRUE;
           break;
         case ACTION_MKBRANCH:
@@ -1512,23 +1571,32 @@ execute(const apr_array_header_t *actions,
             svn_element_content_t *content
               = svn_element_content_create_dir(props, iterpool);
             int new_eid;
+            svn_branch_instance_t *new_branch;
 
             SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
                                     parent_el_rev[0]->branch,
                                     parent_el_rev[0]->eid, path_name[0],
                                     content));
-            SVN_ERR(svn_branch_branchify(parent_el_rev[0]->branch, new_eid,
+            SVN_ERR(svn_branch_branchify(&new_branch,
+                                         parent_el_rev[0]->branch, new_eid,
                                          iterpool));
+            notify("A    %s%s", action->relpath[0],
+                   branch_str(new_branch, iterpool));
           }
-          notify("A    (br) %s", action->relpath[0]);
           made_changes = TRUE;
           break;
         case ACTION_BRANCHIFY:
           VERIFY_REV_UNSPECIFIED("branchify", 0);
           VERIFY_EID_EXISTS("branchify", 0);
-          SVN_ERR(svn_branch_branchify(el_rev[0]->branch, el_rev[0]->eid,
-                                       iterpool));
-          notify("R    (br) %s", action->relpath[0]);
+          {
+            svn_branch_instance_t *new_branch;
+
+            SVN_ERR(svn_branch_branchify(&new_branch,
+                                         el_rev[0]->branch, el_rev[0]->eid,
+                                         iterpool));
+            notify("R    %s%s", action->relpath[0],
+                   branch_str(new_branch, iterpool));
+          }
           made_changes = TRUE;
           break;
         case ACTION_DISSOLVE:
