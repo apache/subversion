@@ -5167,6 +5167,17 @@ test_fs_info_format(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Sleeps until apr_time_now() value changes. */
+static void sleep_for_timestamps()
+{
+  apr_time_t start = apr_time_now();
+
+  while (start == apr_time_now())
+    {
+      apr_sleep(APR_USEC_PER_SEC / 1000);
+    }
+}
+
 static svn_error_t *
 commit_timestamp(const svn_test_opts_t *opts,
                  apr_pool_t *pool)
@@ -5178,6 +5189,7 @@ commit_timestamp(const svn_test_opts_t *opts,
   svn_revnum_t rev = 0;
   apr_hash_t *proplist;
   svn_string_t *svn_date;
+  svn_string_t *txn_svn_date;
 
   SVN_ERR(svn_test__create_fs(&fs, "test-fs-commit-timestamp",
                               opts, pool));
@@ -5256,6 +5268,37 @@ commit_timestamp(const svn_test_opts_t *opts,
   svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
                           APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(svn_date);
+
+  /* Commit that doesn't do anything special about svn:date. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/zig/foo", pool));
+  SVN_ERR(svn_fs_txn_prop(&txn_svn_date, txn, SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(txn_svn_date);
+  sleep_for_timestamps();
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date);
+  SVN_TEST_ASSERT(!svn_string_compare(svn_date, txn_svn_date));
+
+  /* Commit that instructs the backend to use a specific svn:date, but
+   * doesn't provide one.  This used to fail with BDB prior to r1663697. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, rev, SVN_FS_TXN_CLIENT_DATE, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/zig/bar", pool));
+  SVN_ERR(svn_fs_txn_prop(&txn_svn_date, txn, SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(txn_svn_date);
+  sleep_for_timestamps();
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date);
+  SVN_TEST_ASSERT(!svn_string_compare(svn_date, txn_svn_date));
 
   return SVN_NO_ERROR;
 }
