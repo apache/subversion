@@ -5168,7 +5168,7 @@ test_fs_info_format(const svn_test_opts_t *opts,
 }
 
 /* Sleeps until apr_time_now() value changes. */
-static void sleep_for_timestamps()
+static void sleep_for_timestamps(void)
 {
   apr_time_t start = apr_time_now();
 
