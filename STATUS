@@ -44,6 +44,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1663671
+   Improve obstructing working copy detection in the update editor
+   Justification:
+     Avoids doing unrecoverable damage to wc.db on invalid editor
+     operations in cases where that isn't necessary. Github's
+     Subversion compatibility triggers this problem in some sparse
+     working copy scenarios.
+   Notes:
+     This is not a regression against 1.8.x.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
