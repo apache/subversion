@@ -885,7 +885,7 @@ svn_cl__info(apr_getopt_t *os,
       if (opt_state->no_newline)
         return svn_error_create(
             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-            _("--no-newline' is not valid in --xml mode"));
+            _("--no-newline is not valid in --xml mode"));
 
       /* If output is not incremental, output the XML header and wrap
          everything in a top-level element. This makes the output in
