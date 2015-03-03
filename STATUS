@@ -64,7 +64,7 @@ Candidate changes:
    Notes:
      r1663697 is the fix for this problem, r1663706 and r1663749 add a test.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
      +1: kotkov (without r1663749)
 
 Veto-blocked changes:
