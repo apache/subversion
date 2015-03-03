@@ -695,7 +695,6 @@ fp.close()"""
                     "Properties on '/A':\n",
                     '  bogus_prop\n',
                     '  svn:log\n', '  svn:author\n',
-                    '  svn:check-locks\n', # internal prop, not really expected
                     '  bogus_rev_prop\n',
                     '  svn:date\n',
                     '  svn:txn-client-compat-version\n',
