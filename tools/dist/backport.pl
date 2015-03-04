@@ -3,7 +3,16 @@ use warnings;
 use strict;
 use feature qw/switch say/;
 
-#no warnings 'experimental::smartmatch';
+use v5.10.0; # needed for $^V
+
+# The given/when smartmatch facility, introduced in Perl v5.10, was made
+# experimental and "subject to change" in v5.18 (see perl5180delta).  Every
+# use of it now triggers a warning.
+#
+# As of Perl v5.20.1, the semantics of given/when provided by Perl are
+# compatible with those expected by the script, so disable the warning for
+# those Perls.
+no if $^V le v5.20.1, warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
