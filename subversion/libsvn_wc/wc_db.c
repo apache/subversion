@@ -2125,11 +2125,13 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   int op_depth;
   svn_node_kind_t wrk_kind;
   svn_boolean_t no_delete_wc = FALSE;
+  svn_boolean_t file_external;
 
   SVN_ERR(svn_wc__db_base_get_info_internal(&status, &kind, &revision,
                                             &repos_relpath, &repos_id,
                                             NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL,
+                                            &file_external,
                                             wcroot, local_relpath,
                                             scratch_pool, scratch_pool));
 
@@ -2360,35 +2362,69 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* Step 5: handle the BASE node itself */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
   SVN_ERR(db_retract_parent_delete(wcroot, local_relpath, 0, scratch_pool));
 
   if (mark_not_present || mark_excluded)
     {
       struct insert_base_baton_t ibb;
-      blank_ibb(&ibb);
+      svn_boolean_t no_marker = FALSE;
 
-      ibb.repos_id = repos_id;
-      ibb.status = mark_excluded ? svn_wc__db_status_excluded
-                                 : svn_wc__db_status_not_present;
-      ibb.kind = kind;
-      ibb.repos_relpath = repos_relpath;
-      ibb.revision = SVN_IS_VALID_REVNUM(marker_revision)
-                        ? marker_revision
-                        : revision;
+      if (file_external)
+        {
+          const char *parent_local_relpath;
+          const char *name;
+          svn_error_t *err;
 
-      /* Depending upon KIND, any of these might get used. */
-      ibb.children = NULL;
-      ibb.depth = svn_depth_unknown;
-      ibb.checksum = NULL;
-      ibb.target = NULL;
+          /* For file externals we only want to place a not present marker
+             if there is a BASE parent */
+          
+          svn_relpath_split(&parent_local_relpath, &name, local_relpath,
+                            scratch_pool);
 
-      SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
+          err = svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
+                                                  &repos_relpath, &repos_id,
+                                                  NULL, NULL, NULL, NULL, NULL,
+                                                  NULL, NULL, NULL, NULL, NULL,
+                                                  wcroot, parent_local_relpath,
+                                                  scratch_pool, scratch_pool);
+
+          if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_trace(err);
+          else if (err)
+            {
+              svn_error_clear(err);
+              no_marker = TRUE;
+            }
+          else
+            {
+              /* Replace the repos_relpath with something more expected than
+                 the unrelated old file external repository relpath, which
+                 one day may come from a different repository */
+              repos_relpath = svn_relpath_join(repos_relpath, name, scratch_pool);
+            }
+        }
+
+      if (!no_marker)
+        {
+          blank_ibb(&ibb);
+
+          ibb.repos_id = repos_id;
+          ibb.status = mark_excluded ? svn_wc__db_status_excluded
+                                     : svn_wc__db_status_not_present;
+          ibb.kind = kind;
+          ibb.repos_relpath = repos_relpath;
+          ibb.revision = SVN_IS_VALID_REVNUM(marker_revision)
+                            ? marker_revision
+                            : revision;
+
+          /* Depending upon KIND, any of these might get used. */
+          ibb.children = NULL;
+          ibb.depth = svn_depth_unknown;
+          ibb.checksum = NULL;
+          ibb.target = NULL;
+
+          SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
+        }
     }
 
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
@@ -3480,11 +3516,18 @@ db_external_remove(const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  int affected_rows;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_EXTERNAL));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  if (!affected_rows)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' is not an external."),
+                             path_for_error_message(wcroot, local_relpath,
+                                                    scratch_pool));
 
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
 
