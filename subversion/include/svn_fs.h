@@ -2661,7 +2661,7 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
                                                svn_error_t *fs_err,
                                                apr_pool_t *pool);
 
-/** Lock the paths in @a targets in @a fs.
+/** Lock the paths in @a lock_targets in @a fs.
  *
  * @a fs must have a username associated with it (see
  * #svn_fs_access_t), else return #SVN_ERR_FS_NO_USER.  Set the
@@ -2675,7 +2675,7 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
  * to use it.  If in doubt, pass 0.
  *
  * The paths to be locked are passed as the <tt>const char *</tt> keys
- * of the @a targets hash.  The hash values are
+ * of the @a lock_targets hash.  The hash values are
  * <tt>svn_fs_lock_target_t *</tt> and provide the token and
  * @a current_rev for each path.  The token is a lock token such as can
  * be generated using svn_fs_generate_lock_token() (indicating that
@@ -2697,7 +2697,7 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
  * If @a expiration_date is zero, then create a non-expiring lock.
  * Else, the lock will expire at @a expiration_date.
  *
- * For each path in @a targets @a lock_callback will be invoked
+ * For each path in @a lock_targets @a lock_callback will be invoked
  * passing @a lock_baton and the lock and error that apply to path.
  * @a lock_callback can be NULL in which case it is not called.
  *
@@ -2713,7 +2713,7 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
  */
 svn_error_t *
 svn_fs_lock_many(svn_fs_t *fs,
-                 apr_hash_t *targets,
+                 apr_hash_t *lock_targets,
                  const char *comment,
                  svn_boolean_t is_dav_comment,
                  apr_time_t expiration_date,
@@ -2753,10 +2753,10 @@ svn_fs_generate_lock_token(const char **token,
                            apr_pool_t *pool);
 
 
-/** Remove the locks on the paths in @a targets in @a fs.
+/** Remove the locks on the paths in @a unlock_targets in @a fs.
  *
  * The paths to be unlocked are passed as <tt>const char *</tt> keys
- * of the @a targets hash with the corresponding lock tokens as
+ * of the @a unlock_targets hash with the corresponding lock tokens as
  * <tt>const char *</tt> values.  If the token doesn't point to a
  * lock, yield an #SVN_ERR_FS_BAD_LOCK_TOKEN error for this path.  If
  * the token points to an expired lock, yield an
@@ -2770,7 +2770,7 @@ svn_fs_generate_lock_token(const char **token,
  * however, don't return error; allow the lock to be "broken" in any
  * case.  In the latter case, the token shall be @c NULL.
  *
- * For each path in @a targets @a lock_callback will be invoked
+ * For each path in @a unlock_targets @a lock_callback will be invoked
  * passing @a lock_baton and error that apply to path.  The @a lock
  * passed to the callback will be NULL.  @a lock_callback can be NULL
  * in which case it is not called.
@@ -2785,7 +2785,7 @@ svn_fs_generate_lock_token(const char **token,
  */
 svn_error_t *
 svn_fs_unlock_many(svn_fs_t *fs,
-                   apr_hash_t *targets,
+                   apr_hash_t *unlock_targets,
                    svn_boolean_t break_lock,
                    svn_fs_lock_callback_t lock_callback,
                    void *lock_baton,

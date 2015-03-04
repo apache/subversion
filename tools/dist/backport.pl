@@ -3,7 +3,16 @@ use warnings;
 use strict;
 use feature qw/switch say/;
 
-#no warnings 'experimental::smartmatch';
+use v5.10.0; # needed for $^V
+
+# The given/when smartmatch facility, introduced in Perl v5.10, was made
+# experimental and "subject to change" in v5.18 (see perl5180delta).  Every
+# use of it now triggers a warning.
+#
+# As of Perl v5.20.1, the semantics of given/when provided by Perl are
+# compatible with those expected by the script, so disable the warning for
+# those Perls.
+no if $^V le v5.20.1, warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -28,6 +37,8 @@ use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Basename qw/basename dirname/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
+use IO::Select ();
+use IPC::Open3 qw/open3/;
 use POSIX qw/ctermid strftime isprint isspace/;
 use Text::Wrap qw/wrap/;
 use Tie::File ();
@@ -201,8 +212,9 @@ is not parsed; only its presence or absence matters.)
 
 Both batch modes also perform a basic sanity-check on entries that declare
 backport branches (via the "Branch:" header): if a backport branch is used, but
-at least one of the revisions enumerated in the entry title had not been merged
-from $TRUNK to the branch root, the hourly bot will turn red and 
+at least one of the revisions enumerated in the entry title had neither been
+merged from $TRUNK to the branch root, nor been committed
+directly to the backport branch, the hourly bot will turn red and 
 nightly bot will skip the entry and email its admins.  (The nightly bot does
 not email the list on failure, since it doesn't use buildbot.)
 
@@ -318,9 +330,46 @@ sub my_tempfile {
   return ($fh, $fn);
 }
 
+# The first argument is a shell script.  Run it and return the shell's
+# exit code, and stdout and stderr as references to arrays of lines.
+sub run_in_shell($) {
+  my $script = shift;
+  my $pid = open3 \*SHELL_IN, \*SHELL_OUT, \*SHELL_ERR, qw#/bin/sh#;
+  # open3 raises exception when it fails; no need to error check
+
+  print SHELL_IN $script;
+  close SHELL_IN;
+
+  # Read loop: tee stdout,stderr to arrays.
+  my $select = IO::Select->new(\*SHELL_OUT, \*SHELL_ERR);
+  my (@readable, $outlines, $errlines);
+  while (@readable = $select->can_read) {
+    for my $fh (@readable) {
+      my $line = <$fh>;
+      $select->remove($fh) if eof $fh or not defined $line;
+      next unless defined $line;
+
+      if ($fh == \*SHELL_OUT) {
+        push @$outlines, $line;
+        print STDOUT $line;
+      }
+      if ($fh == \*SHELL_ERR) {
+        push @$errlines, $line;
+        print STDERR $line;
+      }
+    }
+  }
+  waitpid $pid, 0; # sets $?
+  return $?, $outlines, $errlines;
+}
+
 
+# EXPECTED_ERROR_P is subref called with EXIT_CODE, OUTLINES, ERRLINES,
+# expected to return TRUE if the error should be considered fatal (cause
+# backport.pl to exit non-zero) or not.  It may be undef for default behaviour.
 sub merge {
-  my %entry = @_;
+  my %entry = %{ +shift };
+  my $expected_error_p = shift // sub { 0 }; # by default, errors are unexpected
   my $parno = $entry{parno} - scalar grep { $_->{parno} < $entry{parno} } @MERGES_TODAY;
 
   my ($logmsg_fh, $logmsg_filename) = my_tempfile();
@@ -434,15 +483,26 @@ EOF
   revert(verbose => 0, discard_STATUS => $MAY_COMMIT);
 
   $MERGED_SOMETHING++;
-  open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
-  print SHELL $script;
-  close SHELL or do {
-    warn "$0: sh($?): $! (in '$entry{header}')";
-    die "Lost track of paragraph numbers; aborting" if $MAY_COMMIT
-  };
-  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
+  my ($exit_code, $outlines, $errlines) = run_in_shell $script;
+  unless ($! == 0) {
+    die "system() failed to spawn subshell ($!); aborting";
+  }
+  unless ($exit_code == 0) {
+    warn "$0: subshell exited with code $exit_code (in '$entry{header}') "
+        ."(maybe due to 'set -e'?)";
 
-  unlink $logmsg_filename unless $? or $!;
+    # If we're committing, don't attempt to guess the problem and gracefully
+    # continue; just abort.
+    if ($MAY_COMMIT) {
+      die "Lost track of paragraph numbers; aborting";
+    }
+
+    # Record the error, unless the caller wants not to.
+    $ERRORS{$entry{id}} = [\%entry, "subshell exited with code $exit_code"]
+      unless $expected_error_p->($exit_code, $outlines, $errlines);
+  }
+
+  unlink $logmsg_filename unless $exit_code;
 }
 
 # Input formats:
@@ -845,7 +905,8 @@ sub validate_branch_contains_named_revisions {
 
   my $shell_escaped_branch = shell_escape($entry{branch});
   %present = do {
-    my @present = `$SVN mergeinfo --show-revs=merged -- $TRUNK $BRANCHES/$shell_escaped_branch`;
+    my @present = `$SVN mergeinfo --show-revs=merged -- $TRUNK $BRANCHES/$shell_escaped_branch &&
+                   $SVN mergeinfo --show-revs=eligible -- $BRANCHES/$shell_escaped_branch`;
     chomp @present;
     @present = map /(\d+)/g, @present;
     map +($_ => 1), @present;
@@ -881,7 +942,7 @@ sub handle_entry {
     unless (@vetoes) {
       if ($MAY_COMMIT and $in_approved) {
         # svn-role mode
-        merge %entry if validate_branch_contains_named_revisions %entry;
+        merge \%entry if validate_branch_contains_named_revisions %entry;
       } elsif (!$MAY_COMMIT) {
         # Scan-for-conflicts mode
 
@@ -890,7 +951,14 @@ sub handle_entry {
         # block.
         validate_branch_contains_named_revisions %entry;
 
-        merge %entry;
+        # E155015 is SVN_ERR_WC_FOUND_CONFLICT
+        my $expected_error_p = sub {
+          my ($exit_code, $outlines, $errlines) = @_;
+          ($exit_code == 0)
+            or
+          (grep /svn: E155015:/, @$errlines)
+        };
+        merge \%entry, ($entry{depends} ? $expected_error_p : undef);
 
         my $output = `$SVN status`;
 
@@ -951,7 +1019,7 @@ sub handle_entry {
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         #validate_branch_contains_named_revisions %entry;
-        merge %entry;
+        merge \%entry;
         while (1) {
           given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
             when (/^y/i) {

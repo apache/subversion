@@ -1,5 +1,6 @@
-/**
- * @copyright
+/*
+ * pools.h: private pool functions
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,47 +19,25 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
- *
- * @file Iterator.h
- * @brief Interface of the class Iterator
  */
 
-#ifndef JAVAHL_ITERATOR_H
-#define JAVAHL_ITERATOR_H
+#ifndef SVN_LIBSVN_SUBR_POOLS_H
+#define SVN_LIBSVN_SUBR_POOLS_H
 
-#include "JNIUtil.h"
+#include "svn_pools.h"
 
-/**
- * Encapsulates an immutable java.lang.Iterator implementation.
- */
-class Iterator
-{
-public:
-  Iterator(jobject jiterable);
-  ~Iterator();
-  bool hasNext() const;
-  jobject next() const;
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-protected:
-  Iterator(jobject jiterable, bool);
+/* Create an unmanaged, global pool with a new allocator.
+   THREAD_SAFE indicates whether the pool's allocator should be
+   thread-safe or not. */
+apr_pool_t *
+svn_pool__create_unmanaged(svn_boolean_t thread_safe);
 
-private:
-  bool m_persistent;
-  jobject m_jiterator;
-};
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-
-/**
- * Like Iterator, but the implementation will hold a global reference
- * to the internal iterator object to protect it across JNI calls.
- */
-class PersistentIterator : protected Iterator
-{
-public:
-  PersistentIterator(jobject jiterable) : Iterator(jiterable, true) {}
-  bool hasNext() const { return Iterator::hasNext(); }
-  jobject next() const { return Iterator::next(); }
-};
-
-#endif  // JAVAHL_ITERATOR_H
+#endif /* SVN_LIBSVN_SUBR_POOLS_H */

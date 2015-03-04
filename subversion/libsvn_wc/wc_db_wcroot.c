@@ -702,11 +702,9 @@ try_symlink_as_dir:
       if (err)
         {
           if (err->apr_err == SVN_ERR_WC_CORRUPT)
-            return svn_error_quick_wrap(
-              err, apr_psprintf(scratch_pool,
-                                _("Missing a row in WCROOT for '%s'."),
-                                svn_dirent_local_style(original_abspath,
-                                                       scratch_pool)));
+            return svn_error_quick_wrapf(
+              err, _("Missing a row in WCROOT for '%s'."),
+              svn_dirent_local_style(original_abspath, scratch_pool));
           return svn_error_trace(err);
         }
 

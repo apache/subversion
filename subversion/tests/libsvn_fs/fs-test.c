@@ -5100,15 +5100,11 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev = 0;
   svn_error_t *err;
-  svn_boolean_t legacy_backend;
-  static const char contents[] = "foo\003bar";
 
-  /* The FS API wants \n to be permitted, but FSFS never implemented that,
-   * so for FSFS we expect errors rather than successes in some of the commits.
-   * Use a blacklist approach so that new FSes default to implementing the API
-   * as originally defined. */
-  legacy_backend = (!strcmp(opts->fs_type, SVN_FS_TYPE_FSFS));
-
+  /* The FS API wants \n to be permitted, but FSFS never implemented that.
+   * Moreover, formats like svn:mergeinfo and svn:externals don't support
+   * it either.  So, we can't have newlines in file names in any FS.
+   */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-filename-trailing-newline",
                               opts, pool));
 
@@ -5120,64 +5116,20 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
-  /* Attempt to copy /foo to "/bar\n". This should fail on FSFS. */
+  /* Attempt to copy /foo to "/bar\n". This should fail. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
   err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
-  if (!legacy_backend)
-    SVN_TEST_ASSERT(err == SVN_NO_ERROR);
-  else
-    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
-  /* Attempt to create a file /foo/baz\n. This should fail on FSFS. */
+  /* Attempt to create a file /foo/baz\n. This should fail. */
   err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
-  if (!legacy_backend)
-    SVN_TEST_ASSERT(err == SVN_NO_ERROR);
-  else
-    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
-
-  /* Create another file, with contents. */
-  if (!legacy_backend)
-    {
-      SVN_ERR(svn_fs_make_file(txn_root, "/bar\n/baz\n", subpool));
-      SVN_ERR(svn_test__set_file_contents(txn_root, "bar\n/baz\n",
-                                          contents, pool));
-    }
-
-  if (!legacy_backend)
-    {
-      svn_revnum_t after_rev;
-      static svn_test__tree_entry_t expected_entries[] = {
-        { "foo", NULL },
-        { "bar\n", NULL },
-        { "foo/baz\n", "" },
-        { "bar\n/baz\n", contents },
-        { NULL, NULL }
-      };
-      const char *expected_changed_paths[] = {
-        "/bar\n",
-        "/foo/baz\n",
-        "/bar\n/baz\n",
-        NULL
-      };
-      apr_hash_t *expected_changes = apr_hash_make(pool);
-      int i;
-
-      SVN_ERR(svn_fs_commit_txn(NULL, &after_rev, txn, subpool));
-      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
-
-      /* Validate the DAG. */
-      SVN_ERR(svn_fs_revision_root(&root, fs, after_rev, pool));
-      SVN_ERR(svn_test__validate_tree(root, expected_entries, 4, pool));
-
-      /* Validate changed-paths, where the problem originally occurred. */
-      for (i = 0; expected_changed_paths[i]; i++)
-        svn_hash_sets(expected_changes, expected_changed_paths[i],
-                      "undefined value");
-      SVN_ERR(svn_test__validate_changes(root, expected_changes, pool));
-    }
+  /* Attempt to create a directory /foo/bang\n. This should fail. */
+  err = svn_fs_make_dir(txn_root, "/foo/bang\n", subpool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
   return SVN_NO_ERROR;
 }
@@ -5215,6 +5167,17 @@ test_fs_info_format(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Sleeps until apr_time_now() value changes. */
+static void sleep_for_timestamps(void)
+{
+  apr_time_t start = apr_time_now();
+
+  while (start == apr_time_now())
+    {
+      apr_sleep(APR_USEC_PER_SEC / 1000);
+    }
+}
+
 static svn_error_t *
 commit_timestamp(const svn_test_opts_t *opts,
                  apr_pool_t *pool)
@@ -5226,6 +5189,7 @@ commit_timestamp(const svn_test_opts_t *opts,
   svn_revnum_t rev = 0;
   apr_hash_t *proplist;
   svn_string_t *svn_date;
+  svn_string_t *txn_svn_date;
 
   SVN_ERR(svn_test__create_fs(&fs, "test-fs-commit-timestamp",
                               opts, pool));
@@ -5244,29 +5208,6 @@ commit_timestamp(const svn_test_opts_t *opts,
 
   /* Commit that overwrites the specified svn:date. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
-  {
-    /* Setting the internal property doesn't enable svn:date behaviour. */
-    apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
-    svn_prop_t prop, other_prop1, other_prop2;
-    svn_string_t *val;
-
-    prop.name = SVN_FS__PROP_TXN_CLIENT_DATE;
-    prop.value = svn_string_create("1", pool);
-    other_prop1.name = "foo";
-    other_prop1.value = svn_string_create("fooval", pool);
-    other_prop2.name = "bar";
-    other_prop2.value = svn_string_create("barval", pool);
-    APR_ARRAY_PUSH(props, svn_prop_t) = other_prop1;
-    APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-    APR_ARRAY_PUSH(props, svn_prop_t) = other_prop2;
-    SVN_ERR(svn_fs_change_txn_props(txn, props, pool));
-    SVN_ERR(svn_fs_txn_prop(&val, txn, other_prop1.name, pool));
-    SVN_TEST_ASSERT(val && !strcmp(val->data, other_prop1.value->data));
-    SVN_ERR(svn_fs_txn_prop(&val, txn, other_prop2.name, pool));
-    SVN_TEST_ASSERT(val && !strcmp(val->data, other_prop2.value->data));
-
-    SVN_ERR(svn_fs_change_txn_prop(txn, prop.name, prop.value, pool));
-  }
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, date, pool));
@@ -5304,6 +5245,37 @@ commit_timestamp(const svn_test_opts_t *opts,
   svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
                           APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(svn_date);
+
+  /* Commit that doesn't do anything special about svn:date. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/zig/foo", pool));
+  SVN_ERR(svn_fs_txn_prop(&txn_svn_date, txn, SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(txn_svn_date);
+  sleep_for_timestamps();
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date);
+  SVN_TEST_ASSERT(!svn_string_compare(svn_date, txn_svn_date));
+
+  /* Commit that instructs the backend to use a specific svn:date, but
+   * doesn't provide one.  This used to fail with BDB prior to r1663697. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, rev, SVN_FS_TXN_CLIENT_DATE, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/zig/bar", pool));
+  SVN_ERR(svn_fs_txn_prop(&txn_svn_date, txn, SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(txn_svn_date);
+  sleep_for_timestamps();
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date);
+  SVN_TEST_ASSERT(!svn_string_compare(svn_date, txn_svn_date));
 
   return SVN_NO_ERROR;
 }
@@ -6746,6 +6718,70 @@ test_prop_and_text_rep_sharing_collision(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_internal_txn_props(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_string_t *val;
+  svn_prop_t prop;
+  svn_prop_t internal_prop;
+  apr_array_header_t *props;
+  apr_hash_t *proplist;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-internal-txn-props",
+                              opts, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0,
+                            SVN_FS_TXN_CHECK_LOCKS |
+                            SVN_FS_TXN_CHECK_OOD |
+                            SVN_FS_TXN_CLIENT_DATE, pool));
+
+  /* Ensure that we cannot read internal transaction properties. */
+  SVN_ERR(svn_fs_txn_prop(&val, txn, SVN_FS__PROP_TXN_CHECK_LOCKS, pool));
+  SVN_TEST_ASSERT(!val);
+  SVN_ERR(svn_fs_txn_prop(&val, txn, SVN_FS__PROP_TXN_CHECK_OOD, pool));
+  SVN_TEST_ASSERT(!val);
+  SVN_ERR(svn_fs_txn_prop(&val, txn, SVN_FS__PROP_TXN_CLIENT_DATE, pool));
+  SVN_TEST_ASSERT(!val);
+
+  SVN_ERR(svn_fs_txn_proplist(&proplist, txn, pool));
+  SVN_TEST_ASSERT(apr_hash_count(proplist) == 1);
+  val = svn_hash_gets(proplist, SVN_PROP_REVISION_DATE);
+  SVN_TEST_ASSERT(val);
+
+  /* We also cannot change or discard them. */
+  val = svn_string_create("Ooops!", pool);
+
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CHECK_LOCKS, val, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CHECK_OOD, val, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CHECK_OOD, NULL, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CLIENT_DATE, val, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CLIENT_DATE, NULL, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+
+  prop.name = "foo";
+  prop.value = svn_string_create("bar", pool);
+  internal_prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
+  internal_prop.value = svn_string_create("Ooops!", pool);
+
+  props = apr_array_make(pool, 2, sizeof(svn_prop_t));
+  APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+  APR_ARRAY_PUSH(props, svn_prop_t) = internal_prop;
+
+  err = svn_fs_change_txn_props(txn, props, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6877,6 +6913,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test modify txn being written in FSFS"),
     SVN_TEST_OPTS_PASS(test_prop_and_text_rep_sharing_collision,
                        "test property and text rep-sharing collision"),
+    SVN_TEST_OPTS_PASS(test_internal_txn_props,
+                       "test setting and getting internal txn props"),
     SVN_TEST_NULL
   };
 

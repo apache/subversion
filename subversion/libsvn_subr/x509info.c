@@ -124,7 +124,7 @@ svn_x509_certinfo_dup(const svn_x509_certinfo_t *certinfo,
 
 typedef struct asn1_oid {
   const unsigned char *oid;
-  const ptrdiff_t oid_len;
+  const apr_size_t oid_len;
   const char *short_label;
   const char *long_label;
 } asn1_oid;

@@ -426,6 +426,25 @@
 {
   $1 = svn_swig_py_path_revs_hash_from_dict($input, _global_pool);
 }
+%typemap(in) apr_hash_t *unlock_targets
+{
+  $1 = svn_swig_py_stringhash_from_dict($input, _global_pool);
+}
+%typemap(in) apr_hash_t *lock_targets
+  (apr_pool_t *_global_pool, PyObject *_global_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+  $1 = svn_swig_py_struct_ptr_hash_from_dict($input,
+     $descriptor(svn_fs_lock_target_t *), _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
 #endif
 
 #ifdef SWIGPERL

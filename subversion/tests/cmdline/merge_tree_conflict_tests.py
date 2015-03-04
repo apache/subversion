@@ -78,9 +78,7 @@ def delete_file_and_dir(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Rev 3 delete E and lambda from B
   E_path = os.path.join(B_path, 'E')
@@ -98,9 +96,7 @@ def delete_file_and_dir(sbox):
                          'A/B/lambda')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   def modify_B2():
     # Local mods in B2
@@ -157,8 +153,7 @@ def delete_file_and_dir(sbox):
                                        expected_disk,
                                        expected_status2,
                                        expected_skip,
-                                       None, None, None, None, None,
-                                       True)
+                                       check_props=True)
 
 #----------------------------------------------------------------------
 # This is a regression for issue #1176.
@@ -203,8 +198,7 @@ def merge_catches_nonexistent_target(sbox):
   ### (M)odified child.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Change newfile, creating r3.
   svntest.main.file_append(newfile_path, 'A change to newfile.\n')
@@ -214,8 +208,7 @@ def merge_catches_nonexistent_target(sbox):
   expected_status.tweak('A/D/Q/newfile', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Merge the change to newfile (from r3) into G, where newfile
   # doesn't exist. This is a tree conflict (use case 4, see
@@ -258,7 +251,7 @@ def merge_catches_nonexistent_target(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, True)
+                                       check_props=True)
 
   expected_status.add({
     'newfile' : Item(status='! ', treeconflict='C'),
@@ -333,8 +326,7 @@ def merge_tree_deleted_in_target(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None,
-                                       1, 0)
+                                       check_props=True)
   expected_status.add({
     'E' : Item(status='! ', treeconflict='C'),
     })
@@ -377,8 +369,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
     "A/theta" : Item(status="  ", wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        wc_dir)
+                                        expected_status)
 
   # In the working copy, attempt to 'svn merge branch_A_url@2 A_url@3 A'.
   # We should *not* see a conflict during the merge, but an 'A'.
@@ -423,8 +414,8 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None,
-                                       1, 0, '--allow-mixed-revisions', A_path)
+                                       [], True, False,
+                                       '--allow-mixed-revisions', A_path)
 
 #----------------------------------------------------------------------
 # Issue #2515
@@ -482,9 +473,7 @@ def merge_added_dir_to_deleted_in_target(sbox):
                                        expected_elision_output,
                                        expected_disk,
                                        None,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       0, 0)
+                                       expected_skip)
 
 #----------------------------------------------------------------------
 # Issue 2584
@@ -514,8 +503,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
     'A/C/alpha' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        wc_dir)
+                                        expected_status)
 
   # Merge r1:2 from A/C to A/B/E.  This will attempt to add A/C/alpha,
   # but since A/B/E/alpha already exists we get a tree conflict.
@@ -573,14 +561,14 @@ def mergeinfo_recording_in_skipped_merge(sbox):
   expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
   wc_status.add({'A/mu'     : Item(status='  ', wc_rev=3)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        wc_status, None, wc_dir)
+                                        wc_status)
 
   # Make a modification to A/B/E/alpha
   svntest.main.file_write(alpha_path, "This is the file 'alpha' modified.\n")
   expected_output = wc.State(wc_dir, {'A/B/E/alpha' : Item(verb='Sending')})
   wc_status.add({'A/B/E/alpha'     : Item(status='  ', wc_rev=4)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        wc_status, None, wc_dir)
+                                        wc_status)
 
   # Delete A_COPY/B/E
   svntest.actions.run_and_verify_svn(None, [], 'rm',
@@ -644,8 +632,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None,
-                                       1, 1)
+                                       [], True, True)
 
 #----------------------------------------------------------------------
 def del_differing_file(sbox):
@@ -1534,7 +1521,7 @@ def merge_replace_setup(sbox):
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # ACTIONS ON THE MERGE SOURCE (branch)
   # various deletes of files and dirs
@@ -1566,8 +1553,7 @@ def merge_replace_setup(sbox):
     'branch/D/H/chi', 'branch/D/H/psi', 'branch/D/G/pi', 'branch/B/E',
     'branch/B/E/beta', 'branch/B/E/alpha')
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {})
@@ -1579,7 +1565,7 @@ def merge_replace_setup(sbox):
   expected_status.tweak(wc_rev='3')
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
   # replacements.
   # file-with-file
@@ -1643,8 +1629,7 @@ def merge_replace_setup(sbox):
     'branch/mu'         : Item(status='  ', wc_rev='4'),
   })
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   return expected_disk, expected_status
 
