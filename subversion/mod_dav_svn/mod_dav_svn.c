@@ -507,7 +507,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
       if (expr_err)
         {
           return apr_pstrcat(cmd->temp_pool, "Cannot parse expression '",
-                             arg2, "' in SVNPath: ", expr_err, NULL);
+                             arg2, "' in SVNPath: ", expr_err, SVN_VA_NULL);
         }
 #else
       return "Expressions require httpd v2.4.0 or higher"
@@ -525,7 +525,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
         {
           return apr_pstrcat(cmd->temp_pool,
                              "Cannot parse Location expression '",
-                             conf->root_dir, "': ", expr_err, NULL);
+                             conf->root_dir, "': ", expr_err, SVN_VA_NULL);
         }
     }
 #endif /* SVN_AP_HAS_EXPRESSIONS */
@@ -555,7 +555,8 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *ar
       if (expr_err)
         {
           return apr_pstrcat(cmd->temp_pool, "Cannot parse expression '",
-                             arg2, "'in SVNParentPath: ", expr_err, NULL);
+                             arg2, "'in SVNParentPath: ", expr_err,
+                             SVN_VA_NULL);
         }
 #else
       return "Expressions require httpd v2.4.0 or higher"
@@ -573,7 +574,7 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *ar
         {
           return apr_pstrcat(
               cmd->temp_pool, "Cannot parse Location expression '",
-              conf->root_dir, "': ", expr_err, NULL);
+              conf->root_dir, "': ", expr_err, SVN_VA_NULL);
         }
     }
 #endif /* SVN_AP_HAS_EXPRESSIONS */
