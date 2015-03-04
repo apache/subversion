@@ -57,6 +57,22 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1663738
+   Stop exposing and prohibit changing internal txn props through FS API
+   Justification:
+     Prevents an implementation detail leak.  Prohibits changing the
+     internal behavior of our transactions public API.  Avoids a situation
+     with the API function call discarding the data and falsely reporting
+     success for "set" operations with 'svn:client-date' properties, i.e.,
+     with the API telling us that the operation completed successfully when
+     the change itself was not applied.  (The last part is new-in-1.9.)
+   Notes:
+     While this is mostly an API correctness fix, there is a user-visible
+     consequence of 'svnlook proplist' no longer leaking internal properties
+     like svn:check-locks for transactions.
+   Votes:
+     +1: kotkov
+
 Veto-blocked changes:
 =====================
 
