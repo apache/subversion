@@ -690,8 +690,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: expose whitespace diff parameters to blame method (issue #4475)
     * javahl: update ConflictDescriptor (r1655842)
     * javahl: update FileRevision to provide textDelta (r1656911)
-    * javahl: use Java iterators instead of std:vector (r1658112)
-    * javahl: use Java iterators instead of std:map (r1658120)
     * swig: partial fix for complication problems wigh SWIG 3.0.x (r1658347)
     * swig-pl: install into prefix (r1658459)
     * javahl: expose the metadataOnly option to copy support (r1661451)
