@@ -13,18 +13,8 @@ delay a release, etc.
 
 Status of 1.9.0:
 
-Candidate changes:
-==================
-
- * r1663183, r1663184
-   Introduce build support for Visual Studio "2015"
-   Justification:
-     Unbreaks building with the VS version that should be released somewhere
-     later this year.
-   Notes:
-     Includes a few generator fixes, and compilation fixes of utf8proc.c
-   Votes:
-     +1: rhuijben
+1.9.0 release blockers:
+=======================
 
  * r1663338, r1663347
    Properly record resolving of individual property conflicts.
@@ -45,18 +35,6 @@ Candidate changes:
      +1: rhuijben, philip
      -0: ivan (prefer r1658194 micro-optimization to be reverted)
 
- * r1663671
-   Improve obstructing working copy detection in the update editor
-   Justification:
-     Avoids doing unrecoverable damage to wc.db on invalid editor
-     operations in cases where that isn't necessary. Github's
-     Subversion compatibility triggers this problem in some sparse
-     working copy scenarios.
-   Notes:
-     This is not a regression against 1.8.x.
-   Votes:
-     +1: rhuijben
-
  * r1663738
    Stop exposing and prohibit changing internal txn props through FS API
    Justification:
@@ -72,6 +50,38 @@ Candidate changes:
      like svn:check-locks for transactions.
    Votes:
      +1: kotkov
+
+Other candidate changes:
+========================
+
+ * r1663183, r1663184
+   Introduce build support for Visual Studio "2015"
+   Justification:
+     Unbreaks building with the VS version that should be released somewhere
+     later this year.
+   Notes:
+     Includes a few generator fixes, and compilation fixes of utf8proc.c
+   Votes:
+     +1: rhuijben
+
+ * r1663671
+   Improve obstructing working copy detection in the update editor
+   Justification:
+     Avoids doing unrecoverable damage to wc.db on invalid editor
+     operations in cases where that isn't necessary. Github's
+     Subversion compatibility triggers this problem in some sparse
+     working copy scenarios.
+   Notes:
+     This is not a regression against 1.8.x.
+   Votes:
+     +1: rhuijben
+
+ * r1663791
+   Trivial typo fix in error message.
+   Justification:
+     Fixes a typo.
+   Votes:
+     +1: brane
 
 Veto-blocked changes:
 =====================
