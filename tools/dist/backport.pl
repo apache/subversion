@@ -13,7 +13,7 @@ use v5.10.0; # needed for $^V
 # compatible with those expected by the script, so disable the warning for
 # those Perls.  But don't try to disable the the warning category on Perls
 # that don't know that category, since that breaks compilation.
-no if v5.17.0 le $^V and $^V le v5.20.1,
+no if (v5.17.0 le $^V and $^V le v5.20.1),
    warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
