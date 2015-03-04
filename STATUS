@@ -50,6 +50,23 @@ Status of 1.9.0:
      like svn:check-locks for transactions.
    Votes:
      +1: kotkov
+     
+ * r1664078
+   Instead of making more changes to the auth batons from ra sessions, reduce
+   the number of changes by introducing an internal slave auth baton feature.
+   Justification:
+     Without this patch (or a complete redesign of the auth layer), the
+     ra sessions cache (currently on a feature branch), will open the ra
+     sessions from outside configuration changes caused by opening other
+     ra sessions. This patch not only reverts the additional changes to the
+     auth baton on init that are new in 1.9, but also removes cases where we
+     already applied similar changes inside specific ra providers.
+   Notes:
+     The reason I group this under release blockers, is to avoid the behavior
+     change introduced in r1609499 from reaching released versions. The changes
+     itself are safe for a later backport.
+   Votes:
+     +1: rhuijben
 
 Other candidate changes:
 ========================
