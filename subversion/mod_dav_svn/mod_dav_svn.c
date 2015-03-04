@@ -50,6 +50,7 @@
 
 #if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
 #include <ap_expr.h>
+#define SVN_AP_HAS_EXPRESSIONS
 #endif
 
 /* This is the default "special uri" used for SVN's special resources
@@ -76,9 +77,9 @@ typedef struct server_conf_t {
 /* combination of path and expression */
 typedef struct path_expr_t {
     const char *base;                /* base path */
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
     const ap_expr_info_t *expr;      /* expression suffix added to the base */
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
 } path_expr_t;
 
 /* A tri-state enum used for per directory on/off flags.  Note that
@@ -118,9 +119,9 @@ typedef struct dir_conf_t {
   enum conf_flag revprop_cache;      /* whether to enable revprop caching */
   enum conf_flag block_read;         /* whether to enable block read mode */
   const char *hooks_env;             /* path to hook script env config file */
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
   const ap_expr_info_t *root_expr;   /* expression for our top-level directory */
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
 } dir_conf_t;
 
 
@@ -287,9 +288,9 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->block_read = INHERIT_VALUE(parent, child, block_read);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
   newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
   newconf->root_expr = INHERIT_VALUE(parent, child, root_expr);
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
 
   if (parent->fs_path)
     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
@@ -498,7 +499,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
 
   if (arg2)
     {
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
       const char *expr_err = NULL;
 
       conf->fs_path->expr = ap_expr_parse_cmd(cmd, arg2, AP_EXPR_FLAG_STRING_RESULT,
@@ -511,10 +512,10 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
         }
 #else
       return "Expressions require httpd v2.4.0 or higher"
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
     }
 
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
   if (!conf->root_expr)
     {
       const char *expr_err = NULL;
@@ -528,7 +529,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
                   expr_err, NULL);
         }
     }
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
 
   return NULL;
 }
@@ -547,7 +548,7 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *ar
 
   if (arg2)
     {
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
       const char *expr_err = NULL;
 
       conf->fs_parent_path->expr = ap_expr_parse_cmd(cmd, arg2, AP_EXPR_FLAG_STRING_RESULT,
@@ -560,10 +561,10 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *ar
         }
 #else
       return "Expressions require httpd v2.4.0 or higher"
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
     }
 
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
   if (!conf->root_expr)
     {
       const char *expr_err = NULL;
@@ -577,7 +578,7 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *ar
                   expr_err, NULL);
         }
     }
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
 
   return NULL;
 }
@@ -759,7 +760,7 @@ dav_svn__get_fs_path(request_rec *r)
   if (conf->fs_path)
     {
 
-  #if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+  #ifdef SVN_AP_HAS_EXPRESSIONS
       if (conf->fs_path->expr)
         {
           svn_error_t *serr;
@@ -801,7 +802,7 @@ dav_svn__get_fs_path(request_rec *r)
               return NULL;
             }
 
-        }
+        } /* SVN_AP_HAS_EXPRESSIONS */
   #endif
 
       return conf->fs_path->base;
@@ -823,7 +824,7 @@ dav_svn__get_fs_parent_path(request_rec *r)
   if (conf->fs_parent_path)
     {
 
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
       if (conf->fs_parent_path->expr)
         {
           svn_error_t *serr;
@@ -866,7 +867,7 @@ dav_svn__get_fs_parent_path(request_rec *r)
             }
 
         }
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
 
       return conf->fs_parent_path->base;
     }
@@ -947,7 +948,7 @@ dav_svn__get_root_dir(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
-#if AP_MODULE_MAGIC_AT_LEAST(20111025,3)
+#ifdef SVN_AP_HAS_EXPRESSIONS
   if (conf->root_expr)
     {
       const char *err = NULL, *root_dir;
@@ -968,7 +969,7 @@ dav_svn__get_root_dir(request_rec *r)
   return NULL;
 #else
   return svn_urlpath__canonicalize(conf->root_dir, r->pool);
-#endif
+#endif /* SVN_AP_HAS_EXPRESSIONS */
 }
 
 
