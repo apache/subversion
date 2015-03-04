@@ -8,17 +8,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * flush stdout before exiting to avoid information being lost (r1543868)
 
   - Major new features:
-    * membuffer: virtually perfect short-term cache efficiency (r1476664 et at)
     * membuffer: quadruple the maximum cacheable directory size (r1545948 et al)
     * resolve: improve interactive conflict resolution menus
     * blame: support showing prospective as well as previous changes
     * info: support printing of individual values with --show-item (r1662620)
     * svn auth: new subcommand to manage cached credentials and certs
     * new experimental filesystem fsx (faster, smaller)
-    * svnserve: cache config, authz and repos to lower resource usage and
-      be able to serve large numbers of connections with a limited number
-      of threads.
-    * fsfs: new format 7 with more efficient logical addressing (r1547045 et al)
+    * svnserve: cache config and authz to lower resource usage and be able to
+      serve large numbers of connections with a limited number of threads.
+    * fsfs: new format 7 with more efficient on-disk layout (r1547045 et al)
 
   - Minor new features and improvements:
     * new 'diff-ignore-content-type' runtime configuration option.
@@ -27,6 +25,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnadmin info: print info about a repository.
     * print summary of conflicts before/after interactive conflict resolution.
     * import: reduce number of connections to the server needed. (r1482962)
+    * membuffer: rework cache eviction heuristics (r1476664 et at)
     * membuffer: improved cache usage statistics (r1489883)
     * mergeinfo: New '--log' option (r1492168)
     * svnadmin upgrade: progress and cancellation support (r1495545, r1495566)
@@ -45,7 +44,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * update: optimize wc db usage (r1537065 et al)
     * decreased overhead for case-sensitive configuration access (r1538068)
     * avoid re-opening repo for in-repo authz if already open (r1538120)
-    * only use revprop caching if supported efficiently (r1543593)
     * svnserve: output errors in a more standard way (r1544250)
     * faster parsing of config file comments (r1544716)
     * avoid trying to open the hooks-env file when it doesn't exist (r1544721)
@@ -58,14 +56,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * merge and mergeinfo: use fewer ra sessions (r1552265)
     * fsfs: limit delta chains from crossing too many shards (r1554942)
     * fsfs: option to configure compression level in deltas (r1559748)
-    * fsfs: enable dir and prop deltas and compressed revprops by default for
-      fsfs formats that support it (r1555286)
+    * fsfs: enable dir and prop deltas by default for formats that support
+      it (r1555286)
     * fsfs: avoid out of date errors from files in a directory changing when
       you change a property on the directory (r1558224)
     * fsfs: temporary transaction properties are preserved when commit is
       interrupted (r1549907 et al)
-    * fsfs: don't try to read revprops for a new transaction (r1544719)
-    * fsfs: avoid trying to open digest files that don't exist (r1544721)
+    * fsfs: speed up transaction creation (r1544719)
+    * fsfs: avoid trying to open lock digest files that don't exist (r1544721)
     * fsfs: Use sorted array instead of hash for directory representation
       internally, this minimizes some overhead (r1554711)
     * fsfs: skip decoding txdelta windows that are already cached (r1555284)
@@ -100,16 +98,16 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * report progress as cumulative across all sessions (issue #3260)
     * ra_serf: don't send DAV headers with GET requests (r1517472)
     * mod_dav_svn: SVNCacheTextDeltas defaults to on (r1517479)
-    * fs: improve scability of fs_open and similar functions (r1523450 et al)
-    * svnserve: improve performance and scability (r1523465 et al)
+    * fs: improve scalability of fs_open and similar functions (r1523450 et al)
+    * svnserve: improve performance and scalability (r1523465 et al)
     * svnadmin verify: output progress messages to stdout (r1471095)
     * svnadmin crashtest: make output less misleading (r1486046) 
     * mod_dav_svn: discover copy to src earlier in some cases (r1537440)
     * speed up mergeinfo parsing (r1483292, r1483309 et al)
     * optimize hash lookups used throughout subversion (r1483434 et al)
     * log: optimize string handling in repos layer (r1483570, r1483572)
-    * ask hardware to sync instead of only syncing to hardware buffers when
-      OS supports it (r1484439, r1484445)
+    * ask disk hardware to sync instead of only syncing to hardware buffers
+      when OS supports it (r1484439, r1484445)
     * optimize diff code to avoid unneeded comparisons (r1485488)
     * optimize check if relpaths are canonical (r1485496, r1489828)
     * ra_svn: reduce protocol implementation overhead (r1485499, r1485504 et al)
@@ -124,7 +122,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * membuffer: reduce memory usage by using shorter lived pools (r1564217)
     * svnadmin load: add '--ignore-dates' option (r1564789)
     * update: reduce sessions used with '--parents' option (r1565920)
-    * fix L1->L2 promotion/eviction heuristics for high hit counts (r1568599)
     * diff: report properties on deleted nodes (r1569320, r1570055)
     * diff: switch to diff processor APIs instead of old style callbacks, step
       towards resolving long standing bugs and feature requests (r1569551 et al)
@@ -134,7 +131,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svn --version: list available authentication credential caches (r1572106)
     * improved detection of changes between two nodes, this should reduce the
       number of out of date errors clients see (r1572336)
-    * alow the use of libmagic to be configured via subversion configuration
+    * allow the use of libmagic to be configured via subversion configuration
       file or SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE env variable (r1572916)
     * store human readable info about SSL certs in auth store (r1573625)
     * new '--pin-externals' option for svn copy (issue #1258)
@@ -152,7 +149,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * commit: print progress notification between client finishing
       transmitting text deltas and asking server to commit (r1604179)
     * fsfs: Optimize log commands for repos on Windows by not
-      usuing a locale specific function to parse ids (r1605123)
+      using a locale specific function to parse ids (r1605123)
     * fsfs: Reduce memory usage of reading/writing changed paths caches
       (r1605188 et al)
     * mod_dav_svn: log post-commit errors to httpd error log as well
@@ -361,7 +358,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: fix a pool lifetime error related to transaction local caches
       (r1643139, 1643233)
     * fsfs: avoid "random DAG walks" during checkout over ra_serf (r1645567)
-    * fsfs/bdb: reduce memory use during a tree deletions (r1647820, r1655022)
+    * fsfs/bdb: reduce memory use during tree deletions (r1647820, r1655022)
     * mod_authz_svn: fix unbounded memory use when SVNPathAuthz short_circuit
       is used (r1647887)
     * fsfs: reduce memory use when walking back in history (r1648230)
@@ -405,6 +402,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * mailer: Properly encode mail headers per RFC2047 (r1487532)
     * svnwcsub: add a pre-update hook, which can deny update (r1494542 et al)
     * fsfs-stats: count file nodes that are added without history (r1519283)
+    * fsfs-stats: replaced by 'svnfsfs stats' (r1594860)
     * fsfs-access-map: count empty reads and unnecessary seeks (r1523441)
     * fsfs-access-map: generate scaled/rectangular heatmaps (r1505065)
     * fsfs-access-map: deal with strace format issues (r1505065)
