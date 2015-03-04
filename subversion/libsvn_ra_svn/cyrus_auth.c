@@ -867,7 +867,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
   realmstring = apr_psprintf(pool, "%s %s", sess->realm_prefix, realm);
 
   /* Initialize the credential baton. */
-  cred_baton.auth_baton = sess->callbacks->auth_baton;
+  cred_baton.auth_baton = sess->auth_baton;
   cred_baton.realmstring = realmstring;
   cred_baton.pool = pool;
 
