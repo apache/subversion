@@ -61,7 +61,7 @@ Candidate changes:
    Stop exposing and prohibit changing internal txn props through FS API
    Justification:
      Prevents an implementation detail leak.  Prohibits changing the
-     internal behavior of our transactions public API.  Avoids a situation
+     internal behavior of our transactions via public API.  Avoids a situation
      with the API function call discarding the data and falsely reporting
      success for "set" operations with 'svn:client-date' properties, i.e.,
      with the API telling us that the operation completed successfully when
