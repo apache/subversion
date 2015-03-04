@@ -239,20 +239,23 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
                            const apr_array_header_t *keys,
                            apr_pool_t *pool);
 
-/* In debug builds, the svn_hash_gets and svn_hash_sets macros forward their
- * parameters through these functions in order to gain type checking for the
- * 'key' parameter which the basic apr_hash_* APIs declare only as 'void *'.
+/* For the Subversion developers, this #define makes the svn_hash_gets and
+ * svn_hash_sets macros forward their parameters through functions in order to
+ * gain type checking for the 'key' parameter which the basic apr_hash_* APIs
+ * declare only as 'void *'.
  */
+#ifdef SVN_DEBUG
+#define SVN_HASH__GETS_SETS
+#endif
+
+#ifdef SVN_HASH__GETS_SETS
 void *
 svn_hash__gets(apr_hash_t *ht, const char *key);
-void
-svn_hash__sets(apr_hash_t *ht, const char *key, const void *value);
 
 /** Shortcut for apr_hash_get() with a const char * key.
  *
  * @since New in 1.8.
  */
-#ifdef SVN_DEBUG
 #define svn_hash_gets(ht, key) \
             svn_hash__gets(ht, key)
 #else
@@ -260,11 +263,14 @@ svn_hash__sets(apr_hash_t *ht, const char *key, const void *value);
             apr_hash_get(ht, key, APR_HASH_KEY_STRING)
 #endif
 
+#ifdef SVN_HASH__GETS_SETS
+void
+svn_hash__sets(apr_hash_t *ht, const char *key, const void *value);
+
 /** Shortcut for apr_hash_set() with a const char * key.
  *
  * @since New in 1.8.
  */
-#ifdef SVN_DEBUG
 #define svn_hash_sets(ht, key, val) \
             svn_hash__sets(ht, key, val)
 #else

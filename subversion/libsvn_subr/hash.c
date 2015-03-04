@@ -31,10 +31,14 @@
 #include <apr_hash.h>
 #include <apr_file_io.h>
 
+#ifndef SVN_HASH__GETS_SETS
+#define SVN_HASH__GETS_SETS
+#endif
+#include "svn_hash.h"
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
-#include "svn_hash.h"
 #include "svn_sorts.h"
 #include "svn_io.h"
 #include "svn_pools.h"
@@ -44,7 +48,6 @@
 #include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
-
 
 
 
