@@ -709,7 +709,7 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
 
 svn_error_t *
 svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
-                            svn_auth_baton_t *auth_baton,
+                            const svn_auth_baton_t *auth_baton,
                             apr_hash_t *config,
                             const char *server_name,
                             apr_pool_t *result_pool,
