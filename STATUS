@@ -90,7 +90,7 @@ Other candidate changes:
    Justification:
      Fixes a typo.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
 
  * r1663991
    Fix calculating the repository path after commits of nodes that are
@@ -128,7 +128,7 @@ Other candidate changes:
      consequence of 'svnlook proplist' no longer leaking internal properties
      like svn:check-locks for transactions.
    Votes:
-     +1: kotkov
+     +1: kotkov, rhuijben
      +0: philip (the new behaviour is fine but so is the old behaviour.
          svn:client-date is internal so does not have to obey the
          rules that apply to user properties. The proplist "leak" is
