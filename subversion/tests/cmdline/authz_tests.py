@@ -83,7 +83,7 @@ def authz_open_root(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         None,
-                                        None,
+                                        [],
                                         mu_path)
 
 #----------------------------------------------------------------------
@@ -119,9 +119,7 @@ def authz_open_directory(sbox):
   # Commit the working copy.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        None,
-                                        None,
-                                        wc_dir)
+                                        None)
 
 @Skip(svntest.main.is_ra_type_file)
 @SkipDumpLoadCrossCheck()
@@ -392,9 +390,9 @@ def authz_checkout_test(sbox):
   expected_wc = svntest.main.greek_state
 
   svntest.actions.run_and_verify_checkout(sbox.repo_url,
-                          local_dir,
-                          expected_output,
-                          expected_wc)
+                                          local_dir,
+                                          expected_output,
+                                          expected_wc)
 
 @Skip(svntest.main.is_ra_type_file)
 def authz_checkout_and_update_test(sbox):
@@ -456,9 +454,7 @@ def authz_checkout_and_update_test(sbox):
                                         expected_output,
                                         expected_wc,
                                         expected_status,
-                                        None,
-                                        None, None,
-                                        None, None, 1)
+                                        [], True)
 
 @Skip(svntest.main.is_ra_type_file)
 def authz_partial_export_test(sbox):
@@ -770,7 +766,7 @@ def authz_locking(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         [],
-                                        None,
+                                        [],
                                         mu_path)
 
   # Lock two paths one of which fails. First add read access to '/' so
@@ -1135,7 +1131,7 @@ def case_sensitive_authz(sbox):
     })
 
   # error messages
-  expected_error_for_commit = "Commit failed"
+  expected_error_for_commit = ".*Commit failed.*"
 
   if sbox.repo_url.startswith("http"):
     expected_error_for_cat = ".*[Ff]orbidden.*"
@@ -1204,7 +1200,7 @@ def case_sensitive_authz(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         None,
-                                        None,
+                                        [],
                                         mu_path)
 
 @Skip(svntest.main.is_ra_type_file)
@@ -1233,7 +1229,7 @@ def authz_tree_conflict(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None, None, None, None, None, 0,
+                                        [], False,
                                         '-r', '1', wc_dir)
 
 @Issue(3900)
@@ -1432,9 +1428,7 @@ def remove_subdir_with_authz_and_tc(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None,
-                                        None, None,
-                                        None, None, False,
+                                        [], False,
                                         wc_dir, '-r', '1')
 
   # Perform some edit operation to introduce a tree conflict
@@ -1449,11 +1443,7 @@ def remove_subdir_with_authz_and_tc(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         None,
-                                        None,
-                                        None,
-                                        None, None,
-                                        None, None, False,
-                                        wc_dir)
+                                        None)
 
 @SkipUnless(svntest.main.is_ra_type_svn)
 def authz_svnserve_groups(sbox):

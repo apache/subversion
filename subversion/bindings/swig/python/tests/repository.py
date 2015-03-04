@@ -311,6 +311,98 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     repos.freeze([self.repos_path], self.freeze_body)
     self.assertEqual(self.freeze_invoked, 1)
 
+  def test_lock_unlock(self):
+    """Basic lock/unlock"""
+
+    access = fs.create_access('jrandom')
+    fs.set_access(self.fs, access)
+    fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, False)
+    try:
+      fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, False)
+    except core.SubversionException, exc:
+      self.assertEqual(exc.apr_err, core.SVN_ERR_FS_PATH_ALREADY_LOCKED)
+    fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, True)
+
+    self.calls = 0
+    self.errors = 0
+    def unlock_callback(path, lock, err, pool):
+      self.assertEqual(path, '/trunk/README.txt')
+      self.assertEqual(lock, None)
+      self.calls += 1
+      if err != None:
+        self.assertEqual(err.apr_err, core.SVN_ERR_FS_NO_SUCH_LOCK)
+        self.errors += 1
+
+    the_lock = fs.get_lock(self.fs, '/trunk/README.txt')
+    fs.unlock_many(self.fs, {'/trunk/README.txt':the_lock.token}, False,
+                   unlock_callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.errors, 0)
+
+    self.calls = 0
+    fs.unlock_many(self.fs, {'/trunk/README.txt':the_lock.token}, False,
+                   unlock_callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.errors, 1)
+
+    self.locks = 0
+    def lock_callback(path, lock, err, pool):
+      self.assertEqual(path, '/trunk/README.txt')
+      if lock != None:
+        self.assertEqual(lock.owner, 'jrandom')
+        self.locks += 1
+      self.calls += 1
+      if err != None:
+        self.assertEqual(err.apr_err, core.SVN_ERR_FS_PATH_ALREADY_LOCKED)
+        self.errors += 1
+      
+    self.calls = 0
+    self.errors = 0
+    target = fs.lock_target_create(None, self.rev)
+    fs.lock_many(self.fs, {'trunk/README.txt':target},
+                 None, False, 0, False, lock_callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.locks, 1)
+    self.assertEqual(self.errors, 0)
+
+    self.calls = 0
+    self.locks = 0
+    fs.lock_many(self.fs, {'trunk/README.txt':target},
+                 None, False, 0, False, lock_callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.locks, 0)
+    self.assertEqual(self.errors, 1)
+
+    self.calls = 0
+    self.errors = 0
+    the_lock = fs.get_lock(self.fs, '/trunk/README.txt')
+    repos.fs_unlock_many(self.repos, {'trunk/README.txt':the_lock.token},
+                         False, unlock_callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.errors, 0)
+
+    self.calls = 0
+    repos.fs_unlock_many(self.repos, {'trunk/README.txt':the_lock.token},
+                         False, unlock_callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.errors, 1)
+
+    self.calls = 0
+    self.errors = 0
+    repos.fs_lock_many(self.repos, {'trunk/README.txt':target},
+                       None, False, 0, False, lock_callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.locks, 1)
+    self.assertEqual(self.errors, 0)
+
+    self.calls = 0
+    self.locks = 0
+    repos.fs_lock_many(self.repos, {'trunk/README.txt':target},
+                       None, False, 0, False, lock_callback)
+    self.assertEqual(self.calls, 1)
+    self.assertEqual(self.locks, 0)
+    self.assertEqual(self.errors, 1)
+
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
       SubversionRepositoryTestCase)

@@ -2273,7 +2273,7 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  */
 svn_error_t *
 svn_repos_fs_lock_many(svn_repos_t *repos,
-                       apr_hash_t *targets,
+                       apr_hash_t *lock_targets,
                        const char *comment,
                        svn_boolean_t is_dav_comment,
                        apr_time_t expiration_date,
@@ -2325,7 +2325,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
  */
 svn_error_t *
 svn_repos_fs_unlock_many(svn_repos_t *repos,
-                         apr_hash_t *targets,
+                         apr_hash_t *unlock_targets,
                          svn_boolean_t break_lock,
                          svn_fs_lock_callback_t lock_callback,
                          void *lock_baton,

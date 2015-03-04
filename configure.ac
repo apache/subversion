@@ -1455,8 +1455,15 @@ if test "$do_javahl_build" = "yes"; then
   # it.
   AC_MSG_CHECKING([for additional flags to link C++ libraries])
   if test "x$ac_compiler_gnu" = "xyes"; then
-    LT_CXX_LIBADD="-lstdc++"
-    AC_MSG_RESULT([$LT_CXX_LIBADD])
+    case "$host" in
+      *freebsd10*)
+        AC_MSG_RESULT([none needed])
+      ;;
+      *)
+        LT_CXX_LIBADD="-lstdc++"
+        AC_MSG_RESULT([$LT_CXX_LIBADD])
+      ;;
+    esac
   else
     AC_MSG_RESULT([none needed])
   fi

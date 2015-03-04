@@ -709,7 +709,7 @@ def dont_diff_binary_file(sbox):
 
   # Commit the new binary file, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Update the whole working copy to HEAD (rev 2)
   expected_output = svntest.wc.State(wc_dir, {})
@@ -729,8 +729,7 @@ def dont_diff_binary_file(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        1)  # verify props, too.
+                                        check_props=True)
 
   # Make a local mod to the binary file.
   svntest.main.file_append(theta_path, "some extra junk")
@@ -772,7 +771,7 @@ def dont_diff_binary_file(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Third diff use-case: 'svn diff -r2:3 wc' will compare two
   # repository trees.
@@ -869,7 +868,7 @@ def diff_base_to_repos(sbox):
   expected_status.tweak('iota', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -999,7 +998,7 @@ def diff_base_to_repos(sbox):
     'A/D/newfile' : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -1067,7 +1066,7 @@ def diff_deleted_in_head(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -1090,7 +1089,7 @@ def diff_deleted_in_head(sbox):
                          'A/C')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Doing an 'svn diff -r1:2' on the URL of directory A should work,
   # especially over the DAV layer.
@@ -1753,7 +1752,7 @@ def diff_force(sbox):
 
   # Commit iota, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Add another line, while keeping he file as binary.
   svntest.main.file_append(iota_path, "another line")
@@ -1769,7 +1768,7 @@ def diff_force(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Check that we get diff when the first, the second and both files
   # are marked as binary.  First we'll use --force.  Then we'll use
@@ -2613,7 +2612,7 @@ def diff_weird_author(sbox):
   expected_status.tweak("A/mu", wc_rev=2)
 
   svntest.actions.run_and_verify_commit(sbox.wc_dir, expected_output,
-                                        expected_status, None, sbox.wc_dir)
+                                        expected_status)
 
   svntest.main.run_svn(None,
                        "propset", "--revprop", "-r", "2", "svn:author",
@@ -2652,7 +2651,7 @@ def diff_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None,)
 
   # only whitespace changes, should return no changes
   svntest.main.file_write(file_path,
@@ -2698,7 +2697,7 @@ def diff_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # commit only eol changes
   svntest.main.file_write(file_path,
@@ -2746,7 +2745,7 @@ def diff_in_renamed_folder(sbox):
   ### child of the A/D/C copy. thus, it appears in the status output as a
   ### (M)odified child.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   expected_output = svntest.wc.State(wc_dir, {
       'A/D/C/kappa' : Item(verb='Sending'),
@@ -2756,7 +2755,7 @@ def diff_in_renamed_folder(sbox):
   for i in range(3, 5):
     svntest.main.file_append(kappa_path, str(i) + "\n")
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, wc_dir)
+                                          None)
 
   expected_output = make_diff_header(kappa_path, "revision 3",
                                      "revision 4") + [
@@ -2906,7 +2905,7 @@ def diff_ignore_eolstyle_empty_lines(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # sleep to guarantee timestamp change
   time.sleep(1.1)
@@ -3013,7 +3012,7 @@ def diff_summarize_xml(sbox):
     [], wc_dir, paths, items, props, kinds, wc_dir)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # 1) Test --xml without --summarize
   svntest.actions.run_and_verify_svn(
@@ -3402,7 +3401,7 @@ def diff_prop_missing_context(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   prop_val = "".join([
                "line 3\n",
@@ -3459,7 +3458,7 @@ def diff_prop_multiple_hunks(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   prop_val = "".join([
                "line 1\n",
@@ -3523,7 +3522,7 @@ def diff_git_empty_files(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   svntest.main.file_write(new_path, "")
   svntest.main.run_svn(None, 'add', new_path)
@@ -3560,7 +3559,7 @@ def diff_git_with_props(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   svntest.main.file_write(new_path, "")
   svntest.main.run_svn(None, 'add', new_path)
@@ -3602,7 +3601,7 @@ def diff_correct_wc_base_revnum(sbox):
     'iota' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Child's base is now 2; parent's is still 1.
   # Make a local mod.
@@ -3641,7 +3640,7 @@ def diff_git_with_props_on_dir(sbox):
 
   sbox.simple_propset('k','v', '', 'A')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
@@ -4371,7 +4370,7 @@ def diff_repos_empty_file_addition(sbox):
     'newfile' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(sbox.wc_dir, expected_output,
-                                        expected_status, None, sbox.wc_dir)
+                                        expected_status)
 
   # Now diff the revision that added the empty file.
   expected_output = [
@@ -4418,8 +4417,8 @@ def diff_missing_tree_conflict_victim(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, None,
-                                       False, '--ignore-ancestry', wc_dir)
+                                       [], False, False,
+                                       '--ignore-ancestry', wc_dir)
 
   # 'svn diff' should show no change for the working copy
   # This currently fails because svn errors out with a 'node not found' error

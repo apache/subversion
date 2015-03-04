@@ -126,8 +126,7 @@ def import_executable(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 def import_ignores(sbox):
@@ -197,8 +196,7 @@ def import_ignores(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 def import_no_ignores(sbox):
@@ -272,8 +270,7 @@ def import_no_ignores(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 #----------------------------------------------------------------------
 def import_avoid_empty_revision(sbox):
   "avoid creating empty revisions with import"

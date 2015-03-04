@@ -234,7 +234,7 @@ def non_inheritable_mergeinfo(sbox):
     })
   expected_status.tweak('A_COPY', 'A_COPY/D/G/rho', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Update the WC a last time to ensure full inheritance.
   svntest.actions.run_and_verify_svn(exp_noop_up_out(7), [], 'up',

@@ -298,7 +298,7 @@ def keywords_from_birth(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # Make sure the unexpanded URL keyword got expanded correctly.
   fp = open(url_unexp_path, 'r')
@@ -449,9 +449,6 @@ def keywords_from_birth(sbox):
 # This is a slight rewrite of his test, to use the run_and_verify_* API.
 # This is for issue #631.
 
-def do_nothing(x, y):
-  return 0
-
 @Issue(631)
 def update_modified_with_translation(sbox):
   "update modified file with eol-style 'native'"
@@ -479,7 +476,7 @@ def update_modified_with_translation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, rho_path)
+                                        [], rho_path)
 
   # Change rho again
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n")
@@ -491,7 +488,7 @@ def update_modified_with_translation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, rho_path)
+                                        [], rho_path)
 
   # Locally modify rho again.
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n")
@@ -533,13 +530,14 @@ def update_modified_with_translation(sbox):
 
   # Updating back to revision 1 should not error; the merge should
   # work, with eol-translation turned on.
+  extra_files = ['rho.r1', 'rho.r3', 'rho.mine']
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        None, None,
-                                        do_nothing, None,
-                                        None, None,
-                                        0, '-r', '1', wc_dir)
+                                        None,
+                                        [], False,
+                                        '-r', '1', wc_dir,
+                                        extra_files=extra_files)
 
 
 #----------------------------------------------------------------------
@@ -667,8 +665,7 @@ def cat_keyword_expansion(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Change the author to value which will get truncated on expansion
   full_author = "x" * 400
@@ -680,7 +677,7 @@ def cat_keyword_expansion(sbox):
                                      sbox.wc_dir)
   svntest.actions.run_and_verify_svn([ full_author ], [],
                                      'propget', '--revprop', '-r2',
-                                     'svn:author', '--strict',
+                                     'svn:author', '--no-newline',
                                      sbox.wc_dir)
 
   # Make another commit so that the last changed revision for A/mu is
@@ -692,8 +689,7 @@ def cat_keyword_expansion(sbox):
     })
   expected_status.tweak('A/B/lambda', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
@@ -729,8 +725,7 @@ def copy_propset_commit(sbox):
     })
   expected_status.tweak('A/mu2', status='  ', wc_rev=2, copied=None)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
 #----------------------------------------------------------------------
 #      Create a greek tree, commit a keyword into one file,
@@ -752,8 +747,7 @@ def propset_commit_checkout_nocrash(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Set property to do keyword expansion on A/mu, commit.
   svntest.actions.run_and_verify_svn(None, [],
@@ -764,8 +758,7 @@ def propset_commit_checkout_nocrash(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Check out into another wc dir
   other_wc_dir = sbox.add_wc_path('other')
@@ -833,9 +826,7 @@ def props_only_file_update(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Create r3 that drops svn:keywords
 
@@ -848,9 +839,7 @@ def props_only_file_update(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Now, go back to r2. iota should have the Author keyword expanded.
   expected_disk = svntest.main.greek_state.copy()
@@ -860,9 +849,7 @@ def props_only_file_update(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         None, None, expected_status,
-                                        None,
-                                        None, None, None, None,
-                                        False,
+                                        [], False,
                                         wc_dir, '-r', '2')
 
   if open(iota_path).read() != ''.join(content_expanded):
@@ -875,11 +862,7 @@ def props_only_file_update(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
 
   svntest.actions.run_and_verify_update(wc_dir,
-                                        None, expected_disk, expected_status,
-                                        None,
-                                        None, None, None, None,
-                                        False,
-                                        wc_dir)
+                                        None, expected_disk, expected_status)
 
   if open(iota_path).read() != ''.join(content):
     raise svntest.Failure("$Author$ is not contracted in 'iota'")

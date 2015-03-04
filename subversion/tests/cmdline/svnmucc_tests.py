@@ -345,7 +345,7 @@ def propset_root_internal(sbox, target):
                                          'propset', 'foo', 'bar',
                                          target)
   svntest.actions.run_and_verify_svn('bar', [],
-                                     'propget', '--strict', 'foo',
+                                     'propget', '--no-newline', 'foo',
                                      target)
 
   ## propdel on ^/
@@ -355,7 +355,7 @@ def propset_root_internal(sbox, target):
                                          target)
   svntest.actions.run_and_verify_svn([],
                                      '.*W200017: Property.*not found',
-                                     'propget', '--strict', 'foo',
+                                     'propget', '--no-newline', 'foo',
                                      target)
 
 @Issues(3663)
