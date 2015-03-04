@@ -157,6 +157,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1663991
+   Fix calculating the repository path after commits of nodes that are
+   shadowing a switched (not-present) node.
+   Justification:
+     Allows introducing repository paths in the working copy, that don't
+     reflect the repository state.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
