@@ -135,6 +135,39 @@ $SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG;
 
 
+my $BACKPORT_OPTIONS_HELP = <<EOF;
+y:   Run a merge.  It will not be committed.
+     WARNING: This will run 'update' and 'revert -R ./'.
+l:   Show logs for the entries being nominated.
+v:   Show the full entry (the prompt only shows an abridged version).
+q:   Quit the "for each entry" loop.  If you have entered any votes or
+     approvals, you will be prompted to commit them.
+±1:  Enter a +1 or -1 vote
+     You will be prompted to commit your vote at the end.
+±0:  Enter a +0 or -0 vote
+     You will be prompted to commit your vote at the end.
+a:   Move the entry to the "Approved changes" section.
+     When both approving and voting on an entry, approve first: for example,
+     to enter a third +1 vote, type "a" "+" "1".
+e:   Edit the entry in \$EDITOR, which is '$EDITOR'.
+     You will be prompted to commit your edits at the end.
+N:   Move to the next entry.  Do not prompt for the current entry again, even
+     in future runs, unless the STATUS nomination has been modified (e.g.,
+     revisions added, justification changed) in the repository.
+     (This is a local action that will not affect other people or bots.)
+ :   Move to the next entry.  Prompt for the current entry again in the next
+     run of backport.pl. 
+     (That's a space character, ASCII 0x20.)
+?:   Display this list.
+EOF
+
+my $BACKPORT_OPTIONS_MERGE_OPTIONS_HELP = <<EOF;
+y:   Open a shell.
+d:   View a diff.
+N:   Move to the next entry.
+?:   Display this list.
+EOF
+
 sub backport_usage {
   my $basename = basename $0;
   print <<EOF;
@@ -164,30 +197,11 @@ sense of "match" is either substring (fgrep) or Perl regexp (with /msi).
 In interactive mode (the default), you will be prompted once per STATUS entry.
 At a prompt, you have the following options:
 
-y:   Run a merge.  It will not be committed.
-     WARNING: This will run 'update' and 'revert -R ./'.
-l:   Show logs for the entries being nominated.
-v:   Show the full entry (the prompt only shows an abridged version).
-q:   Quit the "for each nomination" loop.
-±1:  Enter a +1 or -1 vote
-     You will be prompted to commit your vote at the end.
-±0:  Enter a +0 or -0 vote
-     You will be prompted to commit your vote at the end.
-a:   Move the entry to the "Approved changes" section.
-     When both approving and voting on an entry, approve first: for example,
-     to enter a third +1 vote, type "a" "+" "1".
-e:   Edit the entry in $EDITOR.
-     You will be prompted to commit your edits at the end.
-N:   Move to the next entry.  Cache the entry in '$STATEFILE' and do not
-     prompt for it again (even across runs) until it is changed.
- :   Move to the next entry, without adding the current one to the cache.
-     (That's a space character, ASCII 0x20.)
+$BACKPORT_OPTIONS_HELP
 
 After running a merge, you have the following options:
 
-y:   Open a shell.
-d:   View a diff.
-N:   Move to the next entry.
+$BACKPORT_OPTIONS_MERGE_OPTIONS_HELP
 
 To commit a merge, you have two options: either answer 'y' to the second prompt
 to open a shell, and manually run 'svn commit' therein; or set \$MAY_COMMIT=1
@@ -1017,13 +1031,13 @@ sub handle_entry {
     # See above for why the while(1).
     QUESTION: while (1) {
     my $key = $entry{digest};
-    given (prompt 'Run a merge? [y,l,v,±1,±0,q,e,a, ,N] ',
+    given (prompt 'Run a merge? [y,l,v,±1,±0,q,e,a, ,N,?] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
-        #validate_branch_contains_named_revisions %entry;
+        # TODO: validate_branch_contains_named_revisions %entry;
         merge \%entry;
         while (1) {
-          given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
+          given (prompt "Shall I open a subshell? [ydN?] ", verbose => 1) {
             when (/^y/i) {
               # TODO: if $MAY_COMMIT, save the log message to a file (say,
               #       backport.logmsg in the wcroot).
@@ -1033,6 +1047,10 @@ sub handle_entry {
             when (/^d/) {
               system("$SVN diff | $PAGER") == 0
                 or warn "diff failed ($?): $!";
+              next;
+            }
+            when (/^[?]/i) {
+              print $BACKPORT_OPTIONS_MERGE_OPTIONS_HELP;
               next;
             }
             when (/^N/i) {
@@ -1097,6 +1115,10 @@ sub handle_entry {
       }
       when (/^\x20/) {
         last PROMPT; # Fall off the end of the given/when block.
+      }
+      when (/^[?]/i) {
+        print $BACKPORT_OPTIONS_HELP;
+        next QUESTION;
       }
       default {
         say "Please use one of the options in brackets (q to quit)!";
