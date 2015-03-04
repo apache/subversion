@@ -311,8 +311,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   apr_pool_t *subpool;
-  svn_fs_root_t *start_root, *root, *copy_root;
-  const char *copy_path;
+  svn_fs_root_t *start_root, *root;
   svn_revnum_t mid_rev;
   svn_node_kind_t kind;
   svn_fs_node_relation_t node_relation;
@@ -379,6 +378,8 @@ svn_repos_deleted_rev(svn_fs_t *fs,
                                    root, path, pool));
       if (node_relation != svn_fs_node_unrelated)
         {
+          svn_fs_root_t *copy_root;
+          const char *copy_path;
           SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
                                       path, pool));
           if (!copy_root ||
@@ -440,7 +441,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
 
       /* Get revision root and node id for mid_rev at that revision. */
       SVN_ERR(svn_fs_revision_root(&root, fs, mid_rev, subpool));
-      SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+      SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
       if (kind == svn_node_none)
         {
           /* Case D: Look lower in the range. */
@@ -449,13 +450,15 @@ svn_repos_deleted_rev(svn_fs_t *fs,
         }
       else
         {
+          svn_fs_root_t *copy_root;
+          const char *copy_path;
           /* Determine the relationship between the start node
              and the current node. */
           SVN_ERR(svn_fs_node_relation(&node_relation, start_root, path,
-                                       root, path, pool));
+                                       root, path, subpool));
           if (node_relation != svn_fs_node_unrelated)
-          SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
-                                      path, subpool));
+            SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
+                                        path, subpool));
           if (node_relation == svn_fs_node_unrelated ||
               (copy_root &&
                (svn_fs_revision_root_revision(copy_root) > start)))
