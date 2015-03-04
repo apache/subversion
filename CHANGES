@@ -39,9 +39,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnadmin verify: speed up for repos with large directories (r1520419)
     * merge: interactive conflict merge option tries external tools (r1524145)
     * minor speed up in string to time conversion (r1533387)
-    * list: remove some unnecessary work from implementation (r1533392)
     * windows: speed up console output (r1533994)
-    * update: optimize wc db usage (r1537065 et al)
+    * update: optimize wc db usage when obtaining children (r1537065 et al)
     * decreased overhead for case-sensitive configuration access (r1538068)
     * avoid re-opening repo for in-repo authz if already open (r1538120)
     * svnserve: output errors in a more standard way (r1544250)
@@ -50,7 +49,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnserve: provide the same logging detail in "run once" mode as provided
       in the log file (r1544731)
     * svnserve: reduce connection latency (r1544732)
-    * wc: optimize SQLite queries against wc db (r154511)
     * wc: reduce the number of locks and transactions required (r1545127 et al)
     * cat: add '--ignore-keywords' option (r1547517)
     * merge and mergeinfo: use fewer ra sessions (r1552265)
@@ -88,11 +86,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * ra_serf: pipeline lock/unlock requests (r1551918, r1551993, r1552008)
     * ra_serf: pipeline requests for inherited properties against old servers
       that don't support the faster REPORT (r1552455, r1552475)
-    * ra_serf: allow reuse of sessions after a timeout (r1557686)
+    * ra_serf: allow reuse of sessions after a canceled request (r1557686)
     * ra_serf: reduce memory usage when retrieving revision props (r1557689)
     * mod_dav_svn: make out of date error message consistent with generic repos
       logic (r1558247)
-    * wc: allow SQLite to optimize functions that are deterministic (r1559352)
+    * allow SQLite to optimize functions that are deterministic (r1559352)
     * speed up delta calculations on non-deltifyable sections (r1559767)
     * ra_serf: improve memory usage in commit processing (r1520028)
     * report progress as cumulative across all sessions (issue #3260)
@@ -104,7 +102,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnadmin crashtest: make output less misleading (r1486046) 
     * mod_dav_svn: discover copy to src earlier in some cases (r1537440)
     * speed up mergeinfo parsing (r1483292, r1483309 et al)
-    * optimize hash lookups used throughout subversion (r1483434 et al)
+    * optimize hash lookups used in mergeinfo and caching (r1483434 et al)
     * log: optimize string handling in repos layer (r1483570, r1483572)
     * ask disk hardware to sync instead of only syncing to hardware buffers
       when OS supports it (r1484439, r1484445)
@@ -133,7 +131,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       number of out of date errors clients see (r1572336)
     * allow the use of libmagic to be configured via subversion configuration
       file or SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE env variable (r1572916)
-    * store human readable info about SSL certs in auth store (r1573625)
     * new '--pin-externals' option for svn copy (issue #1258)
     * the '--strict' option was replaced by '--no-newline' (r1662224)
     * merge/update: switch to three-way text conflict markers
@@ -293,15 +290,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * upgrade: fix corner cases found in wc upgrades (r1660646 et al)
     * update: resolve issues with tree conflicts caused by an incoming
       delete removing a mixed revision tree (r1660742)
-    * status: don't display a lock token that we've broken and then removed
-      the target of after readding file (r1661363)
+    * don't hold onto locks of deleted paths in the client on commit (r1661363)
     * info: fix url calculation for a few statuses (r1661476)
     * update: when using '--set-depth' avoid removing local changes (r1661585)
     * update: fix tree conflict detection on unversioned nodes that exist where
       there used to be a deleted node (r1661664)
     * status: display tree conflicts even if the node with the tree conflict is
       shadowed by a file (r1662331)
-    * status: fix with obstructed working copies (r1662412)
+    * entries compatibility: fix with obstructed working copies (r1662412)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
