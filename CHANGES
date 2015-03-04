@@ -223,7 +223,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * log: reduce performance penalties of using -g (r1559912)
     * blame: reduce performance penalties of using -g (r1560112)
     * ra_local: set svn:txn-user-agent for consistency (r1498608)
-    * ra_svn: use the stream api properly for communications (r1562072)
+    * ra_svn: use the stream API properly for communications (r1562072)
     * update: provide error when none of targets are wcs (r1565388)
     * wc: reduce dependence on unspecified SQLite behavior (r1567080 et al)
     * diff: fix diff of directory failing without permissions to read ancester
@@ -507,24 +507,24 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       svn_ra_callbacks2_t::check_tunnel_func,
       svn_ra_callbacks2_t::open_tunnel_func and
       svn_ra_callbacks2_t::close_tunnel_func.
-    * New api for retrieving info about a file system: svn_fs_info()
-    * New api svn_io_file_flush() that wraps apr_file_flush().
-    * New api svn_io_write_atomic(), that writes, sync and renames a file.
-    * New api svn_compat_log_revprops_out_string().
+    * New API for retrieving info about a file system: svn_fs_info()
+    * New API svn_io_file_flush() that wraps apr_file_flush().
+    * New API svn_io_write_atomic(), that writes, sync and renames a file.
+    * New API svn_compat_log_revprops_out_string().
     * Deprecate unused datatype svn_ra_get_latest_revnum_func_t.
-    * New api svn_client_cleanup2() (r1496954 et al)
-    * New api svn_stringbuf_create_wrap() (r1502248)
-    * New api svn_io_file_aligned_seek() (r1502539)
+    * New API svn_client_cleanup2() (r1496954 et al)
+    * New API svn_stringbuf_create_wrap() (r1502248)
+    * New API svn_io_file_aligned_seek() (r1502539)
     * ra_svn: fix svn_ra_get_log*() to apply limit when server can't (r1503043)
     * svn_client_commit6: notify which path prevents a mv commit (r1503662)
-    * New apis svn_io_file_create_empty() and svn_io_file_create_bytes()
+    * New APIs svn_io_file_create_empty() and svn_io_file_create_bytes()
       (r1505006)
-    * New api svn_ver_check_list2() (r1502267)
-    * New api svn_stringbuf_from_stream() (r1532193)
+    * New API svn_ver_check_list2() (r1502267)
+    * New API svn_stringbuf_from_stream() (r1532193)
     * svn_auth_get_platform_specific_client_providers() now includes ssl
       providers (r1534153)
     * dav_svn_split_uri() repos_path is a fspath with a leading slash (r1537812)
-    * New api svn_repos_fs_type() returns filesystem type (r1538585)
+    * New API svn_repos_fs_type() returns filesystem type (r1538585)
     * svn_client__get_inheritable_props() clears wcroot_iprops when revision is
       not valid (r1538602)
     * SVN_VA_NULL: New macro which is null-pointer constant (r1536307)
@@ -534,45 +534,45 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       svn_auth_get_platform_specific_provider() function instead (r1543992)
     * SVN_INT_ERR macro is deprecated use svn_handle_error2() or
       svn_cmdline_handle_exit_error() instead (r1544142)
-    * New api svn_client_cat3() allow disabling keyword expansion and retrieving
+    * New API svn_client_cat3() allow disabling keyword expansion and retrieving
       props. (r1544182)
     * svn_auth_first_credentials(): provides an error rather than crashing if
       auth_baton is NULL (r1544320)
     * svn_auth_set_parameter(): Do nothing if auth_baton is NULL (r1544320)
-    * New api svn_relpath_limit which returns a relpath with a maximum number
+    * New API svn_relpath_limit which returns a relpath with a maximum number
       of path components (r1545123)
     * svn_fs_initialize() is now threadsafe (r1546409)
     * svn_checksum_kind_t has two new FNV-1a checksums (r1546699)
     * svn_fs_lock: control characters are not allowed in lock tokens (r1547445)
-    * New api svn_wc_cleanup4() makes some functionality optional and adds
+    * New API svn_wc_cleanup4() makes some functionality optional and adds
       notifications (r1548075 et al)
-    * New api svn_client_info4() supports walking externals (r1550206 et al)
+    * New API svn_client_info4() supports walking externals (r1550206 et al)
     * New flag for svn_fs_begin_txn2() SVN_FS_TXN_CLIENT_DATE to allow client
       to set the final svn:date (r1550228)
-    * New apis for easier RA commits svn_client_mtcc_* (r1550758 et al)
-    * New api svn_ra_session_dup() (r1552324 et al)
+    * New APIs for easier RA commits svn_client_mtcc_* (r1550758 et al)
+    * New API svn_ra_session_dup() (r1552324 et al)
     * svn_ra_stat() now handles compatibility with 1.0-1.1 svnserve (r1552441)
     * New error code SVN_ERR_COMPOSED_ERROR added to allow detection of
       composed errors by API consumers (r1553266)
     * New error code SVN_ERR_RA_DAV_PRECONDITION_FAILED (r1553668)
     * New error code SVN_ERR_RA_CANNOT_CREATE_SESSION (r1554027)
-    * New api svn_fs_node_relation() (r1554800)
+    * New API svn_fs_node_relation() (r1554800)
     * SVN_EXPERIMENTAL to mark functions that might change in future (r1526012)
     * fix bug in svn_client_get_merging_summary() with some params (r1532396)
     * New error code SVN_ERR_XML_UNEXPECTED_ELEMENT (r1498938)
     * Extend stream API to also support incomplete reads (r1561688 et al)
-    * New api svn_wc_add_from_disk3() (r1563361)
-    * New api svn_client_revert3() to allow clearing changelists and to have
+    * New API svn_wc_add_from_disk3() (r1563361)
+    * New API svn_client_revert3() to allow clearing changelists and to have
       a metadata_only flag (r1568635, r1657026)
     * svn_rangelist_inheritable2(): don't change inheritabilty of remaining
       ranges (r1569731)
     * svn_rangelist_inheritable2() and svn_mergeinfo_inheritable2(): fix a
       pool lifetime issue (r1569764)
-    * New apis to support cancelation during unified diff output and
+    * New APIs to support cancelation during unified diff output and
       allow the context size to be specified (r1570149 et al)
     * APIs related to retrieving logs are now documented to be unlimited when
       a negative value is passed for the limit (r1570330, 1570335)
-    * New apis: svn_fs_props_different() and svn_fs_contents_different()
+    * New APIs: svn_fs_props_different() and svn_fs_contents_different()
       (r1572363, r1573111)
     * Expose SVN_CONFIG_AUTHN_* macros in public API (r1572640)
     * Add SVN_CONFIG_OPTION_SQLITE_TIMEOUT to allow SQLite busy timeout
@@ -583,14 +583,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * Properly handle canonical paths in svn_io_start_cmd3() (r1604761)
     * Add SVN_FS_CONFIG_FSFS_BLOCK_READ to control FSFS format 7 block
       read feature. (r1604933)
-    * New api svn_cstring_skip_prefix() (r1612823)
-    * New api svn_diff_mem_string_output_merge3() (r1618599)
+    * New API svn_cstring_skip_prefix() (r1612823)
+    * New API svn_diff_mem_string_output_merge3() (r1618599)
     * Extend svn_wc_info_t with conflicts2 (r1618643)
-    * New api svn_diff_mem_string_output_unified3() (r1618839)
-    * New api svn_diff_file_output_merge3() (r1618857)
+    * New API svn_diff_mem_string_output_unified3() (r1618839)
+    * New API svn_diff_file_output_merge3() (r1618857)
     * svn_fs_props_changed() and svn_fs_contents_changed() no longer return
       false positives. (r1618880)
-    * New api svn_wc_conflict_description2_dup() (r1618883)
+    * New API svn_wc_conflict_description2_dup() (r1618883)
     * Extend svn_wc_conflict_description2_t with prop_reject_abspath field
       (r1619096)
     * Extend svn_wc_conflict_description2_t with property values as
@@ -599,7 +599,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fix a few cases of invalid filling of svn_client_commit_item3_t (r1623981)
     * Add SVN_FS_CONFIG_FSFS_SHARD_SIZE to allow creation of repositories with
       a custom shard size (r1624512)
-    * New api svn_cmdline_create_auth_baton2 (r1630117)
+    * New API svn_cmdline_create_auth_baton2 (r1630117)
     * Make svn_string_*() and svn_stringbuf_*() functions handle C strings
       of NULL with 0 length (r1632530, et al)
     * Fix svn_stream_compressed() for streams without partial read support
@@ -611,7 +611,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * Rename the 'parent_directory' parameter of
       svn_wc_parse_externals_description3() to 'defining_directory' and improve
       the documentation. (r1642690)
-    * New api svn_repos_get_fs_build_parser5() (r1647563)
+    * New API svn_repos_get_fs_build_parser5() (r1647563)
     * SVN_VERSION_BODY changed so that it is embedded into libraries, ultimately
       allowing SVN_VER_TAG constant to be modified by patches (r1651565)
     * Rename repos_url to repos_url_deocded argument to
@@ -625,7 +625,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       not exist (r1656875)
     * svn_string_dup() will accept a NULL pointer and return a NULL (r1657254)
     * svn_ra_get_file_revs2() now handles SVN_INVALID_REVNUM as HEAD (r1660463)
-    * New api svn_error_quick_wrapf() (r1662668)
+    * New API svn_error_quick_wrapf() (r1662668)
 
   - Bindings:
     * javahl: add support for the RA layer (r1494650 et al)
@@ -653,7 +653,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: new utility API to parse/unparse svn:externals (r1539130 et al)
     * javahl: allow tests to be run from a RAM disk (r1539215 et al)
     * javahl: expose and use the url member of svn_wc_notify_t (r1539601)
-    * javahl: expose a utility api to resolve relative externals (r1540921)
+    * javahl: expose a utility API to resolve relative externals (r1540921)
     * javahl: new utility API for file content translation (r1542401)
     * javahl: throw NullPointerException when sources is empty (r1543328)
     * swig-pl: fix compilation against perl 5.18 on Windows (r1543980)
@@ -661,7 +661,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: enable warnings with javac (r1544163, r1544169)
     * javahl: cleanup warnings (r1544578 et al)
     * javahl: add common utilities for new-style map iterations (r1545925)
-    * javahl: add an api to get runtime version of native libs (r1545945)
+    * javahl: add an API to get runtime version of native libs (r1545945)
     * javahl: use default cache size instead of no cache (r1547248)
     * swig-py: add typemap for hunks field of svn_patch_t (r1548379)
     * javahl: don't ignore difference between NULL and empty changelist in
