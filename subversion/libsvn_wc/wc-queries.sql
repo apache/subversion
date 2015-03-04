@@ -249,7 +249,8 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 
 -- STMT_DELETE_BASE_RECURSIVE
 DELETE FROM nodes
-WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+WHERE wc_id = ?1 AND (local_relpath = ?2 
+                      OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
 
 -- STMT_DELETE_WORKING_OP_DEPTH

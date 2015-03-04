@@ -4086,6 +4086,75 @@ def nested_notification(sbox):
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'update', sbox.ospath('D1'))
 
+def file_external_to_normal_file(sbox):
+  "change a file external to a normal file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_propset('svn:externals', '^/iota iota', 'A')
+  sbox.simple_commit()
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/iota'            : Item(status='  ', wc_rev='2', switched='X'),
+  })
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/iota'            : Item(status='A '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status)
+
+  # Create second working copy in this state
+  sbox2 = sbox.clone_dependent(copy_wc=True)
+
+  sbox.simple_propdel('svn:externals', 'A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/iota'            : Item(verb='Removed external'),
+  })
+  expected_status.remove('A/iota')
+  expected_status.tweak('A', status=' M')
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status)
+
+  sbox.simple_copy('iota', 'A/iota')
+  sbox.simple_commit()
+
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('A', status='  ')
+  expected_status.add({
+    # This case used to triggered a switched status in 1.8.x before this
+    # test (and the fix for this problem) where added.
+    'A/iota'            : Item(status='  ', wc_rev='3'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status)
+
+
+  wc_dir = sbox2.wc_dir
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'                 : Item(status=' U'),
+    'A/iota'            : Item(verb='Removed external', prev_verb='Skipped'),
+  })
+  # This reports an obstruction and removes the file external
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status)
+
+  expected_status.add({
+    'A/iota'            : Item(status='  ', wc_rev='3'),
+  })
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/iota'            : Item(status='A '),
+  })
+  # This should bring in the new file
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -4159,6 +4228,7 @@ test_list = [ None,
               copy_pin_externals_wc_mixed_revisions,
               copy_pin_externals_whitepace_dir,
               nested_notification,
+              file_external_to_normal_file,
              ]
 
 if __name__ == '__main__':
