@@ -35,22 +35,6 @@ Status of 1.9.0:
      +1: rhuijben, philip
      -0: ivan (prefer r1658194 micro-optimization to be reverted)
 
- * r1663738
-   Stop exposing and prohibit changing internal txn props through FS API
-   Justification:
-     Prevents an implementation detail leak.  Prohibits changing the
-     internal behavior of our transactions via public API.  Avoids a situation
-     with the API function call discarding the data and falsely reporting
-     success for "set" operations with 'svn:client-date' properties, i.e.,
-     with the API telling us that the operation completed successfully when
-     the change itself was not applied.  (The last part is new-in-1.9.)
-   Notes:
-     While this is mostly an API correctness fix, there is a user-visible
-     consequence of 'svnlook proplist' no longer leaking internal properties
-     like svn:check-locks for transactions.
-   Votes:
-     +1: kotkov
-     
  * r1664078,r1664080
    Instead of making more changes to the auth batons from ra sessions, reduce
    the number of changes by introducing an internal slave auth baton feature.
@@ -129,6 +113,27 @@ Other candidate changes:
      base remove function.
    Votes:
      +1: rhuijben
+
+ * r1663738
+   Stop exposing and prohibit changing internal txn props through FS API
+   Justification:
+     Prevents an implementation detail leak.  Prohibits changing the
+     internal behavior of our transactions via public API.  Avoids a situation
+     with the API function call discarding the data and falsely reporting
+     success for "set" operations with 'svn:client-date' properties, i.e.,
+     with the API telling us that the operation completed successfully when
+     the change itself was not applied.  (The last part is new-in-1.9.)
+   Notes:
+     While this is mostly an API correctness fix, there is a user-visible
+     consequence of 'svnlook proplist' no longer leaking internal properties
+     like svn:check-locks for transactions.
+   Votes:
+     +1: kotkov
+     +0: philip (the new behaviour is fine but so is the old behaviour.
+         svn:client-date is internal so does not have to obey the
+         rules that apply to user properties. The proplist "leak" is
+         strictly a regression as it is no longer possible to determine
+         whether the CHECK_LOCKS flag is set on a txn.)
 
 Veto-blocked changes:
 =====================
