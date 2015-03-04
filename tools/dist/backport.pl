@@ -1255,7 +1255,7 @@ sub nominate_main {
   }
 
   my @lines;
-  warn "Wrapping [$logmsg]\n";
+  warn "Wrapping [$logmsg]\n" if $DEBUG;
   push @lines, wrap " * ", ' 'x3, join ', ', map "r$_", @revnums;
   push @lines, wrap ' 'x3, ' 'x3, split /\n/, $logmsg;
   push @lines, "   Justification:";
