@@ -573,7 +573,7 @@ svn_hash__gets(apr_hash_t *ht, const char *key)
 void
 svn_hash__sets(apr_hash_t *ht, const char *key, const void *val)
 {
-  return apr_hash_set(ht, key, APR_HASH_KEY_STRING, val);
+  apr_hash_set(ht, key, APR_HASH_KEY_STRING, val);
 }
 
 
