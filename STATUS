@@ -83,6 +83,28 @@ Other candidate changes:
    Votes:
      +1: brane
 
+ * r1663991
+   Fix calculating the repository path after commits of nodes that are
+   shadowing a switched (not-present) node.
+   Justification:
+     Allows introducing repository paths in the working copy, that don't
+     reflect the repository state.
+   Votes:
+     +1: rhuijben
+
+ * r1664035
+   Keep track of changes when a file external is replace by a real file
+   Justification:
+     When a file-external is deleted, there might be a real node that
+     want to take its place. This patch makes svn update introduce a
+     not present marker node, so a follow-up update will bring in the
+     new file (that was previously reported as skipped)
+   Notes:
+     To implement this some features had to be added to the generic
+     base remove function.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
