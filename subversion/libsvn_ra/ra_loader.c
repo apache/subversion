@@ -266,6 +266,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                           apr_pool_t *pool)
 {
   apr_pool_t *sesspool = svn_pool_create(pool);
+  apr_pool_t *scratch_pool = svn_pool_create(sesspool);
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
@@ -275,6 +276,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 #ifdef CHOOSABLE_DAV_MODULE
   const char *http_library = DEFAULT_HTTP_LIBRARY;
 #endif
+  svn_auth_baton_t *auth_baton;
 
   /* Initialize the return variable. */
   *session_p = NULL;
@@ -290,8 +292,12 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                              repos_URL);
 
   if (callbacks->auth_baton)
-    SVN_ERR(svn_auth__apply_config_for_server(callbacks->auth_baton, config,
-                                              repos_URI.hostname, sesspool));
+    SVN_ERR(svn_auth__make_session_auth(&auth_baton,
+                                        callbacks->auth_baton, config,
+                                        repos_URI.hostname,
+                                        sesspool, scratch_pool));
+  else
+    auth_baton = NULL;
 
 #ifdef CHOOSABLE_DAV_MODULE
   if (config)
@@ -344,16 +350,16 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
           if (! initfunc)
             SVN_ERR(load_ra_module(&initfunc, NULL, defn->ra_name,
-                                   sesspool));
+                                   scratch_pool));
           if (! initfunc)
             /* Library not found. */
             continue;
 
-          SVN_ERR(initfunc(svn_ra_version(), &vtable, sesspool));
+          SVN_ERR(initfunc(svn_ra_version(), &vtable, scratch_pool));
 
           SVN_ERR(check_ra_version(vtable->get_version(), scheme));
 
-          if (! has_scheme_of(vtable->get_schemes(sesspool), repos_URL))
+          if (! has_scheme_of(vtable->get_schemes(scratch_pool), repos_URL))
             /* Library doesn't support the scheme at runtime. */
             continue;
 
@@ -377,10 +383,12 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   /* Ask the library to open the session. */
   err = vtable->open_session(session, corrected_url_p,
                              repos_URL,
-                             callbacks, callback_baton, config, sesspool);
+                             callbacks, callback_baton, auth_baton,
+                             config, sesspool, scratch_pool);
 
   if (err)
     {
+      svn_pool_clear(scratch_pool);
       if (err->apr_err == SVN_ERR_RA_SESSION_URL_MISMATCH)
         return svn_error_trace(err);
 
@@ -398,7 +406,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
     {
       /* *session_p = NULL; */
       *corrected_url_p = apr_pstrdup(pool, *corrected_url_p);
-      svn_pool_destroy(sesspool);
+      svn_pool_destroy(sesspool); /* Includes scratch_pool */
       return SVN_NO_ERROR;
     }
 
@@ -412,7 +420,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
         {
           /* Duplicate the uuid as it is allocated in sesspool */
           repository_uuid = apr_pstrdup(pool, repository_uuid);
-          svn_pool_destroy(sesspool);
+          svn_pool_destroy(sesspool); /* includes scratch_pool */
           return svn_error_createf(SVN_ERR_RA_UUID_MISMATCH, NULL,
                                    _("Repository UUID '%s' doesn't match "
                                      "expected UUID '%s'"),
@@ -420,6 +428,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
         }
     }
 
+  svn_pool_clear(scratch_pool);
   *session_p = session;
   return SVN_NO_ERROR;
 }

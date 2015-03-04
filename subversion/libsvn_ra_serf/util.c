@@ -313,11 +313,11 @@ ssl_server_cert(void *baton, int failures,
     {
       svn_error_t *err;
 
-      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+      svn_auth_set_parameter(conn->session->auth_baton,
                              SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                              &cert_info);
 
-      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+      svn_auth_set_parameter(conn->session->auth_baton,
                              SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                              &svn_failures);
 
@@ -327,13 +327,13 @@ ssl_server_cert(void *baton, int failures,
       err = svn_auth_first_credentials(&creds, &state,
                                        SVN_AUTH_CRED_SSL_SERVER_AUTHORITY,
                                        realmstring,
-                                       conn->session->wc_callbacks->auth_baton,
+                                       conn->session->auth_baton,
                                        scratch_pool);
 
-      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+      svn_auth_set_parameter(conn->session->auth_baton,
                              SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
-      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+      svn_auth_set_parameter(conn->session->auth_baton,
                              SVN_AUTH_PARAM_SSL_SERVER_FAILURES, NULL);
 
       if (err)
@@ -360,11 +360,11 @@ ssl_server_cert(void *baton, int failures,
       return APR_SUCCESS;
     }
 
-  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+  svn_auth_set_parameter(conn->session->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                          &svn_failures);
 
-  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+  svn_auth_set_parameter(conn->session->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                          &cert_info);
 
@@ -373,7 +373,7 @@ ssl_server_cert(void *baton, int failures,
   SVN_ERR(svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_SSL_SERVER_TRUST,
                                      realmstring,
-                                     conn->session->wc_callbacks->auth_baton,
+                                     conn->session->auth_baton,
                                      scratch_pool));
   if (creds)
     {
@@ -394,7 +394,7 @@ ssl_server_cert(void *baton, int failures,
         }
     }
 
-  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+  svn_auth_set_parameter(conn->session->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
   /* Are there non accepted failures left? */
@@ -648,7 +648,7 @@ handle_client_cert(void *data,
                                            &conn->ssl_client_auth_state,
                                            SVN_AUTH_CRED_SSL_CLIENT_CERT,
                                            realm,
-                                           session->wc_callbacks->auth_baton,
+                                           session->auth_baton,
                                            pool));
       }
     else
@@ -700,7 +700,7 @@ handle_client_cert_pw(void *data,
                                            &conn->ssl_client_pw_auth_state,
                                            SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
                                            cert_path,
-                                           session->wc_callbacks->auth_baton,
+                                           session->auth_baton,
                                            pool));
       }
     else
@@ -1132,7 +1132,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
                                            &session->auth_state,
                                            SVN_AUTH_CRED_SIMPLE,
                                            realm,
-                                           session->wc_callbacks->auth_baton,
+                                           session->auth_baton,
                                            session->pool);
         }
       else
