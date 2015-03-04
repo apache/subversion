@@ -669,8 +669,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   /* First - let's sort the array of the revisions from the greatest revision
    * downward, so it will be easier to search on. */
   location_revisions = apr_array_copy(pool, location_revisions_orig);
-  qsort(location_revisions->elts, location_revisions->nelts,
-        sizeof(*revision_ptr), svn_sort_compare_revisions);
+  svn_sort__array(location_revisions, svn_sort_compare_revisions);
 
   revision_ptr = (svn_revnum_t *)location_revisions->elts;
   revision_ptr_end = revision_ptr + location_revisions->nelts;
