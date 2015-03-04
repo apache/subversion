@@ -52,14 +52,6 @@ Status of 1.9.0:
    Votes:
      +1: rhuijben
 
- * r1664084, r1664085
-   Reduce memory footprint of svn_repos_deleted_rev().
-   Justification:
-     Unbounded memory usage. Regression since 1.8.x. Simple fix that keeps
-     memory usage limited in a loop.
-   Votes:
-     +1: rhuijben, ivan
-
 Other candidate changes:
 ========================
 
@@ -161,3 +153,11 @@ Approved changes:
      r1663697 is the fix for this problem, r1663706 and r1663749 add a test.
    Votes:
      +1: philip, rhuijben, kotkov
+
+ * r1664084, r1664085
+   Reduce memory footprint of svn_repos_deleted_rev().
+   Justification:
+     Unbounded memory usage. Regression since 1.8.x. Simple fix that keeps
+     memory usage limited in a loop.
+   Votes:
+     +1: rhuijben, ivan, stefan2
