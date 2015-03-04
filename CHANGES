@@ -694,7 +694,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: use Java iterators instead of std:map (r1658120)
     * swig: partial fix for complication problems wigh SWIG 3.0.x (r1658347)
     * swig-pl: install into prefix (r1658459)
-    * javahl: expose the metadataOnly option to copoy support (r1661451)
+    * javahl: expose the metadataOnly option to copy support (r1661451)
     * swig-py: add support for svn_fs_lock_many(), svn_fs_unlock_many(),
       svn_repos_fs_lock_many() and svn_repos_fs_unlock_many() (r1662867)
     * swig-py: fix support for svn_ra_lock() and svn_ra_unlock() (r1662891)
