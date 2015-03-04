@@ -269,7 +269,7 @@ svn_hash__sets(apr_hash_t *ht, const char *key, const void *value);
             svn_hash__sets(ht, key, val)
 #else
 #define svn_hash_sets(ht, key, val) \
-            apr_hash_set(ht, svn_hash__key, APR_HASH_KEY_STRING, val)
+            apr_hash_set(ht, key, APR_HASH_KEY_STRING, val)
 #endif
 
 /** @} */
