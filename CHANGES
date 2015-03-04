@@ -259,7 +259,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       already do (r1628398)
     * use the right error code when fputs() fails (r1630369)
     * export: reject peg specifiers on local destination path (r1635085)
-    * don't reject command-line arguments in the form of ".abc", where
+    * don't reject command-line arguments in the form of ".@abc", where
       "abc" is a peg specifier that may be empty (r1635118)
     * fix directory externals not following history (issue #4529)
     * remove 'df' and 'm' options from the interactive conflict resolver for
