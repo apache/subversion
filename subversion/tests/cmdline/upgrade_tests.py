@@ -1441,11 +1441,9 @@ def upgrade_1_7_dir_external(sbox):
 def auto_analyze(sbox):
   """automatic SQLite ANALYZE"""
 
-  sbox.build(read_only = True)
+  sbox.build(read_only = True, create_wc = False)
 
-  val = svntest.wc.sqlite_stmt(sbox.wc_dir, "drop table sqlite_stat1")
-  if val != []:
-    raise svntest.Failure("drop failed")
+  replace_sbox_with_tarfile(sbox, 'wc-without-stat1.tar.bz2')
 
   # Make working copy read-only (but not wc_dir itself as
   # svntest.main.chmod_tree will not reset it.)
