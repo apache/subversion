@@ -29,6 +29,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
+#include "svn_iter.h"
 #include "svn_props.h"
 #include "svn_pools.h"
 
@@ -393,8 +394,7 @@ get_unsorted_paths(apr_hash_t *changes,
                    const char *base_relpath,
                    apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *paths
-    = apr_array_make(scratch_pool, apr_hash_count(changes), sizeof(char *));
+  svn_array_t *paths = svn_array_make(scratch_pool);
   apr_hash_index_t *hi;
 
   /* Build a new array with just the paths, trimmed to relative paths for
@@ -407,7 +407,7 @@ get_unsorted_paths(apr_hash_t *changes,
 
       if (this_relpath)
         {
-          APR_ARRAY_PUSH(paths, const char *) = this_relpath;
+          SVN_ARRAY_PUSH(paths) = this_relpath;
         }
     }
 
@@ -1051,8 +1051,7 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *sub_branches;
-  int i;
+  SVN_ITER_T(svn_branch_instance_t) *bi;
 
   /*SVN_DBG(("[%d] branch={b%de%d at '%s'}", idx,
            branch->sibling_defn->bid, branch->sibling_defn->root_eid, branch->branch_root_rrpath));*/
@@ -1060,13 +1059,10 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
                           result_pool, scratch_pool);
 
   /* Rercurse into sub-branches */
-  sub_branches = svn_branch_get_all_sub_branches(branch,
-                                                 scratch_pool, scratch_pool);
-  for (i = 0; i < sub_branches->nelts; i++)
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
+                            branch, scratch_pool, scratch_pool), scratch_pool))
     {
-      svn_branch_instance_t *b = APR_ARRAY_IDX(sub_branches, i, void *);
-
-      convert_branch_to_paths_r(paths_union, b, result_pool, scratch_pool);
+      convert_branch_to_paths_r(paths_union, bi->val, result_pool, scratch_pool);
     }
 }
 
