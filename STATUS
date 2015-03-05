@@ -130,14 +130,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1663450
-   Fix removing cache tokens in the ra_svn editor implementation
-   Justification:
-     Unbounded memory usage and potential access to invalid memory.
-   Notes:
-     This regression was introduced in r1658194. Reverting this change
-     is just as valid as backporting this fix.
-   Votes:
-     +1: rhuijben, philip, brane
-     -0: ivan (prefer r1658194 micro-optimization to be reverted)
