@@ -127,6 +127,13 @@ Other candidate changes:
          strictly a regression as it is no longer possible to determine
          whether the CHECK_LOCKS flag is set on a txn.)
 
+ * r1664193
+   Fix win32 resource generation for svnbench.exe
+   Justification:
+     Trivial change to generate version resource for application.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
