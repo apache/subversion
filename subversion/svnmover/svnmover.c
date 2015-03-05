@@ -2051,7 +2051,7 @@ parse_actions(apr_array_header_t **actions,
                                        "Argument '%s' is not a relative path "
                                        "or a URL", path);
             }
-          action->relpath[j] = path;
+          action->relpath[k] = path;
         }
 
       APR_ARRAY_PUSH(*actions, action_t *) = action;
