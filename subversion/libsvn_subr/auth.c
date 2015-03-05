@@ -263,7 +263,7 @@ svn_auth_first_credentials(void **credentials,
             hi;
             hi = apr_hash_next(hi))
         {
-          if (apr_hash_this_val(hi) == auth_NULL)
+          if (apr_hash_this_val(hi) == &auth_NULL)
             svn_hash_sets(parameters, apr_hash_this_key(hi), NULL);
         }
     }
