@@ -1332,7 +1332,7 @@ svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t *old_el_rev,
     return NULL;
 
   branch_id = svn_branch_instance_get_id(old_el_rev->branch, result_pool);
-  rev_root = svn_array_get(repos->rev_roots, old_el_rev->rev - 1);
+  rev_root = svn_array_get(repos->rev_roots, (int)(old_el_rev->rev - 1));
   branch = svn_branch_revision_root_find_branch_by_id(rev_root, branch_id,
                                                       result_pool);
 
