@@ -689,9 +689,9 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   for (eid = first_eid; eid < next_eid; eid++)
     {
       svn_branch_el_rev_content_t **e_yca_src
-        = apr_hash_get(diff_yca_src, &eid, sizeof(eid));
+        = svn_int_hash_get(diff_yca_src, eid);
       svn_branch_el_rev_content_t **e_yca_tgt
-        = apr_hash_get(diff_yca_tgt, &eid, sizeof(eid));
+        = svn_int_hash_get(diff_yca_tgt, eid);
       svn_branch_el_rev_content_t *e_yca;
       svn_branch_el_rev_content_t *e_src;
       svn_branch_el_rev_content_t *e_tgt;
@@ -874,7 +874,7 @@ svn_branch_diff_e(svn_editor3_t *editor,
   for (eid = first_eid; eid < next_eid; eid++)
     {
       svn_branch_el_rev_content_t **e_pair
-        = apr_hash_get(diff_yca_tgt, &eid, sizeof(eid));
+        = svn_int_hash_get(diff_yca_tgt, eid);
       svn_branch_el_rev_content_t *e0, *e1;
 
       if (! e_pair)
@@ -981,7 +981,7 @@ svn_branch_diff(svn_editor3_t *editor,
   for (eid = first_eid; eid < next_eid; eid++)
     {
       svn_branch_el_rev_content_t **e_pair
-        = apr_hash_get(diff_yca_tgt, &eid, sizeof(eid));
+        = svn_int_hash_get(diff_yca_tgt, eid);
       svn_branch_el_rev_content_t *e0, *e1;
 
       if (! e_pair)
@@ -1081,9 +1081,8 @@ get_subbranches(svn_branch_instance_t *branch,
                           scratch_pool))
         {
           svn_branch_instance_t *b = bi->val;
-          int *bid = apr_pmemdup(result_pool, &b->sibling_defn->bid, sizeof (*bid));
 
-          apr_hash_set(result, bid, sizeof (*bid), b);
+          svn_int_hash_set(result, b->sibling_defn->bid, b);
         }
     }
   return result;
@@ -1150,9 +1149,9 @@ svn_branch_diff_r(svn_editor3_t *editor,
   for (hi = apr_hash_first(scratch_pool, subbranches_all);
        hi; hi = apr_hash_next(hi))
     {
-      int bid = *(const int *)apr_hash_this_key(hi);
-      svn_branch_instance_t *branch_l = apr_hash_get(subbranches_l, &bid, sizeof(bid));
-      svn_branch_instance_t *branch_r = apr_hash_get(subbranches_r, &bid, sizeof(bid));
+      int bid = svn_int_hash_this_key(hi);
+      svn_branch_instance_t *branch_l = svn_int_hash_get(subbranches_l, bid);
+      svn_branch_instance_t *branch_r = svn_int_hash_get(subbranches_r, bid);
       svn_branch_el_rev_id_t *sub_left = NULL, *sub_right = NULL;
 
       if (branch_l)

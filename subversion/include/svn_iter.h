@@ -134,6 +134,24 @@ svn_iter__break(void);
 
 /* ====================================================================== */
 
+/** Like apr_hash_get() but the hash key is an integer. */
+void *
+svn_int_hash_get(apr_hash_t *ht,
+                 int key);
+
+/** Like apr_hash_set() but the hash key is an integer. */
+void
+svn_int_hash_set(apr_hash_t *ht,
+                 int key,
+                 const void *val);
+
+/** Like apr_hash_this_key() but the hash key is an integer. */
+int
+svn_int_hash_this_key(apr_hash_index_t *hi);
+
+
+/* ====================================================================== */
+
 /** A hash iterator for iterating over an array or a hash table in
  * its natural order or in sorted order.
  *

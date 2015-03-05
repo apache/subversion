@@ -29,6 +29,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
+#include "svn_iter.h"
 
 #include "private/svn_editor3e.h"
 #include "svn_private_config.h"
@@ -719,13 +720,12 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
       if (! svn_branch_el_rev_content_equal(content_left, content_right,
                                             scratch_pool))
         {
-          int *eid_stored = apr_pmemdup(result_pool, &e, sizeof(e));
           svn_branch_el_rev_content_t **contents
             = apr_palloc(result_pool, 2 * sizeof(void *));
 
           contents[0] = content_left;
           contents[1] = content_right;
-          apr_hash_set(diff, eid_stored, sizeof(*eid_stored), contents);
+          svn_int_hash_set(diff, e, contents);
         }
     }
 

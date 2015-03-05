@@ -215,6 +215,32 @@ void *apr_hash_this_val(apr_hash_index_t *hi)
 
 /* ====================================================================== */
 
+void *
+svn_int_hash_get(apr_hash_t *ht,
+                 int key)
+{
+  return apr_hash_get(ht, &key, sizeof(key));
+}
+
+void
+svn_int_hash_set(apr_hash_t *ht,
+                 int key,
+                 const void *val)
+{
+  int *id_p = apr_pmemdup(apr_hash_pool_get(ht), &key, sizeof(key));
+
+  apr_hash_set(ht, id_p, sizeof(key), val);
+}
+
+int
+svn_int_hash_this_key(apr_hash_index_t *hi)
+{
+  return *(const int *)apr_hash_this_key(hi);
+}
+
+
+/* ====================================================================== */
+
 svn_array_t *
 svn_array_make(apr_pool_t *pool)
 {
