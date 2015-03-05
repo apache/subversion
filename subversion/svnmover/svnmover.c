@@ -1384,11 +1384,8 @@ commit_callback(const svn_commit_info_t *commit_info,
   svn_branch_el_rev_id_t *el_rev_left, *el_rev_right;
   const char *rrpath = "";
 
-  SVN_ERR(svn_cmdline_printf(pool, "r%ld committed by %s at %s\n",
-                             commit_info->revision,
-                             (commit_info->author
-                              ? commit_info->author : "(no author)"),
-                             commit_info->date));
+  SVN_ERR(svn_cmdline_printf(pool, "Committed r%ld:\n",
+                             commit_info->revision));
 
   SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_left, mtcc->editor,
                                     commit_info->revision - 1, rrpath,
@@ -1396,7 +1393,6 @@ commit_callback(const svn_commit_info_t *commit_info,
   SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_right, mtcc->editor,
                                     commit_info->revision, rrpath,
                                     pool, pool));
-  printf("   Committed change:\n");
   SVN_ERR(svn_branch_diff_r(mtcc->editor,
                             el_rev_left, el_rev_right,
                             svn_branch_diff_e, "   ",
