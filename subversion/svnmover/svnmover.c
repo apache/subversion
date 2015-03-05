@@ -249,25 +249,48 @@ typedef struct action_defn_t {
   enum action_code_t code;
   const char *name;
   int num_args;
+  const char *args_help;
+  const char *help;
 } action_defn_t;
 
+#define NL "\n                           "
 static const action_defn_t action_defn[] =
 {
-  {ACTION_DIFF,             "diff", 2},
-  {ACTION_DIFF_E,           "diff-e", 2},
-  {ACTION_LOG,              "log", 2},
-  {ACTION_LIST_BRANCHES,    "branches", 1},
-  {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0},
-  {ACTION_BRANCH,           "branch", 2},
-  {ACTION_MKBRANCH,         "mkbranch", 1},
-  {ACTION_BRANCHIFY,        "branchify", 1},
-  {ACTION_DISSOLVE,         "dissolve", 1},
-  {ACTION_MERGE,            "merge", 3},
-  {ACTION_MV,               "mv", 2},
-  {ACTION_MKDIR,            "mkdir", 1},
-  {ACTION_PUT_FILE,         "put", 2},
-  {ACTION_CP,               "cp", 2},
-  {ACTION_RM,               "rm", 1},
+  {ACTION_LIST_BRANCHES,    "branches", 1, "PATH",
+    "list all branches in the same family as that at PATH"},
+  {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0, "",
+    "list all branches, recursively"},
+  {ACTION_LOG,              "log", 2, "FROM@REV TO@REV",
+    "show per-revision diffs between FROM and TO"},
+  {ACTION_BRANCH,           "branch", 2, "SRC DST",
+    "branch the branch-root or branch-subtree at SRC" NL
+    "to make a new branch at DST"},
+  {ACTION_MKBRANCH,         "mkbranch", 1, "ROOT",
+    "make a directory that's the root of a new branch" NL
+    "in a new branching family; like mkdir+branchify"},
+  {ACTION_BRANCHIFY,        "branchify", 1, "ROOT",
+    "change the existing simple subtree at ROOT into" NL
+    "a sub-branch (presently, in a new branch family)"},
+  {ACTION_DISSOLVE,         "dissolve", 1, "ROOT",
+    "change the existing sub-branch at ROOT into a" NL
+    "simple sub-tree of its parent branch"},
+  {ACTION_DIFF,             "diff", 2, "LEFT RIGHT",
+    "diff LEFT to RIGHT"},
+  {ACTION_DIFF_E,           "diff-e", 2, "LEFT RIGHT",
+    "diff LEFT to RIGHT (element-focused output)"},
+  {ACTION_MERGE,            "merge", 3, "FROM TO YCA@REV",
+    "merge changes YCA->FROM and YCA->TO into TO"},
+  {ACTION_CP,               "cp", 2, "REV SRC DST",
+    "copy SRC@REV to DST"},
+  {ACTION_MV,               "mv", 2, "SRC DST",
+    "move SRC to DST"},
+  {ACTION_RM,               "rm", 1, "PATH",
+    "delete PATH"},
+  {ACTION_MKDIR,            "mkdir", 1, "PATH",
+    "create new directory PATH"},
+  {ACTION_PUT_FILE,         "put", 2, "LOCAL_FILE PATH",
+    "add or modify file PATH with text copied from" NL
+    "LOCAL_FILE (use \"-\" to read from standard input)"},
 };
 
 typedef struct action_t {
@@ -1764,10 +1787,21 @@ sanitize_url(const char *url,
   return svn_uri_canonicalize(url, pool);
 }
 
+static const char *
+help_for_subcommand(const action_defn_t *action, apr_pool_t *pool)
+{
+  const char *cmd = apr_psprintf(pool, "%s %s",
+                                 action->name, action->args_help);
+
+  return apr_psprintf(pool, "  %-22s : %s\n", cmd, action->help);
+}
+
 /* Print a usage message on STREAM. */
 static void
 usage(FILE *stream, apr_pool_t *pool)
 {
+  int i;
+
   svn_error_clear(svn_cmdline_fputs(
     _("usage: svnmover -U REPO_URL [ACTION...]\n"
       "A client for experimenting with move tracking.\n"
@@ -1780,28 +1814,14 @@ usage(FILE *stream, apr_pool_t *pool)
       "\n"
       "  Store move tracking metadata either in local files or in revprops.\n"
       "\n"
-      "Actions:\n"
-      "  branches PATH          : list all branches in the same family as that at PATH\n"
-      "  ls-br-r                : list all branches, recursively\n"
-      "  log FROM@REV TO@REV    : show per-revision diffs between FROM and TO\n"
-      "  branch SRC DST         : branch the branch-root or branch-subtree at SRC\n"
-      "                           to make a new branch at DST\n"
-      "  mkbranch ROOT          : make a directory that's the root of a new branch\n"
-      "                           in a new branching family; like mkdir+branchify\n"
-      "  branchify ROOT         : change the existing simple subtree at ROOT into\n"
-      "                           a sub-branch (presently, in a new branch family)\n"
-      "  dissolve ROOT          : change the existing sub-branch at ROOT into a\n"
-      "                           simple sub-tree of its parent branch\n"
-      "  diff LEFT RIGHT        : diff LEFT to RIGHT\n"
-      "  diff-e LEFT RIGHT      : diff LEFT to RIGHT (element-focused output)\n"
-      "  merge FROM TO YCA@REV  : merge changes YCA->FROM and YCA->TO into TO\n"
-      "  cp REV SRC DST         : copy SRC@REV to DST\n"
-      "  mv SRC DST             : move SRC to DST\n"
-      "  rm PATH                : delete PATH\n"
-      "  mkdir PATH             : create new directory PATH\n"
-      "  put LOCAL_FILE PATH    : add or modify file PATH with text copied from\n"
-      "                           LOCAL_FILE (use \"-\" to read from standard input)\n"
-      "\n"
+      "Actions:\n"),
+                  stream, pool));
+  for (i = 0; i < sizeof (action_defn) / sizeof (action_defn[0]); i++)
+    svn_error_clear(svn_cmdline_fputs(
+                      help_for_subcommand(&action_defn[i], pool),
+                      stream, pool));
+  svn_error_clear(svn_cmdline_fputs(
+    _("\n"
       "Valid options:\n"
       "  -h, -? [--help]        : display this text\n"
       "  -v [--verbose]         : display debugging messages\n"
@@ -1831,10 +1851,12 @@ usage(FILE *stream, apr_pool_t *pool)
 }
 
 static svn_error_t *
-insufficient(void)
+insufficient(int i, apr_pool_t *pool)
 {
-  return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                          "insufficient arguments");
+  return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                           "insufficient arguments:\n"
+                           "%s",
+                           help_for_subcommand(&action_defn[i], pool));
 }
 
 static svn_error_t *
@@ -1963,7 +1985,7 @@ parse_actions(apr_array_header_t **actions,
 
   for (i = 0; i < action_args->nelts; ++i)
     {
-      int j, num_url_args;
+      int j, k, num_url_args;
       const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
       action_t *action = apr_pcalloc(pool, sizeof(*action));
       const char *cp_from_rev = NULL;
@@ -1993,25 +2015,25 @@ parse_actions(apr_array_header_t **actions,
         {
           /* next argument is the copy source revision */
           if (++i == action_args->nelts)
-            return svn_error_trace(insufficient());
+            return svn_error_trace(insufficient(j, pool));
           cp_from_rev = APR_ARRAY_IDX(action_args, i, const char *);
         }
 
       /* Parse the required number of URLs. */
-      for (j = 0; j < num_url_args; ++j)
+      for (k = 0; k < num_url_args; ++k)
         {
           const char *path;
 
           if (++i == action_args->nelts)
-            return svn_error_trace(insufficient());
+            return svn_error_trace(insufficient(j, pool));
           path = APR_ARRAY_IDX(action_args, i, const char *);
 
-          if (cp_from_rev && j == 0)
+          if (cp_from_rev && k == 0)
             {
               path = apr_psprintf(pool, "%s@%s", path, cp_from_rev);
             }
 
-          SVN_ERR(svn_opt_parse_path(&action->rev_spec[j], &path, path, pool));
+          SVN_ERR(svn_opt_parse_path(&action->rev_spec[k], &path, path, pool));
 
           /* If there's an ANCHOR_URL, we expect URL to be a path
              relative to ANCHOR_URL (and we build a full url from the
