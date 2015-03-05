@@ -43,6 +43,7 @@
 
 #include "svn_private_config.h"
 #include "svn_hash.h"
+#include "svn_iter.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
@@ -376,9 +377,7 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
                              svn_boolean_t verbose,
                              apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *fam_branch_instances
-    = svn_branch_family_get_branch_instances(rev_root, family, scratch_pool);
-  int b;
+  SVN_ITER_T(svn_branch_instance_t) *bi;
 
   if (verbose)
     {
@@ -393,10 +392,10 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
              family->fid);
     }
 
-  for (b = 0; b < fam_branch_instances->nelts; b++)
+  for (SVN_ARRAY_ITER(bi, svn_branch_family_get_branch_instances(
+                            rev_root, family, scratch_pool), scratch_pool))
     {
-      svn_branch_instance_t *branch
-        = APR_ARRAY_IDX(fam_branch_instances, b, svn_branch_instance_t *);
+      svn_branch_instance_t *branch = bi->val;
       int eid;
 
       if (verbose)
@@ -432,16 +431,12 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
 
   if (recursive)
     {
-      apr_array_header_t *sub_families
-        = svn_branch_family_get_children(family, scratch_pool);
-      int f;
+      SVN_ITER_T(svn_branch_family_t) *fi;
 
-      for (f = 0; f < sub_families->nelts; f++)
+      for (SVN_ARRAY_ITER(fi, svn_branch_family_get_children(
+                                family, scratch_pool), scratch_pool))
         {
-          svn_branch_family_t *sub_family
-            = APR_ARRAY_IDX(sub_families, f, svn_branch_family_t *);
-
-          SVN_ERR(family_list_branch_instances(rev_root, sub_family, recursive,
+          SVN_ERR(family_list_branch_instances(rev_root, fi->val, recursive,
                                                verbose, scratch_pool));
         }
     }
@@ -960,9 +955,8 @@ svn_branch_diff(svn_editor3_t *editor,
 {
   apr_hash_t *diff_yca_tgt;
   int first_eid, next_eid, eid;
-  apr_array_header_t *diff_changes
-    = apr_array_make(scratch_pool, 0, sizeof(void *));
-  int i;
+  svn_array_t *diff_changes = svn_array_make(scratch_pool);
+  SVN_ITER_T(diff_item_t) *ai;
 
   if (left->branch->sibling_defn->family->fid
       != right->branch->sibling_defn->family->fid)
@@ -1043,18 +1037,16 @@ svn_branch_diff(svn_editor3_t *editor,
           item->from = from;
           item->subbranch_str = subbranch_str(e0 ? left->branch : right->branch,
                                               eid, scratch_pool);
-          APR_ARRAY_PUSH(diff_changes, void *) = item;
+          SVN_ARRAY_PUSH(diff_changes) = item;
         }
     }
-
-  svn_sort__array(diff_changes, diff_ordering);
 
   if (header && diff_changes->nelts)
     printf("%s%s", prefix, header);
 
-  for (i = 0; i < diff_changes->nelts; i++)
+  for (SVN_ARRAY_ITER_SORTED(ai, diff_changes, diff_ordering, scratch_pool))
     {
-      diff_item_t *item = APR_ARRAY_IDX(diff_changes, i, void *);
+      diff_item_t *item = ai->val;
 
       printf("%s%c%c%c %s%s%s\n",
              prefix,
@@ -1082,13 +1074,13 @@ get_subbranches(svn_branch_instance_t *branch,
 
   if (branch)
     {
-      apr_array_header_t *subbranches
-        = svn_branch_get_all_sub_branches(branch, result_pool, scratch_pool);
-      int i;
+      SVN_ITER_T(svn_branch_instance_t) *bi;
 
-      for (i = 0; i < subbranches->nelts; i++)
+      for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
+                                branch, result_pool, scratch_pool),
+                          scratch_pool))
         {
-          svn_branch_instance_t *b = APR_ARRAY_IDX(subbranches, i, void *);
+          svn_branch_instance_t *b = bi->val;
           int *bid = apr_pmemdup(result_pool, &b->sibling_defn->bid, sizeof (*bid));
 
           apr_hash_set(result, bid, sizeof (*bid), b);
@@ -1316,7 +1308,7 @@ svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t *old_el_rev,
     return NULL;
 
   branch_id = svn_branch_instance_get_id(old_el_rev->branch, result_pool);
-  rev_root = APR_ARRAY_IDX(repos->rev_roots, old_el_rev->rev - 1, void *);
+  rev_root = svn_array_get(repos->rev_roots, old_el_rev->rev - 1);
   branch = svn_branch_revision_root_find_branch_by_id(rev_root, branch_id,
                                                       result_pool);
 
