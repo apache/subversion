@@ -253,6 +253,23 @@ svn_auth_first_credentials(void **credentials,
                              _("No provider registered for '%s' credentials"),
                              cred_kind);
 
+  if (auth_baton->slave_parameters)
+    {
+      apr_hash_index_t *hi;
+      parameters = apr_hash_overlay(pool, auth_baton->slave_parameters,
+                                    auth_baton->parameters);
+
+      for (hi = apr_hash_first(pool, auth_baton->slave_parameters);
+            hi;
+            hi = apr_hash_next(hi))
+        {
+          if (apr_hash_this_val(hi) == auth_NULL)
+            svn_hash_sets(parameters, apr_hash_this_key(hi), NULL);
+        }
+    }
+  else
+    parameters = auth_baton->parameters;
+
   /* First, see if we have cached creds in the auth_baton. */
   cache_key = make_cache_key(cred_kind, realmstring, pool);
   creds = svn_hash_gets(auth_baton->creds_cache, cache_key);
@@ -263,23 +280,6 @@ svn_auth_first_credentials(void **credentials,
   else
     /* If not, find a provider that can give "first" credentials. */
     {
-      if (auth_baton->slave_parameters)
-        {
-          apr_hash_index_t *hi;
-          parameters = apr_hash_overlay(pool, auth_baton->slave_parameters,
-                                        auth_baton->parameters);
-
-          for (hi = apr_hash_first(pool, auth_baton->slave_parameters);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              if (apr_hash_this_val(hi) == auth_NULL)
-                svn_hash_sets(parameters, apr_hash_this_key(hi), NULL);
-            }
-        }
-      else
-        parameters = auth_baton->parameters;
-
       /* Find a provider that can give "first" credentials. */
       for (i = 0; i < table->providers->nelts; i++)
         {
