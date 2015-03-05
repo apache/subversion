@@ -125,6 +125,7 @@ struct svn_auth_iterstate_t
   const char *realmstring;      /* The original realmstring passed in */
   const char *cache_key;        /* key to use in auth_baton's creds_cache */
   svn_auth_baton_t *auth_baton; /* the original auth_baton. */
+  apr_hash_t *parameters;
 };
 
 
@@ -239,6 +240,7 @@ svn_auth_first_credentials(void **credentials,
   svn_boolean_t got_first = FALSE;
   svn_auth_iterstate_t *iterstate;
   const char *cache_key;
+  apr_hash_t *parameters;
 
   if (! auth_baton)
     return svn_error_create(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
@@ -261,6 +263,23 @@ svn_auth_first_credentials(void **credentials,
   else
     /* If not, find a provider that can give "first" credentials. */
     {
+      if (auth_baton->slave_parameters)
+        {
+          apr_hash_index_t *hi;
+          parameters = apr_hash_overlay(pool, auth_baton->slave_parameters,
+                                        auth_baton->parameters);
+
+          for (hi = apr_hash_first(pool, auth_baton->slave_parameters);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              if (apr_hash_this_val(hi) == auth_NULL)
+                svn_hash_sets(parameters, apr_hash_this_key(hi), NULL);
+            }
+        }
+      else
+        parameters = auth_baton->parameters;
+
       /* Find a provider that can give "first" credentials. */
       for (i = 0; i < table->providers->nelts; i++)
         {
@@ -268,7 +287,7 @@ svn_auth_first_credentials(void **credentials,
                                    svn_auth_provider_object_t *);
           SVN_ERR(provider->vtable->first_credentials(&creds, &iter_baton,
                                                       provider->provider_baton,
-                                                      auth_baton->parameters,
+                                                      parameters,
                                                       realmstring,
                                                       auth_baton->pool));
 
@@ -295,6 +314,7 @@ svn_auth_first_credentials(void **credentials,
       iterstate->realmstring = apr_pstrdup(pool, realmstring);
       iterstate->cache_key = cache_key;
       iterstate->auth_baton = auth_baton;
+      iterstate->parameters = parameters;
       *state = iterstate;
 
       /* Put the creds in the cache */
@@ -340,7 +360,7 @@ svn_auth_next_credentials(void **credentials,
           SVN_ERR(provider->vtable->next_credentials(&creds,
                                                      state->provider_iter_baton,
                                                      provider->provider_baton,
-                                                     auth_baton->parameters,
+                                                     state->parameters,
                                                      state->realmstring,
                                                      auth_baton->pool));
         }
