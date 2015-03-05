@@ -750,7 +750,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     repos-uuid            the repository UUID\n"
      "     revision              the revision of TARGET (defaults to BASE\n"
      "                           for working copy paths and HEAD for URLs)\n"
-     "     last-changed-rev      the most recent revision in which TARGET\n"
+     "     last-changed-revision the most recent revision in which TARGET\n"
      "                           was changed\n"
      "     last-changed-date     the date of the last-changed revision\n"
      "     last-changed-author   the author of the last-changed revision\n"

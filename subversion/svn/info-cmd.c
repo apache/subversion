@@ -129,7 +129,8 @@ static const info_item_map_t info_item_map[] =
     { MAKE_STRING("repos-root-url"),      info_item_repos_root_url },
     { MAKE_STRING("repos-uuid"),          info_item_repos_uuid },
     { MAKE_STRING("revision"),            info_item_revision },
-    { MAKE_STRING("last-changed-rev"),    info_item_last_changed_rev },
+    { MAKE_STRING("last-changed-revision"),
+                                          info_item_last_changed_rev },
     { MAKE_STRING("last-changed-date"),   info_item_last_changed_date },
     { MAKE_STRING("last-changed-author"), info_item_last_changed_author },
     { MAKE_STRING("wc-root"),             info_item_wc_root }
