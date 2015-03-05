@@ -388,7 +388,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
   if (err)
     {
-      svn_pool_clear(scratch_pool);
+      svn_pool_destroy(sesspool); /* Includes scratch_pool */
       if (err->apr_err == SVN_ERR_RA_SESSION_URL_MISMATCH)
         return svn_error_trace(err);
 
@@ -428,7 +428,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
         }
     }
 
-  svn_pool_clear(scratch_pool);
+  svn_pool_destroy(scratch_pool);
   *session_p = session;
   return SVN_NO_ERROR;
 }
