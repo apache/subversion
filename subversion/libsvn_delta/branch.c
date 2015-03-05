@@ -1346,7 +1346,7 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld"), revnum);
 
-  rev_root = svn_array_get(repos->rev_roots, revnum);
+  rev_root = svn_array_get(repos->rev_roots, (int)(revnum));
   el_rev->rev = revnum;
   svn_branch_find_nested_branch_element_by_rrpath(&el_rev->branch, &el_rev->eid,
                                                   rev_root->root_branch, rrpath,
