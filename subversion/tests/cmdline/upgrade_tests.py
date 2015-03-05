@@ -1448,7 +1448,7 @@ def auto_analyze(sbox):
                             '52ec7e4b-e5f0-451d-829f-f05d5571b4ab')
 
   # Don't use svn to do relocate as that will add the table.
-  val = svntest.wc.sqlite_stmt(sbox.wc_dir,
+  val = svntest.wc.sqlite_exec(sbox.wc_dir,
                                "update repository "
                                "set root ='" + sbox.repo_url + "'");
 
