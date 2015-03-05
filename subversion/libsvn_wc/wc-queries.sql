@@ -1782,7 +1782,7 @@ WHERE wc_id = ?1
   AND (inherited_props not null)
 
 -- STMT_HAVE_STAT1_TABLE
-SELECT 1 FROM sqlite_stat1
+select 1 from sqlite_master where name='sqlite_stat1' and type='table';
 LIMIT 1
 
 /* ------------------------------------------------------------------------- */
