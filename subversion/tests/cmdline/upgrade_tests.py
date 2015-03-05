@@ -1441,9 +1441,14 @@ def upgrade_1_7_dir_external(sbox):
 def auto_analyze(sbox):
   """automatic SQLite ANALYZE"""
 
-  sbox.build(read_only = True, create_wc = False)
+  sbox.build(create_wc = False)
 
   replace_sbox_with_tarfile(sbox, 'wc-without-stat1.tar.bz2')
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            '52ec7e4b-e5f0-451d-829f-f05d5571b4ab')
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
+                                     'file:///tmp/repos', sbox.repo_url,
+                                     sbox.wc_dir)
 
   # Make working copy read-only (but not wc_dir itself as
   # svntest.main.chmod_tree will not reset it.)
