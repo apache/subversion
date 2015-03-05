@@ -233,6 +233,7 @@ typedef enum action_code_t {
   ACTION_LOG,
   ACTION_LIST_BRANCHES,
   ACTION_LIST_BRANCHES_R,
+  ACTION_LS,
   ACTION_BRANCH,
   ACTION_MKBRANCH,
   ACTION_BRANCHIFY,
@@ -260,6 +261,8 @@ static const action_defn_t action_defn[] =
     "list all branches in the same family as that at PATH"},
   {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0, "",
     "list all branches, recursively"},
+  {ACTION_LS,               "ls", 1, "PATH",
+    "list elements in the branch found at PATH"},
   {ACTION_LOG,              "log", 2, "FROM@REV TO@REV",
     "show per-revision diffs between FROM and TO"},
   {ACTION_BRANCH,           "branch", 2, "SRC DST",
@@ -296,24 +299,10 @@ static const action_defn_t action_defn[] =
 typedef struct action_t {
   action_code_t action;
 
-  /* revision (copy-from-rev of path[0] for cp) */
+  /* argument revisions */
   svn_opt_revision_t rev_spec[3];
 
-  /* action    path[0]  path[1]  path[2]
-   * ------    -------  -------  -------
-   * diff[-e]  left     right
-   * ls-br[-r]
-   * branch    source   target
-   * mkbranch  path
-   * branchify path
-   * dissolve  path
-   * merge     from     to       yca@rev
-   * mv        source   target
-   * mkdir     target
-   * put       src-file target
-   * cp        source   target
-   * rm        target
-   */
+  /* argument paths */
   const char *relpath[3];
 } action_t;
 
@@ -389,6 +378,35 @@ subbranch_str(svn_branch_instance_t *branch,
   return branch_str(subbranch, result_pool);
 }
 
+/* List all elements in branch-instance BRANCH.
+ */
+static svn_error_t *
+list_branch_elements(svn_branch_instance_t *branch,
+                     apr_pool_t *scratch_pool)
+{
+  svn_branch_family_t *family = branch->sibling_defn->family;
+  int eid;
+
+  for (eid = family->first_eid; eid < family->next_eid; eid++)
+    {
+      const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
+                                                        scratch_pool);
+
+      if (rrpath)
+        {
+          const char *relpath
+            = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(
+                                          branch, scratch_pool), rrpath);
+
+          printf("    e%d %s%s\n",
+                 eid, relpath[0] ? relpath : ".",
+                 subbranch_str(branch, eid, scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* List all branch instances in FAMILY.
  *
  * If RECURSIVE is true, include branches in nested families.
@@ -419,7 +437,6 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
                             rev_root, family, scratch_pool), scratch_pool))
     {
       svn_branch_instance_t *branch = bi->val;
-      int eid;
 
       if (verbose)
         {
@@ -427,22 +444,7 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
                  svn_branch_instance_get_id(branch, bi->iterpool),
                  branch->sibling_defn->bid, branch->sibling_defn->root_eid,
                  svn_branch_get_root_rrpath(branch, bi->iterpool));
-          for (eid = family->first_eid; eid < family->next_eid; eid++)
-            {
-              const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
-                                                                bi->iterpool);
-
-              if (rrpath)
-                {
-                  const char *relpath
-                    = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(
-                                                  branch, bi->iterpool), rrpath);
-
-                  printf("    e%d %s%s\n",
-                         eid, relpath[0] ? relpath : ".",
-                         subbranch_str(branch, eid, bi->iterpool));
-                }
-            }
+          SVN_ERR(list_branch_elements(branch, bi->iterpool));
         }
       else
         {
@@ -1556,6 +1558,12 @@ execute(const apr_array_header_t *actions,
                       el_rev[0]->branch->rev_root,
                       el_rev[0]->branch->sibling_defn->family,
                       TRUE, TRUE, iterpool));
+          }
+          break;
+        case ACTION_LS:
+          {
+            VERIFY_EID_EXISTS("branches", 0);
+            SVN_ERR(list_branch_elements(el_rev[0]->branch, iterpool));
           }
           break;
         case ACTION_BRANCH:
