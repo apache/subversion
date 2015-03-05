@@ -35,7 +35,7 @@ Status of 1.9.0:
      +1: rhuijben, philip
      -0: ivan (prefer r1658194 micro-optimization to be reverted)
 
- * r1664078,r1664080,r1664187,r1664191
+ * r1664078,r1664080,r1664187,r1664191,r1664200
    Instead of making more changes to the auth batons from ra sessions, reduce
    the number of changes by introducing an internal slave auth baton feature.
    Justification:
@@ -48,7 +48,8 @@ Status of 1.9.0:
    Notes:
      The reason I group this under release blockers, is to avoid the behavior
      change introduced in r1609499 from reaching released versions. The changes
-     itself are safe for a later backport.
+     itself are safe for a later backport as it only affects ra-session
+     internal state.
    Votes:
      +1: rhuijben
 
