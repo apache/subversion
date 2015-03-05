@@ -1781,6 +1781,10 @@ WHERE wc_id = ?1
   AND op_depth = 0
   AND (inherited_props not null)
 
+-- STMT_HAVE_STAT1_TABLE
+SELECT 1 FROM sqlite_stat1
+LIMIT 1
+
 /* ------------------------------------------------------------------------- */
 
 /* Grab all the statements related to the schema.  */
