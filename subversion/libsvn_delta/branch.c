@@ -82,7 +82,7 @@ static svn_branch_family_t *
 repos_get_family_by_id(svn_branch_repos_t *repos,
                        int fid)
 {
-  return apr_hash_get(repos->families, &fid, sizeof(fid));
+  return svn_int_hash_get(repos->families, fid);
 }
 
 /* Register FAMILY in REPOS.
@@ -91,11 +91,7 @@ static void
 repos_register_family(svn_branch_repos_t *repos,
                       svn_branch_family_t *family)
 {
-  int fid = family->fid;
-
-  apr_hash_set(repos->families,
-               apr_pmemdup(repos->pool, &fid, sizeof(fid)), sizeof(fid),
-               family);
+  svn_int_hash_set(repos->families, family->fid, family);
 }
 
 svn_branch_revision_root_t *
@@ -458,7 +454,7 @@ svn_branch_map_get(const svn_branch_instance_t *branch,
 
   SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
 
-  node = apr_hash_get(branch->e_map, &eid, sizeof(eid));
+  node = svn_int_hash_get(branch->e_map, eid);
 
   if (node)
     branch_map_node_validate(branch, eid, node);
@@ -478,13 +474,12 @@ branch_map_set(svn_branch_instance_t *branch,
                svn_branch_el_rev_content_t *node)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
-  int *eid_p = apr_pmemdup(map_pool, &eid, sizeof(eid));
 
   SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
   if (node)
     branch_map_node_validate(branch, eid, node);
 
-  apr_hash_set(branch->e_map, eid_p, sizeof(*eid_p), node);
+  svn_int_hash_set(branch->e_map, eid, node);
   assert_branch_instance_invariants(branch, map_pool);
 }
 
@@ -557,7 +552,7 @@ svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
       for (hi = apr_hash_first(scratch_pool, branch->e_map);
            hi; hi = apr_hash_next(hi))
         {
-          int this_eid = *(const int *)apr_hash_this_key(hi);
+          int this_eid = svn_int_hash_this_key(hi);
           svn_branch_el_rev_content_t *this_node = apr_hash_this_val(hi);
 
           if (this_node->parent_eid != -1)
@@ -675,7 +670,7 @@ svn_branch_get_eid_by_path(const svn_branch_instance_t *branch,
   for (hi = apr_hash_first(scratch_pool, branch->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = *(const int *)apr_hash_this_key(hi);
+      int eid = svn_int_hash_this_key(hi);
       const char *this_path = svn_branch_get_path_by_eid(branch, eid,
                                                          scratch_pool);
 
@@ -755,7 +750,7 @@ svn_branch_map_copy_children(svn_branch_instance_t *from_branch,
   for (hi = apr_hash_first(scratch_pool, from_branch->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int this_from_eid = *(const int *)apr_hash_this_key(hi);
+      int this_from_eid = svn_int_hash_this_key(hi);
       svn_branch_el_rev_content_t *from_node = apr_hash_this_val(hi);
 
       if (from_node->parent_eid == from_parent_eid)
@@ -798,7 +793,7 @@ svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
   for (hi = apr_hash_first(scratch_pool, from_branch->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int this_eid = *(const int *)apr_hash_this_key(hi);
+      int this_eid = svn_int_hash_this_key(hi);
       svn_branch_el_rev_content_t *from_node = svn_branch_map_get(from_branch,
                                                                   this_eid);
 
