@@ -597,11 +597,11 @@ svn_branch_purge_r(svn_branch_instance_t *branch,
 
       if (svn_branch_map_get(branch, b->outer_eid))
         {
-          svn_branch_purge_r(b, scratch_pool);
+          svn_branch_purge_r(b, bi->iterpool);
         }
       else
         {
-          svn_branch_delete_branch_instance_r(b, scratch_pool);
+          svn_branch_delete_branch_instance_r(b, bi->iterpool);
         }
     }
 }
@@ -852,7 +852,7 @@ svn_branch_get_subbranches(const svn_branch_instance_t *branch,
     {
       svn_branch_family_t *sub_branch_family = bi->val->sibling_defn->family;
       const char *sub_branch_root_rrpath
-        = svn_branch_get_root_rrpath(bi->val, scratch_pool);
+        = svn_branch_get_root_rrpath(bi->val, bi->iterpool);
 
       /* Is it an immediate child at or below EID? */
       if (family_is_child(family, sub_branch_family)
@@ -946,7 +946,7 @@ svn_branch_delete_branch_instance_r(svn_branch_instance_t *branch,
   for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
                             branch, scratch_pool, scratch_pool), scratch_pool))
     {
-      svn_branch_delete_branch_instance_r(bi->val, scratch_pool);
+      svn_branch_delete_branch_instance_r(bi->val, bi->iterpool);
     }
 
   svn_branch_revision_root_delete_branch_instance(branch->outer_branch->rev_root,
@@ -1256,11 +1256,11 @@ svn_branch_family_serialize(svn_stream_t *stream,
                             branch_instances->nelts));
 
   for (SVN_ARRAY_ITER(bi, branch_instances, scratch_pool))
-    SVN_ERR(svn_branch_instance_serialize(stream, bi->val, scratch_pool));
+    SVN_ERR(svn_branch_instance_serialize(stream, bi->val, bi->iterpool));
 
   for (SVN_ARRAY_ITER(fi, family->sub_families, scratch_pool))
     SVN_ERR(svn_branch_family_serialize(stream, rev_root, fi->val, family->fid,
-                                        scratch_pool));
+                                        fi->iterpool));
   return SVN_NO_ERROR;
 }
 
@@ -1321,7 +1321,7 @@ svn_branch_find_nested_branch_element_by_rrpath(
       svn_branch_find_nested_branch_element_by_rrpath(&sub_branch,
                                                       &sub_branch_eid,
                                                       bi->val, rrpath,
-                                                      scratch_pool);
+                                                      bi->iterpool);
       if (sub_branch)
         {
            *branch_p = sub_branch;
@@ -1493,7 +1493,7 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
                                              subbranch->sibling_defn->root_eid,
                                              new_branch, subbranch->outer_eid,
                                              subbranch->sibling_defn,
-                                             scratch_pool));
+                                             bi->iterpool));
       }
   }
 

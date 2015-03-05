@@ -401,31 +401,31 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
       if (verbose)
         {
           printf("  branch %s bid=%d root=e%d /%s\n",
-                 svn_branch_instance_get_id(branch, scratch_pool),
+                 svn_branch_instance_get_id(branch, bi->iterpool),
                  branch->sibling_defn->bid, branch->sibling_defn->root_eid,
-                 svn_branch_get_root_rrpath(branch, scratch_pool));
+                 svn_branch_get_root_rrpath(branch, bi->iterpool));
           for (eid = family->first_eid; eid < family->next_eid; eid++)
             {
               const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
-                                                                scratch_pool);
+                                                                bi->iterpool);
 
               if (rrpath)
                 {
                   const char *relpath
                     = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(
-                                                  branch, scratch_pool), rrpath);
+                                                  branch, bi->iterpool), rrpath);
 
                   printf("    e%d %s%s\n",
                          eid, relpath[0] ? relpath : ".",
-                         subbranch_str(branch, eid, scratch_pool));
+                         subbranch_str(branch, eid, bi->iterpool));
                 }
             }
         }
       else
         {
           printf("  %s /%s\n",
-                 svn_branch_instance_get_id(branch, scratch_pool),
-                 svn_branch_get_root_rrpath(branch, scratch_pool));
+                 svn_branch_instance_get_id(branch, bi->iterpool),
+                 svn_branch_get_root_rrpath(branch, bi->iterpool));
         }
     }
 
@@ -437,7 +437,7 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
                                 family, scratch_pool), scratch_pool))
         {
           SVN_ERR(family_list_branch_instances(rev_root, fi->val, recursive,
-                                               verbose, scratch_pool));
+                                               verbose, fi->iterpool));
         }
     }
 
