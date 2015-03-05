@@ -141,11 +141,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1664084, r1664085
-   Reduce memory footprint of svn_repos_deleted_rev().
-   Justification:
-     Unbounded memory usage. Regression since 1.8.x. Simple fix that keeps
-     memory usage limited in a loop.
-   Votes:
-     +1: rhuijben, ivan, stefan2
