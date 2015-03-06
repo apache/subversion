@@ -316,8 +316,8 @@ svn_array__first(apr_pool_t *pool,
  * It is permissible to change the original array @a array during the
  * iteration.  Doing so will not affect the sequence of elements returned
  * by svn_array__next(), as svn_array__sorted_first() takes a snapshot of
- * pointers to the original keys and values.  The memory in which the
- * original keys and values of HT are stored must remain available during
+ * pointers to the original elements.  The memory in which the
+ * original elements of @a array are stored must remain available during
  * the iteration.
  */
 svn_iter_t *
