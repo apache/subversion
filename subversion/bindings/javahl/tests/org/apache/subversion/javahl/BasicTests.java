@@ -1344,9 +1344,10 @@ public class BasicTests extends SVNTests
         assertNotNull("Commit of partial move did not fail", caught);
 
         List<ClientException.ErrorMessage> msgs = caught.getAllMessages();
-        assertTrue(msgs.size() >= 2);
-        assertTrue(msgs.get(0).getMessage().startsWith("Commit failed"));
-        assertTrue(msgs.get(1).getMessage().startsWith("Cannot commit"));
+        assertTrue(msgs.size() >= 3);
+        assertTrue(msgs.get(0).getMessage().startsWith("Illegal target"));
+        assertTrue(msgs.get(1).getMessage().startsWith("Commit failed"));
+        assertTrue(msgs.get(2).getMessage().startsWith("Cannot commit"));
     }
 
     /**
