@@ -153,15 +153,28 @@ svn_branch_family_add_new_element(svn_branch_family_t *family)
   return eid;
 }
 
+#ifdef SVN_DEBUG
+/* If defined, branch-sibling-ids and element-ids start from 10x and 100x
+ * the family-id for easier debugging; else they always start from zero. */
+#define PRETTY_IDS
+#endif
+
 svn_branch_family_t *
 svn_branch_family_add_new_subfamily(svn_branch_family_t *outer_family)
 {
   svn_branch_repos_t *repos = outer_family->repos;
   int fid = repos->next_fid++;
+#ifdef PRETTY_IDS
+  int first_bid = fid * 10;
+  int first_eid = fid * 100;
+#else
+  int first_bid = 0;
+  int first_eid = 0;
+#endif
   svn_branch_family_t *family
     = svn_branch_family_create(repos, fid,
-                               fid * 10, fid * 10,
-                               fid * 100, fid * 100,
+                               first_bid, first_bid,
+                               first_eid, first_eid,
                                outer_family->pool);
 
   /* Register the family */
