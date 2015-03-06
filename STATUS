@@ -124,15 +124,22 @@ Other candidate changes:
    Votes:
      +1: rhuijben
      
-  * r1664531, r1664532
-    Improve database usage in entries-test to speed up test runs
-    Justification:
-      Use of the non deprecated function to check if the working copy is
-      locked avoids re-opening the database for each and every directory.
-      This decreases the total time to run the testsuite by > 2%, by just
-      reducing the number of db operations.
-    Votes:
-      +1: rhuijben
+ * r1664531, r1664532
+   Improve database usage in entries-test to speed up test runs
+   Justification:
+     Use of the non deprecated function to check if the working copy is
+     locked avoids re-opening the database for each and every directory.
+     This decreases the total time to run the testsuite by > 2%, by just
+     reducing the number of db operations.
+   Votes:
+     +1: rhuijben
+
+ * r1664476, r1664480, r1664481, r1664483, r1664507, r1664520, r1664521, r1664523, r1664526, r1664527
+   Automatic ANALYZE to create sqlite_stat1 table in wc.db.
+   Justification:
+     Avoid performance regression on some old working copies.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
