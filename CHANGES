@@ -697,6 +697,43 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * swig-py: fix support for svn_ra_lock() and svn_ra_unlock() (r1662891)
 
 
+Version 1.8.12
+(?? ?? 2015, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.12
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * ra_serf: support case-insensitivity in HTTP headers (r1650481, r1650489)
+    * better error message if an external is shadowed (r1655712, r1655738)
+    * ra_svn: fix reporting of directory read errors (r1656713)
+    * fix a redirect handling bug in 'svn log' over HTTP (r1650531)
+    * properly copy tree conflict information (r1658115, r1659553, r1659554)
+    * fix 'svn patch' output for reordered hunks (issue #4533)
+    * svnrdump load: don't load wrong props with no-deltas dump (issue #4551)
+    * fix working copy corruption with relative file external (issue #4411)
+    * don't crash if config file is unreadable (r1590751, r1660350)
+    * svn resolve: don't ask a question with only one answer (r1658417)
+
+  - Server-side bugfixes:
+    * svnadmin freeze: fix memory allocation error (r1653039)
+    * svnadmin load: tolerate invalid mergeinfo at r0 (r1643074, issue #4476)  
+    * svnadmin load: strip references to r1 from mergeinfo (issue #4538)
+    * svnsync: strip any r0 references from mergeinfo (issue #4476)
+
+  - Client-side and server-side bugfixes:
+    * fix undefined behaviour in string buffer routines (r1650834)
+    * fix consistency issues with APR r/w locks on Windows (r1611380 et al)
+    * fix occasional SEGV if threads load DSOs in parallel (r1659013, r1659315)
+    * properly duplicate svn error objects (r1651759)
+    * fix use-after-free in config parser (1646785, r1646786, r1646797)
+
+ Developer-visible changes:
+  * add lock file config for testing against HTTPD 2.4+ (r1544302, r1544303)
+  * make sqlite amalgamated build work with sqlite 3.8.x+ (r1659399)
+  * fix build with Ruby 2 (r1596882)
+  * process 'svnadmin dump' output as binary in the test suite (r1592987)
+
+
 Version 1.8.11
 (15 Dec 2014, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.11
