@@ -963,8 +963,8 @@ public class SVNRemoteTests extends SVNTests
                            0, false, false, false, null,
                            receiver);
         } catch (ClientException ex) {
-            assertTrue(ex.getAllMessages().get(0).getMessage().startsWith(
-                       "File not found"));
+            assertEquals("Filesystem has no item",
+                         ex.getAllMessages().get(0).getMessage());
             exception = true;
         }
 
