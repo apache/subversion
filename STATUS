@@ -151,6 +151,14 @@ Other candidate changes:
          r1664531 group. Until then +0.5 as the new test causes a 14 sec
          delay in the testsuite even on a ramdrive.
 
+ * r1664653
+   Fix segfault when performing 'svn cp --pin-externals WC URL' against old
+   server over http.
+   Justification:
+     Fixes segfault on --disable-http-v2.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
