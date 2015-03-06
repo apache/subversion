@@ -33,7 +33,7 @@ Issue = svntest.testcase.Issue_deco
 
 ######################################################################
 
-_commit_re = re.compile('^(r[0-9]+) committed by jrandom at (.*)$')
+_commit_re = re.compile('^Committed (r[0-9]+)')
 _log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
 _err_re = re.compile('^svnmover: (.*)$')
 
