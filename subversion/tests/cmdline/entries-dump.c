@@ -77,6 +77,8 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
   svn_wc_context_t *wc_ctx = NULL;
   const char *dir_abspath;
 
+  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
+
   err = svn_wc_adm_open3(&adm_access, related, dir_path, FALSE, 0,
                          NULL, NULL, pool);
   if (!err)
@@ -84,7 +86,6 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
       SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
                                              svn_wc__adm_get_db(adm_access),
                                              pool));
-      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
 
       SVN_ERR(svn_wc_locked2(NULL, &locked, wc_ctx, dir_abspath, pool));
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
@@ -99,7 +100,6 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
       SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
                                              svn_wc__adm_get_db(related),
                                              pool));
-      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
 
       SVN_ERR(svn_wc_locked2(NULL, &locked, wc_ctx, dir_abspath, pool));
       SVN_ERR(svn_wc_entries_read(&entries, related, TRUE, pool));
@@ -114,7 +114,6 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
         return err;
       svn_error_clear(err);
       adm_access = NULL;
-      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
       SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath, pool, pool));
       lockfile_path = svn_dirent_join_many(pool, dir_path,
                                            svn_wc_get_adm_dir(pool),
