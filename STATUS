@@ -169,6 +169,13 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1664684
+   svnrdump: don't provide HEAD+1 as base revision when loading deletes.
+   Justification:
+     Our own tools should be well behaved.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
