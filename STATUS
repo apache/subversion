@@ -135,9 +135,12 @@ Other candidate changes:
      +1: rhuijben
 
  * r1664476, r1664480, r1664481, r1664483, r1664507, r1664520, r1664521, r1664523, r1664526, r1664527
-   Automatic ANALYZE to create sqlite_stat1 table in wc.db.
+   Automatic create sqlite_stat1 table in wc.db if it doesn't exist.
    Justification:
      Avoid performance regression on some old working copies.
+   Notes:
+     This stats table provides very valuable hints to the sqlite query
+     optimizer. Sqlite 3.8.x needs this for most of our queries.
    Votes:
      +1: philip
      +1: rhuijben (r1664476, r1664480, r1664481, r1664483, r1664507)
