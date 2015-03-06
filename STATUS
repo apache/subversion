@@ -123,7 +123,7 @@ Other candidate changes:
      Trivial change to generate version resource for application.
    Votes:
      +1: rhuijben
-     
+
  * r1664531, r1664532
    Improve database usage in entries-test to speed up test runs
    Justification:
@@ -140,6 +140,10 @@ Other candidate changes:
      Avoid performance regression on some old working copies.
    Votes:
      +1: philip
+     +1: rhuijben (r1664476, r1664480, r1664481, r1664483, r1664507)
+     +1: rhuijben (r1664521, r1664523, r1664526, r1664527) after merging the
+         r1664531 group. Until then +0.5 as the new test causes a 14 sec
+         delay in the testsuite even on a ramdrive.
 
 Veto-blocked changes:
 =====================
