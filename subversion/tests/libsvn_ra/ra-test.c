@@ -708,6 +708,55 @@ base_revision_above_youngest(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+delete_revision_above_youngest(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const svn_delta_editor_t *editor;
+  svn_node_kind_t kind;
+  svn_error_t *err;
+  void *edit_baton;
+
+  SVN_ERR(make_and_open_repos(&ra_session, "delete_revision_above_youngest",
+                              opts, pool));
+
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL,
+                                    NULL, NULL, FALSE, pool));
+
+  {
+    void *root_baton;
+    void *dir_baton;
+
+    SVN_ERR(editor->open_root(edit_baton, 0, pool, &root_baton));
+    SVN_ERR(editor->add_directory("A", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->close_edit(edit_baton, pool));
+  }
+
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL,
+                                    NULL, NULL, FALSE, pool));
+
+  {
+    void *root_baton;
+    SVN_ERR(editor->open_root(edit_baton, 1, pool, &root_baton));
+
+    /* Now we supply r2, while HEAD is r1 */
+    err = editor->delete_entry("A", 2, root_baton, pool);
+
+    if (!err)
+      err = editor->close_edit(edit_baton, pool);
+
+    SVN_TEST_ASSERT_ERROR(err,
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_ERR(editor->abort_edit(edit_baton, pool));
+  }
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -731,6 +780,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "commit callback failure"),
     SVN_TEST_OPTS_PASS(base_revision_above_youngest,
                        "base revision newer than youngest"),
+    SVN_TEST_OPTS_PASS(delete_revision_above_youngest,
+                       "delete revision newer than youngest"),
     SVN_TEST_NULL
   };
 
