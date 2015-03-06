@@ -123,6 +123,16 @@ Other candidate changes:
      Trivial change to generate version resource for application.
    Votes:
      +1: rhuijben
+     
+  * r1664531, r1664532
+    Improve database usage in entries-test to speed up test runs
+    Justification:
+      Use of the non deprecated function to check if the working copy is
+      locked avoids re-opening the database for each and every directory.
+      This decreases the total time to run the testsuite by > 2%, by just
+      reducing the number of db operations.
+    Votes:
+      +1: rhuijben
 
 Veto-blocked changes:
 =====================
