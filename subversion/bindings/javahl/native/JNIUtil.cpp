@@ -435,19 +435,24 @@ ErrorMessageStack assemble_error_message(
 {
   // buffer for a single error message
   char errbuf[1024];
-  apr_status_t parent_apr_err = 0;
   ErrorMessageStack message_stack;
+  apr_status_t last_generic = APR_SUCCESS;
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
 
-  for (int depth = 0; err;
-       ++depth, parent_apr_err = err->apr_err, err = err->child)
+  for (; err; err = err->child)
     {
-      /* When we're recursing, don't repeat the top-level message if its
-       * the same as before. */
-      if (depth == 0 || err->apr_err != parent_apr_err)
+      if (err->message)
         {
+          message_stack.push_back(
+              MessageStackItem(err->apr_err, err->message));
+        }
+      else if (err->apr_err != last_generic)
+        {
+          /* When we're recursing, don't repeat the generic message if we
+           * just showed it. */
+
           const char *message;
           /* Is this a Subversion-specific error code? */
           if ((err->apr_err > APR_OS_START_USEERR)
@@ -471,11 +476,8 @@ ErrorMessageStack assemble_error_message(
 
           message_stack.push_back(
               MessageStackItem(err->apr_err, message, true));
-        }
-      if (err->message)
-        {
-          message_stack.push_back(
-              MessageStackItem(err->apr_err, err->message));
+
+          last_generic = err->apr_err;
         }
     }
 

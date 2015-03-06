@@ -176,8 +176,8 @@ public class UtilTests extends SVNTests
                         "propcheck.file", NodeKind.file,
                         "text/plain");
         } catch (ClientException ex) {
-            assertEquals("Unrecognized line ending style",
-                         ex.getAllMessages().get(0).getMessage());
+            assertTrue(ex.getAllMessages().get(0).getMessage().startsWith(
+                       "Unrecognized line ending style"));
             caught_exception = true;
         }
         assertTrue(caught_exception);
@@ -194,7 +194,7 @@ public class UtilTests extends SVNTests
                         "text/plain", new FileInputStream(temp));
         } catch (ClientException ex) {
             assertEquals("Inconsistent line ending style",
-                         ex.getAllMessages().get(2).getMessage());
+                         ex.getAllMessages().get(1).getMessage());
             caught_exception = true;
         }
         assertTrue(caught_exception);
