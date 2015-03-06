@@ -804,6 +804,25 @@ JNIUtil::checkJavaException(apr_status_t errorcode)
     err->message = apr_psprintf(err->pool, _("Java exception: %s"), msg);
   else
     err->message = _("Java exception");
+
+  
+  /* ### TODO: Use apr_pool_userdata_set() on the pool we just created
+               for the error chain to keep track of the actual Java
+               exception while the error is inside Subversion.
+
+               Once the error chain re-enters JavaHL we can check
+               if there is a true exception that we can add to the chain.
+
+               If the error is cleared in Subversion (which may happen
+               during composing error chains, etc.) the cleanup handler
+               handles properly releasing the exception.
+
+    apr_status_t
+    apr_pool_userdata_set(const void *data,
+                          const char *key,
+                          apr_status_t (*cleanup)(void *),
+                          apr_pool_t *pool)
+   */
   return err;
 }
 
