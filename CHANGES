@@ -1510,6 +1510,18 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
+Version 1.7.20
+(?? ??? 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.19
+
+ User-visible changes:
+  - Client-side and server-side bugfixes:
+    * properly duplicate svn error objects (r1651759)
+
+ Developer-visible changes:
+  * add lock file config for testing against HTTPD 2.4+ (r1544302, r1544303)
+
+
 Version 1.7.19
 (15 Dec 2014, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.19
