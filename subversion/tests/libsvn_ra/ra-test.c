@@ -673,21 +673,31 @@ base_revision_above_youngest(const svn_test_opts_t *opts,
   void *edit_baton;
   void *root_baton;
   svn_error_t *err;
-  SVN_ERR(make_and_open_repos(&ra_session, "base_revision_above_youngest", opts, pool));
+  SVN_ERR(make_and_open_repos(&ra_session, "base_revision_above_youngest",
+                              opts, pool));
 
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     apr_hash_make(pool), NULL,
                                     NULL, NULL, FALSE, pool));
 
+  /* r1 doesn't exist, but we say we want to apply changes against this
+     revision to see how the ra layers behave.
+
+     Some will see an error directly on open_root, others in a later
+     state. */
+
+  /* ra-local and http pre-v2 will see the error here */
   err = editor->open_root(edit_baton, 1, pool, &root_baton);
 
   if (!err)
     err = editor->change_dir_prop(root_baton, "A",
                                   svn_string_create("B", pool), pool);
 
+  /* http v2 will notice it here (PROPPATCH) */
   if (!err)
     err = editor->close_directory(root_baton, pool);
 
+  /* ra svn only notes it at some later point. Typically here */
   if (!err)
     err = editor->close_edit(edit_baton, pool);
 
