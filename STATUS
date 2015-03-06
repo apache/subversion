@@ -24,7 +24,7 @@ Status of 1.9.0:
    Votes:
      +1: rhuijben
 
- * r1664078,r1664080,r1664187,r1664191,r1664200,r1664344
+ * r1664078,r1664080,r1664187,r1664191,r1664200,r1664344,r1664588
    Instead of making more changes to the auth batons from ra sessions, reduce
    the number of changes by introducing an internal slave auth baton feature.
    Justification:
