@@ -881,7 +881,7 @@ editor3_add(void *baton,
   eid = svn_branch_family_add_new_element(branch->sibling_defn->family);
 
   SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
-           /*branch->sibling->bid,*/ eid, new_parent_eid,
+           /*branch->sibling->bsid,*/ eid, new_parent_eid,
            new_name, svn_node_kind_to_word(new_content->kind)));
 
   svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
@@ -901,7 +901,7 @@ editor3_instantiate(void *baton,
                     apr_pool_t *scratch_pool)
 {
   SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
-           /*branch->sibling->bid,*/ eid, new_parent_eid,
+           /*branch->sibling->bsid,*/ eid, new_parent_eid,
            new_name, svn_node_kind_to_word(new_content->kind)));
 
   svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
@@ -957,7 +957,7 @@ editor3_delete(void *baton,
                    apr_pool_t *scratch_pool)
 {
   SVN_DBG(("delete(b%d e%d)",
-           branch->sibling_defn->bid, eid));
+           branch->sibling_defn->bsid, eid));
 
   svn_branch_map_delete(branch, eid /* ### , since_rev? */);
 
@@ -976,7 +976,7 @@ editor3_alter(void *baton,
               apr_pool_t *scratch_pool)
 {
   SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
-           /*branch->sibling_defn->bid,*/ eid,
+           /*branch->sibling_defn->bsid,*/ eid,
            new_parent_eid,
            new_name ? new_name : "(same)",
            new_content ? svn_node_kind_to_word(new_content->kind) : "(same)"));
@@ -1028,12 +1028,12 @@ convert_branch_to_paths(apr_hash_t *paths,
                                            result_pool);
           svn_hash_sets(paths, rrpath, ba);
           /*SVN_DBG(("branch-to-path[%d]: b%d e%d -> %s",
-                   i, branch->sibling_defn->bid, eid, rrpath));*/
+                   i, branch->sibling_defn->bsid, eid, rrpath));*/
         }
       else
         {
           SVN_DBG(("branch-to-path: b%d e%d -> <already present; not overwriting> (%s)",
-                   branch->sibling_defn->bid, eid, rrpath));
+                   branch->sibling_defn->bsid, eid, rrpath));
         }
     }
 }
@@ -1054,7 +1054,7 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
   SVN_ITER_T(svn_branch_instance_t) *bi;
 
   /*SVN_DBG(("[%d] branch={b%de%d at '%s'}", idx,
-           branch->sibling_defn->bid, branch->sibling_defn->root_eid, branch->branch_root_rrpath));*/
+           branch->sibling_defn->bsid, branch->sibling_defn->root_eid, branch->branch_root_rrpath));*/
   convert_branch_to_paths(paths_union, branch,
                           result_pool, scratch_pool);
 
