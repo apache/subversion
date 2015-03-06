@@ -1916,6 +1916,9 @@ queue_prop_change_commit_items(const char *local_abspath,
       item->url = commit_url;
       item->kind = svn_node_dir;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+
+      item->incoming_prop_changes = apr_array_make(result_pool, 1,
+                                                   sizeof(svn_prop_t *));
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
     }
   else
