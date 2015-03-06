@@ -106,7 +106,7 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
     }
   else
     {
-      const char *dir_abspath, *lockfile_path;
+      const char *lockfile_path;
       svn_node_kind_t kind;
 
       /* ### Should svn_wc_adm_open3 be returning UPGRADE_REQUIRED? */
