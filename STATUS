@@ -73,15 +73,6 @@ Candidate changes:
    Votes:
      +1: philip, stefan2
 
- * r1646785, r1646786, r1646797
-   Fix a pool handling bug in config variable expansion.
-   Justification:
-     Using memory after free is undefined behaviour.
-   Branch:
-     ^/subversion/branches/1.7.x-r1646797
-   Votes:
-     +1: philip, stefan2
-
  * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
    Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
    non-deltas dumpfile".
@@ -101,7 +92,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1561419
    Votes:
-     +1: stefan2
+     +1: stefan2, stsp
 
  * r1654932, r1654933, r1654934, r1654937
    Fix issue #4554, "0 file length reported in FSFS".
@@ -130,20 +121,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
      +1: danielsh (libsvn_repos part only)
-
- * ^/subversion/branches/1.7.x-buildfix-neon
-   Fix building neon when passing an absolute path to gen-make.py
-   Justification:
-     Don't create invalid paths in generated project files as those
-     will just produce unreadable errors.
-     See http://ci.apache.org/builders/svn-windows-local/builds/1617/steps/Build/logs/stdio
-     "System.InvalidOperationException: The item metadata "%(FullPath)" cannot be applied
-      to the path "D:\local\svn-local\build\D:\local\svn-local\deps\build\neon\neon.vcxproj".
-      The given path's format is not supported."
-   Branch:
-     ^/subversion/branches/1.7.x-buildfix-neon
-   Votes:
-     +1: rhuijben, stefan2
 
 Veto-blocked changes:
 =====================
@@ -195,3 +172,26 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1646785, r1646786, r1646797
+   Fix a pool handling bug in config variable expansion.
+   Justification:
+     Using memory after free is undefined behaviour.
+   Branch:
+     ^/subversion/branches/1.7.x-r1646797
+   Votes:
+     +1: philip, stefan2, stsp
+
+ * ^/subversion/branches/1.7.x-buildfix-neon
+   Fix building neon when passing an absolute path to gen-make.py
+   Justification:
+     Don't create invalid paths in generated project files as those
+     will just produce unreadable errors.
+     See http://ci.apache.org/builders/svn-windows-local/builds/1617/steps/Build/logs/stdio
+     "System.InvalidOperationException: The item metadata "%(FullPath)" cannot be applied
+      to the path "D:\local\svn-local\build\D:\local\svn-local\deps\build\neon\neon.vcxproj".
+      The given path's format is not supported."
+   Branch:
+     ^/subversion/branches/1.7.x-buildfix-neon
+   Votes:
+     +1: rhuijben, stefan2, stsp
