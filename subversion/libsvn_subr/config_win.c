@@ -197,14 +197,12 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
                      &hkey);
   if (err != ERROR_SUCCESS)
     {
-      const int is_enoent = APR_STATUS_IS_ENOENT(APR_FROM_OS_ERROR(err));
-      if (!is_enoent)
-        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+      apr_status_t apr_err = APR_FROM_OS_ERROR(err);
+
+      if (must_exist || APR_STATUS_IS_ENOENT(apr_err))
+        return svn_error_createf(SVN_ERR_BAD_FILENAME,
+                                 svn_error_wrap_apr(apr_err, NULL),
                                  _("Can't open registry key '%s'"),
-                                 svn_dirent_local_style(file, pool));
-      else if (must_exist && is_enoent)
-        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 _("Can't find registry key '%s'"),
                                  svn_dirent_local_style(file, pool));
       else
         return SVN_NO_ERROR;
