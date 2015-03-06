@@ -50,6 +50,9 @@
   ((branch1)->sibling_defn->family->fid \
    == (branch2)->sibling_defn->family->fid)
 
+#define IS_BRANCH_ROOT_EID(branch, eid) \
+  ((eid) == (branch)->sibling_defn->root_eid)
+
 /* Is BRANCH1 the same branch as BRANCH2? Compare by full branch-ids; don't
    require identical branch-instance objects. */
 #define BRANCH_IS_SAME_BRANCH(branch1, branch2, scratch_pool) \
@@ -440,7 +443,7 @@ branch_map_node_validate(const svn_branch_instance_t *branch,
   /* Parent EID must be valid and different from this node's EID, or -1
      iff this is the branch root element. */
   SVN_ERR_ASSERT_NO_RETURN(
-    (eid == branch->sibling_defn->root_eid)
+    IS_BRANCH_ROOT_EID(branch, eid)
     ? (node->parent_eid == -1)
     : (node->parent_eid != eid
        && BRANCH_FAMILY_HAS_ELEMENT(branch, node->parent_eid)));
@@ -448,7 +451,7 @@ branch_map_node_validate(const svn_branch_instance_t *branch,
   /* Node name must be given, and empty iff EID is the branch root. */
   SVN_ERR_ASSERT_NO_RETURN(
     node->name
-    && (eid == branch->sibling_defn->root_eid) == (*node->name == '\0'));
+    && IS_BRANCH_ROOT_EID(branch, eid) == (*node->name == '\0'));
 
   /* Content, if specified, must be in full or by reference. */
   if (node->content)
@@ -645,14 +648,14 @@ svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
 
   SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(branch, eid));
 
-  for (; eid != branch->sibling_defn->root_eid; eid = node->parent_eid)
+  for (; ! IS_BRANCH_ROOT_EID(branch, eid); eid = node->parent_eid)
     {
       node = svn_branch_map_get(branch, eid);
       if (! node)
         return NULL;
       path = svn_relpath_join(node->name, path, result_pool);
     }
-  SVN_ERR_ASSERT_NO_RETURN(eid == branch->sibling_defn->root_eid);
+  SVN_ERR_ASSERT_NO_RETURN(IS_BRANCH_ROOT_EID(branch, eid));
   return path;
 }
 
@@ -1528,15 +1531,13 @@ svn_branch_branch(svn_branch_instance_t **new_branch_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_branch_branchify(svn_branch_instance_t **new_branch_p,
-                     svn_branch_instance_t *outer_branch,
-                     svn_branch_eid_t outer_eid,
-                     apr_pool_t *scratch_pool)
+/* The body of svn_branch_branchify(), which see */
+static svn_error_t *
+branch_branchify(svn_branch_instance_t **new_branch_p,
+                 svn_branch_instance_t *outer_branch,
+                 svn_branch_eid_t outer_eid,
+                 apr_pool_t *scratch_pool)
 {
-  /* ### TODO: First check the element is not already a branch root
-         and its subtree does not contain any branch roots. */
-
   svn_branch_family_t *new_family
     = svn_branch_family_add_new_subfamily(outer_branch->sibling_defn->family);
   int new_root_eid = svn_branch_family_add_new_element(new_family);
@@ -1577,6 +1578,24 @@ svn_branch_branchify(svn_branch_instance_t **new_branch_p,
 
   if (new_branch_p)
     *new_branch_p = new_branch;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_branch_branchify(svn_branch_instance_t **new_branch_p,
+                     svn_branch_instance_t *outer_branch,
+                     svn_branch_eid_t outer_eid,
+                     apr_pool_t *scratch_pool)
+{
+  /* Check the element is not already a branch root */
+  /* ### TODO: and its subtree does not contain any branch roots. */
+  if (IS_BRANCH_ROOT_EID(outer_branch, outer_eid)
+      || svn_branch_get_subbranch_at_eid(outer_branch, outer_eid, scratch_pool))
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                             _("is already a subbranch root"));
+
+  SVN_ERR(branch_branchify(new_branch_p,
+                           outer_branch, outer_eid, scratch_pool));
   return SVN_NO_ERROR;
 }
 

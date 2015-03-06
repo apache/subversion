@@ -1084,9 +1084,7 @@ svn_branch_diff(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/* Return a hash of (BID -> BRANCH) of the subbranches of BRANCH.
- *
- * ### Wrong, because BID is not a unique identifier
+/* Return a hash of (full-branch-id -> BRANCH) of the subbranches of BRANCH.
  *
  * Return an empty hash if BRANCH is null.
  */
@@ -1107,7 +1105,7 @@ get_subbranches(svn_branch_instance_t *branch,
         {
           svn_branch_instance_t *b = bi->val;
 
-          svn_int_hash_set(result, b->sibling_defn->bid, b);
+          svn_hash_sets(result, svn_branch_get_root_rrpath(b, result_pool), b);
         }
     }
   return result;
@@ -1174,9 +1172,9 @@ svn_branch_diff_r(svn_editor3_t *editor,
   for (hi = apr_hash_first(scratch_pool, subbranches_all);
        hi; hi = apr_hash_next(hi))
     {
-      int bid = svn_int_hash_this_key(hi);
-      svn_branch_instance_t *branch_l = svn_int_hash_get(subbranches_l, bid);
-      svn_branch_instance_t *branch_r = svn_int_hash_get(subbranches_r, bid);
+      const char *bid = apr_hash_this_key(hi);
+      svn_branch_instance_t *branch_l = svn_hash_gets(subbranches_l, bid);
+      svn_branch_instance_t *branch_r = svn_hash_gets(subbranches_r, bid);
       svn_branch_el_rev_id_t *sub_left = NULL, *sub_right = NULL;
 
       if (branch_l)
