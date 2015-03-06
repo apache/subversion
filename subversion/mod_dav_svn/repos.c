@@ -4115,6 +4115,22 @@ remove_resource(dav_resource *resource, dav_response **response)
                                       "Can't DELETE out-of-date resource",
                                       resource->pool);
         }
+      else if (resource->info->version_name > created_rev)
+        {
+          svn_revnum_t txn_base_rev;
+
+          txn_base_rev = svn_fs_txn_base_revision(resource->info->root.txn);
+          if (resource->info->version_name > txn_base_rev)
+            {
+              serr = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                       "No such revision %ld",
+                                       resource->info->version_name);
+
+              return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                          "Unknown base revision",
+                                          resource->pool);
+            }
+        }
     }
 
   /* Before attempting the filesystem delete, we need to push any
