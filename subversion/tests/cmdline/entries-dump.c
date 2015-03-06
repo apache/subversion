@@ -74,12 +74,19 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
   apr_hash_index_t *hi;
   svn_boolean_t locked;
   svn_error_t *err;
+  svn_wc_context_t *wc_ctx = NULL;
+  const char *dir_abspath;
 
   err = svn_wc_adm_open3(&adm_access, related, dir_path, FALSE, 0,
                          NULL, NULL, pool);
   if (!err)
     {
-      SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
+      SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                             svn_wc__adm_get_db(adm_access),
+                                             pool));
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
+
+      SVN_ERR(svn_wc_locked2(NULL, &locked, wc_ctx, dir_abspath, pool));
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
     }
   else if (err && err->apr_err == SVN_ERR_WC_LOCKED
@@ -88,7 +95,13 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
     {
       /* Common caller error: Can't open a baton when there is one. */
       svn_error_clear(err);
-      SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
+
+      SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                             svn_wc__adm_get_db(related),
+                                             pool));
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
+
+      SVN_ERR(svn_wc_locked2(NULL, &locked, wc_ctx, dir_abspath, pool));
       SVN_ERR(svn_wc_entries_read(&entries, related, TRUE, pool));
     }
   else
@@ -160,6 +173,9 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
       bool_value("locked", locked && *entry->name == '\0');
       printf("entries['%s'] = e\n", (const char *)key);
     }
+
+  if (wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   if (adm_access)
     SVN_ERR(svn_wc_adm_close2(adm_access, pool));
