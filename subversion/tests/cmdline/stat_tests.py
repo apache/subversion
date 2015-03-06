@@ -1598,42 +1598,79 @@ def status_dash_u_deleted_directories(sbox):
 
   # check status -u of B
   expected = svntest.verify.UnorderedOutput(
-         ["D                1   %s\n" % "B",
-          "D                1   %s\n" % os.path.join("B", "lambda"),
-          "D                1   %s\n" % os.path.join("B", "E"),
-          "D                1   %s\n" % os.path.join("B", "E", "alpha"),
-          "D                1   %s\n" % os.path.join("B", "E", "beta"),
-          "D                1   %s\n" % os.path.join("B", "F"),
+         ["D                1        1 jrandom      %s\n" % \
+                                        "B",
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "lambda"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E", "alpha"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E", "beta"),
+          "D                1        1 jrandom      %s\n" % 
+          os.path.join("B", "F"),
           "Status against revision:      1\n" ])
   svntest.actions.run_and_verify_svn(expected,
                                      [],
+                                     "status", "-u", "-v", "B")
+
+  expected = \
+         ["D                1   %s\n" % "B",
+          "Status against revision:      1\n" ]
+  svntest.actions.run_and_verify_svn(expected,
+                                     [],
                                      "status", "-u", "B")
+
 
   # again, but now from inside B, should give the same output
   if not os.path.exists('B'):
     os.mkdir('B')
   os.chdir("B")
   expected = svntest.verify.UnorderedOutput(
-         ["D                1   %s\n" % ".",
-          "D                1   %s\n" % "lambda",
-          "D                1   %s\n" % "E",
-          "D                1   %s\n" % os.path.join("E", "alpha"),
-          "D                1   %s\n" % os.path.join("E", "beta"),
-          "D                1   %s\n" % "F",
+         ["D                1        1 jrandom      %s\n" % \
+                                        ".",
+          "D                1        1 jrandom      %s\n" % \
+                                        "lambda",
+          "D                1        1 jrandom      %s\n" % \
+                                        "E",
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("E", "alpha"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("E", "beta"),
+          "D                1        1 jrandom      %s\n" % \
+                                        "F",
           "Status against revision:      1\n" ])
+  svntest.actions.run_and_verify_svn(expected,
+                                     [],
+                                     "status", "-u", "-v", ".")
+
+  expected = \
+         ["D                1   %s\n" % ".",
+          "Status against revision:      1\n" ]
   svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", ".")
 
   # check status -u of B/E
   expected = svntest.verify.UnorderedOutput(
-         ["D                1   %s\n" % os.path.join("B", "E"),
-          "D                1   %s\n" % os.path.join("B", "E", "alpha"),
-          "D                1   %s\n" % os.path.join("B", "E", "beta"),
+         ["D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E", "alpha"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E", "beta"),
           "Status against revision:      1\n" ])
 
   os.chdir(was_cwd)
   os.chdir(A_path)
+  svntest.actions.run_and_verify_svn(expected,
+                                     [],
+                                     "status", "-u", "-v",
+                                     os.path.join("B", "E"))
+
+
+  expected = [ "Status against revision:      1\n" ]
   svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u",
