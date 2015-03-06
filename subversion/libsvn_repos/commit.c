@@ -392,9 +392,9 @@ open_root(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   svn_revnum_t youngest;
 
-  /* Ignore BASE_REVISION.  We always build our transaction against
-     HEAD.  However, we will keep it in our dir baton for out of
-     dateness checks.  */
+  /* We always build our transaction against HEAD.  However, we will
+     sanity-check BASE_REVISION and keep it in our dir baton for out
+     of dateness checks.  */
   SVN_ERR(svn_fs_youngest_rev(&youngest, eb->fs, eb->pool));
 
   if (base_revision > youngest)
