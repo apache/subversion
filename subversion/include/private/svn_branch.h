@@ -149,8 +149,8 @@ typedef struct svn_branch_family_t
   /* The branch siblings in this family. */
   apr_array_header_t *branch_siblings;
 
-  /* The range of branch ids assigned within this family. */
-  int first_bid, next_bid;
+  /* The range of branch sibling ids assigned within this family. */
+  int first_bsid, next_bsid;
 
   /* The range of element ids assigned within this family. */
   int first_eid, next_eid;
@@ -166,8 +166,8 @@ typedef struct svn_branch_family_t
 svn_branch_family_t *
 svn_branch_family_create(svn_branch_repos_t *repos,
                          int fid,
-                         int first_bid,
-                         int next_bid,
+                         int first_bsid,
+                         int next_bsid,
                          int first_eid,
                          int next_eid,
                          apr_pool_t *result_pool);
@@ -210,8 +210,8 @@ svn_branch_family_add_new_branch_sibling(svn_branch_family_t *family,
 /* A branch.
  *
  * A branch sibling object describes the characteristics of a branch
- * in a given family with a given BID. This sibling is common to each
- * branch that has this same family and BID: there can be one such instance
+ * in a given family with a given BSID. This sibling is common to each
+ * branch that has this same family and BSID: there can be one such instance
  * within each branch of its outer families.
  *
  * Often, all branches in a family have the same root element. For example,
@@ -247,8 +247,8 @@ struct svn_branch_sibling_t
   /* The family of which this branch is a member. */
   svn_branch_family_t *family;
 
-  /* The BID of this branch within its family. */
-  int bid;
+  /* The BSID of this branch within its family. */
+  int bsid;
 
   /* The EID, within the outer family, of the branch root element. */
   /*int outer_family_eid_of_branch_root;*/
@@ -262,7 +262,7 @@ struct svn_branch_sibling_t
 /* Create a new branch sibling object */
 svn_branch_sibling_t *
 svn_branch_sibling_create(svn_branch_family_t *family,
-                          int bid,
+                          int bsid,
                           int root_eid,
                           apr_pool_t *result_pool);
 

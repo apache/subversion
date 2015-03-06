@@ -425,7 +425,7 @@ el_rev_str(const svn_branch_el_rev_id_t *el_rev,
            apr_pool_t *result_pool)
 {
   return apr_psprintf(result_pool, "r%ldb%de%d",
-                      el_rev->rev, el_rev->branch->sibling_defn->bid, el_rev->eid);
+                      el_rev->rev, el_rev->branch->sibling_defn->bsid, el_rev->eid);
 }
 
 /* Return a human-readable string representation of EID. */
@@ -687,8 +687,8 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
   int e;
 
   /*SVN_DBG(("branch_element_differences(b%d r%ld, b%d r%ld, e%d)",
-           left->branch->sibling->bid, left->rev,
-           right->branch->sibling->bid, right->rev, right->eid));*/
+           left->branch->sibling->bsid, left->rev,
+           right->branch->sibling->bsid, right->rev, right->eid));*/
   SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(left->branch, right->branch));
   SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, left->eid));
   SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, right->eid));

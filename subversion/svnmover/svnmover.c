@@ -422,9 +422,9 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
 
   if (verbose)
     {
-      printf("family %d (BIDs %d:%d, EIDs %d:%d)\n",
+      printf("family %d (BSIDs %d:%d, EIDs %d:%d)\n",
              family->fid,
-             family->first_bid, family->next_bid,
+             family->first_bsid, family->next_bsid,
              family->first_eid, family->next_eid);
     }
   else
@@ -440,9 +440,9 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
 
       if (verbose)
         {
-          printf("  branch %s bid=%d root=e%d /%s\n",
+          printf("  branch %s bsid=%d root=e%d /%s\n",
                  svn_branch_instance_get_id(branch, bi->iterpool),
-                 branch->sibling_defn->bid, branch->sibling_defn->root_eid,
+                 branch->sibling_defn->bsid, branch->sibling_defn->root_eid,
                  svn_branch_get_root_rrpath(branch, bi->iterpool));
           SVN_ERR(list_branch_elements(branch, bi->iterpool));
         }
@@ -680,13 +680,13 @@ branch_merge_subtree_r(svn_editor3_t *editor,
 
   SVN_DBG(("merge src: r%2ld f%d b%2d e%3d",
            src->rev, src->branch->sibling_defn->family->fid,
-           src->branch->sibling_defn->bid, src->eid));
+           src->branch->sibling_defn->bsid, src->eid));
   SVN_DBG(("merge tgt: r%2ld f%d b%2d e%3d",
            tgt->rev, tgt->branch->sibling_defn->family->fid,
-           tgt->branch->sibling_defn->bid, tgt->eid));
+           tgt->branch->sibling_defn->bsid, tgt->eid));
   SVN_DBG(("merge yca: r%2ld f%d b%2d e%3d",
            yca->rev, yca->branch->sibling_defn->family->fid,
-           yca->branch->sibling_defn->bid, yca->eid));
+           yca->branch->sibling_defn->bsid, yca->eid));
 
   /*
       for (eid, diff1) in element_differences(YCA, FROM):
@@ -1172,9 +1172,9 @@ svn_branch_diff_r(svn_editor3_t *editor,
   for (hi = apr_hash_first(scratch_pool, subbranches_all);
        hi; hi = apr_hash_next(hi))
     {
-      const char *bid = apr_hash_this_key(hi);
-      svn_branch_instance_t *branch_l = svn_hash_gets(subbranches_l, bid);
-      svn_branch_instance_t *branch_r = svn_hash_gets(subbranches_r, bid);
+      const char *branch_id = apr_hash_this_key(hi);
+      svn_branch_instance_t *branch_l = svn_hash_gets(subbranches_l, branch_id);
+      svn_branch_instance_t *branch_r = svn_hash_gets(subbranches_r, branch_id);
       svn_branch_el_rev_id_t *sub_left = NULL, *sub_right = NULL;
 
       if (branch_l)
@@ -1309,7 +1309,7 @@ svn_branch_revision_root_find_branch_by_id(const svn_branch_revision_root_t *rev
     }
   SVN_DBG(("branch found: f%db%de%d at '/%s'",
            branch->sibling_defn->family->fid,
-           branch->sibling_defn->bid,
+           branch->sibling_defn->bsid,
            branch->sibling_defn->root_eid,
            svn_branch_get_root_rrpath(branch, scratch_pool)));
   return branch;
