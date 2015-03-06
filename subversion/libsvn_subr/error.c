@@ -164,7 +164,9 @@ make_error_internal(apr_status_t apr_err,
 {
   apr_pool_t *pool;
   svn_error_t *new_error;
-  apr_status_t status = APR_SUCCESS;
+#ifdef SVN_DEBUG
+  apr_status_t status = APR_ENOTIMPL;
+#endif
 
   /* Reuse the child's pool, or create our own. */
   if (child)
