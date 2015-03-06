@@ -256,15 +256,18 @@ svn_auth_first_credentials(void **credentials,
   if (auth_baton->slave_parameters)
     {
       apr_hash_index_t *hi;
-      parameters = apr_hash_overlay(pool, auth_baton->slave_parameters,
-                                    auth_baton->parameters);
+      parameters = apr_hash_copy(pool, auth_baton->parameters);
 
       for (hi = apr_hash_first(pool, auth_baton->slave_parameters);
             hi;
             hi = apr_hash_next(hi))
         {
-          if (apr_hash_this_val(hi) == &auth_NULL)
-            svn_hash_sets(parameters, apr_hash_this_key(hi), NULL);
+          const void *value = apr_hash_this_val(hi);
+
+          if (value == &auth_NULL)
+            value = NULL;
+
+          svn_hash_sets(parameters, apr_hash_this_key(hi), value);
         }
     }
   else
