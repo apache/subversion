@@ -141,6 +141,9 @@ Other candidate changes:
    Notes:
      This stats table provides very valuable hints to the sqlite query
      optimizer. Sqlite 3.8.x needs this for most of our queries.
+     .
+     See "Manual Control Of Query Plans Using SQLITE_STAT Tables"
+     on https://www.sqlite.org/optoverview.html#manctrl
    Votes:
      +1: philip
      +1: rhuijben (r1664476, r1664480, r1664481, r1664483, r1664507)
