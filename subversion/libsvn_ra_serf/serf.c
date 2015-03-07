@@ -484,15 +484,14 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_uri_t url;
   const char *client_string = NULL;
   svn_error_t *err;
-  apr_pool_t *pool = result_pool;
 
   if (corrected_url)
     *corrected_url = NULL;
 
-  serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
-  serf_sess->pool = svn_pool_create(pool);
+  serf_sess = apr_pcalloc(result_pool, sizeof(*serf_sess));
+  serf_sess->pool = result_pool;
   if (config)
-    SVN_ERR(svn_config_copy_config(&serf_sess->config, config, pool));
+    SVN_ERR(svn_config_copy_config(&serf_sess->config, config, result_pool));
   else
     serf_sess->config = NULL;
   serf_sess->wc_callbacks = callbacks;
@@ -554,13 +553,16 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   /* create the user agent string */
   if (callbacks->get_client_string)
-    SVN_ERR(callbacks->get_client_string(callback_baton, &client_string, pool));
+    SVN_ERR(callbacks->get_client_string(callback_baton, &client_string,
+                                         scratch_pool));
 
   if (client_string)
-    serf_sess->useragent = apr_pstrcat(pool, get_user_agent_string(pool), " ",
+    serf_sess->useragent = apr_pstrcat(result_pool,
+                                       get_user_agent_string(scratch_pool),
+                                       " ",
                                        client_string, SVN_VA_NULL);
   else
-    serf_sess->useragent = get_user_agent_string(pool);
+    serf_sess->useragent = get_user_agent_string(result_pool);
 
   /* go ahead and tell serf about the connection. */
   status =
@@ -581,16 +583,24 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  /* This subpool not only avoids having a lot of temporary state in the long
-     living session pool, but it also works around a bug in serf
-     <= r2319 / 1.3.4 where serf doesn't report the request as failed/cancelled
-     when the authorization request handler fails to handle the request.
+  /* The following code explicitly works around a bug in serf <= r2319 / 1.3.8
+     where serf doesn't report the request as failed/cancelled when the
+     authorization request handler fails to handle the request.
 
-     In this specific case the serf connection is cleaned up by the pool
-     handlers before our handler is cleaned up (via subpools). Using a
-     subpool here cleans up our handler before the connection is cleaned. */
+     As long as we allocate the request in a subpool of the serf connection
+     pool, we know that the handler is always cleaned before the connection.
+
+     Luckily our caller now passes us two pools which handle this case.
+   */
+#if defined(SVN_DEBUG) && !SERF_VERSION_AT_LEAST(1,4,0)
+  /* Currently ensured by svn_ra_open4().
+     If failing causes segfault in basic_tests.py 48, "basic auth test" */
+  SVN_ERR_ASSERT((serf_sess->pool != scratch_pool)
+                 && apr_pool_is_ancestor(serf_sess->pool, scratch_pool));
+#endif
+
   err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url,
-                                           pool, scratch_pool);
+                                            result_pool, scratch_pool);
 
   /* serf should produce a usable error code instead of APR_EGENERAL */
   if (err && err->apr_err == APR_EGENERAL)
