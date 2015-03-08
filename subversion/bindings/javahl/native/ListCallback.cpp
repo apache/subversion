@@ -113,10 +113,8 @@ ListCallback::doList(const char *path,
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jdirentry, jlock);
-  // No need to check for exception here, because we'll just return anyway
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
 
 /**

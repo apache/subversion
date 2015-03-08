@@ -86,6 +86,9 @@ class JNIUtil
       return getEnv()->ExceptionCheck();
     }
 
+  static svn_error_t *wrapJavaException();
+  static jthrowable unwrapJavaException(const svn_error_t *err);
+
   static void handleAPRError(int error, const char *op);
 
   /**
@@ -263,6 +266,16 @@ class JNIUtil
       env->PopLocalFrame(NULL);         \
       return;                           \
     }                                   \
+  while (0)
+
+#define POP_AND_RETURN_EXCEPTION_AS_SVNERROR()                            \
+  do                                                                      \
+    {                                                                     \
+      svn_error_t *svn__err_for_exception = JNIUtil::wrapJavaException(); \
+                                                                          \
+      env->PopLocalFrame(NULL);                                           \
+      return svn__err_for_exception;                                      \
+    }                                                                     \
   while (0)
 
 

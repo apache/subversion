@@ -96,10 +96,8 @@ CommitCallback::commitInfo(const svn_commit_info_t *commit_info,
     POP_AND_RETURN(SVN_NO_ERROR);
 
   env->CallVoidMethod(m_callback, sm_mid, jcommitInfo);
-  // No need to check for an exception here, because we return anyway.
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
 
 
