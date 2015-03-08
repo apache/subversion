@@ -1096,7 +1096,9 @@ public:
     // As adding a reference in exception state fails
     m_exception = static_cast<jthrowable>(env->NewGlobalRef(exceptionObj));
 
+#ifdef SVN_DEBUG
     m_fetched = false;
+#endif
   }
 
   static jthrowable get_exception(apr_pool_t *pool)
