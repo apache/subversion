@@ -277,7 +277,7 @@ class Sandbox:
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
 
-  def file_protocol_url(self):
+  def file_protocol_repo_url(self):
     """get a file:// url pointing to the repository"""
     return svntest.main.file_scheme_prefix + \
            svntest.wc.svn_uri_quote(
