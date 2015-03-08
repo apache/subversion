@@ -1079,6 +1079,9 @@ class WrappedException
 {
   JNIEnv *m_env;
   jthrowable m_exception;
+#ifdef SVN_DEBUG
+  bool m_fetched;
+#endif
 public:
   WrappedException(JNIEnv *env)
   {
@@ -1092,6 +1095,8 @@ public:
 
     // As adding a reference in exception state fails
     m_exception = static_cast<jthrowable>(env->NewGlobalRef(exceptionObj));
+
+    m_fetched = false;
   }
 
   static jthrowable get_exception(apr_pool_t *pool)
@@ -1103,6 +1108,9 @@ public:
 
           if (we)
           {
+#ifdef SVN_DEBUG
+              we->m_fetched = TRUE;
+#endif
               // Create reference in local frame, as the pool will be cleared
               return static_cast<jthrowable>(
                             we->m_env->NewLocalRef(we->m_exception));
@@ -1114,6 +1122,10 @@ public:
 private:
   ~WrappedException()
   {
+#ifdef SVN_DEBUG
+      if (!m_fetched)
+          SVN_DBG(("Cleared svn_error_t * before Java exception was fetched"));
+#endif
       m_env->DeleteGlobalRef(m_exception);
   }
 public:
