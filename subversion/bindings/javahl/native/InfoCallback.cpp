@@ -95,8 +95,6 @@ InfoCallback::singleInfo(const char *path,
     POP_AND_RETURN(SVN_NO_ERROR);
 
   env->CallVoidMethod(m_callback, mid, jinfo2);
-  // Return SVN_NO_ERROR here regardless of an exception or not.
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }

@@ -77,6 +77,11 @@ bool JNIUtil::g_initException;
 int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
 
+/* The error code we will use to signal a Java exception */
+static const apr_status_t
+SVN_ERR_JAVAHL_WRAPPED = SVN_ERR_MALFUNC_CATEGORY_START
+                         + SVN_ERR_CATEGORY_SIZE - 10;
+
 /**
  * Return the JNI environment to use
  * @return the JNI environment
@@ -446,7 +451,8 @@ ErrorMessageStack assemble_error_message(
     {
       /* When we're recursing, don't repeat the top-level message if its
        * the same as before. */
-      if (depth == 0 || err->apr_err != parent_apr_err)
+      if ((depth == 0 || err->apr_err != parent_apr_err)
+          && err->apr_err != SVN_ERR_JAVAHL_WRAPPED)
         {
           const char *message;
           /* Is this a Subversion-specific error code? */
@@ -585,6 +591,9 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
     }
 #endif
 #endif
+
+  if (!jcause)
+    jcause = JNIUtil::unwrapJavaException(err);
 
   // Much of the following is stolen from throwNativeException().  As much as
   // we'd like to call that function, we need to do some manual stack
@@ -1061,4 +1070,78 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
     }
 
   return NULL;
+}
+
+/* Tag to use on the apr_pool_t to store a WrappedException reference */
+static const char *WrapExceptionTag = "org.apache.subversion.JavaHL.svnerror";
+
+class WrappedException
+{
+  JNIEnv *m_env;
+  jthrowable m_exception;
+public:
+  WrappedException(JNIEnv *env)
+  {
+    m_env = env;
+
+    // Fetch exception inside local frame
+    jthrowable exceptionObj = env->ExceptionOccurred();
+
+    // Now clear exception status
+    env->ExceptionClear();
+
+    // As adding a reference in exception state fails
+    m_exception = static_cast<jthrowable>(env->NewGlobalRef(exceptionObj));
+  }
+
+  static jthrowable get_exception(apr_pool_t *pool)
+  {
+      void *data;
+      if (! apr_pool_userdata_get(&data, WrapExceptionTag, pool))
+      {
+          WrappedException *we = reinterpret_cast<WrappedException *>(data);
+
+          if (we)
+          {
+              // Create reference in local frame, as the pool will be cleared
+              return static_cast<jthrowable>(
+                            we->m_env->NewLocalRef(we->m_exception));
+          }
+      }
+      return NULL;
+  }
+
+private:
+  ~WrappedException()
+  {
+      m_env->DeleteGlobalRef(m_exception);
+  }
+public:
+  static apr_status_t cleanup(void *data)
+  {
+    WrappedException *we = reinterpret_cast<WrappedException *>(data);
+
+    delete we;
+    return APR_SUCCESS;
+  }
+};
+
+svn_error_t* JNIUtil::wrapJavaException()
+{
+  if (!isExceptionThrown())
+    return SVN_NO_ERROR;
+
+  svn_error_t *err = svn_error_create(SVN_ERR_JAVAHL_WRAPPED, NULL,
+                                      "Wrapped Java Exception");
+  apr_pool_userdata_set(new WrappedException(getEnv()), WrapExceptionTag,
+                        WrappedException::cleanup, err->pool);
+  return err;
+}
+
+jthrowable JNIUtil::unwrapJavaException(const svn_error_t *err)
+{
+    if (!err)
+        return NULL;
+    return
+        WrappedException::get_exception(err->pool);
 }
