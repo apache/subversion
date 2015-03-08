@@ -24,7 +24,6 @@
 import os
 import shutil
 import copy
-import urllib
 import logging
 import re
 
@@ -114,7 +113,8 @@ class Sandbox:
     if empty or not read_only:  # use a local repo
       self.repo_dir = os.path.join(svntest.main.general_repo_dir, self.name)
       self.repo_url = (svntest.main.options.test_area_url + '/'
-                       + urllib.pathname2url(self.repo_dir))
+                       + svntest.wc.svn_uri_quote(
+                                self.repo_dir.replace(os.path.sep, '/')))
       self.add_test_path(self.repo_dir)
     else:
       self.repo_dir = svntest.main.pristine_greek_repos_dir
@@ -195,7 +195,8 @@ class Sandbox:
     path = (os.path.join(svntest.main.general_repo_dir, self.name)
             + '.' + suffix)
     url = svntest.main.options.test_area_url + \
-                                        '/' + urllib.pathname2url(path)
+                                        '/' + svntest.wc.svn_uri_quote(
+                                                path.replace(os.path.sep, '/'))
     self.add_test_path(path, remove)
     return path, url
 
@@ -275,6 +276,12 @@ class Sandbox:
     return '%s/REDIRECT-%s-%s' % (parts[0],
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
+
+  def file_protocol_url(self):
+    """get a file:// url pointing to the repository"""
+    return svntest.main.file_scheme_prefix + \
+           svntest.wc.svn_uri_quote(
+                os.path.abspath(self.repo_dir).replace(os.path.sep, '/'))
 
   def simple_update(self, target=None, revision='HEAD'):
     """Update the WC or TARGET.

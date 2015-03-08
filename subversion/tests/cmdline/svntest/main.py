@@ -112,7 +112,7 @@ class SVNRepositoryCreateFailure(Failure):
 # Windows specifics
 if sys.platform == 'win32':
   windows = True
-  file_scheme_prefix = 'file:'
+  file_scheme_prefix = 'file:///'
   _exe = '.exe'
   _bat = '.bat'
   os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
@@ -1980,7 +1980,9 @@ def _create_parser():
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
         url=file_scheme_prefix + \
-                        urllib.pathname2url(os.path.abspath(os.getcwd())),
+                        svntest.wc.svn_uri_quote(
+                           os.path.abspath(
+                               os.getcwd()).replace(os.path.sep, '/')),
         http_library=_default_http_library)
 
   return parser
@@ -2229,7 +2231,9 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   # Calculate pristine_greek_repos_url from test_area_url.
   pristine_greek_repos_url = options.test_area_url + '/' + \
-                                urllib.pathname2url(pristine_greek_repos_dir)
+                                svntest.wc.svn_uri_quote(
+                                  pristine_greek_repos_dir.replace(
+                                      os.path.sep, '/'))
 
   if options.use_jsvn:
     if options.svn_bin is None:
