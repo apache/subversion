@@ -176,6 +176,14 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1664997
+   Fix test failures when running from a directory whose name contains
+   characters which must be escaped when used in a URL.
+   Justification:
+     User reported problem when testing 1.9 beta.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
