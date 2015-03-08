@@ -131,14 +131,14 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   repo_url = sbox.repo_url
   cwd = os.getcwd()
   if is_src_ra_local:
-    repo_url = sbox.file_protocol_url()
+    repo_url = sbox.file_protocol_repo_url()
 
   if subdir:
     repo_url = repo_url + subdir
 
   dest_repo_url = dest_sbox.repo_url
   if is_dest_ra_local:
-    dest_repo_url = dest_sbox.file_protocol_url()
+    dest_repo_url = dest_sbox.file_protocol_repo_url()
   run_init(dest_repo_url, repo_url, source_prop_encoding)
 
   run_sync(dest_repo_url, repo_url,
