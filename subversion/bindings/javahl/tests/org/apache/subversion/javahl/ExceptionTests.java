@@ -85,6 +85,10 @@ public class ExceptionTests extends SVNTests
         }
     }
 
+    /**
+     * Specific exception class to verify if the marshalling of errors
+     * through Subversion is handled properly.
+     */
     final class TestException extends RuntimeException
     {
         private static final long serialVersionUID = 1L;
@@ -100,7 +104,7 @@ public class ExceptionTests extends SVNTests
         }
     }
 
-    public void testStatusCallback() throws Throwable
+    public void testStatusCallback() throws Exception
     {
         // build the test setup
         OneTest thisTest = new OneTest();
@@ -130,7 +134,7 @@ public class ExceptionTests extends SVNTests
         assertTrue(handled);
     }
 
-    public void testInfoCallback() throws Throwable
+    public void testInfoCallback() throws Exception
     {
         // build the test setup
         OneTest thisTest = new OneTest();
@@ -160,7 +164,7 @@ public class ExceptionTests extends SVNTests
         assertTrue(handled);
     }
 
-    public void testListCallback() throws Throwable
+    public void testListCallback() throws Exception
     {
         // build the test setup
         OneTest thisTest = new OneTest();
@@ -190,7 +194,7 @@ public class ExceptionTests extends SVNTests
         assertTrue(handled);
     }
 
-    public void testBlameCallback() throws Throwable
+    public void testBlameCallback() throws Exception
     {
         // build the test setup
         OneTest thisTest = new OneTest();
@@ -225,7 +229,7 @@ public class ExceptionTests extends SVNTests
         assertTrue(handled);
     }
 
-    public void testLogMessageCallback() throws Throwable
+    public void testLogMessageCallback() throws Exception
     {
         // build the test setup
         OneTest thisTest = new OneTest();
@@ -264,7 +268,7 @@ public class ExceptionTests extends SVNTests
         assertTrue(handled);
     }
 
-    public void testDiffSummaryReceiver() throws Throwable
+    public void testDiffSummaryReceiver() throws Exception
     {
         // build the test setup
         OneTest thisTest = new OneTest();
@@ -301,7 +305,42 @@ public class ExceptionTests extends SVNTests
         assertTrue(handled);
     }
 
-    private boolean VerifyCause(Throwable caught, Throwable needle) throws TestException
+    public void testNotify() throws Exception
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+        final TestException theException = new TestException("The Exception");
+        boolean handled = false;
+        // Test status of non-existent file
+        try
+        {
+            client.notification2(new ClientNotifyCallback()
+                                 {
+                                    public void onNotify(ClientNotifyInformation info)
+                                    {
+                                        throw new TestException("inner",
+                                                                theException);
+                                    }
+                                });
+
+            client.remove(thisTest.getWCPathSet("/A"), false, false,
+                          null, null, null);
+        }
+        catch (ClientException e)
+        {
+            if (VerifyCause(e, theException))
+                handled = true;
+            else
+                throw e;
+        }
+        assertTrue(handled);
+    }
+
+    /**
+     * Verifies if a specific throwable instance is recorded in the exception chain
+     */
+    private boolean VerifyCause(Throwable caught, Throwable needle)
     {
         if (caught == needle)
             return true;
