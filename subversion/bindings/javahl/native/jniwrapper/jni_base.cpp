@@ -375,7 +375,8 @@ const char* unknown_cxx_exception_message() throw()
 
 svn_error_t* caught_java_exception_error(apr_status_t status) throw()
 {
-  return svn_error_create(status, NULL, _("Java exception"));
+  return svn_error_create(status, JNIUtil::wrapJavaException(),
+                          _("Java exception"));
 }
 
 } // namespace Java

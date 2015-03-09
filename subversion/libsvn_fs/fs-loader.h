@@ -446,7 +446,7 @@ typedef struct id_vtable_t
 /*** Definitions of the abstract FS object types ***/
 
 /* These are transaction properties that correspond to the bitfields
-   in the 'flags' argument to svn_fs_lock().  */
+   in the 'flags' argument to svn_fs_begin_txn2().  */
 #define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
 #define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
 /* Set to "0" at the start of the txn, to "1" when svn:date changes. */

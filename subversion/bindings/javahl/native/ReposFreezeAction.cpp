@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file ReposFreezeAction.h
+ * @file ReposFreezeAction.cpp
  * @brief Native mirror of the ReposFreezeAction callback interface
  */
 

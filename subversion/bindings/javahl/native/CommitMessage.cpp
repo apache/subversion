@@ -106,7 +106,7 @@ CommitMessage::getCommitMessage(const char **log_msg,
                                                     midCallback,
                                                     CreateJ::Set(jitems));
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 
   if (jmessage != NULL)
     {

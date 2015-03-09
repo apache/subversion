@@ -809,6 +809,108 @@ test_prop_conflicts(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_prop_conflict_resolving(const svn_test_opts_t *opts,
+                             apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_skel_t *conflict;
+  const char *A_abspath;
+  const char *marker_abspath;
+  apr_hash_t *conflicted_props;
+  apr_hash_t *props;
+  const char *value;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "test_prop_resolving", opts, pool));
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+
+  SVN_ERR(sbox_wc_propset(&b, "prop-1", "r1", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-2", "r1", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-3", "r1", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-4", "r1", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-5", "r1", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-6", "r1", "A"));
+
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_propset(&b, "prop-1", "r2", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-2", "r2", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-3", "r2", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-4", NULL, "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-5", NULL, "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-7", "r2", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-8", "r2", "A"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(sbox_wc_propset(&b, "prop-1", "mod", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-2", "mod", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-3", "mod", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-4", "mod", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-5", "mod", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-6", "mod", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-7", "mod", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "prop-8", "mod", "A"));
+
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  A_abspath = sbox_wc_path(&b, "A");
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL,
+                                   b.wc_ctx->db, A_abspath,
+                                   pool, pool));
+
+  /* We have tree conflicts... */
+  SVN_TEST_ASSERT(conflict != NULL);
+
+  SVN_ERR(svn_wc__conflict_read_prop_conflict(&marker_abspath,
+                                              NULL, NULL, NULL,
+                                              &conflicted_props,
+                                              b.wc_ctx->db, A_abspath,
+                                              conflict,
+                                              pool, pool));
+
+  SVN_TEST_ASSERT(conflicted_props != NULL);
+  /* All properties but r6 are conflicted */
+  SVN_TEST_ASSERT(apr_hash_count(conflicted_props) == 7);
+  SVN_TEST_ASSERT(! svn_hash_gets(conflicted_props, "prop-6"));
+
+  /* Let's resolve a few conflicts */
+  SVN_ERR(sbox_wc_resolve_prop(&b, "A", "prop-1",
+                               svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve_prop(&b, "A", "prop-2",
+                               svn_wc_conflict_choose_theirs_conflict));
+  SVN_ERR(sbox_wc_resolve_prop(&b, "A", "prop-3",
+                               svn_wc_conflict_choose_merged));
+
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL,
+                                   b.wc_ctx->db, A_abspath,
+                                   pool, pool));
+
+  /* We have tree conflicts... */
+  SVN_TEST_ASSERT(conflict != NULL);
+
+  SVN_ERR(svn_wc__conflict_read_prop_conflict(&marker_abspath,
+                                              NULL, NULL, NULL,
+                                              &conflicted_props,
+                                              b.wc_ctx->db, A_abspath,
+                                              conflict,
+                                              pool, pool));
+
+  SVN_TEST_ASSERT(conflicted_props != NULL);
+  SVN_TEST_ASSERT(apr_hash_count(conflicted_props) == 4);
+
+  SVN_ERR(svn_wc__db_read_props(&props, b.wc_ctx->db, A_abspath,
+                                pool, pool));
+
+  value = svn_prop_get_value(props, "prop-1");
+  SVN_TEST_STRING_ASSERT(value, "mod");
+  value = svn_prop_get_value(props, "prop-2");
+  SVN_TEST_STRING_ASSERT(value, "r1");
+  value = svn_prop_get_value(props, "prop-3");
+  SVN_TEST_STRING_ASSERT(value, "mod");
+  
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 
 static int max_threads = 1;
@@ -830,6 +932,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "read and write a tree conflict"),
     SVN_TEST_OPTS_PASS(test_prop_conflicts,
                        "test prop conflicts"),
+    SVN_TEST_OPTS_PASS(test_prop_conflict_resolving,
+                       "test property conflict resolving"),
     SVN_TEST_NULL
   };
 

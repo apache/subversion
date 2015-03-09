@@ -916,26 +916,48 @@ svn_fs_list_transactions(apr_array_header_t **names_p, svn_fs_t *fs,
   return svn_error_trace(fs->vtable->list_transactions(names_p, fs, pool));
 }
 
+static svn_boolean_t
+is_internal_txn_prop(const char *name)
+{
+  return strcmp(name, SVN_FS__PROP_TXN_CHECK_LOCKS) == 0 ||
+         strcmp(name, SVN_FS__PROP_TXN_CHECK_OOD) == 0 ||
+         strcmp(name, SVN_FS__PROP_TXN_CLIENT_DATE) == 0;
+}
+
 svn_error_t *
 svn_fs_txn_prop(svn_string_t **value_p, svn_fs_txn_t *txn,
                 const char *propname, apr_pool_t *pool)
 {
+  if (is_internal_txn_prop(propname))
+    {
+      *value_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
   return svn_error_trace(txn->vtable->get_prop(value_p, txn, propname, pool));
 }
 
 svn_error_t *
 svn_fs_txn_proplist(apr_hash_t **table_p, svn_fs_txn_t *txn, apr_pool_t *pool)
 {
-  return svn_error_trace(txn->vtable->get_proplist(table_p, txn, pool));
+  SVN_ERR(txn->vtable->get_proplist(table_p, txn, pool));
+
+  /* Don't give away internal transaction properties. */
+  svn_hash_sets(*table_p, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL);
+  svn_hash_sets(*table_p, SVN_FS__PROP_TXN_CHECK_OOD, NULL);
+  svn_hash_sets(*table_p, SVN_FS__PROP_TXN_CLIENT_DATE, NULL);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_fs_change_txn_prop(svn_fs_txn_t *txn, const char *name,
                        const svn_string_t *value, apr_pool_t *pool)
 {
-  /* Silently drop attempts to modify the internal property. */
-  if (!strcmp(name, SVN_FS__PROP_TXN_CLIENT_DATE))
-    return SVN_NO_ERROR;
+  if (is_internal_txn_prop(name))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("Attempt to modify internal transaction "
+                               "property '%s'"), name);
 
   return svn_error_trace(txn->vtable->change_prop(txn, name, value, pool));
 }
@@ -946,25 +968,14 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn, const apr_array_header_t *props,
 {
   int i;
 
-  /* Silently drop attempts to modify the internal property. */
   for (i = 0; i < props->nelts; ++i)
     {
       svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-      if (!strcmp(prop->name, SVN_FS__PROP_TXN_CLIENT_DATE))
-        {
-          apr_array_header_t *reduced_props
-            = apr_array_make(pool, props->nelts - 1, sizeof(svn_prop_t));
-
-          for (i = 0; i < props->nelts; ++i)
-            {
-              prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
-              if (strcmp(prop->name, SVN_FS__PROP_TXN_CLIENT_DATE))
-                APR_ARRAY_PUSH(reduced_props, svn_prop_t) = *prop;
-            }
-          props = reduced_props;
-          break;
-        }
+      if (is_internal_txn_prop(prop->name))
+        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                 _("Attempt to modify internal transaction "
+                                   "property '%s'"), prop->name);
     }
 
   return svn_error_trace(txn->vtable->change_props(txn, props, pool));

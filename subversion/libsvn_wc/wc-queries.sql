@@ -46,7 +46,7 @@ SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
-  AND nodes.repos_path = lock.repos_relpath
+  AND nodes.repos_path = lock.repos_relpath AND nodes.op_depth=0
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
 
@@ -134,7 +134,7 @@ SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   lock_comment, lock_date, local_relpath, moved_here, moved_to, file_external
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
-  AND nodes.repos_path = lock.repos_relpath AND op_depth = 0
+  AND nodes.repos_path = lock.repos_relpath AND nodes.op_depth = 0
 WHERE wc_id = ?1 AND parent_relpath = ?2
 ORDER BY local_relpath DESC, op_depth DESC
 
@@ -148,7 +148,7 @@ SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   lock_comment, lock_date, local_relpath, moved_here, moved_to, file_external
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
-  AND nodes.repos_path = lock.repos_relpath AND op_depth = 0
+  AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0
 ORDER BY local_relpath DESC
 
@@ -249,7 +249,8 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 
 -- STMT_DELETE_BASE_RECURSIVE
 DELETE FROM nodes
-WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
+WHERE wc_id = ?1 AND (local_relpath = ?2 
+                      OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
 
 -- STMT_DELETE_WORKING_OP_DEPTH
@@ -1779,6 +1780,10 @@ WHERE wc_id = ?1
   AND parent_relpath = ?2
   AND op_depth = 0
   AND (inherited_props not null)
+
+-- STMT_HAVE_STAT1_TABLE
+SELECT 1 FROM sqlite_master WHERE name='sqlite_stat1' AND type='table'
+LIMIT 1
 
 /* ------------------------------------------------------------------------- */
 

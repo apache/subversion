@@ -2125,11 +2125,13 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   int op_depth;
   svn_node_kind_t wrk_kind;
   svn_boolean_t no_delete_wc = FALSE;
+  svn_boolean_t file_external;
 
   SVN_ERR(svn_wc__db_base_get_info_internal(&status, &kind, &revision,
                                             &repos_relpath, &repos_id,
                                             NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL,
+                                            &file_external,
                                             wcroot, local_relpath,
                                             scratch_pool, scratch_pool));
 
@@ -2360,35 +2362,69 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* Step 5: handle the BASE node itself */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
   SVN_ERR(db_retract_parent_delete(wcroot, local_relpath, 0, scratch_pool));
 
   if (mark_not_present || mark_excluded)
     {
       struct insert_base_baton_t ibb;
-      blank_ibb(&ibb);
+      svn_boolean_t no_marker = FALSE;
 
-      ibb.repos_id = repos_id;
-      ibb.status = mark_excluded ? svn_wc__db_status_excluded
-                                 : svn_wc__db_status_not_present;
-      ibb.kind = kind;
-      ibb.repos_relpath = repos_relpath;
-      ibb.revision = SVN_IS_VALID_REVNUM(marker_revision)
-                        ? marker_revision
-                        : revision;
+      if (file_external)
+        {
+          const char *parent_local_relpath;
+          const char *name;
+          svn_error_t *err;
 
-      /* Depending upon KIND, any of these might get used. */
-      ibb.children = NULL;
-      ibb.depth = svn_depth_unknown;
-      ibb.checksum = NULL;
-      ibb.target = NULL;
+          /* For file externals we only want to place a not present marker
+             if there is a BASE parent */
+          
+          svn_relpath_split(&parent_local_relpath, &name, local_relpath,
+                            scratch_pool);
 
-      SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
+          err = svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
+                                                  &repos_relpath, &repos_id,
+                                                  NULL, NULL, NULL, NULL, NULL,
+                                                  NULL, NULL, NULL, NULL, NULL,
+                                                  wcroot, parent_local_relpath,
+                                                  scratch_pool, scratch_pool);
+
+          if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_trace(err);
+          else if (err)
+            {
+              svn_error_clear(err);
+              no_marker = TRUE;
+            }
+          else
+            {
+              /* Replace the repos_relpath with something more expected than
+                 the unrelated old file external repository relpath, which
+                 one day may come from a different repository */
+              repos_relpath = svn_relpath_join(repos_relpath, name, scratch_pool);
+            }
+        }
+
+      if (!no_marker)
+        {
+          blank_ibb(&ibb);
+
+          ibb.repos_id = repos_id;
+          ibb.status = mark_excluded ? svn_wc__db_status_excluded
+                                     : svn_wc__db_status_not_present;
+          ibb.kind = kind;
+          ibb.repos_relpath = repos_relpath;
+          ibb.revision = SVN_IS_VALID_REVNUM(marker_revision)
+                            ? marker_revision
+                            : revision;
+
+          /* Depending upon KIND, any of these might get used. */
+          ibb.children = NULL;
+          ibb.depth = svn_depth_unknown;
+          ibb.checksum = NULL;
+          ibb.target = NULL;
+
+          SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
+        }
     }
 
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
@@ -3480,11 +3516,18 @@ db_external_remove(const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  int affected_rows;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_EXTERNAL));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  if (!affected_rows)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' is not an external."),
+                             path_for_error_message(wcroot, local_relpath,
+                                                    scratch_pool));
 
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
 
@@ -11357,59 +11400,86 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 }
 
 
-/* Set *REPOS_ID and *REPOS_RELPATH to the BASE repository location of
+/* Helper for commit_node()
+   Set *REPOS_ID and *REPOS_RELPATH to the BASE repository location of
    (WCROOT, LOCAL_RELPATH), directly if its BASE row exists or implied from
    its parent's BASE row if not. In the latter case, error if the parent
    BASE row does not exist.  */
 static svn_error_t *
-determine_repos_info(apr_int64_t *repos_id,
-                     const char **repos_relpath,
-                     svn_wc__db_wcroot_t *wcroot,
-                     const char *local_relpath,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+determine_commit_repos_info(apr_int64_t *repos_id,
+                            const char **repos_relpath,
+                            svn_wc__db_wcroot_t *wcroot,
+                            const char *local_relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  const char *repos_parent_relpath;
-  const char *local_parent_relpath, *name;
-
-  /* ### is it faster to fetch fewer columns? */
+  int op_depth;
 
   /* Prefer the current node's repository information.  */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_BASE_NODE));
+                                    STMT_SELECT_NODE_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (have_row)
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                             svn_sqlite__reset(stmt),
+                             _("The node '%s' was not found."),
+                             path_for_error_message(wcroot, local_relpath,
+                                                    scratch_pool));
+
+  op_depth = svn_sqlite__column_int(stmt, 0);
+
+  if (op_depth > 0)
     {
-      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
-      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 1));
+      svn_wc__db_status_t presence = svn_sqlite__column_token(stmt, 3,
+                                                              presence_map);
 
-      *repos_id = svn_sqlite__column_int64(stmt, 0);
-      *repos_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
+      if (presence == svn_wc__db_status_base_deleted)
+        {
+          SVN_ERR(svn_sqlite__step_row(stmt)); /* There must be a row */
+          op_depth = svn_sqlite__column_int(stmt, 0);
+        }
+      else
+        {
+          const char *parent_repos_relpath;
+          const char *parent_relpath;
+          const char *name;
 
-      return svn_error_trace(svn_sqlite__reset(stmt));
+          SVN_ERR(svn_sqlite__reset(stmt));
+
+          /* The repository relative path of an add/copy is based on its
+             ancestor, not on the shadowed base layer.
+
+             As this function is only used from the commit processing we know
+             the parent directory has only a BASE row, so we can just obtain
+             the information directly by recursing (once!)  */
+
+          svn_relpath_split(&parent_relpath, &name, local_relpath,
+                            scratch_pool);
+
+          SVN_ERR(determine_commit_repos_info(repos_id, &parent_repos_relpath,
+                                              wcroot, parent_relpath,
+                                              scratch_pool, scratch_pool));
+
+          *repos_relpath = svn_relpath_join(parent_repos_relpath, name,
+                                            result_pool);
+          return SVN_NO_ERROR;
+        }
     }
 
-  SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* This was a child node within this wcroot. We want to look at the
-     BASE node of the directory.  */
-  svn_relpath_split(&local_parent_relpath, &name, local_relpath, scratch_pool);
+  SVN_ERR_ASSERT(op_depth == 0); /* And that row must be BASE */
 
-  /* The REPOS_ID will be the same (### until we support mixed-repos)  */
-  SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
-                                            &repos_parent_relpath, repos_id,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            wcroot, local_parent_relpath,
-                                            scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 1));
+  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 2));
 
-  *repos_relpath = svn_relpath_join(repos_parent_relpath, name, result_pool);
+  *repos_id = svn_sqlite__column_int64(stmt, 1);
+  *repos_relpath = svn_sqlite__column_text(stmt, 2, result_pool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
 static svn_error_t *
@@ -11616,9 +11686,9 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
 
      For existing nodes, we should retain the (potentially-switched)
      repository information.  */
-  SVN_ERR(determine_repos_info(&repos_id, &repos_relpath,
-                               wcroot, local_relpath,
-                               scratch_pool, scratch_pool));
+  SVN_ERR(determine_commit_repos_info(&repos_id, &repos_relpath,
+                                      wcroot, local_relpath,
+                                      scratch_pool, scratch_pool));
 
   /* ### is it better to select only the data needed?  */
   SVN_ERR(svn_sqlite__get_statement(&stmt_info, wcroot->sdb,

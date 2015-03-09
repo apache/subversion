@@ -101,6 +101,8 @@ typedef struct delete_context_t {
   svn_revnum_t revision;
 
   commit_context_t *commit_ctx;
+
+  svn_boolean_t non_recursive_if; /* Only create a non-recursive If header */
 } delete_context_t;
 
 /* Represents a directory. */
@@ -1101,8 +1103,15 @@ setup_delete_headers(serf_bucket_t *headers,
   serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
                           apr_ltoa(pool, del->revision));
 
-  SVN_ERR(setup_if_header_recursive(&added, headers, del->commit_ctx,
-                                    del->relpath, pool));
+  if (! del->non_recursive_if)
+    SVN_ERR(setup_if_header_recursive(&added, headers, del->commit_ctx,
+                                      del->relpath, pool));
+  else
+    {
+      SVN_ERR(maybe_set_lock_token_header(headers, del->commit_ctx,
+                                          del->relpath, pool));
+      added = TRUE;
+    }
 
   if (added && del->commit_ctx->keep_locks)
     serf_bucket_headers_setn(headers, SVN_DAV_OPTIONS_HEADER,
@@ -1402,6 +1411,28 @@ open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_delete_body(serf_bucket_t **body_bkt,
+                   void *baton,
+                   serf_bucket_alloc_t *alloc,
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
+{
+  delete_context_t *ctx = baton;
+  serf_bucket_t *body;
+
+  body = serf_bucket_aggregate_create(alloc);
+
+  svn_ra_serf__add_xml_header_buckets(body, alloc);
+
+  svn_ra_serf__merge_lock_token_list(ctx->commit_ctx->lock_tokens,
+                                     ctx->relpath, body, alloc, pool);
+
+  *body_bkt = body;
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t revision,
@@ -1412,6 +1443,7 @@ delete_entry(const char *path,
   delete_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
   const char *delete_target;
+  svn_error_t *err;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
@@ -1446,7 +1478,23 @@ delete_entry(const char *path,
   handler->method = "DELETE";
   handler->path = delete_target;
 
-  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+  err = svn_ra_serf__context_run_one(handler, pool);
+  if (err && err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED
+      && handler->sline.code == 400)
+    {
+      svn_error_clear(err);
+
+      /* Try again with non-standard body to overcome Apache Httpd
+         header limit */
+      delete_ctx->non_recursive_if = TRUE;
+      handler->body_type = "text/xml";
+      handler->body_delegate = create_delete_body;
+      handler->body_delegate_baton = delete_ctx;
+
+      SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+    }
+  else
+    SVN_ERR(err);
 
   /* 204 No Content: item successfully deleted */
   if (handler->sline.code != 204)
@@ -1539,7 +1587,9 @@ add_directory(const char *path,
       handler->header_delegate = setup_copy_dir_headers;
       handler->header_delegate_baton = dir;
     }
-
+  /* We have the same problem as with DELETE here: if there are too many
+     locks, the request fails. But in this case there is no way to retry
+     with a non-standard request. #### How to fix? */
   SVN_ERR(svn_ra_serf__context_run_one(handler, dir->pool));
 
   if (handler->sline.code != 201)
