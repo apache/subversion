@@ -184,6 +184,13 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1665164
+   Fix Python SWIG reference counting in svn_fs_[un]lock_many.
+   Justification:
+     Python interpreter may crash.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
