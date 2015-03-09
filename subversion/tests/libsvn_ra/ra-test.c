@@ -819,7 +819,16 @@ ra_revision_errors(const svn_test_opts_t *opts,
   svn_error_t *err;
   void *edit_baton;
 
+  /* This function DOESN'T use a scratch/iter pool between requests...
 
+     That has a reason: some ra layers (e.g. Serf) are sensitive to
+     reusing the same pool. In that case they may produce bad results
+     that they wouldn't do (as often) when the pool wasn't reused.
+
+     It the amount of memory used gets too big we should probably split
+     this test... as the reuse already discovered a few issues that
+     are now resolved in ra_serf.
+   */
   SVN_ERR(make_and_open_repos(&ra_session, "ra_revision_errors",
                               opts, pool));
 
