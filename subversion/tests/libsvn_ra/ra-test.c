@@ -773,6 +773,42 @@ stub_segment_receiver(svn_location_segment_t *segment,
 {
   return SVN_NO_ERROR;
 }
+/* Stub svn_file_rev_handler_t */
+static svn_error_t *
+stub_file_rev_handler(void *baton,
+                      const char *path,
+                      svn_revnum_t rev,
+                      apr_hash_t *rev_props,
+                      svn_boolean_t result_of_merge,
+                      svn_txdelta_window_handler_t *delta_handler,
+                      void **delta_baton,
+                      apr_array_header_t *prop_diffs,
+                      apr_pool_t *pool)
+{
+  if (delta_handler)
+    *delta_handler = svn_delta_noop_window_handler;
+
+  return SVN_NO_ERROR;
+}
+
+struct lock_stub_baton_t
+{
+  apr_status_t result_code;
+};
+
+static svn_error_t *
+store_lock_result(void *baton,
+                  const char *path,
+                  svn_boolean_t do_lock,
+                  const svn_lock_t *lock,
+                  svn_error_t *ra_err,
+                  apr_pool_t *pool)
+{
+  struct lock_stub_baton_t *b = baton;
+
+  b->result_code = ra_err ? ra_err->apr_err : APR_SUCCESS;
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 ra_revision_errors(const svn_test_opts_t *opts,
@@ -1102,6 +1138,47 @@ ra_revision_errors(const svn_test_opts_t *opts,
                                          SVN_INVALID_REVNUM,
                                          stub_segment_receiver,
                                          NULL, pool));
+  }
+
+  {
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_file_revs2(ra_session, "A/iota", 2, 0,
+                                                FALSE, stub_file_rev_handler,
+                                                NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_file_revs2(ra_session, "A/iota", 0, 2,
+                                                FALSE, stub_file_rev_handler,
+                                                NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_file_revs2(ra_session, "A", 1, 1,
+                                                FALSE, stub_file_rev_handler,
+                                                NULL, pool),
+                          SVN_ERR_FS_NOT_FILE);
+  }
+
+  {
+    apr_hash_t *locks = apr_hash_make(pool);
+    svn_revnum_t rev = 2;
+    struct lock_stub_baton_t lr = {0};
+
+    svn_hash_sets(locks, "A/iota", &rev);
+
+    SVN_ERR(svn_ra_lock(ra_session, locks, "comment", FALSE,
+                         store_lock_result, &lr, pool));
+    SVN_TEST_ASSERT(lr.result_code == SVN_ERR_FS_NO_SUCH_REVISION);
+
+    rev = 0;
+    SVN_ERR(svn_ra_lock(ra_session, locks, "comment", FALSE,
+                         store_lock_result, &lr, pool));
+    SVN_TEST_ASSERT(lr.result_code == SVN_ERR_FS_OUT_OF_DATE);
+
+    svn_hash_sets(locks, "A/iota", NULL);
+    svn_hash_sets(locks, "A", &rev);
+    rev = SVN_INVALID_REVNUM;
+    SVN_ERR(svn_ra_lock(ra_session, locks, "comment", FALSE,
+                         store_lock_result, &lr, pool));
+    SVN_TEST_ASSERT(lr.result_code == SVN_ERR_FS_NOT_FILE);
   }
 
   return SVN_NO_ERROR;
