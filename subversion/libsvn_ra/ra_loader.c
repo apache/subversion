@@ -953,6 +953,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(peg_revision));
   SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   err = session->vtable->get_locations(session, locations, path,
                                        peg_revision, location_revisions, pool);
