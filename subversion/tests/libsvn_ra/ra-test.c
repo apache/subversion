@@ -27,7 +27,6 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <assert.h>
-#define SVN_DEPRECATED
 
 #include "svn_error.h"
 #include "svn_delta.h"
@@ -82,7 +81,7 @@ commit_changes(svn_ra_session_t *session,
   SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
                                     revprop_table,
                                     NULL, NULL, NULL, TRUE, pool));
-  SVN_ERR(svn_ra_get_repos_root(session, &repos_root_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
 
   SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
                             pool, &root_baton));
@@ -106,7 +105,7 @@ commit_tree(svn_ra_session_t *session,
   SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
                                     revprop_table,
                                     NULL, NULL, NULL, TRUE, pool));
-  SVN_ERR(svn_ra_get_repos_root(session, &repos_root_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
 
   SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
                             pool, &root_baton));
@@ -944,7 +943,6 @@ ra_revision_errors(const svn_test_opts_t *opts,
                                           SVN_DIRENT_ALL, pool),
                           SVN_ERR_FS_NO_SUCH_REVISION);
 
-    SVN_DBG(("Final"));
     SVN_ERR(svn_ra_get_dir2(ra_session, &dirents, &fetched,
                             &props, "A", SVN_INVALID_REVNUM,
                             SVN_DIRENT_ALL, pool));
@@ -958,7 +956,7 @@ ra_revision_errors(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-static int max_threads = 2;
+static int max_threads = 4;
 
 static struct svn_test_descriptor_t test_funcs[] =
   {
