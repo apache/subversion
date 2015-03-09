@@ -1453,7 +1453,13 @@ handle_response_cb(serf_request_t *request,
     {
       handler->discard_body = TRUE; /* Discard further data */
       handler->done = TRUE; /* Mark as done */
-      handler->scheduled = FALSE;
+      /* handler->scheduled is still TRUE, as we still expect data.
+         If we would return an error outer-status the connection
+         would have to be restarted. With scheduled still TRUE
+         destroying the handler's pool will still reset the
+         connection, avoiding the posibility of returning
+         an error for this handler when a new request is
+         scheduled. */
       outer_status = APR_EAGAIN; /* Exit context loop */
     }
 
