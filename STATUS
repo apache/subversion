@@ -184,13 +184,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1665164
-   Fix Python SWIG reference counting in svn_fs_[un]lock_many.
-   Justification:
-     Python interpreter may crash.
-   Votes:
-     +1: philip
-
  * r1665195
    Produce an easier to understand error when a server sends a HTTP 405 code
    Justification:
@@ -202,6 +195,13 @@ Other candidate changes:
 Veto-blocked changes:
 =====================
 
-
 Approved changes:
 =================
+
+ * r1665164
+   Fix Python SWIG reference counting in svn_fs_[un]lock_many.
+   Justification:
+     Python interpreter may crash.
+   Votes:
+     +1: philip, danielsh
+
