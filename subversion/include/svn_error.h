@@ -455,7 +455,10 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_FS_NOT_FOUND           ||        \
    err->apr_err == SVN_ERR_FS_OUT_OF_DATE         ||        \
    err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN      ||        \
-   err->apr_err == SVN_ERR_REPOS_HOOK_FAILURE)
+   err->apr_err == SVN_ERR_REPOS_HOOK_FAILURE     ||        \
+   err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION    ||        \
+   err->apr_err == SVN_ERR_FS_OUT_OF_DATE         ||        \
+   err->apr_err == SVN_ERR_FS_NOT_FILE)
 
 /**
  * Return TRUE if @a err is an error specifically related to unlocking
