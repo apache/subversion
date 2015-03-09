@@ -1177,8 +1177,32 @@ ra_revision_errors(const svn_test_opts_t *opts,
     svn_hash_sets(locks, "A", &rev);
     rev = SVN_INVALID_REVNUM;
     SVN_ERR(svn_ra_lock(ra_session, locks, "comment", FALSE,
-                         store_lock_result, &lr, pool));
+                        store_lock_result, &lr, pool));
     SVN_TEST_ASSERT(lr.result_code == SVN_ERR_FS_NOT_FILE);
+  }
+
+  {
+    apr_hash_t *locks = apr_hash_make(pool);
+    struct lock_stub_baton_t lr = {0};
+
+    svn_hash_sets(locks, "A/iota", "no-token");
+
+    SVN_ERR(svn_ra_unlock(ra_session, locks, FALSE,
+                          store_lock_result, &lr, pool));
+    SVN_TEST_ASSERT(lr.result_code == SVN_ERR_FS_NO_SUCH_LOCK);
+
+
+    svn_hash_sets(locks, "A/iota", NULL);
+    svn_hash_sets(locks, "A", "no-token");
+    SVN_ERR(svn_ra_unlock(ra_session, locks, FALSE,
+                          store_lock_result, &lr, pool));
+    SVN_TEST_ASSERT(lr.result_code == SVN_ERR_FS_NO_SUCH_LOCK);
+  }
+
+  {
+    svn_lock_t *lock;
+    SVN_ERR(svn_ra_get_lock(ra_session, &lock, "A", pool));
+    SVN_TEST_ASSERT(lock == NULL);
   }
 
   return SVN_NO_ERROR;
