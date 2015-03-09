@@ -714,7 +714,6 @@ delete_revision_above_youngest(const svn_test_opts_t *opts,
 {
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
-  svn_node_kind_t kind;
   svn_error_t *err;
   void *edit_baton;
 
