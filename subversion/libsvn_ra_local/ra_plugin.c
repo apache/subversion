@@ -1696,23 +1696,13 @@ svn_ra_local__get_inherited_props(svn_ra_session_t *session,
                                   apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *root;
-  svn_revnum_t youngest_rev;
   svn_ra_local__session_baton_t *sess = session->priv;
   const char *abs_path = svn_fspath__join(sess->fs_path->data, path,
                                           scratch_pool);
   svn_node_kind_t node_kind;
 
   /* Open the revision's root. */
-  if (! SVN_IS_VALID_REVNUM(revision))
-    {
-      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, sess->fs, scratch_pool));
-      SVN_ERR(svn_fs_revision_root(&root, sess->fs, youngest_rev,
-                                   scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, scratch_pool));
-    }
+  SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, scratch_pool));
 
   SVN_ERR(svn_fs_check_path(&node_kind, root, abs_path, scratch_pool));
   if (node_kind == svn_node_none)

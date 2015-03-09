@@ -1205,6 +1205,41 @@ ra_revision_errors(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(lock == NULL);
   }
 
+  /* ### TODO: Replay and replay range */
+
+  {
+    svn_revnum_t del_rev;
+
+    /* ### Explicitly documented to not return an FS or RA error???? */
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_deleted_rev(ra_session, "Z", 2, 1,
+                                                 &del_rev, pool),
+                          SVN_ERR_CLIENT_BAD_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_deleted_rev(ra_session, "Z",
+                                                 SVN_INVALID_REVNUM, 2,
+                                                 &del_rev, pool),
+                          SVN_ERR_CLIENT_BAD_REVISION);
+
+  }
+
+  {
+    apr_array_header_t *iprops;
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_inherited_props(ra_session, &iprops,
+                                                     "A", 2, pool, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_inherited_props(ra_session, &iprops,
+                                                     "A", SVN_INVALID_REVNUM,
+                                                     pool, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_inherited_props(ra_session, &iprops,
+                                                     "Z", 1,
+                                                     pool, pool),
+                          SVN_ERR_FS_NOT_FOUND);
+  }
+
   return SVN_NO_ERROR;
 }
 
