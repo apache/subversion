@@ -757,6 +757,204 @@ delete_revision_above_youngest(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ra_revision_errors(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const svn_delta_editor_t *editor;
+  svn_error_t *err;
+  void *edit_baton;
+
+
+  SVN_ERR(make_and_open_repos(&ra_session, "ra_revision_errors",
+                              opts, pool));
+
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL,
+                                    NULL, NULL, FALSE, pool));
+
+  {
+    void *root_baton;
+    void *dir_baton;
+    void *file_baton;
+
+    SVN_ERR(editor->open_root(edit_baton, 0, pool, &root_baton));
+    SVN_ERR(editor->add_directory("A", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->add_file("A/iota", dir_baton, NULL, SVN_INVALID_REVNUM,
+                             pool, &file_baton));
+    SVN_ERR(editor->close_file(file_baton, NULL, pool));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->add_directory("B", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->add_directory("C", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->add_directory("D", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->close_edit(edit_baton, pool));
+  }
+
+  {
+    svn_ra_reporter3_t *reporter;
+    void *report_baton;
+
+    err = svn_ra_do_update3(ra_session, &reporter, &report_baton,
+                            2, "", svn_depth_infinity, FALSE, FALSE,
+                            svn_delta_default_editor(pool), NULL,
+                            pool, pool);
+
+    if (!err)
+      err = reporter->set_path(report_baton, "", 0, svn_depth_infinity, FALSE,
+                               NULL, pool);
+
+    if (!err)
+      err = reporter->finish_report(report_baton, pool);
+
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_NO_SUCH_REVISION);
+  }
+
+  {
+    svn_ra_reporter3_t *reporter;
+    void *report_baton;
+
+    err = svn_ra_do_update3(ra_session, &reporter, &report_baton,
+                            1, "", svn_depth_infinity, FALSE, FALSE,
+                            svn_delta_default_editor(pool), NULL,
+                            pool, pool);
+
+    if (!err)
+      err = reporter->set_path(report_baton, "", 2, svn_depth_infinity, FALSE,
+                               NULL, pool);
+
+    if (!err)
+      err = reporter->finish_report(report_baton, pool);
+
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_NO_SUCH_REVISION);
+  }
+
+  {
+    svn_ra_reporter3_t *reporter;
+    void *report_baton;
+
+    err = svn_ra_do_update3(ra_session, &reporter, &report_baton,
+                            1, "", svn_depth_infinity, FALSE, FALSE,
+                            svn_delta_default_editor(pool), NULL,
+                            pool, pool);
+
+    if (!err)
+      err = reporter->set_path(report_baton, "", 0, svn_depth_infinity, FALSE,
+                               NULL, pool);
+
+    if (!err)
+      err = reporter->finish_report(report_baton, pool);
+
+    SVN_ERR(err);
+  }
+
+  {
+    svn_revnum_t revision;
+
+    SVN_ERR(svn_ra_get_dated_revision(ra_session, &revision,
+                                      apr_time_now() - apr_time_from_sec(3600),
+                                      pool));
+
+    SVN_TEST_ASSERT(revision == 0);
+
+    SVN_ERR(svn_ra_get_dated_revision(ra_session, &revision,
+                                      apr_time_now() + apr_time_from_sec(3600),
+                                      pool));
+
+    SVN_TEST_ASSERT(revision == 1);
+  }
+
+  {
+    /* SVN_INVALID_REVNUM is protected by assert in ra loader */
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_change_rev_prop2(ra_session,
+                                                  2,
+                                                  "bad", NULL,
+                                                  svn_string_create("value",
+                                                                    pool),
+                                                  pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+  }
+
+  {
+    apr_hash_t *props;
+    svn_string_t *value;
+
+    /* SVN_INVALID_REVNUM is protected by assert in ra loader */
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_rev_proplist(ra_session, 2, &props, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_rev_prop(ra_session, 2, "bad", &value, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+  }
+
+  {
+    apr_hash_t *props;
+    svn_string_t *value;
+
+    /* SVN_INVALID_REVNUM is protected by assert in ra loader */
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_rev_proplist(ra_session, 2, &props, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_rev_prop(ra_session, 2, "bad", &value, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+  }
+
+  {
+    svn_revnum_t fetched;
+    apr_hash_t *props;
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_file(ra_session, "A", 1,
+                                          svn_stream_empty(pool), &fetched,
+                                          &props, pool),
+                          SVN_ERR_FS_NOT_FILE);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_file(ra_session, "A/iota", 2,
+                                          svn_stream_empty(pool), &fetched,
+                                          &props, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_ERR(svn_ra_get_file(ra_session, "A/iota", SVN_INVALID_REVNUM,
+                            svn_stream_empty(pool), &fetched,
+                            &props, pool));
+    SVN_TEST_ASSERT(fetched == 1);
+  }
+
+  {
+    svn_revnum_t fetched;
+    apr_hash_t *dirents;
+    apr_hash_t *props;
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_dir2(ra_session, &dirents, &fetched,
+                                          &props, "A/iota", 1,
+                                          SVN_DIRENT_ALL, pool),
+                          SVN_ERR_FS_NOT_DIRECTORY);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_dir2(ra_session, &dirents, &fetched,
+                                          &props, "A", 3,
+                                          SVN_DIRENT_ALL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_DBG(("Final"));
+    SVN_ERR(svn_ra_get_dir2(ra_session, &dirents, &fetched,
+                            &props, "A", SVN_INVALID_REVNUM,
+                            SVN_DIRENT_ALL, pool));
+    SVN_TEST_ASSERT(fetched == 1);
+    SVN_TEST_ASSERT(apr_hash_count(dirents) == 1);
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -781,6 +979,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "base revision newer than youngest"),
     SVN_TEST_OPTS_PASS(delete_revision_above_youngest,
                        "delete revision newer than youngest"),
+    SVN_TEST_OPTS_PASS(ra_revision_errors,
+                       "check how ra functions handle bad revisions"),
     SVN_TEST_NULL
   };
 
