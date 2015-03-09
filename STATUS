@@ -191,6 +191,14 @@ Other candidate changes:
    Votes:
      +1: philip
 
+ * r1665195
+   Produce an easier to understand error when a server sends a HTTP 405 code
+   Justification:
+     Just reporting out of date doesn't hint a user that he should
+     switch/relocate to the location where he is allowed to commit.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
