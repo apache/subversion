@@ -756,6 +756,24 @@ delete_revision_above_youngest(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Stub svn_log_entry_receiver_t */
+static svn_error_t *
+stub_log_receiver(void *baton,
+                  svn_log_entry_t *entry,
+                  apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* Stub svn_location_segment_receiver_t */
+static svn_error_t *
+stub_segment_receiver(svn_location_segment_t *segment,
+                      void *baton,
+                      apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 ra_revision_errors(const svn_test_opts_t *opts,
                    apr_pool_t *pool)
@@ -922,6 +940,11 @@ ra_revision_errors(const svn_test_opts_t *opts,
                                           &props, pool),
                           SVN_ERR_FS_NO_SUCH_REVISION);
 
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_file(ra_session, "Z", 1,
+                                          svn_stream_empty(pool), &fetched,
+                                          &props, pool),
+                          SVN_ERR_FS_NOT_FOUND);
+
     SVN_ERR(svn_ra_get_file(ra_session, "A/iota", SVN_INVALID_REVNUM,
                             svn_stream_empty(pool), &fetched,
                             &props, pool));
@@ -939,15 +962,146 @@ ra_revision_errors(const svn_test_opts_t *opts,
                           SVN_ERR_FS_NOT_DIRECTORY);
 
     SVN_TEST_ASSERT_ERROR(svn_ra_get_dir2(ra_session, &dirents, &fetched,
-                                          &props, "A", 3,
+                                          &props, "A", 2,
                                           SVN_DIRENT_ALL, pool),
                           SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_dir2(ra_session, &dirents, &fetched,
+                                          &props, "Z", 1,
+                                          SVN_DIRENT_ALL, pool),
+                          SVN_ERR_FS_NOT_FOUND);
 
     SVN_ERR(svn_ra_get_dir2(ra_session, &dirents, &fetched,
                             &props, "A", SVN_INVALID_REVNUM,
                             SVN_DIRENT_ALL, pool));
     SVN_TEST_ASSERT(fetched == 1);
     SVN_TEST_ASSERT(apr_hash_count(dirents) == 1);
+  }
+
+  {
+    svn_mergeinfo_catalog_t catalog;
+    apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char*));
+    APR_ARRAY_PUSH(paths, const char *) = "A";
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_mergeinfo(ra_session, &catalog, paths,
+                                               2, svn_mergeinfo_inherited,
+                                               FALSE, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_mergeinfo(ra_session, &catalog, paths,
+                                               0, svn_mergeinfo_inherited,
+                                               FALSE, pool),
+                          SVN_ERR_FS_NOT_FOUND);
+
+    SVN_ERR(svn_ra_get_mergeinfo(ra_session, &catalog, paths,
+                                 SVN_INVALID_REVNUM, svn_mergeinfo_inherited,
+                                 FALSE, pool));
+  }
+
+  {
+    apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char*));
+    APR_ARRAY_PUSH(paths, const char *) = "A";
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_log2(ra_session, paths, 0, 2, -1,
+                                          FALSE, FALSE, FALSE, NULL,
+                                          stub_log_receiver, NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_log2(ra_session, paths, 2, 0, -1,
+                                          FALSE, FALSE, FALSE, NULL,
+                                          stub_log_receiver, NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_log2(ra_session, paths,
+                                          SVN_INVALID_REVNUM, 2, -1,
+                                          FALSE, FALSE, FALSE, NULL,
+                                          stub_log_receiver, NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_log2(ra_session, paths,
+                                          2, SVN_INVALID_REVNUM, -1,
+                                          FALSE, FALSE, FALSE, NULL,
+                                          stub_log_receiver, NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+  }
+
+  {
+    svn_node_kind_t kind;
+    SVN_TEST_ASSERT_ERROR(svn_ra_check_path(ra_session, "A", 2, &kind, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_ERR(svn_ra_check_path(ra_session, "A", SVN_INVALID_REVNUM, &kind,
+                              pool));
+
+    SVN_TEST_ASSERT(kind == svn_node_dir);
+  }
+
+  {
+    svn_dirent_t *dirent;
+    apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char*));
+    APR_ARRAY_PUSH(paths, const char *) = "A";
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_stat(ra_session, "A", 2, &dirent, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_ERR(svn_ra_stat(ra_session, "A", SVN_INVALID_REVNUM, &dirent,
+                              pool));
+
+    SVN_TEST_ASSERT(dirent->kind == svn_node_dir);
+  }
+
+  {
+    apr_hash_t *locations;
+    apr_array_header_t *revisions = apr_array_make(pool, 2, sizeof(svn_revnum_t));
+    APR_ARRAY_PUSH(revisions, svn_revnum_t) = 1;
+
+    /* SVN_INVALID_REVNUM as passed revision doesn't work */
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_locations(ra_session, &locations, "A", 2,
+                                               revisions, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    APR_ARRAY_PUSH(revisions, svn_revnum_t) = 7;
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_locations(ra_session, &locations, "A", 1,
+                                               revisions, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    /* Putting SVN_INVALID_REVNUM in the array doesn't marshal properly in svn://
+     */
+  }
+
+  {
+    /* peg_rev   -> SVN_INVALID_REVNUM -> youngest
+       start_rev -> SVN_INVALID_REVNUM -> peg_rev
+       end_rev   -> SVN_INVALID_REVNUM -> 0 */
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_location_segments(ra_session, "A",
+                                                       2, 1, 0,
+                                                       stub_segment_receiver,
+                                                       NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_location_segments(ra_session, "A",
+                                                       SVN_INVALID_REVNUM,
+                                                       2, 0,
+                                                       stub_segment_receiver,
+                                                       NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_location_segments(ra_session, "A",
+                                                       SVN_INVALID_REVNUM,
+                                                       SVN_INVALID_REVNUM,
+                                                       2,
+                                                       stub_segment_receiver,
+                                                       NULL, pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_ERR(svn_ra_get_location_segments(ra_session, "A",
+                                         SVN_INVALID_REVNUM,
+                                         SVN_INVALID_REVNUM,
+                                         SVN_INVALID_REVNUM,
+                                         stub_segment_receiver,
+                                         NULL, pool));
   }
 
   return SVN_NO_ERROR;

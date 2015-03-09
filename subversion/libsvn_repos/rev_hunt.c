@@ -837,27 +837,32 @@ svn_repos_node_location_segments(svn_repos_t *repos,
 {
   svn_fs_t *fs = svn_repos_fs(repos);
   svn_stringbuf_t *current_path;
-  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM, current_rev;
+  svn_revnum_t youngest_rev, current_rev;
   apr_pool_t *subpool;
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
 
   /* No PEG_REVISION?  We'll use HEAD. */
   if (! SVN_IS_VALID_REVNUM(peg_revision))
-    {
-      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
-      peg_revision = youngest_rev;
-    }
+    peg_revision = youngest_rev;
 
-  /* No START_REV?  We'll use HEAD (which we may have already fetched). */
+  if (peg_revision > youngest_rev)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), peg_revision);
+
+  /* No START_REV?  We'll use peg rev. */
   if (! SVN_IS_VALID_REVNUM(start_rev))
-    {
-      if (SVN_IS_VALID_REVNUM(youngest_rev))
-        start_rev = youngest_rev;
-      else
-        SVN_ERR(svn_fs_youngest_rev(&start_rev, fs, pool));
-    }
+    start_rev = peg_revision;
+  else if (start_rev > peg_revision)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), start_rev);
 
   /* No END_REV?  We'll use 0. */
-  end_rev = SVN_IS_VALID_REVNUM(end_rev) ? end_rev : 0;
+  if (! SVN_IS_VALID_REVNUM(end_rev))
+    end_rev = 0;
+  else if (end_rev > start_rev)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), end_rev);
 
   /* Are the revision properly ordered?  They better be -- the API
      demands it. */
