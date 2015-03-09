@@ -464,7 +464,7 @@ static PyObject *make_ob_error(svn_error_t *err)
   if (err)
     return svn_swig_NewPointerObjString(err, "svn_error_t *", NULL);
   else
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 

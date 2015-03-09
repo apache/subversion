@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_compat.h
+ * @file svn_dep_compat.h
  * @brief Compatibility macros and functions.
  * @since New in 1.5.0.
  */

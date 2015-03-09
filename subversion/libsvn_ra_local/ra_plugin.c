@@ -86,7 +86,7 @@ get_username(svn_ra_session_t *session,
     {
       /* Get a username somehow, so we have some svn:author property to
          attach to a commit. */
-      if (sess->callbacks->auth_baton)
+      if (sess->auth_baton)
         {
           void *creds;
           svn_auth_cred_username_t *username_creds;
@@ -95,7 +95,7 @@ get_username(svn_ra_session_t *session,
           SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
                                              SVN_AUTH_CRED_USERNAME,
                                              sess->uuid, /* realmstring */
-                                             sess->callbacks->auth_baton,
+                                             sess->auth_baton,
                                              scratch_pool));
 
           /* No point in calling next_creds(), since that assumes that the
@@ -551,13 +551,16 @@ svn_ra_local__open(svn_ra_session_t *session,
                    const char *repos_URL,
                    const svn_ra_callbacks2_t *callbacks,
                    void *callback_baton,
+                   svn_auth_baton_t *auth_baton,
                    apr_hash_t *config,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   const char *client_string;
   svn_ra_local__session_baton_t *sess;
   const char *fs_path;
   static volatile svn_atomic_t cache_init_state = 0;
+  apr_pool_t *pool = result_pool;
 
   /* Initialise the FSFS memory cache size.  We can only do this once
      so one CONFIG will win the race and all others will be ignored
@@ -572,6 +575,7 @@ svn_ra_local__open(svn_ra_session_t *session,
   sess = apr_pcalloc(pool, sizeof(*sess));
   sess->callbacks = callbacks;
   sess->callback_baton = callback_baton;
+  sess->auth_baton = auth_baton;
 
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the

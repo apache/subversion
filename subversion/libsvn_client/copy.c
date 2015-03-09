@@ -1668,13 +1668,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, pool));
       if (dst_kind != svn_node_none)
-        {
-          const char *path = svn_uri_skip_ancestor(repos_root,
-                                                   pair->dst_abspath_or_url,
-                                                   pool);
-          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                   _("Path '/%s' already exists"), path);
-        }
+        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                 _("Path '%s' already exists"),
+                                 pair->dst_abspath_or_url);
 
       /* More info for our INFO structure.  */
       info->src_path = src_rel; /* May be NULL, if outside RA session scope */
@@ -1920,6 +1916,9 @@ queue_prop_change_commit_items(const char *local_abspath,
       item->url = commit_url;
       item->kind = svn_node_dir;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+
+      item->incoming_prop_changes = apr_array_make(result_pool, 1,
+                                                   sizeof(svn_prop_t *));
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
     }
   else

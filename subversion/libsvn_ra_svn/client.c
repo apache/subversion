@@ -616,7 +616,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  apr_hash_t *config,
                                  const svn_ra_callbacks2_t *callbacks,
                                  void *callbacks_baton,
-                                 apr_pool_t *pool)
+                                 svn_auth_baton_t *auth_baton,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   svn_ra_svn__session_baton_t *sess;
   svn_ra_svn_conn_t *conn;
@@ -624,6 +626,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *server_caplist, *repos_caplist;
   const char *client_string = NULL;
+  apr_pool_t *pool = result_pool;
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
@@ -636,6 +639,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess->callbacks = callbacks;
   sess->callbacks_baton = callbacks_baton;
   sess->bytes_read = sess->bytes_written = 0;
+  sess->auth_baton = auth_baton;
 
   if (config)
     SVN_ERR(svn_config_copy_config(&sess->config, config, pool));
@@ -804,6 +808,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
                                 const char *url,
                                 const svn_ra_callbacks2_t *callbacks,
                                 void *callback_baton,
+                                svn_auth_baton_t *auth_baton,
                                 apr_hash_t *config,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
@@ -839,30 +844,19 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
                ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG)
                : NULL;
   cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS) : NULL;
-  svn_auth_set_parameter(callbacks->auth_baton,
+  svn_auth_set_parameter(auth_baton,
                          SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, cfg_client);
-  svn_auth_set_parameter(callbacks->auth_baton,
+  svn_auth_set_parameter(auth_baton,
                          SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, cfg);
 
   /* We open the session in a subpool so we can get rid of it if we
      reparent with a server that doesn't support reparenting. */
   SVN_ERR(open_session(&sess, url, &uri, tunnel, tunnel_argv, config,
-                       callbacks, callback_baton, sess_pool));
+                       callbacks, callback_baton,
+                       auth_baton, sess_pool, scratch_pool));
   session->priv = sess;
 
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *ra_svn_open_pool(svn_ra_session_t *session,
-                                     const char **corrected_url,
-                                     const char *url,
-                                     const svn_ra_callbacks2_t *callbacks,
-                                     void *callback_baton,
-                                     apr_hash_t *config,
-                                     apr_pool_t *pool)
-{
-  return ra_svn_open(session, corrected_url, url, callbacks, callback_baton,
-                     config, pool, pool);
 }
 
 static svn_error_t *ra_svn_dup_session(svn_ra_session_t *new_session,
@@ -875,7 +869,7 @@ static svn_error_t *ra_svn_dup_session(svn_ra_session_t *new_session,
 
   SVN_ERR(ra_svn_open(new_session, NULL, new_session_url,
                       old_sess->callbacks, old_sess->callbacks_baton,
-                      old_sess->config,
+                      old_sess->auth_baton, old_sess->config,
                       result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -912,7 +906,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   if (! err)
     err = open_session(&new_sess, url, &uri, sess->tunnel_name, sess->tunnel_argv,
                        sess->config, sess->callbacks, sess->callbacks_baton,
-                       sess_pool);
+                       sess->auth_baton, sess_pool, sess_pool);
   /* We destroy the new session pool on error, since it is allocated in
      the main session pool. */
   if (err)
@@ -2872,7 +2866,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
   ra_svn_get_schemes,
-  ra_svn_open_pool,
+  ra_svn_open,
   ra_svn_dup_session,
   ra_svn_reparent,
   ra_svn_get_session_url,

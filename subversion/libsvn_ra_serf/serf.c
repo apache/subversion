@@ -180,17 +180,17 @@ load_config(svn_ra_serf__session_t *session,
   svn_config_get(config, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
 
-  if (session->wc_callbacks->auth_baton)
+  if (session->auth_baton)
     {
       if (config_client)
         {
-          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+          svn_auth_set_parameter(session->auth_baton,
                                  SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG,
                                  config_client);
         }
       if (config)
         {
-          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+          svn_auth_set_parameter(session->auth_baton,
                                  SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
                                  config);
         }
@@ -255,7 +255,7 @@ load_config(svn_ra_serf__session_t *session,
                                SERF_LOG_INFO));
 #endif
 
-  server_group = svn_auth_get_parameter(session->wc_callbacks->auth_baton,
+  server_group = svn_auth_get_parameter(session->auth_baton,
                                         SVN_AUTH_PARAM_SERVER_GROUP);
 
   if (server_group)
@@ -474,27 +474,29 @@ svn_ra_serf__open(svn_ra_session_t *session,
                   const char *session_URL,
                   const svn_ra_callbacks2_t *callbacks,
                   void *callback_baton,
+                  svn_auth_baton_t *auth_baton,
                   apr_hash_t *config,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   apr_status_t status;
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
   const char *client_string = NULL;
   svn_error_t *err;
-  apr_pool_t *subpool;
 
   if (corrected_url)
     *corrected_url = NULL;
 
-  serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
-  serf_sess->pool = svn_pool_create(pool);
+  serf_sess = apr_pcalloc(result_pool, sizeof(*serf_sess));
+  serf_sess->pool = result_pool;
   if (config)
-    SVN_ERR(svn_config_copy_config(&serf_sess->config, config, pool));
+    SVN_ERR(svn_config_copy_config(&serf_sess->config, config, result_pool));
   else
     serf_sess->config = NULL;
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
+  serf_sess->auth_baton = auth_baton;
   serf_sess->progress_func = callbacks->progress_func;
   serf_sess->progress_baton = callbacks->progress_baton;
   serf_sess->cancel_func = callbacks->cancel_func;
@@ -551,13 +553,16 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   /* create the user agent string */
   if (callbacks->get_client_string)
-    SVN_ERR(callbacks->get_client_string(callback_baton, &client_string, pool));
+    SVN_ERR(callbacks->get_client_string(callback_baton, &client_string,
+                                         scratch_pool));
 
   if (client_string)
-    serf_sess->useragent = apr_pstrcat(pool, get_user_agent_string(pool), " ",
+    serf_sess->useragent = apr_pstrcat(result_pool,
+                                       get_user_agent_string(scratch_pool),
+                                       " ",
                                        client_string, SVN_VA_NULL);
   else
-    serf_sess->useragent = get_user_agent_string(pool);
+    serf_sess->useragent = get_user_agent_string(result_pool);
 
   /* go ahead and tell serf about the connection. */
   status =
@@ -578,24 +583,29 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  /* This subpool not only avoids having a lot of temporary state in the long
-     living session pool, but it also works around a bug in serf
-     <= r2319 / 1.3.4 where serf doesn't report the request as failed/cancelled
-     when the authorization request handler fails to handle the request.
+  /* The following code explicitly works around a bug in serf <= r2319 / 1.3.8
+     where serf doesn't report the request as failed/cancelled when the
+     authorization request handler fails to handle the request.
 
-     In this specific case the serf connection is cleaned up by the pool
-     handlers before our handler is cleaned up (via subpools). Using a
-     subpool here cleans up our handler before the connection is cleaned. */
-  subpool = svn_pool_create(pool);
+     As long as we allocate the request in a subpool of the serf connection
+     pool, we know that the handler is always cleaned before the connection.
+
+     Luckily our caller now passes us two pools which handle this case.
+   */
+#if defined(SVN_DEBUG) && !SERF_VERSION_AT_LEAST(1,4,0)
+  /* Currently ensured by svn_ra_open4().
+     If failing causes segfault in basic_tests.py 48, "basic auth test" */
+  SVN_ERR_ASSERT((serf_sess->pool != scratch_pool)
+                 && apr_pool_is_ancestor(serf_sess->pool, scratch_pool));
+#endif
 
   err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url,
-                                           pool, subpool);
+                                            result_pool, scratch_pool);
 
   /* serf should produce a usable error code instead of APR_EGENERAL */
   if (err && err->apr_err == APR_EGENERAL)
     err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
                             _("Connection to '%s' failed"), session_URL);
-  svn_pool_clear(subpool);
   SVN_ERR(err);
 
   /* We have set up a useful connection (that doesn't indication a redirect).
@@ -604,9 +614,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
      problems in any proxy.  */
   if ((corrected_url == NULL || *corrected_url == NULL)
       && serf_sess->detect_chunking && !serf_sess->http10)
-    SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, subpool));
-
-  svn_pool_destroy(subpool);
+    SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, scratch_pool));
 
   return SVN_NO_ERROR;
 }

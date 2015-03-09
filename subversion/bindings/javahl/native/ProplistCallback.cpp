@@ -112,9 +112,7 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
   env->CallVoidMethod(m_callback, mid, jpath, jmap);
   // We return whether an exception was thrown or not.
 
-  env->PopLocalFrame(NULL);
-
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
 
 

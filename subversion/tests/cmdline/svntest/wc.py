@@ -1035,6 +1035,16 @@ def sqlite_stmt(wc_root_path, stmt):
   c.execute(stmt)
   return c.fetchall()
 
+def sqlite_exec(wc_root_path, stmt):
+  """Execute STMT on the SQLite wc.db in WC_ROOT_PATH and return the
+     results."""
+
+  db = open_wc_db(wc_root_path)[0]
+  c = db.cursor()
+  c.execute(stmt)
+  db.commit()
+
+
 # ------------
 ### probably toss these at some point. or major rework. or something.
 ### just bootstrapping some changes for now.

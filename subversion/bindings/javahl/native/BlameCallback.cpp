@@ -128,8 +128,6 @@ BlameCallback::singleLine(svn_revnum_t start_revnum, svn_revnum_t end_revnum,
   env->CallVoidMethod(m_callback, mid, (jlong)line_no, (jlong)revision,
                       jrevProps, (jlong)mergedRevision, jmergedRevProps,
                       jmergedPath, jline, (jboolean)localChange);
-  // No need to check for an exception here, because we return anyway.
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
