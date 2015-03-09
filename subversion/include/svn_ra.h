@@ -1718,9 +1718,10 @@ svn_ra_get_repos_root(svn_ra_session_t *session,
 /**
  * Set @a *locations to the locations (at the repository revisions
  * @a location_revisions) of the file identified by @a path in
- * @a peg_revision.  @a path is relative to the URL to which
- * @a session was opened.  @a location_revisions is an array of
- * @c svn_revnum_t's.  @a *locations will be a mapping from the revisions to
+ * @a peg_revision (passing @c SVN_INVALID_REVNUM is an error).
+ * @a path is relative to the URL to which @a session was opened.
+ * @a location_revisions is an array of @c svn_revnum_t's.
+ * @a *locations will be a mapping from the revisions to
  * their appropriate absolute paths.  If the file doesn't exist in a
  * location_revision, that revision will be ignored.
  *
