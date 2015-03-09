@@ -1762,8 +1762,8 @@ svn_ra_serf__error_on_status(serf_status_line sline,
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);
       case 405:
-        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                 _("'%s' is out of date"), path);
+        return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
+                                 _("HTTP method is not allowed on '%s'"), path);
       case 409:
         return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
                                  _("'%s' conflicts"), path);
