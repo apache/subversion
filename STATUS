@@ -192,6 +192,15 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1665213, r1665259
+   Fix case of serf's svn_ra_get_dir2() breaking the ra session for further
+   operations.
+   Justification:
+     Without this fix the next session usage after this operation may
+     accidentally process the result of a still outstanding reques.
+   Votes:
+     +1: rhuijben
+
  * r1665318
    Make lock/unlock result reporting consistent over ra layers and fs backends
    Justification:
