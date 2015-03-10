@@ -816,8 +816,9 @@ static svn_error_t *
 open_delta_target(svn_stream_t **stream, void *baton,
                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  const char **delta_target = baton;
-  return svn_stream_open_unique(stream, delta_target, NULL,
+  struct change_node *change = baton;
+  return svn_stream_open_unique(stream, &change->contents_abspath,
+                                NULL,
                                 svn_io_file_del_on_pool_cleanup,
                                 result_pool, scratch_pool);
 }
@@ -850,8 +851,7 @@ ev2_apply_textdelta(void *file_baton,
                                             FALSE, handler_pool);
 
   change->contents_changed = TRUE;
-  target = svn_stream_lazyopen_create(open_delta_target,
-                                      &change->contents_abspath,
+  target = svn_stream_lazyopen_create(open_delta_target, change,
                                       FALSE, fb->eb->edit_pool);
 
   svn_txdelta_apply(hb->source, target,
