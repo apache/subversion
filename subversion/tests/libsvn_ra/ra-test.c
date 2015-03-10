@@ -811,6 +811,30 @@ store_lock_result(void *baton,
 }
 
 static svn_error_t *
+replay_range_rev_start(svn_revnum_t revision,
+                       void *replay_baton,
+                       const svn_delta_editor_t **editor,
+                       void **edit_baton,
+                       apr_hash_t *rev_props,
+                       apr_pool_t *pool)
+{
+  *editor = svn_delta_default_editor(pool);
+  *edit_baton = NULL;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+replay_range_rev_end(svn_revnum_t revision,
+                     void *replay_baton,
+                     const svn_delta_editor_t *editor,
+                     void *edit_baton,
+                     apr_hash_t *rev_props,
+                     apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 ra_revision_errors(const svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
@@ -1225,7 +1249,24 @@ ra_revision_errors(const svn_test_opts_t *opts,
                           svn_delta_default_editor(pool), NULL,
                           pool));
   }
-  /* ### TODO: Replay range */
+
+  {
+    SVN_TEST_ASSERT_ERROR(svn_ra_replay_range(ra_session, 1, 2, 0,
+                                              TRUE,
+                                              replay_range_rev_start,
+                                              replay_range_rev_end, NULL,
+                                              pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    SVN_DBG(("Pre-final"));
+    /* Simply assumes everything is there*/
+    SVN_TEST_ASSERT_ERROR(svn_ra_replay_range(ra_session, 2, 2, 0,
+                                              TRUE,
+                                              replay_range_rev_start,
+                                              replay_range_rev_end, NULL,
+                                              pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+  }
 
   {
     svn_revnum_t del_rev;
