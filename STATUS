@@ -192,12 +192,15 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1665213, r1665259
-   Fix case of serf's svn_ra_get_dir2() breaking the ra session for further
-   operations.
+ * r1665213, r1665259, r1665609
+   Fix cases of serf's svn_ra_get_dir2() and svn_ra_get_log2() breaking the
+   ra session for further operations.
    Justification:
      Without this fix the next session usage after this operation may
-     accidentally process the result of a still outstanding reques.
+     accidentally process the result of a still outstanding request.
+   Notes:
+     If caller just passed a scratch pool for a single request things would
+     usually have worked fine, but if not...
    Votes:
      +1: rhuijben
 
