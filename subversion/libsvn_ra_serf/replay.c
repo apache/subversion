@@ -427,10 +427,11 @@ replay_closed(svn_ra_serf__xml_estate_t *xes,
     {
       struct replay_node_t *node = ctx->current_node;
 
-      if (! node || ! node->file || ! node->stream)
+      if (! node || ! node->file)
         return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
 
-      SVN_ERR(svn_stream_close(node->stream));
+      if (node->stream)
+        SVN_ERR(svn_stream_close(node->stream));
 
       node->stream = NULL;
     }
