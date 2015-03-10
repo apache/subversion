@@ -1214,7 +1214,18 @@ ra_revision_errors(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(lock == NULL);
   }
 
-  /* ### TODO: Replay and replay range */
+  {
+    SVN_TEST_ASSERT_ERROR(svn_ra_replay(ra_session, 2, 0, TRUE,
+                                        svn_delta_default_editor(pool), NULL,
+                                        pool),
+                          SVN_ERR_FS_NO_SUCH_REVISION);
+
+    /* Simply assumes everything is there*/
+    SVN_ERR(svn_ra_replay(ra_session, 1, 2, TRUE,
+                          svn_delta_default_editor(pool), NULL,
+                          pool));
+  }
+  /* ### TODO: Replay range */
 
   {
     svn_revnum_t del_rev;

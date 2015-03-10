@@ -555,10 +555,6 @@ path_driver_cb_func(void **dir_baton,
         return svn_error_create(SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                 _("Root directory already exists."));
 
-      /* A NULL parent_baton will cause a segfault.  It should never be
-          NULL for non-root paths. */
-      SVN_ERR_ASSERT(parent_baton);
-
       /* Was this node copied? */
       SVN_ERR(fill_copyfrom(&copyfrom_root, &copyfrom_path, &copyfrom_rev,
                             &src_readable, root, change,
@@ -865,6 +861,8 @@ svn_repos_replay2(svn_fs_root_t *root,
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
 
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(low_water_mark));
+
   /* Special-case r0, which we know is an empty revision; if we don't
      special-case it we might end up trying to compare it to "r-1". */
   if (svn_fs_is_revision_root(root) && svn_fs_revision_root_revision(root) == 0)
@@ -922,11 +920,6 @@ svn_repos_replay2(svn_fs_root_t *root,
         }
     }
 
-  /* If we were not given a low water mark, assume that everything is there,
-     all the way back to revision 0. */
-  if (! SVN_IS_VALID_REVNUM(low_water_mark))
-    low_water_mark = 0;
-
   /* Initialize our callback baton. */
   cb_baton.editor = editor;
   cb_baton.edit_baton = edit_baton;
@@ -970,6 +963,8 @@ svn_repos_replay2(svn_fs_root_t *root,
   svn_boolean_t send_abs_paths;
   const char *repos_root = "";
   void *unlock_baton;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(low_water_mark));
 
   /* Special-case r0, which we know is an empty revision; if we don't
      special-case it we might end up trying to compare it to "r-1". */
@@ -1493,7 +1488,7 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
   svn_error_t *err = SVN_NO_ERROR;
   int i;
 
-  SVN_ERR_ASSERT(!svn_dirent_is_absolute(base_repos_relpath));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(base_repos_relpath));
 
   /* Special-case r0, which we know is an empty revision; if we don't
      special-case it we might end up trying to compare it to "r-1". */
