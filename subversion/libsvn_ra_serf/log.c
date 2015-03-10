@@ -272,7 +272,7 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
       svn_log_entry_t *log_entry;
       const char *rev_str;
 
-      if (log_ctx->limit && (log_ctx->nest_level == 0)
+      if ((log_ctx->limit > 0) && (log_ctx->nest_level == 0)
           && (++log_ctx->count > log_ctx->limit))
         {
           return SVN_NO_ERROR;

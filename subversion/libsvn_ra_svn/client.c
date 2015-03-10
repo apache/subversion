@@ -1778,7 +1778,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
           - Except if the server sends more than a >= 1 limit top level items
           - Or when the callback reported a SVN_ERR_CEASE_INVOCATION
             in an earlier invocation. */
-      if (! (limit && (nest_level == 0) && (++nreceived > limit))
+      if (! ((limit > 0) && (nest_level == 0) && (++nreceived > limit))
           && ! *outer_error)
         {
           svn_error_t *err;
