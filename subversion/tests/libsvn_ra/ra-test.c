@@ -88,6 +88,8 @@ commit_changes(svn_ra_session_t *session,
   /* copy root-dir@0 to A@1 */
   SVN_ERR(editor->add_directory("A", root_baton, repos_root_url, 0,
                                pool, &dir_baton));
+  SVN_ERR(editor->close_directory(dir_baton, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
   SVN_ERR(editor->close_edit(edit_baton, pool));
   return SVN_NO_ERROR;
 }
@@ -130,6 +132,7 @@ commit_tree(svn_ra_session_t *session,
   SVN_ERR(editor->close_file(file_baton, NULL, pool));
   SVN_ERR(editor->close_directory(B_baton, pool));
   SVN_ERR(editor->close_directory(A_baton, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
   SVN_ERR(editor->close_edit(edit_baton, pool));
   return SVN_NO_ERROR;
 }
@@ -731,6 +734,7 @@ delete_revision_above_youngest(const svn_test_opts_t *opts,
     SVN_ERR(editor->add_directory("A", root_baton, NULL, SVN_INVALID_REVNUM,
                                   pool, &dir_baton));
     SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->close_directory(root_baton, pool));
     SVN_ERR(editor->close_edit(edit_baton, pool));
   }
 
@@ -881,6 +885,7 @@ ra_revision_errors(const svn_test_opts_t *opts,
     SVN_ERR(editor->add_directory("D", root_baton, NULL, SVN_INVALID_REVNUM,
                                   pool, &dir_baton));
     SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->close_directory(root_baton, pool));
     SVN_ERR(editor->close_edit(edit_baton, pool));
   }
 
