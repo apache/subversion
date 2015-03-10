@@ -1307,6 +1307,136 @@ ra_revision_errors(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+/* svn_log_entry_receiver_t returning cease invocation */
+static svn_error_t *
+error_log_receiver(void *baton,
+                  svn_log_entry_t *entry,
+                  apr_pool_t *scratch_pool)
+{
+  return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+}
+
+/* Stub svn_location_segment_receiver_t */
+static svn_error_t *
+error_segment_receiver(svn_location_segment_t *segment,
+                      void *baton,
+                      apr_pool_t *scratch_pool)
+{
+  return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+}
+
+
+static svn_error_t *
+errors_from_callbacks(const svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+
+  /* This function DOESN'T use a scratch/iter pool between requests...
+
+     That has a reason: some ra layers (e.g. Serf) are sensitive to
+     reusing the same pool. In that case they may produce bad results
+     that they wouldn't do (as often) when the pool wasn't reused.
+
+     It the amount of memory used gets too big we should probably split
+     this test... as the reuse already discovered a few issues that
+     are now resolved in ra_serf.
+   */
+  SVN_ERR(make_and_open_repos(&ra_session, "errors_from_callbacks",
+                              opts, pool));
+
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL,
+                                    NULL, NULL, FALSE, pool));
+
+  {
+    void *root_baton;
+    void *dir_baton;
+    void *file_baton;
+
+    SVN_ERR(editor->open_root(edit_baton, 0, pool, &root_baton));
+    SVN_ERR(editor->add_directory("A", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->add_file("A/iota", dir_baton, NULL, SVN_INVALID_REVNUM,
+                             pool, &file_baton));
+    SVN_ERR(editor->close_file(file_baton, NULL, pool));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->add_directory("B", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->add_directory("C", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->add_directory("D", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  pool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->close_directory(root_baton, pool));
+    SVN_ERR(editor->close_edit(edit_baton, pool));
+  }
+
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL,
+                                    NULL, NULL, FALSE, pool));
+
+  {
+    void *root_baton;
+    void *dir_baton;
+    void *file_baton;
+
+    SVN_ERR(editor->open_root(edit_baton, 1, pool, &root_baton));
+    SVN_ERR(editor->open_directory("A", root_baton, 1, pool, &dir_baton));
+    SVN_ERR(editor->open_file("A/iota", dir_baton, 1, pool, &file_baton));
+
+    SVN_ERR(editor->change_file_prop(file_baton, "A", svn_string_create("B",
+                                                                        pool),
+                                     pool));
+
+    SVN_ERR(editor->close_file(file_baton, NULL, pool));
+
+    SVN_ERR(editor->change_dir_prop(dir_baton, "A", svn_string_create("B",
+                                                                        pool),
+                                     pool));
+    SVN_ERR(editor->close_directory(dir_baton, pool));
+    SVN_ERR(editor->close_directory(root_baton, pool));
+    SVN_ERR(editor->close_edit(edit_baton, pool));
+  }
+
+  {
+    apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char*));
+    APR_ARRAY_PUSH(paths, const char *) = "A/iota";
+
+    /* Note that ra_svn performs OK for SVN_ERR_CEASE_INVOCATION, but any
+       other error will make it break the ra session for further operations */
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_log2(ra_session, paths, 2, 0, -1,
+                                          FALSE, FALSE, FALSE, NULL,
+                                          error_log_receiver, NULL, pool),
+                          SVN_ERR_CEASE_INVOCATION);
+  }
+
+  {
+    /* Note that ra_svn performs OK for SVN_ERR_CEASE_INVOCATION, but any
+       other error will make it break the ra session for further operations */
+
+    SVN_TEST_ASSERT_ERROR(svn_ra_get_location_segments(ra_session, "A/iota",
+                                                       2, 2, 0,
+                                                       error_segment_receiver,
+                                                       NULL, pool),
+                          SVN_ERR_CEASE_INVOCATION);
+  }
+
+  /* And a final check to see if the ra session is still ok */
+  {
+    svn_node_kind_t kind;
+
+    SVN_ERR(svn_ra_check_path(ra_session, "A", 2, &kind, pool));
+
+    SVN_TEST_ASSERT(kind == svn_node_dir);
+  }
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -1334,6 +1464,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "delete revision newer than youngest"),
     SVN_TEST_OPTS_PASS(ra_revision_errors,
                        "check how ra functions handle bad revisions"),
+    SVN_TEST_OPTS_PASS(errors_from_callbacks,
+                       "check how ra layers handle errors from callbacks"),
     SVN_TEST_NULL
   };
 
