@@ -1535,6 +1535,8 @@ __mod_dav_url_quoting_broken_versions = frozenset([
     '2.4.9',
     '2.4.8',
     '2.4.7',
+    '2.4.6',
+    '2.4.5',
 ])
 def is_mod_dav_url_quoting_broken():
     if is_ra_type_dav():
