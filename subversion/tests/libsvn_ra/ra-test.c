@@ -1258,7 +1258,6 @@ ra_revision_errors(const svn_test_opts_t *opts,
                                               pool),
                           SVN_ERR_FS_NO_SUCH_REVISION);
 
-    SVN_DBG(("Pre-final"));
     /* Simply assumes everything is there*/
     SVN_TEST_ASSERT_ERROR(svn_ra_replay_range(ra_session, 2, 2, 0,
                                               TRUE,
