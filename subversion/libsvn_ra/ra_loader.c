@@ -1121,6 +1121,8 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
                            void *edit_baton,
                            apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision)
+                 && SVN_IS_VALID_REVNUM(low_water_mark));
   return session->vtable->replay(session, revision, low_water_mark,
                                  text_deltas, editor, edit_baton, pool);
 }
