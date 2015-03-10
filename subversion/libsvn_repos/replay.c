@@ -861,8 +861,6 @@ svn_repos_replay2(svn_fs_root_t *root,
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
 
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(low_water_mark));
-
   /* Special-case r0, which we know is an empty revision; if we don't
      special-case it we might end up trying to compare it to "r-1". */
   if (svn_fs_is_revision_root(root) && svn_fs_revision_root_revision(root) == 0)
@@ -920,6 +918,11 @@ svn_repos_replay2(svn_fs_root_t *root,
         }
     }
 
+  /* If we were not given a low water mark, assume that everything is there,
+     all the way back to revision 0. */
+  if (! SVN_IS_VALID_REVNUM(low_water_mark))
+    low_water_mark = 0;
+
   /* Initialize our callback baton. */
   cb_baton.editor = editor;
   cb_baton.edit_baton = edit_baton;
@@ -964,7 +967,10 @@ svn_repos_replay2(svn_fs_root_t *root,
   const char *repos_root = "";
   void *unlock_baton;
 
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(low_water_mark));
+  /* If we were not given a low water mark, assume that everything is there,
+     all the way back to revision 0. */
+  if (! SVN_IS_VALID_REVNUM(low_water_mark))
+    low_water_mark = 0;
 
   /* Special-case r0, which we know is an empty revision; if we don't
      special-case it we might end up trying to compare it to "r-1". */
