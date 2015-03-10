@@ -1806,7 +1806,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
                           SVN_PROP_REVISION_LOG, message);
 
           err = receiver(receiver_baton, log_entry, iterpool);
-          if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+          if (svn_error_find_cause(err, SVN_ERR_CEASE_INVOCATION))
             {
               *outer_error = svn_error_trace(
                                 svn_error_compose_create(*outer_error, err));
@@ -1994,14 +1994,15 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-ra_svn_get_location_segments(svn_ra_session_t *session,
-                             const char *path,
-                             svn_revnum_t peg_revision,
-                             svn_revnum_t start_rev,
-                             svn_revnum_t end_rev,
-                             svn_location_segment_receiver_t receiver,
-                             void *receiver_baton,
-                             apr_pool_t *pool)
+perform_get_location_segments(svn_error_t **outer_error,
+                              svn_ra_session_t *session,
+                              const char *path,
+                              svn_revnum_t peg_revision,
+                              svn_revnum_t start_rev,
+                              svn_revnum_t end_rev,
+                              svn_location_segment_receiver_t receiver,
+                              void *receiver_baton,
+                              apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -2048,7 +2049,17 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
           segment->path = ret_path;
           segment->range_start = range_start;
           segment->range_end = range_end;
-          SVN_ERR(receiver(segment, receiver_baton, iterpool));
+
+          if (!*outer_error)
+            {
+              svn_error_t *err = svn_error_trace(receiver(segment, receiver_baton,
+                                                          iterpool));
+
+              if (svn_error_find_cause(err, SVN_ERR_CEASE_INVOCATION))
+                *outer_error = err;
+              else
+                SVN_ERR(err);
+            }
         }
     }
   svn_pool_destroy(iterpool);
@@ -2058,6 +2069,26 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
   SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, ""));
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+ra_svn_get_location_segments(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t peg_revision,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             svn_location_segment_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool)
+{
+  svn_error_t *outer_err = SVN_NO_ERROR;
+  svn_error_t *err;
+
+  err = svn_error_trace(
+            perform_get_location_segments(&outer_err, session, path,
+                                          peg_revision, start_rev, end_rev,
+                                          receiver, receiver_baton, pool));
+  return svn_error_compose_create(outer_err, err);
 }
 
 static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
