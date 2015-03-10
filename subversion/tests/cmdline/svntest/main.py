@@ -1527,9 +1527,14 @@ def is_plaintext_password_storage_disabled():
 
 
 # https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
 __mod_dav_url_quoting_broken_versions = frozenset([
+    '2.2.27',
     '2.2.26',
+    '2.2.25',
     '2.4.9',
+    '2.4.8',
+    '2.4.7',
 ])
 def is_mod_dav_url_quoting_broken():
     if is_ra_type_dav():
