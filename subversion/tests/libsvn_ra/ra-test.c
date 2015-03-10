@@ -885,7 +885,7 @@ ra_revision_errors(const svn_test_opts_t *opts,
   }
 
   {
-    svn_ra_reporter3_t *reporter;
+    const svn_ra_reporter3_t *reporter;
     void *report_baton;
 
     err = svn_ra_do_update3(ra_session, &reporter, &report_baton,
@@ -904,7 +904,7 @@ ra_revision_errors(const svn_test_opts_t *opts,
   }
 
   {
-    svn_ra_reporter3_t *reporter;
+    const svn_ra_reporter3_t *reporter;
     void *report_baton;
 
     err = svn_ra_do_update3(ra_session, &reporter, &report_baton,
@@ -923,7 +923,7 @@ ra_revision_errors(const svn_test_opts_t *opts,
   }
 
   {
-    svn_ra_reporter3_t *reporter;
+    const svn_ra_reporter3_t *reporter;
     void *report_baton;
 
     err = svn_ra_do_update3(ra_session, &reporter, &report_baton,
