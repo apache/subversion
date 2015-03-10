@@ -224,7 +224,7 @@ Other candidate changes:
    Justification:
      Prevents spurious test suite failures against older versions of httpd.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
 
 Veto-blocked changes:
 =====================
