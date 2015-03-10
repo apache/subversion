@@ -2720,10 +2720,16 @@ ra_svn_replay_range(svn_ra_session_t *session,
 
       SVN_ERR(svn_ra_svn__read_tuple(sess->conn, iterpool,
                                      "wl", &word, &list));
+
       if (strcmp(word, "revprops") != 0)
-        return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                 _("Expected 'revprops', found '%s'"),
-                                 word);
+        {
+          if (strcmp(word, "failure") == 0)
+            SVN_ERR(svn_ra_svn__handle_failure_status(list, iterpool));
+
+          return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                   _("Expected 'revprops', found '%s'"),
+                                   word);
+        }
 
       SVN_ERR(svn_ra_svn__parse_proplist(list, iterpool, &rev_props));
 

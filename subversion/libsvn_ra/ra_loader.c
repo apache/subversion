@@ -1190,7 +1190,14 @@ svn_ra_replay_range(svn_ra_session_t *session,
                     void *replay_baton,
                     apr_pool_t *pool)
 {
-  svn_error_t *err =
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start_revision)
+                 && SVN_IS_VALID_REVNUM(end_revision)
+                 && start_revision <= end_revision
+                 && SVN_IS_VALID_REVNUM(low_water_mark));
+
+  err =
     session->vtable->replay_range(session, start_revision, end_revision,
                                   low_water_mark, text_deltas,
                                   revstart_func, revfinish_func,
