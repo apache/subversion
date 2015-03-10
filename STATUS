@@ -15,14 +15,6 @@ Status of 1.9.0:
 1.9.0 release blockers:
 =======================
 
- * r1663338, r1663347
-   Properly record resolving of individual property conflicts.
-   Justification:
-     Fixes a few implementation bugs in the resolver code and exposes the
-     api for more users than those that pass a callback function.
-   Votes:
-     +1: rhuijben
-
  * r1664078,r1664080,r1664187,r1664191,r1664200,r1664344,r1664588,r1664927
    Instead of making more changes to the auth batons from ra sessions, reduce
    the number of changes by introducing an internal slave auth baton feature.
@@ -38,6 +30,20 @@ Status of 1.9.0:
      change introduced in r1609499 from reaching released versions. The changes
      itself are safe for a later backport as it only affects ra-session
      internal state.
+   Votes:
+     +1: rhuijben
+
+1.9.0 candidate changes that cannot go into a later 1.9.x:
+==========================================================
+
+ * r1663338, r1663347
+   Properly record resolving of individual property conflicts.
+   Justification:
+     Fixes a few implementation bugs in the resolver code and exposes the
+     api for more users than those that pass a callback function.
+   Notes:
+     Bert says it changes a public API and so needs to go into 1.9.0: see
+     http://colabti.org/irclogger/irclogger_log/svn-dev?date=2015-03-10#l93
    Votes:
      +1: rhuijben
 
