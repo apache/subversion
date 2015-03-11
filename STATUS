@@ -53,7 +53,7 @@ Candidate changes:
      Without this the external is not properly handled as such when performing
      operations like status.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1660220, r1665874
    Don't leave conflict markers on files that are moved
