@@ -3073,6 +3073,47 @@ def mkdir_parents_target_exists_on_disk(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+@Skip(svntest.main.is_ra_type_file)
+def plaintext_password_storage_disabled(sbox):
+  "test store-plaintext-passwords = no"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  sbox.simple_append("iota", "New content for iota.")
+
+  config_dir_path = sbox.get_tempname(prefix="config-dir")
+  os.mkdir(config_dir_path)
+
+  # disable all encryped password stores
+  config_file = file(os.path.join(config_dir_path, "config"), "w")
+  config_file.write("[auth]\npassword-stores =\n")
+  config_file.close()
+
+  # disable plaintext password storage
+  servers_file = file(os.path.join(config_dir_path, "servers"), "w")
+  servers_file.write("[global]\nstore-plaintext-passwords=no\n")
+  servers_file.close()
+  
+  svntest.main.run_command(svntest.main.svn_binary, False, False,
+   "commit", "--config-dir", config_dir_path,
+    "-m", "committing with plaintext password storage disabled",
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd,
+    wc_dir)
+
+  # Verify that the password was not stored in plaintext
+  for root, dirs, files, in os.walk(os.path.join(config_dir_path, "auth")):
+    for file_name in files:
+      path = os.path.join(root, file_name)
+      f = file(path, "r")
+      for line in f.readlines():
+        if svntest.main.wc_passwd in line:
+          f.close()
+          raise svntest.Failure("password was found in '%s'" % path)
+      f.close()
+
+
 ########################################################################
 # Run the tests
 
@@ -3142,6 +3183,7 @@ test_list = [ None,
               delete_conflicts_one_of_many,
               peg_rev_on_non_existent_wc_path,
               mkdir_parents_target_exists_on_disk,
+              plaintext_password_storage_disabled,
              ]
 
 if __name__ == '__main__':
