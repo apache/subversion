@@ -173,16 +173,6 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1524145
-   Make the 'm' conflict prompt option run external merge tool if configured.
-   Justification:
-     Usability fix. The current behaviour ('m' -> internal merge tool,
-     'l' -> external merge tool) confuses users who try 'm' to run an
-     external merge tool. See issue #4426.
-   Votes:
-     +1: stsp
-     -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
-
  * r1619380, r1619393
    Fix diff of a locally copied directory with props: it showed all props
    as added instead of a diff against the copy-from props.
