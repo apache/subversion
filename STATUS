@@ -29,14 +29,6 @@ Candidate changes:
      +1: stefan2, breser
      -0: julianfoad (test is missing from branch -- how do we know it works?)
 
- * r1651963, r1651966, r1651980, r1651997
-   Sequence of moves shouldn't trigger an assertion in the working copy
-   Justification:
-     Users shouldn't be able to trigger assertions by performing normal
-     operations.
-   Votes:
-     +1: rhuijben, philip
-
  * r1654932, r1654933, r1654934, r1654937
    Fix issue #4554, "0 file length reported in FSFS".
    Justification:
@@ -191,3 +183,11 @@ Approved changes:
      because the workflow problem fixed by it does not exist in 1.8.x.
    Votes:
      +1: stefan2, philip, stsp
+
+ * r1651963, r1651966, r1651980, r1651997
+   Sequence of moves shouldn't trigger an assertion in the working copy
+   Justification:
+     Users shouldn't be able to trigger assertions by performing normal
+     operations.
+   Votes:
+     +1: rhuijben, philip, stsp
