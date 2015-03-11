@@ -33,7 +33,7 @@ Status of 1.9.0:
    Votes:
      +1: rhuijben
      +1: brane, philip (Without r1665886)
-     -1: stsp (seems to break plaintext password caching configuration options)
+     -1: stsp (asks for plaintext storage even if store-plaintext-passwords=no)
 
 1.9.0 candidate changes that cannot go into a later 1.9.x:
 ==========================================================
