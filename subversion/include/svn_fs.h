@@ -920,9 +920,9 @@ typedef struct svn_fs_id_t svn_fs_id_t;
 /** Return -1, 0, or 1 if node revisions @a a and @a b are respectively
  * unrelated, equivalent, or otherwise related (part of the same node).
  *
- * @note Using FS ID based functions is discouraged since 1.9 and may be
- * fully deprecated in future releases.  New code should use
- * #svn_fs_node_relation() and #svn_fs_node_relation_t instead.
+ * @note Consider using the more expressive #svn_fs_node_relation() instead.
+ *
+ * @see #svn_fs_node_relation
  */
 int
 svn_fs_compare_ids(const svn_fs_id_t *a,
@@ -933,9 +933,9 @@ svn_fs_compare_ids(const svn_fs_id_t *a,
 /** Return TRUE if node revisions @a id1 and @a id2 are related (part of the
  * same node), else return FALSE.
  *
- * @note Using FS ID based functions is discouraged since 1.9 and may be
- * fully deprecated in future releases.  New code should use
- * #svn_fs_node_relation() and #svn_fs_node_relation_t instead.
+ * @note Consider using the more expressive #svn_fs_node_relation() instead.
+ *
+ * @see #svn_fs_node_relation
  */
 svn_boolean_t
 svn_fs_check_related(const svn_fs_id_t *id1,
