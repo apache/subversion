@@ -148,9 +148,6 @@ Candidate changes:
    Votes:
      +1: rhuijben (after the veto on this same group for 1.9.0 is resolved)
 
-Veto-blocked changes:
-=====================
-
  * r1619380, r1619393, r1660186
    Fix diff of a locally copied directory with props: it showed all props
    as added instead of a diff against the copy-from props.
@@ -166,8 +163,10 @@ Veto-blocked changes:
    Votes:
      +1: rhuijben
      +1: stefan2 (before r1660186 was added)
-     -1: julianfoad (assertion failure on incomplete dir -- see email)
-                    (before r1660186 was added)
+     +0: julianfoad
+
+Veto-blocked changes:
+=====================
 
 Approved changes:
 =================
