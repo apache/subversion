@@ -217,23 +217,6 @@ Other candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1664476, r1664480, r1664481, r1664483, r1664507, r1664520, r1664521, r1664523, r1664526, r1664527, r1665845, r1665850, r1665852
-   Automatic create sqlite_stat1 table in wc.db if it doesn't exist.
-   Justification:
-     Avoid performance regression on some old working copies.
-   Notes:
-     This stats table provides very valuable hints to the sqlite query
-     optimizer. Sqlite 3.8.x needs this for most of our queries.
-     .
-     See "Manual Control Of Query Plans Using SQLITE_STAT Tables"
-     on https://www.sqlite.org/optoverview.html#manctrl
-     I (philip) think we cannot release 1.9.0 without this fix.
-   Votes:
-     +1: philip, rhuijben
-     +1: brane (before r1665845, r1665850, r1665852)
-     -1: ivan (test failures before r1665845, r1665850, r1665852
-               See http://svn.haxx.se/dev/archive-2015-03/0119.shtml)
-
 Approved changes:
 =================
 
@@ -260,3 +243,18 @@ Approved changes:
      reducing the number of db operations.
    Votes:
      +1: rhuijben, philip, brane
+
+ * r1664476, r1664480, r1664481, r1664483, r1664507, r1664520, r1664521, r1664523, r1664526, r1664527, r1665845, r1665850, r1665852
+   Automatic create sqlite_stat1 table in wc.db if it doesn't exist.
+   Justification:
+     Avoid performance regression on some old working copies.
+   Notes:
+     This stats table provides very valuable hints to the sqlite query
+     optimizer. Sqlite 3.8.x needs this for most of our queries.
+     .
+     See "Manual Control Of Query Plans Using SQLITE_STAT Tables"
+     on https://www.sqlite.org/optoverview.html#manctrl
+     I (philip) think we cannot release 1.9.0 without this fix.
+   Votes:
+     +1: philip, rhuijben, ivan
+     +1: brane (before r1665845, r1665850, r1665852)
