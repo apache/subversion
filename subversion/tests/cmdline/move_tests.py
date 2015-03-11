@@ -1464,6 +1464,214 @@ def move_to_from_external(sbox):
                                      sbox.ospath(''),
                                      sbox.ospath('GG'))
   
+def move_conflict_details(sbox):
+  "move conflict details"
+
+  sbox.build()
+
+  sbox.simple_append('A/B/E/new', 'new\n')
+  sbox.simple_add('A/B/E/new')
+  sbox.simple_append('A/B/E/alpha', '\nextra\nlines\n')
+  sbox.simple_rm('A/B/E/beta', 'A/B/F')
+  sbox.simple_propset('key', 'VAL', 'A/B/E', 'A/B')
+  sbox.simple_mkdir('A/B/E/new-dir1')
+  sbox.simple_mkdir('A/B/E/new-dir2')
+  sbox.simple_mkdir('A/B/E/new-dir3')
+  sbox.simple_rm('A/B/lambda')
+  sbox.simple_mkdir('A/B/lambda')
+  sbox.simple_commit()
+
+  sbox.simple_update('', 1)
+
+  sbox.simple_move('A/B', 'B')
+
+  sbox.simple_update('', 2)
+
+  expected_info = [
+    {
+      "Moved To": re.escape(sbox.ospath("B")),
+      "Tree conflict": re.escape(
+              'local dir moved away, incoming dir edit upon update' +
+              ' Source  left: (dir) ^/A/B@1' +
+              ' Source right: (dir) ^/A/B@2')
+    }
+  ]
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B'))
+
+  sbox.simple_propset('key', 'vAl', 'B')
+  sbox.simple_move('B/E/beta', 'beta')
+  sbox.simple_propset('a', 'b', 'B/F', 'B/lambda')
+  sbox.simple_append('B/E/alpha', 'other\nnew\nlines')
+  sbox.simple_mkdir('B/E/new')
+  sbox.simple_mkdir('B/E/new-dir1')
+  sbox.simple_append('B/E/new-dir2', 'something')
+  sbox.simple_append('B/E/new-dir3', 'something')
+  sbox.simple_add('B/E/new-dir3')
+
+
+  expected_output = [
+    " C   %s\n" % sbox.ospath('B'),         # Property conflicted
+    " U   %s\n" % sbox.ospath('B/E'),       # Just updated
+    "C    %s\n" % sbox.ospath('B/E/alpha'), # Text conflicted
+    "   C %s\n" % sbox.ospath('B/E/beta'),
+    "   C %s\n" % sbox.ospath('B/E/new'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir1'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir2'),
+    "   C %s\n" % sbox.ospath('B/E/new-dir3'),
+    "   C %s\n" % sbox.ospath('B/F'),
+    "   C %s\n" % sbox.ospath('B/lambda'),
+    "Updated to revision 2.\n",
+    "Resolved conflicted state of '%s'\n" % sbox.ospath('A/B')
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'resolve', sbox.ospath('A/B'),
+                                     '--depth', 'empty',
+                                     '--accept', 'mine-conflict')
+
+  expected_info = [
+    {
+      "Path" : re.escape(sbox.ospath('B')),
+
+      "Conflict Properties File" :
+            re.escape(sbox.ospath('B/dir_conflicts.prej')) + '.*',
+      "Conflict Details": re.escape(
+            'incoming dir edit upon update' +
+            ' Source  left: (dir) ^/A/B@1' +
+            ' Source right: (dir) ^/A/B@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E')),
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/alpha')),
+      "Conflict Previous Base File" : '.*alpha.*',
+      "Conflict Previous Working File" : '.*alpha.*',
+      "Conflict Current Base File": '.*alpha.*',
+      "Conflict Details": re.escape(
+          'incoming file edit upon update' +
+          ' Source  left: (file) ^/A/B/E/alpha@1' +
+          ' Source right: (file) ^/A/B/E/alpha@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/beta')),
+      "Tree conflict": re.escape(
+          'local file moved away, incoming file delete or move upon update' +
+          ' Source  left: (file) ^/A/B/E/beta@1' +
+          ' Source right: (none) ^/A/B/E/beta@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming file add upon update' +
+          ' Source  left: (none) ^/A/B/E/new@1' +
+          ' Source right: (file) ^/A/B/E/new@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir1')),
+      "Tree conflict": re.escape(
+          'local dir add, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir1@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir1@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir2')),
+      "Tree conflict": re.escape(
+          'local file unversioned, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir2@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir2@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/E/new-dir3')),
+      "Tree conflict": re.escape(
+          'local file add, incoming dir add upon update' +
+          ' Source  left: (none) ^/A/B/E/new-dir3@1' +
+          ' Source right: (dir) ^/A/B/E/new-dir3@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/F')),
+      "Tree conflict": re.escape(
+          'local dir edit, incoming dir delete or move upon update' +
+          ' Source  left: (dir) ^/A/B/F@1' +
+          ' Source right: (none) ^/A/B/F@2')
+    },
+    {
+      "Path" : re.escape(sbox.ospath('B/lambda')),
+      "Tree conflict": re.escape(
+          'local file edit, incoming replace with dir upon update' +
+          ' Source  left: (file) ^/A/B/lambda@1' +
+          ' Source right: (dir) ^/A/B/lambda@2')
+    },
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('B'),
+                                      '--depth', 'infinity')
+
+def move_conflict_markers(sbox):
+  "move conflict markers"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_propset('key','val', 'iota', 'A/B/E', 'A/B/E/beta')
+  sbox.simple_commit()
+  sbox.simple_update('', 1)
+  sbox.simple_propset('key','false', 'iota', 'A/B/E', 'A/B/E/beta')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status=' C'),
+    'A/B/E/beta'  : Item(status=' C'),
+    'iota'        : Item(status=' C'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('iota', 'A/B/E', 'A/B/E/beta', status=' C')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/E/dir_conflicts.prej' : Item(contents=
+                                      "Trying to add new property 'key'\n"
+                                      "but the property already exists.\n"
+                                      "<<<<<<< (local property value)\n"
+                                      "false=======\n"
+                                      "val>>>>>>> (incoming property value)\n"),
+    'A/B/E/beta.prej'          : Item(contents=
+                                      "Trying to add new property 'key'\n"
+                                      "but the property already exists.\n"
+                                      "<<<<<<< (local property value)\n"
+                                      "false=======\n"
+                                      "val>>>>>>> (incoming property value)\n"),
+    'iota.prej'                : Item(contents=
+                                      "Trying to add new property 'key'\n"
+                                      "but the property already exists.\n"
+                                      "<<<<<<< (local property value)\n"
+                                      "false=======\n"
+                                      "val>>>>>>> (incoming property value)\n"),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  sbox.simple_move('iota', 'A/iotb')
+  sbox.simple_move('A/B/E', 'E')
+
+  expected_status.tweak('iota', status='D ', moved_to='A/iotb')
+  expected_status.tweak('A/B/E', status='D ', moved_to='E')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/iotb'  : Item(status='A ', copied='+', moved_from='iota', wc_rev='-'),
+    'E'       : Item(status='A ', copied='+', moved_from='A/B/E', wc_rev='-'),
+    'E/beta'  : Item(status=' M', copied='+', wc_rev='-'),
+    'E/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+  })
+  expected_disk.remove('iota', 'iota.prej',
+                       'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/E/dir_conflicts.prej', 
+                       'A/B/E/beta.prej')
+  expected_disk.add({
+    'A/iotb'  : Item(contents="This is the file 'iota'.\n"),
+    'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
 
 #######################################################################
 # Run the tests
@@ -1481,6 +1689,7 @@ test_list = [ None,
               move_del_moved,
               copy_move_commit,
               move_to_from_external,
+              move_conflict_markers,
             ]
 
 if __name__ == '__main__':
