@@ -15,21 +15,6 @@ Status of 1.8.12:
 Candidate changes:
 ==================
 
- * r1501293, r1501338, r1501360, r1501533
-   Fix issue #4390, "parallel nested checkout not possible with wc-ng"
-   Justification:
-     Regression from 1.6. User complained. See issue for details.
-   Branch:
-     ^/subversion/branches/1.8.x-issue4390
-   Depends:
-     Nomination conflicts with the branch and merges cleanly without it.
-     Branch should probably be removed from the nomination (it was only needed
-     before r1503552).
-   Votes:
-     +1: stsp
-     -0: ivan, brane, rhuijben (not regression from 1.7.x,
-                                destructive change in libsvn_wc core)
-
  * r1536854
    Make 'svnadmin verify' detect inconsistencies that will prevent loading
    dump files.
