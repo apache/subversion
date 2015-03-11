@@ -1998,7 +1998,7 @@ typedef struct svn_diff3__file_output_baton_t
   const char *marker_eol;
 
   svn_diff_conflict_display_style_t conflict_style;
-  int context_size;
+  apr_size_t context_size;
 
   /* cancel support */
   svn_cancel_func_t cancel_func;
