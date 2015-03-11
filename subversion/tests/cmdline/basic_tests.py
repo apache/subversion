@@ -3100,7 +3100,7 @@ def plaintext_password_storage_disabled(sbox):
     "-m", "committing with plaintext password storage disabled",
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd,
-    wc_dir)
+    "--non-interactive", wc_dir)
 
   # Verify that the password was not stored in plaintext
   for root, dirs, files, in os.walk(os.path.join(config_dir_path, "auth")):
