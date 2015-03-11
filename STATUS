@@ -165,9 +165,9 @@ Veto-blocked changes:
      ^/subversion/branches/1.8.x-r1619380
    Votes:
      +1: rhuijben
-     +1: stefan2 (before r1619380 was added)
+     +1: stefan2 (before r1660186 was added)
      -1: julianfoad (assertion failure on incomplete dir -- see email)
-                    (before r1619380 was added)
+                    (before r1660186 was added)
 
 Approved changes:
 =================
