@@ -212,6 +212,9 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
  * r1664476, r1664480, r1664481, r1664483, r1664507, r1664520, r1664521, r1664523, r1664526, r1664527
    Automatic create sqlite_stat1 table in wc.db if it doesn't exist.
    Justification:
@@ -224,10 +227,8 @@ Other candidate changes:
      on https://www.sqlite.org/optoverview.html#manctrl
    Votes:
      +1: philip, brane, rhuijben
-     -0: ivan (reviewing)
-
-Veto-blocked changes:
-=====================
+     -1: ivan (test failures.
+               See http://svn.haxx.se/dev/archive-2015-03/0119.shtml)
 
 Approved changes:
 =================
