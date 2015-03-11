@@ -1342,19 +1342,15 @@ x_node_relation(svn_fs_node_relation_t *relation,
       return SVN_NO_ERROR;
     }
 
-  /* Nodes from different transactions are never related. */
-  if (root_a->is_txn_root && root_b->is_txn_root
-      && strcmp(root_a->txn, root_b->txn))
-    {
-      *relation = svn_fs_node_unrelated;
-      return SVN_NO_ERROR;
-    }
-
   /* Are both (!) root paths? Then, they are related and we only test how
    * direct the relation is. */
   if (a_is_root_dir && b_is_root_dir)
     {
-      *relation = root_a->rev == root_b->rev
+      svn_boolean_t different_txn
+        = root_a->is_txn_root && root_b->is_txn_root
+            && strcmp(root_a->txn, root_b->txn);
+
+      *relation = ((root_a->rev == root_b->rev) && !different_txn)
                 ? svn_fs_node_same
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
@@ -1370,6 +1366,8 @@ x_node_relation(svn_fs_node_relation_t *relation,
   noderev_id_b = *svn_fs_x__dag_get_id(node);
   SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_b, node));
 
+  /* In FSX, even in-txn IDs are globally unique.
+   * So, we can simply compare them. */
   if (svn_fs_x__id_eq(&noderev_id_a, &noderev_id_b))
     *relation = svn_fs_node_same;
   else if (svn_fs_x__id_eq(&node_id_a, &node_id_b))
