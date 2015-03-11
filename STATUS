@@ -31,7 +31,7 @@ Status of 1.9.0:
      itself are safe for a later backport as it only affects ra-session
      internal state.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
 1.9.0 candidate changes that cannot go into a later 1.9.x:
 ==========================================================
@@ -51,7 +51,7 @@ Status of 1.9.0:
      conflict data is.
      .
      The part of the patch that enables the new feature is very small
-     compared to the part that fixes the issue, and the regression 
+     compared to the part that fixes the issue, and the regression
      test would be at least tree times harder to write and review without
      enabling the resolving of individual property conflicts.
      .
@@ -61,6 +61,9 @@ Status of 1.9.0:
      .
    Votes:
      +1: rhuijben
+     +0: brane (Backport merge causes new -Wshadow warning at
+                subversion/libsvn_wc/conflicts.c:2360; otherwise +1.
+                By the way, I don't see any API change here.)
 
 Other candidate changes:
 ========================
@@ -71,9 +74,9 @@ Other candidate changes:
      Unbreaks building with the VS version that should be released somewhere
      later this year.
    Notes:
-     Includes a few generator fixes, and compilation fixes of utf8proc.c
+     Includes a few generator fixes, and compilation fixes of utf8proc.c.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1663671
    Improve obstructing working copy detection in the update editor
@@ -143,16 +146,6 @@ Other candidate changes:
      Trivial change to generate version resource for application.
    Votes:
      +1: rhuijben
-
- * r1664531, r1664532
-   Improve database usage in entries-test to speed up test runs
-   Justification:
-     Use of the non deprecated function to check if the working copy is
-     locked avoids re-opening the database for each and every directory.
-     This decreases the total time to run the testsuite by > 2%, by just
-     reducing the number of db operations.
-   Votes:
-     +1: rhuijben, philip
 
  * r1664476, r1664480, r1664481, r1664483, r1664507, r1664520, r1664521, r1664523, r1664526, r1664527
    Automatic create sqlite_stat1 table in wc.db if it doesn't exist.
@@ -239,13 +232,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1665611, r1665612
-   Improve set of versions of httpd with known encoding issues.
-   Justification:
-     Prevents spurious test suite failures against older versions of httpd.
-   Votes:
-     +1: breser, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -259,3 +245,19 @@ Approved changes:
    Votes:
      +1: philip, danielsh
 
+ * r1665611, r1665612
+   Improve set of versions of httpd with known encoding issues.
+   Justification:
+     Prevents spurious test suite failures against older versions of httpd.
+   Votes:
+     +1: breser, rhuijben, brane
+
+ * r1664531, r1664532
+   Improve database usage in entries-test to speed up test runs
+   Justification:
+     Use of the non deprecated function to check if the working copy is
+     locked avoids re-opening the database for each and every directory.
+     This decreases the total time to run the testsuite by > 2%, by just
+     reducing the number of db operations.
+   Votes:
+     +1: rhuijben, philip, brane
