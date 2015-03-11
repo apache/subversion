@@ -15,6 +15,25 @@ Status of 1.9.0:
 1.9.0 release blockers:
 =======================
 
+ * r1664078,r1664080,r1664187,r1664191,r1664200,r1664344,r1664588,r1664927,r1665886
+   Instead of making more changes to the auth batons from ra sessions, reduce
+   the number of changes by introducing an internal slave auth baton feature.
+   Justification:
+     Without this patch (or a complete redesign of the auth layer), the
+     ra sessions cache (currently on a feature branch), will open the ra
+     sessions from outside configuration changes caused by opening other
+     ra sessions. This patch not only reverts the additional changes to the
+     auth baton on init that are new in 1.9, but also removes cases where we
+     already applied similar changes inside specific ra providers.
+   Notes:
+     The reason I group this under release blockers, is to avoid the behavior
+     change introduced in r1609499 from reaching released versions. The changes
+     itself are safe for a later backport as it only affects ra-session
+     internal state.
+   Votes:
+     +1: rhuijben
+     +1: brane, philip (Without r1665886)
+
 1.9.0 candidate changes that cannot go into a later 1.9.x:
 ==========================================================
 
@@ -209,8 +228,8 @@ Veto-blocked changes:
      on https://www.sqlite.org/optoverview.html#manctrl
      I (philip) think we cannot release 1.9.0 without this fix.
    Votes:
-     +1: philip
-     +1: brane, rhuijben (before r1665845, r1665850, r1665852)
+     +1: philip, rhuijben
+     +1: brane (before r1665845, r1665850, r1665852)
      -1: ivan (test failures before r1665845, r1665850, r1665852
                See http://svn.haxx.se/dev/archive-2015-03/0119.shtml)
 
@@ -240,21 +259,3 @@ Approved changes:
      reducing the number of db operations.
    Votes:
      +1: rhuijben, philip, brane
-
- * r1664078,r1664080,r1664187,r1664191,r1664200,r1664344,r1664588,r1664927
-   Instead of making more changes to the auth batons from ra sessions, reduce
-   the number of changes by introducing an internal slave auth baton feature.
-   Justification:
-     Without this patch (or a complete redesign of the auth layer), the
-     ra sessions cache (currently on a feature branch), will open the ra
-     sessions from outside configuration changes caused by opening other
-     ra sessions. This patch not only reverts the additional changes to the
-     auth baton on init that are new in 1.9, but also removes cases where we
-     already applied similar changes inside specific ra providers.
-   Notes:
-     The reason I group this under release blockers, is to avoid the behavior
-     change introduced in r1609499 from reaching released versions. The changes
-     itself are safe for a later backport as it only affects ra-session
-     internal state.
-   Votes:
-     +1: rhuijben, brane, philip
