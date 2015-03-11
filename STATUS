@@ -47,28 +47,6 @@ Candidate changes:
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
                    7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
- * ^/subversion/branches/1.8.x-r1659867
-   Fix reproducable memory corruption and unneeded io errors on editor abort
-   Justification:
-     Reproducible double free(), which is undefined behaviour.  Details:
-     .
-     A SIGPIPE caused by cancelling a commit at the wrong time may cause
-     the commit editor to return an error from editor->close_edit() which
-     makes most code paths call editor->abort_edit(). But ra-local and ra-serf
-     then still tried to access the original transaction which is already
-     gone. Daniel Shahaf reported reproducable see double frees when using
-     ra-local with fsfs. This fix makes calling abort safe (+- a NO-OP) after
-     a successfull commit. A testcase is added showcasing this scenario.
-   Notes:
-     'svn import -mm | (sleep 2; cat)' followed by ^C at the right time was
-     the reproduction.
-   Branch:
-     ^/subversion/branches/1.8.x-r1659867
-   Votes:
-     +1: danielsh (without r1660091, r1660097,
-                   ra_serf part; looks good but I can't vouch for it)
-     +1: philip, rhuijben
-
  * r1660071
    When handling a pre-existing working copy as external, register it as such
    Justification:
@@ -191,3 +169,25 @@ Approved changes:
      operations.
    Votes:
      +1: rhuijben, philip, stsp
+
+ * ^/subversion/branches/1.8.x-r1659867
+   Fix reproducable memory corruption and unneeded io errors on editor abort
+   Justification:
+     Reproducible double free(), which is undefined behaviour.  Details:
+     .
+     A SIGPIPE caused by cancelling a commit at the wrong time may cause
+     the commit editor to return an error from editor->close_edit() which
+     makes most code paths call editor->abort_edit(). But ra-local and ra-serf
+     then still tried to access the original transaction which is already
+     gone. Daniel Shahaf reported reproducable see double frees when using
+     ra-local with fsfs. This fix makes calling abort safe (+- a NO-OP) after
+     a successfull commit. A testcase is added showcasing this scenario.
+   Notes:
+     'svn import -mm | (sleep 2; cat)' followed by ^C at the right time was
+     the reproduction.
+   Branch:
+     ^/subversion/branches/1.8.x-r1659867
+   Votes:
+     +1: danielsh (without r1660091, r1660097,
+                   ra_serf part; looks good but I can't vouch for it)
+     +1: philip, rhuijben, stsp
