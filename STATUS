@@ -207,6 +207,7 @@ Veto-blocked changes:
      .
      See "Manual Control Of Query Plans Using SQLITE_STAT Tables"
      on https://www.sqlite.org/optoverview.html#manctrl
+     I (philip) think we cannot release 1.9.0 without this fix.
    Votes:
      +1: philip
      +1: brane, rhuijben (before r1665845, r1665850, r1665852)
