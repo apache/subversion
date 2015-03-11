@@ -354,7 +354,7 @@ svn_auth_next_credentials(void **credentials,
         {
           SVN_ERR(provider->vtable->first_credentials(
                       &creds, &(state->provider_iter_baton),
-                      provider->provider_baton, auth_baton->parameters,
+                      provider->provider_baton, state->parameters,
                       state->realmstring, auth_baton->pool));
           state->got_first = TRUE;
         }
@@ -404,7 +404,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
     return SVN_NO_ERROR;
 
   /* Do not save the creds if SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
-  no_auth_cache = svn_hash_gets(auth_baton->parameters,
+  no_auth_cache = svn_hash_gets(state->parameters,
                                 SVN_AUTH_PARAM_NO_AUTH_CACHE);
   if (no_auth_cache)
     return SVN_NO_ERROR;
@@ -417,7 +417,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
     SVN_ERR(provider->vtable->save_credentials(&save_succeeded,
                                                creds,
                                                provider->provider_baton,
-                                               auth_baton->parameters,
+                                               state->parameters,
                                                state->realmstring,
                                                pool));
   if (save_succeeded)
@@ -433,7 +433,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
       if (provider->vtable->save_credentials)
         SVN_ERR(provider->vtable->save_credentials(&save_succeeded, creds,
                                                    provider->provider_baton,
-                                                   auth_baton->parameters,
+                                                   state->parameters,
                                                    state->realmstring,
                                                    pool));
 
