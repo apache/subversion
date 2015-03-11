@@ -1328,8 +1328,8 @@ fs_node_relation(svn_fs_node_relation_t *relation,
                  apr_pool_t *pool)
 {
   dag_node_t *node;
-  const svn_fs_id_t *id;
-  svn_fs_fs__id_part_t rev_item_a, rev_item_b, node_id_a, node_id_b;
+  const svn_fs_id_t *id_a, *id_b;
+  svn_fs_fs__id_part_t node_id_a, node_id_b;
 
   /* Root paths are a common special case. */
   svn_boolean_t a_is_root_dir
@@ -1337,16 +1337,13 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   svn_boolean_t b_is_root_dir
     = (path_b[0] == '\0') || ((path_b[0] == '/') && (path_b[1] == '\0'));
 
+  /* Another useful thing to know: Both are txns but not the same txn. */
+  svn_boolean_t different_txn
+    = root_a->is_txn_root && root_b->is_txn_root
+        && strcmp(root_a->txn, root_b->txn);
+
   /* Path from different repository are always unrelated. */
   if (root_a->fs != root_b->fs)
-    {
-      *relation = svn_fs_node_unrelated;
-      return SVN_NO_ERROR;
-    }
-
-  /* Nodes from different transactions are never related. */
-  if (root_a->is_txn_root && root_b->is_txn_root
-      && strcmp(root_a->txn, root_b->txn))
     {
       *relation = svn_fs_node_unrelated;
       return SVN_NO_ERROR;
@@ -1356,7 +1353,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
    * direct the relation is. */
   if (a_is_root_dir && b_is_root_dir)
     {
-      *relation = root_a->rev == root_b->rev
+      *relation = ((root_a->rev == root_b->rev) && !different_txn)
                 ? svn_fs_node_same
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
@@ -1365,21 +1362,35 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   /* We checked for all separations between ID spaces (repos, txn).
    * Now, we can simply test for the ID values themselves. */
   SVN_ERR(get_dag(&node, root_a, path_a, pool));
-  id = svn_fs_fs__dag_get_id(node);
-  rev_item_a = *svn_fs_fs__id_rev_item(id);
-  node_id_a = *svn_fs_fs__id_node_id(id);
+  id_a = svn_fs_fs__dag_get_id(node);
+  node_id_a = *svn_fs_fs__id_node_id(id_a);
 
   SVN_ERR(get_dag(&node, root_b, path_b, pool));
-  id = svn_fs_fs__dag_get_id(node);
-  rev_item_b = *svn_fs_fs__id_rev_item(id);
-  node_id_b = *svn_fs_fs__id_node_id(id);
+  id_b = svn_fs_fs__dag_get_id(node);
+  node_id_b = *svn_fs_fs__id_node_id(id_b);
 
-  if (svn_fs_fs__id_part_eq(&rev_item_a, &rev_item_b))
+  /* Noderevs from different nodes are unrelated. */
+  if (!svn_fs_fs__id_part_eq(&node_id_a, &node_id_b))
+    {
+      *relation = svn_fs_node_unrelated;
+      return SVN_NO_ERROR;
+    }
+
+  /* Noderevs have the same node-ID now. So, they *seem* to be related.
+   *
+   * Special case: Different txns may create the same (txn-local) node ID.
+   * Only when they are committed can they actually be related to others. */
+  if (different_txn && node_id_a.revision == SVN_INVALID_REVNUM)
+    {
+      *relation = svn_fs_node_unrelated;
+      return SVN_NO_ERROR;
+    }
+
+  /* The noderevs are actually related.  Are they the same? */
+  if (svn_fs_fs__id_eq(id_a, id_b))
     *relation = svn_fs_node_same;
-  else if (svn_fs_fs__id_part_eq(&node_id_a, &node_id_b))
-    *relation = svn_fs_node_common_ancestor;
   else
-    *relation = svn_fs_node_unrelated;
+    *relation = svn_fs_node_common_ancestor;
 
   return SVN_NO_ERROR;
 }

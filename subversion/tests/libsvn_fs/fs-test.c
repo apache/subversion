@@ -4339,6 +4339,195 @@ check_related(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
+check_txn_related(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn[3];
+  svn_fs_root_t *root[3];
+  svn_revnum_t youngest_rev = 0;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-check-related",
+                              opts, pool));
+
+  /*** Step I: Build up some state in our repository through a series
+       of commits */
+
+  /* This is the node graph we are testing.  It contains one revision (r1)
+     and two transactions, T1 and T2 - yet uncommitted.
+
+     A is a file that exists in r1 (A-0) and gets modified in both txns.
+     C is a copy of A1 made in both txns.
+     B is a new node created in both txns
+     D is a file that exists in r1 (D-0) and never gets modified.
+
+                 +--A-0--+                  D-0
+                 |       |
+           +-----+       +-----+
+           |     |       |     |
+     B-1   C-T   A-1     A-2   C-1   B-2
+  */
+  /* Revision 1 */
+  SVN_ERR(svn_fs_begin_txn(&txn[0], fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&root[0], txn[0], subpool));
+  SVN_ERR(svn_fs_make_file(root[0], "A", subpool));
+  SVN_ERR(svn_test__set_file_contents(root[0], "A", "1", subpool));
+  SVN_ERR(svn_fs_make_file(root[0], "D", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn[0], subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
+  SVN_ERR(svn_fs_revision_root(&root[0], fs, youngest_rev, pool));
+
+  /* Transaction 1 */
+  SVN_ERR(svn_fs_begin_txn(&txn[1], fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root[1], txn[1], pool));
+  SVN_ERR(svn_test__set_file_contents(root[1], "A", "2", pool));
+  SVN_ERR(svn_fs_copy(root[0], "A", root[1], "C", pool));
+  SVN_ERR(svn_fs_make_file(root[1], "B", pool));
+
+  /* Transaction 2 */
+  SVN_ERR(svn_fs_begin_txn(&txn[2], fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root[2], txn[2], pool));
+  SVN_ERR(svn_test__set_file_contents(root[2], "A", "2", pool));
+  SVN_ERR(svn_fs_copy(root[0], "A", root[2], "C", pool));
+  SVN_ERR(svn_fs_make_file(root[2], "B", pool));
+
+  /*** Step II: Exhaustively verify relationship between all nodes in
+       existence. */
+  {
+    int i, j;
+
+    struct path_rev_t
+    {
+      const char *path;
+      int root;
+    };
+
+    /* Our 16 existing files/revisions. */
+    struct path_rev_t path_revs[8] = {
+      { "A", 0 }, { "A", 1 }, { "A", 2 },
+      { "B", 1 }, { "B", 2 },
+      { "C", 1 }, { "C", 2 },
+      { "D", 0 }
+    };
+
+    int related_matrix[8][8] = {
+      /* A-0 ... D-0 across the top here*/
+      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-0 */
+      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-2 */
+      { 0, 0, 0, 1, 0, 0, 0, 0 }, /* C-1 */
+      { 0, 0, 0, 0, 1, 0, 0, 0 }, /* C-2 */
+      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* B-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* B-2 */
+      { 0, 0, 0, 0, 0, 0, 0, 1 }  /* D-0 */
+    };
+
+    /* Here's the fun part.  Running the tests. */
+    for (i = 0; i < 8; i++)
+      {
+        for (j = 0; j < 8; j++)
+          {
+            struct path_rev_t pr1 = path_revs[i];
+            struct path_rev_t pr2 = path_revs[j];
+            const svn_fs_id_t *id1, *id2;
+            int related = 0;
+            svn_fs_node_relation_t relation;
+
+            svn_pool_clear(subpool);
+
+            /* Get the ID for the first path/revision combination. */
+            SVN_ERR(svn_fs_node_id(&id1, root[pr1.root], pr1.path, subpool));
+
+            /* Get the ID for the second path/revision combination. */
+            SVN_ERR(svn_fs_node_id(&id2, root[pr2.root], pr2.path, subpool));
+
+            /* <exciting> Now, run the relationship check! </exciting> */
+            related = svn_fs_check_related(id1, id2) ? 1 : 0;
+            if (related == related_matrix[i][j])
+              {
+                /* xlnt! */
+              }
+            else if ((! related) && related_matrix[i][j])
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s-%d' to be related to '%s-%d'; it was not",
+                   pr1.path, pr1.root, pr2.path, pr2.root);
+              }
+            else if (related && (! related_matrix[i][j]))
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s-%d' to not be related to '%s-%d'; it was",
+                   pr1.path, pr1.root, pr2.path, pr2.root);
+              }
+
+            /* Asking directly, i.e. without involving the noderev IDs as
+             * an intermediate, should yield the same results. */
+            SVN_ERR(svn_fs_node_relation(&relation, root[pr1.root], pr1.path,
+                                         root[pr2.root], pr2.path, subpool));
+            if (i == j)
+              {
+                /* Identical note. */
+                if (!related || relation != svn_fs_node_same)
+                  {
+                    return svn_error_createf
+                      (SVN_ERR_TEST_FAILED, NULL,
+                      "expected '%s-%d' to be the same as '%s-%d';"
+                      " it was not",
+                      pr1.path, pr1.root, pr2.path, pr2.root);
+                  }
+              }
+            else if (related && relation != svn_fs_node_common_ancestor)
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s-%d' to have a common ancestor with '%s-%d';"
+                   " it had not",
+                   pr1.path, pr1.root, pr2.path, pr2.root);
+              }
+            else if (!related && relation != svn_fs_node_unrelated)
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s-%d' to not be related to '%s-%d'; it was",
+                   pr1.path, pr1.root, pr2.path, pr2.root);
+              }
+          } /* for ... */
+      } /* for ... */
+
+    /* Verify that the noderevs stay the same after their last change.
+       There is only D that is not changed. */
+    for (i = 1; i <= 2; ++i)
+      {
+        svn_fs_node_relation_t relation;
+        svn_pool_clear(subpool);
+
+        /* Query their noderev relationship to the latest change. */
+        SVN_ERR(svn_fs_node_relation(&relation, root[i], "D",
+                                     root[0], "D", subpool));
+
+        /* They shall use the same noderevs */
+        if (relation != svn_fs_node_same)
+          {
+            return svn_error_createf
+              (SVN_ERR_TEST_FAILED, NULL,
+              "expected 'D-%d' to be the same as 'D-0'; it was not", i);
+          }
+      } /* for ... */
+  }
+
+  /* Destroy the subpool. */
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 branch_test(const svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
@@ -6915,6 +7104,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test property and text rep-sharing collision"),
     SVN_TEST_OPTS_PASS(test_internal_txn_props,
                        "test setting and getting internal txn props"),
+    SVN_TEST_OPTS_PASS(check_txn_related,
+                       "test svn_fs_check_related for transactions"),
     SVN_TEST_NULL
   };
 

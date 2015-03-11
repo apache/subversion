@@ -219,12 +219,6 @@ id_compare(const svn_fs_id_t *a,
   if (svn_fs_x__id_eq(&id_a->noderev_id, &id_b->noderev_id))
     return svn_fs_node_same;
 
-  /* Items from different txns are unrelated. */
-  if (   svn_fs_x__is_txn(id_a->noderev_id.change_set)
-      && svn_fs_x__is_txn(id_b->noderev_id.change_set)
-      && id_a->noderev_id.change_set != id_b->noderev_id.change_set)
-    return svn_fs_node_unrelated;
-
   /* Fetch the nodesrevs, compare the IDs of the nodes they belong to and
      clean up any temporaries.  If we can't find one of the noderevs, don't
      get access to the FS etc., report the IDs as "unrelated" as only
