@@ -36,7 +36,7 @@ Status of 1.9.0:
 1.9.0 candidate changes that cannot go into a later 1.9.x:
 ==========================================================
 
- * r1663338, r1663347
+ * r1663338, r1663347, r1663374
    Properly record resolving of individual property conflicts.
    Justification:
      Fixes a few implementation bugs in the resolver code and exposes the
@@ -64,6 +64,7 @@ Status of 1.9.0:
      +0: brane (Backport merge causes new -Wshadow warning at
                 subversion/libsvn_wc/conflicts.c:2360; otherwise +1.
                 By the way, I don't see any API change here.)
+                (without r1663374)
 
 Other candidate changes:
 ========================
