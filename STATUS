@@ -60,11 +60,7 @@ Status of 1.9.0:
      switch to resolving after the update completed yet.
      .
    Votes:
-     +1: rhuijben
-     +0: brane (Backport merge causes new -Wshadow warning at
-                subversion/libsvn_wc/conflicts.c:2360; otherwise +1.
-                By the way, I don't see any API change here.)
-                (without r1663374)
+     +1: rhuijben, brane
 
 Other candidate changes:
 ========================
