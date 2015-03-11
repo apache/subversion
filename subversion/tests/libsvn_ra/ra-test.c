@@ -341,13 +341,14 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
   cbtable->tunnel_baton = &b;
-  SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
-                                        TRUE  /* non_interactive */,
-                                        "jrandom", "rayjandom",
-                                        NULL,
-                                        TRUE  /* no_auth_cache */,
-                                        FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, pool));
+  SVN_ERR(svn_cmdline_create_auth_baton2(&cbtable->auth_baton,
+                                         TRUE  /* non_interactive */,
+                                         "jrandom", "rayjandom",
+                                         NULL,
+                                         TRUE  /* no_auth_cache */,
+                                         FALSE /* trust_server_cert */,
+                                         FALSE, FALSE, FALSE, FALSE,
+                                         NULL, NULL, NULL, pool));
 
   b.last_check = TRUE;
   err = svn_ra_open4(&session, NULL, "svn+foo://localhost/no-repo",
@@ -382,13 +383,14 @@ tunnel_callback_test(const svn_test_opts_t *opts,
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
   cbtable->tunnel_baton = &b;
-  SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
-                                        TRUE  /* non_interactive */,
-                                        "jrandom", "rayjandom",
-                                        NULL,
-                                        TRUE  /* no_auth_cache */,
-                                        FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, pool));
+  SVN_ERR(svn_cmdline_create_auth_baton2(&cbtable->auth_baton,
+                                         TRUE  /* non_interactive */,
+                                         "jrandom", "rayjandom",
+                                         NULL,
+                                         TRUE  /* no_auth_cache */,
+                                         FALSE /* trust_server_cert */,
+                                         FALSE, FALSE, FALSE, FALSE,
+                                         NULL, NULL, NULL, pool));
 
   b.last_check = FALSE;
   err = svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
