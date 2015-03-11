@@ -255,5 +255,4 @@ Approved changes:
      on https://www.sqlite.org/optoverview.html#manctrl
      I (philip) think we cannot release 1.9.0 without this fix.
    Votes:
-     +1: philip, rhuijben, ivan
-     +1: brane (before r1665845, r1665850, r1665852)
+     +1: philip, rhuijben, ivan, brane
