@@ -145,7 +145,7 @@ Other candidate changes:
    Justification:
      Trivial change to generate version resource for application.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1664476, r1664480, r1664481, r1664483, r1664507, r1664520, r1664521, r1664523, r1664526, r1664527
    Automatic create sqlite_stat1 table in wc.db if it doesn't exist.
@@ -158,7 +158,7 @@ Other candidate changes:
      See "Manual Control Of Query Plans Using SQLITE_STAT Tables"
      on https://www.sqlite.org/optoverview.html#manctrl
    Votes:
-     +1: philip
+     +1: philip, brane
      +1: rhuijben (r1664476, r1664480, r1664481, r1664483, r1664507)
      +1: rhuijben (r1664521, r1664523, r1664526, r1664527) after merging the
          r1664531 group. Until then +0.5 as the new test causes a 14 sec
@@ -170,7 +170,7 @@ Other candidate changes:
    Justification:
      Fixes segfault on --disable-http-v2.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1664664, r1664672, r1664674
    Make detection of invalid (newer than HEAD) base revision on commit behave
