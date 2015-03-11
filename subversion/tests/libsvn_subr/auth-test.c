@@ -312,6 +312,143 @@ test_auth_clear(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+struct plaintext_baton_t
+{
+  int nr_calls;
+  svn_boolean_t may_save;
+};
+static svn_error_t *
+plaintext_prompt_cb(svn_boolean_t *may_save_plaintext,
+                    const char *realmstring,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  struct plaintext_baton_t *b = baton;
+  b->nr_calls++;
+  *may_save_plaintext = b->may_save;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_save_cleartext(apr_pool_t *pool)
+{
+  const char *auth_dir;
+  svn_auth_baton_t *baton, *slave;
+  svn_auth_provider_object_t *provider;
+  apr_array_header_t *providers;
+  void *credentials;
+  svn_auth_iterstate_t *state;
+  struct plaintext_baton_t pb = {0, FALSE};
+
+  SVN_ERR(svn_dirent_get_absolute(&auth_dir, "save-cleartext", pool));
+
+  SVN_ERR(svn_io_remove_dir2(auth_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_dir_make(auth_dir, APR_OS_DEFAULT, pool));
+  svn_test_add_dir_cleanup(auth_dir);
+
+  svn_auth_get_simple_provider2(&provider, plaintext_prompt_cb, &pb, pool);
+
+  providers = apr_array_make(pool, 1, sizeof(svn_auth_provider_object_t *));
+  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+  svn_auth_open(&baton, providers, pool);
+
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_DEFAULT_USERNAME, "jrandom");
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_DEFAULT_PASSWORD, "rayjandom");
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_CONFIG_DIR, auth_dir);
+
+  /* Create the auth subdirs. Without these we can't store passwords */
+  SVN_ERR(svn_config_ensure(auth_dir, pool));
+  pb.nr_calls = 0;
+
+  /* Legacy behavior: Don't ask: Save */
+  SVN_ERR(svn_auth_first_credentials(&credentials, &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "realm-1", baton, pool));
+  SVN_TEST_ASSERT(credentials != NULL);
+  SVN_ERR(svn_auth_save_credentials(state, pool));
+  SVN_TEST_ASSERT(pb.nr_calls == 0);
+
+  /* Set to ask */
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         SVN_CONFIG_ASK);
+  SVN_ERR(svn_auth_first_credentials(&credentials, &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "realm-2", baton, pool));
+  SVN_TEST_ASSERT(credentials != NULL);
+  SVN_ERR(svn_auth_save_credentials(state, pool));
+  SVN_TEST_ASSERT(pb.nr_calls == 1);
+
+  /* Set to true */
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         SVN_CONFIG_TRUE);
+  SVN_ERR(svn_auth_first_credentials(&credentials, &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "realm-3", baton, pool));
+  SVN_TEST_ASSERT(credentials != NULL);
+  SVN_ERR(svn_auth_save_credentials(state, pool));
+  SVN_TEST_ASSERT(pb.nr_calls == 1);
+
+  /* Set to false */
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         SVN_CONFIG_FALSE);
+  SVN_ERR(svn_auth_first_credentials(&credentials, &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "realm-4", baton, pool));
+  SVN_TEST_ASSERT(credentials != NULL);
+  SVN_ERR(svn_auth_save_credentials(state, pool));
+  SVN_TEST_ASSERT(pb.nr_calls == 1);
+
+  /* Reset baton...*/
+  svn_auth_set_parameter(baton, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         NULL);
+  pb.nr_calls = 0;
+
+  SVN_ERR(svn_auth__make_session_auth(&slave, baton, NULL, "dummy",
+                                      pool, pool));
+
+
+  /* Standard behavior after make session auth: */
+  SVN_ERR(svn_auth_first_credentials(&credentials, &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "realm-1a", slave, pool));
+  SVN_TEST_ASSERT(credentials != NULL);
+  SVN_ERR(svn_auth_save_credentials(state, pool));
+  SVN_TEST_ASSERT(pb.nr_calls == 1);
+
+  /* Set to ask */
+  svn_auth_set_parameter(slave, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         SVN_CONFIG_ASK);
+  SVN_ERR(svn_auth_first_credentials(&credentials, &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "realm-2a", slave, pool));
+  SVN_TEST_ASSERT(credentials != NULL);
+  SVN_ERR(svn_auth_save_credentials(state, pool));
+  SVN_TEST_ASSERT(pb.nr_calls == 2);
+
+  /* Set to true */
+  svn_auth_set_parameter(slave, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         SVN_CONFIG_TRUE);
+  SVN_ERR(svn_auth_first_credentials(&credentials, &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "realm-3a", slave, pool));
+  SVN_TEST_ASSERT(credentials != NULL);
+  SVN_ERR(svn_auth_save_credentials(state, pool));
+  SVN_TEST_ASSERT(pb.nr_calls == 2);
+
+  /* Set to false */
+  svn_auth_set_parameter(slave, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         SVN_CONFIG_FALSE);
+  SVN_ERR(svn_auth_first_credentials(&credentials, &state,
+                                     SVN_AUTH_CRED_SIMPLE,
+                                     "realm-4a", slave, pool));
+  SVN_TEST_ASSERT(credentials != NULL);
+  SVN_ERR(svn_auth_save_credentials(state, pool));
+  SVN_TEST_ASSERT(pb.nr_calls == 2);
+
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -324,6 +461,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test retrieving platform-specific auth providers"),
     SVN_TEST_PASS2(test_auth_clear,
                    "test svn_auth_clear()"),
+    SVN_TEST_PASS2(test_save_cleartext,
+                   "test save cleartext info"),
     SVN_TEST_NULL
   };
 
