@@ -61,7 +61,9 @@ Status of 1.9.0:
      switch to resolving after the update completed yet.
      .
    Votes:
-     +1: rhuijben, brane
+     +1: rhuijben
+     +1: brane (But there's no API change here, no public headers are
+                modified by the backport merge.)
 
 Other candidate changes:
 ========================
@@ -176,7 +178,7 @@ Other candidate changes:
    Justification:
      User reported problem when testing 1.9 beta.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1665213, r1665259, r1665609
    Fix cases of serf's svn_ra_get_dir2() and svn_ra_get_log2() breaking the
