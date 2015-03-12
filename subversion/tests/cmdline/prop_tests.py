@@ -2783,6 +2783,32 @@ def wc_propop_on_url(sbox):
                                      'pg', 'my:Q', '-r', 'PREV',
                                      sbox.repo_url)
 
+@XFail()
+def prop_conflict_root(sbox):
+  """property conflict on wc root"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('propname', 'propval1', '')
+  sbox.simple_commit()
+  sbox.simple_propset('propname', 'propval2', '')
+  sbox.simple_commit()
+  sbox.simple_update(revision=2)
+  sbox.simple_propset('propname', 'propvalconflict', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    '' : Item(status=' C'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('', status=' C')
+  extra_files = ['dir_conflicts.prej']
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        extra_files=extra_files)
 
 ########################################################################
 # Run the tests
@@ -2834,6 +2860,7 @@ test_list = [ None,
               dir_prop_conflict_details,
               iprops_list_abspath,
               wc_propop_on_url,
+              prop_conflict_root,
              ]
 
 if __name__ == '__main__':
