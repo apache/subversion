@@ -98,7 +98,7 @@ Candidate changes:
    Justification:
      Simple fix that avoids recording invalid data in WC-NG.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1663991
    Fix calculating the repository path after commits of nodes that are
