@@ -163,9 +163,9 @@ Other candidate changes:
  * r1666270, r1666272
    Resolve a segfault when an update introduces a conflict on the update root
    Justification:
-     Regression in 1.9.x.
+     Regression from 1.8.x.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
 Veto-blocked changes:
 =====================
