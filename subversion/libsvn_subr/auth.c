@@ -207,8 +207,7 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
   value = svn_hash_gets(auth_baton->slave_parameters, name);
 
   if (value)
-    return (value == &auth_NULL) ? NULL
-                                : value;
+    return (value == &auth_NULL ? NULL : value);
 
   return svn_hash_gets(auth_baton->parameters, name);
 }
@@ -766,12 +765,10 @@ svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
   * "store-auth-creds = yes" -- they'll get the expected behaviour.
   */
 
-  if (svn_auth_get_parameter(ab,
-                              SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
+  if (svn_auth_get_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
     store_passwords = FALSE;
 
-  if (svn_auth_get_parameter(ab,
-                              SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
+  if (svn_auth_get_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
     store_auth_creds = FALSE;
 
   /* All the svn_auth_set_parameter() calls below this not only affect the
@@ -856,8 +853,7 @@ svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
 
   /* Save auth caching parameters in the auth parameter hash. */
   if (! store_passwords)
-    svn_auth_set_parameter(ab,
-                           SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
   svn_auth_set_parameter(ab,
                          SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
@@ -873,8 +869,7 @@ svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
                          store_pp_plaintext);
 
   if (! store_auth_creds)
-    svn_auth_set_parameter(ab,
-                           SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
   if (server_group)
     svn_auth_set_parameter(ab,
