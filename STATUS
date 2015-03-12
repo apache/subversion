@@ -174,14 +174,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1651963, r1651966, r1651980, r1651997
-   Sequence of moves shouldn't trigger an assertion in the working copy
-   Justification:
-     Users shouldn't be able to trigger assertions by performing normal
-     operations.
-   Votes:
-     +1: rhuijben, philip, stsp
-
  * ^/subversion/branches/1.8.x-r1659867
    Fix reproducable memory corruption and unneeded io errors on editor abort
    Justification:
