@@ -2752,7 +2752,8 @@ close_directory(void *dir_baton,
                                     db->old_revision,
                                     db->new_repos_relpath,
                                     svn_node_dir, svn_node_dir,
-                                    db->parent_baton->deletion_conflicts
+                                    (db->parent_baton
+                                     && db->parent_baton->deletion_conflicts)
                                       ? svn_hash_gets(
                                             db->parent_baton->deletion_conflicts,
                                             db->name)

@@ -2783,7 +2783,6 @@ def wc_propop_on_url(sbox):
                                      'pg', 'my:Q', '-r', 'PREV',
                                      sbox.repo_url)
 
-@XFail()
 def prop_conflict_root(sbox):
   """property conflict on wc root"""
 
