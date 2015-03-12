@@ -139,8 +139,7 @@ Candidate changes:
      while the third revision adds necessary plumbing needed for compilation
      of this group.
    Votes:
-     +1: rhuijben (after the veto on this same group for 1.9.0 is resolved)
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1619380, r1619393, r1660186
    Fix diff of a locally copied directory with props: it showed all props
