@@ -107,7 +107,7 @@ Candidate changes:
      Allows introducing repository paths in the working copy, that don't
      reflect the repository state.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1664531, r1664532, r1545134
    Improve database usage in entries-test and svn_wc__db_read_info()
