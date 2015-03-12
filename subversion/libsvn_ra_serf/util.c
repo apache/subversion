@@ -1793,8 +1793,9 @@ svn_ra_serf__error_on_status(serf_status_line sline,
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);
       case 405:
-        return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
-                                 _("HTTP method is not allowed on '%s'"), path);
+        return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                                 _("HTTP method is not supported on '%s'"),
+                                 path);
       case 409:
         return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
                                  _("'%s' conflicts"), path);
@@ -1833,9 +1834,10 @@ svn_error_t *
 svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler)
 {
   /* Is it a standard error status? */
-  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                       handler->path,
-                                       handler->location));
+  if (handler->sline.code != 405)
+    SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                         handler->path,
+                                         handler->location));
 
   switch (handler->sline.code)
     {
@@ -1848,6 +1850,11 @@ svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler)
                                  _("Path '%s' already exists"),
                                  handler->path);
 
+      case 405:
+        return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                                 _("HTTP method '%s' is not supported"
+                                   " on '%s'"),
+                                 handler->method, handler->path);
       default:
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Unexpected HTTP status %d '%s' on '%s' "
