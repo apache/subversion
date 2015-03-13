@@ -1793,8 +1793,8 @@ svn_ra_serf__error_on_status(serf_status_line sline,
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);
       case 405:
-        return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                                 _("HTTP method is not supported on '%s'"),
+        return svn_error_createf(SVN_ERR_RA_DAV_METHOD_NOT_ALLOWED, NULL,
+                                 _("HTTP method is not allowed on '%s'"),
                                  path);
       case 409:
         return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
@@ -1851,8 +1851,8 @@ svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler)
                                  handler->path);
 
       case 405:
-        return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                                 _("HTTP method '%s' is not supported"
+        return svn_error_createf(SVN_ERR_RA_DAV_METHOD_NOT_ALLOWED, NULL,
+                                 _("The HTTP method '%s' is not allowed"
                                    " on '%s'"),
                                  handler->method, handler->path);
       default:

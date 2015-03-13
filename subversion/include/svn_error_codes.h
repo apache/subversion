@@ -1066,6 +1066,11 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 14,
              "The server state conflicts with the requested preconditions")
 
+  /** @since New in 1.9 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_METHOD_NOT_ALLOWED,
+             SVN_ERR_RA_DAV_CATEGORY_START + 15,
+             "The URL doesn't allow the requested method")
+
   /* ra_local errors */
 
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
@@ -1590,11 +1595,14 @@ SVN_ERROR_START
              "Diff data source modified unexpectedly")
 
   /* libsvn_ra_serf errors */
-  /** @since New in 1.5. */
+  /** @since New in 1.5.
+      @deprecated SSPI now handled by serf rather than libsvn_ra_serf. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED,
              SVN_ERR_RA_SERF_CATEGORY_START + 0,
              "Initialization of SSPI library failed")
-  /** @since New in 1.5. */
+  /** @since New in 1.5.
+      @deprecated Certificate verification now handled by serf rather
+                  than libsvn_ra_serf. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED,
              SVN_ERR_RA_SERF_CATEGORY_START + 1,
              "Server SSL certificate untrusted")
