@@ -887,25 +887,25 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  * @{
  */
 
-/** Defines the possible ways two arbitrary nodes may be related.
+/** Defines the possible ways two arbitrary node-revisions may be related.
  *
  * @since New in 1.9.
  */
 typedef enum svn_fs_node_relation_t
 {
-  /** The nodes are not related.
-   * Nodes from different repositories are always unrelated.
+  /** The node-revisions are not related.
+   * Node-revisions from different repositories are always unrelated.
    * #svn_fs_compare_ids would return the value -1 in this case.
    */
   svn_fs_node_unrelated = 0,
 
-  /** They are the same physical node, i.e. there is no intervening change.
+  /** They are the same node-revision, i.e. there is no intervening change.
    * However, due to lazy copying, there may be part of different parent
    * copies.  #svn_fs_compare_ids would return the value 0 in this case.
    */
   svn_fs_node_same,
 
-  /** The nodes have a common ancestor (which may be one of these nodes)
+  /** The node-revisions have a common ancestor (which may be one of them)
    * but are not the same.
    * #svn_fs_compare_ids would return the value 1 in this case.
    */
