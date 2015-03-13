@@ -170,7 +170,7 @@ Other candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1665195
+ * r1665195, r1666096, r1666379
    Produce an easier to understand error when a server sends a HTTP 405 code
    Justification:
      Just reporting out of date doesn't hint a user that he should
@@ -183,6 +183,7 @@ Veto-blocked changes:
                 the user should switch/relocate to anywhere; if anything,
                 it's hint that she should spam our users@ list with
                 confusing questions. ...)
+               (without r1666096, r1666379)
 
 Approved changes:
 =================
