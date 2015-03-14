@@ -160,13 +160,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1666270, r1666272
-   Resolve a segfault when an update introduces a conflict on the update root
-   Justification:
-     Regression from 1.8.x.
-   Votes:
-     +1: rhuijben, philip
-
  * r1665195, r1666096, r1666379
    Produce an easier to understand error when a server sends a HTTP 405 code
    Justification:
@@ -264,3 +257,10 @@ Approved changes:
      +1: rhuijben, philip
      +1: brane (But there's no API change here, no public headers are
                 modified by the backport merge.)
+
+ * r1666270, r1666272
+   Resolve a segfault when an update introduces a conflict on the update root
+   Justification:
+     Regression from 1.8.x.
+   Votes:
+     +1: rhuijben, philip, brane
