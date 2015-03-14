@@ -168,6 +168,14 @@ Other candidate changes:
    Votes:
      +1: rhuijben, brane
 
+ * r1666690
+   Record skipped tree during merge on the skip root instead of leaves
+   Justification:
+     Resolves a user reported problem in merge handling. Avoids unnecessary
+     mergeinfo recording on multiple leaves when a single ancestor is shadowed.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
