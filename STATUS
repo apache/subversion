@@ -167,23 +167,16 @@ Other candidate changes:
    Votes:
      +1: rhuijben, philip
 
-Veto-blocked changes:
-=====================
-
  * r1665195, r1666096, r1666379
    Produce an easier to understand error when a server sends a HTTP 405 code
    Justification:
      Just reporting out of date doesn't hint a user that he should
      switch/relocate to the location where he is allowed to commit.
    Votes:
-     +1: rhuijben
-     -1: brane (See: http://markmail.org/message/h5xxvaansb64dlkc
-                     http://svn.haxx.se/dev/archive-2015-03/0135.shtml
-                In addition, the new error message is *not* a hint that
-                the user should switch/relocate to anywhere; if anything,
-                it's hint that she should spam our users@ list with
-                confusing questions. ...)
-               (without r1666096, r1666379)
+     +1: rhuijben, brane
+
+Veto-blocked changes:
+=====================
 
 Approved changes:
 =================
