@@ -1935,7 +1935,8 @@ add_directory(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
       svn_boolean_t root;
 
@@ -3119,7 +3120,8 @@ add_file(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
       svn_boolean_t root;
 
