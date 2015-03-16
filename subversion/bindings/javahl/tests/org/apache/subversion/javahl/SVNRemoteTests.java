@@ -937,6 +937,7 @@ public class SVNRemoteTests extends SVNTests
                        0, false, false, false, null,
                        receiver);
         assertEquals(1, receiver.logs.size());
+        assertTrue(receiver.logs.get(0).revprops.size() > 0);
 
         receiver.logs.clear();
         session.reparent(getTestRepoUrl() + "/A");
@@ -945,6 +946,7 @@ public class SVNRemoteTests extends SVNTests
                        0, 0, false, false, false, null,
                        receiver);
         assertEquals(2, receiver.logs.size());
+        assertTrue(receiver.logs.get(0).revprops.size() > 0);
     }
 
     public void testGetLogMissing() throws Exception

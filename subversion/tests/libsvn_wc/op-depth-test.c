@@ -11773,6 +11773,103 @@ test_global_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_global_commit_switched(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "global_commit_switched", opts, pool));
+  {
+    nodes_row_t before[] = {
+      { 0, "",          "normal",       2, "" },
+      { 0, "A",         "normal",       2, "A" },
+      /* A/B is switched... The libsvn_client layer tries to prevent this,
+                             because it has such an unexpected behavior. */
+      { 0, "A/B",       "normal",       2, "N/B" },
+      { 0, "A/B/C",     "normal",       2, "N/B/C" },
+      { 0, "A/B/C/D",   "normal",       2, "N/B/C/D" },
+      { 0, "A/B/C/E",   "normal",       2, "N/B/C/E" },
+      { 2, "A/B",       "normal",       3, "Z/B" },
+      { 2, "A/B/C",     "normal",       3, "Z/B/C" },
+      { 2, "A/B/C/D",   "normal",       3, "Z/B/C/D" },
+      { 2, "A/B/C/E",   "base-deleted", NO_COPY_FROM },
+      /* not-present nodes have an 'uninteresting path',
+         which doesn't have to be as implied by ancestor at same depth */
+      { 2, "A/B/C/F",   "not-present",  3, "ZZ-Z-Z_ZZ_Z_Z" },
+      { 2, "A/B/C/G",   "normal",       3, "Z/B/C/G" },
+      { 2, "A/B/C/G/H", "normal",       3, "Z/B/C/G/H" },
+
+      { 3, "A/B/C",     "normal",       4, "Q/C" },
+      { 3, "A/B/C/D",   "base-deleted", NO_COPY_FROM },
+      { 3, "A/B/C/G",   "normal",       4, "Q/C/G" },
+      { 3, "A/B/C/G/H", "base-deleted", NO_COPY_FROM },
+
+      { 4, "A/B/C/F",   "normal",       NO_COPY_FROM },
+      { 5, "A/B/C/G/H", "normal",       NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(insert_dirs(&b, before));
+    SVN_ERR(verify_db(&b));
+  }
+
+  SVN_ERR(svn_wc__db_global_commit(b.wc_ctx->db,
+                                   sbox_wc_path(&b, "A/B"),
+                                   7, 7, 12, "me", NULL, NULL,
+                                   FALSE, FALSE, NULL, pool));
+
+  {
+    nodes_row_t after[] = {
+      { 0, "",          "normal",       2, "" },
+      { 0, "A",         "normal",       2, "A" },
+      /* The commit is applied as A/B, because the path is calculated from A,
+         and not the shadowed node at A/B. (Fixed in r1663991) */
+      { 0, "A/B",       "normal",       7, "A/B" },
+      { 0, "A/B/C",     "normal",       7, "A/B/C" },
+      { 0, "A/B/C/D",   "normal",       7, "A/B/C/D" },
+      /* Even calculated path of not-present is fixed */
+      { 0, "A/B/C/F",   "not-present",  7, "A/B/C/F" },
+      { 0, "A/B/C/G",   "normal",       7, "A/B/C/G" },
+      { 0, "A/B/C/G/H", "normal",       7, "A/B/C/G/H" },
+
+      /* The higher layers are unaffected */
+      { 3, "A/B/C",     "normal",       4, "Q/C" },
+      { 3, "A/B/C/D",   "base-deleted", NO_COPY_FROM },
+      { 3, "A/B/C/G",   "normal",       4, "Q/C/G" },
+      { 3, "A/B/C/G/H", "base-deleted", NO_COPY_FROM },
+
+      { 4, "A/B/C/F",   "normal",       NO_COPY_FROM },
+      { 5, "A/B/C/G/H", "normal",       NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(verify_db(&b));
+    SVN_ERR(check_db_rows(&b, "", after));
+  }
+
+  SVN_ERR(svn_wc__db_global_commit(b.wc_ctx->db,
+                                   sbox_wc_path(&b, "A/B/C"),
+                                   8, 8, 12, "me", NULL, NULL,
+                                   FALSE, FALSE, NULL, pool));
+
+  {
+    nodes_row_t after[] = {
+      { 0, "",          "normal",       2, "" },
+      { 0, "A",         "normal",       2, "A" },
+      { 0, "A/B",       "normal",       7, "A/B" },
+      /* Base deleted and not-present are now gone */
+      { 0, "A/B/C",     "normal",       8, "A/B/C" },
+      { 0, "A/B/C/G",   "normal",       8, "A/B/C/G" },
+
+      { 4, "A/B/C/F",   "normal",       NO_COPY_FROM },
+      { 5, "A/B/C/G/H", "normal",       NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(verify_db(&b));
+    SVN_ERR(check_db_rows(&b, "", after));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -11987,6 +12084,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(make_copy_and_delete_mixed,
                        "make a copy of a mixed revision tree and del"),
     SVN_TEST_OPTS_PASS(test_global_commit,
+                       "test global commit"),
+    SVN_TEST_OPTS_PASS(test_global_commit_switched,
                        "test global commit"),
     SVN_TEST_NULL
   };

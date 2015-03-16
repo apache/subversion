@@ -746,13 +746,14 @@ svn_test__init_auth_baton(svn_auth_baton_t **ab,
                  SVN_CONFIG_OPTION_PASSWORD_STORES,
                  "windows-cryptoapi");
 
-  SVN_ERR(svn_cmdline_create_auth_baton(ab,
-                                        TRUE  /* non_interactive */,
-                                        "jrandom", "rayjandom",
-                                        NULL,
-                                        TRUE  /* no_auth_cache */,
-                                        FALSE /* trust_server_cert */,
-                                        cfg_config, NULL, NULL, result_pool));
+  SVN_ERR(svn_cmdline_create_auth_baton2(ab,
+                                         TRUE  /* non_interactive */,
+                                         "jrandom", "rayjandom",
+                                         NULL,
+                                         TRUE  /* no_auth_cache */,
+                                         FALSE /* trust_server_cert */,
+                                         FALSE, FALSE, FALSE, FALSE,
+                                         cfg_config, NULL, NULL, result_pool));
 
   return SVN_NO_ERROR;
 }

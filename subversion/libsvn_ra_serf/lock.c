@@ -291,6 +291,7 @@ run_locks(svn_ra_serf__session_t *sess,
                                             ctx->handler->sline.reason);
                     break;
 
+                  case 404:
                   case 409:
                   case 500:
                     if (server_err)

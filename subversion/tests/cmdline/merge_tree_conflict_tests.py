@@ -2087,6 +2087,116 @@ def merge_conflict_details(sbox):
   svntest.actions.run_and_verify_info(expected_info, sbox.ospath('B'),
                                       '--depth', 'infinity')
 
+def merge_obstruction_recording(sbox):
+  "merge obstruction recording"
+
+  sbox.build(empty=True)
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_mkdir('trunk')
+  sbox.simple_mkdir('branches')
+  sbox.simple_commit() #r1
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches/branch',
+                                     '-mCopy') # r2
+
+  sbox.simple_mkdir('trunk/dir')
+  sbox.simple_add_text('The file on trunk\n', 'trunk/dir/file.txt')
+  sbox.simple_commit() #r3
+
+  sbox.simple_update()
+
+  sbox.simple_mkdir('branches/branch/dir')
+  sbox.simple_add_text('The file on branch\n', 'branches/branch/dir/file.txt')
+  sbox.simple_commit() #r4
+
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                      'switch', '^/branches/branch', wc_dir,
+                                      '--ignore-ancestry')
+
+  expected_output = wc.State(wc_dir, {
+    'dir'          : Item(status='  ', treeconflict='C'),
+    'dir/file.txt' : Item(status='  ', treeconflict='A'),
+  })
+  expected_mergeinfo_output = wc.State(wc_dir, {
+    ''             : Item(status=' U'),
+    'dir'          : Item(status=' U'), # Because dir already exists
+  })
+  expected_elision_output = wc.State(wc_dir, {
+  })
+  expected_disk = wc.State('', {
+    'dir/file.txt' : Item(contents="The file on branch\n"),
+    'dir'          : Item(props={'svn:mergeinfo':''}),
+    '.'            : Item(props={'svn:mergeinfo':'/trunk:2-4'}),
+  })
+  expected_status = wc.State(wc_dir, {
+    ''             : Item(status=' M', wc_rev='4'),
+    'dir'          : Item(status=' M', treeconflict='C', wc_rev='4'),
+    'dir/file.txt' : Item(status='  ', wc_rev='4'),
+  })
+  expected_skip = wc.State('', {
+  })
+  svntest.actions.run_and_verify_merge(wc_dir, '1', '4', sbox.repo_url + '/trunk',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=True)
+  expected_info = [
+     {
+      "Path" : re.escape(sbox.ospath('dir')),
+      "Tree conflict": re.escape(
+          'local dir obstruction, incoming dir add upon merge' +
+          ' Source  left: (none) ^/trunk/dir@1' +
+          ' Source right: (dir) ^/trunk/dir@4')
+    },
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('dir'))
+
+  # How should the user handle this conflict?
+  # ### Would be nice if we could just accept mine (leave as is, fix mergeinfo)
+  # ### or accept theirs (delete what is here and insert copy
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'resolve', '--accept=working',
+                                     sbox.ospath('dir'))
+
+  # Redo the skipped merge as record only merge
+  expected_output = [
+    '--- Recording mergeinfo for merge of r4 into \'%s\':\n' % \
+            sbox.ospath('dir'),
+    ' G   %s\n' % sbox.ospath('dir'),
+  ]
+  # ### Why are r1-r3 not recorded?
+  # ### Guess: Because dir's history only exists since r4.
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge', '--record-only',
+                                     sbox.repo_url + '/trunk/dir',
+                                     sbox.ospath('dir'),
+                                     '-c', '1-4')
+
+  expected_disk = wc.State('', {
+    'dir'          : Item(props={'svn:mergeinfo':'/trunk/dir:4'}),
+    'dir/file.txt' : Item(contents="The file on branch\n"),
+    '.'            : Item(props={'svn:mergeinfo':'/trunk:2-4'}),
+  })
+  svntest.actions.verify_disk(wc_dir, expected_disk, check_props=True)
+
+  # Because r1-r3 are not recorded, the mergeinfo is not elided :(
+
+  # Even something like a two url merge wouldn't work, because dir
+  # didn't exist below trunk in r1 either.
+
+  # A resolver action could be smarter though...
+
+
 ########################################################################
 # Run the tests
 
@@ -2118,6 +2228,7 @@ test_list = [ None,
               merge_replace_causes_tree_conflict2,
               merge_replace_on_del_fails,
               merge_conflict_details,
+              merge_obstruction_recording,
              ]
 
 if __name__ == '__main__':

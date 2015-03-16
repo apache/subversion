@@ -74,17 +74,17 @@
 # if _MSC_VER >= 1600
 #   include <stdint.h>
 # else
-    typedef signed char int8_t;
-    typedef unsigned char uint8_t;
-    typedef short int16_t;
-    typedef unsigned short uint16_t;
-    typedef int int32_t;
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef int int32_t;
 # endif
 # if _MSC_VER >= 1800
 #   include <stdbool.h>
 # else
-    typedef unsigned char bool;
-    enum {false, true};
+typedef unsigned char bool;
+enum {false, true};
 # endif
 # ifdef _WIN64
 #   define ssize_t __int64

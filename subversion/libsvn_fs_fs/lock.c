@@ -715,6 +715,7 @@ check_lock(svn_error_t **fs_err,
            const svn_fs_lock_target_t *target,
            struct lock_baton *lb,
            svn_fs_root_t *root,
+           svn_revnum_t youngest_rev,
            apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -751,6 +752,15 @@ check_lock(svn_error_t **fs_err,
   if (SVN_IS_VALID_REVNUM(target->current_rev))
     {
       svn_revnum_t created_rev;
+
+      if (target->current_rev > youngest_rev)
+        {
+          *fs_err = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                      _("No such revision %ld"),
+                                      target->current_rev);
+          return SVN_NO_ERROR;
+        }
+
       SVN_ERR(svn_fs_fs__node_created_rev(&created_rev, root, path,
                                           pool));
 
@@ -856,7 +866,7 @@ lock_body(void *baton, apr_pool_t *pool)
       info.fs_err = SVN_NO_ERROR;
 
       SVN_ERR(check_lock(&info.fs_err, info.path, item->value, lb, root,
-                         iterpool));
+                         youngest, iterpool));
 
       /* If no error occurred while pre-checking, schedule the index updates for
          this path. */

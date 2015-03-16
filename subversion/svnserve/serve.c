@@ -3296,6 +3296,7 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
   authz_baton_t ab;
+  svn_node_kind_t node_kind;
 
   ab.server = b;
   ab.conn = conn;
@@ -3311,15 +3312,18 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
   SVN_ERR(must_have_access(conn, iterpool, b, svn_authz_read,
                            full_path, FALSE));
 
-  if (!SVN_IS_VALID_REVNUM(rev))
-    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->repository->fs, pool));
-
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__get_inherited_props(full_path, rev,
                                                    iterpool)));
 
   /* Fetch the properties and a stream for the contents. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->repository->fs, rev, iterpool));
+  SVN_CMD_ERR(svn_fs_check_path(&node_kind, root, full_path, pool));
+  if (node_kind == svn_node_none)
+    {
+      SVN_CMD_ERR(svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                    _("'%s' path not found"), full_path));
+    }
   SVN_CMD_ERR(get_props(NULL, &inherited_props, &ab, root, full_path, pool));
 
   /* Send successful command response with revision and props. */

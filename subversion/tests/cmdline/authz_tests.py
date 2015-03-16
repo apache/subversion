@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  authz_tests.py:  testing authentication.
+#  authz_tests.py:  testing authorization.
 #
 #  Subversion is a tool for revision control.
 #  See http://subversion.apache.org for more information.
