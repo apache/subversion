@@ -65,6 +65,10 @@ struct log_receiver_baton
 
   /* whether the client can handle encoded binary property values */
   svn_boolean_t encode_binary_props;
+
+  /* Helper variables to force early bucket brigade flushes */
+  int result_count;
+  int next_forced_flush;
 };
 
 
@@ -282,6 +286,33 @@ log_receiver(void *baton,
   SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
                                 "</S:log-item>" DEBUG_CR));
 
+  /* In general APR will flush the bucket every 8 KByte, but log items
+     may not be generated that fast, especially in combination with authz
+     and busy servers. This algorithm makes sure the client gets the first
+     two results very fast (but less efficient), while it gradually removes
+     its performance hit and falls back to the APR standard buffer handling,
+     which streamlines the http processing */
+  lrb->result_count++;
+  if (lrb->result_count == lrb->next_forced_flush)
+    {
+      apr_off_t len = 0;
+      (void)apr_brigade_length(lrb->bb, FALSE, &len);
+
+      if (len != 0)
+        {
+          apr_status_t apr_err = ap_fflush(lrb->output, lrb->bb);
+          if (apr_err)
+            return svn_error_create(apr_err, NULL, NULL);
+
+          if (lrb->output->c->aborted)
+            return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED,
+                                    NULL, NULL);
+        }
+
+      if (lrb->result_count < 2048)
+        lrb->next_forced_flush = lrb->next_forced_flush * 2;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -426,6 +457,9 @@ dav_svn__log_report(const dav_resource *resource,
   lrb.needs_header = TRUE;
   lrb.stack_depth = 0;
   /* lrb.requested_custom_revprops set above */
+
+  lrb.result_count = 0;
+  lrb.next_forced_flush = 1;
 
   /* Our svn_log_entry_receiver_t sends the <S:log-report> header in
      a lazy fashion.  Before writing the first log message, it assures
