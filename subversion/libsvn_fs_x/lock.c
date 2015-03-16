@@ -755,6 +755,7 @@ check_lock(svn_error_t **fs_err,
            const svn_fs_lock_target_t *target,
            lock_baton_t *lb,
            svn_fs_root_t *root,
+           svn_revnum_t youngest_rev,
            apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -791,6 +792,15 @@ check_lock(svn_error_t **fs_err,
   if (SVN_IS_VALID_REVNUM(target->current_rev))
     {
       svn_revnum_t created_rev;
+
+      if (target->current_rev > youngest_rev)
+        {
+          *fs_err = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                      _("No such revision %ld"),
+                                      target->current_rev);
+          return SVN_NO_ERROR;
+        }
+
       SVN_ERR(svn_fs_x__node_created_rev(&created_rev, root, path,
                                          pool));
 
@@ -895,7 +905,8 @@ lock_body(void *baton, apr_pool_t *pool)
       svn_pool_clear(iterpool);
 
       info.path = item->key;
-      SVN_ERR(check_lock(&info.fs_err, info.path, target, lb, root, iterpool));
+      SVN_ERR(check_lock(&info.fs_err, info.path, target, lb, root,
+                         youngest, iterpool));
       info.lock = NULL;
       info.component = NULL;
       APR_ARRAY_PUSH(lb->infos, lock_info_t) = info;

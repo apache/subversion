@@ -472,6 +472,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *props_handler = NULL;
   const char *path;
   struct get_dir_baton_t gdb;
+  svn_error_t *err = SVN_NO_ERROR;
 
   gdb.result_pool = result_pool;
   gdb.is_directory = FALSE;
@@ -542,9 +543,16 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
   if (dirent_handler)
     {
-      SVN_ERR(svn_ra_serf__context_run_wait(&dirent_handler->done,
+      err = svn_error_trace(
+              svn_ra_serf__context_run_wait(&dirent_handler->done,
                                             session,
                                             scratch_pool));
+
+      if (err)
+        {
+          svn_pool_clear(scratch_pool); /* Unregisters outstanding requests */
+          return err;
+        }
 
       if (gdb.supports_deadprop_count == svn_tristate_false
           && session->supports_deadprop_count == svn_tristate_unknown
@@ -571,23 +579,27 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
   if (props_handler)
     {
-      SVN_ERR(svn_ra_serf__context_run_wait(&props_handler->done,
+      err = svn_error_trace(
+              svn_ra_serf__context_run_wait(&props_handler->done,
                                             session,
                                             scratch_pool));
     }
 
   /* And dirent again for the case when we had to send the request again */
-  if (dirent_handler)
+  if (! err && dirent_handler)
     {
-      SVN_ERR(svn_ra_serf__context_run_wait(&dirent_handler->done,
+      err = svn_error_trace(
+              svn_ra_serf__context_run_wait(&dirent_handler->done,
                                             session,
                                             scratch_pool));
     }
 
-  if (gdb.supports_deadprop_count != svn_tristate_unknown)
+  if (!err && gdb.supports_deadprop_count != svn_tristate_unknown)
     session->supports_deadprop_count = gdb.supports_deadprop_count;
 
-  svn_pool_destroy(scratch_pool);
+  svn_pool_destroy(scratch_pool); /* Unregisters outstanding requests */
+
+  SVN_ERR(err);
 
   if (!gdb.is_directory)
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,

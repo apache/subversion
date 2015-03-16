@@ -1935,7 +1935,8 @@ add_directory(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
       svn_boolean_t root;
 
@@ -2752,7 +2753,8 @@ close_directory(void *dir_baton,
                                     db->old_revision,
                                     db->new_repos_relpath,
                                     svn_node_dir, svn_node_dir,
-                                    db->parent_baton->deletion_conflicts
+                                    (db->parent_baton
+                                     && db->parent_baton->deletion_conflicts)
                                       ? svn_hash_gets(
                                             db->parent_baton->deletion_conflicts,
                                             db->name)
@@ -3118,7 +3120,8 @@ add_file(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
       svn_boolean_t root;
 

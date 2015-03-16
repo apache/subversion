@@ -207,8 +207,7 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
   value = svn_hash_gets(auth_baton->slave_parameters, name);
 
   if (value)
-    return (value == &auth_NULL) ? NULL
-                                : value;
+    return (value == &auth_NULL ? NULL : value);
 
   return svn_hash_gets(auth_baton->parameters, name);
 }
@@ -354,7 +353,7 @@ svn_auth_next_credentials(void **credentials,
         {
           SVN_ERR(provider->vtable->first_credentials(
                       &creds, &(state->provider_iter_baton),
-                      provider->provider_baton, auth_baton->parameters,
+                      provider->provider_baton, state->parameters,
                       state->realmstring, auth_baton->pool));
           state->got_first = TRUE;
         }
@@ -392,19 +391,17 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
   svn_auth_provider_object_t *provider;
   svn_boolean_t save_succeeded = FALSE;
   const char *no_auth_cache;
-  svn_auth_baton_t *auth_baton;
   void *creds;
 
   if (! state || state->table->providers->nelts <= state->provider_idx)
     return SVN_NO_ERROR;
 
-  auth_baton = state->auth_baton;
   creds = svn_hash_gets(state->auth_baton->creds_cache, state->cache_key);
   if (! creds)
     return SVN_NO_ERROR;
 
   /* Do not save the creds if SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
-  no_auth_cache = svn_hash_gets(auth_baton->parameters,
+  no_auth_cache = svn_hash_gets(state->parameters,
                                 SVN_AUTH_PARAM_NO_AUTH_CACHE);
   if (no_auth_cache)
     return SVN_NO_ERROR;
@@ -417,7 +414,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
     SVN_ERR(provider->vtable->save_credentials(&save_succeeded,
                                                creds,
                                                provider->provider_baton,
-                                               auth_baton->parameters,
+                                               state->parameters,
                                                state->realmstring,
                                                pool));
   if (save_succeeded)
@@ -433,7 +430,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
       if (provider->vtable->save_credentials)
         SVN_ERR(provider->vtable->save_credentials(&save_succeeded, creds,
                                                    provider->provider_baton,
-                                                   auth_baton->parameters,
+                                                   state->parameters,
                                                    state->realmstring,
                                                    pool));
 
@@ -768,12 +765,10 @@ svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
   * "store-auth-creds = yes" -- they'll get the expected behaviour.
   */
 
-  if (svn_auth_get_parameter(ab,
-                              SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
+  if (svn_auth_get_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
     store_passwords = FALSE;
 
-  if (svn_auth_get_parameter(ab,
-                              SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
+  if (svn_auth_get_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
     store_auth_creds = FALSE;
 
   /* All the svn_auth_set_parameter() calls below this not only affect the
@@ -858,8 +853,7 @@ svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
 
   /* Save auth caching parameters in the auth parameter hash. */
   if (! store_passwords)
-    svn_auth_set_parameter(ab,
-                           SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
   svn_auth_set_parameter(ab,
                          SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
@@ -875,8 +869,7 @@ svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
                          store_pp_plaintext);
 
   if (! store_auth_creds)
-    svn_auth_set_parameter(ab,
-                           SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
   if (server_group)
     svn_auth_set_parameter(ab,

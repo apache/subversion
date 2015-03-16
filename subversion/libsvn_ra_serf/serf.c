@@ -600,7 +600,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 #endif
 
   err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url,
-                                            result_pool, scratch_pool);
+                                           result_pool, scratch_pool);
 
   /* serf should produce a usable error code instead of APR_EGENERAL */
   if (err && err->apr_err == APR_EGENERAL)

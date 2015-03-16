@@ -3849,8 +3849,8 @@ def copy_pin_externals_wc_mixed_revisions(sbox):
                                      '--pin-externals')
 
 @Issue(4558)
-def copy_pin_externals_whitepace_dir(sbox):
-  "copy --pin-externals with whitepace dir"
+def copy_pin_externals_whitespace_dir(sbox):
+  "copy --pin-externals with whitespace dir"
 
   sbox.build(empty=True)
   repo_url = sbox.repo_url
@@ -4226,7 +4226,7 @@ test_list = [ None,
               copy_pin_externals_wc_local_mods,
               copy_pin_externals_wc_switched_subtrees,
               copy_pin_externals_wc_mixed_revisions,
-              copy_pin_externals_whitepace_dir,
+              copy_pin_externals_whitespace_dir,
               nested_notification,
               file_external_to_normal_file,
              ]

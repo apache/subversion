@@ -365,14 +365,21 @@ svn_fs_fs__id_check_related(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  /* If both node_ids start with _ and they have differing transaction
-     IDs, then it is impossible for them to be related. */
-  if (id_a->private_id.node_id.revision == SVN_INVALID_REVNUM)
+  /* If both node_ids have been created within _different_ transactions
+     (and are still uncommitted), then it is impossible for them to be
+     related.
+
+     Due to our txn-local temporary IDs, however, they might have been
+     given the same temporary node ID.  We need to detect that case.
+   */
+  if (   id_a->private_id.node_id.revision == SVN_INVALID_REVNUM
+      && id_b->private_id.node_id.revision == SVN_INVALID_REVNUM)
     {
-      if (   !svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
-                                    &id_b->private_id.txn_id)
-          || !svn_fs_fs__id_txn_used(&id_a->private_id.txn_id))
+      if (!svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
+                                 &id_b->private_id.txn_id))
         return FALSE;
+
+      /* At this point, matching node_ids implies relatedness. */
     }
 
   return svn_fs_fs__id_part_eq(&id_a->private_id.node_id,

@@ -1450,6 +1450,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(peg_revision));
   SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   err = session->vtable->get_locations(session, locations, path,
                                        peg_revision, location_revisions, pool);
@@ -1617,6 +1618,8 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
                            void *edit_baton,
                            apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision)
+                 && SVN_IS_VALID_REVNUM(low_water_mark));
   return session->vtable->replay(session, revision, low_water_mark,
                                  text_deltas, editor, edit_baton, pool);
 }
@@ -1684,7 +1687,14 @@ svn_ra_replay_range(svn_ra_session_t *session,
                     void *replay_baton,
                     apr_pool_t *pool)
 {
-  svn_error_t *err =
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start_revision)
+                 && SVN_IS_VALID_REVNUM(end_revision)
+                 && start_revision <= end_revision
+                 && SVN_IS_VALID_REVNUM(low_water_mark));
+
+  err =
     session->vtable->replay_range(session, start_revision, end_revision,
                                   low_water_mark, text_deltas,
                                   revstart_func, revfinish_func,

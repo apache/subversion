@@ -59,11 +59,12 @@ static apr_threadkey_t *error_line_key = NULL;
 /* No-op destructor for apr_threadkey_private_create(). */
 static void null_threadkey_dtor(void *stuff) {}
 
-/* Handler for svn_atomic__init_once used by svn_error__locate to
-   initialize the thread-local error location storage.
-   This function will never return an error. */
-static svn_error_t *
-locate_init_once(void *ignored_baton, apr_pool_t *ignored_pool)
+/* Implements svn_atomic__str_init_func_t.
+   Callback used by svn_error__locate to initialize the thread-local
+   error location storage.  This function will never return an
+   error string. */
+static const char *
+locate_init_once(void *ignored_baton)
 {
   /* Strictly speaking, this is a memory leak, since we're creating an
      unmanaged, top-level pool and never destroying it.  We do this
@@ -86,7 +87,7 @@ locate_init_once(void *ignored_baton, apr_pool_t *ignored_pool)
   if (status != APR_SUCCESS)
     error_file_key = error_line_key = NULL;
 
-  return SVN_NO_ERROR;
+  return NULL;
 }
 #  endif  /* APR_HAS_THREADS */
 
@@ -124,9 +125,7 @@ svn_error__locate(const char *file, long line)
 #ifdef SVN_DEBUG
 #  if APR_HAS_THREADS
   static volatile svn_atomic_t init_status = 0;
-  svn_error_clear(svn_atomic__init_once(&init_status,
-                                        locate_init_once,
-                                        NULL, NULL));
+  svn_atomic__init_once_no_error(&init_status, locate_init_once, NULL);
 
   if (error_file_key && error_line_key)
     {
