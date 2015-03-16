@@ -196,6 +196,14 @@ Other candidate changes:
      that would be 0.2 seconds.
    Votes:
      +1: rhuijben
+     -0.5: julianfoad (can make a huge improvement to the user experience, but:
+                       figures given in justification are for a 1.8 server but
+                       a 1.9 server should have vastly quicker log computation;
+                       concerns about detrimental effect on fast-compute,
+                       network-bound systems; not yet tested with compression
+                       and other output modules that add their own buffering;
+                       counting-based design doesn't semantically match the
+                       user's requirement which is for a limited time delay)
 
  * r1666832
    Resolve an assertion on a bad update report involving incomplete status
