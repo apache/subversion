@@ -688,7 +688,7 @@ typedef struct context_saver_t {
   const char **data; /* const char *data[context_size] */
   apr_size_t *len;   /* apr_size_t len[context_size] */
   apr_size_t next_slot;
-  apr_size_t total_written;
+  apr_ssize_t total_writes;
 } context_saver_t;
 
 
@@ -701,7 +701,7 @@ context_saver_stream_write(void *baton,
   cs->data[cs->next_slot] = data;
   cs->len[cs->next_slot] = *len;
   cs->next_slot = (cs->next_slot + 1) % cs->context_size;
-  cs->total_written++;
+  cs->total_writes++;
   return SVN_NO_ERROR;
 }
 
@@ -977,7 +977,7 @@ output_conflict_with_context(void *baton,
      trailing context)?  If so, flush it. */
   if (btn->output_stream == btn->context_saver->stream)
     {
-      if (btn->context_saver->total_written > btn->context_size)
+      if (btn->context_saver->total_writes > btn->context_size)
         SVN_ERR(svn_stream_puts(btn->real_output_stream, "@@\n"));
       SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
     }
