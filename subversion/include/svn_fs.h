@@ -361,22 +361,22 @@ typedef enum svn_fs_upgrade_notify_action_t
 /** The type of an upgrade notification function.  @a number is specifc
  * to @a action (see #svn_fs_upgrade_notify_action_t); @a action is the
  * type of action being performed.  @a baton is the corresponding baton
- * for the notification function, and @a pool can be used for temporary
- * allocations, but will be cleared between invocations.
+ * for the notification function, and @a scratch_pool can be used for
+ * temporary allocations, but will be cleared between invocations.
  *
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_fs_upgrade_notify_t)(void *baton,
                                       apr_uint64_t number,
                                       svn_fs_upgrade_notify_action_t action,
-                                      apr_pool_t *pool);
+                                      apr_pool_t *scratch_pool);
 
 /**
  * Upgrade the Subversion filesystem located in the directory @a path
  * to the latest version supported by this library.  Return
  * #SVN_ERR_FS_UNSUPPORTED_UPGRADE and make no changes to the
- * filesystem if the requested upgrade is not supported.  Use @a pool
- * for necessary allocations.
+ * filesystem if the requested upgrade is not supported.  Use
+ * @a scratch_pool for temporary allocations.
  *
  * The optional @a notify_func callback is only a general feedback that
  * the operation is still in process but may be called in e.g. random shard
@@ -399,7 +399,7 @@ svn_fs_upgrade2(const char *path,
                 void *notify_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
-                apr_pool_t *pool);
+                apr_pool_t *scratch_pool);
 
 /**
  * Like svn_fs_upgrade2 but with notify_func, notify_baton, cancel_func
@@ -486,13 +486,14 @@ svn_fs_delete_fs(const char *path,
 
 /** The type of a hotcopy notification function.  @a start_revision and
  * @a end_revision indicate the copied revision range.  @a baton is the
- * corresponding baton for the notification function, and @a pool can be
- * used for temporary allocations, but will be cleared between invocations.
+ * corresponding baton for the notification function, and @a scratch_pool
+ * can be used for temporary allocations, but will be cleared between
+ * invocations.
  */
 typedef void (*svn_fs_hotcopy_notify_t)(void *baton,
                                         svn_revnum_t start_revision,
                                         svn_revnum_t end_revision,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *scratch_pool);
 
 /**
  * Copy a possibly live Subversion filesystem from @a src_path to
@@ -1731,7 +1732,7 @@ svn_fs_node_id(const svn_fs_id_t **id_p,
  * are related and return the result in @a relation.  There is no restriction
  * concerning the roots: They may refer to different repositories, be in
  * arbitrary revision order and any of them may pertain to a transaction.
- * @a pool is used for temporary allocations.
+ * @a scratch_pool is used for temporary allocations.
  *
  * @note Paths from different svn_fs_t will be reported as unrelated even
  * if the underlying physical repository is the same.
@@ -1744,7 +1745,7 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      const char *path_a,
                      svn_fs_root_t *root_b,
                      const char *path_b,
-                     apr_pool_t *pool);
+                     apr_pool_t *scratch_pool);
 
 /** Set @a *revision to the revision in which @a path under @a root was
  * created.  Use @a pool for any temporary allocations.  @a *revision will
@@ -1834,7 +1835,7 @@ svn_fs_change_node_prop(svn_fs_root_t *root,
  * differ from those at @a path2 under @a root2, or set it to #FALSE if they
  * are the same.  Both paths must exist under their respective roots, and
  * both roots must be in the same filesystem.
- * Do any necessary temporary allocation in @a pool.
+ * Do any necessary temporary allocation in @a scratch_pool.
  *
  * @since New in 1.9.
  */
@@ -1844,7 +1845,7 @@ svn_fs_props_different(svn_boolean_t *different_p,
                        const char *path1,
                        svn_fs_root_t *root2,
                        const char *path2,
-                       apr_pool_t *pool);
+                       apr_pool_t *scratch_pool);
 
 
 /** Determine if the properties of two path/root combinations are different.
@@ -2389,7 +2390,7 @@ svn_fs_apply_text(svn_stream_t **contents_p,
  * @a root1 differ from those at @a path2 under @a root2, or set it to
  * #FALSE if they are the same.  Both paths must exist under their
  * respective roots, and both roots must be in the same filesystem.
- * Do any necessary temporary allocation in @a pool.
+ * Do any necessary temporary allocation in @a scratch_pool.
  *
  * @since New in 1.9.
  */
@@ -2399,7 +2400,7 @@ svn_fs_contents_different(svn_boolean_t *different_p,
                           const char *path1,
                           svn_fs_root_t *root2,
                           const char *path2,
-                          apr_pool_t *pool);
+                          apr_pool_t *scratch_pool);
 
 /** Check if the contents of two root/path combos have changed.  In
  * contrast to #svn_fs_contents_different, we only perform a quick test
