@@ -1097,7 +1097,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * merge: rename 'automatic merge' to 'complete merge' (r1491432)
     * mergeinfo: reduce network usage for '--show-revs' (r1492005)
     * ra_serf: improve http status handling (r1495104)
-    * merge: avoid unneeded ra session (r1493475)
+    * merge: avoid unneeded RA session (r1493475)
     * merge: reduce network usage (r1478987)
     * merge: remove duplicated ancestry check (r1493424, r1495597)
     * ra_serf: fix 'Accept-Encoding' header for IIS interoperability (r1497551)
