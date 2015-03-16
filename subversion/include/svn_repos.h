@@ -629,14 +629,15 @@ svn_fs_t *
 svn_repos_fs(svn_repos_t *repos);
 
 /** Return the type of filesystem associated with repository object
- * @a repos allocated in @a pool.
+ * @a repos allocated in @a result_pool.
  *
  * @see #svn_fs_backend_names
  *
  * @since New in 1.9.
  */
 const char *
-svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool);
+svn_repos_fs_type(svn_repos_t *repos,
+                  apr_pool_t *result_pool);
 
 /** Make a hot copy of the Subversion repository found at @a src_path
  * to @a dst_path.
@@ -662,6 +663,8 @@ svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool);
  * The optional @a cancel_func callback will be invoked with
  * @a cancel_baton as usual to allow the user to preempt this potentially
  * lengthy operation.
+ * 
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
@@ -674,7 +677,7 @@ svn_repos_hotcopy3(const char *src_path,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
-                   apr_pool_t *pool);
+                   apr_pool_t *scratch_pool);
 
 /**
  * Like svn_repos_hotcopy3(), but with @a notify_func and @a notify_baton
