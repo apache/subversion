@@ -4359,15 +4359,17 @@ check_txn_related(const svn_test_opts_t *opts,
      and two transactions, T1 and T2 - yet uncommitted.
 
      A is a file that exists in r1 (A-0) and gets modified in both txns.
-     C is a copy of A1 made in both txns.
+     C is a copy of A-0 made in both txns.
      B is a new node created in both txns
      D is a file that exists in r1 (D-0) and never gets modified.
+     / is the root folder, touched in r0, r1 and both txns (root-0)
+     R is a copy of the root-0 made in both txns.
 
-                 +--A-0--+                  D-0
-                 |       |
-           +-----+       +-----+
-           |     |       |     |
-     B-1   C-T   A-1     A-2   C-1   B-2
+                 +--A-0--+                D-0           +-root-0-+
+                 |       |                              |        |
+           +-----+       +-----+                 +------+        +------+
+           |     |       |     |                 |      |        |      |
+     B-1   C-1   A-1     A-2   C-1   B-2         R-1    root-1   root-2 R-2
   */
   /* Revision 1 */
   SVN_ERR(svn_fs_begin_txn(&txn[0], fs, youngest_rev, subpool));
@@ -4385,6 +4387,7 @@ check_txn_related(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&root[1], txn[1], pool));
   SVN_ERR(svn_test__set_file_contents(root[1], "A", "2", pool));
   SVN_ERR(svn_fs_copy(root[0], "A", root[1], "C", pool));
+  SVN_ERR(svn_fs_copy(root[0], "", root[1], "R", pool));
   SVN_ERR(svn_fs_make_file(root[1], "B", pool));
 
   /* Transaction 2 */
@@ -4392,11 +4395,13 @@ check_txn_related(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&root[2], txn[2], pool));
   SVN_ERR(svn_test__set_file_contents(root[2], "A", "2", pool));
   SVN_ERR(svn_fs_copy(root[0], "A", root[2], "C", pool));
+  SVN_ERR(svn_fs_copy(root[0], "", root[2], "R", pool));
   SVN_ERR(svn_fs_make_file(root[2], "B", pool));
 
   /*** Step II: Exhaustively verify relationship between all nodes in
        existence. */
   {
+    enum { NODE_COUNT = 13 };
     int i, j;
 
     struct path_rev_t
@@ -4406,29 +4411,36 @@ check_txn_related(const svn_test_opts_t *opts,
     };
 
     /* Our 16 existing files/revisions. */
-    struct path_rev_t path_revs[8] = {
+    struct path_rev_t path_revs[NODE_COUNT] = {
       { "A", 0 }, { "A", 1 }, { "A", 2 },
       { "B", 1 }, { "B", 2 },
       { "C", 1 }, { "C", 2 },
-      { "D", 0 }
+      { "D", 0 },
+      { "/", 0 }, { "/", 1 }, { "/", 2 },
+      { "R", 1 }, { "R", 2 }
     };
 
-    int related_matrix[8][8] = {
-      /* A-0 ... D-0 across the top here*/
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-0 */
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-1 */
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-2 */
-      { 0, 0, 0, 1, 0, 0, 0, 0 }, /* C-1 */
-      { 0, 0, 0, 0, 1, 0, 0, 0 }, /* C-2 */
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* B-1 */
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* B-2 */
-      { 0, 0, 0, 0, 0, 0, 0, 1 }  /* D-0 */
+    int related_matrix[NODE_COUNT][NODE_COUNT] = {
+      /* A-0 ... R-2 across the top here*/
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-0 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-2 */
+      { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* C-1 */
+      { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 }, /* C-2 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* B-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* B-2 */
+      { 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 }, /* D-0 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-0 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-1 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-2 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* R-1 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* R-2 */
     };
 
     /* Here's the fun part.  Running the tests. */
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < NODE_COUNT; i++)
       {
-        for (j = 0; j < 8; j++)
+        for (j = 0; j < NODE_COUNT; j++)
           {
             struct path_rev_t pr1 = path_revs[i];
             struct path_rev_t pr2 = path_revs[j];
