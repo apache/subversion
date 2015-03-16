@@ -822,13 +822,11 @@ make_trailing_context_printer(merge_output_baton_t *btn)
 
 
 static svn_error_t *
-output_merge_token_range(apr_size_t *lines_printed_p,
-                         merge_output_baton_t *btn,
+output_merge_token_range(merge_output_baton_t *btn,
                          int idx, apr_off_t first,
                          apr_off_t length)
 {
   apr_array_header_t *tokens = btn->sources[idx].tokens;
-  apr_size_t lines_printed = 0;
 
   for (; length > 0 && first < tokens->nelts; length--, first++)
     {
@@ -838,11 +836,7 @@ output_merge_token_range(apr_size_t *lines_printed_p,
       /* Note that the trailing context printer assumes that
          svn_stream_write is called exactly once per line. */
       SVN_ERR(svn_stream_write(btn->output_stream, token->data, &len));
-      lines_printed++;
     }
-
-  if (lines_printed_p)
-    *lines_printed_p = lines_printed;
 
   return SVN_NO_ERROR;
 }
@@ -866,7 +860,7 @@ output_common_modified(void *baton,
                        apr_off_t modified_start, apr_off_t modified_length,
                        apr_off_t latest_start, apr_off_t latest_length)
 {
-  return output_merge_token_range(NULL, baton, 1/*modified*/,
+  return output_merge_token_range(baton, 1/*modified*/,
                                   modified_start, modified_length);
 }
 
@@ -876,7 +870,7 @@ output_latest(void *baton,
               apr_off_t modified_start, apr_off_t modified_length,
               apr_off_t latest_start, apr_off_t latest_length)
 {
-  return output_merge_token_range(NULL, baton, 2/*latest*/,
+  return output_merge_token_range(baton, 2/*latest*/,
                                   latest_start, latest_length);
 }
 
@@ -920,26 +914,26 @@ output_conflict(void *baton,
       style == svn_diff_conflict_display_modified_original_latest)
     {
       SVN_ERR(output_merge_marker(btn, 1/*modified*/));
-      SVN_ERR(output_merge_token_range(NULL, btn, 1/*modified*/,
+      SVN_ERR(output_merge_token_range(btn, 1/*modified*/,
                                        modified_start, modified_length));
 
       if (style == svn_diff_conflict_display_modified_original_latest)
         {
           SVN_ERR(output_merge_marker(btn, 0/*original*/));
-          SVN_ERR(output_merge_token_range(NULL, btn, 0/*original*/,
+          SVN_ERR(output_merge_token_range(btn, 0/*original*/,
                                            original_start, original_length));
         }
 
       SVN_ERR(output_merge_marker(btn, 2/*separator*/));
-      SVN_ERR(output_merge_token_range(NULL, btn, 2/*latest*/,
+      SVN_ERR(output_merge_token_range(btn, 2/*latest*/,
                                        latest_start, latest_length));
       SVN_ERR(output_merge_marker(btn, 3/*latest (end)*/));
     }
   else if (style == svn_diff_conflict_display_modified)
-      SVN_ERR(output_merge_token_range(NULL, btn, 1/*modified*/,
+      SVN_ERR(output_merge_token_range(btn, 1/*modified*/,
                                        modified_start, modified_length));
   else if (style == svn_diff_conflict_display_latest)
-      SVN_ERR(output_merge_token_range(NULL, btn, 2/*latest*/,
+      SVN_ERR(output_merge_token_range(btn, 2/*latest*/,
                                        latest_start, latest_length));
   else /* unknown style */
     SVN_ERR_MALFUNCTION();
@@ -995,17 +989,17 @@ output_conflict_with_context(void *baton,
   SVN_ERR(output_conflict_with_context_marker(btn, btn->markers[1],
                                               modified_start,
                                               modified_length));
-  SVN_ERR(output_merge_token_range(NULL, btn, 1/*modified*/,
+  SVN_ERR(output_merge_token_range(btn, 1/*modified*/,
                                    modified_start, modified_length));
 
   SVN_ERR(output_conflict_with_context_marker(btn, btn->markers[0],
                                               original_start,
                                               original_length));
-  SVN_ERR(output_merge_token_range(NULL, btn, 0/*original*/,
+  SVN_ERR(output_merge_token_range(btn, 0/*original*/,
                                    original_start, original_length));
 
   SVN_ERR(output_merge_marker(btn, 2/*separator*/));
-  SVN_ERR(output_merge_token_range(NULL, btn, 2/*latest*/,
+  SVN_ERR(output_merge_token_range(btn, 2/*latest*/,
                                    latest_start, latest_length));
   SVN_ERR(output_conflict_with_context_marker(btn, btn->markers[3],
                                               latest_start,
