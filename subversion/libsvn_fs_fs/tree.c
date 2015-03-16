@@ -1379,7 +1379,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   /* Noderevs have the same node-ID now. So, they *seem* to be related.
    *
    * Special case: Different txns may create the same (txn-local) node ID.
-   * Only when they are committed can they actually be related to others. */
+   * These are not related to each other, nor to any other node ID so far. */
   if (different_txn && node_id_a.revision == SVN_INVALID_REVNUM)
     {
       *relation = svn_fs_node_unrelated;
