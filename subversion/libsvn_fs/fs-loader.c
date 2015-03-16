@@ -561,19 +561,19 @@ svn_fs_upgrade2(const char *path,
                 void *notify_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
 
-  SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = fs_new(NULL, pool);
+  SVN_ERR(fs_library_vtable(&vtable, path, scratch_pool));
+  fs = fs_new(NULL, scratch_pool);
 
   SVN_ERR(vtable->upgrade_fs(fs, path,
                              notify_func, notify_baton,
                              cancel_func, cancel_baton,
                              common_pool_lock,
-                             pool, common_pool));
+                             scratch_pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1141,7 +1141,7 @@ svn_error_t *
 svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      svn_fs_root_t *root_a, const char *path_a,
                      svn_fs_root_t *root_b, const char *path_b,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   /* Different repository types? */
   if (root_a->fs != root_b->fs)
@@ -1150,9 +1150,10 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_trace(root_a->vtable->node_relation(relation, root_a,
-                                                       path_a, root_b,
-                                                       path_b, pool));
+  return svn_error_trace(root_a->vtable->node_relation(relation,
+                                                       root_a, path_a,
+                                                       root_b, path_b,
+                                                       scratch_pool));
 }
 
 svn_error_t *
@@ -1207,12 +1208,12 @@ svn_fs_change_node_prop(svn_fs_root_t *root, const char *path,
 svn_error_t *
 svn_fs_props_different(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                        const char *path1, svn_fs_root_t *root2,
-                       const char *path2, apr_pool_t *pool)
+                       const char *path2, apr_pool_t *scratch_pool)
 {
   return svn_error_trace(root1->vtable->props_changed(changed_p,
                                                       root1, path1,
                                                       root2, path2,
-                                                      TRUE, pool));
+                                                      TRUE, scratch_pool));
 }
 
 svn_error_t *
@@ -1484,12 +1485,13 @@ svn_fs_apply_text(svn_stream_t **contents_p, svn_fs_root_t *root,
 svn_error_t *
 svn_fs_contents_different(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                           const char *path1, svn_fs_root_t *root2,
-                          const char *path2, apr_pool_t *pool)
+                          const char *path2, apr_pool_t *scratch_pool)
 {
   return svn_error_trace(root1->vtable->contents_changed(changed_p,
                                                          root1, path1,
                                                          root2, path2,
-                                                         TRUE, pool));
+                                                         TRUE,
+                                                         scratch_pool));
 }
 
 svn_error_t *
