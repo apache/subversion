@@ -918,12 +918,10 @@ test_binary_file_conflict(const svn_test_opts_t *opts,
   const apr_array_header_t *conflicts;
   svn_wc_conflict_description2_t *desc;
 
-  svn_test__enable_sleep_for_timestamps(pool);
-
   SVN_ERR(svn_test__sandbox_create(&sbox, "test_binary_file_conflict", opts, pool));
 
   /* Create and add a binary file. */
-  SVN_ERR(sbox_file_write(&sbox, "binary-file", "\xff\xff\xff\xff\xff\xff"));
+  SVN_ERR(sbox_file_write(&sbox, "binary-file", "\xff\xff"));
   SVN_ERR(sbox_wc_add(&sbox, "binary-file"));
   SVN_ERR(sbox_wc_propset(&sbox, SVN_PROP_MIME_TYPE,
                           "application/octet-stream", "binary-file"));
@@ -935,7 +933,7 @@ test_binary_file_conflict(const svn_test_opts_t *opts,
 
   /* Update back to r1, make a conflicting change to binary file. */
   SVN_ERR(sbox_wc_update(&sbox, "binary-file", 1));
-  SVN_ERR(sbox_file_write(&sbox, "binary-file", "\xfd\xfd\xfd\xfd\xfd\xfd"));
+  SVN_ERR(sbox_file_write(&sbox, "binary-file", "\xfd\xfd\xfd\xfd"));
 
   /* Update to HEAD and ensure the conflict is marked as binary. */
   SVN_ERR(sbox_wc_update(&sbox, "binary-file", 2));
@@ -946,8 +944,6 @@ test_binary_file_conflict(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(conflicts->nelts == 1);
   desc = APR_ARRAY_IDX(conflicts, 0, svn_wc_conflict_description2_t *);
   SVN_TEST_ASSERT(desc->is_binary);
-
-  svn_test__disable_sleep_for_timestamps(pool);
 
   return SVN_NO_ERROR;
 }
