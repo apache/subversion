@@ -31,18 +31,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben, brane
 
- * r1663671
-   Improve obstructing working copy detection in the update editor
-   Justification:
-     Avoids doing unrecoverable damage to wc.db on invalid editor
-     operations in cases where that isn't necessary. Github's
-     Subversion compatibility triggers this problem in some sparse
-     working copy scenarios.
-   Notes:
-     This is not a regression against 1.8.x.
-   Votes:
-     +1: rhuijben
-
  * r1663791
    Trivial typo fix in error message.
    Justification:
@@ -194,7 +182,7 @@ Other candidate changes:
                        counting-based design doesn't semantically match the
                        user's requirement which is for a limited time delay)
 
- * r1666832
+ * r1663671, r1666832
    Resolve an assertion on a bad update report involving incomplete status
    Justification:
      The tree conflict detection logic in the update editor wasn't
