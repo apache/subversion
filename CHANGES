@@ -714,6 +714,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.12
     * svnadmin load: tolerate invalid mergeinfo at r0 (r1643074, issue #4476)  
     * svnadmin load: strip references to r1 from mergeinfo (issue #4538)
     * svnsync: strip any r0 references from mergeinfo (issue #4476)
+    * fsfs: reduce memory consumption when operating on dag nodes (r1655651)
+    * reject invalid get-location-segments requests in mod_dav_svn and
+      svnserve (r1667233)
+    * mod_dav_svn: reject invalid txnprop change requests (r1667235)
 
   - Client-side and server-side bugfixes:
     * fix undefined behaviour in string buffer routines (r1650834)
@@ -1510,6 +1514,11 @@ Version 1.7.20
 http://svn.apache.org/repos/asf/subversion/tags/1.7.19
 
  User-visible changes:
+  - Server-side bugfixes:
+    * reject invalid get-location-segments requests in mod_dav_svn and
+      svnserve (r1667233)
+    * mod_dav_svn: reject invalid txnprop change requests (r1667235)
+
   - Client-side and server-side bugfixes:
     * properly duplicate svn error objects (r1651759)
 
