@@ -2506,9 +2506,30 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   abs_path = svn_fspath__join(b->repository->fs_path->data, relative_path,
                               pool);
 
-  if (SVN_IS_VALID_REVNUM(start_rev)
-      && SVN_IS_VALID_REVNUM(end_rev)
-      && (end_rev > start_rev))
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+  SVN_ERR(log_command(baton, conn, pool, "%s",
+                      svn_log__get_location_segments(abs_path, peg_revision,
+                                                     start_rev, end_rev,
+                                                     pool)));
+
+  /* No START_REV or PEG_REVISION?  We'll use HEAD. */
+  if (!SVN_IS_VALID_REVNUM(start_rev) || !SVN_IS_VALID_REVNUM(peg_revision))
+    {
+      svn_revnum_t youngest;
+
+      SVN_CMD_ERR(svn_fs_youngest_rev(&youngest, b->repository->fs, pool));
+
+      if (!SVN_IS_VALID_REVNUM(start_rev))
+        start_rev = youngest;
+      if (!SVN_IS_VALID_REVNUM(peg_revision))
+        peg_revision = youngest;
+    }
+
+  /* No END_REV?  We'll use 0. */
+  if (!SVN_IS_VALID_REVNUM(end_rev))
+    end_rev = 0;
+
+  if (end_rev > start_rev)
     {
       err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                               "Get-location-segments end revision must not be "
@@ -2516,21 +2537,13 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
       return log_fail_and_flush(err, b, conn, pool);
     }
 
-  if (SVN_IS_VALID_REVNUM(peg_revision)
-      && SVN_IS_VALID_REVNUM(start_rev)
-      && (start_rev > peg_revision))
+  if (start_rev > peg_revision)
     {
       err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                               "Get-location-segments start revision must not "
                               "be younger than peg revision");
       return log_fail_and_flush(err, b, conn, pool);
     }
-
-  SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_ERR(log_command(baton, conn, pool, "%s",
-                      svn_log__get_location_segments(abs_path, peg_revision,
-                                                     start_rev, end_rev,
-                                                     pool)));
 
   /* All the parameters are fine - let's perform the query against the
    * repository. */
