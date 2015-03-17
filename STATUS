@@ -169,7 +169,7 @@ Other candidate changes:
      +1: rhuijben, brane
 
  * r1666965, r1667120
-   Reduce 'the lag' of the first svn log results over mod_dav.
+   mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
    Justification:
      A slow svn log makes users call Subversion slow. This fixes the
      perceived performance problem by no longer optimizing just for
@@ -184,8 +184,8 @@ Other candidate changes:
      $ svn log -q ^/subversion/trunk
      .
      This currently takes > 10 seconds before the first result using
-     the EU mirror for me. With --limit 1 (best comparison with post-patch)
-     that would be 0.2 seconds.
+     the EU mirror for me. By comparison, 'svn log --limit=1' takes
+     0.2 seconds.
    Votes:
      +1: rhuijben, philip
      -0.3: julianfoad (can make a huge improvement to the user experience, but:
