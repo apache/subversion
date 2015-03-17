@@ -686,14 +686,22 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
   /* Have they done *something* (edit, look at diff, etc) to
      give them a rational basis for choosing (r)esolved? */
   svn_boolean_t knows_something = FALSE;
-
+  const char *local_relpath;
+  
   SVN_ERR_ASSERT(desc->kind == svn_wc_conflict_kind_text);
 
-  SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                              _("Conflict discovered in file '%s'.\n"),
-                              svn_cl__local_style_skip_ancestor(
-                                b->path_prefix, desc->local_abspath,
-                                scratch_pool)));
+  local_relpath = svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                    desc->local_abspath,
+                                                    scratch_pool);;
+
+  if (desc->is_binary)
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                _("Conflict discovered in binary file '%s'.\n"),
+                                local_relpath));
+  else
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                _("Conflict discovered in file '%s'.\n"),
+                                local_relpath));
 
   /* ### TODO This whole feature availability check is grossly outdated.
      DIFF_ALLOWED needs either to be redefined or to go away.
