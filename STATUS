@@ -47,23 +47,6 @@ Candidate changes:
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
                    7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
- * r1619380, r1619393, r1660186
-   Fix diff of a locally copied directory with props: it showed all props
-   as added instead of a diff against the copy-from props.
-   Justification:
-     Behaviour regression introduced in 1.8.0.
-   Notes:
-     r1619380 is the fix; r1619393 a test for it.
-     The test on trunk@1619393 is tweaked to account for a trunk bug in the
-     display of diff headers; the backport branch provides the correct
-     version for 1.8.x.
-   Branch:
-     ^/subversion/branches/1.8.x-r1619380
-   Votes:
-     +1: rhuijben, brane
-     +1: stefan2 (before r1660186 was added)
-     +0: julianfoad
-
  * r1666965, r1667120
    Reduce 'the lag' of the first svn log results over mod_dav.
    Justification:
@@ -176,3 +159,20 @@ Approved changes:
      ^/subversion/branches/1.8.x-r1666690
    Votes:
      +1: rhuijben, brane, philip
+
+ * r1619380, r1619393, r1660186
+   Fix diff of a locally copied directory with props: it showed all props
+   as added instead of a diff against the copy-from props.
+   Justification:
+     Behaviour regression introduced in 1.8.0.
+   Notes:
+     r1619380 is the fix; r1619393 a test for it.
+     The test on trunk@1619393 is tweaked to account for a trunk bug in the
+     display of diff headers; the backport branch provides the correct
+     version for 1.8.x.
+   Branch:
+     ^/subversion/branches/1.8.x-r1619380
+   Votes:
+     +1: rhuijben, brane, stefan2
+     +0: julianfoad
+
