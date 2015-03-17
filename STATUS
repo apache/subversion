@@ -176,7 +176,7 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1666965
+ * r1666965, r1667120
    Reduce 'the lag' of the first svn log results over mod_dav.
    Justification:
      A slow svn log makes users call Subversion slow. This fixes the
@@ -204,6 +204,7 @@ Other candidate changes:
                        and other output modules that add their own buffering;
                        counting-based design doesn't semantically match the
                        user's requirement which is for a limited time delay)
+                      (before r1667120)
 
  * r1666832
    Resolve an assertion on a bad update report involving incomplete status
