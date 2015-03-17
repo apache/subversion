@@ -853,7 +853,7 @@ test_prop_conflict_resolving(const svn_test_opts_t *opts,
   SVN_ERR(sbox_wc_update(&b, "", 1));
 
   A_abspath = sbox_wc_path(&b, "A");
-  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL,
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
                                    b.wc_ctx->db, A_abspath,
                                    pool, pool));
 
@@ -880,7 +880,7 @@ test_prop_conflict_resolving(const svn_test_opts_t *opts,
   SVN_ERR(sbox_wc_resolve_prop(&b, "A", "prop-3",
                                svn_wc_conflict_choose_merged));
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL,
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
                                    b.wc_ctx->db, A_abspath,
                                    pool, pool));
 
@@ -937,9 +937,10 @@ test_binary_file_conflict(const svn_test_opts_t *opts,
 
   /* Update to HEAD and ensure the conflict is marked as binary. */
   SVN_ERR(sbox_wc_update(&sbox, "binary-file", 2));
-  SVN_ERR(svn_wc__read_conflicts(&conflicts, sbox.wc_ctx->db,
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, NULL, sbox.wc_ctx->db,
                                  sbox_wc_path(&sbox, "binary-file"),
-                                 FALSE, /* create_tempfiles */
+                                 FALSE /* create_tempfiles */,
+                                 FALSE /* only_tree_conflict */,
                                  pool, pool));
   SVN_TEST_ASSERT(conflicts->nelts == 1);
   desc = APR_ARRAY_IDX(conflicts, 0, svn_wc_conflict_description2_t *);

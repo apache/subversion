@@ -751,7 +751,8 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
       apr_hash_t *conflicted_props;
       svn_skel_t *conflicts;
 
-      SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
+      SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, NULL,
+                                       db, local_abspath,
                                       scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL, NULL,
