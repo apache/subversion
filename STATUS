@@ -218,6 +218,11 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1665894, r1667101
+   Fix the noderev relatedness checks for FSFS (and FSX).
+   Votes:
+     +0: julianfoad (reviewed, not tested)
+
 Veto-blocked changes:
 =====================
 
