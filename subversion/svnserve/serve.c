@@ -2517,7 +2517,16 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
     {
       svn_revnum_t youngest;
 
-      SVN_CMD_ERR(svn_fs_youngest_rev(&youngest, b->repository->fs, pool));
+      err = svn_fs_youngest_rev(&youngest, b->repository->fs, pool);
+
+      if (err)
+        {
+          err = svn_error_compose_create(
+                    svn_ra_svn__write_word(conn, pool, "done"),
+                    err);
+
+          return log_fail_and_flush(err, b, conn, pool);
+        }
 
       if (!SVN_IS_VALID_REVNUM(start_rev))
         start_rev = youngest;
@@ -2531,7 +2540,8 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
 
   if (end_rev > start_rev)
     {
-      err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+      err = svn_ra_svn__write_word(conn, pool, "done");
+      err = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, err,
                               "Get-location-segments end revision must not be "
                               "younger than start revision");
       return log_fail_and_flush(err, b, conn, pool);
@@ -2539,7 +2549,8 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
 
   if (start_rev > peg_revision)
     {
-      err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+      err = svn_ra_svn__write_word(conn, pool, "done");
+      err = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, err,
                               "Get-location-segments start revision must not "
                               "be younger than peg revision");
       return log_fail_and_flush(err, b, conn, pool);
@@ -2559,8 +2570,7 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (write_err)
     {
-      svn_error_clear(err);
-      return write_err;
+      return svn_error_compose_create(write_err, err);
     }
   SVN_CMD_ERR(err);
 
