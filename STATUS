@@ -181,6 +181,9 @@ Other candidate changes:
                        a 1.9 server should have vastly quicker log computation;
                        counting-based design doesn't semantically match the
                        user's requirement which is for a limited time delay)
+     +0: kotkov (change looks good and passes the tests; will update the vote
+                 after trying it on a couple of real-world repositories with
+                 different HTTPD setups)
 
  * r1663671, r1666832
    Resolve an assertion on a bad update report involving incomplete status
