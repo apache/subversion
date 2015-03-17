@@ -85,6 +85,9 @@ Candidate changes:
      that would be 0.2 seconds.
    Votes:
      +1: rhuijben, philip (After it has been approved for 1.9)
+     -0.5: ivan (It's not security or bug fix. The change itself a little
+                 bit controversial for me, so it's better to release it as
+                 part of Subversion 1.9.0)
 
 Veto-blocked changes:
 =====================
