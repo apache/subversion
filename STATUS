@@ -203,6 +203,16 @@ Other candidate changes:
    Votes:
      +0: julianfoad (reviewed, not tested)
 
+ * r1667228, r1667234, r1667228, r1667250, r1667258, r1667290
+   Improve binary file and property handling during conflict resolving
+   Justification:
+     Resolves a regression against 1.7 (and probably 1.8) where binary
+     files are not handled as such. The patch also contains some correctness
+     and performance fixes to avoid adding extra db operations on common
+     code paths.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
