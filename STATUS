@@ -168,14 +168,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben, brane
 
- * r1666690
-   Record skipped tree during merge on the skip root instead of leaves
-   Justification:
-     Resolves a user reported problem in merge handling. Avoids unnecessary
-     mergeinfo recording on multiple leaves when a single ancestor is shadowed.
-   Votes:
-     +1: rhuijben, brane
-
  * r1666965, r1667120
    Reduce 'the lag' of the first svn log results over mod_dav.
    Justification:
@@ -327,3 +319,11 @@ Approved changes:
      Simple bugfix makes new in 1.9 code do what it was designed to do.
    Votes:
      +1: rhuijben, brane
+
+ * r1666690
+   Record skipped tree during merge on the skip root instead of leaves
+   Justification:
+     Resolves a user reported problem in merge handling. Avoids unnecessary
+     mergeinfo recording on multiple leaves when a single ancestor is shadowed.
+   Votes:
+     +1: rhuijben, brane, philip
