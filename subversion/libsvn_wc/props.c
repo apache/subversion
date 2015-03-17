@@ -327,7 +327,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
     {
       svn_boolean_t prop_conflicted;
 
-      SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, conflict_skel,
+      SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, kind,
+                                               conflict_skel,
                                                NULL /* merge_options */,
                                                conflict_func, conflict_baton,
                                                cancel_func, cancel_baton,
