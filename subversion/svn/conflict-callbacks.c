@@ -703,8 +703,9 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
      markers to the user (this is the typical 3-way merge
      scenario), or if no base is available, we can show a diff
      between mine and theirs. */
-  if ((desc->merged_file && desc->base_abspath)
-      || (!desc->base_abspath && desc->my_abspath && desc->their_abspath))
+  if (!desc->is_binary &&
+      ((desc->merged_file && desc->base_abspath)
+      || (!desc->base_abspath && desc->my_abspath && desc->their_abspath)))
     diff_allowed = TRUE;
 
   while (TRUE)
@@ -731,11 +732,8 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           if (knows_something)
             *next_option++ = "r";
 
-          if (! desc->is_binary)
-            {
-              *next_option++ = "mc";
-              *next_option++ = "tc";
-            }
+          *next_option++ = "mc";
+          *next_option++ = "tc";
         }
       else
         {
