@@ -355,11 +355,6 @@ svn_test__fs_type_not(const svn_test_opts_t *opts,
                       const char *predicate_value,
                       apr_pool_t *pool);
 
-void
-svn_test__enable_sleep_for_timestamps(apr_pool_t *pool);
-
-void
-svn_test__disable_sleep_for_timestamps(apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -973,7 +973,9 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   opts.verbose = verbose_mode;
 
   /* Disable sleeping for timestamps, to speed up the tests. */
-  svn_test__disable_sleep_for_timestamps(pool);
+  apr_env_set(
+         "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS",
+         "yes", pool);
 
   /* You can't be both quiet and verbose. */
   if (quiet_mode && verbose_mode)
@@ -1089,20 +1091,4 @@ svn_test__fs_type_not(const svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
   return (0 != strcmp(predicate_value, opts->fs_type));
-}
-
-void
-svn_test__enable_sleep_for_timestamps(apr_pool_t *pool)
-{
-  apr_env_set(
-         "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS",
-         "no", pool);
-}
-
-void
-svn_test__disable_sleep_for_timestamps(apr_pool_t *pool)
-{
-  apr_env_set(
-         "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS",
-         "yes", pool);
 }
