@@ -635,9 +635,11 @@ svn_wc__write_check(svn_wc__db_t *db,
  */
 svn_error_t *
 svn_wc__read_conflicts(const apr_array_header_t **conflicts,
+                       svn_skel_t **conflict_skel,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t create_tempfiles,
+                       svn_boolean_t only_tree_conflict,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
