@@ -123,7 +123,7 @@ Other candidate changes:
    Justification:
      Our own tools should be well behaved.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1664997
    Fix test failures when running from a directory whose name contains
@@ -174,7 +174,7 @@ Other candidate changes:
      Resolves a user reported problem in merge handling. Avoids unnecessary
      mergeinfo recording on multiple leaves when a single ancestor is shadowed.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1666965, r1667120
    Reduce 'the lag' of the first svn log results over mod_dav.
