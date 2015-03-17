@@ -134,7 +134,7 @@ def update_binary_file(sbox):
     'A/theta' : Item(status='C ', wc_rev=3),
     })
 
-  extra_files = ['theta.r2', 'theta.r3']
+  extra_files = ['theta.r2', 'theta.r3', 'theta.mine']
 
   # Do the update and check the results in three ways.  Pass our
   # custom singleton handler to verify the .orig file; this handler
