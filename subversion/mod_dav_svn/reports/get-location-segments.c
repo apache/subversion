@@ -201,11 +201,13 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
     end_rev = 0;
 
   if (end_rev > start_rev)
-    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST,
+                                  SVN_ERR_FS_NO_SUCH_REVISION,
                                   "End revision must not be younger than "
                                   "start revision");
   if (start_rev > peg_revision)
-    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST,
+                                  SVN_ERR_FS_NO_SUCH_REVISION,
                                   "Start revision must not be younger than "
                                   "peg revision");
 
