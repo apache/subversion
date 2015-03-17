@@ -195,7 +195,7 @@ Other candidate changes:
      the EU mirror for me. With --limit 1 (best comparison with post-patch)
      that would be 0.2 seconds.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
      -0.5: julianfoad (can make a huge improvement to the user experience, but:
                        figures given in justification are for a 1.8 server but
                        a 1.9 server should have vastly quicker log computation;
