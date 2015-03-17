@@ -1142,6 +1142,7 @@ static svn_error_t *
 generate_propconflict(svn_boolean_t *conflict_remains,
                       svn_wc__db_t *db,
                       const char *local_abspath,
+                      svn_node_kind_t kind,
                       svn_wc_operation_t operation,
                       const svn_wc_conflict_version_t *left_version,
                       const svn_wc_conflict_version_t *right_version,
@@ -1159,24 +1160,11 @@ generate_propconflict(svn_boolean_t *conflict_remains,
   svn_wc_conflict_result_t *result = NULL;
   svn_wc_conflict_description2_t *cdesc;
   const char *dirpath = svn_dirent_dirname(local_abspath, scratch_pool);
-  svn_node_kind_t kind;
   const svn_string_t *new_value = NULL;
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath,
-                               FALSE /* allow_missing */,
-                               FALSE /* show_deleted */,
-                               FALSE /* show_hidden */,
-                               scratch_pool));
-
-  if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("The node '%s' was not found."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
 
   cdesc = svn_wc_conflict_description_create_prop2(
                 local_abspath,
-                (kind == svn_node_dir) ? svn_node_dir : svn_node_file,
+                kind,
                 propname, scratch_pool);
 
   cdesc->operation = operation;
@@ -1838,6 +1826,7 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
 svn_error_t *
 svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  const char *local_abspath,
+                                 svn_node_kind_t kind,
                                  const svn_skel_t *conflict_skel,
                                  const apr_array_header_t *merge_options,
                                  svn_wc_conflict_resolver_func2_t resolver_func,
@@ -1914,7 +1903,7 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
             SVN_ERR(cancel_func(cancel_baton));
 
           SVN_ERR(generate_propconflict(&conflict_remains,
-                                        db, local_abspath,
+                                        db, local_abspath, kind,
                                         operation,
                                         left_version,
                                         right_version,
