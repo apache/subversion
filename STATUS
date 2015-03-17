@@ -47,17 +47,6 @@ Candidate changes:
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
                    7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
- * r1660220, r1665874
-   Don't leave conflict markers on files that are moved
-   Branch:
-     ^/subversion/branches/1.8.x-r1660220
-   Justification:
-     Without this patch property or text conflicted files that are moved
-     leave dangling conflict markers in the old location. Easy fix.
-   Votes:
-     +1: stsp, brane
-     +1: rhuijben (without r1665874)
-
  * r1619380, r1619393, r1660186
    Fix diff of a locally copied directory with props: it showed all props
    as added instead of a diff against the copy-from props.
@@ -152,3 +141,13 @@ Approved changes:
      ^/subversion/branches/1.8.x-r1664684
    Votes:
      +1: rhuijben, stsp, brane
+
+ * r1660220, r1665874
+   Don't leave conflict markers on files that are moved
+   Branch:
+     ^/subversion/branches/1.8.x-r1660220
+   Justification:
+     Without this patch property or text conflicted files that are moved
+     leave dangling conflict markers in the old location. Easy fix.
+   Votes:
+     +1: stsp, brane, rhuijben
