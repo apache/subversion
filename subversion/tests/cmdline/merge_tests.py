@@ -16009,6 +16009,11 @@ def dry_run_merge_conflicting_binary(sbox):
   'A/theta.merge-right.r3' :
     Item(contents= theta_contents + "some extra junk")
   })
+  # verify content of working backup ("mine") file
+  expected_disk.add({
+  'A/theta.working' :
+    Item(contents= theta_contents + "some other junk")
+  })
 
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
   expected_status.add({
