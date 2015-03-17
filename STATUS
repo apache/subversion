@@ -188,11 +188,9 @@ Other candidate changes:
      0.2 seconds.
    Votes:
      +1: rhuijben, philip
-     -0.3: julianfoad (can make a huge improvement to the user experience, but:
+     -0.2: julianfoad (can make a huge improvement to the user experience, but:
                        figures given in justification are for a 1.8 server but
                        a 1.9 server should have vastly quicker log computation;
-                       concerns about detrimental effect on fast-compute,
-                       network-bound systems;
                        counting-based design doesn't semantically match the
                        user's requirement which is for a limited time delay)
 
