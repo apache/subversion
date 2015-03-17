@@ -64,16 +64,6 @@ Candidate changes:
      +1: stefan2 (before r1660186 was added)
      +0: julianfoad
 
- * r1666690
-   Record skipped tree during merge on the skip root instead of leaves
-   Justification:
-     Resolves a user reported problem in merge handling. Avoids unnecessary
-     mergeinfo recording on multiple leaves when a single ancestor is shadowed.
-   Branch:
-     ^/subversion/branches/1.8.x-r1666690
-   Votes:
-     +1: rhuijben, brane
-
 Veto-blocked changes:
 =====================
 
@@ -151,3 +141,13 @@ Approved changes:
      leave dangling conflict markers in the old location. Easy fix.
    Votes:
      +1: stsp, brane, rhuijben
+
+ * r1666690
+   Record skipped tree during merge on the skip root instead of leaves
+   Justification:
+     Resolves a user reported problem in merge handling. Avoids unnecessary
+     mergeinfo recording on multiple leaves when a single ancestor is shadowed.
+   Branch:
+     ^/subversion/branches/1.8.x-r1666690
+   Votes:
+     +1: rhuijben, brane, philip
