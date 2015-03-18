@@ -78,20 +78,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1532287
-   Simplify Windows resource compilation to avoid warnings
-   Justification:
-     Windows .rc files are compiled with a resource compiler that uses a
-     C preprocessor. Our .rc file uses svn_version.h to include the version
-     info, but this also brings in a lot of other include files. On newer
-     Windows development platforms these header files include macros that
-     cause warnings in the resource compilation process. This patch resolves
-     all those warnings by including just what is necessary. (This resolves
-     multiple warnings for each .dll and .exe on the Windows buildbot,
-     thereby hiding more important warnings)
-   Votes:
-     +1: rhuijben, ivan, brane
-
  * ^/subversion/branches/1.8.x-r1660593
    Fix recording last-* information on nodes copied from foreign repositories
    Justification:
