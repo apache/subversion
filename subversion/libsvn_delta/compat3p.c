@@ -774,13 +774,15 @@ process_actions(struct ev3_edit_baton *eb,
 
       if (change->copyfrom_path != NULL)
         {
-          SVN_ERR(svn_editor3p_cp(eb->editor,
 #ifdef SVN_EDITOR3_WITH_COPY_FROM_THIS_REV
+          SVN_ERR(svn_editor3p_cp(eb->editor,
                                  txn_path(change->copyfrom_path, change->copyfrom_rev, ""),
-#else
-                                 pathrev(change->copyfrom_path, change->copyfrom_rev),
-#endif
                                  parent_loc, repos_relpath_basename));
+#else
+          SVN_ERR(svn_editor3p_cp(eb->editor,
+                                 pathrev(change->copyfrom_path, change->copyfrom_rev),
+                                 parent_loc, repos_relpath_basename));
+#endif
           /* Fall through to possibly make changes post-copy.  */
         }
       else
