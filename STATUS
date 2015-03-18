@@ -78,13 +78,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1660646
-   Fix calculating the repository path of replaced directories on entry upgrade
-   Justification:
-     Simple fix that avoids recording invalid data in WC-NG.
-   Votes:
-     +1: rhuijben, stsp, brane
-
  * r1663991
    Fix calculating the repository path after commits of nodes that are
    shadowing a switched (not-present) node.
