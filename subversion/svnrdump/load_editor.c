@@ -494,6 +494,7 @@ new_node_record(void **node_baton,
   const struct svn_delta_editor_t *commit_editor = rb->pb->commit_editor;
   void *commit_edit_baton = rb->pb->commit_edit_baton;
   struct node_baton *nb;
+  svn_revnum_t head_rev_before_commit = rb->rev - rb->rev_offset - 1;
   apr_hash_index_t *hi;
   void *child_baton;
   const char *nb_dirname;
@@ -532,7 +533,7 @@ new_node_record(void **node_baton,
       rb->pb->commit_edit_baton = commit_edit_baton;
 
       SVN_ERR(commit_editor->open_root(commit_edit_baton,
-                                       rb->rev - rb->rev_offset - 1,
+                                       head_rev_before_commit,
                                        rb->pool, &child_baton));
 
       /* child_baton corresponds to the root directory baton here */
@@ -612,7 +613,7 @@ new_node_record(void **node_baton,
                              rb->pool);
           SVN_ERR(commit_editor->open_directory(relpath_compose,
                                                 rb->db->baton,
-                                                rb->rev - rb->rev_offset - 1,
+                                                head_rev_before_commit,
                                                 rb->pool, &child_baton));
           push_directory(rb, child_baton, relpath_compose, TRUE /*is_added*/,
                          NULL, SVN_INVALID_REVNUM);
@@ -655,7 +656,7 @@ new_node_record(void **node_baton,
     case svn_node_action_delete:
     case svn_node_action_replace:
       SVN_ERR(commit_editor->delete_entry(nb->path,
-                                          rb->rev - rb->rev_offset - 1,
+                                          head_rev_before_commit,
                                           rb->db->baton, rb->pool));
       if (nb->action == svn_node_action_delete)
         break;
@@ -693,7 +694,7 @@ new_node_record(void **node_baton,
           break;
         default:
           SVN_ERR(commit_editor->open_directory(nb->path, rb->db->baton,
-                                                rb->rev - rb->rev_offset - 1,
+                                                head_rev_before_commit,
                                                 rb->pool, &child_baton));
           push_directory(rb, child_baton, nb->path, FALSE /*is_added*/,
                          NULL, SVN_INVALID_REVNUM);
@@ -983,6 +984,7 @@ close_revision(void *baton)
     }
   else
     {
+      svn_revnum_t head_rev_before_commit = rb->rev - rb->rev_offset - 1;
       void *child_baton;
 
       /* Legitimate revision with no node information */
@@ -992,7 +994,7 @@ close_revision(void *baton)
                                         NULL, FALSE, rb->pool));
 
       SVN_ERR(commit_editor->open_root(commit_edit_baton,
-                                       rb->rev - rb->rev_offset - 1,
+                                       head_rev_before_commit,
                                        rb->pool, &child_baton));
 
       SVN_ERR(commit_editor->close_directory(child_baton, rb->pool));
