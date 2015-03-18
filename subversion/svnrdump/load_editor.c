@@ -407,7 +407,7 @@ new_revision_record(void **revision_baton,
       const char *hval = apr_hash_this_val(hi);
 
       if (strcmp(hname, SVN_REPOS_DUMPFILE_REVISION_NUMBER) == 0)
-        rb->rev = atoi(hval);
+        rb->rev = SVN_STR_TO_REV(hval);
     }
 
   SVN_ERR(svn_ra_get_latest_revnum(pb->session, &head_rev, pool));
@@ -570,7 +570,7 @@ new_node_record(void **node_baton,
       if (strcmp(hname, SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_MD5) == 0)
         nb->base_checksum = apr_pstrdup(rb->pool, hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV) == 0)
-        nb->copyfrom_rev = atoi(hval);
+        nb->copyfrom_rev = SVN_STR_TO_REV(hval);
       if (strcmp(hname, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH) == 0)
         nb->copyfrom_path = apr_pstrdup(rb->pool, hval);
     }
