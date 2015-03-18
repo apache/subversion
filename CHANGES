@@ -693,11 +693,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
 
 Version 1.8.12
-(?? ?? 2015, from /branches/1.8.x)
+(31 Mar 2015, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.12
 
  User-visible changes:
   - Client-side bugfixes:
+    * ra_serf: prevent abort of commits that have already succeeded (r1659867)
     * ra_serf: support case-insensitivity in HTTP headers (r1650481, r1650489)
     * better error message if an external is shadowed (r1655712, r1655738)
     * ra_svn: fix reporting of directory read errors (r1656713)
@@ -708,8 +709,19 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.12
     * fix working copy corruption with relative file external (issue #4411)
     * don't crash if config file is unreadable (r1590751, r1660350)
     * svn resolve: don't ask a question with only one answer (r1658417)
+    * fix assertion failure in svn move (r1651963 et al)
+    * working copy performance improvements (r1664531, r1664476, et al)
+    * handle existing working copies which become externals (r1660071)
+    * fix recording of WC meta-data for foreign repos copies (r1660593)
+    * fix calculating repository path of replaced directories (r1660646)
+    * fix calculating repository path after commit of switched nodes (r1663991)
+    * svnrdump: don't provide HEAD+1 as base revision for deletes (r1664684)
+    * don't leave conflict markers on files that are moved (r1660220, r1665874)
+    * avoid unnecessary subtree mergeinfo recording (r1666690)
+    * fix diff of a locally copied directory with props (r1619380 et al)
 
   - Server-side bugfixes:
+    * fsfs: fix a problem verifying pre-1.4 repos used with 1.8 (r1561419)
     * svnadmin freeze: fix memory allocation error (r1653039)
     * svnadmin load: tolerate invalid mergeinfo at r0 (r1643074, issue #4476)  
     * svnadmin load: strip references to r1 from mergeinfo (issue #4538)
@@ -731,6 +743,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.12
   * make sqlite amalgamated build work with sqlite 3.8.x+ (r1659399)
   * fix build with Ruby 2 (r1596882)
   * process 'svnadmin dump' output as binary in the test suite (r1592987)
+  * simplify Windows resource compilation to avoid warnings (r1532287)
 
 
 Version 1.8.11
