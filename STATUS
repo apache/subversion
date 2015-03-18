@@ -78,16 +78,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1666690
-   Record skipped tree during merge on the skip root instead of leaves
-   Justification:
-     Resolves a user reported problem in merge handling. Avoids unnecessary
-     mergeinfo recording on multiple leaves when a single ancestor is shadowed.
-   Branch:
-     ^/subversion/branches/1.8.x-r1666690
-   Votes:
-     +1: rhuijben, brane, philip
-
  * r1619380, r1619393, r1660186
    Fix diff of a locally copied directory with props: it showed all props
    as added instead of a diff against the copy-from props.
