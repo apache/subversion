@@ -198,9 +198,9 @@ open_file(const char *name, int handle)
       /* determine first revision of rev / packed rev files */
       if (strstr(name, "/db/revs/") != NULL && strstr(name, "manifest") == NULL)
         if (strstr(name, ".pack/pack") != NULL)
-          file->rev_num = atoi(strstr(name, "/db/revs/") + 9);
+          file->rev_num = SVN_STR_TO_REV(strstr(name, "/db/revs/") + 9);
         else
-          file->rev_num = atoi(strrchr(name, '/') + 1);
+          file->rev_num = SVN_STR_TO_REV(strrchr(name, '/') + 1);
       else
         file->rev_num = -1;
 
