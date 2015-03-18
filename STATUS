@@ -51,7 +51,7 @@ Other candidate changes:
      is a better fix to backport the check to the other layers than to hide
      the problem.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1665213, r1665259, r1665609
    Fix cases of serf's svn_ra_get_dir2() and svn_ra_get_log2() breaking the
@@ -118,7 +118,7 @@ Other candidate changes:
      Resolves a reproducable assertion in an restarted checkout against
      github.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1665894, r1667101
    Fix the noderev relatedness checks for FSFS (and FSX).
