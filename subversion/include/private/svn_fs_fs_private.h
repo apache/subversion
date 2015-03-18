@@ -53,7 +53,8 @@ typedef struct svn_fs_fs__large_change_info_t
   /* size of the (deltified) representation */
   apr_uint64_t size;
 
-  /* Revision of the representation. SVN_INVALID_REVNUM for unused entries. */
+  /* Revision of the representation. SVN_INVALID_REVNUM for unused entries.
+   */
   svn_revnum_t revision;
 
   /* node path. "" for unused instances */
@@ -279,7 +280,8 @@ typedef struct svn_fs_fs__id_part_t
 {
   /* SVN_INVALID_REVNUM for txn_id part -> not a txn, NUMBER must be 0.
      SVN_INVALID_REVNUM for other parts -> not assigned to a revision, yet.
-     0                  for other parts -> old-style ID or the root in rev 0. */
+     0                  for other parts -> old-style ID or the root in rev 0.
+   */
   svn_revnum_t revision;
 
   /* sub-id value relative to REVISION.  Its interpretation depends on
