@@ -692,9 +692,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * swig-py: fix support for svn_ra_lock() and svn_ra_unlock() (r1662891)
 
 
-Version 1.8.12
+Version 1.8.13
 (31 Mar 2015, from /branches/1.8.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.8.12
+http://svn.apache.org/repos/asf/subversion/tags/1.8.13
 
  User-visible changes:
   - Client-side bugfixes:
@@ -744,6 +744,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.12
   * fix build with Ruby 2 (r1596882)
   * process 'svnadmin dump' output as binary in the test suite (r1592987)
   * simplify Windows resource compilation to avoid warnings (r1532287)
+
+
+Version 1.8.12
+(Not released, see changes for 1.8.13.)
 
 
 Version 1.8.11
