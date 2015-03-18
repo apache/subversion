@@ -156,6 +156,16 @@ Other candidate changes:
    Votes:
      +1: stefan2, julianfoad
 
+ * r1667471
+   Fix bad assertion in diff callbacks
+   Justification:
+     Problem uncovered by 1.8.x code that still use these callbacks. On 1.9.x
+     this code is only used from some deprecated libsvn_wc functions that
+     used to drive the old diff code. Some third party tools might hit this
+     problem.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
