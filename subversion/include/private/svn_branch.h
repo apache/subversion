@@ -128,7 +128,6 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 apr_pool_t *result_pool);
 
 /* A branch family.
- * ### Most of this is not per-revision data. Move it out of revision-root?
  */
 typedef struct svn_branch_family_t
 {
@@ -155,8 +154,8 @@ typedef struct svn_branch_family_t
   /* The range of element ids assigned within this family. */
   int first_eid, next_eid;
 
-  /* The immediate sub-families of this family. */
-  apr_array_header_t *sub_families;
+  /* The immediate sub-family of this family, or NULL if none. */
+  struct svn_branch_family_t *subfamily;
 
   /* The pool in which this object lives. */
   apr_pool_t *pool;
@@ -171,14 +170,6 @@ svn_branch_family_create(svn_branch_repos_t *repos,
                          int first_eid,
                          int next_eid,
                          apr_pool_t *result_pool);
-
-/* Return an array of the immediate sub-families of FAMILY.
- *
- * Return an empty array if there are none.
- */
-apr_array_header_t *
-svn_branch_family_get_children(svn_branch_family_t *family,
-                               apr_pool_t *result_pool);
 
 /* Return the branch instances that are members of FAMILY in REV_ROOT.
  *

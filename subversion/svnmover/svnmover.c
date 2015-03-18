@@ -456,13 +456,11 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
 
   if (recursive)
     {
-      SVN_ITER_T(svn_branch_family_t) *fi;
-
-      for (SVN_ARRAY_ITER(fi, svn_branch_family_get_children(
-                                family, scratch_pool), scratch_pool))
+      if (family->subfamily)
         {
-          SVN_ERR(family_list_branch_instances(rev_root, fi->val, recursive,
-                                               verbose, fi->iterpool));
+          SVN_ERR(family_list_branch_instances(rev_root, family->subfamily,
+                                               recursive,
+                                               verbose, scratch_pool));
         }
     }
 
