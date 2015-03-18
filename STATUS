@@ -77,11 +77,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1667471
-   Fix bad assertion in diff callbacks
-   Justification:
-     Recently backported diff driver improvements cause this assertion to be
-     hit, because copyfrom information is now properly passed.
-   Votes:
-     +1: rhuijben, brane, stsp
