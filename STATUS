@@ -128,8 +128,7 @@ Other candidate changes:
      does not occur in our code but API users may want to use it to e.g.
      detect conflicts between transactions early.
    Votes:
-     +1: stefan2
-     +0: julianfoad (reviewed, not tested)
+     +1: stefan2, julianfoad
 
  * r1667228, r1667234, r1667228, r1667250, r1667258, r1667290
    Improve binary file and property handling during conflict resolving
@@ -147,7 +146,7 @@ Other candidate changes:
      Have a complete, correct and easily accessible API description.
      None of these changes should affect generated code nor the ABI.
    Votes:
-     +1: stefan2 
+     +1: stefan2, julianfoad
 
  * r1665438, r1667107
    Fixes to the public Repos layer API declarations and documentation.
@@ -155,7 +154,7 @@ Other candidate changes:
      Have a complete, correct and easily accessible API description.
      None of these changes should affect generated code nor the ABI.
    Votes:
-     +1: stefan2 
+     +1: stefan2, julianfoad
 
 Veto-blocked changes:
 =====================
