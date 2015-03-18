@@ -78,17 +78,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1664684
-   svnrdump: don't provide HEAD+1 as base revision when loading deletes.
-   Justification:
-     Our own tools should be well behaved.
-   Notes:
-     A trival merge conflict is fixed on the branch.
-   Branch:
-     ^/subversion/branches/1.8.x-r1664684
-   Votes:
-     +1: rhuijben, stsp, brane
-
  * r1660220, r1665874
    Don't leave conflict markers on files that are moved
    Branch:

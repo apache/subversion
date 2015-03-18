@@ -827,7 +827,8 @@ new_node_record(void **node_baton,
     case svn_node_action_delete:
     case svn_node_action_replace:
       LDR_DBG(("Deleting entry %s in %p\n", nb->path, rb->db->baton));
-      SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev - rb->rev_offset,
+      SVN_ERR(commit_editor->delete_entry(nb->path,
+                                          rb->rev - rb->rev_offset - 1,
                                           rb->db->baton, rb->pool));
       if (nb->action == svn_node_action_delete)
         break;
