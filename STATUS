@@ -78,14 +78,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1660071
-   When handling a pre-existing working copy as external, register it as such
-   Justification:
-     Without this the external is not properly handled as such when performing
-     operations like status.
-   Votes:
-     +1: rhuijben, stsp, brane
-
  * r1532287
    Simplify Windows resource compilation to avoid warnings
    Justification:
@@ -175,4 +167,3 @@ Approved changes:
    Votes:
      +1: rhuijben, brane, stefan2
      +0: julianfoad
-
