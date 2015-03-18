@@ -78,16 +78,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1660220, r1665874
-   Don't leave conflict markers on files that are moved
-   Branch:
-     ^/subversion/branches/1.8.x-r1660220
-   Justification:
-     Without this patch property or text conflicted files that are moved
-     leave dangling conflict markers in the old location. Easy fix.
-   Votes:
-     +1: stsp, brane, rhuijben
-
  * r1666690
    Record skipped tree during merge on the skip root instead of leaves
    Justification:
