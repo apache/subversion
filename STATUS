@@ -21,23 +21,6 @@ Status of 1.9.0:
 Other candidate changes:
 ========================
 
- * r1663183, r1663184
-   Introduce build support for Visual Studio "2015"
-   Justification:
-     Unbreaks building with the VS version that should be released somewhere
-     later this year.
-   Notes:
-     Includes a few generator fixes, and compilation fixes of utf8proc.c.
-   Votes:
-     +1: rhuijben, brane
-
- * r1663791
-   Trivial typo fix in error message.
-   Justification:
-     Fixes a typo.
-   Votes:
-     +1: brane, rhuijben
-
  * r1663991
    Fix calculating the repository path after commits of nodes that are
    shadowing a switched (not-present) node.
@@ -60,42 +43,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1663738
-   Stop exposing and prohibit changing internal txn props through FS API
-   Justification:
-     Prevents an implementation detail leak.  Prohibits changing the
-     internal behavior of our transactions via public API.  Avoids a situation
-     with the API function call discarding the data and falsely reporting
-     success for "set" operations with 'svn:client-date' properties, i.e.,
-     with the API telling us that the operation completed successfully when
-     the change itself was not applied.  (The last part is new-in-1.9.)
-   Notes:
-     While this is mostly an API correctness fix, there is a user-visible
-     consequence of 'svnlook proplist' no longer leaking internal properties
-     like svn:check-locks for transactions.
-   Votes:
-     +1: kotkov, rhuijben
-     +0: philip (the new behaviour is fine but so is the old behaviour.
-         svn:client-date is internal so does not have to obey the
-         rules that apply to user properties. The proplist "leak" is
-         strictly a regression as it is no longer possible to determine
-         whether the CHECK_LOCKS flag is set on a txn.)
-
- * r1664193
-   Fix win32 resource generation for svnbench.exe
-   Justification:
-     Trivial change to generate version resource for application.
-   Votes:
-     +1: rhuijben, brane
-
- * r1664653
-   Fix segfault when performing 'svn cp --pin-externals WC URL' against old
-   server over http.
-   Justification:
-     Fixes segfault on --disable-http-v2.
-   Votes:
-     +1: rhuijben, brane
-
  * r1664664, r1664672, r1664674
    Make detection of invalid (newer than HEAD) base revision on commit behave
    the same on all RA layers.
@@ -105,13 +52,6 @@ Other candidate changes:
      the problem.
    Votes:
      +1: rhuijben
-
- * r1664684
-   svnrdump: don't provide HEAD+1 as base revision when loading deletes.
-   Justification:
-     Our own tools should be well behaved.
-   Votes:
-     +1: rhuijben, brane
 
  * r1664997
    Fix test failures when running from a directory whose name contains
@@ -346,3 +286,64 @@ Approved changes:
      mergeinfo recording on multiple leaves when a single ancestor is shadowed.
    Votes:
      +1: rhuijben, brane, philip
+
+ * r1663183, r1663184
+   Introduce build support for Visual Studio "2015"
+   Justification:
+     Unbreaks building with the VS version that should be released somewhere
+     later this year.
+   Notes:
+     Includes a few generator fixes, and compilation fixes of utf8proc.c.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
+ * r1663791
+   Trivial typo fix in error message.
+   Justification:
+     Fixes a typo.
+   Votes:
+     +1: brane, rhuijben, stefan2
+
+ * r1663738
+   Stop exposing and prohibit changing internal txn props through FS API
+   Justification:
+     Prevents an implementation detail leak.  Prohibits changing the
+     internal behavior of our transactions via public API.  Avoids a situation
+     with the API function call discarding the data and falsely reporting
+     success for "set" operations with 'svn:client-date' properties, i.e.,
+     with the API telling us that the operation completed successfully when
+     the change itself was not applied.  (The last part is new-in-1.9.)
+   Notes:
+     While this is mostly an API correctness fix, there is a user-visible
+     consequence of 'svnlook proplist' no longer leaking internal properties
+     like svn:check-locks for transactions.
+   Votes:
+     +1: kotkov, rhuijben, stefan2
+     +0: philip (the new behaviour is fine but so is the old behaviour.
+         svn:client-date is internal so does not have to obey the
+         rules that apply to user properties. The proplist "leak" is
+         strictly a regression as it is no longer possible to determine
+         whether the CHECK_LOCKS flag is set on a txn.)
+
+ * r1664193
+   Fix win32 resource generation for svnbench.exe
+   Justification:
+     Trivial change to generate version resource for application.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
+ * r1664653
+   Fix segfault when performing 'svn cp --pin-externals WC URL' against old
+   server over http.
+   Justification:
+     Fixes segfault on --disable-http-v2.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
+ * r1664684
+   svnrdump: don't provide HEAD+1 as base revision when loading deletes.
+   Justification:
+     Our own tools should be well behaved.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
