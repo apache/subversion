@@ -392,7 +392,7 @@ new_revision_record(void **revision_baton,
 {
   struct revision_baton *rb;
   struct parse_baton *pb;
-  apr_hash_index_t *hi;
+  const char *rev_str;
   svn_revnum_t head_rev;
 
   rb = apr_pcalloc(pool, sizeof(*rb));
@@ -401,14 +401,9 @@ new_revision_record(void **revision_baton,
   rb->pb = pb;
   rb->db = NULL;
 
-  for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
-    {
-      const char *hname = apr_hash_this_key(hi);
-      const char *hval = apr_hash_this_val(hi);
-
-      if (strcmp(hname, SVN_REPOS_DUMPFILE_REVISION_NUMBER) == 0)
-        rb->rev = SVN_STR_TO_REV(hval);
-    }
+  rev_str = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER);
+  if (rev_str)
+    rb->rev = SVN_STR_TO_REV(rev_str);
 
   SVN_ERR(svn_ra_get_latest_revnum(pb->session, &head_rev, pool));
 
