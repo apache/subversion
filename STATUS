@@ -53,14 +53,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1664997
-   Fix test failures when running from a directory whose name contains
-   characters which must be escaped when used in a URL.
-   Justification:
-     User reported problem when testing 1.9 beta.
-   Votes:
-     +1: rhuijben, brane
-
  * r1665213, r1665259, r1665609
    Fix cases of serf's svn_ra_get_dir2() and svn_ra_get_log2() breaking the
    ra session for further operations.
@@ -87,14 +79,6 @@ Other candidate changes:
      here. Check r1665319 for details on what is ensured on trunk now.
    Votes:
      +1: rhuijben
-
- * r1665195, r1666096, r1666379
-   Produce an easier to understand error when a server sends a HTTP 405 code
-   Justification:
-     Just reporting out of date doesn't hint a user that he should
-     switch/relocate to the location where he is allowed to commit.
-   Votes:
-     +1: rhuijben, brane
 
  * r1666965, r1667120
    mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
@@ -344,6 +328,22 @@ Approved changes:
    svnrdump: don't provide HEAD+1 as base revision when loading deletes.
    Justification:
      Our own tools should be well behaved.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
+ * r1664997
+   Fix test failures when running from a directory whose name contains
+   characters which must be escaped when used in a URL.
+   Justification:
+     User reported problem when testing 1.9 beta.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
+ * r1665195, r1666096, r1666379
+   Produce an easier to understand error when a server sends a HTTP 405 code
+   Justification:
+     Just reporting out of date doesn't hint a user that he should
+     switch/relocate to the location where he is allowed to commit.
    Votes:
      +1: rhuijben, brane, stefan2
 
