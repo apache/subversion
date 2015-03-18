@@ -4365,11 +4365,13 @@ check_txn_related(const svn_test_opts_t *opts,
      / is the root folder, touched in r0, r1 and both txns (root-0)
      R is a copy of the root-0 made in both txns.
 
+     The edges in the graph connect related noderevs:
+
                  +--A-0--+                D-0           +-root-0-+
                  |       |                              |        |
            +-----+       +-----+                 +------+        +------+
            |     |       |     |                 |      |        |      |
-     B-1   C-1   A-1     A-2   C-1   B-2         R-1    root-1   root-2 R-2
+     B-1   C-1   A-1     A-2   C-2   B-2         R-1    root-1   root-2 R-2
   */
   /* Revision 1 */
   SVN_ERR(svn_fs_begin_txn(&txn[0], fs, youngest_rev, subpool));
@@ -4425,10 +4427,10 @@ check_txn_related(const svn_test_opts_t *opts,
       { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-0 */
       { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-1 */
       { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-2 */
-      { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* C-1 */
-      { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 }, /* C-2 */
-      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* B-1 */
-      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* B-2 */
+      { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* B-1 */
+      { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 }, /* B-2 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* C-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* C-2 */
       { 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 }, /* D-0 */
       { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-0 */
       { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-1 */
@@ -4483,7 +4485,7 @@ check_txn_related(const svn_test_opts_t *opts,
                                          root[pr2.root], pr2.path, subpool));
             if (i == j)
               {
-                /* Identical note. */
+                /* Identical noderev. */
                 if (!related || relation != svn_fs_node_same)
                   {
                     return svn_error_createf
