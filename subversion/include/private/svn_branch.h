@@ -696,21 +696,31 @@ svn_branch_branch(svn_branch_instance_t **new_branch_p,
                   const char *new_name,
                   apr_pool_t *scratch_pool);
 
-/* Change the existing simple sub-tree at OUTER_BRANCH:OUTER_EID into a
- * sub-branch in a new branch family.
+/* Replace the existing simple sub-tree at OUTER_BRANCH:OUTER_EID with a
+ * new subtree that has identical content but is a sub-branch in a new
+ * branch family.
  *
- * Set *NEW_BRANCH_P to the new branch.
+ * Delete the element OUTER_BRANCH:OUTER_EID. Create a new branch family
+ * and a branch instance of it, nested in OUTER_BRANCH. Create a
+ * subbranch-root element in OUTER_BRANCH (with a new EID) at the same
+ * parent element and same name, and create child elements to match the
+ * old subtree.
  *
- * ### TODO: Also we must (in order to maintain correctness) branchify
- *     the corresponding subtrees in all other branches in this family.
+ * Note: No mapping between the old and the new elements is recorded.
  *
- * TODO: Allow adding to an existing family, by specifying a mapping.
+ * Set *NEW_BRANCH_P to the new subbranch.
  *
- *   create a new family
- *   create a new branch-def and branch-instance
- *   for each element in subtree:
- *     ?[unassign eid in outer branch (except root element)]
- *     assign a new eid in inner branch
+ * The old element at OUTER_EID must be a 'dir' or 'file' element, and not
+ * the root element of OUTER_BRANCH, and there must be no subbranch root
+ * elements below it.
+ *
+ * ### Mixes pathwise ('select a subtree') and element-wise semantics.
+ *
+ * ### Should be built from simpler operations: 'branchify' is not a
+ * fundamental operation and does not need to appear at this API level.
+ *
+ * TODO: Allow adding to an existing family, by specifying a mapping to
+ * be used during the conversion.
  */
 svn_error_t *
 svn_branch_branchify(svn_branch_instance_t **new_branch_p,
