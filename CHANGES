@@ -1523,10 +1523,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
 
 
 Version 1.7.20
-(?? ??? 2015, from /branches/1.7.x)
+(31 Mar 2015, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.20
 
  User-visible changes:
+  - Client-side bugfixes:
+    * fix 'svn patch' output for reordered hunks (issue #4533)
+
   - Server-side bugfixes:
     * reject invalid get-location-segments requests in mod_dav_svn and
       svnserve (r1667233)
@@ -1534,9 +1537,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.20
 
   - Client-side and server-side bugfixes:
     * properly duplicate svn error objects (r1651759)
+    * fix use-after-free in config parser (1646785, r1646786, r1646797)
 
  Developer-visible changes:
   * add lock file config for testing against HTTPD 2.4+ (r1544302, r1544303)
+  * fix build with absolute path to neon install (r1664789)
 
 
 Version 1.7.19
