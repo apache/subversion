@@ -708,6 +708,7 @@ insert_base_node(const insert_base_baton_t *pibb,
   svn_sqlite__stmt_t *stmt;
   svn_filesize_t recorded_size = SVN_INVALID_FILESIZE;
   apr_int64_t recorded_time;
+  svn_boolean_t present;
 
   /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
      bind the appropriate parent_relpath. */
@@ -738,6 +739,9 @@ insert_base_node(const insert_base_baton_t *pibb,
       SVN_ERR(svn_sqlite__reset(stmt));
     }
 
+  present = (pibb->status == svn_wc__db_status_normal
+             || pibb->status == svn_wc__db_status_incomplete);
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsisr"
                             "tstr"               /* 8 - 11 */
@@ -750,15 +754,16 @@ insert_base_node(const insert_base_baton_t *pibb,
                             pibb->repos_relpath,
                             pibb->revision,
                             presence_map, pibb->status, /* 8 */
-                            (pibb->kind == svn_node_dir) ? /* 9 */
-                             svn_token__to_word(depth_map, pibb->depth) : NULL,
+                            (pibb->kind == svn_node_dir && present) /* 9 */
+                              ? svn_token__to_word(depth_map, pibb->depth)
+                              : NULL,
                             kind_map, pibb->kind, /* 10 */
                             pibb->changed_rev,    /* 11 */
                             pibb->changed_date,   /* 12 */
                             pibb->changed_author, /* 13 */
-                            (pibb->kind == svn_node_symlink) ?
+                            (pibb->kind == svn_node_symlink && present) ?
                                 pibb->target : NULL)); /* 19 */
-  if (pibb->kind == svn_node_file)
+  if (pibb->kind == svn_node_file && present)
     {
       if (!pibb->checksum
           && pibb->status != svn_wc__db_status_not_present
@@ -783,11 +788,14 @@ insert_base_node(const insert_base_baton_t *pibb,
   assert(pibb->status == svn_wc__db_status_normal
          || pibb->status == svn_wc__db_status_incomplete
          || pibb->props == NULL);
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
-                                      scratch_pool));
+  if (present)
+    {
+      SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
+                                          scratch_pool));
 
-  SVN_ERR(svn_sqlite__bind_iprops(stmt, 23, pibb->iprops,
+      SVN_ERR(svn_sqlite__bind_iprops(stmt, 23, pibb->iprops,
                                       scratch_pool));
+    }
 
   if (pibb->dav_cache)
     SVN_ERR(svn_sqlite__bind_properties(stmt, 18, pibb->dav_cache,
@@ -992,6 +1000,7 @@ insert_working_node(const insert_working_baton_t *piwb,
   const char *moved_to_relpath = NULL;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  svn_boolean_t present;
 
   SVN_ERR_ASSERT(piwb->op_depth > 0);
 
@@ -1010,6 +1019,9 @@ insert_working_node(const insert_working_baton_t *piwb,
     moved_to_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
 
+  present = (piwb->presence == svn_wc__db_status_normal
+             || piwb->presence == svn_wc__db_status_incomplete);
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isdsnnntstrisn"
                 "nnnn" /* properties translated_size last_mod_time dav_cache */
@@ -1018,14 +1030,14 @@ insert_working_node(const insert_working_baton_t *piwb,
                 piwb->op_depth,
                 parent_relpath,
                 presence_map, piwb->presence,
-                (piwb->kind == svn_node_dir)
+                (piwb->kind == svn_node_dir && present)
                             ? svn_token__to_word(depth_map, piwb->depth) : NULL,
                 kind_map, piwb->kind,
                 piwb->changed_rev,
                 piwb->changed_date,
                 piwb->changed_author,
                 /* Note: incomplete nodes may have a NULL target.  */
-                (piwb->kind == svn_node_symlink)
+                (piwb->kind == svn_node_symlink && present)
                             ? piwb->target : NULL,
                 moved_to_relpath));
 
@@ -1034,7 +1046,7 @@ insert_working_node(const insert_working_baton_t *piwb,
       SVN_ERR(svn_sqlite__bind_int(stmt, 8, TRUE));
     }
 
-  if (piwb->kind == svn_node_file)
+  if (piwb->kind == svn_node_file && present)
     {
       SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, piwb->checksum,
                                         scratch_pool));
@@ -1051,7 +1063,8 @@ insert_working_node(const insert_working_baton_t *piwb,
   assert(piwb->presence == svn_wc__db_status_normal
          || piwb->presence == svn_wc__db_status_incomplete
          || piwb->props == NULL);
-  SVN_ERR(svn_sqlite__bind_properties(stmt, 15, piwb->props, scratch_pool));
+  if (present && piwb->original_repos_relpath)
+    SVN_ERR(svn_sqlite__bind_properties(stmt, 15, piwb->props, scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
@@ -5343,8 +5356,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                        const char *original_uuid,
                        svn_revnum_t original_revision,
                        const apr_array_header_t *children,
-                       svn_boolean_t is_move,
                        svn_depth_t depth,
+                       svn_boolean_t is_move,
                        const svn_skel_t *conflict,
                        const svn_skel_t *work_items,
                        apr_pool_t *scratch_pool)
@@ -5371,11 +5384,6 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_node_dir;
 
-  iwb.props = props;
-  iwb.changed_rev = changed_rev;
-  iwb.changed_date = changed_date;
-  iwb.changed_author = changed_author;
-
   if (original_root_url != NULL)
     {
       SVN_ERR(create_repos_id(&iwb.original_repos_id,
@@ -5383,6 +5391,11 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                               wcroot->sdb, scratch_pool));
       iwb.original_repos_relpath = original_repos_relpath;
       iwb.original_revnum = original_revision;
+
+      iwb.props = props;
+      iwb.changed_rev = changed_rev;
+      iwb.changed_date = changed_date;
+      iwb.changed_author = changed_author;
     }
 
   /* ### Should we do this inside the transaction? */
@@ -5451,11 +5464,6 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_node_file;
 
-  iwb.props = props;
-  iwb.changed_rev = changed_rev;
-  iwb.changed_date = changed_date;
-  iwb.changed_author = changed_author;
-
   if (original_root_url != NULL)
     {
       SVN_ERR(create_repos_id(&iwb.original_repos_id,
@@ -5463,6 +5471,11 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                               wcroot->sdb, scratch_pool));
       iwb.original_repos_relpath = original_repos_relpath;
       iwb.original_revnum = original_revision;
+
+      iwb.props = props;
+      iwb.changed_rev = changed_rev;
+      iwb.changed_date = changed_date;
+      iwb.changed_author = changed_author;
     }
 
   /* ### Should we do this inside the transaction? */
@@ -5505,6 +5518,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                            const char *original_uuid,
                            svn_revnum_t original_revision,
                            const char *target,
+                           svn_boolean_t is_move,
                            const svn_skel_t *conflict,
                            const svn_skel_t *work_items,
                            apr_pool_t *scratch_pool)
@@ -5529,11 +5543,6 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_node_symlink;
 
-  iwb.props = props;
-  iwb.changed_rev = changed_rev;
-  iwb.changed_date = changed_date;
-  iwb.changed_author = changed_author;
-  iwb.moved_here = FALSE;
 
   if (original_root_url != NULL)
     {
@@ -5542,6 +5551,11 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                               wcroot->sdb, scratch_pool));
       iwb.original_repos_relpath = original_repos_relpath;
       iwb.original_revnum = original_revision;
+
+      iwb.props = props;
+      iwb.changed_rev = changed_rev;
+      iwb.changed_date = changed_date;
+      iwb.changed_author = changed_author;
     }
 
   /* ### Should we do this inside the transaction? */
@@ -5551,6 +5565,8 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
                             wcroot, local_relpath, scratch_pool));
 
   iwb.target = target;
+  iwb.moved_here = is_move && (parent_op_depth == 0 ||
+                               iwb.op_depth == parent_op_depth);
 
   iwb.work_items = work_items;
   iwb.conflict = conflict;
