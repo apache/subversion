@@ -72,6 +72,14 @@ Candidate changes:
                  bit controversial for me, so it's better to release it as
                  part of Subversion 1.9.0)
 
+ * r1667471
+   Fix bad assertion in diff callbacks
+   Justification:
+     Recently backported diff driver improvements cause this assertion to be
+     hit, because copyfrom information is now properly passed.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
