@@ -178,14 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1664997
-   Fix test failures when running from a directory whose name contains
-   characters which must be escaped when used in a URL.
-   Justification:
-     User reported problem when testing 1.9 beta.
-   Votes:
-     +1: rhuijben, brane, stefan2
-
  * r1665195, r1666096, r1666379
    Produce an easier to understand error when a server sends a HTTP 405 code
    Justification:
