@@ -412,6 +412,29 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
                                 apr_pool_t *scratch_pool);
 
 
+/* Describe a subtree of elements.
+ *
+ * A subtree is described by the content of element ROOT_EID in E_MAP,
+ * and its children (as determined by their parent links) and their names
+ * and their content recursively. For the element ROOT_EID itself, only
+ * its content is relevant; its parent and name are to be ignored.
+ *
+ * E_MAP may also contain entries that are not part of the subtree. Thus,
+ * to select a sub-subtree, it is only necessary to change ROOT_EID.
+ *
+ * The EIDs used in here are in effect stand-alone, in their own name-space,
+ * although they may actually be copied from the originating branch family.
+ */
+typedef struct svn_branch_subtree_t
+{
+  /* EID -> svn_branch_el_rev_content_t mapping. */
+  apr_hash_t *e_map;
+
+  /* Subtree root EID. (EID must be an existing key in E_MAP.) */
+  int root_eid;
+} svn_branch_subtree_t;
+
+
 /* Declare that the following function requires/implies that in BRANCH's
  * mapping, for each existing element, the parent also exists.
  *
@@ -538,31 +561,19 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
                              svn_branch_sibling_t *new_branch_def,
                              apr_pool_t *scratch_pool);
 
-/* Copy a subtree.
+/* Create a copy of NEW_SUBTREE at TO_BRANCH:TO_EID, generating new elements
+ * for all elements in NEW_SUBTREE except the root. Set the root element's
+ * parent to NEW_PARENT_EID and name to NEW_NAME.
  *
- * For each element that in FROM_BRANCH is a pathwise descendant of
- * FROM_PARENT_EID, excluding FROM_PARENT_EID itself, instantiate a
- * new element in TO_BRANCH. For each element, keep the same parent
- * element (except, for first-level children, change FROM_PARENT_EID to
- * TO_PARENT_EID), name, and content that it had in FROM_BRANCH.
- *
- * Assign a new EID in TO_BRANCH's family for each copied element.
- *
- * FROM_BRANCH and TO_BRANCH may be the same or different branch instances
- * in the same or different branch families.
- *
- * FROM_PARENT_EID MUST be an existing element in FROM_BRANCH. It may be the
- * root element of FROM_BRANCH.
- *
- * TO_PARENT_EID MUST be an existing element in TO_BRANCH. It may be the
- * root element of TO_BRANCH.
+ * Alter the 'to' element if it already exists, otherwise instantiate it.
  */
 svn_error_t *
-svn_branch_map_copy_children(svn_branch_instance_t *from_branch,
-                             int from_parent_eid,
-                             svn_branch_instance_t *to_branch,
-                             int to_parent_eid,
-                             apr_pool_t *scratch_pool);
+svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
+                           int to_eid,
+                           svn_branch_eid_t new_parent_eid,
+                           const char *new_name,
+                           svn_branch_subtree_t new_subtree,
+                           apr_pool_t *scratch_pool);
 
 /* Copy a subtree.
  *
