@@ -750,9 +750,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       svn_pool_clear(iterpool);
 
       options = apr_palloc(iterpool,
-                           desc->is_binary
-                             ? ARRAY_LEN(binary_conflict_options)
-                             : ARRAY_LEN(text_conflict_options));
+                           sizeof (const char *) *
+                           (desc->is_binary
+                              ? ARRAY_LEN(binary_conflict_options)
+                              : ARRAY_LEN(text_conflict_options)));
       next_option = options;
 
       *next_option++ = "p";
