@@ -178,13 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1665611, r1665612
-   Improve set of versions of httpd with known encoding issues.
-   Justification:
-     Prevents spurious test suite failures against older versions of httpd.
-   Votes:
-     +1: breser, rhuijben, brane
-
  * r1664531, r1664532
    Improve database usage in entries-test to speed up test runs
    Justification:
