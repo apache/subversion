@@ -178,13 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1666270, r1666272
-   Resolve a segfault when an update introduces a conflict on the update root
-   Justification:
-     Regression from 1.8.x.
-   Votes:
-     +1: rhuijben, philip, brane
-
  * r1666851
    Make JavaHL fetch all revision properties when the api promises too.
    Justification:
