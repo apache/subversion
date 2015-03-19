@@ -962,10 +962,9 @@ merge_text_file(svn_skel_t **work_items,
  * Copy* the files at LEFT_ABSPATH and RIGHT_ABSPATH into the same directory
  * as the target file, giving them unique names that start with the target
  * file's name and end with LEFT_LABEL and RIGHT_LABEL respectively.
- *
- * Copy the working state of the merge target to a unique name ending with
- * TARGET_LABEL. If the merge target has been 'detranslated' to repository
- * normal form, use the detranslated form instead of the working state.
+ * If the merge target has been 'detranslated' to repository normal form,
+ * move the detranslated file similarly to a unique name ending with
+ * TARGET_LABEL.
  *
  * ### * Why do we copy the left and right temp files when we could (maybe
  *     not always?) move them?
@@ -1036,31 +1035,26 @@ merge_binary_file(svn_skel_t **work_items,
   SVN_ERR(svn_io_copy_file(left_abspath, left_copy, TRUE, pool));
   SVN_ERR(svn_io_copy_file(right_abspath, right_copy, TRUE, pool));
 
-  /* Create a .mine file too */
-  SVN_ERR(svn_io_open_uniquely_named(NULL,
-                                     &conflict_wrk,
-                                     merge_dirpath,
-                                     merge_filename,
-                                     target_label,
-                                     svn_io_file_del_none,
-                                     pool, pool));
-
   /* Was the merge target detranslated? */
   if (strcmp(mt->local_abspath, detranslated_target_abspath) != 0)
-    SVN_ERR(svn_wc__wq_build_file_move(work_items, mt->db,
-                                       mt->local_abspath,
-                                       detranslated_target_abspath,
-                                       conflict_wrk,
-                                       pool, result_pool));
+    {
+      /* Create a .mine file too */
+      SVN_ERR(svn_io_open_uniquely_named(NULL,
+                                         &conflict_wrk,
+                                         merge_dirpath,
+                                         merge_filename,
+                                         target_label,
+                                         svn_io_file_del_none,
+                                         pool, pool));
+      SVN_ERR(svn_wc__wq_build_file_move(work_items, mt->db,
+                                         mt->local_abspath,
+                                         detranslated_target_abspath,
+                                         conflict_wrk,
+                                         pool, result_pool));
+    }
   else
     {
-      /* Ensure .mine file is created (translation is a no-op).
-       * ### add workq API to copy without translation? */
-      SVN_ERR(svn_wc__wq_build_file_copy_translated(work_items, mt->db,
-                                                    mt->local_abspath,
-                                                    mt->local_abspath,
-                                                    conflict_wrk,
-                                                    pool, result_pool));
+      conflict_wrk = NULL;
     }
 
   /* Mark target_abspath's entry as "Conflicted", and start tracking
