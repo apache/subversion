@@ -422,7 +422,7 @@ static const resolver_option_t text_conflict_options[] =
                                   svn_wc_conflict_choose_undefined },
   { "df", N_("show diff"),        N_("show all changes made to merged file"),
                                   svn_wc_conflict_choose_undefined },
-  { "r",  N_("mark resolved"),   N_("accept merged version of file"),
+  { "r",  N_("mark resolved"),   N_("accept merged version of file  [working]"),
                                   svn_wc_conflict_choose_merged },
   { "",   "",                     "", svn_wc_conflict_choose_unspecified },
   { "dc", N_("display conflict"), N_("show all conflicts "
