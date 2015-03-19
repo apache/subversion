@@ -743,11 +743,17 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       const resolver_option_t *conflict_options = desc->is_binary
                                                     ? binary_conflict_options
                                                     : text_conflict_options;
-      const char *options[ARRAY_LEN(conflict_options)];
-      const char **next_option = options;
+      const char **options;
+      const char **next_option;
       const resolver_option_t *opt;
 
       svn_pool_clear(iterpool);
+
+      options = apr_palloc(iterpool,
+                           desc->is_binary
+                             ? ARRAY_LEN(binary_conflict_options)
+                             : ARRAY_LEN(text_conflict_options));
+      next_option = options;
 
       *next_option++ = "p";
       if (diff_allowed)
