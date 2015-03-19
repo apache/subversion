@@ -178,13 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1663791
-   Trivial typo fix in error message.
-   Justification:
-     Fixes a typo.
-   Votes:
-     +1: brane, rhuijben, stefan2
-
  * r1663738
    Stop exposing and prohibit changing internal txn props through FS API
    Justification:
