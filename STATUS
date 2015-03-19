@@ -148,11 +148,10 @@ Other candidate changes:
      files are not handled as such. The patch also contains some correctness
      and performance fixes to avoid adding extra db operations on common
      code paths.
-   Depends on:
-     The r1663338 group (in the approved section)
    Votes:
      +1: rhuijben
      +0: stsp (conflicts, needs a backport branch)
+              (before the r1663338 group was backported)
 
  * r1667471
    Fix bad assertion in diff callbacks
