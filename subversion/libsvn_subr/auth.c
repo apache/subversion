@@ -109,10 +109,10 @@ struct svn_auth_baton_t
 
   /* run-time parameters needed by providers. */
   apr_hash_t *parameters;
+  apr_hash_t *slave_parameters;
 
   /* run-time credentials cache. */
   apr_hash_t *creds_cache;
-
 };
 
 /* Abstracted iteration baton */
@@ -125,6 +125,7 @@ struct svn_auth_iterstate_t
   const char *realmstring;      /* The original realmstring passed in */
   const char *cache_key;        /* key to use in auth_baton's creds_cache */
   svn_auth_baton_t *auth_baton; /* the original auth_baton. */
+  apr_hash_t *parameters;
 };
 
 
@@ -142,6 +143,7 @@ svn_auth_open(svn_auth_baton_t **auth_baton,
   ab = apr_pcalloc(pool, sizeof(*ab));
   ab->tables = apr_hash_make(pool);
   ab->parameters = apr_hash_make(pool);
+  /* ab->slave_parameters = NULL; */
   ab->creds_cache = apr_hash_make(pool);
   ab->pool = pool;
 
@@ -170,7 +172,8 @@ svn_auth_open(svn_auth_baton_t **auth_baton,
   *auth_baton = ab;
 }
 
-
+/* Magic pointer value to allow storing 'NULL' in an apr_hash_t */
+static const void *auth_NULL = NULL;
 
 void
 svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
@@ -178,17 +181,36 @@ svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
                        const void *value)
 {
   if (auth_baton)
-    svn_hash_sets(auth_baton->parameters, name, value);
+    {
+      if (auth_baton->slave_parameters)
+        {
+          if (!value)
+            value = &auth_NULL;
+
+          svn_hash_sets(auth_baton->slave_parameters, name, value);
+        }
+      else
+        svn_hash_sets(auth_baton->parameters, name, value);
+    }
 }
 
 const void *
 svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
                        const char *name)
 {
-  if (auth_baton)
-    return svn_hash_gets(auth_baton->parameters, name);
-  else
+  const void *value;
+  if (!auth_baton)
     return NULL;
+  else if (!auth_baton->slave_parameters)
+    return svn_hash_gets(auth_baton->parameters, name);
+
+  value = svn_hash_gets(auth_baton->slave_parameters, name);
+
+  if (value)
+    return (value == &auth_NULL) ? NULL
+                                : value;
+
+  return svn_hash_gets(auth_baton->parameters, name);
 }
 
 
@@ -218,6 +240,7 @@ svn_auth_first_credentials(void **credentials,
   svn_boolean_t got_first = FALSE;
   svn_auth_iterstate_t *iterstate;
   const char *cache_key;
+  apr_hash_t *parameters;
 
   if (! auth_baton)
     return svn_error_create(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
@@ -229,6 +252,26 @@ svn_auth_first_credentials(void **credentials,
     return svn_error_createf(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
                              _("No provider registered for '%s' credentials"),
                              cred_kind);
+
+  if (auth_baton->slave_parameters)
+    {
+      apr_hash_index_t *hi;
+      parameters = apr_hash_copy(pool, auth_baton->parameters);
+
+      for (hi = apr_hash_first(pool, auth_baton->slave_parameters);
+            hi;
+            hi = apr_hash_next(hi))
+        {
+          const void *value = apr_hash_this_val(hi);
+
+          if (value == &auth_NULL)
+            value = NULL;
+
+          svn_hash_sets(parameters, apr_hash_this_key(hi), value);
+        }
+    }
+  else
+    parameters = auth_baton->parameters;
 
   /* First, see if we have cached creds in the auth_baton. */
   cache_key = make_cache_key(cred_kind, realmstring, pool);
@@ -247,7 +290,7 @@ svn_auth_first_credentials(void **credentials,
                                    svn_auth_provider_object_t *);
           SVN_ERR(provider->vtable->first_credentials(&creds, &iter_baton,
                                                       provider->provider_baton,
-                                                      auth_baton->parameters,
+                                                      parameters,
                                                       realmstring,
                                                       auth_baton->pool));
 
@@ -274,6 +317,7 @@ svn_auth_first_credentials(void **credentials,
       iterstate->realmstring = apr_pstrdup(pool, realmstring);
       iterstate->cache_key = cache_key;
       iterstate->auth_baton = auth_baton;
+      iterstate->parameters = parameters;
       *state = iterstate;
 
       /* Put the creds in the cache */
@@ -310,7 +354,7 @@ svn_auth_next_credentials(void **credentials,
         {
           SVN_ERR(provider->vtable->first_credentials(
                       &creds, &(state->provider_iter_baton),
-                      provider->provider_baton, auth_baton->parameters,
+                      provider->provider_baton, state->parameters,
                       state->realmstring, auth_baton->pool));
           state->got_first = TRUE;
         }
@@ -319,7 +363,7 @@ svn_auth_next_credentials(void **credentials,
           SVN_ERR(provider->vtable->next_credentials(&creds,
                                                      state->provider_iter_baton,
                                                      provider->provider_baton,
-                                                     auth_baton->parameters,
+                                                     state->parameters,
                                                      state->realmstring,
                                                      auth_baton->pool));
         }
@@ -360,7 +404,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
     return SVN_NO_ERROR;
 
   /* Do not save the creds if SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
-  no_auth_cache = svn_hash_gets(auth_baton->parameters,
+  no_auth_cache = svn_hash_gets(state->parameters,
                                 SVN_AUTH_PARAM_NO_AUTH_CACHE);
   if (no_auth_cache)
     return SVN_NO_ERROR;
@@ -373,7 +417,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
     SVN_ERR(provider->vtable->save_credentials(&save_succeeded,
                                                creds,
                                                provider->provider_baton,
-                                               auth_baton->parameters,
+                                               state->parameters,
                                                state->realmstring,
                                                pool));
   if (save_succeeded)
@@ -389,7 +433,7 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
       if (provider->vtable->save_credentials)
         SVN_ERR(provider->vtable->save_credentials(&save_succeeded, creds,
                                                    provider->provider_baton,
-                                                   auth_baton->parameters,
+                                                   state->parameters,
                                                    state->realmstring,
                                                    pool));
 
@@ -687,10 +731,12 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
 }
 
 svn_error_t *
-svn_auth__apply_config_for_server(svn_auth_baton_t *auth_baton,
-                                  apr_hash_t *config,
-                                  const char *server_name,
-                                  apr_pool_t *scratch_pool)
+svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
+                            const svn_auth_baton_t *auth_baton,
+                            apr_hash_t *config,
+                            const char *server_name,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
   svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
@@ -701,6 +747,12 @@ svn_auth__apply_config_for_server(svn_auth_baton_t *auth_baton,
     = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
   svn_config_t *servers = NULL;
   const char *server_group = NULL;
+
+  struct svn_auth_baton_t *ab;
+
+  ab = apr_pmemdup(result_pool, auth_baton, sizeof(*ab));
+
+  ab->slave_parameters = apr_hash_make(result_pool);
 
   /* The 'store-passwords' and 'store-auth-creds' parameters used to
   * live in SVN_CONFIG_CATEGORY_CONFIG. For backward compatibility,
@@ -716,11 +768,11 @@ svn_auth__apply_config_for_server(svn_auth_baton_t *auth_baton,
   * "store-auth-creds = yes" -- they'll get the expected behaviour.
   */
 
-  if (svn_auth_get_parameter(auth_baton,
+  if (svn_auth_get_parameter(ab,
                               SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
     store_passwords = FALSE;
 
-  if (svn_auth_get_parameter(auth_baton,
+  if (svn_auth_get_parameter(ab,
                               SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
     store_auth_creds = FALSE;
 
@@ -806,46 +858,32 @@ svn_auth__apply_config_for_server(svn_auth_baton_t *auth_baton,
 
   /* Save auth caching parameters in the auth parameter hash. */
   if (! store_passwords)
-    svn_auth_set_parameter(auth_baton,
+    svn_auth_set_parameter(ab,
                            SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
-  svn_auth_set_parameter(auth_baton,
+  svn_auth_set_parameter(ab,
                          SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
                          store_plaintext_passwords);
 
   if (! store_pp)
-    svn_auth_set_parameter(auth_baton,
+    svn_auth_set_parameter(ab,
                            SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP,
                            "");
 
-  svn_auth_set_parameter(auth_baton,
+  svn_auth_set_parameter(ab,
                          SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
                          store_pp_plaintext);
 
   if (! store_auth_creds)
-    svn_auth_set_parameter(auth_baton,
-                            SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+    svn_auth_set_parameter(ab,
+                           SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
-  /* ### This setting may have huge side-effects when the auth baton is shared
-     ### between different ra sessions, as it will change which server settings
-     ### will be used for all future auth requests.
-     ###
-     ### E.g. when you connect using a ssl client cert that is specified in the
-     ### config file, you might have it when you first connect... but if you
-     ### then connect to another repository, you might not see the same
-     ### settings when the SSL connection is built up again later on.
-     ###
-     ### Most current usages should probably have been keyed on the realm
-     ### string instead of this magic flag that changes when multiple repositories
-     ### are used.
-     ###
-     ### This especially affects long living ra sessions, such as those on the
-     ### reuse-ra-session branch.
-   */
   if (server_group)
-    svn_auth_set_parameter(auth_baton,
+    svn_auth_set_parameter(ab,
                            SVN_AUTH_PARAM_SERVER_GROUP,
-                           apr_pstrdup(auth_baton->pool, server_group));
+                           apr_pstrdup(ab->pool, server_group));
+
+  *session_auth_baton = ab;
 
   return SVN_NO_ERROR;
 }
