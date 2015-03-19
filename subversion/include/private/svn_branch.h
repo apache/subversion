@@ -434,6 +434,12 @@ typedef struct svn_branch_subtree_t
   int root_eid;
 } svn_branch_subtree_t;
 
+/* Return the subtree of BRANCH rooted at EID.
+ */
+svn_branch_subtree_t
+svn_branch_map_get_subtree(const svn_branch_instance_t *branch,
+                           int eid,
+                           apr_pool_t *result_pool);
 
 /* Declare that the following function requires/implies that in BRANCH's
  * mapping, for each existing element, the parent also exists.
@@ -499,30 +505,20 @@ void
 svn_branch_purge_r(svn_branch_instance_t *branch,
                    apr_pool_t *scratch_pool);
 
-/* Branch a subtree.
+/* Instantiate a subtree.
  *
- * For each element that in FROM_BRANCH is a pathwise descendant of
- * FROM_PARENT_EID, excluding FROM_PARENT_EID itself, instantiate the
- * same element in TO_BRANCH. For each element, keep the same parent
- * element (except, for first-level children, change FROM_PARENT_EID to
- * TO_PARENT_EID), name, and content that it had in FROM_BRANCH.
+ * In TO_BRANCH, instantiate (or alter, if existing) each element of
+ * FROM_SUBTREE, keeping their tree structure and content. Set the subtree
+ * root element's parent to NEW_PARENT_EID and name to NEW_NAME.
  *
- * ### It's not particularly useful to allow TO_PARENT_EID != FROM_PARENT_EID.
- *
- * FROM_BRANCH and TO_BRANCH must be different branch instances in the
- * same branch family.
- *
- * FROM_PARENT_EID MUST be an existing element in FROM_BRANCH. It may be the
- * root element of FROM_BRANCH.
- *
- * TO_PARENT_EID MUST be an existing element in TO_BRANCH. It may be the
+ * NEW_PARENT_EID MUST be an existing element in TO_BRANCH. It may be the
  * root element of TO_BRANCH.
  */
 svn_error_t *
-svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
-                               int from_parent_eid,
-                               svn_branch_instance_t *to_branch,
-                               int to_parent_eid,
+svn_branch_instantiate_subtree(svn_branch_instance_t *to_branch,
+                               svn_branch_eid_t new_parent_eid,
+                               const char *new_name,
+                               svn_branch_subtree_t from_subtree,
                                apr_pool_t *scratch_pool);
 
 /* Branch a subtree.
