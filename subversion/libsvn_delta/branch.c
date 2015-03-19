@@ -546,9 +546,24 @@ svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
   branch_map_set(branch, eid, node);
 }
 
-void
-svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
-                             apr_pool_t *scratch_pool)
+svn_branch_subtree_t
+svn_branch_map_get_subtree(const svn_branch_instance_t *branch,
+                           int eid,
+                           apr_pool_t *result_pool)
+{
+  svn_branch_subtree_t new_subtree;
+
+  SVN_BRANCH_SEQUENCE_POINT(branch);
+
+  new_subtree.e_map = apr_hash_copy(result_pool, branch->e_map);
+  new_subtree.root_eid = eid;
+  return new_subtree;
+}
+
+static void
+map_purge_orphans(apr_hash_t *e_map,
+                  int root_eid,
+                  apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
   svn_boolean_t changed;
@@ -557,22 +572,22 @@ svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
     {
       changed = FALSE;
 
-      for (hi = apr_hash_first(scratch_pool, branch->e_map);
+      for (hi = apr_hash_first(scratch_pool, e_map);
            hi; hi = apr_hash_next(hi))
         {
           int this_eid = svn_int_hash_this_key(hi);
           svn_branch_el_rev_content_t *this_node = apr_hash_this_val(hi);
 
-          if (this_node->parent_eid != -1)
+          if (this_eid != root_eid)
             {
               svn_branch_el_rev_content_t *parent_node
-                = svn_branch_map_get(branch, this_node->parent_eid);
+                = svn_int_hash_get(e_map, this_node->parent_eid);
 
               /* Purge if parent is deleted */
               if (! parent_node)
                 {
                   SVN_DBG(("purge orphan: e%d", this_eid));
-                  svn_branch_map_delete(branch, this_eid);
+                  svn_int_hash_set(e_map, this_eid, NULL);
                   changed = TRUE;
                 }
               else
@@ -581,6 +596,13 @@ svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
         }
     }
   while (changed);
+}
+
+void
+svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
+                             apr_pool_t *scratch_pool)
+{
+  map_purge_orphans(branch->e_map, branch->sibling_defn->root_eid, scratch_pool);
 }
 
 void
@@ -713,34 +735,6 @@ svn_branch_get_eid_by_rrpath(svn_branch_instance_t *branch,
   return eid;
 }
 
-/* Get an element's content (props, text, ...) in full or by reference.
- */
-static svn_error_t *
-copy_content_from(svn_element_content_t **content_p,
-                  svn_branch_instance_t *from_branch,
-                  int from_eid,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  svn_branch_el_rev_content_t *old_el = svn_branch_map_get(from_branch, from_eid);
-  svn_element_content_t *content = old_el->content;
-
-  /* If content is unknown, then presumably this is a committed rev and
-     so we can provide a reference to the committed content. */
-  if (! content)
-    {
-      svn_pathrev_t peg;
-
-      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(from_branch->rev_root->rev));
-      peg.rev = from_branch->rev_root->rev;
-      peg.relpath = svn_branch_get_rrpath_by_eid(from_branch, from_eid,
-                                                 scratch_pool);
-      content = svn_element_content_create_ref(peg, result_pool);
-    }
-  *content_p = content;
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
                            int to_eid,
@@ -788,44 +782,39 @@ svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
 }
 
 svn_error_t *
-svn_branch_map_branch_children(svn_branch_instance_t *from_branch,
-                               int from_parent_eid,
-                               svn_branch_instance_t *to_branch,
-                               int to_parent_eid,
+svn_branch_instantiate_subtree(svn_branch_instance_t *to_branch,
+                               svn_branch_eid_t new_parent_eid,
+                               const char *new_name,
+                               svn_branch_subtree_t new_subtree,
                                apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
+  svn_branch_el_rev_content_t *new_root_content;
 
-  SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(from_branch, to_branch));
-  SVN_ERR_ASSERT(from_branch != to_branch);
+  /*SVN_ERR_ASSERT(SAME_FAMILY(to_branch...family, new_subtree...family));*/
 
-  /* The 'from' and 'to' nodes must exist. */
-  SVN_ERR_ASSERT(svn_branch_map_get(from_branch, from_parent_eid));
-  SVN_ERR_ASSERT(svn_branch_map_get(to_branch, to_parent_eid));
+  /* Instantiate the root element of NEW_SUBTREE */
+  new_root_content = svn_int_hash_get(new_subtree.e_map, new_subtree.root_eid);
+  if (new_root_content->content)
+    svn_branch_map_update(to_branch, new_subtree.root_eid,
+                          new_parent_eid, new_name, new_root_content->content);
+  else
+    svn_branch_map_update_as_subbranch_root(to_branch, new_subtree.root_eid,
+                                            new_parent_eid, new_name);
 
-  /* Process the immediate children of FROM_PARENT_EID. */
-  for (hi = apr_hash_first(scratch_pool, from_branch->e_map);
+  /* Instantiate all the children of NEW_SUBTREE */
+  /* ### Writes to NEW_SUBTREE.e_map. No semantic change; just purges orphan
+     elements. Could easily avoid this by duplicating first. */
+  map_purge_orphans(new_subtree.e_map, new_subtree.root_eid, scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, new_subtree.e_map);
        hi; hi = apr_hash_next(hi))
     {
       int this_eid = svn_int_hash_this_key(hi);
-      svn_branch_el_rev_content_t *from_node = svn_branch_map_get(from_branch,
-                                                                  this_eid);
+      svn_branch_el_rev_content_t *this_node = apr_hash_this_val(hi);
 
-      if (from_node->parent_eid == from_parent_eid)
+      if (this_eid != new_subtree.root_eid)
         {
-          svn_element_content_t *this_content;
-
-          SVN_ERR(copy_content_from(&this_content, from_branch, this_eid,
-                                    scratch_pool, scratch_pool));
-          svn_branch_map_update(to_branch, this_eid,
-                                from_node->parent_eid, from_node->name,
-                                this_content);
-
-          /* Recurse. (We don't try to check whether it's a directory node,
-             as we might not have the node kind in the map.) */
-          SVN_ERR(svn_branch_map_branch_children(from_branch, this_eid,
-                                                 to_branch, this_eid,
-                                                 scratch_pool));
+          branch_map_set(to_branch, this_eid, this_node);
         }
     }
 
@@ -1443,10 +1432,10 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
                              svn_branch_sibling_t *new_branch_def,
                              apr_pool_t *scratch_pool)
 {
+  svn_branch_subtree_t from_subtree
+    = svn_branch_map_get_subtree(from_branch, from_eid, scratch_pool);
   svn_branch_instance_t *new_branch;
 
-  /* Source element must exist */
-  SVN_ERR_ASSERT(svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool));
   /* When creating a new branch-sibling in same outer branch, TO_OUTER_BRANCH
      is the parent of FROM_BRANCH. When instantiating the same branch-sibling
      into a different outer-branch, TO_OUTER_BRANCH is in the same family as
@@ -1457,20 +1446,8 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
   new_branch = svn_branch_add_new_branch_instance(to_outer_branch, to_outer_eid,
                                                   new_branch_def, scratch_pool);
 
-  /* Initialize the new (inner) branch root element */
-  {
-    svn_element_content_t *old_content;
-
-    SVN_ERR(copy_content_from(&old_content,
-                              from_branch, from_eid,
-                              scratch_pool, scratch_pool));
-    svn_branch_map_update(new_branch, new_branch_def->root_eid,
-                      -1, "", old_content);
-  }
-
-  /* Populate the rest of the new branch mapping */
-  SVN_ERR(svn_branch_map_branch_children(from_branch, from_eid,
-                                         new_branch, new_branch_def->root_eid,
+  /* Populate the new branch mapping */
+  SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", from_subtree,
                                          scratch_pool));
 
   /* branch any subbranches under FROM_BRANCH:FROM_EID */
@@ -1478,8 +1455,8 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
     SVN_ITER_T(svn_branch_instance_t) *bi;
 
     for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(
-                              from_branch, from_eid, scratch_pool, scratch_pool),
-                        scratch_pool))
+                              from_branch, from_subtree.root_eid,
+                              scratch_pool, scratch_pool), scratch_pool))
       {
         svn_branch_instance_t *subbranch = bi->val;
 
@@ -1582,8 +1559,6 @@ svn_branch_branchify(svn_branch_instance_t **new_branch_p,
                      svn_branch_eid_t outer_eid,
                      apr_pool_t *scratch_pool)
 {
-  svn_branch_subtree_t new_subtree;
-
   /* Check the element is not already a branch root */
   /* ### TODO: and its subtree does not contain any branch roots. */
   if (IS_BRANCH_ROOT_EID(outer_branch, outer_eid)
@@ -1591,10 +1566,11 @@ svn_branch_branchify(svn_branch_instance_t **new_branch_p,
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                              _("is already a subbranch root"));
 
-  new_subtree.e_map = outer_branch->e_map;
-  new_subtree.root_eid = outer_eid;
   SVN_ERR(branch_branchify(new_branch_p,
-                           outer_branch, outer_eid, new_subtree, scratch_pool));
+                           outer_branch, outer_eid,
+                           svn_branch_map_get_subtree(outer_branch, outer_eid,
+                                                      scratch_pool),
+                           scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1606,17 +1582,16 @@ svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
                           apr_pool_t *scratch_pool)
 {
   int to_eid;
-  svn_branch_subtree_t new_subtree;
 
   /* Assign a new EID for the new subtree's root element */
   to_eid = svn_branch_family_add_new_element(to_branch->sibling_defn->family);
 
-  new_subtree.e_map = from_el_rev->branch->e_map;
-  new_subtree.root_eid = from_el_rev->eid;
-
   /* copy the subtree, assigning new EIDs */
   SVN_ERR(svn_branch_map_add_subtree(to_branch, to_eid,
-                                     to_parent_eid, to_name, new_subtree,
+                                     to_parent_eid, to_name,
+                                     svn_branch_map_get_subtree(
+                                       from_el_rev->branch, from_el_rev->eid,
+                                       scratch_pool),
                                      scratch_pool));
 
   /* handle any subbranches under FROM_BRANCH:FROM_EID */
