@@ -56,7 +56,7 @@ class RemoteSession : public SVNBase
                         const char* username, const char* password,
                         Prompter::UniquePtr prompter, jobject jprogress,
                         jobject jcfgcb, jobject jtunnelcb);
-    ~RemoteSession();
+    virtual ~RemoteSession();
 
     void cancelOperation() const { m_context->cancelOperation(); }
 
@@ -102,7 +102,6 @@ class RemoteSession : public SVNBase
                           jlong jstart_revision, jlong jend_revision,
                           jboolean jinclude_merged_revisions,
                           jobject jcallback);
-    // TODO: getFileRevisions
     // TODO: lock
     // TODO: unlock
     // TODO: getLock
