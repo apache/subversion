@@ -2338,7 +2338,7 @@ static svn_error_t *
 resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
                               svn_wc__db_t *db,
                               const char *local_abspath,
-                              const svn_skel_t *conflicts,
+                              svn_skel_t *conflicts,
                               const char *conflicted_propname,
                               svn_wc_conflict_choice_t conflict_choice,
                               const char *merged_file,
@@ -2357,6 +2357,8 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
   svn_skel_t *work_items = NULL;
   svn_wc_operation_t operation;
   svn_boolean_t prop_conflicted;
+  apr_hash_t *actual_props;
+  svn_boolean_t resolved_all, resolved_all_prop;
 
   *did_resolve = FALSE;
 
@@ -2372,11 +2374,34 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
                                               db, local_abspath, conflicts,
                                               scratch_pool, scratch_pool));
 
+  if (!conflicted_props)
+    {
+      /* We have a pre 1.8 property conflict. Just mark it resolved */
+
+      SVN_ERR(remove_artifact_file_if_exists(&work_items, did_resolve,
+                                             db, local_abspath, prop_reject_file,
+                                             scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath, FALSE, TRUE, FALSE,
+                                      work_items, scratch_pool));
+      SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+                             scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
+  if (conflicted_propname[0] != '\0'
+      && !svn_hash_gets(conflicted_props, conflicted_propname))
+    {
+      return SVN_NO_ERROR; /* This property is not conflicted! */
+    }
+
   if (operation == svn_wc_operation_merge)
       SVN_ERR(svn_wc__db_read_pristine_props(&old_props, db, local_abspath,
                                              scratch_pool, scratch_pool));
     else
       old_props = their_old_props;
+
+  SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
+                                scratch_pool, scratch_pool));
 
   /* We currently handle *_conflict as *_full as this argument is currently
      always applied for all conflicts on a node at the same time. Giving
@@ -2405,11 +2430,7 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
     case svn_wc_conflict_choose_merged:
       if ((merged_file || merged_value) && conflicted_propname[0] != '\0')
         {
-          apr_hash_t *actual_props;
-
-          SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
-                                        scratch_pool, scratch_pool));
-          resolve_from = actual_props;
+          resolve_from = apr_hash_copy(scratch_pool, actual_props);
 
           if (!merged_value)
             {
@@ -2433,15 +2454,26 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
                               _("Invalid 'conflict_result' argument"));
     }
 
-  if (conflicted_props && apr_hash_count(conflicted_props) && resolve_from)
+
+  if (resolve_from)
     {
       apr_hash_index_t *hi;
-      apr_hash_t *actual_props;
+      apr_hash_t *apply_on_props;
 
-      SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
-                                    scratch_pool, scratch_pool));
+      if (conflicted_propname[0] == '\0')
+        {
+          /* Apply to all conflicted properties */
+          apply_on_props = conflicted_props;
+        }
+      else
+        {
+          /* Apply to a single property */
+          apply_on_props = apr_hash_make(scratch_pool);
+          svn_hash_sets(apply_on_props, conflicted_propname, "");
+        }
 
-      for (hi = apr_hash_first(scratch_pool, conflicted_props);
+      /* Apply the selected changes */
+      for (hi = apr_hash_first(scratch_pool, apply_on_props);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -2452,28 +2484,67 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
 
           svn_hash_sets(actual_props, propname, new_value);
         }
-      SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
-                                      FALSE, NULL, NULL,
-                                      scratch_pool));
+    }
+  /*else the user accepted the properties as-is */
+
+  /* This function handles conflicted_propname "" as resolving
+     all property conflicts... Just what we need here */
+  SVN_ERR(svn_wc__conflict_skel_resolve(&resolved_all, conflicts,
+                                        db, local_abspath,
+                                        FALSE, conflicted_propname,
+                                        FALSE,
+                                        scratch_pool, scratch_pool));
+
+  if (!resolved_all)
+    {
+      /* Are there still property conflicts left? (or only...) */
+      SVN_ERR(svn_wc__conflict_read_info(NULL, NULL, NULL, &prop_conflicted,
+                                         NULL, db, local_abspath, conflicts,
+                                         scratch_pool, scratch_pool));
+
+      resolved_all_prop = (! prop_conflicted);
+    }
+  else
+    {
+      resolved_all_prop = TRUE;
+      conflicts = NULL;
     }
 
-  /* Legacy behavior: Only report property conflicts as resolved when the
-     property reject file exists
+  if (resolved_all_prop)
+    {
+      /* Legacy behavior: Only report property conflicts as resolved when the
+         property reject file exists
 
-     If not the UI shows the conflict as already resolved
-     (and in this case we just remove the in-db conflict) */
+         If not the UI shows the conflict as already resolved
+         (and in this case we just remove the in-db conflict) */
+      SVN_ERR(remove_artifact_file_if_exists(&work_items, did_resolve,
+                                             db, local_abspath,
+                                             prop_reject_file,
+                                             scratch_pool, scratch_pool));
+    }
+  else
+    {
+      /* Create a new prej file, based on the remaining conflicts */
+      SVN_ERR(svn_wc__wq_build_prej_install(&work_items,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+      *did_resolve = TRUE; /* We resolved a property conflict */
+    }
 
-  {
-    svn_skel_t *work_item;
+  /* This installs the updated conflict skel */
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, actual_props,
+                                  FALSE, conflicts, work_items,
+                                  scratch_pool));
 
-    SVN_ERR(remove_artifact_file_if_exists(&work_item, did_resolve,
-                                           db, local_abspath, prop_reject_file,
-                                           scratch_pool, scratch_pool));
-    work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
-  }
+  if (resolved_all)
+    {
+      /* Remove the whole conflict. Should probably be integrated
+         into the op_set_props() call */
+      SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
+                                          FALSE, TRUE, FALSE,
+                                          NULL, scratch_pool));
+    }
 
-  SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath, FALSE, TRUE, FALSE,
-                                      work_items, scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
                          scratch_pool));
 
@@ -3019,13 +3090,6 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
   struct conflict_status_walker_baton cswb;
   apr_pool_t *iterpool = NULL;
   svn_error_t *err;
-
-  /* ### the underlying code does NOT support resolving individual
-     ### properties. bail out if the caller tries it.  */
-  if (resolve_prop != NULL && *resolve_prop != '\0')
-    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                            U_("Resolving a single property is not (yet) "
-                               "supported."));
 
   /* ### Just a versioned check? */
   /* Conflicted is set to allow invoking on actual only nodes */
