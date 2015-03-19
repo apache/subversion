@@ -461,6 +461,28 @@ static const resolver_option_t text_conflict_options[] =
   { NULL }
 };
 
+/* Resolver options for a binary file conflict. */
+static const resolver_option_t binary_conflict_options[] =
+{
+  /* Translators: keep long_desc below 70 characters (wrap with a left
+     margin of 9 spaces if needed); don't translate the words within square
+     brackets. */
+  { "r",  N_("mark resolved"),   N_("accept the working copy version of file "
+                                    " [working]"),
+                                  svn_wc_conflict_choose_merged },
+  { "tf", N_("their version"),    N_("accept the incoming version of file "
+                                     " [theirs-full]"),
+                                  svn_wc_conflict_choose_theirs_full },
+  { "p",  N_("postpone"),         N_("mark the conflict to be resolved later "
+                                     " [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "s",  N_("show all options"), N_("show this list (also 'h', '?')"),
+                                  svn_wc_conflict_choose_undefined },
+  { NULL }
+};
+
 /* Resolver options for a property conflict */
 static const resolver_option_t prop_conflict_options[] =
 {
@@ -718,7 +740,10 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
 
   while (TRUE)
     {
-      const char *options[ARRAY_LEN(text_conflict_options)];
+      const resolver_option_t *conflict_options = desc->is_binary
+                                                    ? binary_conflict_options
+                                                    : text_conflict_options;
+      const char *options[ARRAY_LEN(conflict_options)];
       const char **next_option = options;
       const resolver_option_t *opt;
 
@@ -747,14 +772,19 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           if (knows_something)
             *next_option++ = "r";
-          *next_option++ = "mf";
+
+          /* The 'mine-full' option selects the ".mine" file so only offer
+           * it if that file exists. It does not exist for binary files,
+           * for example (questionable historical behaviour since 1.0). */
+          if (desc->my_abspath)
+            *next_option++ = "mf";
+
           *next_option++ = "tf";
         }
       *next_option++ = "s";
       *next_option++ = NULL;
 
-      SVN_ERR(prompt_user(&opt, text_conflict_options, options, b->pb,
-                          iterpool));
+      SVN_ERR(prompt_user(&opt, conflict_options, options, b->pb, iterpool));
       if (! opt)
         continue;
 
@@ -768,7 +798,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       else if (strcmp(opt->code, "s") == 0)
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "\n%s\n",
-                                      help_string(text_conflict_options,
+                                      help_string(conflict_options,
                                                   iterpool)));
         }
       else if (strcmp(opt->code, "dc") == 0)
