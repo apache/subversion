@@ -5208,29 +5208,6 @@ commit_timestamp(const svn_test_opts_t *opts,
 
   /* Commit that overwrites the specified svn:date. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
-  {
-    /* Setting the internal property doesn't enable svn:date behaviour. */
-    apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
-    svn_prop_t prop, other_prop1, other_prop2;
-    svn_string_t *val;
-
-    prop.name = SVN_FS__PROP_TXN_CLIENT_DATE;
-    prop.value = svn_string_create("1", pool);
-    other_prop1.name = "foo";
-    other_prop1.value = svn_string_create("fooval", pool);
-    other_prop2.name = "bar";
-    other_prop2.value = svn_string_create("barval", pool);
-    APR_ARRAY_PUSH(props, svn_prop_t) = other_prop1;
-    APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-    APR_ARRAY_PUSH(props, svn_prop_t) = other_prop2;
-    SVN_ERR(svn_fs_change_txn_props(txn, props, pool));
-    SVN_ERR(svn_fs_txn_prop(&val, txn, other_prop1.name, pool));
-    SVN_TEST_ASSERT(val && !strcmp(val->data, other_prop1.value->data));
-    SVN_ERR(svn_fs_txn_prop(&val, txn, other_prop2.name, pool));
-    SVN_TEST_ASSERT(val && !strcmp(val->data, other_prop2.value->data));
-
-    SVN_ERR(svn_fs_change_txn_prop(txn, prop.name, prop.value, pool));
-  }
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, date, pool));
@@ -6741,6 +6718,70 @@ test_prop_and_text_rep_sharing_collision(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_internal_txn_props(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_string_t *val;
+  svn_prop_t prop;
+  svn_prop_t internal_prop;
+  apr_array_header_t *props;
+  apr_hash_t *proplist;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-internal-txn-props",
+                              opts, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0,
+                            SVN_FS_TXN_CHECK_LOCKS |
+                            SVN_FS_TXN_CHECK_OOD |
+                            SVN_FS_TXN_CLIENT_DATE, pool));
+
+  /* Ensure that we cannot read internal transaction properties. */
+  SVN_ERR(svn_fs_txn_prop(&val, txn, SVN_FS__PROP_TXN_CHECK_LOCKS, pool));
+  SVN_TEST_ASSERT(!val);
+  SVN_ERR(svn_fs_txn_prop(&val, txn, SVN_FS__PROP_TXN_CHECK_OOD, pool));
+  SVN_TEST_ASSERT(!val);
+  SVN_ERR(svn_fs_txn_prop(&val, txn, SVN_FS__PROP_TXN_CLIENT_DATE, pool));
+  SVN_TEST_ASSERT(!val);
+
+  SVN_ERR(svn_fs_txn_proplist(&proplist, txn, pool));
+  SVN_TEST_ASSERT(apr_hash_count(proplist) == 1);
+  val = svn_hash_gets(proplist, SVN_PROP_REVISION_DATE);
+  SVN_TEST_ASSERT(val);
+
+  /* We also cannot change or discard them. */
+  val = svn_string_create("Ooops!", pool);
+
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CHECK_LOCKS, val, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CHECK_OOD, val, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CHECK_OOD, NULL, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CLIENT_DATE, val, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+  err = svn_fs_change_txn_prop(txn, SVN_FS__PROP_TXN_CLIENT_DATE, NULL, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+
+  prop.name = "foo";
+  prop.value = svn_string_create("bar", pool);
+  internal_prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
+  internal_prop.value = svn_string_create("Ooops!", pool);
+
+  props = apr_array_make(pool, 2, sizeof(svn_prop_t));
+  APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+  APR_ARRAY_PUSH(props, svn_prop_t) = internal_prop;
+
+  err = svn_fs_change_txn_props(txn, props, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_INCORRECT_PARAMS);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6872,6 +6913,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test modify txn being written in FSFS"),
     SVN_TEST_OPTS_PASS(test_prop_and_text_rep_sharing_collision,
                        "test property and text rep-sharing collision"),
+    SVN_TEST_OPTS_PASS(test_internal_txn_props,
+                       "test setting and getting internal txn props"),
     SVN_TEST_NULL
   };
 
