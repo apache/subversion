@@ -178,13 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1664684
-   svnrdump: don't provide HEAD+1 as base revision when loading deletes.
-   Justification:
-     Our own tools should be well behaved.
-   Votes:
-     +1: rhuijben, brane, stefan2
-
  * r1664997
    Fix test failures when running from a directory whose name contains
    characters which must be escaped when used in a URL.
