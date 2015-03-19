@@ -1194,29 +1194,6 @@ svn_delta__ev3_from_delta_for_commit2(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-/* Return in NEW_DEDITOR/NEW_DETIT_BATON a delta editor that wraps
- * OLD_DEDITOR/OLD_DEDIT_BATON, inserting a pair of shims that convert
- * Ev1 to Ev3 and back to Ev1.
- *
- * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
- * relative path within the repository of the root directory of the edit.
- *
- * FETCH_FUNC/FETCH_BATON is a callback by which the shim may retrieve the
- * original or copy-from kind/properties/text for a path being committed.
- */
-svn_error_t *
-svn_editor3__insert_shims(
-                        const svn_delta_editor_t **new_deditor,
-                        void **new_dedit_baton,
-                        const svn_delta_editor_t *old_deditor,
-                        void *old_dedit_baton,
-                        const char *repos_root,
-                        const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
-                        void *fetch_baton,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
-
 
 #ifdef __cplusplus
 }
