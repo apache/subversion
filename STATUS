@@ -178,20 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1664476, r1664480, r1664481, r1664483, r1664507, r1664520, r1664521, r1664523, r1664526, r1664527, r1665845, r1665850, r1665852
-   Automatic create sqlite_stat1 table in wc.db if it doesn't exist.
-   Justification:
-     Avoid performance regression on some old working copies.
-   Notes:
-     This stats table provides very valuable hints to the sqlite query
-     optimizer. Sqlite 3.8.x needs this for most of our queries.
-     .
-     See "Manual Control Of Query Plans Using SQLITE_STAT Tables"
-     on https://www.sqlite.org/optoverview.html#manctrl
-     I (philip) think we cannot release 1.9.0 without this fix.
-   Votes:
-     +1: philip, rhuijben, ivan, brane
-
  * r1664078,r1664080,r1664187,r1664191,r1664200,r1664344,r1664588,r1664927,r1665886
    Instead of making more changes to the auth batons from ra sessions, reduce
    the number of changes by introducing an internal slave auth baton feature.

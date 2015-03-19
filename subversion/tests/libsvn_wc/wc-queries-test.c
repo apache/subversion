@@ -108,6 +108,7 @@ static const int slow_statements[] =
   /* Slow, but just if foreign keys are enabled:
    * STMT_DELETE_PRISTINE_IF_UNREFERENCED,
    */
+  STMT_HAVE_STAT1_TABLE, /* Queries sqlite_master which has no index */
 
   -1 /* final marker */
 };
