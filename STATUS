@@ -178,14 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1664653
-   Fix segfault when performing 'svn cp --pin-externals WC URL' against old
-   server over http.
-   Justification:
-     Fixes segfault on --disable-http-v2.
-   Votes:
-     +1: rhuijben, brane, stefan2
-
  * r1664684
    svnrdump: don't provide HEAD+1 as base revision when loading deletes.
    Justification:
