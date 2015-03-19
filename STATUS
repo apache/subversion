@@ -178,13 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1664193
-   Fix win32 resource generation for svnbench.exe
-   Justification:
-     Trivial change to generate version resource for application.
-   Votes:
-     +1: rhuijben, brane, stefan2
-
  * r1664653
    Fix segfault when performing 'svn cp --pin-externals WC URL' against old
    server over http.
