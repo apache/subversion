@@ -139,6 +139,7 @@ Other candidate changes:
      code paths.
    Votes:
      +1: rhuijben
+     +0: stsp (conflicts, needs a backport branch)
 
  * r1665437, r1665896, r1666449, r1667106
    Fixes to the public FS API declarations and documentation.
