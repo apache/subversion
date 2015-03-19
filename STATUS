@@ -178,13 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1665164
-   Fix Python SWIG reference counting in svn_fs_[un]lock_many.
-   Justification:
-     Python interpreter may crash.
-   Votes:
-     +1: philip, danielsh
-
  * r1665611, r1665612
    Improve set of versions of httpd with known encoding issues.
    Justification:
