@@ -178,14 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1665437, r1665896, r1666449, r1667106
-   Fixes to the public FS API declarations and documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2, julianfoad, rhuijben
-
  * r1665438, r1667107
    Fixes to the public Repos layer API declarations and documentation.
    Justification:
