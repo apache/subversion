@@ -178,14 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1665195, r1666096, r1666379
-   Produce an easier to understand error when a server sends a HTTP 405 code
-   Justification:
-     Just reporting out of date doesn't hint a user that he should
-     switch/relocate to the location where he is allowed to commit.
-   Votes:
-     +1: rhuijben, brane, stefan2
-
  * r1665437, r1665896, r1666449, r1667106
    Fixes to the public FS API declarations and documentation.
    Justification:
