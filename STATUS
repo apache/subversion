@@ -129,6 +129,7 @@ Other candidate changes:
      detect conflicts between transactions early.
    Votes:
      +1: stefan2, julianfoad
+     +0.5: rhuijben (Patch looks ok. What about bdb? Automatically handled?)
 
  * r1667228, r1667234, r1667228, r1667250, r1667258, r1667290
    Improve binary file and property handling during conflict resolving
@@ -137,25 +138,11 @@ Other candidate changes:
      files are not handled as such. The patch also contains some correctness
      and performance fixes to avoid adding extra db operations on common
      code paths.
+   Depends on:
+     The r1663338 group (in the approved section)
    Votes:
      +1: rhuijben
      +0: stsp (conflicts, needs a backport branch)
-
- * r1665437, r1665896, r1666449, r1667106
-   Fixes to the public FS API declarations and documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2, julianfoad
-
- * r1665438, r1667107
-   Fixes to the public Repos layer API declarations and documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2, julianfoad
 
  * r1667471
    Fix bad assertion in diff callbacks
@@ -355,3 +342,18 @@ Approved changes:
    Votes:
      +1: rhuijben, brane, stefan2
 
+ * r1665437, r1665896, r1666449, r1667106
+   Fixes to the public FS API declarations and documentation.
+   Justification:
+     Have a complete, correct and easily accessible API description.
+     None of these changes should affect generated code nor the ABI.
+   Votes:
+     +1: stefan2, julianfoad, rhuijben
+
+ * r1665438, r1667107
+   Fixes to the public Repos layer API declarations and documentation.
+   Justification:
+     Have a complete, correct and easily accessible API description.
+     None of these changes should affect generated code nor the ABI.
+   Votes:
+     +1: stefan2, julianfoad, rhuijben
