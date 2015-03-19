@@ -1669,7 +1669,13 @@ build_text_conflict_resolve_items(svn_skel_t **work_items,
         SVN_ERR_ASSERT(choice == svn_wc_conflict_choose_postpone);
     }
 
-  SVN_ERR_ASSERT(install_from_abspath != NULL);
+  if (install_from_abspath == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Conflict on '%s' could not be resolved "
+                               "because the chosen version of the file "
+                               "is not available."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* ### It would be nice if we could somehow pass RECORD_FILEINFO
          as true in some easy cases. */
