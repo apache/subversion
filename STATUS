@@ -178,13 +178,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1666851
-   Make JavaHL fetch all revision properties when the api promises too.
-   Justification:
-     Simple bugfix makes new in 1.9 code do what it was designed to do.
-   Votes:
-     +1: rhuijben, brane
-
  * r1666690
    Record skipped tree during merge on the skip root instead of leaves
    Justification:

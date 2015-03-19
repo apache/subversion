@@ -877,8 +877,10 @@ RemoteSession::getLog(jobject jpaths,
                                                        true, subPool);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  const apr_array_header_t* revprops = build_string_array(revpropiter,
-                                                          false, subPool);
+  const apr_array_header_t* revprops = (jrevprops != NULL)
+                                        ? build_string_array(revpropiter,
+                                                             false, subPool)
+                                        : NULL;
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
