@@ -6715,8 +6715,8 @@ test_fs_merge(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-test_create_with_config_opts(const svn_test_opts_t *opts,
-                             apr_pool_t *pool)
+test_fsfs_config_opts(const svn_test_opts_t *opts,
+                      apr_pool_t *pool)
 {
   apr_hash_t *fs_config;
   svn_fs_t *fs;
@@ -6724,9 +6724,9 @@ test_create_with_config_opts(const svn_test_opts_t *opts,
   const svn_fs_fsfs_info_t *fsfs_info;
 
   /* Bail (with SKIP) on known-untestable scenarios */
-  if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "this will not test BDB repositories");
+                            "this will test FSFS repositories only");
 
   /* Remove the test directory from previous runs. */
   SVN_ERR(svn_io_remove_dir2("test-fsfs-config-opts", TRUE, NULL, NULL, pool));
@@ -7108,8 +7108,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "get a delta stream on a file"),
     SVN_TEST_OPTS_PASS(test_fs_merge,
                        "get merging txns with newer revisions"),
-    SVN_TEST_OPTS_PASS(test_create_with_config_opts,
-                       "test creating a repository with different opts"),
+    SVN_TEST_OPTS_PASS(test_fsfs_config_opts,
+                       "test creating FSFS repository with different opts"),
     SVN_TEST_OPTS_PASS(test_txn_pool_lifetime,
                        "test pool lifetime dependencies with txn roots"),
     SVN_TEST_OPTS_PASS(test_modify_txn_being_written,
