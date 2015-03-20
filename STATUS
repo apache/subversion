@@ -122,7 +122,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1667941
+ * r1667941, r1667976
    Bump copyright year.
    Justification:
      We won't make more 1.7.x releases in 2014.
