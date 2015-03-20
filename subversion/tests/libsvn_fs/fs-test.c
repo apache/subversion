@@ -4912,7 +4912,7 @@ unordered_txn_dirprops(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *txn_root2;
   svn_string_t pval;
   svn_revnum_t new_rev, not_rev;
-  svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
+  svn_boolean_t is_bdb = strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0;
 
   /* This is a regression test for issue #2751. */
 
@@ -5544,7 +5544,7 @@ dir_prop_merge(const svn_test_opts_t *opts,
   svn_revnum_t head_rev;
   svn_fs_root_t *root;
   svn_fs_txn_t *txn, *mid_txn, *top_txn, *sub_txn, *c_txn;
-  svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
+  svn_boolean_t is_bdb = strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0;
 
   /* Create test repository. */
   SVN_ERR(svn_test__create_fs(&fs, "test-fs-dir_prop-merge", opts, pool));
@@ -5809,7 +5809,7 @@ test_paths_changed(const svn_test_opts_t *opts,
   int i;
 
   /* The "mergeinfo_mod flag will say "unknown" until recently. */
-  if (   strcmp(opts->fs_type, "bdb") != 0
+  if (   strcmp(opts->fs_type, SVN_FS_TYPE_BDB) != 0
       && (!opts->server_minor_version || (opts->server_minor_version >= 9)))
     has_mergeinfo_mod = TRUE;
 
@@ -6393,11 +6393,11 @@ test_print_modules(const svn_test_opts_t *opts,
   svn_stringbuf_t *modules = svn_stringbuf_create_empty(pool);
 
   /* Name of the providing module */
-  if (strcmp(opts->fs_type, "fsx") == 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSX) == 0)
     module_name = "fs_x";
-  else if (strcmp(opts->fs_type, "fsfs") == 0)
+  else if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) == 0)
     module_name = "fs_fs";
-  else if (strcmp(opts->fs_type, "bdb") == 0)
+  else if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
     module_name = "fs_base";
   else
     return svn_error_createf(SVN_ERR_TEST_SKIPPED, NULL,
