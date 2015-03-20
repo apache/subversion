@@ -421,6 +421,17 @@ def compare_changes(repos, branch, revision):
       logging.warning('CHANGES has unmerged revisions: %s' %
                       stdout.replace("\n", " "))
 
+def check_copyright_year(repos, branch, revision):
+    cat_cmd = ['svn', 'cat', repos + '/' + branch + '/NOTICE@' + str(revision)]
+    stdout = subprocess.check_output(cat_cmd)
+    year = None
+    for line in stdout.split('\n'):
+      m = re.match('Copyright ([0-9]+) The Apache Software Foundation', line)
+      if m:
+        year = m.group(1)
+    if year == None or year != str(datetime.datetime.now().year):
+      logging.warning('NOTICE does not contain current year')
+
 def roll_tarballs(args):
     'Create the release artifacts.'
 
@@ -431,6 +442,8 @@ def roll_tarballs(args):
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
+
+    check_copyright_year(repos, args.branch, args.revnum)
 
     # Ensure we've got the appropriate rolling dependencies available
     autoconf = AutoconfDep(args.base_dir, False, args.verbose,
