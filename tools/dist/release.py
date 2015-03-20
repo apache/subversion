@@ -421,16 +421,28 @@ def compare_changes(repos, branch, revision):
       logging.warning('CHANGES has unmerged revisions: %s' %
                       stdout.replace("\n", " "))
 
+
+_current_year = str(datetime.datetime.now().year)
+_copyright_re = re.compile(r'Copyright (?:\(C\) )?(?P<year>[0-9]+)'
+                           r' The Apache Software Foundation',
+                           re.MULTILINE)
+
 def check_copyright_year(repos, branch, revision):
-    cat_cmd = ['svn', 'cat', repos + '/' + branch + '/NOTICE@' + str(revision)]
-    stdout = subprocess.check_output(cat_cmd)
-    year = None
-    for line in stdout.split('\n'):
-      m = re.match('Copyright ([0-9]+) The Apache Software Foundation', line)
-      if m:
-        year = m.group(1)
-    if year == None or year != str(datetime.datetime.now().year):
-      logging.warning('NOTICE does not contain current year')
+    def check_file(branch_relpath):
+        file_url = (repos + '/' + branch + '/'
+                    + branch_relpath + '@' + str(revision))
+        cat_cmd = ['svn', 'cat', file_url]
+        stdout = subprocess.check_output(cat_cmd)
+        m = _copyright_re.search(stdout)
+        if m:
+            year = m.group('year')
+        else:
+            year = None
+        if year != _current_year:
+            logging.warning('Copyright year in ' + branch_relpath
+                            + ' is not the current year')
+    check_file('NOTICE')
+    check_file('subversion/libsvn_subr/version.c')
 
 def roll_tarballs(args):
     'Create the release artifacts.'
