@@ -181,15 +181,16 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1667941, r1667976
    Bump copyright year.
    Justification:
      We won't release 1.9.0 last year.
    Votes:
      +1: brane, philip, julianfoad
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +0: rhuijben (concept. Not reviewed)
