@@ -148,7 +148,8 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
-            apr_pool_t *pool)
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
 {
   svn_config_t *config, *config_client;
   const char *server_group;
@@ -202,7 +203,7 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, "");
   if (! svn_cstring_match_glob_list(session->session_url.hostname,
                                     svn_cstring_split(exceptions, ",",
-                                                      TRUE, pool)))
+                                                      TRUE, scratch_pool)))
     {
       svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
                      SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
@@ -433,7 +434,7 @@ load_config(svn_ra_serf__session_t *session,
     }
 
   /* Setup authentication. */
-  SVN_ERR(load_http_auth_types(pool, config, server_group,
+  SVN_ERR(load_http_auth_types(result_pool, config, server_group,
                                &session->authn_types));
   serf_config_authn_types(session->context, session->authn_types);
   serf_config_credentials_callback(session->context,
@@ -509,7 +510,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                        serf_sess->pool));
 
 
-  status = apr_uri_parse(serf_sess->pool, session_URL, &url);
+  status = apr_uri_parse(scratch_pool, session_URL, &url);
   if (status)
     {
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -542,7 +543,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
      this, if we find an intervening proxy does not support chunked requests.  */
   serf_sess->using_chunked_requests = TRUE;
 
-  SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
+  SVN_ERR(load_config(serf_sess, config, serf_sess->pool, scratch_pool));
 
   serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
                                     sizeof(*serf_sess->conns[0]));
@@ -759,7 +760,8 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
 
   new_sess->context = serf_context_create(result_pool);
 
-  SVN_ERR(load_config(new_sess, old_sess->config, result_pool));
+  SVN_ERR(load_config(new_sess, old_sess->config,
+                      result_pool, scratch_pool));
 
   new_sess->conns[0] = apr_pcalloc(result_pool,
                                    sizeof(*new_sess->conns[0]));
