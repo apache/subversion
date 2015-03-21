@@ -18,6 +18,18 @@ Status of 1.9.0:
 1.9.0 candidate changes that cannot go into a later 1.9.x:
 ==========================================================
 
+ * r1664938, r1664939, r1664940, r1664978, r1664984
+   libsvn_javahl: wrap and unwrap java exceptions via svn_error_t
+   Justification:
+     This patch makes Java callbacks that throw errors report
+     their error to the subversion function that called them. This
+     allows this function to properly handle the error condition instead
+     of continuing as if nothing happened. If further callbacks are needed
+     during error handling these callbacks will now just work and Subversion
+     can ignore certain kinds of errors as needed, by just clearing the error.
+   Votes:
+     +1: rhuijben (not after 1.9.0)
+
 Other candidate changes:
 ========================
 
@@ -187,18 +199,6 @@ Other candidate changes:
      ra operations shouldn't unnecessary grow the session pool.
    Votes:
      +1: rhuijben
-
- * r1664938, r1664939, r1664940, r1664978, r1664984
-   libsvn_javahl: wrap and unwrap java exceptions via svn_error_t
-   Justification:
-     This patch makes Java callbacks that throw errors report
-     their error to the subversion function that called them. This
-     allows this function to properly handle the error condition instead
-     of continuing as if nothing happened. If further callbacks are needed
-     during error handling these callbacks will now just work and Subversion
-     can ignore certain kinds of errors as needed, by just clearing the error.
-   Votes:
-     +1: rhuijben (not after 1.9.0)
 
 Veto-blocked changes:
 =====================
