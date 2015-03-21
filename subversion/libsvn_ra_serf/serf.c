@@ -510,7 +510,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                        serf_sess->pool));
 
 
-  status = apr_uri_parse(scratch_pool, session_URL, &url);
+  status = apr_uri_parse(serf_sess->pool, session_URL, &url);
   if (status)
     {
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
