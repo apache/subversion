@@ -181,6 +181,13 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1668320
+   ra_serf: resolve minor memory leak against very old servers
+   Justification:
+     ra operations shouldn't unnecessary grow the session pool.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
