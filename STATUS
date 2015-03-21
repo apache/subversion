@@ -172,12 +172,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1667941, r1667976
-   Bump copyright year.
-   Justification:
-     We won't make more 1.7.x releases in 2014.
-   Branch:
-     ^/subversion/branches/1.7.x-r1667941
-   Votes:
-     +1: brane, julianfoad, philip
