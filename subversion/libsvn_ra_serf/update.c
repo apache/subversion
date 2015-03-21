@@ -2759,7 +2759,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                             update_editor,
                                             update_baton,
                                             depth, has_target,
-                                            sess->pool));
+                                            result_pool));
       update_editor = filter_editor;
       update_baton = filter_baton;
     }
