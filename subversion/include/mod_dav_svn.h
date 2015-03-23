@@ -92,6 +92,8 @@ AP_MODULE_DECLARE(dav_error *) dav_svn_split_uri2(request_rec *r,
 
 /**
  * Same as dav_svn_split_uri2() but allocates the result in @a r->pool.
+ *
+ * @deprecated Provided for backward compatibility with 1.8 API.
  */
 AP_MODULE_DECLARE(dav_error *) dav_svn_split_uri(request_rec *r,
                                                  const char *uri,
@@ -120,6 +122,8 @@ AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path2(request_rec *r,
 
 /**
  * Same as dav_svn_get_repos_path2() but allocates the result in@a r->pool.
+ *
+ * @deprecated Provided for backward compatibility with 1.8 API.
  */
 AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path(request_rec *r,
                                                       const char *root_path,
