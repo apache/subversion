@@ -1116,11 +1116,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 
 %typemap(argout) unsigned char *result_digest {
-  /* FIXME: This code is clearly buggy. The return value of sv_newmortal()
-     is immediately overwritten by the return value
-     of svn_swig_pl_from_md5(). */
-    ST(argvi) = sv_newmortal();
-    ST(argvi++) = svn_swig_pl_from_md5($1);
+    %append_output(svn_swig_pl_from_md5($1));
 }
 #endif
 
