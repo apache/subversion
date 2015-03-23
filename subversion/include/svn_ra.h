@@ -289,7 +289,7 @@ typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
  * This function will be called when the pool that owns the tunnel
  * connection is cleared or destroyed.
  *
- * @a tunnel_context is the baton as returned from the
+ * @a close_baton is the baton as returned from the
  * svn_ra_open_tunnel_func_t.
  *
  * @a tunnel_baton was returned by the open-tunnel callback.
@@ -1798,7 +1798,7 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * to support reversion of the revision range for @a include_merged_revision
  * @c FALSE reporting by switching  @a end with @a start.
  *
- * @note Prior to Subversion 1.9, this function may accept delta handlers
+ * @note Prior to Subversion 1.9, this function may request delta handlers
  * from @a handler even for empty text deltas.  Starting with 1.9, the
  * delta handler / baton return arguments passed to @a handler will be
  * #NULL unless there is an actual difference in the file contents between
