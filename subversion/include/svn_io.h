@@ -707,7 +707,7 @@ svn_io_file_create(const char *file,
  * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a length is
  * zero, create an empty file; in this case @a contents may be @c NULL.
  *
- * Use @a pool for memory allocations.
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
@@ -715,20 +715,20 @@ svn_error_t *
 svn_io_file_create_bytes(const char *file,
                          const void *contents,
                          apr_size_t length,
-                         apr_pool_t *pool);
+                         apr_pool_t *scratch_pool);
 
 /** Create an empty file at utf8-encoded path @a file.
  *
  * @a file must not already exist. If an error occurs while
  * closing the file, attempt to delete the file before returning the error.
  *
- * Use @a pool for memory allocations.
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
 svn_io_file_create_empty(const char *file,
-                         apr_pool_t *pool);
+                         apr_pool_t *scratch_pool);
 
 /**
  * Lock file at @a lock_file. If @a exclusive is TRUE,
@@ -1129,8 +1129,8 @@ svn_error_t *
 svn_stream_for_stdout(svn_stream_t **out,
                       apr_pool_t *pool);
 
-/** Set @a *str to a string buffer allocated in @a pool that contains all
- * data from the current position in @a stream to its end.  @a len_hint
+/** Set @a *str to a string buffer allocated in @a result_pool that contains
+ * all data from the current position in @a stream to its end.  @a len_hint
  * specifies the initial capacity of the string buffer and may be 0.  The
  * buffer gets automatically resized to fit the actual amount of data being
  * read from @a stream.
@@ -1141,7 +1141,7 @@ svn_error_t *
 svn_stringbuf_from_stream(svn_stringbuf_t **str,
                           svn_stream_t *stream,
                           apr_size_t len_hint,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool);
 
 /** Return a generic stream connected to stringbuf @a str.  Allocate the
  * stream in @a pool.
@@ -2225,7 +2225,7 @@ svn_io_file_seek(apr_file_t *file,
  * internal data buffer to @a block_size bytes and to read data aligned to
  * multiples of that value.  The beginning of the block will be returned
  * in @a buffer_start, if that is not NULL.
- * Uses @a pool for temporary allocations.
+ * Uses @a scratch_pool for temporary allocations.
  *
  * @note Due to limitations of the APR API, the alignment may not be
  * successful.  If you never use any other seek function on @a file,
@@ -2241,7 +2241,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
                          apr_off_t block_size,
                          apr_off_t *buffer_start,
                          apr_off_t offset,
-                         apr_pool_t *pool);
+                         apr_pool_t *scratch_pool);
 
 /** Wrapper for apr_file_write(). */
 svn_error_t *
