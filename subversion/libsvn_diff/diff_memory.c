@@ -622,7 +622,7 @@ svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
                                     int context_size,
                                     svn_cancel_func_t cancel_func,
                                     void *cancel_baton,
-                                    apr_pool_t *pool)
+                                    apr_pool_t *scratch_pool)
 {
 
   if (svn_diff_contains_diffs(diff))
@@ -631,9 +631,9 @@ svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
 
       memset(&baton, 0, sizeof(baton));
       baton.output_stream = output_stream;
-      baton.pool = svn_pool_create(pool);
+      baton.pool = svn_pool_create(scratch_pool);
       baton.header_encoding = header_encoding;
-      baton.hunk = svn_stringbuf_create_empty(pool);
+      baton.hunk = svn_stringbuf_create_empty(scratch_pool);
       baton.hunk_delimiter = hunk_delimiter;
       baton.no_newline_string
         = (hunk_delimiter == NULL || strcmp(hunk_delimiter, "##") != 0)
@@ -644,22 +644,22 @@ svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_context]), " ",
-               header_encoding, pool));
+               header_encoding, scratch_pool));
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_delete]), "-",
-               header_encoding, pool));
+               header_encoding, scratch_pool));
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_insert]), "+",
-               header_encoding, pool));
+               header_encoding, scratch_pool));
 
-      fill_source_tokens(&baton.sources[0], original, pool);
-      fill_source_tokens(&baton.sources[1], modified, pool);
+      fill_source_tokens(&baton.sources[0], original, scratch_pool);
+      fill_source_tokens(&baton.sources[1], modified, scratch_pool);
 
       if (with_diff_header)
         {
           SVN_ERR(svn_diff__unidiff_write_header(
                     output_stream, header_encoding,
-                    original_header, modified_header, pool));
+                    original_header, modified_header, scratch_pool));
         }
 
       SVN_ERR(svn_diff_output2(diff, &baton,
@@ -1060,7 +1060,7 @@ svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
                                   svn_diff_conflict_display_style_t style,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
-                                  apr_pool_t *pool)
+                                  apr_pool_t *scratch_pool)
 {
   merge_output_baton_t btn;
   const char *eol;
@@ -1074,16 +1074,16 @@ svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
 
   if (conflicts_only)
     {
-      btn.pool = svn_pool_create(pool);
+      btn.pool = svn_pool_create(scratch_pool);
       make_context_saver(&btn);
       btn.real_output_stream = output_stream;
     }
   else
     btn.output_stream = output_stream;
 
-  fill_source_tokens(&(btn.sources[0]), original, pool);
-  fill_source_tokens(&(btn.sources[1]), modified, pool);
-  fill_source_tokens(&(btn.sources[2]), latest, pool);
+  fill_source_tokens(&(btn.sources[0]), original, scratch_pool);
+  fill_source_tokens(&(btn.sources[1]), modified, scratch_pool);
+  fill_source_tokens(&(btn.sources[2]), latest, scratch_pool);
 
   btn.conflict_style = style;
 
@@ -1104,22 +1104,22 @@ svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
                                     conflict_modified
                                     ? conflict_modified
                                     : "<<<<<<< (modified)",
-                                    pool));
+                                    scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[0],
                                     conflict_original
                                     ? conflict_original
                                     : "||||||| (original)",
-                                    pool));
+                                    scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[2],
                                     conflict_separator
                                     ? conflict_separator
                                     : "=======",
-                                    pool));
+                                    scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[3],
                                     conflict_latest
                                     ? conflict_latest
                                     : ">>>>>>> (latest)",
-                                    pool));
+                                    scratch_pool));
 
   SVN_ERR(svn_diff_output2(diff, &btn, vtable, cancel_func, cancel_baton));
   if (conflicts_only)
