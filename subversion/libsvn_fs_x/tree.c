@@ -1350,7 +1350,10 @@ x_node_relation(svn_fs_node_relation_t *relation,
         = root_a->is_txn_root && root_b->is_txn_root
             && strcmp(root_a->txn, root_b->txn);
 
-      *relation = ((root_a->rev == root_b->rev) && !different_txn)
+      /* For txn roots, root->REV is the base revision of that TXN. */
+      *relation = (   (root_a->rev == root_b->rev)
+                   && (root_a->is_txn_root == root_b->is_txn_root)
+                   && !different_txn)
                 ? svn_fs_node_same
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;

@@ -1353,7 +1353,10 @@ fs_node_relation(svn_fs_node_relation_t *relation,
    * direct the relation is. */
   if (a_is_root_dir && b_is_root_dir)
     {
-      *relation = ((root_a->rev == root_b->rev) && !different_txn)
+      /* For txn roots, root->REV is the base revision of that TXN. */
+      *relation = (   (root_a->rev == root_b->rev)
+                   && (root_a->is_txn_root == root_b->is_txn_root)
+                   && !different_txn)
                 ? svn_fs_node_same
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
@@ -1379,7 +1382,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   /* Noderevs have the same node-ID now. So, they *seem* to be related.
    *
    * Special case: Different txns may create the same (txn-local) node ID.
-   * Only when they are committed can they actually be related to others. */
+   * These are not related to each other, nor to any other node ID so far. */
   if (different_txn && node_id_a.revision == SVN_INVALID_REVNUM)
     {
       *relation = svn_fs_node_unrelated;

@@ -463,7 +463,8 @@ expect_buffer_nul(apr_file_t *file,
 
   /* read the whole data block; error out on failure */
   data.chunks[(size - 1)/ sizeof(apr_uint64_t)] = 0;
-  SVN_ERR(svn_io_file_read_full2(file, data.buffer, (apr_size_t)size, NULL, NULL, pool));
+  SVN_ERR(svn_io_file_read_full2(file, data.buffer, (apr_size_t)size, NULL,
+                                 NULL, pool));
 
   /* chunky check */
   for (i = 0; i < size / sizeof(apr_uint64_t); ++i)

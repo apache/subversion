@@ -1443,13 +1443,14 @@ svn_error_t *
 svn_stringbuf_from_stream(svn_stringbuf_t **str,
                           svn_stream_t *stream,
                           apr_size_t len_hint,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
 #define MIN_READ_SIZE 64
 
   apr_size_t to_read = 0;
   svn_stringbuf_t *text
-    = svn_stringbuf_create_ensure(len_hint ? len_hint : MIN_READ_SIZE, pool);
+    = svn_stringbuf_create_ensure(len_hint ? len_hint : MIN_READ_SIZE,
+                                  result_pool);
 
   do
     {

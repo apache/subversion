@@ -198,7 +198,8 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
   if (err != ERROR_SUCCESS)
     {
       apr_status_t apr_err = APR_FROM_OS_ERROR(err);
-      svn_boolean_t is_enoent = APR_STATUS_IS_ENOENT(apr_err);
+      svn_boolean_t is_enoent = APR_STATUS_IS_ENOENT(apr_err)
+                                || (err == ERROR_INVALID_HANDLE);
 
       if (must_exist || !is_enoent)
         return svn_error_createf(SVN_ERR_BAD_FILENAME,

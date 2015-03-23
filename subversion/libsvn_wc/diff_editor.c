@@ -2404,8 +2404,8 @@ wrap_dir_opened(void **new_dir_baton,
   wc_diff_wrap_baton_t *wb = processor->baton;
   svn_boolean_t tree_conflicted = FALSE;
 
-  assert(left_source || right_source);
-  assert(!copyfrom_source || !right_source);
+  assert(left_source || right_source);      /* Must exist at one point. */
+  assert(!left_source || !copyfrom_source); /* Either existed or added. */
 
   /* Maybe store state and tree_conflicted in baton? */
   if (left_source != NULL)
