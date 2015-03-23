@@ -689,11 +689,9 @@ svn_io_files_contents_three_same_p(svn_boolean_t *same12,
  * closing the file, attempt to delete the file before returning the error.
  *
  * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a contents
- * is null, create an empty file.
+ * is @c NULL, create an empty file.
  *
  * Use @a pool for memory allocations.
- *
- * @since
  */
 svn_error_t *
 svn_io_file_create(const char *file,
@@ -707,7 +705,7 @@ svn_io_file_create(const char *file,
  * closing the file, attempt to delete the file before returning the error.
  *
  * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a length is
- * zero, create an empty file; in this case @a contents may be null.
+ * zero, create an empty file; in this case @a contents may be @c NULL.
  *
  * Use @a pool for memory allocations.
  *
@@ -2229,10 +2227,10 @@ svn_io_file_seek(apr_file_t *file,
  * in @a buffer_start, if that is not NULL.
  * Uses @a pool for temporary allocations.
  *
- * @note Due to limitations of the APR API, in particular pre-1.3 APR,
- * the alignment may not be successful.  If you never use any other seek
- * function on @a file, you are, however, virtually guaranteed to get at
- * least 4kByte alignments for all reads.
+ * @note Due to limitations of the APR API, the alignment may not be
+ * successful.  If you never use any other seek function on @a file,
+ * however, you are virtually guaranteed to get at least 4kByte alignment
+ * for all reads.
  *
  * @note Calling this for non-buffered files is legal but inefficient.
  *
