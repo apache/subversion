@@ -4826,6 +4826,48 @@ def diff_local_copied_dir(sbox):
     os.chdir(was_cwd)
 
 
+def diff_summarize_ignore_properties(sbox):
+  "diff --summarize --ignore-properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a property change and a content change to 'iota'
+  sbox.simple_propset('svn:eol-style', 'native', 'iota')
+  svntest.main.file_append(sbox.ospath('iota'), 'new text')
+
+  # Make a property change to 'A/mu'
+  sbox.simple_propset('svn:eol-style', 'native', 'A/mu')
+
+  # Make a content change to 'A/B/lambda'
+  svntest.main.file_append(sbox.ospath('A/B/lambda'), 'new text')
+
+  # Add a file.
+  svntest.main.file_write(sbox.ospath('new'), 'new text')
+  sbox.simple_add('new')
+
+  # Delete a file
+  sbox.simple_rm('A/B/E/alpha')
+
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='M '),
+    'new': Item(status='A '),
+    'A/B/lambda': Item(status='M '),
+    'A/B/E/alpha': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                '--ignore-properties',
+                                                sbox.wc_dir)
+
+  # test with --xml, too
+  paths = ['iota', 'new', 'A/B/lambda', 'A/B/E/alpha']
+  items = ['modified', 'added', 'modified', 'deleted' ]
+  kinds = ['file','file', 'file', 'file']
+  props = ['none', 'none', 'none', 'none']
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], wc_dir, paths, items, props, kinds, wc_dir, '--ignore-properties')
+
+
 ########################################################################
 #Run the tests
 
@@ -4916,6 +4958,7 @@ test_list = [ None,
               diff_deleted_in_move_against_repos,
               diff_replaced_moved,
               diff_local_copied_dir,
+              diff_summarize_ignore_properties,
               ]
 
 if __name__ == '__main__':

@@ -1230,6 +1230,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   apr_hash_t *pristine_props = NULL;
   apr_hash_t *old_actual_props;
   apr_hash_t *new_actual_props = NULL;
+  svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(left_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(right_abspath));
@@ -1242,7 +1243,6 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   /* Sanity check:  the merge target must be a file under revision control */
   {
     svn_wc__db_status_t status;
-    svn_node_kind_t kind;
     svn_boolean_t had_props;
     svn_boolean_t props_mod;
     svn_boolean_t conflicted;
@@ -1405,7 +1405,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
           svn_boolean_t text_conflicted, prop_conflicted;
 
           SVN_ERR(svn_wc__conflict_invoke_resolver(
-                    wc_ctx->db, target_abspath,
+                    wc_ctx->db, target_abspath, kind,
                     conflict_skel, merge_options,
                     conflict_func, conflict_baton,
                     cancel_func, cancel_baton,

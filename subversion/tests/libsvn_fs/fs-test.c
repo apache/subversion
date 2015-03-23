@@ -4359,15 +4359,19 @@ check_txn_related(const svn_test_opts_t *opts,
      and two transactions, T1 and T2 - yet uncommitted.
 
      A is a file that exists in r1 (A-0) and gets modified in both txns.
-     C is a copy of A1 made in both txns.
+     C is a copy of A-0 made in both txns.
      B is a new node created in both txns
      D is a file that exists in r1 (D-0) and never gets modified.
+     / is the root folder, touched in r0, r1 and both txns (root-0)
+     R is a copy of the root-0 made in both txns.
 
-                 +--A-0--+                  D-0
-                 |       |
-           +-----+       +-----+
-           |     |       |     |
-     B-1   C-T   A-1     A-2   C-1   B-2
+     The edges in the graph connect related noderevs:
+
+                 +--A-0--+                D-0           +-root-0-+
+                 |       |                              |        |
+           +-----+       +-----+                 +------+        +------+
+           |     |       |     |                 |      |        |      |
+     B-1   C-1   A-1     A-2   C-2   B-2         R-1    root-1   root-2 R-2
   */
   /* Revision 1 */
   SVN_ERR(svn_fs_begin_txn(&txn[0], fs, youngest_rev, subpool));
@@ -4385,6 +4389,7 @@ check_txn_related(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&root[1], txn[1], pool));
   SVN_ERR(svn_test__set_file_contents(root[1], "A", "2", pool));
   SVN_ERR(svn_fs_copy(root[0], "A", root[1], "C", pool));
+  SVN_ERR(svn_fs_copy(root[0], "", root[1], "R", pool));
   SVN_ERR(svn_fs_make_file(root[1], "B", pool));
 
   /* Transaction 2 */
@@ -4392,11 +4397,13 @@ check_txn_related(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&root[2], txn[2], pool));
   SVN_ERR(svn_test__set_file_contents(root[2], "A", "2", pool));
   SVN_ERR(svn_fs_copy(root[0], "A", root[2], "C", pool));
+  SVN_ERR(svn_fs_copy(root[0], "", root[2], "R", pool));
   SVN_ERR(svn_fs_make_file(root[2], "B", pool));
 
   /*** Step II: Exhaustively verify relationship between all nodes in
        existence. */
   {
+    enum { NODE_COUNT = 13 };
     int i, j;
 
     struct path_rev_t
@@ -4406,29 +4413,36 @@ check_txn_related(const svn_test_opts_t *opts,
     };
 
     /* Our 16 existing files/revisions. */
-    struct path_rev_t path_revs[8] = {
+    struct path_rev_t path_revs[NODE_COUNT] = {
       { "A", 0 }, { "A", 1 }, { "A", 2 },
       { "B", 1 }, { "B", 2 },
       { "C", 1 }, { "C", 2 },
-      { "D", 0 }
+      { "D", 0 },
+      { "/", 0 }, { "/", 1 }, { "/", 2 },
+      { "R", 1 }, { "R", 2 }
     };
 
-    int related_matrix[8][8] = {
-      /* A-0 ... D-0 across the top here*/
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-0 */
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-1 */
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* A-2 */
-      { 0, 0, 0, 1, 0, 0, 0, 0 }, /* C-1 */
-      { 0, 0, 0, 0, 1, 0, 0, 0 }, /* C-2 */
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* B-1 */
-      { 1, 1, 1, 0, 0, 1, 1, 0 }, /* B-2 */
-      { 0, 0, 0, 0, 0, 0, 0, 1 }  /* D-0 */
+    int related_matrix[NODE_COUNT][NODE_COUNT] = {
+      /* A-0 ... R-2 across the top here*/
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-0 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-2 */
+      { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* B-1 */
+      { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 }, /* B-2 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* C-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* C-2 */
+      { 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 }, /* D-0 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-0 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-1 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-2 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* R-1 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* R-2 */
     };
 
     /* Here's the fun part.  Running the tests. */
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < NODE_COUNT; i++)
       {
-        for (j = 0; j < 8; j++)
+        for (j = 0; j < NODE_COUNT; j++)
           {
             struct path_rev_t pr1 = path_revs[i];
             struct path_rev_t pr2 = path_revs[j];
@@ -4471,7 +4485,7 @@ check_txn_related(const svn_test_opts_t *opts,
                                          root[pr2.root], pr2.path, subpool));
             if (i == j)
               {
-                /* Identical note. */
+                /* Identical noderev. */
                 if (!related || relation != svn_fs_node_same)
                   {
                     return svn_error_createf
@@ -4898,7 +4912,7 @@ unordered_txn_dirprops(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *txn_root2;
   svn_string_t pval;
   svn_revnum_t new_rev, not_rev;
-  svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
+  svn_boolean_t is_bdb = strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0;
 
   /* This is a regression test for issue #2751. */
 
@@ -5530,7 +5544,7 @@ dir_prop_merge(const svn_test_opts_t *opts,
   svn_revnum_t head_rev;
   svn_fs_root_t *root;
   svn_fs_txn_t *txn, *mid_txn, *top_txn, *sub_txn, *c_txn;
-  svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
+  svn_boolean_t is_bdb = strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0;
 
   /* Create test repository. */
   SVN_ERR(svn_test__create_fs(&fs, "test-fs-dir_prop-merge", opts, pool));
@@ -5795,7 +5809,7 @@ test_paths_changed(const svn_test_opts_t *opts,
   int i;
 
   /* The "mergeinfo_mod flag will say "unknown" until recently. */
-  if (   strcmp(opts->fs_type, "bdb") != 0
+  if (   strcmp(opts->fs_type, SVN_FS_TYPE_BDB) != 0
       && (!opts->server_minor_version || (opts->server_minor_version >= 9)))
     has_mergeinfo_mod = TRUE;
 
@@ -6379,11 +6393,11 @@ test_print_modules(const svn_test_opts_t *opts,
   svn_stringbuf_t *modules = svn_stringbuf_create_empty(pool);
 
   /* Name of the providing module */
-  if (strcmp(opts->fs_type, "fsx") == 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSX) == 0)
     module_name = "fs_x";
-  else if (strcmp(opts->fs_type, "fsfs") == 0)
+  else if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) == 0)
     module_name = "fs_fs";
-  else if (strcmp(opts->fs_type, "bdb") == 0)
+  else if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
     module_name = "fs_base";
   else
     return svn_error_createf(SVN_ERR_TEST_SKIPPED, NULL,
@@ -6710,7 +6724,7 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
   const svn_fs_fsfs_info_t *fsfs_info;
 
   /* Bail (with SKIP) on known-untestable scenarios */
-  if (strcmp(opts->fs_type, "fsfs") != 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "this will test FSFS repositories only");
 
@@ -6816,9 +6830,9 @@ test_modify_txn_being_written(const svn_test_opts_t *opts,
   svn_stream_t *bar_contents;
 
   /* Bail (with success) on known-untestable scenarios */
-  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "this will test FSFS repositories only");
+                            "this will not test BDB repositories");
 
   /* Create a new repo. */
   SVN_ERR(svn_test__create_fs(&fs, "test-modify-txn-being-written",
@@ -7099,7 +7113,7 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_txn_pool_lifetime,
                        "test pool lifetime dependencies with txn roots"),
     SVN_TEST_OPTS_PASS(test_modify_txn_being_written,
-                       "test modify txn being written in FSFS"),
+                       "test modify txn being written"),
     SVN_TEST_OPTS_PASS(test_prop_and_text_rep_sharing_collision,
                        "test property and text rep-sharing collision"),
     SVN_TEST_OPTS_PASS(test_internal_txn_props,

@@ -1635,9 +1635,10 @@ svn_repos_fs(svn_repos_t *repos)
 }
 
 const char *
-svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool)
+svn_repos_fs_type(svn_repos_t *repos,
+                  apr_pool_t *result_pool)
 {
-  return apr_pstrdup(pool, repos->fs_type);
+  return apr_pstrdup(result_pool, repos->fs_type);
 }
 
 /* For historical reasons, for the Berkeley DB backend, this code uses
@@ -1957,7 +1958,7 @@ svn_repos_hotcopy3(const char *src_path,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   svn_fs_hotcopy_notify_t fs_notify_func;
   struct fs_hotcopy_notify_baton_t fs_notify_baton;
@@ -1968,8 +1969,8 @@ svn_repos_hotcopy3(const char *src_path,
   svn_repos_t *dst_repos;
   svn_error_t *err;
 
-  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
-  SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, scratch_pool));
   if (strcmp(src_abspath, dst_abspath) == 0)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                              _("Hotcopy source and destination are equal"));
@@ -1979,7 +1980,7 @@ svn_repos_hotcopy3(const char *src_path,
                     FALSE, FALSE,
                     FALSE,    /* don't try to open the db yet. */
                     NULL,
-                    pool, pool));
+                    scratch_pool, scratch_pool));
 
   /* If we are going to clean logs, then get an exclusive lock on
      db-logs.lock, to ensure that no one else will work with logs.
@@ -1987,7 +1988,7 @@ svn_repos_hotcopy3(const char *src_path,
      If we are just copying, then get a shared lock to ensure that
      no one else will clean logs while we copying them */
 
-  SVN_ERR(lock_db_logs_file(src_repos, clean_logs, pool));
+  SVN_ERR(lock_db_logs_file(src_repos, clean_logs, scratch_pool));
 
   /* Copy the repository to a new path, with exception of
      specially handled directories */
@@ -2001,16 +2002,16 @@ svn_repos_hotcopy3(const char *src_path,
                            0,
                            hotcopy_structure,
                            &hotcopy_context,
-                           pool));
+                           scratch_pool));
 
   /* Prepare dst_repos object so that we may create locks,
      so that we may open repository */
 
-  dst_repos = create_svn_repos_t(dst_abspath, pool);
+  dst_repos = create_svn_repos_t(dst_abspath, scratch_pool);
   dst_repos->fs_type = src_repos->fs_type;
   dst_repos->format = src_repos->format;
 
-  err = create_locks(dst_repos, pool);
+  err = create_locks(dst_repos, scratch_pool);
   if (err)
     {
       if (incremental && err->apr_err == SVN_ERR_DIR_NOT_EMPTY)
@@ -2019,7 +2020,8 @@ svn_repos_hotcopy3(const char *src_path,
         return svn_error_trace(err);
     }
 
-  err = svn_io_dir_make_sgid(dst_repos->db_path, APR_OS_DEFAULT, pool);
+  err = svn_io_dir_make_sgid(dst_repos->db_path, APR_OS_DEFAULT,
+                             scratch_pool);
   if (err)
     {
       if (incremental && APR_STATUS_IS_EEXIST(err->apr_err))
@@ -2030,7 +2032,7 @@ svn_repos_hotcopy3(const char *src_path,
 
   /* Exclusively lock the new repository.
      No one should be accessing it at the moment */
-  SVN_ERR(lock_repos(dst_repos, TRUE, FALSE, pool));
+  SVN_ERR(lock_repos(dst_repos, TRUE, FALSE, scratch_pool));
 
   fs_notify_func = notify_func ? fs_hotcopy_notify : NULL;
   fs_notify_baton.notify_func = notify_func;
@@ -2039,12 +2041,12 @@ svn_repos_hotcopy3(const char *src_path,
   SVN_ERR(svn_fs_hotcopy3(src_repos->db_path, dst_repos->db_path,
                           clean_logs, incremental,
                           fs_notify_func, &fs_notify_baton,
-                          cancel_func, cancel_baton, pool));
+                          cancel_func, cancel_baton, scratch_pool));
 
   /* Destination repository is ready.  Stamp it with a format number. */
   return svn_io_write_version_file
-          (svn_dirent_join(dst_repos->path, SVN_REPOS__FORMAT, pool),
-           dst_repos->format, pool);
+          (svn_dirent_join(dst_repos->path, SVN_REPOS__FORMAT, scratch_pool),
+           dst_repos->format, scratch_pool);
 }
 
 /* Return the library version number. */
