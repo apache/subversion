@@ -1191,7 +1191,7 @@ svn_error_t *
 svn_io_file_create_bytes(const char *file,
                          const void *contents,
                          apr_size_t length,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   apr_file_t *f;
   apr_size_t written;
@@ -1200,13 +1200,14 @@ svn_io_file_create_bytes(const char *file,
   SVN_ERR(svn_io_file_open(&f, file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
-                           pool));
+                           scratch_pool));
   if (length)
-    err = svn_io_file_write_full(f, contents, length, &written, pool);
+    err = svn_io_file_write_full(f, contents, length, &written,
+                                 scratch_pool);
 
   err = svn_error_compose_create(
                     err,
-                    svn_io_file_close(f, pool));
+                    svn_io_file_close(f, scratch_pool));
 
   if (err)
     {
@@ -1216,7 +1217,7 @@ svn_io_file_create_bytes(const char *file,
       return svn_error_trace(
                 svn_error_compose_create(
                     err,
-                    svn_io_remove_file2(file, TRUE, pool)));
+                    svn_io_remove_file2(file, TRUE, scratch_pool)));
     }
 
   return SVN_NO_ERROR;
@@ -1235,9 +1236,10 @@ svn_io_file_create(const char *file,
 
 svn_error_t *
 svn_io_file_create_empty(const char *file,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_io_file_create_bytes(file, NULL, 0, pool));
+  return svn_error_trace(svn_io_file_create_bytes(file, NULL, 0,
+                                                  scratch_pool));
 }
 
 svn_error_t *
@@ -3633,7 +3635,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
                          apr_off_t block_size,
                          apr_off_t *buffer_start,
                          apr_off_t offset,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   const apr_size_t apr_default_buffer_size = 4096;
   apr_size_t file_buffer_size = apr_default_buffer_size;
@@ -3683,7 +3685,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
          buffer and no I/O will actually happen in the FILL_BUFFER
          section below.
        */
-      SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, scratch_pool));
       fill_buffer = aligned_offset + file_buffer_size <= current
                  || current <= aligned_offset;
     }
@@ -3694,7 +3696,8 @@ svn_io_file_aligned_seek(apr_file_t *file,
       apr_status_t status;
 
       /* seek to the start of the block and cause APR to read 1 block */
-      SVN_ERR(svn_io_file_seek(file, APR_SET, &aligned_offset, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &aligned_offset,
+                               scratch_pool));
       status = apr_file_getc(&dummy, file);
 
       /* read may fail if we seek to or behind EOF.  That's ok then. */
@@ -3702,17 +3705,17 @@ svn_io_file_aligned_seek(apr_file_t *file,
         return do_io_file_wrapper_cleanup(file, status,
                                           N_("Can't read file '%s'"),
                                           N_("Can't read stream"),
-                                          pool);
+                                          scratch_pool);
     }
 
   /* finally, seek to the OFFSET the caller wants */
   desired_offset = offset;
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, scratch_pool));
   if (desired_offset != offset)
     return do_io_file_wrapper_cleanup(file, APR_EOF,
                                       N_("Can't seek in file '%s'"),
                                       N_("Can't seek in stream"),
-                                      pool);
+                                      scratch_pool);
 
   /* return the buffer start that we (probably) enforced */
   if (buffer_start)
