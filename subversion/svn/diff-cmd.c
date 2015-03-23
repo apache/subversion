@@ -249,7 +249,7 @@ svn_cl__diff(apr_getopt_t *os,
       if (opt_state->force)
         return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("'%s' not valid with '--summarize' option"),
-                                 "--no-diff-deleted");
+                                 "--force");
       /* Not handling ignore-properties, and properties-only as there should
          be a patch adding support for these being applied soon */
     }
