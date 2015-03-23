@@ -305,7 +305,7 @@ svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
  * The advantages extend beyond the actual call because the reduced
  * register pressure allows for more optimization within the caller.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  * @since New in 1.7.
  */
 void
@@ -314,7 +314,7 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *targetstr,
 
 /** Append the array of bytes @a bytes of length @a count onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  *
  * @since 1.9 @a bytes can be NULL if @a count is zero.
  */
@@ -325,7 +325,7 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,
 
 /** Append @a byte @a count times onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  * @since New in 1.9.
  */
 void
@@ -335,7 +335,7 @@ svn_stringbuf_appendfill(svn_stringbuf_t *targetstr,
 
 /** Append the stringbuf @c appendstr onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void
 svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,
@@ -343,7 +343,7 @@ svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,
 
 /** Append the C string @a cstr onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void
 svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
