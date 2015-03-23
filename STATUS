@@ -28,7 +28,7 @@ Status of 1.9.0:
      during error handling these callbacks will now just work and Subversion
      can ignore certain kinds of errors as needed, by just clearing the error.
    Votes:
-     +1: rhuijben (not after 1.9.0)
+     +1: rhuijben (not after 1.9.0), brane
 
 Other candidate changes:
 ========================
