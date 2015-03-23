@@ -705,7 +705,8 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
  * @a conflict_latest to be displayed as conflict markers in the output.
  * If @a conflict_original, @a conflict_modified, @a conflict_latest and/or
  * @a conflict_separator is @c NULL, a default marker will be displayed.
- * @a conflict_style dictates how conflicts are displayed.
+ * @a conflict_style dictates how conflicts are displayed. 
+ * Uses @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
@@ -722,7 +723,7 @@ svn_diff_file_output_merge3(svn_stream_t *output_stream,
                             svn_diff_conflict_display_style_t conflict_style,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
-                            apr_pool_t *pool);
+                            apr_pool_t *scratch_pool);
 
 /** Similar to svn_diff_file_output_merge3, but without cancel support.
  *
@@ -858,6 +859,8 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
  * will be used in the generated diff output. Otherwise the legacy compile
  * time default will be used.
  *
+ * Uses @a scratch_pool for temporary allocations.
+ *
  * @since New in 1.9
  */
 svn_error_t *
@@ -873,7 +876,7 @@ svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
                                     int context_size,
                                     svn_cancel_func_t cancel_func,
                                     void *cancel_baton,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
 /** Similar to svn_diff_mem_string_output_unified3() but without
  * cancel support and with @a context_size set to -1.
@@ -924,6 +927,8 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
  *
  * @a conflict_style dictates how conflicts are displayed.
  *
+ * Uses @a scratch_pool for temporary allocations.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -939,7 +944,7 @@ svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
                                   svn_diff_conflict_display_style_t style,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 /** Similar to svn_diff_mem_string_output_merge2(), but without cancel support.
  *
