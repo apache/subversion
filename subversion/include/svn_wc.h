@@ -1859,11 +1859,11 @@ typedef struct svn_wc_conflict_description2_t
   /** Info on the "merge-right source" or "their" version of incoming change. */
   const svn_wc_conflict_version_t *src_right_version;
 
-  /* For property conflicts, the absolute path to the .prej file.
+  /** For property conflicts, the absolute path to the .prej file.
    * @since New in 1.9. */
   const char *prop_reject_abspath;
 
-  /* For property conflicts, the local base value of the property, i.e. the
+  /** For property conflicts, the local base value of the property, i.e. the
    * value of the property as of the BASE revision of the working copy.
    * For conflicts created during update/switch this contains the
    * post-update/switch property value. The pre-update/switch value can
@@ -1872,20 +1872,20 @@ typedef struct svn_wc_conflict_description2_t
    * @since New in 1.9. */
   const svn_string_t *prop_value_base;
 
-  /* For property conflicts, the local working value of the property,
+  /** For property conflicts, the local working value of the property,
    * i.e. the value of the property in the working copy, possibly with
    * local modiciations.
    * Only set if available, so might be @c NULL.
    * @since New in 1.9. */
   const svn_string_t *prop_value_working;
 
-  /* For property conflicts, the incoming old value of the property,
+  /** For property conflicts, the incoming old value of the property,
    * i.e. the value the property had at @c src_left_version.
    * Only set if available, so might be @c NULL.
    * @since New in 1.9 */
   const svn_string_t *prop_value_incoming_old;
 
-  /* For property conflicts, the incoming new value of the property,
+  /** For property conflicts, the incoming new value of the property,
    * i.e. the value the property had at @c src_right_version.
    * Only set if available, so might be @c NULL.
    * @since New in 1.9 */
@@ -3836,8 +3836,8 @@ typedef struct svn_wc_status3_t
   svn_boolean_t file_external;
 
 
-  /** The actual kind of the node in the working copy. May differ from kind
-   * on obstructions, deletes, etc. svn_node_unknown if unavailable.
+  /** The actual kind of the node in the working copy. May differ from
+   * @a kind on obstructions, deletes, etc. #svn_node_unknown if unavailable.
    *
    * @since New in 1.9 */
   svn_node_kind_t actual_kind;
