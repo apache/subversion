@@ -128,7 +128,9 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
 
 def xtest_svnmover(repo_url, error_re_string, *varargs):
   """Run svnmover with the list of VARARGS arguments.  Verify that
-  its run produces an error that matches ERROR_RE_STRING."""
+     its run produces an error, and that the error matches ERROR_RE_STRING
+     if that is not None.
+  """
 
   # First, run svnmover.
   exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
@@ -136,8 +138,11 @@ def xtest_svnmover(repo_url, error_re_string, *varargs):
   if error_re_string:
     if not error_re_string.startswith(".*"):
       error_re_string = ".*(" + error_re_string + ")"
-    expected_err = svntest.verify.RegexOutput(error_re_string, match_all=False)
-    svntest.verify.verify_outputs(None, None, errlines, None, expected_err)
+  else:
+    error_re_string = ".*"
+
+  expected_err = svntest.verify.RegexOutput(error_re_string, match_all=False)
+  svntest.verify.verify_outputs(None, None, errlines, None, expected_err)
 
 ######################################################################
 
