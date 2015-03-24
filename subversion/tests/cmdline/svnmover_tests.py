@@ -37,7 +37,48 @@ _commit_re = re.compile('^Committed (r[0-9]+)')
 _log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
 _err_re = re.compile('^svnmover: (.*)$')
 
-def sbox_build_svnmover(sbox):
+def mk_file(sbox, file_name):
+  """Make an unversioned file named FILE_NAME, with some text content,
+     in some convenient directory, and return a path to it.
+  """
+  file_path = os.path.join(sbox.repo_dir, file_name)
+  svntest.main.file_append(file_path, "This is the file '" + file_name + "'.")
+  return file_path
+
+def populate_trunk(sbox, trunk):
+  """Create some files and dirs under the existing dir (relpath) TRUNK.
+  """
+  test_svnmover(sbox.repo_url + '/' + trunk, None,
+                'put', mk_file(sbox, 'README'), 'README',
+                'mkdir', 'lib',
+                'mkdir', 'lib/foo',
+                'mkdir', 'lib/foo/x',
+                'mkdir', 'lib/foo/y',
+                'put', mk_file(sbox, 'file'), 'lib/foo/file')
+
+def initial_content_A_iota(sbox):
+  """Commit something in place of a greek tree for revision 1.
+  """
+  svntest.main.run_svnmover('-U', sbox.repo_url,
+                            'mkdir', 'A',
+                            'put', mk_file(sbox, 'iota'), 'iota')
+
+def initial_content_ttb(sbox):
+  """Make a 'trunk' branch and 'tags' and 'branches' dirs.
+  """
+  test_svnmover(sbox.repo_url, None,
+                'mkbranch', 'trunk',
+                'mkdir', 'tags',
+                'mkdir', 'branches')
+
+def initial_content_in_trunk(sbox):
+  initial_content_ttb(sbox)
+
+  # create initial state in trunk
+  # (r3)
+  populate_trunk(sbox, 'trunk')
+
+def sbox_build_svnmover(sbox, content=None):
   """Create a sandbox repo containing one revision, with a directory 'A' and
      a file 'iota'.
 
@@ -48,12 +89,8 @@ def sbox_build_svnmover(sbox):
   sbox.build(create_wc=False, empty=True)
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
-  # commit something in place of a greek tree for revision 1
-  iota_file = os.path.join(sbox.repo_dir, 'iota')
-  svntest.main.file_append(iota_file, "This is the file 'iota'.")
-  svntest.main.run_svnmover('-U', sbox.repo_url,
-                            'mkdir', 'A',
-                            'put', iota_file, 'iota')
+  if content:
+    content(sbox)
 
 def test_svnmover(repo_url, expected_path_changes, *varargs):
   """Run svnmover with the list of SVNMOVER_ARGS arguments.  Verify that
@@ -80,13 +117,14 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
     if match:
       changed_paths.append(match.group(1).rstrip('\n\r'))
 
-  expected_path_changes.sort()
-  changed_paths.sort()
-  if changed_paths != expected_path_changes:
-    raise svntest.Failure("Logged path changes differ from expectations\n"
-                          "   expected: %s\n"
-                          "     actual: %s" % (str(expected_path_changes),
-                                               str(changed_paths)))
+  if expected_path_changes is not None:
+    expected_path_changes.sort()
+    changed_paths.sort()
+    if changed_paths != expected_path_changes:
+      raise svntest.Failure("Logged path changes differ from expectations\n"
+                            "   expected: %s\n"
+                            "     actual: %s" % (str(expected_path_changes),
+                                                 str(changed_paths)))
 
 def xtest_svnmover(repo_url, error_re_string, *varargs):
   """Run svnmover with the list of VARARGS arguments.  Verify that
@@ -107,7 +145,7 @@ def basic_svnmover(sbox):
   "basic svnmover tests"
   # a copy of svnmucc_tests 1
 
-  sbox_build_svnmover(sbox)
+  sbox_build_svnmover(sbox, content=initial_content_A_iota)
 
   empty_file = os.path.join(sbox.repo_dir, 'empty')
   svntest.main.file_append(empty_file, '')
@@ -313,15 +351,15 @@ def nested_replaces(sbox):
 
   sbox_build_svnmover(sbox)
   repo_url = sbox.repo_url
+
+  # r1
   svntest.actions.run_and_verify_svnmover(None, [],
-                           '-U', repo_url, '-m', 'r2: create tree',
-                           'rm', 'A',
-                           'rm', 'iota',
+                           '-U', repo_url, '-m', 'r1: create tree',
                            'mkdir', 'A', 'mkdir', 'A/B', 'mkdir', 'A/B/C',
                            'mkdir', 'M', 'mkdir', 'M/N', 'mkdir', 'M/N/O',
                            'mkdir', 'X', 'mkdir', 'X/Y', 'mkdir', 'X/Y/Z')
   svntest.actions.run_and_verify_svnmover(None, [],
-                           '-U', repo_url, '-m', 'r3: nested replaces',
+                           '-U', repo_url, '-m', 'r2: nested replaces',
                            *("""
 rm A rm M rm X
 cp HEAD X/Y/Z A cp HEAD A/B/C M cp HEAD M/N/O X
@@ -333,38 +371,31 @@ rm A/B/C/Y
 
   # ### TODO: need a smarter run_and_verify_log() that verifies copyfrom
   expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
-    '   R /A (from /X/Y/Z:2)',
-    '   A /A/B (from /A/B:2)',
-    '   R /A/B/C (from /X:2)',
-    '   R /M (from /A/B/C:2)',
-    '   A /M/N (from /M/N:2)',
-    '   R /M/N/O (from /A:2)',
-    '   R /X (from /M/N/O:2)',
-    '   A /X/Y (from /X/Y:2)',
-    '   R /X/Y/Z (from /M:2)',
+    '   R /A (from /X/Y/Z:1)',
+    '   A /A/B (from /A/B:1)',
+    '   R /A/B/C (from /X:1)',
+    '   R /M (from /A/B/C:1)',
+    '   A /M/N (from /M/N:1)',
+    '   R /M/N/O (from /A:1)',
+    '   R /X (from /M/N/O:1)',
+    '   A /X/Y (from /X/Y:1)',
+    '   R /X/Y/Z (from /M:1)',
     '   D /A/B/C/Y',
   ]) + [
-    '^-', '^r3', '^-', '^Changed paths:',
+    '^-', '^r2', '^-', '^Changed paths:',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'log', '-qvr3', repo_url)
+                                     'log', '-qvr2', repo_url)
 
 def merges(sbox):
   "merges"
-  sbox_build_svnmover(sbox)
+  sbox_build_svnmover(sbox, content=initial_content_ttb)
   repo_url = sbox.repo_url
-
-  # make a 'trunk' branch and a 'branches' directory
-  # (r2)
-  svntest.actions.run_and_verify_svnmover(None, [],
-                           '-U', repo_url,
-                           'mkbranch', 'trunk',
-                           'mkdir', 'branches')
 
   # Create some nodes in trunk, each one named for how we will modify it.
   # The name 'rm_no', for example, means we are going to 'rm' this node on
   # trunk and make 'no' change on the branch.
-  # (r3)
+  # (r2)
   svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
                            'mkdir', 'trunk/no_no',
@@ -375,12 +406,12 @@ def merges(sbox):
                            'mkdir', 'trunk/rm_mv',
                            'mkdir', 'trunk/mv_rm')
 
-  # branch (r4)
+  # branch (r3)
   svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
                            'branch', 'trunk', 'branches/br1')
 
-  # modify (r5, r6)
+  # modify (r4, r5)
   svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url + '/trunk',
                            'mkdir', 'add_no',
@@ -401,38 +432,29 @@ def merges(sbox):
   # a merge that makes no changes
   svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
-                           'merge', 'trunk', 'branches/br1', 'trunk@5')
+                           'merge', 'trunk', 'branches/br1', 'trunk@4')
 
   # a merge that makes changes with no conflict
   svntest.actions.run_and_verify_svnmover(None, [],
                            '-U', repo_url,
-                           'merge', 'branches/br1', 'trunk', 'trunk@5')
+                           'merge', 'branches/br1', 'trunk', 'trunk@4')
 
   # a merge that makes changes, with conflicts
   svntest.actions.run_and_verify_svnmover(None, svntest.verify.AnyOutput,
                            '-U', repo_url,
-                           'merge', 'trunk@6', 'branches/br1', 'trunk@3')
+                           'merge', 'trunk@5', 'branches/br1', 'trunk@2')
 
-@XFail()  # bug: in r7 'bar' is plain-added instead of copied.
+@XFail()  # bug: in r6 'bar' is plain-added instead of copied.
 def merge_edits_with_move(sbox):
   "merge_edits_with_move"
-  sbox_build_svnmover(sbox)
+  sbox_build_svnmover(sbox, content=initial_content_ttb)
   repo_url = sbox.repo_url
 
   # ### This checks the traditional 'log' output, in which a move shows up
   # as a delete and a set of adds.
 
-  # make a 'trunk' branch and a 'branches' directory
-  # (r2)
-  test_svnmover(repo_url, [
-                 'A /trunk',
-                 'A /branches',
-                ],
-                'mkbranch', 'trunk',
-                'mkdir', 'branches')
-
   # create initial state in trunk
-  # (r3)
+  # (r2)
   test_svnmover(repo_url + '/trunk', [
                  'A /trunk/lib',
                  'A /trunk/lib/foo',
@@ -444,47 +466,47 @@ def merge_edits_with_move(sbox):
                 'mkdir', 'lib/foo/x',
                 'mkdir', 'lib/foo/y')
 
-  # branch (r4)
+  # branch (r3)
   test_svnmover(repo_url, [
-                 'A /branches/br1 (from /trunk:3)',
+                 'A /branches/br1 (from /trunk:2)',
                 ],
                 'branch', 'trunk', 'branches/br1')
 
-  # on trunk: make edits under 'foo' (r5)
+  # on trunk: make edits under 'foo' (r4)
   test_svnmover(repo_url + '/trunk', [
                  'D /trunk/lib/foo/x',
                  'D /trunk/lib/foo/y',
-                 'A /trunk/lib/foo/y2 (from /trunk/lib/foo/y:4)',
+                 'A /trunk/lib/foo/y2 (from /trunk/lib/foo/y:3)',
                  'A /trunk/lib/foo/z',
                 ],
                 'rm', 'lib/foo/x',
                 'mv', 'lib/foo/y', 'lib/foo/y2',
                 'mkdir', 'lib/foo/z')
 
-  # on branch: move/rename 'foo' (r6)
+  # on branch: move/rename 'foo' (r5)
   test_svnmover(repo_url + '/branches/br1', [
-                 'A /branches/br1/bar (from /branches/br1/lib/foo:5)',
+                 'A /branches/br1/bar (from /branches/br1/lib/foo:4)',
                  'D /branches/br1/lib/foo',
                 ],
                 'mv', 'lib/foo', 'bar')
 
-  # merge the move to trunk (r7)
+  # merge the move to trunk (r6)
   test_svnmover(repo_url, [
-                 'A /trunk/bar (from /trunk/lib/foo:6)',
-                 'A /trunk/bar/y2 (from /trunk/lib/foo/y2:6)',
-                 'A /trunk/bar/z (from /trunk/lib/foo/z:6)',
+                 'A /trunk/bar (from /trunk/lib/foo:5)',
+                 'A /trunk/bar/y2 (from /trunk/lib/foo/y2:5)',
+                 'A /trunk/bar/z (from /trunk/lib/foo/z:5)',
                  'D /trunk/lib/foo',
                 ],
-                'merge', 'branches/br1@6', 'trunk', 'trunk@3')
+                'merge', 'branches/br1@5', 'trunk', 'trunk@2')
 
-  # merge the edits in trunk (excluding the merge r7) to branch (r8)
+  # merge the edits in trunk (excluding the merge r6) to branch (r7)
   test_svnmover(repo_url, [
                  'D /branches/br1/bar/x',
                  'D /branches/br1/bar/y',
-                 'A /branches/br1/bar/y2 (from /branches/br1/bar/y:7)',
+                 'A /branches/br1/bar/y2 (from /branches/br1/bar/y:6)',
                  'A /branches/br1/bar/z',
                 ],
-                'merge', 'trunk@6', 'branches/br1', 'trunk@3')
+                'merge', 'trunk@5', 'branches/br1', 'trunk@2')
 
 
 ######################################################################
