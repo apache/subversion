@@ -508,6 +508,41 @@ def merge_edits_with_move(sbox):
                 ],
                 'merge', 'trunk@5', 'branches/br1', 'trunk@2')
 
+# Exercise simple moves (not cyclic or hierarchy-inverting):
+#   - {file,dir}
+#   - {rename-only,move-only,rename-and-move}
+def simple_moves_within_a_branch(sbox):
+  "simple moves within a branch"
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+  repo_url = sbox.repo_url
+
+  # rename only, file
+  test_svnmover(repo_url + '/trunk', None,
+                'mv', 'README', 'README.txt')
+  # move only, file
+  test_svnmover(repo_url + '/trunk', None,
+                'mv', 'README.txt', 'lib/README.txt')
+  # rename only, empty dir
+  test_svnmover(repo_url + '/trunk', None,
+                'mv', 'lib/foo/y', 'lib/foo/y2')
+  # move only, empty dir
+  test_svnmover(repo_url + '/trunk', None,
+                'mv', 'lib/foo/y2', 'y2')
+  # move and rename, dir with children
+  test_svnmover(repo_url + '/trunk', None,
+                'mkdir', 'subdir',
+                'mv', 'lib', 'subdir/lib2',
+                )
+
+  # moves and renames together
+  # (put it all back to how it was, in one commit)
+  test_svnmover(repo_url + '/trunk', None,
+                'mv', 'subdir/lib2', 'lib',
+                'rm', 'subdir',
+                'mv', 'y2', 'lib/foo/y',
+                'mv', 'lib/README.txt', 'README'
+                )
+
 
 ######################################################################
 
@@ -516,6 +551,7 @@ test_list = [ None,
               nested_replaces,
               merges,
               merge_edits_with_move,
+              simple_moves_within_a_branch,
             ]
 
 if __name__ == '__main__':
