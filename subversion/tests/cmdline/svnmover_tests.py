@@ -614,6 +614,32 @@ def move_to_related_branch_element_already_exists(sbox):
                 'mv', 'branches/br1/lib/foo/x', 'branches/br1/x2',
                 'mv', 'trunk/lib', 'branches/br1/lib2')
 
+# Exercise moves from one branch to an unrelated branch (different family).
+# 'svnmover' executes these by copy-and-delete.
+def move_to_unrelated_branch(sbox):
+  "move to unrelated branch"
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+  repo_url = sbox.repo_url
+
+  # move from trunk to a directory in the root branch
+  test_svnmover(repo_url, [
+                 'D /trunk/README',
+                 'D /trunk/lib',
+                 'A /README (from /trunk/README:2)',
+                 'A /subdir',
+                 'A /subdir/lib2 (from /trunk/lib:2)',
+                 'D /subdir/lib2/foo/y',
+                 'A /y2 (from /trunk/lib/foo/y:2)',
+                ],
+                # keeping same relpath
+                'mv', 'trunk/README', 'README',
+                # with a move-within-branch and rename as well
+                'mv', 'trunk/lib/foo/y', 'y2',
+                # dir with children, also renaming and moving within branch
+                'mkdir', 'subdir',
+                'mv', 'trunk/lib', 'subdir/lib2',
+                )
+
 
 ######################################################################
 
@@ -625,6 +651,7 @@ test_list = [ None,
               simple_moves_within_a_branch,
               move_to_related_branch,
               move_to_related_branch_element_already_exists,
+              move_to_unrelated_branch,
             ]
 
 if __name__ == '__main__':
