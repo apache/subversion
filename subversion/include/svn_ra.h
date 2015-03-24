@@ -1551,7 +1551,7 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * revisions in which at least one of @a paths was changed (i.e., if
  * file, text or props changed; if dir, props changed or an entry
  * was added or deleted).  Each path is an <tt>const char *</tt>, relative
- * to the @a session's common parent.
+ * to the repository root of @ session.
  *
  * If @a limit is greater than zero only invoke @a receiver on the first
  * @a limit logs.
