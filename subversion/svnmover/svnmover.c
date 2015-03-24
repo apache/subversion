@@ -1202,16 +1202,87 @@ svn_branch_diff_r(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+/* Move by branch-and-delete into an existing target branch.
+ *
+ * The target branch is different from the source branch.
+ *
+ *      delete elements from source branch
+ *      instantiate (or update) same elements in target branch
+ *
+ * For each element being moved, if the element already exists in TO_BRANCH,
+ * the effect is as if the existing element in TO_BRANCH was first deleted.
+ */
+static svn_error_t *
+move_by_branch_and_delete(svn_editor3_t *editor,
+                          svn_branch_el_rev_id_t *el_rev,
+                          svn_branch_instance_t *to_branch,
+                          int to_parent_eid,
+                          const char *to_name,
+                          apr_pool_t *scratch_pool)
+{
+  svn_branch_subtree_t subtree
+    = svn_branch_map_get_subtree(el_rev->branch, el_rev->eid, scratch_pool);
+
+  SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(el_rev->branch, to_branch));
+
+  /* This is supposed to be used for moving to a *different* branch in the
+     same family. In fact, this method would also work for moving within one
+     branch, but we don't currently want to use it for that purpose. */
+  SVN_ERR_ASSERT(! BRANCH_IS_SAME_BRANCH(el_rev->branch, to_branch,
+                                         scratch_pool));
+
+  SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+                             el_rev->branch, el_rev->eid));
+  SVN_ERR(svn_branch_instantiate_subtree(to_branch,
+                                         to_parent_eid, to_name, subtree,
+                                         scratch_pool));
+
+  /* ###  We need to move nested branches too. */
+  return SVN_NO_ERROR;
+}
+
+/* Move by copy-and-delete into a different branch family.
+ *
+ * The target branch is different from the source branch.
+ *
+ *      copy source elements to target branch
+ *      delete elements from source branch
+ *
+ * For each element being moved, if the element already exists in TO_BRANCH,
+ * the effect is as if the existing element in TO_BRANCH was first deleted.
+ */
+static svn_error_t *
+move_by_copy_and_delete(svn_editor3_t *editor,
+                        svn_branch_el_rev_id_t *el_rev,
+                        svn_branch_instance_t *to_branch,
+                        int to_parent_eid,
+                        const char *to_name,
+                        apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(! BRANCHES_IN_SAME_FAMILY(el_rev->branch, to_branch));
+
+  SVN_ERR(svn_editor3_copy_tree(editor, el_rev,
+                                to_branch,
+                                to_parent_eid, to_name));
+  SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+                             el_rev->branch, el_rev->eid));
+  return SVN_NO_ERROR;
+}
+
 /* Move in the 'best' way possible.
  *
  *    if target is in same branch:
  *      move the element
  *    else if target is in another branch of same family:
- *      delete element from source branch
- *      instantiate same element in target branch
+ *      delete from source branch
+ *      instantiate in target branch
  *    else:
- *      delete element from source branch
- *      create a new element in target branch
+ *      copy into target branch
+ *      delete from source branch
+ *
+ * ### Another available option is a variant of the second case:
+ * if (parent branch of source branch) and (parent element of target) are in
+ * the same family, then make a subtree-branch of the source subtree.
  */
 static svn_error_t *
 do_move(svn_editor3_t *editor,
@@ -1220,10 +1291,9 @@ do_move(svn_editor3_t *editor,
         const char *to_name,
         apr_pool_t *scratch_pool)
 {
-  svn_branch_el_rev_content_t *old_node;
-
   /* Simple move/rename within same branch, if possible */
-  if (to_parent_el_rev->branch == el_rev->branch)
+  if (BRANCH_IS_SAME_BRANCH(to_parent_el_rev->branch, el_rev->branch,
+                            scratch_pool))
     {
       /* Move within same branch */
       SVN_ERR(svn_editor3_alter(editor, el_rev->rev,
@@ -1233,60 +1303,30 @@ do_move(svn_editor3_t *editor,
       return SVN_NO_ERROR;
     }
 
-  /* Instantiate same element in another branch of same family, if possible */
-  if (el_rev->branch->sibling_defn->family->fid
-      == to_parent_el_rev->branch->sibling_defn->family->fid)
+  /* Instantiate same elements in another branch of same family, if possible */
+  if (BRANCHES_IN_SAME_FAMILY(el_rev->branch, to_parent_el_rev->branch))
     {
-      /* Does this element already exist in the target branch? We can't
-         use this method if it does. */
-      SVN_ERR(svn_editor3_el_rev_get(&old_node,
-                                     editor,
-                                     to_parent_el_rev->branch, el_rev->eid,
-                                     scratch_pool, scratch_pool));
-      if (! old_node)
-        {
-          /* (There is no danger of creating a cyclic directory hierarchy in
-             the target branch, as this element doesn't yet exist there.) */
+      /* Here the elements moved from the source branch will overwrite any
+         corresponding elements that already exist in the target branch.
+         We could instead check and either throw an error or fall back to
+         copy-and-delete in that case. */
 
-          printf("mv: moving by deleting element in source branch and "
-                 "instantiating same element in target branch\n");
+      printf("mv: moving by branch-and-delete\n");
 
-          /* Get the old content of the source node (which we know exists) */
-          SVN_ERR(svn_editor3_el_rev_get(&old_node,
-                                         editor, el_rev->branch, el_rev->eid,
-                                         scratch_pool, scratch_pool));
-          SVN_ERR_ASSERT(old_node);
-          SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
-                                     el_rev->branch, el_rev->eid));
-          SVN_ERR(svn_editor3_instantiate(editor,
-                                          to_parent_el_rev->branch, el_rev->eid,
-                                          to_parent_el_rev->eid, to_name,
-                                          old_node->content));
-          /* ###  We need to move nested branches too. */
-          return SVN_NO_ERROR;
-        }
+      SVN_ERR(move_by_branch_and_delete(editor, el_rev,
+                                        to_parent_el_rev->branch,
+                                        to_parent_el_rev->eid, to_name,
+                                        scratch_pool));
+      return SVN_NO_ERROR;
     }
 
   /* Move by copy-and-delete */
-  if (el_rev->branch->sibling_defn->family->fid
-      != to_parent_el_rev->branch->sibling_defn->family->fid) /* ### always */
-    {
-      printf("mv: moving by copy-and-delete to a different branch family\n");
-    }
-  else /* ### never */
-    {
-      printf("mv: moving by copy-and-delete\n");
-    }
-  SVN_ERR(svn_editor3_el_rev_get(&old_node,
-                                 editor, el_rev->branch, el_rev->eid,
-                                 scratch_pool, scratch_pool));
-  SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
-                             el_rev->branch, el_rev->eid));
-  SVN_ERR(svn_editor3_add(editor, NULL /*new_eid*/,
-                          old_node->content->kind,
-                          to_parent_el_rev->branch,
-                          to_parent_el_rev->eid, to_name,
-                          old_node->content));
+  printf("mv: moving by copy-and-delete\n");
+
+  SVN_ERR(move_by_copy_and_delete(editor, el_rev,
+                                  to_parent_el_rev->branch,
+                                  to_parent_el_rev->eid, to_name,
+                                  scratch_pool));
 
   return SVN_NO_ERROR;
 }

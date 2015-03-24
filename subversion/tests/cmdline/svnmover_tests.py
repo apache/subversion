@@ -548,6 +548,72 @@ def simple_moves_within_a_branch(sbox):
                 'mv', 'lib/README.txt', 'README'
                 )
 
+# Exercise moves from one branch to another in the same family. 'svnmover'
+# executes these by branch-and-delete. In this test, the elements being moved
+# do not already exist in the target branch.
+def move_to_related_branch(sbox):
+  "move to related branch"
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+  repo_url = sbox.repo_url
+
+  # branch
+  test_svnmover(repo_url, None,
+                'branch', 'trunk', 'branches/br1')
+
+  # remove all elements from branch so we can try moving them there
+  test_svnmover(repo_url, None,
+                'rm', 'branches/br1/README',
+                'rm', 'branches/br1/lib')
+
+  # move from trunk to branch 'br1'
+  test_svnmover(repo_url, [
+                 'D /trunk/README',
+                 'D /trunk/lib',
+                 'A /branches/br1/README (from /trunk/README:4)',
+                 'A /branches/br1/subdir',
+                 'A /branches/br1/subdir/lib2 (from /trunk/lib:4)',
+                 'D /branches/br1/subdir/lib2/foo/y',
+                 'A /branches/br1/y2 (from /trunk/lib/foo/y:4)',
+                ],
+                # keeping same relpath
+                'mv', 'trunk/README', 'branches/br1/README',
+                # with a move-within-branch and rename as well
+                'mv', 'trunk/lib/foo/y', 'branches/br1/y2',
+                # dir with children, also renaming and moving within branch
+                'mkdir', 'branches/br1/subdir',
+                'mv', 'trunk/lib', 'branches/br1/subdir/lib2',
+                )
+
+# Exercise moves from one branch to another in the same family. 'svnmover'
+# executes these by branch-and-delete. In this test, there are existing
+# instances of the same elements in the target branch, which should be
+# overwritten.
+def move_to_related_branch_element_already_exists(sbox):
+  "move to related branch; element already exists"
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+  repo_url = sbox.repo_url
+
+  # branch
+  test_svnmover(repo_url, None,
+                'branch', 'trunk', 'branches/br1')
+
+  # move to a branch where same element already exists: should overwrite
+  test_svnmover(repo_url, [
+                 'D /trunk/README',
+                 'D /branches/br1/README',
+                 'A /branches/br1/README2 (from /trunk/README:3)',
+                ],
+                 # single file: element already exists, at different relpath
+                 'mv', 'trunk/README', 'branches/br1/README2')
+  test_svnmover(repo_url, [
+                 'D /trunk/lib',
+                 'D /branches/br1/lib',
+                 'A /branches/br1/lib2 (from /trunk/lib:4)',
+                ],
+                # dir: child elements already exist (at different relpaths)
+                'mv', 'branches/br1/lib/foo/x', 'branches/br1/x2',
+                'mv', 'trunk/lib', 'branches/br1/lib2')
+
 
 ######################################################################
 
@@ -557,6 +623,8 @@ test_list = [ None,
               merges,
               merge_edits_with_move,
               simple_moves_within_a_branch,
+              move_to_related_branch,
+              move_to_related_branch_element_already_exists,
             ]
 
 if __name__ == '__main__':
