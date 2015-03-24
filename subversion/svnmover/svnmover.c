@@ -87,6 +87,10 @@ static svn_boolean_t quiet = FALSE;
   (strcmp(svn_branch_instance_get_id(branch1, scratch_pool), \
           svn_branch_instance_get_id(branch2, scratch_pool)) == 0)
 
+#define BRANCHES_IN_SAME_FAMILY(branch1, branch2) \
+  ((branch1)->sibling_defn->family->fid \
+   == (branch2)->sibling_defn->family->fid)
+
 /*  */
 __attribute__((format(printf, 1, 2)))
 static void
@@ -1150,13 +1154,14 @@ svn_branch_diff_r(svn_editor3_t *editor,
     }
   else
     {
-      assert(BRANCH_IS_SAME_BRANCH(left->branch, right->branch, scratch_pool));
+      assert(BRANCHES_IN_SAME_FAMILY(left->branch, right->branch));
       header = apr_psprintf(scratch_pool,
-                 "--- diff branch %s, family %d, at /%s : /%s\n",
+                 "--- diff branch %s at /%s : %s at /%s, family %d\n",
                  svn_branch_instance_get_id(left->branch, scratch_pool),
-                 right->branch->sibling_defn->family->fid,
                  svn_branch_get_root_rrpath(left->branch, scratch_pool),
-                 svn_branch_get_root_rrpath(right->branch, scratch_pool));
+                 svn_branch_instance_get_id(right->branch, scratch_pool),
+                 svn_branch_get_root_rrpath(right->branch, scratch_pool),
+                 right->branch->sibling_defn->family->fid);
       SVN_ERR(diff_func(editor, left, right, prefix, header, scratch_pool));
     }
 
