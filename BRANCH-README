@@ -1,0 +1,3 @@
+This branch aggregates various caching-related changes
+that are supposed to be part of 1.10 but should not go
+onto /trunk until 1.9 has been released.
