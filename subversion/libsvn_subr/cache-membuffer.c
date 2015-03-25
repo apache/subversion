@@ -1746,8 +1746,11 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].first_spare_group = NO_INDEX;
       c[seg].max_spare_used = 0;
 
-      c[seg].directory = apr_pcalloc(pool,
-                                     group_count * sizeof(entry_group_t));
+      /* Allocate but don't clear / zero the directory because it would add
+         significantly to the server start-up time if the caches are large.
+         Group initialization will take care of that in stead. */
+      c[seg].directory = apr_palloc(pool,
+                                    group_count * sizeof(entry_group_t));
 
       /* Allocate and initialize directory entries as "not initialized",
          hence "unused" */
