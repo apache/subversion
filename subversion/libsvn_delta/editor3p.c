@@ -217,21 +217,21 @@ svn_editor3p_mv(svn_editor3p_t *editor,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
 svn_error_t *
 svn_editor3p_res(svn_editor3p_t *editor,
                  svn_pathrev_t from_loc,
                  svn_editor3_txn_path_t parent_loc,
                  const char *new_name)
 {
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
   /* SVN_ERR_ASSERT(...); */
 
   DO_CALLBACK(editor, cb_res,
               3(from_loc, parent_loc, new_name));
 
+#endif
   return SVN_NO_ERROR;
 }
-#endif
 
 svn_error_t *
 svn_editor3p_rm(svn_editor3p_t *editor,
@@ -400,7 +400,6 @@ wrap_mv(void *baton,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
 static svn_error_t *
 wrap_res(void *baton,
          svn_pathrev_t from_loc,
@@ -408,6 +407,7 @@ wrap_res(void *baton,
          const char *new_name,
          apr_pool_t *scratch_pool)
 {
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
   wrapper_baton_t *eb = baton;
 
   dbg(eb, scratch_pool, "res(f=%s, p=%s, n=%s)",
@@ -415,9 +415,9 @@ wrap_res(void *baton,
       txn_path_str(parent_loc, scratch_pool), new_name);
   SVN_ERR(svn_editor3p_res(eb->wrapped_editor,
                            from_loc, parent_loc, new_name));
+#endif
   return SVN_NO_ERROR;
 }
-#endif
 
 static svn_error_t *
 wrap_rm(void *baton,
@@ -479,9 +479,7 @@ svn_editor3p__get_debug_editor(svn_editor3p_t **editor_p,
     wrap_mk,
     wrap_cp,
     wrap_mv,
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
     wrap_res,
-#endif
     wrap_rm,
     wrap_put,
     wrap_complete,

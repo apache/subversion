@@ -273,7 +273,6 @@ svn_editor3p_mv(svn_editor3p_t *editor,
                 svn_editor3_txn_path_t new_parent_loc,
                 const char *new_name);
 
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
 /** Resurrect a previously deleted node-branch.
  *
  * Resurrect the node-branch that previously existed at @a from_loc,
@@ -303,7 +302,6 @@ svn_editor3p_res(svn_editor3p_t *editor,
                  svn_pathrev_t from_loc,
                  svn_editor3_txn_path_t parent_loc,
                  const char *new_name);
-#endif
 
 /** Remove the existing node-branch identified by @a loc and, recursively,
  * all nodes that are currently its children in the txn.
@@ -422,7 +420,6 @@ typedef svn_error_t *(*svn_editor3p_cb_mv_t)(
   const char *new_name,
   apr_pool_t *scratch_pool);
 
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
 /** @see svn_editor3p_res(), #svn_editor3p_t
  */
 typedef svn_error_t *(*svn_editor3p_cb_res_t)(
@@ -431,7 +428,6 @@ typedef svn_error_t *(*svn_editor3p_cb_res_t)(
   svn_editor3_txn_path_t parent_loc,
   const char *new_name,
   apr_pool_t *scratch_pool);
-#endif
 
 /** @see svn_editor3p_rm(), #svn_editor3p_t
  */
@@ -480,9 +476,7 @@ typedef struct svn_editor3p_cb_funcs_t
   svn_editor3p_cb_mk_t cb_mk;
   svn_editor3p_cb_cp_t cb_cp;
   svn_editor3p_cb_mv_t cb_mv;
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
   svn_editor3p_cb_res_t cb_res;
-#endif
   svn_editor3p_cb_rm_t cb_rm;
   svn_editor3p_cb_put_t cb_put;
 

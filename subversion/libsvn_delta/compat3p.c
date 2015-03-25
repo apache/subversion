@@ -2333,7 +2333,6 @@ editor3_mv(void *baton,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
 /* An #svn_editor3p_t method. */
 static svn_error_t *
 editor3_res(void *baton,
@@ -2342,11 +2341,12 @@ editor3_res(void *baton,
             const char *new_name,
             apr_pool_t *scratch_pool)
 {
+#ifdef SVN_EDITOR3_WITH_RESURRECTION
   /* ### */
 
+#endif
   return SVN_NO_ERROR;
 }
-#endif
 
 /* An #svn_editor3p_t method. */
 static svn_error_t *
@@ -2481,9 +2481,7 @@ svn_delta__ev3_from_delta_for_commit(
     editor3_mk,
     editor3_cp,
     editor3_mv,
-#ifdef SVN_EDITOR3_WITH_RESURRECTION
     editor3_res,
-#endif
     editor3_rm,
     editor3_put,
 
