@@ -422,6 +422,51 @@ test_membuffer_cache_clearing(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_iter_apr_hash_cb_t. */
+static svn_error_t *
+null_cache_iter_func(void *baton,
+                     const void *key,
+                     apr_ssize_t klen,
+                     void *val,
+                     apr_pool_t *pool)
+{
+  /* shall never be called */
+  return svn_error_create(SVN_ERR_TEST_FAILED, NULL, "should not be called");
+}
+
+static svn_error_t *
+test_null_cache(apr_pool_t *pool)
+{
+  svn_boolean_t found, done;
+  int data = 0;
+  svn_cache__info_t info;
+
+  svn_cache__t *cache;
+  SVN_ERR(svn_cache__create_null(&cache, "test-dummy", pool));
+
+  /* Can't cache anything. */
+  SVN_TEST_ASSERT(svn_cache__is_cachable(cache, 0) == FALSE);
+  SVN_TEST_ASSERT(svn_cache__is_cachable(cache, 1) == FALSE);
+
+  /* No point in adding data. */
+  SVN_ERR(svn_cache__set(cache, "data", &data, pool));
+  SVN_ERR(svn_cache__get((void **)&data, &found, cache, "data", pool));
+  SVN_TEST_ASSERT(found == FALSE);
+
+  SVN_ERR(svn_cache__has_key(&found, cache, "data", pool));
+  SVN_TEST_ASSERT(found == FALSE);
+
+  /* Iteration "works" but is a no-op. */
+  SVN_ERR(svn_cache__iter(&done, cache, null_cache_iter_func, NULL, pool));
+  SVN_TEST_ASSERT(done);
+
+  /* It shall know its name. */
+  SVN_ERR(svn_cache__get_info(cache, &info, TRUE, pool));
+  SVN_TEST_STRING_ASSERT(info.id, "test-dummy");
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -442,6 +487,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test for error handling in membuffer svn_cache"),
     SVN_TEST_PASS2(test_membuffer_cache_clearing,
                    "test clearing a membuffer svn_cache"),
+    SVN_TEST_PASS2(test_null_cache,
+                   "basic null svn_cache test"),
     SVN_TEST_NULL
   };
 

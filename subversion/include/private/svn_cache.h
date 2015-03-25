@@ -373,6 +373,19 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   apr_pool_t *scratch_pool);
 
 /**
+ * Creates a null-cache instance in @a *cache_p, allocated from
+ * @a result_pool.  The given @c id is the only data stored in it and can
+ * be retrieved through svn_cache__get_info().
+ *
+ * The cache object will immediately evict (reject) any data being added
+ * to it and will always report as empty.
+ */
+svn_error_t *
+svn_cache__create_null(svn_cache__t **cache_p,
+                       const char *id,
+                       apr_pool_t *result_pool);
+
+/**
  * Sets @a handler to be @a cache's error handling routine.  If any
  * error is returned from a call to svn_cache__get or svn_cache__set, @a
  * handler will be called with @a baton and the error, and the
