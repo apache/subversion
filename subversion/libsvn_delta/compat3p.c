@@ -1595,9 +1595,9 @@ svn_delta__delta_from_ev3_for_update(
                         fetch_func, fetch_baton,
                         shim_connector,
                         result_pool, scratch_pool));
-  SVN_ERR(svn_delta__get_debug_editor(deditor, dedit_baton,
+  /*SVN_ERR(svn_delta__get_debug_editor(deditor, dedit_baton,
                                       *deditor, *dedit_baton,
-                                      "[UP>1] ", result_pool));
+                                      "[UP>1] ", result_pool));*/
 
   return SVN_NO_ERROR;
 }
@@ -2548,9 +2548,9 @@ svn_delta__ev3_from_delta_for_update(
   SVN_DBG(("svn_delta__ev3_from_delta_for_update(base='%s')...",
            base_repos_relpath));
 
-  SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
+  /*SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
                                       deditor, dedit_baton,
-                                      "[1>UP] ", result_pool));
+                                      "[1>UP] ", result_pool));*/
   SVN_ERR(svn_delta__ev3_from_delta_for_commit(
                         &update_editor->editor,
                         &shim_connector,
