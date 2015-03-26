@@ -12,11 +12,11 @@ delay a release, etc.
 
 Status of 1.9.0:
 
-1.9.0 release blockers:
-=======================
+Release blockers for 1.9.0:
+===========================
 
-1.9.0 candidate changes that cannot go into a later 1.9.x:
-==========================================================
+Candidate changes that cannot go into a later 1.9.x:
+====================================================
 
  * r1664938, r1664939, r1664940, r1664978, r1664984
    libsvn_javahl: wrap and unwrap java exceptions via svn_error_t
