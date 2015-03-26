@@ -24,8 +24,9 @@ Work on this branch:
     It's called 'svnmover'. Like 'svnmucc', it operates directly on a repo,
     completely avoiding any working copy considerations.
 
-    The implementation is just a hack. It stores metadata in revprops, with
-    little concern for efficiency etc. at this stage.
+    The implementation is just a hack. It stores metadata in revprops
+    or flat files , with little concern for efficiency etc. at this
+    stage.
 
     STATUS
 
@@ -57,12 +58,14 @@ Work on this branch:
 
   * Develop a 'commit editor' interface supporting moves.
 
-    See subversion/include/private/svn_editor3.h
+    See subversion/include/private/svn_editor3e.h
+    and subversion/include/private/svn_editor3p.h
 
     STATUS
 
     This looks like it's panning out OK.
 
+    ### Out-of-date
     Two versions are declared (in the same struct): 'incremental' and
     'independent per-node changes'. Need eventually to choose one and
     lose the other. It's not a question of one's right and one's wrong;
