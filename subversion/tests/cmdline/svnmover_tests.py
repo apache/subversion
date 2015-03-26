@@ -50,10 +50,10 @@ def populate_trunk(sbox, trunk):
   """
   test_svnmover(sbox.repo_url + '/' + trunk, None,
                 'put', mk_file(sbox, 'README'), 'README',
-                'mkdir', 'lib',
-                'mkdir', 'lib/foo',
-                'mkdir', 'lib/foo/x',
-                'mkdir', 'lib/foo/y',
+                'mkdir lib',
+                'mkdir lib/foo',
+                'mkdir lib/foo/x',
+                'mkdir lib/foo/y',
                 'put', mk_file(sbox, 'file'), 'lib/foo/file')
 
 def initial_content_A_iota(sbox):
@@ -67,9 +67,9 @@ def initial_content_ttb(sbox):
   """Make a 'trunk' branch and 'tags' and 'branches' dirs.
   """
   test_svnmover(sbox.repo_url, None,
-                'mkbranch', 'trunk',
-                'mkdir', 'tags',
-                'mkdir', 'branches')
+                'mkbranch trunk',
+                'mkdir tags',
+                'mkdir branches')
 
 def initial_content_in_trunk(sbox):
   initial_content_ttb(sbox)
@@ -97,6 +97,8 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
   its run results in a new commit with 'svn log -rHEAD' changed paths
   that match the list of EXPECTED_PATH_CHANGES."""
 
+  # Split arguments at spaces
+  varargs = ' '.join(varargs).split()
   # First, run svnmover.
   exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
                                                             *varargs)
@@ -132,6 +134,8 @@ def xtest_svnmover(repo_url, error_re_string, *varargs):
      if that is not None.
   """
 
+  # Split arguments at spaces
+  varargs = ' '.join(varargs).split()
   # First, run svnmover.
   exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
                                                             *varargs)
@@ -159,14 +163,12 @@ def basic_svnmover(sbox):
   test_svnmover(sbox.repo_url,
                 ['A /foo'
                  ], # ---------
-                '-m', 'log msg',
-                'mkdir', 'foo')
+                'mkdir foo')
 
   # revision 3
   test_svnmover(sbox.repo_url,
                 ['A /z.c',
                  ], # ---------
-                '-m', 'log msg',
                 'put', empty_file, 'z.c')
 
   # revision 4
@@ -174,9 +176,8 @@ def basic_svnmover(sbox):
                 ['A /foo/z.c (from /z.c:3)',
                  'A /foo/bar (from /foo:3)',
                  ], # ---------
-                '-m', 'log msg',
-                'cp', '3', 'z.c', 'foo/z.c',
-                'cp', '3', 'foo', 'foo/bar')
+                'cp 3 z.c foo/z.c',
+                'cp 3 foo foo/bar')
 
   # revision 5
   test_svnmover(sbox.repo_url,
@@ -185,10 +186,9 @@ def basic_svnmover(sbox):
                  'D /foo',
                  'A /zig/zag (from /foo:4)',
                  ], # ---------
-                '-m', 'log msg',
-                'cp', '4', 'foo', 'zig',
-                'rm',             'zig/bar',
-                'mv',      'foo', 'zig/zag')
+                'cp 4 foo zig',
+                'rm zig/bar',
+                'mv foo zig/zag')
 
   # revision 6
   test_svnmover(sbox.repo_url,
@@ -196,9 +196,8 @@ def basic_svnmover(sbox):
                  'A /zig/zag/bar/y.c (from /z.c:5)',
                  'A /zig/zag/bar/x.c (from /z.c:3)',
                  ], # ---------
-                '-m', 'log msg',
-                'mv',      'z.c', 'zig/zag/bar/y.c',
-                'cp', '3', 'z.c', 'zig/zag/bar/x.c')
+                'mv z.c zig/zag/bar/y.c',
+                'cp 3 z.c zig/zag/bar/x.c')
 
   # revision 7
   test_svnmover(sbox.repo_url,
@@ -206,9 +205,8 @@ def basic_svnmover(sbox):
                  'A /zig/zag/bar/y_y.c (from /zig/zag/bar/y.c:6)',
                  'A /zig/zag/bar/y%20y.c (from /zig/zag/bar/y.c:6)',
                  ], # ---------
-                '-m', 'log msg',
-                'mv',         'zig/zag/bar/y.c', 'zig/zag/bar/y_y.c',
-                'cp', 'HEAD', 'zig/zag/bar/y.c', 'zig/zag/bar/y%20y.c')
+                'mv zig/zag/bar/y.c zig/zag/bar/y_y.c',
+                'cp HEAD zig/zag/bar/y.c zig/zag/bar/y%20y.c')
 
   # revision 8
   test_svnmover(sbox.repo_url,
@@ -217,10 +215,9 @@ def basic_svnmover(sbox):
                  'A /zig/zag/bar/z%20z.c (from /zig/zag/bar/y%20y.c:7)',
                  'A /zig/zag/bar/z_z2.c (from /zig/zag/bar/y_y.c:7)',
                  ], #---------
-                '-m', 'log msg',
-                'mv',         'zig/zag/bar/y_y.c',   'zig/zag/bar/z_z1.c',
-                'cp', 'HEAD', 'zig/zag/bar/y%20y.c', 'zig/zag/bar/z%20z.c',
-                'cp', 'HEAD', 'zig/zag/bar/y_y.c',   'zig/zag/bar/z_z2.c')
+                'mv zig/zag/bar/y_y.c zig/zag/bar/z_z1.c',
+                'cp HEAD zig/zag/bar/y%20y.c zig/zag/bar/z%20z.c',
+                'cp HEAD zig/zag/bar/y_y.c zig/zag/bar/z_z2.c')
 
 
   # revision 9
@@ -231,38 +228,34 @@ def basic_svnmover(sbox):
                  'D /zig/foo/bar/z_z2.c',
                  'R /zig/foo/bar/z_z1.c (from /zig/zag/bar/x.c:6)',
                  ], #---------
-                '-m', 'log msg',
-                'mv',      'zig/zag',         'zig/foo',
-                'rm',                         'zig/foo/bar/z_z1.c',
-                'rm',                         'zig/foo/bar/z_z2.c',
-                'rm',                         'zig/foo/bar/z%20z.c',
-                'cp', '6', 'zig/zag/bar/x.c', 'zig/foo/bar/z_z1.c')
+                'mv zig/zag zig/foo',
+                'rm zig/foo/bar/z_z1.c',
+                'rm zig/foo/bar/z_z2.c',
+                'rm zig/foo/bar/z%20z.c',
+                'cp 6 zig/zag/bar/x.c zig/foo/bar/z_z1.c')
 
   # revision 10
   test_svnmover(sbox.repo_url,
                 ['R /zig/foo/bar (from /zig/z.c:9)',
                  ], #---------
-                '-m', 'log msg',
-                'rm',                 'zig/foo/bar',
-                'cp', '9', 'zig/z.c', 'zig/foo/bar')
+                'rm zig/foo/bar',
+                'cp 9 zig/z.c zig/foo/bar')
 
   # revision 11
   test_svnmover(sbox.repo_url,
                 ['R /zig/foo/bar (from /zig/foo/bar:9)',
                  'D /zig/foo/bar/z_z1.c',
                  ], #---------
-                '-m', 'log msg',
-                'rm',                     'zig/foo/bar',
-                'cp', '9', 'zig/foo/bar', 'zig/foo/bar',
-                'rm',                     'zig/foo/bar/z_z1.c')
+                'rm zig/foo/bar',
+                'cp 9 zig/foo/bar zig/foo/bar',
+                'rm zig/foo/bar/z_z1.c')
 
   # revision 12
   test_svnmover(sbox.repo_url,
                 ['R /zig/foo (from /zig/foo/bar:11)',
                  ], #---------
-                '-m', 'log msg',
-                'rm',                        'zig/foo',
-                'cp', 'head', 'zig/foo/bar', 'zig/foo')
+                'rm zig/foo',
+                'cp head zig/foo/bar zig/foo')
 
   # revision 13
   test_svnmover(sbox.repo_url,
@@ -273,14 +266,13 @@ def basic_svnmover(sbox):
                  'D /foo/foo/bar',
                  'R /foo/foo/foo/bar (from /foo:4)',
                  ], #---------
-                '-m', 'log msg',
-                'rm',             'zig',
-                'cp', '4', 'foo', 'foo',
-                'cp', '4', 'foo', 'foo/foo',
-                'cp', '4', 'foo', 'foo/foo/foo',
-                'rm',             'foo/foo/bar',
-                'rm',             'foo/foo/foo/bar',
-                'cp', '4', 'foo', 'foo/foo/foo/bar')
+                'rm zig',
+                'cp 4 foo foo',
+                'cp 4 foo foo/foo',
+                'cp 4 foo foo/foo/foo',
+                'rm foo/foo/bar',
+                'rm foo/foo/foo/bar',
+                'cp 4 foo foo/foo/foo/bar')
 
   # revision 14
   test_svnmover(sbox.repo_url,
@@ -288,10 +280,9 @@ def basic_svnmover(sbox):
                  'A /boozle/buz',
                  'A /boozle/buz/nuz',
                  ], #---------
-                '-m', 'log msg',
-                'cp',    '4', 'foo', 'boozle',
-                'mkdir',             'boozle/buz',
-                'mkdir',             'boozle/buz/nuz')
+                'cp 4 foo boozle',
+                'mkdir boozle/buz',
+                'mkdir boozle/buz/nuz')
 
   # revision 15
   test_svnmover(sbox.repo_url,
@@ -299,55 +290,48 @@ def basic_svnmover(sbox):
                  'A /boozle/guz (from /boozle/buz:14)',
                  'A /boozle/guz/svnmover-test.py',
                  ], #---------
-                '-m', 'log msg',
-                'put',      empty_file,   'boozle/buz/svnmover-test.py',
-                'cp', '14', 'boozle/buz', 'boozle/guz',
-                'put',      empty_file,   'boozle/guz/svnmover-test.py')
+                'put', empty_file, 'boozle/buz/svnmover-test.py',
+                'cp 14 boozle/buz boozle/guz',
+                'put', empty_file, 'boozle/guz/svnmover-test.py')
 
   # revision 16
   test_svnmover(sbox.repo_url,
                 ['R /boozle/guz/svnmover-test.py',
                  ], #---------
-                '-m', 'log msg',
                 'put', empty_file, 'boozle/buz/svnmover-test.py',
-                'rm',              'boozle/guz/svnmover-test.py',
+                'rm boozle/guz/svnmover-test.py',
                 'put', empty_file, 'boozle/guz/svnmover-test.py')
 
   # Expected missing revision error
   xtest_svnmover(sbox.repo_url,
                  "E205000: Syntax error parsing peg revision 'a'",
                  #---------
-                 '-m', 'log msg',
-                 'cp', 'a', 'b')
+                 'cp a b')
 
   # Expected cannot be younger error
   xtest_svnmover(sbox.repo_url,
                  "E160006: No such revision 42",
                  #---------
-                 '-m', 'log msg',
-                 'cp', '42', 'a', 'b')
+                 'cp 42 a b')
 
   # Expected already exists error
   xtest_svnmover(sbox.repo_url,
                  "'foo' already exists",
                  #---------
-                 '-m', 'log msg',
-                 'cp', '16', 'A', 'foo')
+                 'cp 16 A foo')
 
   # Expected copy-child already exists error
   xtest_svnmover(sbox.repo_url,
                  "'a/bar' already exists",
                  #---------
-                 '-m', 'log msg',
-                 'cp', '16', 'foo', 'a',
-                 'cp', '16', 'foo/foo', 'a/bar')
+                 'cp 16 foo a',
+                 'cp 16 foo/foo a/bar')
 
   # Expected not found error
   xtest_svnmover(sbox.repo_url,
                  "'a' not found",
                  #---------
-                 '-m', 'log msg',
-                 'cp', '16', 'a', 'b')
+                 'cp 16 a b')
 
 
 def nested_replaces(sbox):
@@ -466,16 +450,16 @@ def merge_edits_with_move(sbox):
                  'A /trunk/lib/foo/x',
                  'A /trunk/lib/foo/y',
                 ],
-                'mkdir', 'lib',
-                'mkdir', 'lib/foo',
-                'mkdir', 'lib/foo/x',
-                'mkdir', 'lib/foo/y')
+                'mkdir lib',
+                'mkdir lib/foo',
+                'mkdir lib/foo/x',
+                'mkdir lib/foo/y')
 
   # branch (r3)
   test_svnmover(repo_url, [
                  'A /branches/br1 (from /trunk:2)',
                 ],
-                'branch', 'trunk', 'branches/br1')
+                'branch trunk branches/br1')
 
   # on trunk: make edits under 'foo' (r4)
   test_svnmover(repo_url + '/trunk', [
@@ -484,16 +468,16 @@ def merge_edits_with_move(sbox):
                  'A /trunk/lib/foo/y2 (from /trunk/lib/foo/y:3)',
                  'A /trunk/lib/foo/z',
                 ],
-                'rm', 'lib/foo/x',
-                'mv', 'lib/foo/y', 'lib/foo/y2',
-                'mkdir', 'lib/foo/z')
+                'rm lib/foo/x',
+                'mv lib/foo/y lib/foo/y2',
+                'mkdir lib/foo/z')
 
   # on branch: move/rename 'foo' (r5)
   test_svnmover(repo_url + '/branches/br1', [
                  'A /branches/br1/bar (from /branches/br1/lib/foo:4)',
                  'D /branches/br1/lib/foo',
                 ],
-                'mv', 'lib/foo', 'bar')
+                'mv lib/foo bar')
 
   # merge the move to trunk (r6)
   test_svnmover(repo_url, [
@@ -502,7 +486,7 @@ def merge_edits_with_move(sbox):
                  'A /trunk/bar/z (from /trunk/lib/foo/z:5)',
                  'D /trunk/lib/foo',
                 ],
-                'merge', 'branches/br1@5', 'trunk', 'trunk@2')
+                'merge branches/br1@5 trunk trunk@2')
 
   # merge the edits in trunk (excluding the merge r6) to branch (r7)
   test_svnmover(repo_url, [
@@ -511,7 +495,7 @@ def merge_edits_with_move(sbox):
                  'A /branches/br1/bar/y2 (from /branches/br1/bar/y:6)',
                  'A /branches/br1/bar/z',
                 ],
-                'merge', 'trunk@5', 'branches/br1', 'trunk@2')
+                'merge trunk@5 branches/br1 trunk@2')
 
 # Exercise simple moves (not cyclic or hierarchy-inverting):
 #   - {file,dir}
@@ -523,29 +507,29 @@ def simple_moves_within_a_branch(sbox):
 
   # rename only, file
   test_svnmover(repo_url + '/trunk', None,
-                'mv', 'README', 'README.txt')
+                'mv README README.txt')
   # move only, file
   test_svnmover(repo_url + '/trunk', None,
-                'mv', 'README.txt', 'lib/README.txt')
+                'mv README.txt lib/README.txt')
   # rename only, empty dir
   test_svnmover(repo_url + '/trunk', None,
-                'mv', 'lib/foo/y', 'lib/foo/y2')
+                'mv lib/foo/y lib/foo/y2')
   # move only, empty dir
   test_svnmover(repo_url + '/trunk', None,
-                'mv', 'lib/foo/y2', 'y2')
+                'mv lib/foo/y2 y2')
   # move and rename, dir with children
   test_svnmover(repo_url + '/trunk', None,
-                'mkdir', 'subdir',
-                'mv', 'lib', 'subdir/lib2',
+                'mkdir subdir',
+                'mv lib subdir/lib2',
                 )
 
   # moves and renames together
   # (put it all back to how it was, in one commit)
   test_svnmover(repo_url + '/trunk', None,
-                'mv', 'subdir/lib2', 'lib',
-                'rm', 'subdir',
-                'mv', 'y2', 'lib/foo/y',
-                'mv', 'lib/README.txt', 'README'
+                'mv subdir/lib2 lib',
+                'rm subdir',
+                'mv y2 lib/foo/y',
+                'mv lib/README.txt README'
                 )
 
 # Exercise moves from one branch to another in the same family. 'svnmover'
@@ -558,12 +542,12 @@ def move_to_related_branch(sbox):
 
   # branch
   test_svnmover(repo_url, None,
-                'branch', 'trunk', 'branches/br1')
+                'branch trunk branches/br1')
 
   # remove all elements from branch so we can try moving them there
   test_svnmover(repo_url, None,
-                'rm', 'branches/br1/README',
-                'rm', 'branches/br1/lib')
+                'rm branches/br1/README',
+                'rm branches/br1/lib')
 
   # move from trunk to branch 'br1'
   test_svnmover(repo_url, [
@@ -576,12 +560,12 @@ def move_to_related_branch(sbox):
                  'A /branches/br1/y2 (from /trunk/lib/foo/y:4)',
                 ],
                 # keeping same relpath
-                'mv', 'trunk/README', 'branches/br1/README',
+                'mv trunk/README branches/br1/README',
                 # with a move-within-branch and rename as well
-                'mv', 'trunk/lib/foo/y', 'branches/br1/y2',
+                'mv trunk/lib/foo/y branches/br1/y2',
                 # dir with children, also renaming and moving within branch
-                'mkdir', 'branches/br1/subdir',
-                'mv', 'trunk/lib', 'branches/br1/subdir/lib2',
+                'mkdir branches/br1/subdir',
+                'mv trunk/lib branches/br1/subdir/lib2',
                 )
 
 # Exercise moves from one branch to another in the same family. 'svnmover'
@@ -595,7 +579,7 @@ def move_to_related_branch_element_already_exists(sbox):
 
   # branch
   test_svnmover(repo_url, None,
-                'branch', 'trunk', 'branches/br1')
+                'branch trunk branches/br1')
 
   # move to a branch where same element already exists: should overwrite
   test_svnmover(repo_url, [
@@ -604,15 +588,15 @@ def move_to_related_branch_element_already_exists(sbox):
                  'A /branches/br1/README2 (from /trunk/README:3)',
                 ],
                  # single file: element already exists, at different relpath
-                 'mv', 'trunk/README', 'branches/br1/README2')
+                 'mv trunk/README branches/br1/README2')
   test_svnmover(repo_url, [
                  'D /trunk/lib',
                  'D /branches/br1/lib',
                  'A /branches/br1/lib2 (from /trunk/lib:4)',
                 ],
                 # dir: child elements already exist (at different relpaths)
-                'mv', 'branches/br1/lib/foo/x', 'branches/br1/x2',
-                'mv', 'trunk/lib', 'branches/br1/lib2')
+                'mv branches/br1/lib/foo/x branches/br1/x2',
+                'mv trunk/lib branches/br1/lib2')
 
 # Exercise moves from one branch to an unrelated branch (different family).
 # 'svnmover' executes these by copy-and-delete.
@@ -632,12 +616,12 @@ def move_to_unrelated_branch(sbox):
                  'A /y2 (from /trunk/lib/foo/y:2)',
                 ],
                 # keeping same relpath
-                'mv', 'trunk/README', 'README',
+                'mv trunk/README README',
                 # with a move-within-branch and rename as well
-                'mv', 'trunk/lib/foo/y', 'y2',
+                'mv trunk/lib/foo/y y2',
                 # dir with children, also renaming and moving within branch
-                'mkdir', 'subdir',
-                'mv', 'trunk/lib', 'subdir/lib2',
+                'mkdir subdir',
+                'mv trunk/lib subdir/lib2',
                 )
 
 
