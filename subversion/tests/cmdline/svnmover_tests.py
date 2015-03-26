@@ -624,6 +624,117 @@ def move_to_unrelated_branch(sbox):
                 'mv trunk/lib subdir/lib2',
                 )
 
+# This tests one variant of rearranging a trunk/tags/branches structure.
+#
+# From a single set of branches (each branch containing multiple
+# more-or-less-independent projects) to a separate set of branches for
+# each project.
+#
+# +- /TRUNK/                          +- proj1/
+# |    +- proj1/...                   |    +- TRUNK/...
+# |    +- proj2/...                   |    +- branches/
+# |                                   |         +- BR1/...
+# +- /branches/               ==>     |
+#      +- BR1/                        +- proj2/
+#          +- proj1/...                   +- TRUNK/...
+#          +- proj2/...                   +- branches/
+#                                             +- BR1/...
+#
+# (UPPER CASE denotes a branch root.)
+#
+# All branches are necessarily in the same family in the first arrangement.
+# The rearranged form could have a separate family for each project if the
+# projects historically never shared any elements, but we keep them all in
+# the same family and this way can guarantee to accommodate them even if
+# they do share history.
+#
+# This rearrangement is achieved entirely by branching from subtrees of the
+# existing branches.
+#
+def rearrange_repo_projects_ttb_structure(sbox):
+  "rearrange repo project ttb structure"
+  sbox_build_svnmover(sbox, content=initial_content_ttb)
+  repo_url = sbox.repo_url
+
+  test_svnmover(repo_url + '/trunk', None,
+                'mkdir proj1',
+                'mkdir proj1/lib',
+                'mkdir proj1/lib/foo',
+                'mkdir proj1/lib/foo/x',
+                'mkdir proj1/lib/foo/y')
+  # branch
+  test_svnmover(repo_url, None,
+                'branch', 'trunk', 'branches/br1')
+
+  # make 'proj2' (on branch, for no particular reason) (r4)
+  test_svnmover(repo_url + '/branches/br1', None,
+                'mkdir proj2',
+                'mkdir proj2/foo',
+                'mkdir proj2/bar')
+
+
+  # on trunk: make edits (r5)
+  test_svnmover(repo_url + '/trunk', [
+                 'D /trunk/proj1/lib/foo/x',
+                 'D /trunk/proj1/lib/foo/y',
+                 'A /trunk/proj1/lib/foo/y2 (from /trunk/proj1/lib/foo/y:4)',
+                 'A /trunk/proj1/lib/foo/z',
+                ],
+                'rm proj1/lib/foo/x',
+                'mv proj1/lib/foo/y proj1/lib/foo/y2',
+                'mkdir proj1/lib/foo/z')
+
+  # on branch: make edits (r6)
+  test_svnmover(repo_url + '/branches/br1/proj1', [
+                 'A /branches/br1/proj1/bar (from /branches/br1/proj1/lib/foo:5)',
+                 'D /branches/br1/proj1/lib/foo',
+                ],
+                'mv', 'lib/foo', 'bar')
+
+  # merge the branch to trunk (r7)
+  test_svnmover(repo_url, [
+                 'A /trunk/proj1/bar', # ' (from /trunk/proj1/lib/foo:6)',
+                 'A /trunk/proj1/bar/y2 (from /trunk/proj1/lib/foo/y2:6)',
+                 'A /trunk/proj1/bar/z (from /trunk/proj1/lib/foo/z:6)',
+                 'D /trunk/proj1/lib/foo',
+                 'A /trunk/proj2', # ' (from )',
+                 'A /trunk/proj2/foo', # ' (from )',
+                 'A /trunk/proj2/bar', # ' (from )',
+                ],
+                'merge branches/br1 trunk trunk@3')
+
+  # merge the edits in trunk (excluding the merge r6) to branch (r7)
+  test_svnmover(repo_url, [
+                 'D /branches/br1/proj1/bar/x',
+                 'D /branches/br1/proj1/bar/y',
+                 'A /branches/br1/proj1/bar/y2', # ' (from /branches/br1/proj1/bar/y:6)',
+                 'A /branches/br1/proj1/bar/z',
+                ],
+                'merge trunk@5 branches/br1 trunk@2')
+
+  # Make the new project directories
+  test_svnmover(repo_url, None,
+                'mkdir proj1',
+                'mkdir proj1/branches',
+                'mkdir proj2',
+                'mkdir proj2/branches',
+                )
+  # Rearrange: {t,t,b}/{proj} => {proj}/{t,t,b}
+  test_svnmover(repo_url, None,
+                'branch trunk/proj1 proj1/trunk',
+                'branch trunk/proj2 proj2/trunk',
+                'branch branches/br1/proj1 proj1/branches/br1',
+                'branch branches/br1/proj2 proj2/branches/br1',
+                )
+  # Delete the remaining root dir of the old trunk and branches
+  test_svnmover(repo_url, None,
+                'rm trunk',
+                'rm branches',
+                )
+
+  ### It's all very well to see that the dirs and files now appear at the
+  ### right places, but what should we test to ensure the history is intact?
+
 
 ######################################################################
 
@@ -636,6 +747,7 @@ test_list = [ None,
               move_to_related_branch,
               move_to_related_branch_element_already_exists,
               move_to_unrelated_branch,
+              rearrange_repo_projects_ttb_structure,
             ]
 
 if __name__ == '__main__':
