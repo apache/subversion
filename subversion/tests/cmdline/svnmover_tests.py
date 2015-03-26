@@ -33,7 +33,7 @@ Issue = svntest.testcase.Issue_deco
 
 ######################################################################
 
-_commit_re = re.compile('^Committed (r[0-9]+)')
+_commit_re = re.compile('^Committed r([0-9]+)')
 _log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
 _err_re = re.compile('^svnmover: (.*)$')
 
@@ -91,6 +91,42 @@ def sbox_build_svnmover(sbox, content=None):
 
   if content:
     content(sbox)
+
+def test_svnmover2(sbox, relpath, expected_changes, *varargs):
+  """Run svnmover with the list of SVNMOVER_ARGS arguments.  Verify that
+     its run results in a new commit with 'svnmover diff -c HEAD' changes
+     that match the list of EXPECTED_CHANGES.
+  """
+  repo_url = sbox.repo_url
+  if relpath:
+    repo_url += '/' + relpath
+
+  # Split arguments at spaces
+  varargs = ' '.join(varargs).split()
+  # First, run svnmover.
+  exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
+                                                            *varargs)
+  if exit_code or errlines:
+    raise svntest.main.SVNCommitFailure(str(errlines))
+  # Find the committed revision
+  for line in outlines:
+    m = _commit_re.match(line)
+    if m:
+      commit_rev = int(m.group(1))
+      break
+  else:
+    raise svntest.main.SVNLineUnequal(str(outlines))
+
+  # Now, run 'svnmover diff -c HEAD'
+  exit_code, outlines, errlines = svntest.main.run_svnmover('-U', sbox.repo_url,
+                                                            'diff',
+                                                            '.@' + str(commit_rev - 1),
+                                                            '.@' + str(commit_rev))
+  if exit_code or errlines:
+    raise svntest.main.SVNCommitFailure(str(errlines))
+
+  outlines = [l.strip() for l in outlines]
+  svntest.verify.verify_outputs(None, outlines, None, expected_changes, None)
 
 def test_svnmover(repo_url, expected_path_changes, *varargs):
   """Run svnmover with the list of SVNMOVER_ARGS arguments.  Verify that
@@ -435,14 +471,28 @@ def merges(sbox):
                            '-U', repo_url,
                            'merge', 'trunk@5', 'branches/br1', 'trunk@2')
 
-@XFail()  # bug: in r6 'bar' is plain-added instead of copied.
+def reported_del(path):
+  return 'D   ' + path
+
+def reported_add(path):
+  return 'A   ' + path
+
+def reported_move(path1, path2):
+  dir1, name1 = os.path.split(path1)
+  dir2, name2 = os.path.split(path2)
+  if dir1 == dir2:
+    return 'M r ' + path2 + ' (renamed from .../' + name1 + ')'
+  elif name1 == name2:
+    return 'Mv  ' + path2 + ' (moved from ' + dir1 + '/...)'
+  else:
+    return 'Mvr ' + path2 + ' (moved+renamed from ' + path1 + ')'
+
+#@XFail()  # There is a bug in the conversion to old-style commits:
+#  in r6 'bar' is plain-added instead of copied.
 def merge_edits_with_move(sbox):
   "merge_edits_with_move"
   sbox_build_svnmover(sbox, content=initial_content_ttb)
   repo_url = sbox.repo_url
-
-  # ### This checks the traditional 'log' output, in which a move shows up
-  # as a delete and a set of adds.
 
   # create initial state in trunk
   # (r2)
@@ -464,38 +514,36 @@ def merge_edits_with_move(sbox):
                 'branch trunk branches/br1')
 
   # on trunk: make edits under 'foo' (r4)
-  test_svnmover(repo_url + '/trunk', [
-                 'D /trunk/lib/foo/x',
-                 'D /trunk/lib/foo/y',
-                 'A /trunk/lib/foo/y2 (from /trunk/lib/foo/y:3)',
-                 'A /trunk/lib/foo/z',
+  test_svnmover2(sbox, 'trunk', [
+                 '--- diff branch ^.2 at /trunk : ^.2 at /trunk, family 1',
+                 reported_del('lib/foo/x'),
+                 reported_move('lib/foo/y', 'lib/foo/y2'),
+                 reported_add('lib/foo/z'),
                 ],
                 'rm lib/foo/x',
                 'mv lib/foo/y lib/foo/y2',
                 'mkdir lib/foo/z')
 
   # on branch: move/rename 'foo' (r5)
-  test_svnmover(repo_url + '/branches/br1', [
-                 'A /branches/br1/bar (from /branches/br1/lib/foo:4)',
-                 'D /branches/br1/lib/foo',
+  test_svnmover2(sbox, 'branches/br1', [
+                 '--- diff branch ^.5 at /branches/br1 : ^.5 at /branches/br1, family 1',
+                 reported_move('lib/foo', 'bar'),
                 ],
                 'mv lib/foo bar')
 
   # merge the move to trunk (r6)
-  test_svnmover(repo_url, [
-                 'A /trunk/bar (from /trunk/lib/foo:5)',
-                 'A /trunk/bar/y2 (from /trunk/lib/foo/y2:5)',
-                 'A /trunk/bar/z (from /trunk/lib/foo/z:5)',
-                 'D /trunk/lib/foo',
+  test_svnmover2(sbox, '', [
+                 '--- diff branch ^.2 at /trunk : ^.2 at /trunk, family 1',
+                 reported_move('lib/foo', 'bar'),
                 ],
                 'merge branches/br1@5 trunk trunk@2')
 
   # merge the edits in trunk (excluding the merge r6) to branch (r7)
-  test_svnmover(repo_url, [
-                 'D /branches/br1/bar/x',
-                 'D /branches/br1/bar/y',
-                 'A /branches/br1/bar/y2 (from /branches/br1/bar/y:6)',
-                 'A /branches/br1/bar/z',
+  test_svnmover2(sbox, '', [
+                 '--- diff branch ^.5 at /branches/br1 : ^.5 at /branches/br1, family 1',
+                 reported_del('bar/x'),
+                 reported_move('bar/y', 'bar/y2'),
+                 reported_add('bar/z'),
                 ],
                 'merge trunk@5 branches/br1 trunk@2')
 
