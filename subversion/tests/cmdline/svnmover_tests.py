@@ -59,9 +59,9 @@ def populate_trunk(sbox, trunk):
 def initial_content_A_iota(sbox):
   """Commit something in place of a greek tree for revision 1.
   """
-  svntest.main.run_svnmover('-U', sbox.repo_url,
-                            'mkdir', 'A',
-                            'put', mk_file(sbox, 'iota'), 'iota')
+  test_svnmover(sbox.repo_url, None,
+                'mkdir A',
+                'put', mk_file(sbox, 'iota'), 'iota')
 
 def initial_content_ttb(sbox):
   """Make a 'trunk' branch and 'tags' and 'branches' dirs.
@@ -102,7 +102,7 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
   # First, run svnmover.
   exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
                                                             *varargs)
-  if errlines:
+  if exit_code or errlines:
     raise svntest.main.SVNCommitFailure(str(errlines))
   if not any(map(_commit_re.match, outlines)):
     raise svntest.main.SVNLineUnequal(str(outlines))
@@ -139,6 +139,8 @@ def xtest_svnmover(repo_url, error_re_string, *varargs):
   # First, run svnmover.
   exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
                                                             *varargs)
+  if not exit_code:
+    raise svntest.main.Failure("Expected an error, but exit code is 0")
   if error_re_string:
     if not error_re_string.startswith(".*"):
       error_re_string = ".*(" + error_re_string + ")"
