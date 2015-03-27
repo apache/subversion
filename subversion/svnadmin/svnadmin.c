@@ -2510,6 +2510,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         SVN_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
                                              utf8_opt_arg, pool));
         dash_F_arg = TRUE;
+        break;
       case svnadmin__version:
         opt_state.version = TRUE;
         break;
