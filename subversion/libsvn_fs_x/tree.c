@@ -1354,7 +1354,7 @@ x_node_relation(svn_fs_node_relation_t *relation,
       *relation = (   (root_a->rev == root_b->rev)
                    && (root_a->is_txn_root == root_b->is_txn_root)
                    && !different_txn)
-                ? svn_fs_node_same
+                ? svn_fs_node_unchanged
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
@@ -1372,7 +1372,7 @@ x_node_relation(svn_fs_node_relation_t *relation,
   /* In FSX, even in-txn IDs are globally unique.
    * So, we can simply compare them. */
   if (svn_fs_x__id_eq(&noderev_id_a, &noderev_id_b))
-    *relation = svn_fs_node_same;
+    *relation = svn_fs_node_unchanged;
   else if (svn_fs_x__id_eq(&node_id_a, &node_id_b))
     *relation = svn_fs_node_common_ancestor;
   else

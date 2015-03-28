@@ -4268,7 +4268,7 @@ check_related(const svn_test_opts_t *opts,
             if (i == j)
               {
                 /* Identical note. */
-                if (!related || relation != svn_fs_node_same)
+                if (!related || relation != svn_fs_node_unchanged)
                   {
                     return svn_error_createf
                       (SVN_ERR_TEST_FAILED, NULL,
@@ -4319,7 +4319,7 @@ check_related(const svn_test_opts_t *opts,
                                          rev_root, path, subpool));
 
             /* They shall use the same noderevs */
-            if (relation != svn_fs_node_same)
+            if (relation != svn_fs_node_unchanged)
               {
                 return svn_error_createf
                   (SVN_ERR_TEST_FAILED, NULL,
@@ -4486,7 +4486,7 @@ check_txn_related(const svn_test_opts_t *opts,
             if (i == j)
               {
                 /* Identical noderev. */
-                if (!related || relation != svn_fs_node_same)
+                if (!related || relation != svn_fs_node_unchanged)
                   {
                     return svn_error_createf
                       (SVN_ERR_TEST_FAILED, NULL,
@@ -4525,7 +4525,7 @@ check_txn_related(const svn_test_opts_t *opts,
                                      root[0], "D", subpool));
 
         /* They shall use the same noderevs */
-        if (relation != svn_fs_node_same)
+        if (relation != svn_fs_node_unchanged)
           {
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
