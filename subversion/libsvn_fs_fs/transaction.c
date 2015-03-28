@@ -2214,10 +2214,11 @@ get_shared_rep(representation_t **old_rep,
     return SVN_NO_ERROR;
 
   /* We don't want 0-length PLAIN representations to replace non-0-length
-     ones (see issue #4554).  Also, this doubles as a simple guard against
-     general rep-cache induced corruption. */
+     ones (see issue #4554).  Take into account that EXPANDED_SIZE may be
+     0 in which case we have to check the on-disk SIZE.  Also, this doubles
+     as a simple guard against general rep-cache induced corruption. */
   if (   ((*old_rep)->expanded_size != rep->expanded_size)
-      || ((*old_rep)->size != rep->size))
+      || (rep->expanded_size && ((*old_rep)->size != rep->size)))
     {
       *old_rep = NULL;
     }
