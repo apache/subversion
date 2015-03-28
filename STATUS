@@ -15,6 +15,17 @@ Status of 1.9.0:
 Release blockers for 1.9.0:
 ===========================
 
+ * r1669746
+   Rename svn_fs_node_same to svn_fs_node_unchanged in FS API.
+   Justification:
+     This clarifies the new "node relationship" concept introduced in 1.9.
+     Neither calling it "same" (too strict) nor "equal" (too loose) would
+     imply the intended semantics.  The sloppy and easily misinterpreted
+     semantics of the similar svn_fs_compare_ids lead to false and fragile
+     code (e.g. issue #4542).  Let's not repeat this.
+   Votes:
+     +1: stefan2
+
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
@@ -29,6 +40,17 @@ Candidate changes that cannot go into a later 1.9.x:
      can ignore certain kinds of errors as needed, by just clearing the error.
    Votes:
      +1: rhuijben (not after 1.9.0), brane
+
+ * r1669749
+   Make the new svn_fs_dir_optimal_order use two pools.
+   Justification:
+     New code should use the two-pool paradigm.  Hence, all new API should
+     allow users to do so.
+   Notes:
+     This is not strictly blocking 1.9 but if we don't merge it, we need to
+     revert it on /trunk as well.
+   Votes:
+     +1: stefan2
 
 Other candidate changes:
 ========================
@@ -199,6 +221,15 @@ Other candidate changes:
      ra operations shouldn't unnecessary grow the session pool.
    Votes:
      +1: rhuijben
+
+ * r1669743
+   Restore FSFS representation sharing to its previous effectiveness.
+   Justification:
+     Without this patch, repositories may grow faster than necessary.
+     Effected users include those that use plain add instead of copy to
+     create branches and those that merge frequently between branches.
+   Votes:
+     +1: stefan2
 
 Veto-blocked changes:
 =====================
