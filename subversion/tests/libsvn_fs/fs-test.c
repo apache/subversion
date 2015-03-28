@@ -6524,7 +6524,7 @@ test_dir_optimal_order(const svn_test_opts_t *opts,
 
   /* Call the API function we are interested in. */
   SVN_ERR(svn_fs_dir_entries(&unordered, root, "A", pool));
-  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool));
+  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool, pool));
 
   /* Verify that all entries are returned. */
   SVN_TEST_ASSERT(ordered->nelts == apr_hash_count(unordered));
