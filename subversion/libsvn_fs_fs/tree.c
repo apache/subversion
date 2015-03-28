@@ -1357,7 +1357,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
       *relation = (   (root_a->rev == root_b->rev)
                    && (root_a->is_txn_root == root_b->is_txn_root)
                    && !different_txn)
-                ? svn_fs_node_same
+                ? svn_fs_node_unchanged
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
@@ -1391,7 +1391,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
 
   /* The noderevs are actually related.  Are they the same? */
   if (svn_fs_fs__id_eq(id_a, id_b))
-    *relation = svn_fs_node_same;
+    *relation = svn_fs_node_unchanged;
   else
     *relation = svn_fs_node_common_ancestor;
 

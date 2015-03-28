@@ -1899,7 +1899,7 @@ svn_fs_compare_ids(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   switch (a->vtable->compare(a, b))
     {
-    case svn_fs_node_same:
+    case svn_fs_node_unchanged:
       return 0;
     case svn_fs_node_common_ancestor:
       return 1;

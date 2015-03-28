@@ -3164,7 +3164,8 @@ txn_body_copy(void *baton,
   if ((to_parent_path->node)
       && (svn_fs_base__id_compare(svn_fs_base__dag_get_id(from_node),
                                   svn_fs_base__dag_get_id
-                                  (to_parent_path->node)) == svn_fs_node_same))
+                                  (to_parent_path->node))
+          == svn_fs_node_unchanged))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)

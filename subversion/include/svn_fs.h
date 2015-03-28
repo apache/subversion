@@ -888,27 +888,39 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  * @{
  */
 
-/** Defines the possible ways two arbitrary node-revisions may be related.
+/** Defines the possible ways two arbitrary (root, path)-pairs may be
+ * related.
  *
  * @since New in 1.9.
  */
 typedef enum svn_fs_node_relation_t
 {
-  /** The node-revisions are not related.
-   * Node-revisions from different repositories are always unrelated.
-   * #svn_fs_compare_ids would return the value -1 in this case.
+  /** The (root, path)-pairs are not related, i.e. none of the other cases
+   * apply.  If the roots refer to different @c svn_fs_t instances, then
+   * they are always considered unrelated - even if the underlying
+   * repository is the same.
    */
   svn_fs_node_unrelated = 0,
 
-  /** They are the same node-revision, i.e. there is no intervening change.
-   * However, due to lazy copying, there may be part of different parent
-   * copies.  #svn_fs_compare_ids would return the value 0 in this case.
+  /** No changes have been made between the (root, path)-pairs, i.e. they
+   * have the same (relative) nodes in their sub-trees, corresponding sub-
+   * tree nodes have the same contents as well as properties and report the
+   * same "created-path" and "created-rev" data.  This implies having a
+   * common ancestor.
+   *
+   * However, due to efficiency considerations, the FS implementation may
+   * report some combinations as merely having a common ancestor
+   * (@a svn_fs_node_common_ancestor) instead of actually being unchanged.
    */
-  svn_fs_node_same,
+  svn_fs_node_unchanged,
 
-  /** The node-revisions have a common ancestor (which may be one of them)
-   * but are not the same.
-   * #svn_fs_compare_ids would return the value 1 in this case.
+  /** The (root, path)-pairs have a common ancestor (which may be one of
+   * them) but there are changes between them, i.e. they don't fall into
+   * the @c svn_fs_node_unchanged category.
+   *
+   * Due to efficiency considerations, the FS implementation may falsely
+   * classify some combinations as merely having a common ancestor that
+   * are, in fact, unchanged (@a svn_fs_node_unchanged).
    */
   svn_fs_node_common_ancestor
 
