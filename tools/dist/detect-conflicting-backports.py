@@ -75,7 +75,6 @@ ERRORS = collections.defaultdict(list)
 
 # Main loop.
 for entry_para in sf.entries_paras():
-  if entry_para.approved():
     entry = entry_para.entry()
     # SVN_ERR_WC_FOUND_CONFLICT = 155015
     backport.merger.merge(entry, 'svn: E155015' if entry.depends else None)

@@ -176,12 +176,15 @@ def serialize_entry(entry):
   ])
 
 def serialize_STATUS(approveds,
+                     candidates=[],
                      serialize_entry=serialize_entry):
   """Construct and return the contents of a STATUS file.
 
   APPROVEDS is an iterable of ENTRY dicts.  The dicts are defined
   to have the following keys: 'revisions', a list of revision numbers (ints);
   'logsummary'; and 'votes', a dict mapping ±1/±0 (int) to list of voters.
+
+  CANDIDATES is like APPROVEDS, except added to a different section of the file.
   """
 
   strings = []
@@ -189,6 +192,8 @@ def serialize_STATUS(approveds,
 
   strings.append("Candidate changes:\n")
   strings.append("==================\n\n")
+
+  strings.extend(map(serialize_entry, candidates))
 
   strings.append("Random new subheading:\n")
   strings.append("======================\n\n")
@@ -377,10 +382,10 @@ def backport_conflicts_detection(sbox):
   sbox.simple_commit(message="Conflicting change on iota")
 
   # r7: nominate r4, but without the requisite --accept
-  approved_entries = [
+  candidate_entries = [
     make_entry([4], notes="This will conflict."),
   ]
-  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_append(STATUS, serialize_STATUS([], candidate_entries))
   sbox.simple_commit(message='Nominate r4')
 
   # Run it.
