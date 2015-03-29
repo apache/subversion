@@ -222,12 +222,14 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1669743
+ * r1669743, r1669945
    Restore FSFS representation sharing to its previous effectiveness.
    Justification:
      Without this patch, repositories may grow faster than necessary.
      Effected users include those that use plain add instead of copy to
      create branches and those that merge frequently between branches.
+   Notes:
+     r1669945 fixes the replacement condition and provides a test.
    Votes:
      +1: stefan2
 
