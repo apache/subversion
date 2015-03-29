@@ -233,40 +233,8 @@ Other candidate changes:
    Votes:
      +1: stefan2
 
- * r1668598
-   Fixes to the public svn_config API declarations and documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2
-
  * r1668599, r1668608
    Fixes to the public svn_io API declarations and documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2
-
- * r1668600
-   Fixes to the public RA layer API declarations and documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2
-
- * r1668602
-   Fixes to the public svn_string API declarations and documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2
-
- * r1668603
-   Fixes to the public svn_wc API declarations and documentation.
    Justification:
      Have a complete, correct and easily accessible API description.
      None of these changes should affect generated code nor the ABI.
@@ -286,3 +254,36 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1668598
+   Fixes to the public svn_config API documentation.
+   Justification:
+     Have a complete, correct and easily accessible API description.
+     None of these changes should affect generated code nor the ABI.
+   Votes:
+     +1: stefan2
+
+ * r1668600
+   Fixes to the public RA layer API documentation.
+   Justification:
+     Have a complete, correct and easily accessible API description.
+     None of these changes should affect generated code nor the ABI.
+   Votes:
+     +1: stefan2
+
+ * r1668602
+   Fixes to the public svn_string API documentation.
+   Justification:
+     Have a complete, correct and easily accessible API description.
+     None of these changes should affect generated code nor the ABI.
+   Votes:
+     +1: stefan2
+
+ * r1668603
+   Fixes to the public svn_wc API documentation.
+   Justification:
+     Have a complete, correct and easily accessible API description.
+     None of these changes should affect generated code nor the ABI.
+   Votes:
+     +1: stefan2
+
