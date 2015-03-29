@@ -438,7 +438,7 @@ static svn_error_t *
 test_null_cache(apr_pool_t *pool)
 {
   svn_boolean_t found, done;
-  int data = 0;
+  int *data = NULL;
   svn_cache__info_t info;
 
   svn_cache__t *cache;
