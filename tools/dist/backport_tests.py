@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # py:encoding=utf-8
 #
-#  backport_tests.py:  Test backport.pl
+#  backport_tests.py:  Test backport.pl or backport.py
 #
 #  Subversion is a tool for revision control.
 #  See http://subversion.apache.org for more information.
@@ -24,6 +24,25 @@
 #    specific language governing permissions and limitations
 #    under the License.
 ######################################################################
+
+# We'd like to test backport.pl and backport.py the same way, and to reuse
+# the svntest Python harness.  Since the latter standardizes argv parsing,
+# we can't use argv to determine whether .py or .pl should be tested.  Thus,
+# we implement the tests themselves in this file, while two driver files
+# (backport_tests_pl.py and backport_tests_py.py) invoke this file set
+# to run either backport-suite implementation.
+#
+# ### Note: the two driver scripts use the same repository names in
+# ### svn-test-work.  This is not ideal, but hopefully acceptable
+# ### temporarily until we switch over to backport.py and remove backport.pl.
+# ###
+# ### See svntest.testcase.FunctionTestCase.get_sandbox_name().
+try:
+  run_backport, run_conflicter
+except NameError:
+  raise Exception("Failure: %s should not be run directly, or the wrapper "
+                  "does not define both run_backport() and run_conflicter()"
+                  % __file__)
 
 # General modules
 import contextlib
@@ -58,8 +77,6 @@ Wimp = svntest.testcase.Wimp_deco
 ######################################################################
 # Helper functions
 
-BACKPORT_PL = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                           'backport.pl'))
 STATUS = 'branch/STATUS'
 
 class BackportTest(object):
@@ -185,22 +202,6 @@ def serialize_STATUS(approveds,
   strings.extend(map(serialize_entry, approveds))
 
   return "".join(strings)
-
-def run_backport(sbox, error_expected=False, extra_env=[]):
-  """Run backport.pl.  EXTRA_ENV is a list of key=value pairs (str) to set in
-  the child's environment.  ERROR_EXPECTED is propagated to run_command()."""
-  # TODO: if the test is run in verbose mode, pass DEBUG=1 in the environment,
-  #       and pass error_expected=True to run_command() to not croak on
-  #       stderr output from the child (because it uses 'sh -x').
-  args = [
-    '/usr/bin/env',
-    'SVN=' + svntest.main.svn_binary,
-    'YES=1', 'MAY_COMMIT=1', 'AVAILID=jrandom',
-  ] + list(extra_env) + [
-    'perl', BACKPORT_PL,
-  ]
-  with chdir(sbox.ospath('branch')):
-    return svntest.main.run_command(args[0], error_expected, False, *(args[1:]))
 
 def verify_backport(sbox, expected_dump_file, uuid):
   """Compare the contents of the SBOX repository with EXPECTED_DUMP_FILE.
@@ -383,9 +384,7 @@ def backport_conflicts_detection(sbox):
   sbox.simple_commit(message='Nominate r4')
 
   # Run it.
-  exit_code, output, errput = run_backport(sbox, True,
-                                           # Choose conflicts mode:
-                                           ["MAY_COMMIT=0"])
+  exit_code, output, errput = run_conflicter(sbox, True)
 
   # Verify the conflict is detected.
   expected_output = svntest.verify.RegexOutput(
@@ -418,9 +417,9 @@ def backport_conflicts_detection(sbox):
   sbox.simple_commit(message='Re-nominate r4')
 
   # Detect conflicts.
-  exit_code, output, errput = run_backport(sbox, extra_env=["MAY_COMMIT=0"])
+  exit_code, output, errput = run_conflicter(sbox)
 
-  # Verify stdout.  (exit_code and errput were verified by run_backport().)
+  # Verify stdout.  (exit_code and errput were verified by run_conflicter().)
   svntest.verify.verify_outputs(None, output, errput,
                                 "Conflicts found.*, as expected.", [])
 
@@ -501,7 +500,7 @@ def backport_double_conflict(sbox):
   sbox.simple_commit(message='Nominate the r4 group')
 
   # Run it, in conflicts mode.
-  exit_code, output, errput = run_backport(sbox, True, ["MAY_COMMIT=0"])
+  exit_code, output, errput = run_conflicter(sbox, True)
 
   # Verify the failure mode: "merge conflict" error on stderr, but backport.pl
   # itself exits with code 0, since conflicts were confined to Depends:-ed
@@ -541,13 +540,16 @@ def backport_double_conflict(sbox):
   sbox.simple_append(STATUS, serialize_STATUS(approved_entries), truncate=True)
   sbox.simple_commit(message='Re-nominate the r4 group')
 
-  exit_code, output, errput = run_backport(sbox, True, ["MAY_COMMIT=0"])
+  exit_code, output, errput = run_conflicter(sbox, True)
 
+  ## An unexpected non-zero exit code is treated as a fatal error.
   # [1-9]\d+ matches non-zero exit codes
-  expected_errput = r'r4 .*: subshell exited with code (?:[1-9]\d+)'
+  expected_stdout = None
+  expected_errput = r'r4 .*: subshell exited with code (?:[1-9]\d+)' \
+                   r"|.*subprocess.CalledProcessError.*'merge'.*exit status 1"
   svntest.verify.verify_exit_code(None, exit_code, 1)
   svntest.verify.verify_outputs(None, output, errput,
-                                svntest.verify.AnyOutput, expected_errput)
+                                expected_stdout, expected_errput)
 
 
 
