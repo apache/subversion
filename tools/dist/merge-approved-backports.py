@@ -39,6 +39,7 @@ if sys.argv[1:]:
   print(__doc__)
   sys.exit(0)
 
+backport.merger.no_local_mods('./STATUS')
 sf = backport.status.StatusFile(open('./STATUS'))
 
 # Duplicate sf.paragraphs, since merge() will be removing elements from it.

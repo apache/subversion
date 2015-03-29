@@ -121,6 +121,11 @@ def last_changed_revision(path_or_url):
     else:
       raise Exception("'svn info' did not print last changed revision")
 
+def no_local_mods(path):
+  "Check PATH for local mods.  Raise if there are any."
+  if run_svn(['status', '-q', '--', path])[1]:
+    raise UnableToMergeException("Local mods on {!r}".format(path))
+
 def _includes_only_svn_mergeinfo_changes(status_output):
   """Return TRUE iff there is exactly one local mod, and it is an svn:mergeinfo
   change.  Use the provided `status -q` output."""
