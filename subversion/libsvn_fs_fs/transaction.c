@@ -2218,7 +2218,7 @@ get_shared_rep(representation_t **old_rep,
      0 in which case we have to check the on-disk SIZE.  Also, this doubles
      as a simple guard against general rep-cache induced corruption. */
   if (   ((*old_rep)->expanded_size != rep->expanded_size)
-      || (rep->expanded_size && ((*old_rep)->size != rep->size)))
+      || ((rep->expanded_size == 0) && ((*old_rep)->size != rep->size)))
     {
       *old_rep = NULL;
     }
