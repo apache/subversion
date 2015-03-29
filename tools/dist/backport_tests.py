@@ -225,7 +225,7 @@ def verify_backport(sbox, expected_dump_file, uuid):
   src_dump = svntest.actions.run_and_verify_dump(sbox.repo_dir)
 
   svntest.verify.compare_dump_files(
-    "Dump files", "DUMP", src_dump, dest_dump)
+    "Dump files", "DUMP", dest_dump, src_dump)
 
 ######################################################################
 # Tests
