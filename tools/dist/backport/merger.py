@@ -87,8 +87,8 @@ class Test_invoking_cmdline_client(unittest.TestCase):
 
     run_svn(['--version', '--no-such-option'], "invalid option")
 
-    with self.assertRaises(subprocess.CalledProcessError):
-      with self.assertLogs() as cm:
+    with self.assertLogs() as cm:
+      with self.assertRaises(subprocess.CalledProcessError):
         run_svn(['--version', '--no-such-option'])
       self.assertRegex(cm.output[0], "Unexpected stderr.*")
 
