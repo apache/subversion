@@ -431,7 +431,7 @@ fi
 $SVNq up
 $SVNq merge @mergeargs
 if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
-  if [ -n "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
+  if [ -z "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
     # This check detects STATUS entries that name non-^/subversion/ revnums.
     # ### Q: What if we actually commit a mergeinfo fix to trunk and then want
     # ###    to backport it?
