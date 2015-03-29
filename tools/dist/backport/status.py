@@ -493,7 +493,7 @@ class StatusEntry:
     #
     # This is currently only used for finding the end of logsummary, and all
     # explicitly special-cased headers (e.g., "Depends:") match this, though.
-    return re.compile(r'^\s*\w+:').match(string)
+    return re.compile(r'^\s*[A-Z]\w*:').match(string)
 
   def unparse(self, stream):
     "Write this entry to STREAM, an open file-like object."
@@ -619,6 +619,19 @@ class Test_StatusEntry(unittest.TestCase):
     """
     with self.assertRaisesRegex(ParseException, "Too many.*--accept"):
       entry = StatusEntry(s)
+
+    # logsummary that resembles a subheader
+    s = """\
+      * r42
+        svnversion: Fix typo in output.
+        Justification:
+          Fixes output that scripts depend on.
+        Votes:
+          +1: jrandom
+    """
+    entry = StatusEntry(s)
+    self.assertEqual(entry.revisions, [42])
+    self.assertEqual(entry.logsummary, ["svnversion: Fix typo in output."])
 
   def test_digest(self):
     s = """\
