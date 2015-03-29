@@ -121,6 +121,24 @@ def last_changed_revision(path_or_url):
     else:
       raise Exception("'svn info' did not print last changed revision")
 
+def _includes_only_svn_mergeinfo_changes(status_output):
+  """Return TRUE iff there is exactly one local mod, and it is an svn:mergeinfo
+  change.  Use the provided `status -q` output."""
+
+  if len(status_output.splitlines()) != 1:
+    return False
+
+  _, diff_output, _ = run_svn(['diff'])
+
+  pattern = re.compile(r'^(Added|Modified|Deleted): ')
+  targets = (line.split(':', 1)[1].strip()
+             for line in diff_output.splitlines()
+               if pattern.match(line))
+  if set(targets) == {'svn:mergeinfo'}:
+    return True
+
+  return False
+
 
 def merge(entry, expected_stderr=None, *, commit=False, sf=None):
   """Merges ENTRY into the working copy at cwd.
@@ -173,7 +191,11 @@ def merge(entry, expected_stderr=None, *, commit=False, sf=None):
   _, stdout, stderr = run_svn_quiet(['merge'] + mergeargs, expected_stderr)
   sys.stdout.write(stdout)
   sys.stderr.write(stderr)
-  run_svn(['status', '-q'])
+
+  _, stdout, _ = run_svn(['status', '-q'])
+  if _includes_only_svn_mergeinfo_changes(stdout):
+    raise UnableToMergeException("Entry %s includes only svn:mergeinfo changes"
+                                 % entry)
 
   if commit:
     sf.remove(entry)
@@ -187,7 +209,6 @@ def merge(entry, expected_stderr=None, *, commit=False, sf=None):
 
     run_svn_quiet(['commit', '-m', logmsg])
 
-  # TODO: add the 'only mergeinfo changes' check (and regression test it)
   # TODO(interactive mode): add the 'svn status' display
 
   if entry.branch:

@@ -592,6 +592,38 @@ def backport_branch_with_original_revision(sbox):
 
 
 #----------------------------------------------------------------------
+@BackportTest(None)
+def backport_otherproject_change(sbox):
+  "inoperative revision"
+
+  # r6: a change outside ^/subversion
+  sbox.simple_mkdir('elsewhere')
+  sbox.simple_commit()
+
+  # r7: Nominate r6 by mistake
+  approved_entries = [
+    make_entry([6])
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_commit(message='Nominate r6 by mistake')
+
+  # Run it.
+  exit_code, output, errput = run_backport(sbox, error_expected=True)
+
+  # Verify no commit occurred.
+  svntest.actions.run_and_verify_svnlook(["7\n"], [],
+                                         'youngest', sbox.repo_dir)
+
+  # Verify the failure mode.
+  expected_stdout = None
+  expected_stderr = ".*only svn:mergeinfo changes.*"
+  if exit_code == 0:
+    # Can't use verify_exit_code() since the exact code used varies.
+    raise svntest.Failure("exit_code should be non-zero")
+  svntest.verify.verify_outputs(None, output, errput,
+                                expected_stdout, expected_stderr)
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -607,6 +639,7 @@ test_list = [ None,
               backport_branch_contains,
               backport_double_conflict,
               backport_branch_with_original_revision,
+              backport_otherproject_change,
               # When adding a new test, include the test number in the last
               # 6 bytes of the UUID.
              ]
