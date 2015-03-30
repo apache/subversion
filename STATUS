@@ -50,7 +50,7 @@ Candidate changes that cannot go into a later 1.9.x:
      This is not strictly blocking 1.9 but if we don't merge it, we need to
      revert it on /trunk as well.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
 Other candidate changes:
 ========================
@@ -164,17 +164,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1665894, r1667101
-   Fix the noderev relatedness checks for FSFS (and FSX).
-   Justification:
-     Without this, the new public API function will return false results
-     when comparing nodes from different transactions.  That constallation
-     does not occur in our code but API users may want to use it to e.g.
-     detect conflicts between transactions early.
-   Votes:
-     +1: stefan2, julianfoad
-     +0.5: rhuijben (Patch looks ok. What about bdb? Automatically handled?)
-
  * r1667228, r1667234, r1667228, r1667250, r1667258, r1667290
    Improve binary file and property handling during conflict resolving
    Justification:
@@ -239,7 +228,7 @@ Other candidate changes:
      Have a complete, correct and easily accessible API description.
      None of these changes should affect generated code nor the ABI.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1668607
    Fixes to the public svn_diff API declarations and documentation.
@@ -247,7 +236,7 @@ Other candidate changes:
      Have a complete, correct and easily accessible API description.
      None of these changes should affect generated code nor the ABI.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1663355
    Fix #include guards and Doxygen mark-up that does not match a file's actual
@@ -257,10 +246,20 @@ Other candidate changes:
      change. The only public symbol affected is the include-guard symbol
      SVN_OPTS_H renamed to SVN_OPT_H.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1665894, r1667101
+   Fix the noderev relatedness checks for FSFS (and FSX).
+   Justification:
+     Without this, the new public API function will return false results
+     when comparing nodes from different transactions.  That constallation
+     does not occur in our code but API users may want to use it to e.g.
+     detect conflicts between transactions early.
+   Votes:
+     +1: stefan2, julianfoad, rhuijben
