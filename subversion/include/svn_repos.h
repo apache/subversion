@@ -2268,7 +2268,8 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  *
  * For each path in @a targets @a lock_callback will be invoked
  * passing @a lock_baton and the lock and error that apply to path.
- * @a lock_callback can be NULL in which case it is not called.
+ * @a lock_callback can be NULL in which case it is not called and any
+ * errors that would have been passed to the callback are not reported.
  *
  * If an error occurs when running the post-lock hook the error is
  * returned wrapped with #SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the
@@ -2325,7 +2326,8 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * For each path in @a targets @a lock_callback will be invoked
  * passing @a lock_baton and error that apply to path.  The lock
  * passed to the callback will be NULL.  @a lock_callback can be NULL
- * in which case it is not called.
+ * in which case it is not called and any errors that would have been
+ * passed to the callback are not reported.
  *
  * If an error occurs when running the post-unlock hook, return the
  * original error wrapped with #SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.
