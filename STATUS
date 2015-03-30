@@ -173,8 +173,6 @@ Other candidate changes:
      code paths.
    Votes:
      +1: rhuijben
-     +0: stsp (conflicts, needs a backport branch)
-              (before the r1663338 group was backported)
 
  * r1667471
    Fix bad assertion in diff callbacks
