@@ -1321,10 +1321,13 @@ svn_error_t *
 svn_fs_dir_optimal_order(apr_array_header_t **ordered_p,
                          svn_fs_root_t *root,
                          apr_hash_t *entries,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   return svn_error_trace(root->vtable->dir_optimal_order(ordered_p, root,
-                                                         entries, pool));
+                                                         entries,
+                                                         result_pool,
+                                                         scratch_pool));
 }
 
 svn_error_t *
@@ -1759,9 +1762,10 @@ svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
 svn_fs_lock_target_t *
 svn_fs_lock_target_create(const char *token,
                           svn_revnum_t current_rev,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
-  svn_fs_lock_target_t *target = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
+  svn_fs_lock_target_t *target = apr_palloc(result_pool,
+                                            sizeof(svn_fs_lock_target_t));
 
   target->token = token;
   target->current_rev = current_rev;
@@ -1899,7 +1903,7 @@ svn_fs_compare_ids(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   switch (a->vtable->compare(a, b))
     {
-    case svn_fs_node_same:
+    case svn_fs_node_unchanged:
       return 0;
     case svn_fs_node_common_ancestor:
       return 1;
