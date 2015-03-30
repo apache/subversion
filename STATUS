@@ -253,7 +253,7 @@ Other candidate changes:
    Notes:
      Depends on r1665318 to avoid a merge conflict.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
