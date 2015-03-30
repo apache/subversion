@@ -1948,7 +1948,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
                                       r->pool);
         }
 
-      if (node_relation != svn_fs_node_same)
+      if (node_relation != svn_fs_node_unchanged)
         {
           serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
                                    "Directory '%s' is out of date",

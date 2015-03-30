@@ -4268,7 +4268,7 @@ check_related(const svn_test_opts_t *opts,
             if (i == j)
               {
                 /* Identical note. */
-                if (!related || relation != svn_fs_node_same)
+                if (!related || relation != svn_fs_node_unchanged)
                   {
                     return svn_error_createf
                       (SVN_ERR_TEST_FAILED, NULL,
@@ -4319,7 +4319,7 @@ check_related(const svn_test_opts_t *opts,
                                          rev_root, path, subpool));
 
             /* They shall use the same noderevs */
-            if (relation != svn_fs_node_same)
+            if (relation != svn_fs_node_unchanged)
               {
                 return svn_error_createf
                   (SVN_ERR_TEST_FAILED, NULL,
@@ -4486,7 +4486,7 @@ check_txn_related(const svn_test_opts_t *opts,
             if (i == j)
               {
                 /* Identical noderev. */
-                if (!related || relation != svn_fs_node_same)
+                if (!related || relation != svn_fs_node_unchanged)
                   {
                     return svn_error_createf
                       (SVN_ERR_TEST_FAILED, NULL,
@@ -4525,7 +4525,7 @@ check_txn_related(const svn_test_opts_t *opts,
                                      root[0], "D", subpool));
 
         /* They shall use the same noderevs */
-        if (relation != svn_fs_node_same)
+        if (relation != svn_fs_node_unchanged)
           {
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
@@ -6524,7 +6524,7 @@ test_dir_optimal_order(const svn_test_opts_t *opts,
 
   /* Call the API function we are interested in. */
   SVN_ERR(svn_fs_dir_entries(&unordered, root, "A", pool));
-  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool));
+  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool, pool));
 
   /* Verify that all entries are returned. */
   SVN_TEST_ASSERT(ordered->nelts == apr_hash_count(unordered));

@@ -1608,13 +1608,15 @@ static svn_error_t *
 base_dir_optimal_order(apr_array_header_t **ordered_p,
                        svn_fs_root_t *root,
                        apr_hash_t *entries,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   /* 1:1 copy of entries with no differnce in ordering */
   apr_hash_index_t *hi;
-  apr_array_header_t *result = apr_array_make(pool, apr_hash_count(entries),
-                                              sizeof(svn_fs_dirent_t *));
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  apr_array_header_t *result
+    = apr_array_make(result_pool, apr_hash_count(entries),
+                     sizeof(svn_fs_dirent_t *));
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
     APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = apr_hash_this_val(hi);
 
   *ordered_p = result;
@@ -3164,7 +3166,8 @@ txn_body_copy(void *baton,
   if ((to_parent_path->node)
       && (svn_fs_base__id_compare(svn_fs_base__dag_get_id(from_node),
                                   svn_fs_base__dag_get_id
-                                  (to_parent_path->node)) == svn_fs_node_same))
+                                  (to_parent_path->node))
+          == svn_fs_node_unchanged))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
