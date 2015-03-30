@@ -255,14 +255,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1668600
-   Fixes to the public RA layer API documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2
-
  * r1668602
    Fixes to the public svn_string API documentation.
    Justification:
