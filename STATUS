@@ -218,7 +218,7 @@ Other candidate changes:
    Notes:
      r1669945 fixes the replacement condition and provides a test.
    Votes:
-     +1: stefan2
+     +1: stefan2, danielsh
 
  * r1668599, r1668608
    Fixes to the public svn_io API declarations and documentation.
