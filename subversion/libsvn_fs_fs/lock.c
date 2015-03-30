@@ -1109,6 +1109,7 @@ svn_fs_fs__lock(svn_fs_t *fs,
   apr_array_header_t *sorted_targets;
   apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
 
@@ -1149,11 +1150,13 @@ svn_fs_fs__lock(svn_fs_t *fs,
   lb.steal_lock = steal_lock;
   lb.result_pool = result_pool;
 
-  err = svn_fs_fs__with_write_lock(fs, lock_body, &lb, scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  err = svn_fs_fs__with_write_lock(fs, lock_body, &lb, iterpool);
   for (i = 0; i < lb.infos->nelts; ++i)
     {
       struct lock_info_t *info = &APR_ARRAY_IDX(lb.infos, i,
                                                 struct lock_info_t);
+      svn_pool_clear(iterpool);
       if (!cb_err && lock_callback)
         {
           if (!info->lock && !info->fs_err)
@@ -1162,10 +1165,11 @@ svn_fs_fs__lock(svn_fs_t *fs,
                                              info->path);
 
           cb_err = lock_callback(lock_baton, info->path, info->lock,
-                                 info->fs_err, scratch_pool);
+                                 info->fs_err, iterpool);
         }
       svn_error_clear(info->fs_err);
     }
+  svn_pool_destroy(iterpool);
 
   if (err && cb_err)
     svn_error_compose(err, cb_err);
@@ -1205,6 +1209,7 @@ svn_fs_fs__unlock(svn_fs_t *fs,
   apr_array_header_t *sorted_targets;
   apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
 
@@ -1239,11 +1244,13 @@ svn_fs_fs__unlock(svn_fs_t *fs,
   ub.break_lock = break_lock;
   ub.result_pool = result_pool;
 
-  err = svn_fs_fs__with_write_lock(fs, unlock_body, &ub, scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  err = svn_fs_fs__with_write_lock(fs, unlock_body, &ub, iterpool);
   for (i = 0; i < ub.infos->nelts; ++i)
     {
       struct unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i,
                                                   struct unlock_info_t);
+      svn_pool_clear(iterpool);
       if (!cb_err && lock_callback)
         {
           if (!info->done && !info->fs_err)
@@ -1251,10 +1258,11 @@ svn_fs_fs__unlock(svn_fs_t *fs,
                                              0, _("Failed to unlock '%s'"),
                                              info->path);
           cb_err = lock_callback(lock_baton, info->path, NULL, info->fs_err,
-                                 scratch_pool);
+                                 iterpool);
         }
       svn_error_clear(info->fs_err);
     }
+  svn_pool_destroy(iterpool);
 
   if (err && cb_err)
     svn_error_compose(err, cb_err);

@@ -1762,9 +1762,10 @@ svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
 svn_fs_lock_target_t *
 svn_fs_lock_target_create(const char *token,
                           svn_revnum_t current_rev,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
-  svn_fs_lock_target_t *target = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
+  svn_fs_lock_target_t *target = apr_palloc(result_pool,
+                                            sizeof(svn_fs_lock_target_t));
 
   target->token = token;
   target->current_rev = current_rev;

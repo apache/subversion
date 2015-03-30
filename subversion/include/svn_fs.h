@@ -2652,8 +2652,8 @@ svn_fs_set_uuid(svn_fs_t *fs,
  */
 typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
 
-/** Create an <tt>svn_fs_lock_target_t</tt> allocated in @a pool. @a
- * token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
+/** Create an <tt>svn_fs_lock_target_t</tt> allocated in @a result_pool.
+ * @a token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
  *
  * The @a token is not duplicated and so must have a lifetime at least as
  * long as the returned target object.
@@ -2662,7 +2662,7 @@ typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
  */
 svn_fs_lock_target_t *svn_fs_lock_target_create(const char *token,
                                                 svn_revnum_t current_rev,
-                                                apr_pool_t *pool);
+                                                apr_pool_t *result_pool);
 
 /** Update @a target changing the token to @a token, @a token can be NULL.
  *
@@ -2690,7 +2690,7 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
                                                const char *path,
                                                const svn_lock_t *lock,
                                                svn_error_t *fs_err,
-                                               apr_pool_t *pool);
+                                               apr_pool_t *scratch_pool);
 
 /** Lock the paths in @a lock_targets in @a fs.
  *
