@@ -2682,7 +2682,12 @@ void svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
  * returns, use svn_error_dup() to preserve the error.
  *
  * If the callback returns an error no further callbacks will be made
- * and svn_fs_lock_many/svn_fs_unlock_many will return an error.
+ * and svn_fs_lock_many/svn_fs_unlock_many will return an error.  The
+ * caller cannot rely on any particular order for these callbacks and
+ * cannot rely on interrupting the underlying operation by returning
+ * an error.  Returning an error stops the callbacks but any locks
+ * that would have been reported in further callbacks may, or may not,
+ * still be created/released.
  *
  * @since New in 1.9.
  */
@@ -2730,7 +2735,8 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
  *
  * For each path in @a lock_targets @a lock_callback will be invoked
  * passing @a lock_baton and the lock and error that apply to path.
- * @a lock_callback can be NULL in which case it is not called.
+ * @a lock_callback can be NULL in which case it is not called and any
+ * errors that would have been passed to the callback are not reported.
  *
  * The lock and path passed to @a lock_callback will be allocated in
  * @a result_pool.  Use @a scratch_pool for temporary allocations.
@@ -2804,7 +2810,8 @@ svn_fs_generate_lock_token(const char **token,
  * For each path in @a unlock_targets @a lock_callback will be invoked
  * passing @a lock_baton and error that apply to path.  The @a lock
  * passed to the callback will be NULL.  @a lock_callback can be NULL
- * in which case it is not called.
+ * in which case it is not called and any errors that would have been
+ * passed to the callback are not reported.
  *
  * The path passed to lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
