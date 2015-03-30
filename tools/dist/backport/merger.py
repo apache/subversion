@@ -38,10 +38,6 @@ logger = logging.getLogger(__name__)
 SVN = os.getenv('SVN', 'svn')
 # TODO: maybe run 'svn info' to check if it works / fail early?
 
-# ### Hardcode these here.
-TRUNK = '^/subversion/trunk'
-BRANCHES = '^/subversion/branches'
-
 
 class UnableToMergeException(Exception):
   pass
@@ -145,18 +141,19 @@ def _includes_only_svn_mergeinfo_changes(status_output):
   return False
 
 
-def merge(entry, expected_stderr=None, *, commit=False, sf=None):
+def merge(entry, expected_stderr=None, *, commit=False):
   """Merges ENTRY into the working copy at cwd.
 
   Do not commit the result, unless COMMIT is true.  When committing,
-  use parameter SF, a StatusFile instance, to remove ENTRY from the STATUS file
-  prior to committing.
+  remove ENTRY from its STATUS file prior to committing.
   
   EXPECTED_STDERR will be passed to run_svn() for the actual 'merge' command."""
 
-  assert (commit == False) or isinstance(sf, backport.status.StatusFile)
   assert isinstance(entry, backport.status.StatusEntry)
   assert entry.valid()
+  assert entry.status_file
+
+  sf = entry.status_file
 
   # TODO(interactive mode): catch the exception
   validate_branch_contains_named_revisions(entry)
@@ -164,7 +161,7 @@ def merge(entry, expected_stderr=None, *, commit=False, sf=None):
   # Prepare mergeargs and logmsg.
   logmsg = ""
   if entry.branch:
-    branch_url = "%s/%s" % (BRANCHES, entry.branch)
+    branch_url = "%s/%s" % (sf.BRANCHES, entry.branch)
     if svn_version() >= (1, 8):
       mergeargs = ['--', branch_url]
       logmsg = "Merge {}:\n".format(entry.noun())
@@ -184,7 +181,7 @@ def merge(entry, expected_stderr=None, *, commit=False, sf=None):
       logmsg += "Merge {} from trunk:\n".format(entry.noun())
     logmsg += "\n"
     mergeargs.extend('-c' + str(revision) for revision in entry.revisions)
-    mergeargs.extend(['--', TRUNK])
+    mergeargs.extend(['--', sf.TRUNK])
   logmsg += entry.raw
 
   # TODO(interactive mode): exclude STATUS from reverts
@@ -239,10 +236,13 @@ def validate_branch_contains_named_revisions(entry):
   if svn_version() < (1,5): # doesn't have 'svn mergeinfo' subcommand
     return # skip check
 
-  branch_url = "%s/%s" % (BRANCHES, entry.branch)
-  present_str = \
-    run_svn(['mergeinfo', '--show-revs=merged', '--', TRUNK, branch_url])[1] + \
+  sf = entry.status_file
+  branch_url = "%s/%s" % (sf.BRANCHES, entry.branch)
+  present_str = (
+    run_svn(['mergeinfo', '--show-revs=merged', '--', sf.TRUNK, branch_url])[1]
+    +
     run_svn(['mergeinfo', '--show-revs=eligible', '--', branch_url])[1]
+  )
 
   present = map(int, re.compile(r'(\d+)').findall(present_str))
 

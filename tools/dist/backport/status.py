@@ -157,17 +157,20 @@ class Paragraph:
 class StatusFile:
   "Encapsulates the STATUS file."
 
-  def __init__(self, status_file):
-    "Constructor.  STATUS_FILE is an open file-like object to parse."
-    self._parse(status_file)
+  TRUNK = '^/subversion/trunk'
+  BRANCHES = '^/subversion/branches'
+
+  def __init__(self, status_fp):
+    "Constructor.  STATUS_FP is an open file-like object to parse."
+    self._parse(status_fp)
     self.validate_unique_entry_ids() # Use-case for making this optional?
 
-  def _parse(self, status_file):
-    "Parse self.status_file into self.paragraphs."
+  def _parse(self, status_fp):
+    "Parse self.status_fp into self.paragraphs."
 
     self.paragraphs = []
     last_header = None
-    for para_text in _ParagraphsIterator(status_file):
+    for para_text in _ParagraphsIterator(status_fp):
       kind = None
       entry = None
       header = Paragraph.is_header(para_text)
@@ -178,12 +181,12 @@ class StatusFile:
         last_header = header
       elif last_header is not None:
         try:
-          entry = StatusEntry(para_text)
+          entry = StatusEntry(para_text, status_file=self)
           kind = Kind.nomination
         except ParseException:
           kind = Kind.unknown
           logger.warning("Failed to parse entry {!r} in {!r}".format(
-                          para_text, status_file))
+                          para_text, status_fp))
       else:
         kind = Kind.preamble
 
@@ -276,6 +279,8 @@ class Test_StatusFile(unittest.TestCase):
     self.assertTrue(sf.paragraphs[3].approved()) # header
     self.assertTrue(sf.paragraphs[4].approved()) # unknown
 
+    self.assertIs(sf.paragraphs[2].entry().status_file, sf)
+
     output_file = io.StringIO()
     sf.unparse(output_file)
     self.assertEqual(s, output_file.getvalue())
@@ -316,15 +321,19 @@ class StatusEntry:
   votes_str - everything after the "Votes:" subheader.  An unparsed string.
   """
 
-  def __init__(self, para_text):
+  def __init__(self, para_text, status_file=None):
     """Parse an entry from PARA_TEXT, and add it to SELF.  PARA_TEXT must
-    contain exactly one entry, as a single multiline string."""
+    contain exactly one entry, as a single multiline string.
+    
+    STATUS_FILE is the StatusFile object containing this entry, if any.
+    """
     self.branch = None
     self.revisions = []
     self.logsummary = []
     self.depends = False
     self.accept = None
     self.votes_str = None
+    self.status_file = status_file
 
     self.raw = para_text
 

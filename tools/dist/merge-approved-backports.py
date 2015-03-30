@@ -47,4 +47,4 @@ entries_paras = list(sf.entries_paras())
 for entry_para in entries_paras:
   if entry_para.approved():
     entry = entry_para.entry()
-    backport.merger.merge(entry, commit=True, sf=sf)
+    backport.merger.merge(entry, commit=True)
