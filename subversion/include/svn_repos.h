@@ -2265,6 +2265,7 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * The pre-lock is run for every path in @a targets. Those targets for
  * which the pre-lock is successful are passed to svn_fs_lock_many and
  * the post-lock is run for those that are successfully locked.
+ * Pre-lock hook errors are passed to @a lock_callback.
  *
  * For each path in @a targets @a lock_callback will be invoked
  * passing @a lock_baton and the lock and error that apply to path.
@@ -2321,7 +2322,8 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * The pre-unlock hook is run for every path in @a targets. Those
  * targets for which the pre-unlock is successful are passed to
  * svn_fs_unlock_many and the post-unlock is run for those that are
- * successfully unlocked.
+ * successfully unlocked. Pre-unlock hook errors are passed to @a
+ * lock_callback.
  *
  * For each path in @a targets @a lock_callback will be invoked
  * passing @a lock_baton and error that apply to path.  The lock
