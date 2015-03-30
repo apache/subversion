@@ -255,14 +255,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1668598
-   Fixes to the public svn_config API documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2
-
  * r1668600
    Fixes to the public RA layer API documentation.
    Justification:
@@ -286,4 +278,3 @@ Approved changes:
      None of these changes should affect generated code nor the ABI.
    Votes:
      +1: stefan2
-
