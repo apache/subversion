@@ -254,11 +254,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1668603
-   Fixes to the public svn_wc API documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2
