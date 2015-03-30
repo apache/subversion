@@ -249,6 +249,16 @@ Other candidate changes:
    Votes:
      +1: stefan2
 
+ * r1663355
+   Fix #include guards and Doxygen mark-up that does not match a file's actual
+   name.
+   Justification:
+     Simple corrections to documentation and source code; no functional
+     change. The only public symbol affected is the include-guard symbol
+     SVN_OPTS_H renamed to SVN_OPT_H.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
