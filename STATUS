@@ -122,7 +122,7 @@ Other candidate changes:
      The regression test on trunk tests a bit more behavior than is backported
      here. Check r1665319 for details on what is ensured on trunk now.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1666965, r1667120
    mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
@@ -245,6 +245,15 @@ Other candidate changes:
      SVN_OPTS_H renamed to SVN_OPT_H.
    Votes:
      +1: julianfoad, rhuijben
+
+ * r1670139, r1670149, r1670152
+   Lock-many pool handling and doc fixes as a result of API review.
+   Justification:
+     Better memory handling for callback, clearer documentation.
+   Notes:
+     Depends on r1665318 to avoid a merge conflict.
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
