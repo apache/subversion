@@ -2283,6 +2283,9 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * The lock and path passed to @a lock_callback will be allocated in
  * @a result_pool.  Use @a scratch_pool for temporary allocations.
  *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain unlocked while others may have been locked.
+ *
  * @see svn_fs_lock_many
  *
  * @since New in 1.9.
@@ -2338,6 +2341,9 @@ svn_repos_fs_lock(svn_lock_t **lock,
  *
  * The path passed to @a lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
+ *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain locked while others may have been unlocked.
  *
  * @see svn_fs_unlock_many
  *
