@@ -105,25 +105,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1665318
-   Make lock/unlock result reporting consistent over ra layers and fs backends
-   Justification:
-     With the 1.9 redesign of multiple locks in a single operation differences
-     between the different ra layers were introduced in how out of date
-     revisions are reported. This patch makes the behavior consistent, which
-     in turn will help clients produce a more stable result.
-     (This resolves multiple long standing AnkhSVN issues that I wasn't
-      aware of)
-     .
-     Without this patch some ra layers report out of dates via the callback
-     while others (read: serf) fail directly, causing locks not to be stored
-     in the working copy, etc.
-   Notes:
-     The regression test on trunk tests a bit more behavior than is backported
-     here. Check r1665319 for details on what is ensured on trunk now.
-   Votes:
-     +1: rhuijben, philip
-
  * r1666965, r1667120
    mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
    Justification:
@@ -237,16 +218,6 @@ Other candidate changes:
      +1: stefan2
      +1: rhuijben (without r1670337)
 
- * r1663355
-   Fix #include guards and Doxygen mark-up that does not match a file's actual
-   name.
-   Justification:
-     Simple corrections to documentation and source code; no functional
-     change. The only public symbol affected is the include-guard symbol
-     SVN_OPTS_H renamed to SVN_OPT_H.
-   Votes:
-     +1: julianfoad, rhuijben
-
  * r1670139, r1670149, r1670152, r1670347
    Lock-many pool handling and doc fixes as a result of API review.
    Justification:
@@ -270,4 +241,33 @@ Approved changes:
      None of these changes should affect generated code nor the ABI.
    Votes:
      +1: stefan2, rhuijben
+
+ * r1663355
+   Fix #include guards and Doxygen mark-up that does not match a file's actual
+   name.
+   Justification:
+     Simple corrections to documentation and source code; no functional
+     change. The only public symbol affected is the include-guard symbol
+     SVN_OPTS_H renamed to SVN_OPT_H.
+   Votes:
+     +1: julianfoad, rhuijben, stefan2
+
+ * r1665318
+   Make lock/unlock result reporting consistent over ra layers and fs backends
+   Justification:
+     With the 1.9 redesign of multiple locks in a single operation differences
+     between the different ra layers were introduced in how out of date
+     revisions are reported. This patch makes the behavior consistent, which
+     in turn will help clients produce a more stable result.
+     (This resolves multiple long standing AnkhSVN issues that I wasn't
+      aware of)
+     .
+     Without this patch some ra layers report out of dates via the callback
+     while others (read: serf) fail directly, causing locks not to be stored
+     in the working copy, etc.
+   Notes:
+     The regression test on trunk tests a bit more behavior than is backported
+     here. Check r1665319 for details on what is ensured on trunk now.
+   Votes:
+     +1: rhuijben, philip, stefan2
 
