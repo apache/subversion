@@ -71,7 +71,9 @@ null_cache_iter(svn_boolean_t *completed,
                 apr_pool_t *scratch_pool)
 {
   /* Iteration over an empty set is a no-op. */
-  *completed = TRUE;
+  if (completed)
+    *completed = TRUE;
+
   return SVN_NO_ERROR;
 }
 
