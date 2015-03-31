@@ -2743,6 +2743,9 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
  *
  * @note At this time, only files can be locked.
  *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain unlocked while others may have been locked.
+ *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_fs_lock_many() instead.
  *
@@ -2815,6 +2818,9 @@ svn_fs_generate_lock_token(const char **token,
  *
  * The path passed to lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
+ *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain locked while others may have been unlocked.
  *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_fs_unlock_many() instead.
