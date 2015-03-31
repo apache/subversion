@@ -260,13 +260,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1665894, r1667101
-   Fix the noderev relatedness checks for FSFS (and FSX).
-   Justification:
-     Without this, the new public API function will return false results
-     when comparing nodes from different transactions.  That constallation
-     does not occur in our code but API users may want to use it to e.g.
-     detect conflicts between transactions early.
-   Votes:
-     +1: stefan2, julianfoad, rhuijben
