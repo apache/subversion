@@ -228,13 +228,14 @@ Other candidate changes:
    Votes:
      +1: stefan2, rhuijben
 
- * r1668607
+ * r1668607, r1670337
    Fixes to the public svn_diff API declarations and documentation.
    Justification:
      Have a complete, correct and easily accessible API description.
      None of these changes should affect generated code nor the ABI.
    Votes:
-     +1: stefan2, rhuijben
+     +1: stefan2
+     +1: rhuijben (without r1670337)
 
  * r1663355
    Fix #include guards and Doxygen mark-up that does not match a file's actual
@@ -260,3 +261,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1670329
+   Fixes to the public svn_client API documentation.
+   Justification:
+     Have a complete, correct and easily accessible API description.
+     None of these changes should affect generated code nor the ABI.
+   Votes:
+     +1: stefan2, rhuijben
+
