@@ -247,14 +247,15 @@ Other candidate changes:
    Votes:
      +1: julianfoad, rhuijben
 
- * r1670139, r1670149, r1670152
+ * r1670139, r1670149, r1670152, r1670347
    Lock-many pool handling and doc fixes as a result of API review.
    Justification:
      Better memory handling for callback, clearer documentation.
    Notes:
      Depends on r1665318 to avoid a merge conflict.
    Votes:
-     +1: philip, rhuijben
+     +1: philip, rhuijben (without r1670347)
+     +1: stefan2
 
 Veto-blocked changes:
 =====================
