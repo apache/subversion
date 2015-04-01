@@ -29,8 +29,6 @@
 #ifndef SVN_BRANCH_H
 #define SVN_BRANCH_H
 
-#include "svn_editor.h"
-
 #include <apr_pools.h>
 
 #include "svn_types.h"
