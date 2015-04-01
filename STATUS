@@ -241,22 +241,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1665318
-   Make lock/unlock result reporting consistent over ra layers and fs backends
-   Justification:
-     With the 1.9 redesign of multiple locks in a single operation differences
-     between the different ra layers were introduced in how out of date
-     revisions are reported. This patch makes the behavior consistent, which
-     in turn will help clients produce a more stable result.
-     (This resolves multiple long standing AnkhSVN issues that I wasn't
-      aware of)
-     .
-     Without this patch some ra layers report out of dates via the callback
-     while others (read: serf) fail directly, causing locks not to be stored
-     in the working copy, etc.
-   Notes:
-     The regression test on trunk tests a bit more behavior than is backported
-     here. Check r1665319 for details on what is ensured on trunk now.
-   Votes:
-     +1: rhuijben, philip, stefan2

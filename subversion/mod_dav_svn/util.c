@@ -135,6 +135,7 @@ dav_svn__convert_err(svn_error_t *serr,
   switch (purged_serr->apr_err)
     {
     case SVN_ERR_FS_NOT_FOUND:
+    case SVN_ERR_FS_NO_SUCH_REVISION:
       status = HTTP_NOT_FOUND;
       break;
     case SVN_ERR_UNSUPPORTED_FEATURE:
