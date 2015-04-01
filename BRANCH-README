@@ -38,12 +38,17 @@ Work on this branch:
       diff
       merge
 
-    To do:
-      "replay": convert committed changes to an edit drive
-      dissolve (unbranchify)
+    UI things to do:
+      implement a 'dissolve' (unbranchify) command
       provide a way to specify a mixed-rev base state
-      synthesize element tracking info (instead of aborting) when reading
+      provide a UI for element-based addressing ('mv e101:foo e103:foo'?)
+
+    Bigger things to do:
+      "replay": convert committed changes to an edit drive
+      heuristic conversion of old repositories:
+        synthesize element tracking info (instead of aborting) when reading
         a revision that was committed by a non-move-tracking client
+      implement a back-in-history variant of branchify/unbranchify
 
 
   * The model.
@@ -56,27 +61,49 @@ Work on this branch:
         that is the same across all branches in a family?
 
 
-  * Develop a 'commit editor' interface supporting moves.
-
-    See subversion/include/private/svn_editor3e.h
-    and subversion/include/private/svn_editor3p.h
+  * A 'commit editor' interface supporting moves
 
     STATUS
 
-    This looks like it's panning out OK.
+    First I tried:
 
-    ### Out-of-date
-    Two versions are declared (in the same struct): 'incremental' and
-    'independent per-node changes'. Need eventually to choose one and
-    lose the other. It's not a question of one's right and one's wrong;
-    both are correct. I think the 'independent per-node changes' one is
-    ultimately better and easier to use, while the 'incremental' one is
-    easier to start using when we're starting from an Ev1 code base.
+        Type 1: stateful/incremental; path-based addressing
+
+        (subversion/include/private/svn_editor3p.h)
+
+    This is an evolution of the old delta editor, trying to add on moves.
+    Starting from an Ev1 code base, this one seems easier to start using,
+    as the style is more familiar.
 
     Ev1->Ev3->Ev1 shims are written, using the 'incremental' API. Tests
     pass with double-shim conversions at RA layer and repos layer. (One
     svnlook test fails due to svnlook reporting a no-op change as a
     change.)
+
+    However, this version of the editory is not complete with respect to
+    branching: it only provides the operations that are needed *within* a
+    branch. It could, I suppose, be extended to support operations on
+    branches, including both the 'branching' operation itself, and also
+    dealing with sub-branches found in the scope of subtree operations
+    such as move, copy, and delete.
+
+    However, now I believe the future lies in:
+
+        Type 2: stateless/independent per-element changes
+
+        (subversion/include/private/svn_element.h,
+         subversion/include/private/svn_branch.h,
+         subversion/include/private/svn_editor3e.h)
+
+    (The functionality is currently partially encapsulated in
+    an 'editor' class with a vtable of methods, and partially
+    provided as plain functions in svn_branch.h. This needs to be
+    sorted out.)
+
+    I think this one is ultimately better and easier to use.
+
+    I think it's not a question of one way is right and one is wrong;
+    rather, both are possible correct approaches.
 
 
   * Adapt the editor as necessary to use as an 'update editor'.
