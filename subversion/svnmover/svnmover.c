@@ -1231,8 +1231,18 @@ move_by_branch_and_delete(svn_editor3_t *editor,
   SVN_ERR_ASSERT(! BRANCH_IS_SAME_BRANCH(el_rev->branch, to_branch,
                                          scratch_pool));
 
-  SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
-                             el_rev->branch, el_rev->eid));
+  /* Delete the source subtree. If it's a whole branch, do so by deleting
+     its root from the outer branch instead. */
+  if (el_rev->eid != el_rev->branch->sibling_defn->root_eid)
+    {
+      SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+                                 el_rev->branch, el_rev->eid));
+    }
+  else
+    {
+      SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+                                 el_rev->branch->outer_branch, el_rev->branch->outer_eid));
+    }
   SVN_ERR(svn_branch_instantiate_subtree(to_branch,
                                          to_parent_eid, to_name, subtree,
                                          scratch_pool));
