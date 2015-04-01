@@ -252,6 +252,12 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              PyObject *py_editor,
                              apr_pool_t *pool);
 
+/* make a parse vtable that "thunks" from C callbacks up to Python */
+void svn_swig_py_make_parse_fns3(const svn_repos_parse_fns3_t **parse_fns3,
+                                 void **parse_baton,
+                                 PyObject *py_parse_fns3,
+                                 apr_pool_t *pool);
+
 apr_file_t *svn_swig_py_make_file(PyObject *py_file,
                                   apr_pool_t *pool);
 
@@ -309,6 +315,13 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton);
 svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
                                            svn_lock_t *lock,
                                            apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_fs_lock_callback(
+                    void *baton,
+                    const char *path,
+                    const svn_lock_t *lock,
+                    svn_error_t *ra_err,
+                    apr_pool_t *pool);
 
 /* thunked commit log fetcher */
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,

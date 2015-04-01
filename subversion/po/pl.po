@@ -55,7 +55,7 @@
 # work queue - kolejka pracy
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.7\n"
+"Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
 "POT-Creation-Date: 2010-11-12 08:49-0600\n"
 "PO-Revision-Date: 2009-11-14 22:00+0100\n"

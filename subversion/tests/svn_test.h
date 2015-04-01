@@ -27,6 +27,8 @@
 #define SVN_DEPRECATED
 #endif /* ! SVN_ENABLE_DEPRECATION_WARNINGS_IN_TESTS */
 
+#include <stdio.h>
+
 #include <apr_pools.h>
 
 #include "svn_delta.h"
@@ -34,6 +36,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,6 +54,23 @@ extern "C" {
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,         \
                                "assertion '%s' failed at %s:%d",  \
                                #expr, __FILE__, __LINE__);        \
+  } while (0)
+
+/**
+ * Macro for testing assumptions when the context does not allow
+ * returning an svn_error_t*.
+ *
+ * Will write to stderr and cause a segfault if EXPR is false.
+ */
+#define SVN_TEST_ASSERT_NO_RETURN(expr)                           \
+  do {                                                            \
+    if (!(expr))                                                  \
+      {                                                           \
+        unsigned int z_e_r_o_p_a_g_e__;                           \
+        fprintf(stderr, "TEST ASSERTION FAILED: %s\n", #expr);    \
+        z_e_r_o_p_a_g_e__ = *(volatile unsigned int*)0;           \
+        *(volatile unsigned int*)0 = z_e_r_o_p_a_g_e__;           \
+      }                                                           \
   } while (0)
 
 /** Handy macro for testing an expected svn_error_t return value.
@@ -71,6 +91,23 @@ extern "C" {
                                        "Expected error %s but got %s",    \
                                        svn_error_symbolic_name(expected), \
                                         "SVN_NO_ERROR");                  \
+    svn_error_clear(err__);                                               \
+  } while (0)
+
+/** Handy macro for testing that an svn_error_t is returned.
+ * The result must be neither SVN_NO_ERROR nor SVN_ERR_ASSERTION_FAIL.
+ * The error returned by EXPR will be cleared.
+ */
+#define SVN_TEST_ASSERT_ANY_ERROR(expr)                                   \
+  do {                                                                    \
+    svn_error_t *err__ = (expr);                                          \
+    if (err__ == SVN_NO_ERROR || err__->apr_err == SVN_ERR_ASSERTION_FAIL)\
+      return err__ ? svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
+                                       "Expected error but got %s",       \
+                                       "SVN_ERR_ASSERTION_FAIL")          \
+                   : svn_error_createf(SVN_ERR_TEST_FAILED, err__,        \
+                                       "Expected error but got %s",       \
+                                       "SVN_NO_ERROR");                   \
     svn_error_clear(err__);                                               \
   } while (0)
 
@@ -100,15 +137,24 @@ extern "C" {
  */
 typedef struct svn_test_opts_t
 {
+  /* The name of the application (to generate unique names) */
+  const char *prog_name;
   /* Description of the fs backend that should be used for testing. */
   const char *fs_type;
   /* Config file. */
   const char *config_file;
   /* Source dir. */
   const char *srcdir;
+  /* Repository dir: temporary directory to create repositories in as subdir */
+  const char *repos_dir;
+  /* Repository url: The url to access REPOS_DIR as */
+  const char *repos_url;
+  /* Repository template: pre-created repository to copy for tests */
+  const char *repos_template;
   /* Minor version to use for servers and FS backends, or zero to use
      the current latest version. */
   int server_minor_version;
+  svn_boolean_t verbose;
   /* Add future "arguments" here. */
 } svn_test_opts_t;
 
@@ -119,6 +165,11 @@ typedef svn_error_t* (*svn_test_driver2_t)(apr_pool_t *pool);
 typedef svn_error_t* (*svn_test_driver_opts_t)(const svn_test_opts_t *opts,
                                                apr_pool_t *pool);
 
+/* Prototype for test predicate functions. */
+typedef svn_boolean_t (*svn_test_predicate_func_t)(const svn_test_opts_t *opts,
+                                                   const char *predicate_value,
+                                                   apr_pool_t *pool);
+
 /* Test modes. */
 enum svn_test_mode_t
   {
@@ -127,6 +178,23 @@ enum svn_test_mode_t
     svn_test_skip,
     svn_test_all
   };
+
+/* Structure for runtime test predicates. */
+struct svn_test_predicate_t
+{
+  /* The predicate function. */
+  svn_test_predicate_func_t func;
+
+  /* The value that the predicate function tests. */
+  const char *value;
+
+  /* The test mode that's used if the predicate matches. */
+  enum svn_test_mode_t alternate_mode;
+
+  /* Description for the test log */
+  const char *description;
+};
+
 
 /* Each test gets a test descriptor, holding the function and other
  * associated data.
@@ -147,6 +215,9 @@ struct svn_test_descriptor_t
 
   /* An optional description of a work-in-progress test. */
   const char *wip;
+
+  /* An optional runtiume predicate. */
+  struct svn_test_predicate_t predicate;
 };
 
 /* All Subversion test programs include an array of svn_test_descriptor_t's
@@ -190,6 +261,8 @@ int svn_test_main(int argc, const char *argv[], int max_threads,
 #define SVN_TEST_OPTS_XFAIL(func, msg) {svn_test_xfail, NULL, func, msg}
 #define SVN_TEST_OPTS_XFAIL_COND(func, p, msg) \
   {(p) ? svn_test_xfail : svn_test_pass, NULL, func, msg}
+#define SVN_TEST_OPTS_XFAIL_OTOH(func, msg, predicate) \
+  {svn_test_xfail, NULL, func, msg, NULL, predicate}
 #define SVN_TEST_OPTS_SKIP(func, p, msg) \
   {(p) ? svn_test_skip : svn_test_pass, NULL, func, msg}
 
@@ -241,6 +314,46 @@ extern const svn_test__tree_entry_t svn_test__greek_tree_nodes[21];
    current test. */
 const char *
 svn_test_data_path(const char* basename, apr_pool_t *result_pool);
+
+
+/* Some tests require the --srcdir option and should use this function
+ * to get it. If not provided, print a warning and attempt to run the
+ * tests under the assumption that --srcdir is the current directory. */
+svn_error_t *
+svn_test_get_srcdir(const char **srcdir,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool);
+
+/* Initializes a standard auth baton for accessing the repositories */
+svn_error_t *
+svn_test__init_auth_baton(svn_auth_baton_t **baton,
+                          apr_pool_t *result_pool);
+
+
+/*
+ * Test predicates
+ */
+
+#define SVN_TEST_PASS_IF_FS_TYPE_IS(fs_type) \
+  { svn_test__fs_type_is, fs_type, svn_test_pass, \
+    "PASS if fs-type = " fs_type }
+
+#define SVN_TEST_PASS_IF_FS_TYPE_IS_NOT(fs_type) \
+  { svn_test__fs_type_not, fs_type, svn_test_pass, \
+    "PASS if fs-type != " fs_type }
+
+/* Return TRUE if the fs-type in OPTS matches PREDICATE_VALUE. */
+svn_boolean_t
+svn_test__fs_type_is(const svn_test_opts_t *opts,
+                     const char *predicate_value,
+                     apr_pool_t *pool);
+
+
+/* Return TRUE if the fs-type in OPTS does not matches PREDICATE_VALUE. */
+svn_boolean_t
+svn_test__fs_type_not(const svn_test_opts_t *opts,
+                      const char *predicate_value,
+                      apr_pool_t *pool);
 
 
 #ifdef __cplusplus

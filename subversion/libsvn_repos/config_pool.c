@@ -182,7 +182,7 @@ setter(void **target,
  * CONFIG_POOL, yet, parse CONTENTS and cache the result.  CASE_SENSITIVE
  * controls option and section name matching.
  *
- * RESULT_POOL determines the lifetime of the returned reference and 
+ * RESULT_POOL determines the lifetime of the returned reference and
  * SCRATCH_POOL is being used for temporary allocations.
  */
 static svn_error_t *
@@ -205,7 +205,7 @@ auto_parse(svn_config_t **cfg,
                    &checksum, NULL, svn_checksum_sha1, TRUE, scratch_pool)));
 
   /* return reference to suitable config object if that already exists */
-  *key = checksum_as_key(checksum, scratch_pool);
+  *key = checksum_as_key(checksum, result_pool);
   SVN_ERR(svn_object_pool__lookup((void **)cfg, config_pool->object_pool,
                                   *key, &case_sensitive, result_pool));
   if (*cfg)
@@ -283,12 +283,12 @@ add_checksum(svn_repos__config_pool_t *config_pool,
   return SVN_NO_ERROR;
 }
 
-/* Set *CFG to the configuration stored in URL@HEAD and cache it in 
+/* Set *CFG to the configuration stored in URL@HEAD and cache it in
  * CONFIG_POOL.  CASE_SENSITIVE controls
  * option and section name matching.  If PREFERRED_REPOS is given,
  * use that if it also matches URL.
- * 
- * RESULT_POOL determines the lifetime of the returned reference and 
+ *
+ * RESULT_POOL determines the lifetime of the returned reference and
  * SCRATCH_POOL is being used for temporary allocations.
  */
 static svn_error_t *
@@ -337,7 +337,8 @@ find_repos_config(svn_config_t **cfg,
       repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
 
       /* Attempt to open a repository at repos_root_dirent. */
-      SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
+      SVN_ERR(svn_repos_open3(&repos, repos_root_dirent, NULL,
+                              scratch_pool, scratch_pool));
     }
 
   fs_path = &dirent[strlen(repos_root_dirent)];
@@ -415,7 +416,7 @@ key_by_url(svn_membuf_t **key,
 
   /* found *some* reference to a configuration.
    * Verify that it is still current.  Will fail for BDB repos. */
-  err = svn_stringbuf_from_file2(&contents, 
+  err = svn_stringbuf_from_file2(&contents,
                                  svn_dirent_join(config->repo_root,
                                                  "db/current", pool),
                                  pool);

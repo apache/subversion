@@ -240,13 +240,15 @@ get_or_allocate_third(struct fs_type_defn **fst,
   (*fst)->fs_type = apr_pstrdup(common_pool, fs_type);
   (*fst)->fsap_name = (*fst)->fs_type;
   (*fst)->initfunc = NULL;
+  (*fst)->vtable = NULL;
   (*fst)->next = NULL;
 
   return SVN_NO_ERROR;
 }
 #endif
 
-/* Fetch a library vtable by FS type. */
+/* Fetch a library *VTABLE by FS_TYPE.
+   Use POOL for temporary allocations. */
 static svn_error_t *
 get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
                    apr_pool_t *pool)
@@ -254,16 +256,22 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
   struct fs_type_defn **fst;
   svn_boolean_t known = FALSE;
 
-  /* There are two FS module definitions known at compile time.  We
+  /* There are three FS module definitions known at compile time.  We
      want to check these without any locking overhead even when
      dynamic third party modules are enabled.  The third party modules
      cannot be checked until the lock is held.  */
   for (fst = &fs_modules; *fst; fst = &(*fst)->next)
-    if (strcmp(fs_type, (*fst)->fs_type) == 0)
-      {
-        known = TRUE;
-        break;
-      }
+    {
+      if (strcmp(fs_type, (*fst)->fs_type) == 0)
+        {
+          known = TRUE;
+          break;
+        }
+      else if (!(*fst)->next)
+        {
+          break;
+        }
+    }
 
 #if defined(SVN_USE_DSO) && APR_HAS_DSO
   /* Third party FS modules that are unknown at compile time.
@@ -347,7 +355,9 @@ fs_library_vtable(fs_library_vtable_t **vtable, const char *path,
   SVN_ERR(svn_fs_type(&fs_type, path, pool));
 
   /* Fetch the library vtable by name, now that we've chosen one. */
-  return svn_error_trace(get_library_vtable(vtable, fs_type, pool));
+  SVN_ERR(get_library_vtable(vtable, fs_type, pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -398,6 +408,11 @@ synchronized_initialize(void *baton, apr_pool_t *pool)
 svn_error_t *
 svn_fs_initialize(apr_pool_t *pool)
 {
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
+  /* Ensure that DSO subsystem is initialized early as possible if
+     we're going to use it. */
+  SVN_ERR(svn_dso_initialize2());
+#endif
   /* Protect against multiple calls. */
   return svn_error_trace(svn_atomic__init_once(&common_pool_initialized,
                                                synchronized_initialize,
@@ -426,6 +441,8 @@ default_warning_func(void *baton, svn_error_t *err)
 svn_error_t *
 svn_fs__path_valid(const char *path, apr_pool_t *pool)
 {
+  char *c;
+
   /* UTF-8 encoded string without NULs. */
   if (! svn_utf__cstring_is_valid(path))
     {
@@ -440,6 +457,18 @@ svn_fs__path_valid(const char *path, apr_pool_t *pool)
       return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
                                _("Path '%s' contains '.' or '..' element"),
                                path);
+    }
+
+  /* Raise an error if PATH contains a newline because svn:mergeinfo and
+     friends can't handle them.  Issue #4340 describes a similar problem
+     in the FSFS code itself.
+   */
+  c = strchr(path, '\n');
+  if (c)
+    {
+      return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+               _("Invalid control character '0x%02x' in path '%s'"),
+               (unsigned char)*c, svn_path_illegal_path_escape(path, pool));
     }
 
   /* That's good enough. */
@@ -496,23 +525,34 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = fs_new(fs_config, pool);
 
   SVN_ERR(vtable->create(*fs_p, path, common_pool_lock, pool, common_pool));
-  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
+  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open2));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
-            apr_pool_t *pool)
+svn_fs_open2(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  *fs_p = fs_new(fs_config, pool);
-  SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, pool, common_pool));
-  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
+  SVN_ERR(fs_library_vtable(&vtable, path, scratch_pool));
+  *fs_p = fs_new(fs_config, result_pool);
+  SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, scratch_pool,
+                          common_pool));
+  SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open2));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_open(svn_fs_t **fs_p,
+            const char *path,
+            apr_hash_t *fs_config,
+            apr_pool_t *pool)
+{
+  return svn_fs_open2(fs_p, path, fs_config, pool, pool);
 }
 
 svn_error_t *
@@ -537,10 +577,11 @@ svn_fs_upgrade2(const char *path,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_upgrade(const char *path, apr_pool_t *pool)
+/* A warning handling function that does not abort on errors,
+   but just lets them be returned normally.  */
+static void
+verify_fs_warning_func(void *baton, svn_error_t *err)
 {
-  return svn_error_trace(svn_fs_upgrade2(path, NULL, NULL, NULL, NULL, pool));
 }
 
 svn_error_t *
@@ -559,6 +600,7 @@ svn_fs_verify(const char *path,
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(fs_config, pool);
+  svn_fs_set_warning_func(fs, verify_fs_warning_func, NULL);
 
   SVN_ERR(vtable->verify_fs(fs, path, start, end,
                             notify_func, notify_baton,
@@ -593,9 +635,12 @@ svn_fs_delete_fs(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_hotcopy2(const char *src_path, const char *dst_path,
+svn_fs_hotcopy3(const char *src_path, const char *dst_path,
                 svn_boolean_t clean, svn_boolean_t incremental,
-                svn_cancel_func_t cancel_func, void *cancel_baton,
+                svn_fs_hotcopy_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
@@ -648,17 +693,10 @@ svn_fs_hotcopy2(const char *src_path, const char *dst_path,
     }
 
   SVN_ERR(vtable->hotcopy(src_fs, dst_fs, src_path, dst_path, clean,
-                          incremental, cancel_func, cancel_baton,
-                          scratch_pool));
+                          incremental, notify_func, notify_baton,
+                          cancel_func, cancel_baton, common_pool_lock,
+                          scratch_pool, common_pool));
   return svn_error_trace(write_fs_type(dst_path, src_fs_type, scratch_pool));
-}
-
-svn_error_t *
-svn_fs_hotcopy(const char *src_path, const char *dest_path,
-               svn_boolean_t clean, apr_pool_t *pool)
-{
-  return svn_error_trace(svn_fs_hotcopy2(src_path, dest_path, clean,
-                                         FALSE, NULL, NULL, pool));
 }
 
 svn_error_t *
@@ -735,7 +773,7 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
 
   /* Perform the actual creation. */
   SVN_ERR(vtable->create(fs, path, common_pool_lock, fs->pool, common_pool));
-  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
+  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open2));
 
   return SVN_NO_ERROR;
 }
@@ -747,7 +785,7 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
 
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
   SVN_ERR(vtable->open_fs(fs, path, common_pool_lock, fs->pool, common_pool));
-  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
+  SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open2));
 
   return SVN_NO_ERROR;
 }
@@ -768,8 +806,9 @@ svn_error_t *
 svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
                         svn_boolean_t clean_logs, apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_hotcopy2(src_path, dest_path, clean_logs,
-                                         FALSE, NULL, NULL, pool));
+  return svn_error_trace(svn_fs_hotcopy3(src_path, dest_path, clean_logs,
+                                         FALSE, NULL, NULL, NULL, NULL,
+                                         pool));
 }
 
 svn_error_t *
@@ -810,14 +849,6 @@ svn_fs_begin_txn2(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
 
 
 svn_error_t *
-svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
-                 apr_pool_t *pool)
-{
-  return svn_error_trace(svn_fs_begin_txn2(txn_p, fs, rev, 0, pool));
-}
-
-
-svn_error_t *
 svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
                    svn_fs_txn_t *txn, apr_pool_t *pool)
 {
@@ -842,20 +873,6 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
 #endif
 
   SVN_ERR(err);
-
-#ifdef PACK_AFTER_EVERY_COMMIT
-  {
-    svn_fs_t *fs = txn->fs;
-    const char *fs_path = svn_fs_path(fs, pool);
-    err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
-    if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-      /* Pre-1.6 filesystem. */
-      svn_error_clear(err);
-    else if (err)
-      /* Real error. */
-      return svn_error_trace(err);
-  }
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -899,26 +916,48 @@ svn_fs_list_transactions(apr_array_header_t **names_p, svn_fs_t *fs,
   return svn_error_trace(fs->vtable->list_transactions(names_p, fs, pool));
 }
 
+static svn_boolean_t
+is_internal_txn_prop(const char *name)
+{
+  return strcmp(name, SVN_FS__PROP_TXN_CHECK_LOCKS) == 0 ||
+         strcmp(name, SVN_FS__PROP_TXN_CHECK_OOD) == 0 ||
+         strcmp(name, SVN_FS__PROP_TXN_CLIENT_DATE) == 0;
+}
+
 svn_error_t *
 svn_fs_txn_prop(svn_string_t **value_p, svn_fs_txn_t *txn,
                 const char *propname, apr_pool_t *pool)
 {
+  if (is_internal_txn_prop(propname))
+    {
+      *value_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
   return svn_error_trace(txn->vtable->get_prop(value_p, txn, propname, pool));
 }
 
 svn_error_t *
 svn_fs_txn_proplist(apr_hash_t **table_p, svn_fs_txn_t *txn, apr_pool_t *pool)
 {
-  return svn_error_trace(txn->vtable->get_proplist(table_p, txn, pool));
+  SVN_ERR(txn->vtable->get_proplist(table_p, txn, pool));
+
+  /* Don't give away internal transaction properties. */
+  svn_hash_sets(*table_p, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL);
+  svn_hash_sets(*table_p, SVN_FS__PROP_TXN_CHECK_OOD, NULL);
+  svn_hash_sets(*table_p, SVN_FS__PROP_TXN_CLIENT_DATE, NULL);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_fs_change_txn_prop(svn_fs_txn_t *txn, const char *name,
                        const svn_string_t *value, apr_pool_t *pool)
 {
-  /* Silently drop attempts to modify the internal property. */
-  if (!strcmp(name, SVN_FS__PROP_TXN_CLIENT_DATE))
-    return SVN_NO_ERROR;
+  if (is_internal_txn_prop(name))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("Attempt to modify internal transaction "
+                               "property '%s'"), name);
 
   return svn_error_trace(txn->vtable->change_prop(txn, name, value, pool));
 }
@@ -929,25 +968,14 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn, const apr_array_header_t *props,
 {
   int i;
 
-  /* Silently drop attempts to modify the internal property. */
   for (i = 0; i < props->nelts; ++i)
     {
       svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-      if (!strcmp(prop->name, SVN_FS__PROP_TXN_CLIENT_DATE))
-        {
-          apr_array_header_t *reduced_props
-            = apr_array_make(pool, props->nelts - 1, sizeof(svn_prop_t));
-
-          for (i = 0; i < props->nelts; ++i)
-            {
-              prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
-              if (strcmp(prop->name, SVN_FS__PROP_TXN_CLIENT_DATE))
-                APR_ARRAY_PUSH(reduced_props, svn_prop_t) = *prop;
-            }
-          props = reduced_props;
-          break;
-        }
+      if (is_internal_txn_prop(prop->name))
+        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                 _("Attempt to modify internal transaction "
+                                   "property '%s'"), prop->name);
     }
 
   return svn_error_trace(txn->vtable->change_props(txn, props, pool));
@@ -1063,11 +1091,21 @@ svn_fs_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_node_history2(svn_fs_history_t **history_p, svn_fs_root_t *root,
+                     const char *path, apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(root->vtable->node_history(history_p, root, path,
+                                                    result_pool,
+                                                    scratch_pool));
+}
+
+svn_error_t *
 svn_fs_node_history(svn_fs_history_t **history_p, svn_fs_root_t *root,
                     const char *path, apr_pool_t *pool)
 {
   return svn_error_trace(root->vtable->node_history(history_p, root, path,
-                                                    pool));
+                                                    pool, pool));
 }
 
 svn_error_t *
@@ -1319,15 +1357,6 @@ svn_fs_revision_link(svn_fs_root_t *from_root, svn_fs_root_t *to_root,
 }
 
 svn_error_t *
-svn_fs_move(svn_fs_root_t *from_root, const char *from_path,
-            svn_fs_root_t *to_root, const char *to_path, apr_pool_t *pool)
-{
-  SVN_ERR(svn_fs__path_valid(to_path, pool));
-  return svn_error_trace(to_root->vtable->move(from_root, from_path,
-                                               to_root, to_path, pool));
-}
-
-svn_error_t *
 svn_fs_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
                    const char *path, apr_pool_t *pool)
 {
@@ -1536,14 +1565,6 @@ svn_fs_change_rev_prop2(svn_fs_t *fs, svn_revnum_t rev, const char *name,
 }
 
 svn_error_t *
-svn_fs_change_rev_prop(svn_fs_t *fs, svn_revnum_t rev, const char *name,
-                       const svn_string_t *value, apr_pool_t *pool)
-{
-  return svn_error_trace(
-           svn_fs_change_rev_prop2(fs, rev, name, NULL, value, pool));
-}
-
-svn_error_t *
 svn_fs_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                              svn_fs_root_t *source_root,
                              const char *source_path,
@@ -1583,21 +1604,20 @@ svn_fs_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_lock2(apr_hash_t **results,
-             svn_fs_t *fs,
-             apr_hash_t *targets,
-             const char *comment,
-             svn_boolean_t is_dav_comment,
-             apr_time_t expiration_date,
-             svn_boolean_t steal_lock,
-             apr_pool_t *result_pool,
-             apr_pool_t *scratch_pool)
+svn_fs_lock_many(svn_fs_t *fs,
+                 apr_hash_t *targets,
+                 const char *comment,
+                 svn_boolean_t is_dav_comment,
+                 apr_time_t expiration_date,
+                 svn_boolean_t steal_lock,
+                 svn_fs_lock_callback_t lock_callback,
+                 void *lock_baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  apr_hash_t *ok_targets = apr_hash_make(scratch_pool), *ok_results;
-  svn_error_t *err;
-
-  *results = apr_hash_make(result_pool);
+  apr_hash_t *ok_targets = apr_hash_make(scratch_pool);
+  svn_error_t *err, *cb_err = SVN_NO_ERROR;
 
   /* Enforce that the comment be xml-escapable. */
   if (comment)
@@ -1612,7 +1632,7 @@ svn_fs_lock2(apr_hash_t **results,
   /* Enforce that the token be an XML-safe URI. */
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const svn_fs_lock_target_t *target = svn__apr_hash_index_val(hi);
+      const svn_fs_lock_target_t *target = apr_hash_this_val(hi);
 
       err = SVN_NO_ERROR;
       if (target->token)
@@ -1627,45 +1647,74 @@ svn_fs_lock2(apr_hash_t **results,
                                     target->token, "opaquelocktoken");
 
           if (!err)
-            for (c = target->token; *c && !err; c++)
-              if (! svn_ctype_isascii(*c) || svn_ctype_iscntrl(*c))
-                err = svn_error_createf(
-                        SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                        _("Lock token '%s' is not ASCII or is a "
-                          "control character at byte %u"),
-                        target->token,
-                        (unsigned)(c - target->token));
+            {
+              for (c = target->token; *c && !err; c++)
+                if (! svn_ctype_isascii(*c) || svn_ctype_iscntrl(*c))
+                  err = svn_error_createf(
+                          SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                          _("Lock token '%s' is not ASCII or is a "
+                            "control character at byte %u"),
+                          target->token,
+                          (unsigned)(c - target->token));
 
-          /* strlen(token) == c - token. */
-          if (!err && !svn_xml_is_xml_safe(target->token, c - target->token))
-            err = svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                    _("Lock token URI '%s' is not XML-safe"),
-                                    target->token);
+              /* strlen(token) == c - token. */
+              if (!err && !svn_xml_is_xml_safe(target->token,
+                                               c - target->token))
+                err = svn_error_createf(
+                            SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                            _("Lock token URI '%s' is not XML-safe"),
+                            target->token);
+            }
         }
 
       if (err)
         {
-          svn_fs_lock_result_t *result
-            = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
-
-          result->err = err;
-          result->lock = NULL;
-          svn_hash_sets(*results, svn__apr_hash_index_key(hi), result);
+          if (!cb_err && lock_callback)
+            cb_err = lock_callback(lock_baton, apr_hash_this_key(hi),
+                                   NULL, err, scratch_pool);
+          svn_error_clear(err);
         }
       else
-        svn_hash_sets(ok_targets, svn__apr_hash_index_key(hi), target);
+        svn_hash_sets(ok_targets, apr_hash_this_key(hi), target);
     }
 
-  err = fs->vtable->lock(&ok_results, fs, ok_targets, comment,
-                         is_dav_comment, expiration_date,
-                         steal_lock, result_pool, scratch_pool);
+  if (!apr_hash_count(ok_targets))
+    return svn_error_trace(cb_err);
 
-  for (hi = apr_hash_first(scratch_pool, ok_results);
-       hi; hi = apr_hash_next(hi))
-    svn_hash_sets(*results, svn__apr_hash_index_key(hi),
-                  svn__apr_hash_index_val(hi));
+  err = fs->vtable->lock(fs, ok_targets, comment, is_dav_comment,
+                         expiration_date, steal_lock,
+                         lock_callback, lock_baton,
+                         result_pool, scratch_pool);
+
+  if (err && cb_err)
+    svn_error_compose(err, cb_err);
+  else if (!err)
+    err = cb_err;
 
   return svn_error_trace(err);
+}
+
+struct lock_baton_t {
+  const svn_lock_t *lock;
+  svn_error_t *fs_err;
+};
+
+/* Implements svn_fs_lock_callback_t. Used by svn_fs_lock and
+   svn_fs_unlock to record the lock and error from svn_fs_lock_many
+   and svn_fs_unlock_many. */
+static svn_error_t *
+lock_cb(void *lock_baton,
+        const char *path,
+        const svn_lock_t *lock,
+        svn_error_t *fs_err,
+        apr_pool_t *pool)
+{
+  struct lock_baton_t *b = lock_baton;
+
+  b->lock = lock;
+  b->fs_err = svn_error_dup(fs_err);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1675,32 +1724,28 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
             svn_revnum_t current_rev, svn_boolean_t steal_lock,
             apr_pool_t *pool)
 {
-  apr_hash_t *targets = apr_hash_make(pool), *results;
-  svn_fs_lock_target_t target; 
+  apr_hash_t *targets = apr_hash_make(pool);
+  svn_fs_lock_target_t target;
   svn_error_t *err;
+  struct lock_baton_t baton = {0};
 
   target.token = token;
   target.current_rev = current_rev;
   svn_hash_sets(targets, path, &target);
 
-  err = svn_fs_lock2(&results, fs, targets, comment, is_dav_comment,
-                     expiration_date, steal_lock, pool, pool);
+  err = svn_fs_lock_many(fs, targets, comment, is_dav_comment,
+                         expiration_date, steal_lock, lock_cb, &baton,
+                         pool, pool);
 
-  if (apr_hash_count(results))
-    {
-      svn_fs_lock_result_t *result
-        = svn__apr_hash_index_val(apr_hash_first(pool, results));
+  if (baton.lock)
+    *lock = (svn_lock_t*)baton.lock;
 
-      if (result->lock)
-        *lock = result->lock;
+  if (err && baton.fs_err)
+    svn_error_compose(err, baton.fs_err);
+  else if (!err)
+    err = baton.fs_err;
 
-      if (err && result->err)
-        svn_error_compose(err, result->err);
-      else if (!err)
-        err = result->err;
-    }
-  
-  return err;
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -1709,15 +1754,37 @@ svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
   return svn_error_trace(fs->vtable->generate_lock_token(token, fs, pool));
 }
 
-svn_error_t *
-svn_fs_unlock2(apr_hash_t **results,
-               svn_fs_t *fs,
-               apr_hash_t *targets,
-               svn_boolean_t break_lock,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
+svn_fs_lock_target_t *
+svn_fs_lock_target_create(const char *token,
+                          svn_revnum_t current_rev,
+                          apr_pool_t *pool)
 {
-  return svn_error_trace(fs->vtable->unlock(results, fs, targets, break_lock,
+  svn_fs_lock_target_t *target = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
+
+  target->token = token;
+  target->current_rev = current_rev;
+
+  return target;
+}
+
+void
+svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
+                             const char *token)
+{
+  target->token = token;
+}
+
+svn_error_t *
+svn_fs_unlock_many(svn_fs_t *fs,
+                   apr_hash_t *targets,
+                   svn_boolean_t break_lock,
+                   svn_fs_lock_callback_t lock_callback,
+                   void *lock_baton,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(fs->vtable->unlock(fs, targets, break_lock,
+                                            lock_callback, lock_baton,
                                             result_pool, scratch_pool));
 }
 
@@ -1725,27 +1792,23 @@ svn_error_t *
 svn_fs_unlock(svn_fs_t *fs, const char *path, const char *token,
               svn_boolean_t break_lock, apr_pool_t *pool)
 {
-  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_t *targets = apr_hash_make(pool);
   svn_error_t *err;
+  struct lock_baton_t baton = {0};
 
   if (!token)
     token = "";
   svn_hash_sets(targets, path, token);
 
-  err = svn_fs_unlock2(&results, fs, targets, break_lock, pool, pool);
+  err = svn_fs_unlock_many(fs, targets, break_lock, lock_cb, &baton,
+                           pool, pool);
 
-  if (apr_hash_count(results))
-    {
-      svn_fs_lock_result_t *result
-        = svn__apr_hash_index_val(apr_hash_first(pool, results));
+  if (err && baton.fs_err)
+    svn_error_compose(err, baton.fs_err);
+  else if (!err)
+    err = baton.fs_err;
 
-      if (err && result->err)
-        svn_error_compose(err, result->err);
-      else if (!err)
-        err = result->err;
-    }
-
-  return err;
+  return svn_error_trace(err);
 }
 
 svn_error_t *
@@ -1769,18 +1832,18 @@ svn_fs_get_locks2(svn_fs_t *fs, const char *path, svn_depth_t depth,
                                                get_locks_baton, pool));
 }
 
-svn_error_t *
-svn_fs_get_locks(svn_fs_t *fs, const char *path,
-                 svn_fs_get_locks_callback_t get_locks_func,
-                 void *get_locks_baton, apr_pool_t *pool)
-{
-  return svn_error_trace(svn_fs_get_locks2(fs, path, svn_depth_infinity,
-                                           get_locks_func, get_locks_baton,
-                                           pool));
-}
-
 
 /* --- History functions --- */
+
+svn_error_t *
+svn_fs_history_prev2(svn_fs_history_t **prev_history_p,
+                     svn_fs_history_t *history, svn_boolean_t cross_copies,
+                     apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(history->vtable->prev(prev_history_p, history,
+                                               cross_copies, result_pool,
+                                               scratch_pool));
+}
 
 svn_error_t *
 svn_fs_history_prev(svn_fs_history_t **prev_history_p,
@@ -1788,7 +1851,7 @@ svn_fs_history_prev(svn_fs_history_t **prev_history_p,
                     apr_pool_t *pool)
 {
   return svn_error_trace(history->vtable->prev(prev_history_p, history,
-                                               cross_copies, pool));
+                                               cross_copies, pool, pool));
 }
 
 svn_error_t *
@@ -1929,7 +1992,7 @@ svn_fs_info_dup(const void *info_void,
   fs_library_vtable_t *vtable;
 
   SVN_ERR(get_library_vtable(&vtable, info->fs_type, scratch_pool));
-  
+
   if (vtable->info_fsap_dup)
     return vtable->info_fsap_dup(info_void, result_pool);
   else

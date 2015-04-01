@@ -38,6 +38,10 @@ Use the default ordering of revisions (that is, '-r HEAD:0').
 Return errorcode 0 if there are no additional dependencies found, 1 if
 there were; any other errorcode indicates a fatal error.
 
+Paths in mergeinfo are not considered as additional dependencies so the
+--skip-missing-merge-sources option of 'svndumpfilter' may be required
+for successful filtering with the resulting path list.
+
 Options:
 
    --help (-h)           Show this usage message and exit.
@@ -68,7 +72,7 @@ def sanitize_path(path):
 def subsumes(path, maybe_child):
   if path == maybe_child:
     return True
-  if maybe_child.find(path + '/') == 0:
+  if maybe_child.startswith(path + '/'):
     return True
   return False
 
@@ -117,20 +121,35 @@ def log(msg, min_verbosity):
 
 class DependencyTracker:
   def __init__(self, include_paths):
-    self.include_paths = include_paths[:]
-    self.dependent_paths = []
+    self.include_paths = set(include_paths)
+    self.dependent_paths = set()
 
   def path_included(self, path):
-    for include_path in self.include_paths + self.dependent_paths:
+    for include_path in self.include_paths | self.dependent_paths:
       if subsumes(include_path, path):
         return True
     return False
 
-  def handle_changes(self, path_copies):
-    for path, copyfrom_path in path_copies.items():
-      if self.path_included(path) and copyfrom_path:
-        if not self.path_included(copyfrom_path):
-          self.dependent_paths.append(copyfrom_path)
+  def include_missing_copies(self, path_copies):
+    while True:
+      log("Cross-checking %d included paths with %d copies "
+          "for missing path dependencies..." % (
+            len(self.include_paths) + len(self.dependent_paths),
+            len(path_copies)),
+          1)
+      included_copies = []
+      for path, copyfrom_path in path_copies:
+        if self.path_included(path):
+          log("Adding copy '%s' -> '%s'" % (copyfrom_path, path), 1)
+          self.dependent_paths.add(copyfrom_path)
+          included_copies.append((path, copyfrom_path))
+      if not included_copies:
+        log("Found all missing path dependencies", 1)
+        break
+      for path, copyfrom_path in included_copies:
+        path_copies.remove((path, copyfrom_path))
+      log("Found %d new copy dependencies, need to re-check for more"
+        % len(included_copies), 1)
 
 def readline(stream):
   line = stream.readline()
@@ -151,7 +170,7 @@ def svn_log_stream_get_dependencies(stream, included_paths):
   line_buf = None
   last_revision = 0
   eof = False
-  path_copies = {}
+  path_copies = set()
   found_changed_path = False
 
   while not eof:
@@ -195,16 +214,15 @@ def svn_log_stream_get_dependencies(stream, included_paths):
         except EOFError:
           eof = True
           break
-        match = action_re.search(line)
+        match = copy_action_re.search(line)
         if match:
           found_changed_path = True
-          match = copy_action_re.search(line)
-          if match:
-            path_copies[sanitize_path(match.group(1))] = \
-              sanitize_path(match.group(2))
+          path_copies.add((sanitize_path(match.group(1)),
+                           sanitize_path(match.group(2))))
+        elif action_re.search(line):
+          found_changed_path = True
         else:
           break
-      dt.handle_changes(path_copies)
 
     # Finally, skip any log message lines.  (If there are none,
     # remember the last line we read, because it probably has
@@ -221,6 +239,7 @@ def svn_log_stream_get_dependencies(stream, included_paths):
                          "'svn log' with the --verbose (-v) option when "
                          "generating the input to this script?")
 
+  dt.include_missing_copies(path_copies)
   return dt
 
 def analyze_logs(included_paths):

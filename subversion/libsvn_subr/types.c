@@ -62,14 +62,14 @@ svn_revnum_parse(svn_revnum_t *rev,
         return svn_error_createf
                   (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                   _("Revision number longer than 10 digits '%s'"), str);
-        
+
       /* we support 32 bit revision numbers only. check for overflows */
       if (*str > '2' || (apr_uint32_t)result > APR_INT32_MAX)
         return svn_error_createf
                   (SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
                   _("Revision number too large '%s'"), str);
     }
-  
+
   if (endptr)
     *endptr = end;
 
@@ -349,40 +349,4 @@ svn_location_segment_dup(const svn_location_segment_t *segment,
   if (segment->path)
     new_segment->path = apr_pstrdup(pool, segment->path);
   return new_segment;
-}
-
-const char *
-svn_move_behavior_to_word(svn_move_behavior_t value)
-{
-  switch (value)
-    {
-    case svn_move_behavior_no_moves:
-      return "none";
-    case svn_move_behavior_explicit_moves:
-      return "explicit";
-    case svn_move_behavior_auto_moves:
-      return "auto";
-    default:
-      return "INVALID-MOVE-BEHAVIOR";
-    }
-}
-
-svn_move_behavior_t
-svn_move_behavior_from_word(const char *word)
-{
-  if (word)
-    {
-      if (strcmp(word, "none") == 0)
-        return svn_move_behavior_no_moves;
-      if (strcmp(word, "explicit") == 0)
-        return svn_move_behavior_explicit_moves;
-      if (strcmp(word, "auto") == 0)
-        return svn_move_behavior_auto_moves;
-    }
-
-  /* There's no special value for invalid move behavior, and no convincing
-     reason to make one yet, so just fall back to "explicit moves only",
-     i.e. no conversion either way.
-  */
-  return svn_move_behavior_explicit_moves;
 }

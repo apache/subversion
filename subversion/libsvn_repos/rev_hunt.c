@@ -231,7 +231,7 @@ svn_repos_history2(svn_fs_t *fs,
         return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
     }
 
-  SVN_ERR(svn_fs_node_history(&history, root, path, oldpool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, oldpool, oldpool));
 
   /* Now, we loop over the history items, calling svn_fs_history_prev(). */
   do
@@ -242,7 +242,8 @@ svn_repos_history2(svn_fs_t *fs,
       apr_pool_t *tmppool;
       svn_error_t *err;
 
-      SVN_ERR(svn_fs_history_prev(&history, history, cross_copies, newpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, cross_copies, newpool,
+                                   oldpool));
 
       /* Only continue if there is further history to deal with. */
       if (! history)
@@ -523,7 +524,7 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
 
   SVN_ERR(svn_fs_revision_root(&root, fs, future_revision, pool));
 
-  SVN_ERR(svn_fs_node_history(&history, root, fs_path, lastpool));
+  SVN_ERR(svn_fs_node_history2(&history, root, fs_path, lastpool, lastpool));
 
   /* Since paths that are different according to strcmp may still be
      equivalent (due to number of consecutive slashes and the fact that
@@ -536,7 +537,8 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
     {
       apr_pool_t *tmppool;
 
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, currpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, currpool,
+                                   lastpool));
 
       if (!history)
         break;
@@ -982,7 +984,8 @@ struct path_revision
   svn_revnum_t revnum;
   const char *path;
 
-  /* Does this path_rev have merges to also be included?  */
+  /* Does this path_rev have merges to also be included?  If so, this is
+     the union of both additions and (negated) deletions of mergeinfo. */
   apr_hash_t *merged_mergeinfo;
 
   /* Is this a merged revision? */
@@ -991,6 +994,7 @@ struct path_revision
 
 /* Check for merges in OLD_PATH_REV->PATH at OLD_PATH_REV->REVNUM.  Store
    the mergeinfo difference in *MERGED_MERGEINFO, allocated in POOL.  The
+   difference is the union of both additions and (negated) deletions.  The
    returned *MERGED_MERGEINFO will be NULL if there are no changes. */
 static svn_error_t *
 get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
@@ -1068,7 +1072,8 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   else
     SVN_ERR(err);
 
-  /* Then calculate and merge the differences. */
+  /* Then calculate and merge the differences, combining additions and
+     (negated) deletions as all positive changes in CHANGES. */
   SVN_ERR(svn_mergeinfo_diff2(&deleted, &changed, prev_mergeinfo,
                               curr_mergeinfo, FALSE, result_pool,
                               scratch_pool));
@@ -1116,7 +1121,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
        path, end);
 
   /* Open a history object. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, scratch_pool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, scratch_pool,
+                               scratch_pool));
   while (1)
     {
       struct path_revision *path_rev;
@@ -1127,7 +1133,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
       svn_pool_clear(iterpool);
 
       /* Fetch the history object to walk through. */
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, iterpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
+                                   iterpool));
       if (!history)
         break;
       SVN_ERR(svn_fs_history_location(&tmp_path, &tmp_revnum,
@@ -1249,8 +1256,8 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
           for (hi = apr_hash_first(iterpool, old_pr->merged_mergeinfo); hi;
                hi = apr_hash_next(hi))
             {
-              const char *path = svn__apr_hash_index_key(hi);
-              svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+              const char *path = apr_hash_this_key(hi);
+              svn_rangelist_t *rangelist = apr_hash_this_val(hi);
               apr_pool_t *iterpool3;
               int j;
 
@@ -1379,7 +1386,7 @@ send_path_revision(struct path_revision *path_rev,
   /* Compute and send delta if client asked for it.
      Note that this was initialized to NULL, so if !contents_changed,
      no deltas will be computed. */
-  if (delta_handler)
+  if (delta_handler && delta_handler != svn_delta_noop_window_handler)
     {
       /* Get the content delta. */
       SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
@@ -1453,7 +1460,7 @@ get_file_revs_backwards(svn_repos_t *repos,
                              path, end);
 
   /* Open a history object. */
-  SVN_ERR(svn_fs_node_history(&history, root, path, scratch_pool));
+  SVN_ERR(svn_fs_node_history2(&history, root, path, scratch_pool, iterpool));
   while (1)
     {
       struct path_revision *path_rev;
@@ -1463,7 +1470,8 @@ get_file_revs_backwards(svn_repos_t *repos,
       svn_pool_clear(iterpool);
 
       /* Fetch the history object to walk through. */
-      SVN_ERR(svn_fs_history_prev(&history, history, TRUE, iterpool));
+      SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
+                                   iterpool));
       if (!history)
         break;
       SVN_ERR(svn_fs_history_location(&tmp_path, &tmp_revnum,
@@ -1550,6 +1558,18 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   apr_hash_t *duplicate_path_revs;
   struct send_baton sb;
   int mainline_pos, merged_pos;
+
+  if (!SVN_IS_VALID_REVNUM(start)
+      || !SVN_IS_VALID_REVNUM(end))
+    {
+      svn_revnum_t youngest_rev;
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, repos->fs, scratch_pool));
+
+      if (!SVN_IS_VALID_REVNUM(start))
+        start = youngest_rev;
+      if (!SVN_IS_VALID_REVNUM(end))
+        end = youngest_rev;
+    }
 
   if (end < start)
     {

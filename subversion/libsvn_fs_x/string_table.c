@@ -121,14 +121,14 @@ add_table(string_table_builder_t *builder)
 }
 
 string_table_builder_t *
-svn_fs_x__string_table_builder_create(apr_pool_t *pool)
+svn_fs_x__string_table_builder_create(apr_pool_t *result_pool)
 {
-  string_table_builder_t *result = apr_palloc(pool, sizeof(*result));
-  result->pool = pool;
-  result->tables = apr_array_make(pool, 1, sizeof(builder_table_t *));
+  string_table_builder_t *result = apr_palloc(result_pool, sizeof(*result));
+  result->pool = result_pool;
+  result->tables = apr_array_make(result_pool, 1, sizeof(builder_table_t *));
 
   add_table(result);
-  
+
   return result;
 }
 
@@ -146,7 +146,7 @@ balance(builder_table_t *table,
       node->left->right = node;
       *parent = node->left;
       node->left = temp;
-      
+
       --left_height;
     }
   else if (left_height + 1 < right_height)
@@ -284,12 +284,13 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
   string = apr_pstrmemdup(builder->pool, string, len);
   if (len > MAX_SHORT_STRING_LEN)
     {
+      void *idx_void;
       svn_string_t item;
       item.data = string;
       item.len = len;
-      
-      result
-        = (apr_uintptr_t)apr_hash_get(table->long_string_dict, string, len);
+
+      idx_void = apr_hash_get(table->long_string_dict, string, len);
+      result = (apr_uintptr_t)idx_void;
       if (result)
         return result - 1
              + LONG_STRING_MASK
@@ -369,7 +370,7 @@ svn_fs_x__string_table_builder_estimate_size(string_table_builder_t *builder)
   /* ZIP compression should give us a 50% reduction.
    * add some static overhead */
   return 200 + total / 2;
- 
+
 }
 
 static void
@@ -455,7 +456,7 @@ svn_fs_x__string_table_create(const string_table_builder_t *builder,
                               apr_pool_t *pool)
 {
   apr_size_t i;
-  
+
   string_table_t *result = apr_pcalloc(pool, sizeof(*result));
   result->size = (apr_size_t)builder->tables->nelts;
   result->sub_tables
@@ -584,11 +585,11 @@ svn_fs_x__string_table_get(const string_table_t *table,
 svn_error_t *
 svn_fs_x__write_string_table(svn_stream_t *stream,
                              const string_table_t *table,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
   apr_size_t i, k;
 
-  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   svn_packed__int_stream_t *table_sizes
     = svn_packed__create_int_stream(root, FALSE, FALSE);
@@ -609,7 +610,7 @@ svn_fs_x__write_string_table(svn_stream_t *stream,
   svn_packed__add_uint(table_sizes, table->size);
 
   /* all short-string char data sizes */
-  
+
   for (i = 0; i < table->size; ++i)
     svn_packed__add_uint(table_sizes,
                          table->sub_tables[i].short_string_count);
@@ -645,7 +646,7 @@ svn_fs_x__write_string_table(svn_stream_t *stream,
 
   /* write to target stream */
 
-  SVN_ERR(svn_packed__data_write(stream, root, pool));
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -659,7 +660,7 @@ svn_fs_x__read_string_table(string_table_t **table_p,
   apr_size_t i, k;
 
   string_table_t *table = apr_palloc(result_pool, sizeof(*table));
- 
+
   svn_packed__data_root_t *root;
   svn_packed__int_stream_t *table_sizes;
   svn_packed__byte_stream_t *large_strings;
@@ -786,7 +787,7 @@ svn_fs_x__serialize_string_table(svn_temp_serializer__context_t *context,
                                         (const void * const *)&string->data,
                                         string->len + 1);
         }
-        
+
       svn_temp_serializer__pop(context);
     }
 
@@ -801,7 +802,7 @@ svn_fs_x__deserialize_string_table(void *buffer,
 {
   apr_size_t i, k;
   string_sub_table_t *sub_tables;
-  
+
   svn_temp_deserializer__resolve(buffer, (void **)table);
   if (*table == NULL)
     return;

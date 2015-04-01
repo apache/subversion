@@ -54,6 +54,11 @@
 
 /*** Code. ***/
 
+/* FSFS format 7's "block-read" feature performs poorly with small caches.
+ * Enable it only if caches above this threshold have been configured.
+ * The current threshold is 64MB. */
+#define BLOCK_READ_CACHE_THRESHOLD (0x40 * 0x100000)
+
 /* A flag to see if we've been cancelled by the client or not. */
 static volatile sig_atomic_t cancelled = FALSE;
 
@@ -113,6 +118,10 @@ open_repos(svn_repos_t **repos,
            const char *path,
            apr_pool_t *pool)
 {
+  /* Enable the "block-read" feature (where it applies)? */
+  svn_boolean_t use_block_read
+    = svn_cache_config_get()->cache_size > BLOCK_READ_CACHE_THRESHOLD;
+
   /* construct FS configuration parameters: enable caches for r/o data */
   apr_hash_t *fs_config = apr_hash_make(pool);
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
@@ -120,9 +129,11 @@ open_repos(svn_repos_t **repos,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
                            svn_uuid_generate(pool));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                           use_block_read ? "1" : "0");
 
   /* now, open the requested repository */
-  SVN_ERR(svn_repos_open2(repos, path, fs_config, pool));
+  SVN_ERR(svn_repos_open3(repos, path, fs_config, pool, pool));
   svn_fs_set_warning_func(svn_repos_fs(*repos), warning_func, NULL);
   return SVN_NO_ERROR;
 }
@@ -152,6 +163,7 @@ check_lib_versions(void)
 static svn_opt_subcommand_t
   subcommand_crashtest,
   subcommand_create,
+  subcommand_delrevprop,
   subcommand_deltify,
   subcommand_dump,
   subcommand_freeze,
@@ -201,7 +213,8 @@ enum svnadmin__cmdline_options_t
     svnadmin__pre_1_5_compatible,
     svnadmin__pre_1_6_compatible,
     svnadmin__compatible_version,
-    svnadmin__check_normalization
+    svnadmin__check_normalization,
+    svnadmin__metadata_only
   };
 
 /* Option codes and descriptions.
@@ -315,6 +328,11 @@ static const apr_getopt_option_t options_table[] =
         "                             in character representation, but are otherwise\n"
         "                             identical")},
 
+    {"metadata-only", svnadmin__metadata_only, 0,
+     N_("verify metadata only (ignored for BDB),\n"
+        "                             checking against external corruption in\n"
+        "                             Subversion 1.9+ format repositories.\n")},
+
     {NULL}
   };
 
@@ -338,6 +356,19 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     svnadmin__pre_1_4_compatible, svnadmin__pre_1_5_compatible,
     svnadmin__pre_1_6_compatible
     } },
+
+  {"delrevprop", subcommand_delrevprop, {0}, N_
+   ("usage: 1. svnadmin delrevprop REPOS_PATH -r REVISION NAME\n"
+    "                   2. svnadmin delrevprop REPO_PATH -t TXN NAME\n\n"
+    "1. Delete the property NAME on revision REVISION.\n\n"
+    "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
+    "trigger the revision property-related hooks (for example, if you want\n"
+    "an email notification sent from your post-revprop-change hook).\n\n"
+    "NOTE: Revision properties are not versioned, so this command will\n"
+    "irreversibly destroy the previous value of the property.\n\n"
+    "2. Delete the property NAME on transaction TXN.\n"),
+   {'r', 't', svnadmin__use_pre_revprop_change_hook,
+    svnadmin__use_post_revprop_change_hook} },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -381,7 +412,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Make a hot copy of a repository.\n"
     "If --incremental is passed, data which already exists at the destination\n"
     "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"),
-   {svnadmin__clean_logs, svnadmin__incremental} },
+   {svnadmin__clean_logs, svnadmin__incremental, 'q'} },
 
   {"info", subcommand_info, {0}, N_
    ("usage: svnadmin info REPOS_PATH\n\n"
@@ -468,14 +499,16 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'r', svnadmin__bypass_hooks} },
 
   {"setrevprop", subcommand_setrevprop, {0}, N_
-   ("usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n"
-    "Set the property NAME on revision REVISION to the contents of FILE. Use\n"
-    "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
-    "the revision property-related hooks (for example, if you want an email\n"
-    "notification sent from your post-revprop-change hook).\n\n"
+   ("usage: 1. svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
+    "                   2. svnadmin setrevprop REPOS_PATH -t TXN NAME FILE\n\n"
+    "1. Set the property NAME on revision REVISION to the contents of FILE.\n\n"
+    "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
+    "trigger the revision property-related hooks (for example, if you want\n"
+    "an email notification sent from your post-revprop-change hook).\n\n"
     "NOTE: Revision properties are not versioned, so this command will\n"
-    "overwrite the previous value of the property.\n"),
-   {'r', svnadmin__use_pre_revprop_change_hook,
+    "overwrite the previous value of the property.\n\n"
+    "2. Set the property NAME on transaction TXN to the contents of FILE.\n"),
+   {'r', 't', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
 
   {"setuuid", subcommand_setuuid, {0}, N_
@@ -509,7 +542,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verify the data stored in the repository.\n"),
    {'t', 'r', 'q', svnadmin__keep_going, 'M',
-    svnadmin__check_normalization} },
+    svnadmin__check_normalization, svnadmin__metadata_only} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -539,6 +572,7 @@ struct svnadmin_opt_state
   svn_boolean_t wait;                               /* --wait */
   svn_boolean_t keep_going;                         /* --keep-going */
   svn_boolean_t check_normalization;                /* --check-normalization */
+  svn_boolean_t metadata_only;                      /* --metadata-only */
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   svn_boolean_t ignore_dates;                       /* --ignore-dates */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
@@ -842,7 +876,8 @@ struct repos_notify_handler_baton {
 };
 
 /* Implementation of svn_repos_notify_func_t to wrap the output to a
-   response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
+   response stream for svn_repos_dump_fs2(), svn_repos_verify_fs(),
+   svn_repos_hotcopy3() and others. */
 static void
 repos_notify_handler(void *baton,
                      const svn_repos_notify_t *notify,
@@ -871,7 +906,7 @@ repos_notify_handler(void *baton,
           if (b->error_summary && notify->revision != SVN_INVALID_REVNUM)
             {
               struct verification_error *verr;
-              
+
               verr = apr_palloc(b->result_pool, sizeof(*verr));
               verr->rev = notify->revision;
               verr->err = svn_error_dup(notify->err);
@@ -1058,6 +1093,21 @@ repos_notify_handler(void *baton,
       svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                             _("Bumped repository format to %ld\n"),
                             notify->revision));
+      return;
+
+    case svn_repos_notify_hotcopy_rev_range:
+      if (notify->start_revision == notify->end_revision)
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                            _("* Copied revision %ld.\n"),
+                                            notify->start_revision));
+        }
+      else
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                               _("* Copied revisions from %ld to %ld.\n"),
+                               notify->start_revision, notify->end_revision));
+        }
 
     default:
       return;
@@ -1214,12 +1264,14 @@ subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
   else
     {
+      const char *utf8;
       /* All repositories in filedata. */
-      paths = svn_cstring_split(opt_state->filedata->data, "\n", FALSE, pool);
+      SVN_ERR(svn_utf_cstring_to_utf8(&utf8, opt_state->filedata->data, pool));
+      paths = svn_cstring_split(utf8, "\r\n", FALSE, pool);
     }
 
   b.command = APR_ARRAY_IDX(args, 0, const char *);
-  b.args = apr_palloc(pool, sizeof(char *) * args->nelts + 1);
+  b.args = apr_palloc(pool, sizeof(char *) * (args->nelts + 1));
   for (i = 0; i < args->nelts; ++i)
     b.args[i] = APR_ARRAY_IDX(args, i, const char *);
   b.args[args->nelts] = NULL;
@@ -1561,30 +1613,47 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 
 /* A helper for the 'setrevprop' and 'setlog' commands.  Expects
-   OPT_STATE->use_pre_revprop_change_hook and
-   OPT_STATE->use_post_revprop_change_hook to be set appropriately. */
+   OPT_STATE->txn_id, OPT_STATE->use_pre_revprop_change_hook and
+   OPT_STATE->use_post_revprop_change_hook to be set appropriately.
+   If FILENAME is NULL, delete property PROP_NAME.  */
 static svn_error_t *
 set_revprop(const char *prop_name, const char *filename,
             struct svnadmin_opt_state *opt_state, apr_pool_t *pool)
 {
   svn_repos_t *repos;
-  svn_string_t *prop_value = svn_string_create_empty(pool);
-  svn_stringbuf_t *file_contents;
+  svn_string_t *prop_value;
 
-  SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename, pool));
+  if (filename)
+    {
+      svn_stringbuf_t *file_contents;
 
-  prop_value->data = file_contents->data;
-  prop_value->len = file_contents->len;
+      SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename, pool));
 
-  SVN_ERR(svn_subst_translate_string2(&prop_value, NULL, NULL, prop_value,
-                                      NULL, FALSE, pool, pool));
+      prop_value = svn_string_create_empty(pool);
+      prop_value->data = file_contents->data;
+      prop_value->len = file_contents->len;
+
+      SVN_ERR(svn_subst_translate_string2(&prop_value, NULL, NULL, prop_value,
+                                          NULL, FALSE, pool, pool));
+    }
+  else
+    {
+      prop_value = NULL;
+    }
 
   /* Open the filesystem  */
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
-  /* If we are bypassing the hooks system, we just hit the filesystem
-     directly. */
-  SVN_ERR(svn_repos_fs_change_rev_prop4(
+  if (opt_state->txn_id)
+    {
+      svn_fs_t *fs = svn_repos_fs(repos);
+      svn_fs_txn_t *txn;
+
+      SVN_ERR(svn_fs_open_txn(&txn, fs, opt_state->txn_id, pool));
+      SVN_ERR(svn_fs_change_txn_prop(txn, prop_name, prop_value, pool));
+    }
+  else
+    SVN_ERR(svn_repos_fs_change_rev_prop4(
               repos, opt_state->start_revision.value.number,
               NULL, prop_name, NULL, prop_value,
               opt_state->use_pre_revprop_change_hook,
@@ -1609,7 +1678,21 @@ subcommand_setrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   filename = APR_ARRAY_IDX(args, 1, const char *);
   SVN_ERR(target_arg_to_dirent(&filename, filename, pool));
 
-  if (opt_state->start_revision.kind != svn_opt_revision_number)
+  if (opt_state->txn_id)
+    {
+      if (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("--revision (-r) and --transaction (-t) "
+                                   "are mutually exclusive"));
+
+      if (opt_state->use_pre_revprop_change_hook
+          || opt_state->use_post_revprop_change_hook)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Calling hooks is incompatible with "
+                                   "--transaction (-t)"));
+    }
+  else if (opt_state->start_revision.kind != svn_opt_revision_number)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Missing revision"));
   else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
@@ -1760,6 +1843,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   verify_err = svn_repos_verify_fs3(repos, lower, upper,
                                     opt_state->keep_going,
                                     opt_state->check_normalization,
+                                    opt_state->metadata_only,
                                     !opt_state->quiet
                                     ? repos_notify_handler : NULL,
                                     &notify_baton, check_cancel,
@@ -1796,7 +1880,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           struct verification_error *verr;
           svn_error_t *err;
           const char *rev_str;
-          
+
           svn_pool_clear(iterpool);
 
           verr = APR_ARRAY_IDX(notify_baton.error_summary, i,
@@ -1808,7 +1892,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
             {
               char buf[512];
               const char *message;
-              
+
               message = svn_err_best_message(err, buf, sizeof(buf));
               svn_error_clear(svn_stream_printf(notify_baton.feedback_stream,
                                                 iterpool,
@@ -1829,6 +1913,7 @@ svn_error_t *
 subcommand_hotcopy(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
+  struct repos_notify_handler_baton notify_baton = { 0 };
   apr_array_header_t *targets;
   const char *new_repos_path;
 
@@ -1837,9 +1922,14 @@ subcommand_hotcopy(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   new_repos_path = APR_ARRAY_IDX(targets, 0, const char *);
   SVN_ERR(target_arg_to_dirent(&new_repos_path, new_repos_path, pool));
 
-  return svn_repos_hotcopy2(opt_state->repository_path, new_repos_path,
+  /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
+  if (! opt_state->quiet)
+    notify_baton.feedback_stream = recode_stream_create(stdout, pool);
+
+  return svn_repos_hotcopy3(opt_state->repository_path, new_repos_path,
                             opt_state->clean_logs, opt_state->incremental,
-                            check_cancel, NULL, pool);
+                            !opt_state->quiet ? repos_notify_handler : NULL,
+                            &notify_baton, check_cancel, NULL, pool);
 }
 
 svn_error_t *
@@ -1937,6 +2027,11 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
             SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shards Packed: %ld/%ld\n"),
                                        shards_packed, shards_full));
           }
+
+        if (fsfs_info->log_addressing)
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Logical Addressing: yes\n")));
+        else
+          SVN_ERR(svn_cmdline_printf(pool, _("FSFS Logical Addressing: no\n")));
       }
   }
 
@@ -2053,8 +2148,8 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
       const char *cr_date, *exp_date = "";
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_lock_t *lock = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      svn_lock_t *lock = apr_hash_this_val(hi);
       int comment_lines = 0;
 
       svn_pool_clear(iterpool);
@@ -2271,6 +2366,43 @@ subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_delrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *args;
+  const char *prop_name;
+
+  /* Expect one more argument: NAME */
+  SVN_ERR(parse_args(&args, os, 1, 1, pool));
+  prop_name = APR_ARRAY_IDX(args, 0, const char *);
+
+  if (opt_state->txn_id)
+    {
+      if (opt_state->start_revision.kind != svn_opt_revision_unspecified
+          || opt_state->end_revision.kind != svn_opt_revision_unspecified)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("--revision (-r) and --transaction (-t) "
+                                   "are mutually exclusive"));
+
+      if (opt_state->use_pre_revprop_change_hook
+          || opt_state->use_post_revprop_change_hook)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Calling hooks is incompatible with "
+                                   "--transaction (-t)"));
+    }
+  else if (opt_state->start_revision.kind != svn_opt_revision_number)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Missing revision"));
+  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Only one revision allowed"));
+
+  return set_revprop(prop_name, NULL, opt_state, pool);
+}
+
+
 
 /** Main. **/
 
@@ -2449,6 +2581,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case svnadmin__check_normalization:
         opt_state.check_normalization = TRUE;
+        break;
+      case svnadmin__metadata_only:
+        opt_state.metadata_only = TRUE;
         break;
       case svnadmin__fs_type:
         SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool));

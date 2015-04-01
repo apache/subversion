@@ -122,7 +122,7 @@ def check_mergeinfo_recursively(root_path, subpaths_mergeinfo):
   expected = verify.UnorderedOutput(
     [path + ' - ' + subpaths_mergeinfo[path] + '\n'
      for path in subpaths_mergeinfo])
-  actions.run_and_verify_svn(None, expected, [],
+  actions.run_and_verify_svn(expected, [],
                                      'propget', '-R', SVN_PROP_MERGEINFO,
                                      root_path)
 
@@ -146,7 +146,7 @@ def set_up_dir_replace(sbox):
   new_file2 = os.path.join(foo_path, "new file 2")
 
   # Make directory foo in F, and add some files within it.
-  actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+  actions.run_and_verify_svn(None, [], 'mkdir', foo_path)
   main.file_append(new_file, "Initial text in new file.\n")
   main.file_append(new_file2, "Initial text in new file 2.\n")
   main.run_svn(None, "add", new_file)
@@ -164,10 +164,7 @@ def set_up_dir_replace(sbox):
     'A/B/F/foo/new file'    : Item(status='  ', wc_rev=2),
     'A/B/F/foo/new file 2'  : Item(status='  ', wc_rev=2),
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # Merge foo onto C
   expected_output = wc.State(C_path, {
@@ -200,7 +197,7 @@ def set_up_dir_replace(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       check_props=True)
   # Commit merge of foo onto C, creating r3.
   expected_output = wc.State(wc_dir, {
     'A/C'        : Item(verb='Sending'),
@@ -217,13 +214,10 @@ def set_up_dir_replace(sbox):
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),
 
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # Delete foo on F, creating r4.
-  actions.run_and_verify_svn(None, None, [], 'rm', foo_path)
+  actions.run_and_verify_svn(None, [], 'rm', foo_path)
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo'   : Item(verb='Deleting'),
     })
@@ -234,10 +228,7 @@ def set_up_dir_replace(sbox):
     'A/C/foo/new file'      : Item(status='  ', wc_rev=3),
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),
     })
-  actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
 #----------------------------------------------------------------------
 def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
@@ -327,17 +318,13 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
       })
 
     # Make a branch A_COPY to merge into.
-    actions.run_and_verify_svn(None, expected, [], 'copy',
+    actions.run_and_verify_svn(expected, [], 'copy',
                                        sbox.repo_url + "/A",
                                        os.path.join(wc_dir,
                                                     dest_name))
 
     expected_output = wc.State(wc_dir, {dest_name : Item(verb='Adding')})
-    actions.run_and_verify_commit(wc_dir,
-                                          expected_output,
-                                          expected_status,
-                                          None,
-                                          wc_dir)
+    actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   for i in range(nbr_of_branches):
     if i == 0:
       copy_A('A_COPY', i + 2)
@@ -354,8 +341,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
   expected_status.tweak('A/D/H/psi', wc_rev=nbr_of_branches + 2)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/H/psi', contents="New content")
 
   # r(nbr_of_branches + 3) - modify and commit A/D/G/rho
@@ -363,8 +349,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/G/rho' : Item(verb='Sending')})
   expected_status.tweak('A/D/G/rho', wc_rev=nbr_of_branches + 3)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/G/rho', contents="New content")
 
   # r(nbr_of_branches + 4) - modify and commit A/B/E/beta
@@ -372,8 +357,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/B/E/beta' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/beta', wc_rev=nbr_of_branches + 4)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/B/E/beta', contents="New content")
 
   # r(nbr_of_branches + 5) - modify and commit A/D/H/omega
@@ -381,8 +365,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
                           "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/omega' : Item(verb='Sending')})
   expected_status.tweak('A/D/H/omega', wc_rev=nbr_of_branches + 5)
-  actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
   expected_disk.tweak('A/D/H/omega', contents="New content")
 
   return expected_disk, expected_status
@@ -400,22 +383,22 @@ def svn_mkfile(path):
   dirname, filename = os.path.split(path)
   main.file_write(path, "This is the file '" + filename + "'.\n" +
                                 "Last changed in '$Revision$'.\n")
-  actions.run_and_verify_svn(None, None, [], 'add', path)
-  actions.run_and_verify_svn(None, None, [], 'propset',
+  actions.run_and_verify_svn(None, [], 'add', path)
+  actions.run_and_verify_svn(None, [], 'propset',
                                      'svn:keywords', 'Revision', path)
 
 def svn_modfile(path):
   "Make text and property mods to a WC file."
   path = local_path(path)
   main.file_append(path, "An extra line.\n")
-  actions.run_and_verify_svn(None, None, [], 'propset',
+  actions.run_and_verify_svn(None, [], 'propset',
                                      'newprop', 'v', path)
 
 def svn_copy(s_rev, path1, path2):
   "Copy a WC path locally."
   path1 = local_path(path1)
   path2 = local_path(path2)
-  actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
+  actions.run_and_verify_svn(None, [], 'copy', '--parents',
                                      '-r', s_rev, path1, path2)
 
 def svn_merge(rev_range, source, target, lines=None, elides=[],
@@ -462,7 +445,7 @@ def svn_merge(rev_range, source, target, lines=None, elides=[],
                                   text_resolved=text_resolved,
                                   prop_resolved=prop_resolved,
                                   tree_resolved=tree_resolved)
-  actions.run_and_verify_svn(None, exp_out, [],
+  actions.run_and_verify_svn(exp_out, [],
                                      'merge', rev_arg, source, target, *args)
 
 #----------------------------------------------------------------------

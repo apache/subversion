@@ -100,14 +100,33 @@ public:
   svn_wc_external_item2_t* get_external_item(SVN::Pool& pool) const;
 
 private:
-  friend class ::Java::ClassCache;
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ::Java::ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(::Java::Env env, jclass cls);
+
+  public:
+    virtual ~ClassImpl();
+
+    const ::Java::MethodID m_mid_ctor;
+    const ::Java::FieldID m_fid_target_dir;
+    const ::Java::FieldID m_fid_url;
+    const ::Java::FieldID m_fid_revision;
+    const ::Java::FieldID m_fid_peg_revision;
+  };
+
+  const ClassImpl& impl() const
+    {
+      return *dynamic_cast<const ClassImpl*>(m_impl);
+    }
+
+  friend class ::Java::ClassCacheImpl;
   static const char* const m_class_name;
-  static void static_init(::Java::Env env);
-  static ::Java::MethodID m_mid_ctor;
-  static ::Java::FieldID m_fid_target_dir;
-  static ::Java::FieldID m_fid_url;
-  static ::Java::FieldID m_fid_revision;
-  static ::Java::FieldID m_fid_peg_revision;
 
   ::Java::String m_target_dir;
   ::Java::String m_url;

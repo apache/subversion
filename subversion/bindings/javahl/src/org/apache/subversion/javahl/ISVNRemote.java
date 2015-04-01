@@ -599,13 +599,15 @@ public interface ISVNRemote
         private FileRevision(String path, long revision,
                              boolean resultOfMerge,
                              Map<String, byte[]> revisionProperties,
-                             Map<String, byte[]> propertiesDelta)
+                             Map<String, byte[]> propertiesDelta,
+                             boolean textDelta)
         {
             this.path = path;
             this.revision = revision;
             this.resultOfMerge = resultOfMerge;
             this.revisionProperties = revisionProperties;
             this.propertiesDelta = propertiesDelta;
+            this.textDelta = textDelta;
         }
 
         /**
@@ -643,11 +645,17 @@ public interface ISVNRemote
             return propertiesDelta;
         }
 
+        /**
+         * @return A flag indicating that this revision has a text delta.
+         */
+        public boolean hasTextDelta() { return textDelta; }
+
         private String path;
         private long revision;
         private boolean resultOfMerge;
         private Map<String, byte[]> revisionProperties;
         private Map<String, byte[]> propertiesDelta;
+        private boolean textDelta;
     }
 
     /**

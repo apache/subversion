@@ -79,16 +79,40 @@ public interface ISVNClient
     public boolean isAdminDirectory(String name);
 
     /**
-     * List a directory or file of the working copy.
+     * Return the status of the working copy and maybe repository.
      *
      * @param path        Path to explore.
      * @param depth       How deep to recurse into subdirectories.
      * @param onServer    Request status information from server.
+     * @param onDisk      Check the working copy for local modifications.
+     *                    A value of <code>false</code> only
+     *                    has effect when <code>onServer</code> is
+     *                    <code>true</code>.
      * @param getAll      get status for uninteresting (unchanged) files.
      * @param noIgnore    get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
+     * @param depthAsSticky When set, interpret <code>depth</code> as
+     *                      the ambient depth of the working copy.
      * @param changelists changelists to filter by
+     * @since 1.9
      */
+    void status(String path, Depth depth,
+                boolean onServer, boolean ignoreLocal,
+                boolean getAll, boolean noIgnore,
+                boolean ignoreExternals, boolean depthAsSticky,
+                Collection<String> changelists, StatusCallback callback)
+            throws ClientException;
+
+    /**
+     * Return information about the status of the working copy and
+     * maybe repository.
+     * <p>
+     * Behaves like the 1.9 version with
+     *     <code>onDisk = true</code> and
+     *     <code>depthAsSticky = false</code>.
+     * @deprecated
+     */
+    @Deprecated
     void status(String path, Depth depth, boolean onServer,
                 boolean getAll, boolean noIgnore, boolean ignoreExternals,
                 Collection<String> changelists, StatusCallback callback)
@@ -136,6 +160,16 @@ public interface ISVNClient
      * accepted by the command-line client.
      * @param prompt the callback interface
      */
+    void setPrompt(AuthnCallback prompt);
+
+    /**
+     * Register callback interface to supply username and password on demand.
+     * This callback can also be used to provide theequivalent of the
+     * <code>--no-auth-cache</code> and <code>--non-interactive</code> arguments
+     * accepted by the command-line client.
+     * @param prompt the callback interface
+     */
+    @SuppressWarnings("deprecation")
     void setPrompt(UserPasswordCallback prompt);
 
     /**
@@ -225,11 +259,29 @@ public interface ISVNClient
      * @param path      A set of paths to revert.
      * @param depth     the depth to recurse into subdirectories
      * @param changelists changelists to filter by
+     * @param clearChangelists If set, will clear changelist association
+     *                         from the reverted paths.
+     * @param metadataOnly Revert just the metadata (including conflict data)
+     *                     and not the working files/dirs
      * @throws ClientException
      * @since 1.9
      */
-    void revert(Set<String> paths, Depth depth, Collection<String> changelists)
+    void revert(Set<String> paths, Depth depth,
+                Collection<String> changelists,
+                boolean clearChangelists,
+                boolean metadataOnly)
             throws ClientException;
+
+    /**
+     * Reverts set of files or directories to a pristine state.
+     * <p>
+     * Behaves like the 1.9 version with <code>clearChangelists</code>
+     * set to <code>false</code>;
+     */
+    void revert(Set<String> paths, Depth depth,
+                Collection<String> changelists)
+            throws ClientException;
+
 
     /**
      * Reverts a file to a pristine state.
@@ -324,6 +376,21 @@ public interface ISVNClient
      * @param makeParents Whether to create intermediate parents
      * @param ignoreExternals Whether or not to process external definitions
      *                        as part of this operation.
+     * @param metadataOnly Copy just the metadata and not the working files/dirs
+     * @param pinExternals Whether or not to pin external definitions as part
+     *                     of this operation.
+     * @param externalsToPin The set of externals to pin.
+     *            Keys are either local absolute paths (when the source of the
+     *            copy is the working copy) or URLs within the repository
+     *            (when the source is the repository) where an
+     *            <code>svn:externals</code> property is defined.
+     *            Values are lists of parsed {@link ExternalItem}
+     *            objects from each external definitions.
+     *            If <code>pinExternals</code> is <code>true</code>, only
+     *            the externals in this set will be pinned; if this parameter
+     *            is <code>null</code>, all externals will be pinned.
+     *            If <code>pinExternals</code> is <code>false</code>,
+     *            this parameter will be ignored.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
@@ -331,6 +398,24 @@ public interface ISVNClient
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the copy operation fails.
      * @throws NullPointerException if the <code>sources</code> list is empty.
+     * @since 1.9
+     */
+    void copy(List<CopySource> sources, String destPath,
+              boolean copyAsChild, boolean makeParents,
+              boolean ignoreExternals, boolean metadataOnly,
+              boolean pinExternals,
+              Map<String, List<ExternalItem>> externalsToPin,
+              Map<String, String> revpropTable,
+              CommitMessageCallback handler, CommitCallback callback)
+            throws ClientException;
+
+    /**
+     * Copy versioned paths with the history preserved.
+     * <p>
+     * Behaves like the 1.9 version with
+     *     <code>pinExternals</code> set to <code>false</code> and
+     *     <code>externalsToPin</code> set to <code>null</code> and
+     *     <code>metadataOnly</code> set to <code>false</code>.
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
@@ -396,6 +481,30 @@ public interface ISVNClient
     /**
      * Recursively cleans up a local directory, finishing any
      * incomplete operations, removing lockfiles, etc.
+     * @param path a local directory.
+     * @param breakLocks ### FIXME: Missing docstring in svn_client.h
+     * @param clearDavCache ### FIXME: Missing docstring in svn_client.h
+     * @param removeUnusedPristines ### FIXME: Missing docstring in svn_client.h
+     * @param includeExternals Recurse into externals working copies
+     *        and clean them up, too.
+     * @throws ClientException
+     * @since 1.9
+     */
+    void cleanup(String path,
+                 boolean breakLocks,
+                 boolean fixRecordedTimestamps,
+                 boolean clearDavCache,
+                 boolean removeUnusedPristines,
+                 boolean includeExternals)
+        throws ClientException;
+
+    /**
+     * Recursively cleans up a local directory, finishing any
+     * incomplete operations, removing lockfiles, etc.
+     * <p>
+     * Behaves like the 1.9 version with <code>breakLocks</code> and
+     * <code>includeExternals</code> set to <code>false<code>, and the
+     * other flags to <code>true</code>.
      * @param path a local directory.
      * @throws ClientException
      */
@@ -1169,6 +1278,9 @@ public interface ISVNClient
 
     /**
      * Retrieve the content of a file
+     *
+     * Always expands keywords and never returns properties.
+     *
      * @param path      the path of the file
      * @param revision  the revision to retrieve
      * @param pegRevision the revision to interpret path
@@ -1187,11 +1299,40 @@ public interface ISVNClient
      * @param revision    the revision to retrieve
      * @param pegRevision the revision at which to interpret the path
      * @param stream      the stream to write the file's content to
+     * @param returnProps whether to return the file's own (not inherited)
+     *                    properties dalong with the contents
+     * @return The file's properties if <code>returnProps</code> is
+     *         set (which may yield an empty map), otherwise
+     *         <code>null</code>.
+     * @throws ClientException
+     * @see java.io.PipedOutputStream
+     * @see java.io.PipedInputStream
+     * @since 1.9
+     */
+    Map<String, byte[]>
+        streamFileContent(String path,
+                          Revision revision, Revision pegRevision,
+                          boolean expandKeywords, boolean returnProps,
+                          OutputStream stream)
+        throws ClientException;
+
+    /**
+     * Write the file's content to the specified output stream.  If
+     * you need an InputStream, use a
+     * PipedInputStream/PipedOutputStream combination.
+     *
+     * Always expands keywords and never returns properties.
+     *
+     * @param path        the path of the file
+     * @param revision    the revision to retrieve
+     * @param pegRevision the revision at which to interpret the path
+     * @param stream      the stream to write the file's content to
      * @throws ClientException
      * @see java.io.PipedOutputStream
      * @see java.io.PipedInputStream
      */
-    void streamFileContent(String path, Revision revision, Revision pegRevision,
+    void streamFileContent(String path,
+                           Revision revision, Revision pegRevision,
                            OutputStream stream)
         throws ClientException;
 
@@ -1218,12 +1359,28 @@ public interface ISVNClient
      *                      information
      * @param callback      callback to receive the file content and the other
      *                      information
+     * @param options       additional options for controlling the output
      * @throws ClientException
+     * @since 1.9
      */
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,
-               BlameCallback callback) throws ClientException;
+               BlameCallback callback, DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * <p>
+     * Behaves like the 1.9 version with <code>options</code> set to
+     * their default values.
+     */
+    void blame(String path, Revision pegRevision, Revision revisionStart,
+               Revision revisionEnd, boolean ignoreMimeType,
+               boolean includeMergedRevisions,
+               BlameCallback callback)
+            throws ClientException;
 
     /**
      * Set directory for the configuration information, taking the
@@ -1350,28 +1507,25 @@ public interface ISVNClient
      * @param fetchActualOnly when <code>true</code>, retrieve
      * information about node that are not versioned, but are still
      * tree conflicted.
+     * @param includeExternals Recurs into externals directories
      * @param changelists   if non-null, filter paths using changelists
      * @param callback      a callback to receive the infos retrieved
      * @since 1.9
      */
-    void info2(String pathOrUrl,
-               Revision revision, Revision pegRevision, Depth depth,
-               boolean fetchExcluded, boolean fetchActualOnly,
-               Collection<String> changelists, InfoCallback callback)
+    void info(String pathOrUrl,
+              Revision revision, Revision pegRevision, Depth depth,
+              boolean fetchExcluded, boolean fetchActualOnly,
+              boolean includeExternals,
+              Collection<String> changelists, InfoCallback callback)
         throws ClientException;
 
     /**
      * Retrieve information about repository or working copy items.
      * <p>
      * Behaves like the 1.9 version, with <code>fetchExcluded</code>
-     * set to <code>false</code> and <code>fetchActualOnly</code> set
-     * to <code>true</code>.
-     * @param pathOrUrl     the path or the url of the item
-     * @param revision      the revision of the item to return
-     * @param pegRevision   the revision to interpret pathOrUrl
-     * @param depth         the depth to recurse
-     * @param changelists   if non-null, filter paths using changelists
-     * @param callback      a callback to receive the infos retrieved
+     * set to <code>false</code>, <code>fetchActualOnly</code> set to
+     * <code>true</code> anf <code>includeExternals</code> set to
+     * <code>false</code>.
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,
                Depth depth, Collection<String> changelists,
@@ -1412,6 +1566,37 @@ public interface ISVNClient
     void patch(String patchPath, String targetPath, boolean dryRun,
                int stripCount, boolean reverse, boolean ignoreWhitespace,
                boolean removeTempfiles, PatchCallback callback)
+            throws ClientException;
+
+    /**
+     * Recursively vacuum a working copy, removing unnecessary data.
+     * <p>
+     * This method will report an error when
+     * <code>removeUnversionedItems</code> or
+     * <code>removeIgnoredItems</code> are set, and the working copy
+     * is already locked. This prevents accidental corruption of the
+     * working copy if this method is invoked while another client is
+     * performing some other operation on the working copy.
+     * @param path The path of the working copy directory.
+     * @param removeUnversionedItems Remove unversioned items from the
+     *        working copy after it has been successfully cleaned up.
+     * @param removeIgnoredItems Remove unversioned items that are
+     *        ignored by Subversion, after the working copy has been
+     *        successfully cleaned up.
+     * @param fixRecordedTimestamps Update timestamps recorded in the
+     *        working copy database to their actual on-disk values.
+     * @param removeUnusedPristines Remove pristine files that are not
+     *        referenced by the working copy.
+     * @param includeExternals Recurse into externals working copies
+     *        and vacuum them, too.
+     * @since 1.9
+     */
+    void vacuum(String path,
+                boolean removeUnversionedItems,
+                boolean removeIgnoredItems,
+                boolean fixRecordedTimestamps,
+                boolean removeUnusedPristines,
+                boolean includeExternals)
             throws ClientException;
 
     /**

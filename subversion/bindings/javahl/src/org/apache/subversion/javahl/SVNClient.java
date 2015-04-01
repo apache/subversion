@@ -121,12 +121,25 @@ public class SVNClient implements ISVNClient
     @Deprecated
     public native String getLastPath();
 
-    public native void status(String path, Depth depth, boolean onServer,
+    public native void status(String path, Depth depth,
+                              boolean onServer, boolean onDisk,
                               boolean getAll, boolean noIgnore,
-                              boolean ignoreExternals,
+                              boolean ignoreExternals, boolean depthAsSticky,
                               Collection<String> changelists,
                               StatusCallback callback)
             throws ClientException;
+
+    @Deprecated
+    public void status(String path, Depth depth, boolean onServer,
+                       boolean getAll, boolean noIgnore,
+                       boolean ignoreExternals,
+                       Collection<String> changelists,
+                       StatusCallback callback)
+            throws ClientException
+    {
+        status(path, depth, onServer, true, getAll, noIgnore,
+               ignoreExternals, false, changelists, callback);
+    }
 
     public native void list(String url, Revision revision,
                             Revision pegRevision, Depth depth, int direntFields,
@@ -137,6 +150,9 @@ public class SVNClient implements ISVNClient
 
     public native void password(String password);
 
+    public native void setPrompt(AuthnCallback prompt);
+
+    @SuppressWarnings("deprecation")
     public native void setPrompt(UserPasswordCallback prompt);
 
     public native void setTunnelAgent(TunnelAgent tunnelAgent);
@@ -177,14 +193,23 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     public native void revert(Set<String> paths, Depth depth,
-                              Collection<String> changelists)
+                              Collection<String> changelists,
+                              boolean clearChangelists,
+                              boolean metadataOnly)
             throws ClientException;
+
+    public void revert(Set<String> paths, Depth depth,
+                       Collection<String> changelists)
+            throws ClientException
+    {
+        revert(paths, depth, changelists, false, false);
+    }
 
     public void revert(String path, Depth depth,
                        Collection<String> changelists)
             throws ClientException
     {
-        revert(Collections.singleton(path), depth, changelists);
+        revert(Collections.singleton(path), depth, changelists, false, false);
     }
 
     public native void add(String path, Depth depth, boolean force,
@@ -215,10 +240,23 @@ public class SVNClient implements ISVNClient
 
     public native void copy(List<CopySource> sources, String destPath,
                             boolean copyAsChild, boolean makeParents,
-                            boolean ignoreExternals,
+                            boolean ignoreExternals, boolean metadataOnly,
+                            boolean pinExternals,
+                            Map<String, List<ExternalItem>> externalsToPin,
                             Map<String, String> revpropTable,
                             CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
+
+    public void copy(List<CopySource> sources, String destPath,
+                     boolean copyAsChild, boolean makeParents,
+                     boolean ignoreExternals,
+                     Map<String, String> revpropTable,
+                     CommitMessageCallback handler, CommitCallback callback)
+            throws ClientException
+    {
+        copy(sources, destPath, copyAsChild, makeParents, ignoreExternals,
+             false, false, null, revpropTable, handler, callback);
+    }
 
     public native void move(Set<String> srcPaths, String destPath,
                             boolean force, boolean moveAsChild,
@@ -246,8 +284,18 @@ public class SVNClient implements ISVNClient
                              CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    public native void cleanup(String path)
-            throws ClientException;
+    public native void cleanup(String path,
+                               boolean breakLocks,
+                               boolean fixRecordedTimestamps,
+                               boolean clearDavCache,
+                               boolean removeUnusedPristines,
+                               boolean includeExternals)
+        throws ClientException;
+
+    public void cleanup(String path) throws ClientException
+    {
+        cleanup(path, false, true, true, true, false);
+    }
 
     public native void resolve(String path, Depth depth,
                                ConflictResult.Choice conflictResult)
@@ -594,24 +642,46 @@ public class SVNClient implements ISVNClient
     {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
-        streamFileContent(path, revision, pegRevision, stream);
+        streamFileContent(path, revision, pegRevision, true, false, stream);
         return stream.toByteArray();
     }
 
-    public native void streamFileContent(String path, Revision revision,
-                                         Revision pegRevision,
-                                         OutputStream stream)
+    public native Map<String, byte[]>
+        streamFileContent(String path,
+                          Revision revision, Revision pegRevision,
+                          boolean expandKeywords, boolean returnProps,
+                          OutputStream stream)
             throws ClientException;
+
+    public void streamFileContent(String path, Revision revision,
+                                  Revision pegRevision,
+                                  OutputStream stream)
+        throws ClientException
+    {
+        streamFileContent(path, revision, pegRevision, true, false, stream);
+    }
 
     public native void relocate(String from, String to, String path,
                                 boolean ignoreExternals)
             throws ClientException;
 
+    public void blame(String path, Revision pegRevision,
+                      Revision revisionStart,
+                      Revision revisionEnd, boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback callback)
+            throws ClientException
+    {
+        blame(path, pegRevision, revisionStart, revisionEnd, ignoreMimeType,
+              includeMergedRevisions, callback, null);
+    }
+
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
                              boolean includeMergedRevisions,
-                             BlameCallback callback)
+                             BlameCallback callback,
+                             DiffOptions options)
             throws ClientException;
 
     public native void setConfigDirectory(String configDir)
@@ -710,11 +780,12 @@ public class SVNClient implements ISVNClient
     public native void unlock(Set<String> paths, boolean force)
             throws ClientException;
 
-    public native void info2(String pathOrUrl, Revision revision,
-                             Revision pegRevision, Depth depth,
-                             boolean fetchExcluded, boolean fetchActualOnly,
-                             Collection<String> changelists,
-                             InfoCallback callback)
+    public native void info(String pathOrUrl, Revision revision,
+                            Revision pegRevision, Depth depth,
+                            boolean fetchExcluded, boolean fetchActualOnly,
+                            boolean includeExternals,
+                            Collection<String> changelists,
+                            InfoCallback callback)
             throws ClientException;
 
     public void info2(String pathOrUrl, Revision revision,
@@ -723,14 +794,22 @@ public class SVNClient implements ISVNClient
                       InfoCallback callback)
             throws ClientException
     {
-        info2(pathOrUrl, revision, pegRevision, depth,
-              false, true, changelists, callback);
+        info(pathOrUrl, revision, pegRevision, depth,
+             false, true, false, changelists, callback);
     }
 
     public native void patch(String patchPath, String targetPath,
                              boolean dryRun, int stripCount, boolean reverse,
                              boolean ignoreWhitespace, boolean removeTempfiles,
                              PatchCallback callback)
+            throws ClientException;
+
+    public native void vacuum(String wcPath,
+                              boolean removeUnversionedItems,
+                              boolean removeIgnoredItems,
+                              boolean fixRecordedTimestamps,
+                              boolean removeUnusedPristines,
+                              boolean includeExternals)
             throws ClientException;
 
     public ISVNRemote openRemoteSession(String pathOrUrl)

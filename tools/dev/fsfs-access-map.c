@@ -60,7 +60,7 @@ typedef struct file_stats_t
 
   /* number of read() calls that returned 0 bytes */
   apr_int64_t empty_reads;
-  
+
   /* total number of bytes returned by those reads */
   apr_int64_t read_size;
 
@@ -168,7 +168,7 @@ open_file(const char *name, int handle)
   if (!file)
     {
       apr_pool_t *pool = apr_hash_pool_get(files);
-      apr_pool_t *sub_pool = svn_pool_create(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       apr_file_t *apr_file = NULL;
       apr_finfo_t finfo = { 0 };
@@ -176,10 +176,10 @@ open_file(const char *name, int handle)
 
       /* determine file size (if file still exists) */
       apr_file_open(&apr_file, name,
-                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT, sub_pool);
+                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT, subpool);
       if (apr_file)
         apr_file_info_get(&finfo, APR_FINFO_SIZE, apr_file);
-      svn_pool_destroy(sub_pool);
+      svn_pool_destroy(subpool);
 
       file = apr_pcalloc(pool, sizeof(*file));
       file->name = apr_pstrdup(pool, name);
@@ -314,7 +314,7 @@ parse_line(svn_stringbuf_t *line)
   else
     while(*func_start == ' ')
       func_start++;
-  
+
   first_param_end = strchr(func_end, ',');
   if (first_param_end == NULL)
     first_param_end = strchr(func_end, ')');
@@ -353,7 +353,7 @@ static void
 parse_file(apr_file_t *file)
 {
   apr_pool_t *pool = svn_pool_create(NULL);
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* limit lines to 4k (usually, we need less than 200 bytes) */
   svn_stringbuf_t *line = svn_stringbuf_create_ensure(4096, pool);
@@ -363,13 +363,13 @@ parse_file(apr_file_t *file)
       svn_error_t *err = NULL;
 
       line->len = line->blocksize-1;
-      err = svn_io_read_length_line(file, line->data, &line->len, iter_pool);
+      err = svn_io_read_length_line(file, line->data, &line->len, iterpool);
       svn_error_clear(err);
       if (err)
         break;
 
       parse_line(line);
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
     }
   while (line->len > 0);
 }
@@ -558,13 +558,13 @@ scale_line(color_t* out,
            int in_len)
 {
   double scaling_factor = (double)(in_len) / (double)(out_len);
-  
+
   apr_size_t i;
   memset(out, 0, out_len * sizeof(color_t));
   for (i = 0; i < out_len; ++i)
     {
       color_t color = { 0 };
-      
+
       double source_start = i * scaling_factor;
       double source_end = (i + 1) * scaling_factor;
 
@@ -626,7 +626,7 @@ write_bitmap(apr_array_header_t *info,
   /**/
   line = apr_pcalloc(pool, xsize * sizeof(color_t));
   scaled_line = apr_pcalloc(pool, row_size);
-  
+
   /* write header to file */
   write_bitmap_header(file, max_x, ysize);
 

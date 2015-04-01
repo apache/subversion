@@ -1513,8 +1513,8 @@ compare_git_tree_entries(apr_hash_t *changed_paths,
       for (hi = apr_hash_first(pool, other_entries); hi;
            hi = apr_hash_next(hi))
         {
-          const char *other_entry_name = svn__apr_hash_index_key(hi);
-          const git_oid *other_entry_id = svn__apr_hash_index_val(hi);
+          const char *other_entry_name = apr_hash_this_key(hi);
+          const git_oid *other_entry_id = apr_hash_this_val(hi);
           const git_tree_entry *other_entry;
           const char *other_entry_relpath;
 
@@ -1697,7 +1697,6 @@ svn_ra_git__get_log(svn_ra_session_t *session,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
-                    svn_move_behavior_t move_behavior,
                     const apr_array_header_t *revprops,
                     svn_log_entry_receiver_t receiver,
                     void *receiver_baton,
@@ -1803,8 +1802,8 @@ svn_ra_git__get_log(svn_ra_session_t *session,
                   for (hi = apr_hash_first(pool, changed_paths); hi;
                        hi = apr_hash_next(hi))
                     {
-                      const char *relpath_key = svn__apr_hash_index_key(hi);
-                      void *val = svn__apr_hash_index_val(hi);
+                      const char *relpath_key = apr_hash_this_key(hi);
+                      void *val = apr_hash_this_val(hi);
                       const char *fspath_key;
 
                       fspath_key = apr_pstrcat(iterpool, "/", relpath_key,

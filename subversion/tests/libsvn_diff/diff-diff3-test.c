@@ -173,13 +173,15 @@ three_way_merge(const char *base_filename1,
   actual = svn_stringbuf_create_empty(pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
 
-  SVN_ERR(svn_diff_mem_string_output_merge2
+  SVN_ERR(svn_diff_mem_string_output_merge3
           (ostream, diff, original, modified, latest,
            apr_psprintf(pool, "||||||| %s", base_filename1),
            apr_psprintf(pool, "<<<<<<< %s", base_filename2),
            apr_psprintf(pool, ">>>>>>> %s", base_filename3),
            NULL, /* separator */
-           style, pool));
+           style,
+           NULL, NULL, /* cancel */
+           pool));
 
   SVN_ERR(svn_stream_close(ostream));
   if (strcmp(actual->data, expected) != 0)
@@ -199,14 +201,16 @@ three_way_merge(const char *base_filename1,
                            APR_OS_DEFAULT, pool));
 
   ostream = svn_stream_from_aprfile2(output, FALSE, pool);
-  SVN_ERR(svn_diff_file_output_merge2(
+  SVN_ERR(svn_diff_file_output_merge3(
               ostream, diff,
               filename1, filename2, filename3,
               apr_psprintf(pool, "||||||| %s", base_filename1),
               apr_psprintf(pool, "<<<<<<< %s", base_filename2),
               apr_psprintf(pool, ">>>>>>> %s", base_filename3),
               NULL, /* separator */
-              style, pool));
+              style,
+              NULL, NULL, /* cancel */
+              pool));
   SVN_ERR(svn_stream_close(ostream));
   SVN_ERR(svn_stringbuf_from_file2(&actual, merge_name, pool));
   if (strcmp(actual->data, expected))

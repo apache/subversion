@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
+#include "svn_time.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_dirent_uri.h"
@@ -41,36 +42,26 @@
 #include "../svn_test_fs.h"
 #include "../../libsvn_ra_local/ra_local.h"
 
-static const char tunnel_repos_name[] = "test-repo-tunnel";
-
 /*-------------------------------------------------------------------*/
 
 /** Helper routines. **/
 
 
 static svn_error_t *
-make_and_open_local_repos(svn_ra_session_t **session,
-                          const char *repos_name,
-                          const svn_test_opts_t *opts,
-                          apr_pool_t *pool)
+make_and_open_repos(svn_ra_session_t **session,
+                    const char *repos_name,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
-  svn_repos_t *repos;
   const char *url;
   svn_ra_callbacks2_t *cbtable;
 
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
-  SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
-                                        TRUE  /* non_interactive */,
-                                        "jrandom", "rayjandom",
-                                        NULL,
-                                        TRUE  /* no_auth_cache */,
-                                        FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&cbtable->auth_baton, pool));
 
-  SVN_ERR(svn_test__create_repos(&repos, repos_name, opts, pool));
+  SVN_ERR(svn_test__create_repos2(NULL, &url, NULL, repos_name, opts,
+                                  pool, pool));
   SVN_ERR(svn_ra_initialize(pool));
-
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&url, repos_name, pool));
 
   SVN_ERR(svn_ra_open4(session, NULL, url, NULL, cbtable, NULL, NULL, pool));
 
@@ -144,18 +135,36 @@ commit_tree(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t last_tunnel_check;
-static int tunnel_open_count;
-static void *check_tunnel_baton;
-static void *open_tunnel_context;
+/* Baton for opening tunnels */
+typedef struct tunnel_baton_t
+{
+  int magic; /* TUNNEL_MAGIC */
+  int open_count;
+  svn_boolean_t last_check;
+} tunnel_baton_t;
+
+#define TUNNEL_MAGIC 0xF00DF00F
+
+/* Baton for closing a specific tunnel */
+typedef struct close_baton_t
+{
+  int magic;
+  tunnel_baton_t *tb;
+  apr_proc_t *proc;
+} close_baton_t;
+
+#define CLOSE_MAGIC 0x1BADBAD1
 
 static svn_boolean_t
 check_tunnel(void *tunnel_baton, const char *tunnel_name)
 {
-  if (tunnel_baton != check_tunnel_baton)
+  tunnel_baton_t *b = tunnel_baton;
+
+  if (b->magic != TUNNEL_MAGIC)
     abort();
-  last_tunnel_check = (0 == strcmp(tunnel_name, "test"));
-  return last_tunnel_check;
+
+  b->last_check = (0 == strcmp(tunnel_name, "test"));
+  return b->last_check;
 }
 
 static void
@@ -176,8 +185,10 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
   apr_status_t status;
   const char *args[] = { "svnserve", "-t", "-r", ".", NULL };
   const char *svnserve;
+  tunnel_baton_t *b = tunnel_baton;
+  close_baton_t *cb;
 
-  SVN_TEST_ASSERT(tunnel_baton == check_tunnel_baton);
+  SVN_TEST_ASSERT(b->magic == TUNNEL_MAGIC);
 
   SVN_ERR(svn_dirent_get_absolute(&svnserve, "../../svnserve/svnserve", pool));
 #ifdef WIN32
@@ -201,11 +212,7 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
                              args, NULL, attr, pool);
   if (status != APR_SUCCESS)
     return svn_error_wrap_apr(status, "Could not run svnserve");
-#ifdef WIN32
   apr_pool_note_subprocess(pool, proc, APR_KILL_NEVER);
-#else
-  apr_pool_note_subprocess(pool, proc, APR_KILL_ONLY_ONCE);
-#endif
 
   /* APR pipe objects inherit by default.  But we don't want the
    * tunnel agent's pipes held open by future child processes
@@ -213,20 +220,42 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
   apr_file_inherit_unset(proc->in);
   apr_file_inherit_unset(proc->out);
 
+  cb = apr_pcalloc(pool, sizeof(*cb));
+  cb->magic = CLOSE_MAGIC;
+  cb->tb = b;
+  cb->proc = proc;
+
   *request = svn_stream_from_aprfile2(proc->in, FALSE, pool);
   *response = svn_stream_from_aprfile2(proc->out, FALSE, pool);
   *close_func = close_tunnel;
-  open_tunnel_context = *close_baton = &last_tunnel_check;
-  ++tunnel_open_count;
+  *close_baton = cb;
+  ++b->open_count;
   return SVN_NO_ERROR;
 }
 
 static void
 close_tunnel(void *tunnel_context, void *tunnel_baton)
 {
-  assert(tunnel_context == open_tunnel_context);
-  assert(tunnel_baton == check_tunnel_baton);
-  --tunnel_open_count;
+  close_baton_t *b = tunnel_context;
+
+  if (b->magic != CLOSE_MAGIC)
+    abort();
+  if (--b->tb->open_count == 0)
+    {
+      apr_status_t child_exit_status;
+      int child_exit_code;
+      apr_exit_why_e child_exit_why;
+
+      SVN_TEST_ASSERT_NO_RETURN(0 == apr_file_close(b->proc->in));
+      SVN_TEST_ASSERT_NO_RETURN(0 == apr_file_close(b->proc->out));
+
+      child_exit_status =
+        apr_proc_wait(b->proc, &child_exit_code, &child_exit_why, APR_WAIT);
+
+      SVN_TEST_ASSERT_NO_RETURN(child_exit_status == APR_CHILD_DONE);
+      SVN_TEST_ASSERT_NO_RETURN(child_exit_code == 0);
+      SVN_TEST_ASSERT_NO_RETURN(child_exit_why == APR_PROC_EXIT);
+    }
 }
 
 
@@ -272,9 +301,9 @@ location_segments_test(const svn_test_opts_t *opts,
   b.segments = segments;
   b.pool = pool;
 
-  SVN_ERR(make_and_open_local_repos(&session,
-                                    "test-repo-locsegs", opts,
-                                    pool));
+  SVN_ERR(make_and_open_repos(&session,
+                              "test-repo-locsegs", opts,
+                              pool));
 
   /* ### This currently tests only a small subset of what's possible. */
   SVN_ERR(commit_changes(session, pool));
@@ -301,6 +330,7 @@ static svn_error_t *
 check_tunnel_callback_test(const svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
+  tunnel_baton_t b = { TUNNEL_MAGIC };
   svn_ra_callbacks2_t *cbtable;
   svn_ra_session_t *session;
   svn_error_t *err;
@@ -308,7 +338,7 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
-  cbtable->tunnel_baton = check_tunnel_baton = &cbtable;
+  cbtable->tunnel_baton = &b;
   SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
                                         TRUE  /* non_interactive */,
                                         "jrandom", "rayjandom",
@@ -317,13 +347,12 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
                                         FALSE /* trust_server_cert */,
                                         NULL, NULL, NULL, pool));
 
-  last_tunnel_check = TRUE;
-  open_tunnel_context = NULL;
+  b.last_check = TRUE;
   err = svn_ra_open4(&session, NULL, "svn+foo://localhost/no-repo",
                      NULL, cbtable, NULL, NULL, pool);
   svn_error_clear(err);
   SVN_TEST_ASSERT(err);
-  SVN_TEST_ASSERT(!last_tunnel_check);
+  SVN_TEST_ASSERT(!b.last_check);
   return SVN_NO_ERROR;
 }
 
@@ -331,21 +360,26 @@ static svn_error_t *
 tunnel_callback_test(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
-  apr_pool_t *connection_pool;
-  svn_repos_t *repos;
+  tunnel_baton_t b = { TUNNEL_MAGIC };
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
   const char *url;
   svn_ra_callbacks2_t *cbtable;
   svn_ra_session_t *session;
   svn_error_t *err;
+  const char tunnel_repos_name[] = "test-repo-tunnel";
 
-  SVN_ERR(svn_test__create_repos(&repos, tunnel_repos_name, opts, pool));
+  SVN_ERR(svn_test__create_repos(NULL, tunnel_repos_name, opts, scratch_pool));
+
+  /* Immediately close the repository to avoid race condition with svnserve
+     (and then the cleanup code) with BDB when our pool is cleared. */
+  svn_pool_clear(scratch_pool);
 
   url = apr_pstrcat(pool, "svn+test://localhost/", tunnel_repos_name,
                     SVN_VA_NULL);
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
-  cbtable->tunnel_baton = check_tunnel_baton = &cbtable;
+  cbtable->tunnel_baton = &b;
   SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
                                         TRUE  /* non_interactive */,
                                         "jrandom", "rayjandom",
@@ -354,12 +388,9 @@ tunnel_callback_test(const svn_test_opts_t *opts,
                                         FALSE /* trust_server_cert */,
                                         NULL, NULL, NULL, pool));
 
-  last_tunnel_check = FALSE;
-  open_tunnel_context = NULL;
-  tunnel_open_count = 0;
-  connection_pool = svn_pool_create(pool);
+  b.last_check = FALSE;
   err = svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
-                     connection_pool);
+                     scratch_pool);
   if (err && err->apr_err == SVN_ERR_TEST_FAILED)
     {
       svn_handle_error2(err, stderr, FALSE, "svn_tests: ");
@@ -367,12 +398,17 @@ tunnel_callback_test(const svn_test_opts_t *opts,
       return SVN_NO_ERROR;
     }
   SVN_ERR(err);
-  SVN_TEST_ASSERT(last_tunnel_check);
-  SVN_TEST_ASSERT(tunnel_open_count > 0);
-  svn_pool_destroy(connection_pool);
-  SVN_TEST_ASSERT(tunnel_open_count == 0);
+  SVN_TEST_ASSERT(b.last_check);
+  SVN_TEST_ASSERT(b.open_count > 0);
+  svn_pool_destroy(scratch_pool);
+  SVN_TEST_ASSERT(b.open_count == 0);
   return SVN_NO_ERROR;
 }
+
+struct lock_result_t {
+  svn_lock_t *lock;
+  svn_error_t *err;
+};
 
 struct lock_baton_t {
   apr_hash_t *results;
@@ -389,8 +425,8 @@ lock_cb(void *baton,
         apr_pool_t *pool)
 {
   struct lock_baton_t *b = baton;
-  svn_fs_lock_result_t *result = apr_palloc(b->pool,
-                                            sizeof(svn_fs_lock_result_t));
+  struct lock_result_t *result = apr_palloc(b->pool,
+                                            sizeof(struct lock_result_t));
 
   if (lock)
     {
@@ -406,7 +442,7 @@ lock_cb(void *baton,
   result->err = ra_err;
 
   svn_hash_sets(b->results, apr_pstrdup(b->pool, path), result);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -417,7 +453,7 @@ expect_lock(const char *path,
             apr_pool_t *scratch_pool)
 {
   svn_lock_t *lock;
-  svn_fs_lock_result_t *result = svn_hash_gets(results, path);
+  struct lock_result_t *result = svn_hash_gets(results, path);
 
   SVN_TEST_ASSERT(result && result->lock && !result->err);
   SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
@@ -432,10 +468,13 @@ expect_error(const char *path,
              apr_pool_t *scratch_pool)
 {
   svn_lock_t *lock;
-  svn_fs_lock_result_t *result = svn_hash_gets(results, path);
+  struct lock_result_t *result = svn_hash_gets(results, path);
 
-  SVN_TEST_ASSERT(result && !result->lock && result->err);
+  SVN_TEST_ASSERT(result && result->err);
+  SVN_TEST_ASSERT(!result->lock);
+  /* RA layers shouldn't report SVN_ERR_FS_NOT_FOUND */
   SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
+
   SVN_TEST_ASSERT(!lock);
   return SVN_NO_ERROR;
 }
@@ -447,7 +486,7 @@ expect_unlock(const char *path,
               apr_pool_t *scratch_pool)
 {
   svn_lock_t *lock;
-  svn_fs_lock_result_t *result = svn_hash_gets(results, path);
+  struct lock_result_t *result = svn_hash_gets(results, path);
 
   SVN_TEST_ASSERT(result && !result->err);
   SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
@@ -462,7 +501,7 @@ expect_unlock_error(const char *path,
                     apr_pool_t *scratch_pool)
 {
   svn_lock_t *lock;
-  svn_fs_lock_result_t *result = svn_hash_gets(results, path);
+  struct lock_result_t *result = svn_hash_gets(results, path);
 
   SVN_TEST_ASSERT(result && result->err);
   SVN_ERR(svn_ra_get_lock(session, &lock, path, scratch_pool));
@@ -479,12 +518,11 @@ lock_test(const svn_test_opts_t *opts,
   apr_hash_t *lock_targets = apr_hash_make(pool);
   apr_hash_t *unlock_targets = apr_hash_make(pool);
   svn_revnum_t rev = 1;
-  svn_fs_lock_result_t *result;
+  struct lock_result_t *result;
   struct lock_baton_t baton;
   apr_hash_index_t *hi;
 
-  SVN_ERR(make_and_open_local_repos(&session, "test-repo-lock", opts,
-                                    pool));
+  SVN_ERR(make_and_open_repos(&session, "test-repo-lock", opts, pool));
   SVN_ERR(commit_tree(session, pool));
 
   baton.results = apr_hash_make(pool);
@@ -508,7 +546,7 @@ lock_test(const svn_test_opts_t *opts,
 
   /* Unlock without force and wrong lock tokens */
   for (hi = apr_hash_first(pool, lock_targets); hi; hi = apr_hash_next(hi))
-    svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi), "wrong-token");
+    svn_hash_sets(unlock_targets, apr_hash_this_key(hi), "wrong-token");
   apr_hash_clear(baton.results);
   SVN_ERR(svn_ra_unlock(session, unlock_targets, FALSE, lock_cb, &baton, pool));
 
@@ -520,7 +558,7 @@ lock_test(const svn_test_opts_t *opts,
 
   /* Force unlock */
   for (hi = apr_hash_first(pool, lock_targets); hi; hi = apr_hash_next(hi))
-    svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi), "");
+    svn_hash_sets(unlock_targets, apr_hash_this_key(hi), "");
   apr_hash_clear(baton.results);
   SVN_ERR(svn_ra_unlock(session, unlock_targets, TRUE, lock_cb, &baton, pool));
 
@@ -543,8 +581,8 @@ lock_test(const svn_test_opts_t *opts,
 
   for (hi = apr_hash_first(pool, baton.results); hi; hi = apr_hash_next(hi))
     {
-      result = svn__apr_hash_index_val(hi);
-      svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi),
+      result = apr_hash_this_val(hi);
+      svn_hash_sets(unlock_targets, apr_hash_this_key(hi),
                     result->lock ? result->lock->token : "non-existent-token");
     }
   apr_hash_clear(baton.results);
@@ -559,11 +597,77 @@ lock_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Test svn_ra_get_dir2(). */
+static svn_error_t *
+get_dir_test(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  svn_ra_session_t *session;
+  apr_hash_t *dirents;
+
+  SVN_ERR(make_and_open_repos(&session, "test-get-dir", opts, pool));
+  SVN_ERR(commit_tree(session, pool));
+
+  /* This call used to block on ra-svn for 1.8.0...r1656713 */
+  SVN_TEST_ASSERT_ERROR(svn_ra_get_dir2(session, &dirents, NULL, NULL,
+                                        "non/existing/relpath", 1,
+                                        SVN_DIRENT_KIND, pool),
+                        SVN_ERR_FS_NOT_FOUND);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_commit_callback2_t for commit_callback_failure() */
+static svn_error_t *
+commit_callback_with_failure(const svn_commit_info_t *info,
+                             void *baton,
+                             apr_pool_t *scratch_pool)
+{
+  apr_time_t timetemp;
+
+  SVN_TEST_ASSERT(info != NULL);
+  SVN_TEST_STRING_ASSERT(info->author, "jrandom");
+  SVN_TEST_STRING_ASSERT(info->post_commit_err, NULL);
+
+  SVN_ERR(svn_time_from_cstring(&timetemp, info->date, scratch_pool));
+  SVN_TEST_ASSERT(timetemp != 0);
+  SVN_TEST_ASSERT(info->repos_root != NULL);
+  SVN_TEST_ASSERT(info->revision == 1);
+
+  return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+}
+
+static svn_error_t *
+commit_callback_failure(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  void *root_baton;
+  SVN_ERR(make_and_open_repos(&ra_session, "commit_cb_failure", opts, pool));
+
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    apr_hash_make(pool), commit_callback_with_failure,
+                                    NULL, NULL, FALSE, pool));
+
+  SVN_ERR(editor->open_root(edit_baton, 1, pool, &root_baton));
+  SVN_ERR(editor->change_dir_prop(root_baton, "A",
+                                  svn_string_create("B", pool), pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_TEST_ASSERT_ERROR(editor->close_edit(edit_baton, pool),
+                        SVN_ERR_CANCELLED);
+
+  /* This is what users should do if close_edit fails... Except that in this case
+     the commit actually succeeded*/
+  SVN_ERR(editor->abort_edit(edit_baton, pool));
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
 
-static int max_threads = 1;
+static int max_threads = 2;
 
 static struct svn_test_descriptor_t test_funcs[] =
   {
@@ -576,6 +680,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test ra_svn tunnel creation callbacks"),
     SVN_TEST_OPTS_PASS(lock_test,
                        "lock multiple paths"),
+    SVN_TEST_OPTS_PASS(get_dir_test,
+                       "test ra_get_dir2"),
+    SVN_TEST_OPTS_PASS(commit_callback_failure,
+                       "commit callback failure"),
     SVN_TEST_NULL
   };
 

@@ -254,7 +254,8 @@ svn_error_t *svn_fs_fs__dag_clone_root(dag_node_t **root_p,
 
 /* Open the node named NAME in the directory PARENT.  Set *CHILD_P to
    the new node, allocated in RESULT_POOL.  NAME must be a single path
-   component; it cannot be a slash-separated directory path.
+   component; it cannot be a slash-separated directory path.  If NAME does
+   not exist within PARENT, set *CHILD_P to NULL.
  */
 svn_error_t *
 svn_fs_fs__dag_open(dag_node_t **child_p,

@@ -55,6 +55,7 @@
 #include "svn_types.h"
 #include "svn_io.h"       /* for svn_stream_t */
 #include "svn_string.h"
+#include "svn_mergeinfo.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -402,6 +403,9 @@ typedef enum svn_diff_conflict_display_style_t
   /** Like svn_diff_conflict_display_modified_original_latest, but
       *only* showing conflicts. */
   svn_diff_conflict_display_only_conflicts
+
+  /* IMPORTANT: If you extend this enum note that it is mapped in
+     tools/diff/diff3.c. */
 } svn_diff_conflict_display_style_t;
 
 
@@ -471,8 +475,15 @@ typedef struct svn_diff_file_options_t
     * of the nearest preceding line that starts with a character that might be
     * the initial character of a C language identifier.  The default is
     * @c FALSE.
+    * @since New in 1.5.
     */
   svn_boolean_t show_c_function;
+
+  /** The number of context lines produced above and below modifications, if
+   * available. The number of context lines must be >= 0.
+   *
+   * @since New in 1.9 */
+  int context_size;
 } svn_diff_file_options_t;
 
 /** Allocate a @c svn_diff_file_options_t structure in @a pool, initializing
@@ -495,6 +506,7 @@ svn_diff_file_options_create(apr_pool_t *pool);
  * - --ignore-all-space, -w
  * - --ignore-eol-style
  * - --show-c-function, -p @since New in 1.5.
+ * - --context, -U ARG @since New in 1.9.
  * - --unified, -u (for compatibility, does nothing).
  */
 svn_error_t *
@@ -612,6 +624,10 @@ svn_diff_file_diff4(svn_diff_t **diff,
  * path of the target, an error is returned. Finally, if @a relative_to_dir
  * is a URL, an error will be returned.
  *
+ * If @a context_size is not negative, then this number of context lines
+ * will be used in the generated diff output. Otherwise the legacy compile
+ * time default will be used.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -624,12 +640,13 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
                               const char *header_encoding,
                               const char *relative_to_dir,
                               svn_boolean_t show_c_function,
+                              int context_size,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool);
 
 /** Similar to svn_diff_file_output_unified3(), but without cancel
- * support.
+ * support and with @a context_size set to -1.
  *
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.8 API.
@@ -690,8 +707,30 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
  * @a conflict_separator is @c NULL, a default marker will be displayed.
  * @a conflict_style dictates how conflicts are displayed.
  *
- * @since New in 1.6.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_diff_file_output_merge3(svn_stream_t *output_stream,
+                            svn_diff_t *diff,
+                            const char *original_path,
+                            const char *modified_path,
+                            const char *latest_path,
+                            const char *conflict_original,
+                            const char *conflict_modified,
+                            const char *conflict_latest,
+                            const char *conflict_separator,
+                            svn_diff_conflict_display_style_t conflict_style,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
+
+/** Similar to svn_diff_file_output_merge3, but without cancel support.
+ *
+ * @since New in 1.6.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_merge2(svn_stream_t *output_stream,
                             svn_diff_t *diff,
@@ -735,7 +774,25 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
                            svn_boolean_t display_resolved_conflicts,
                            apr_pool_t *pool);
 
-
+/** Creates a git-like binary diff hunk describing the differences between
+ * @a original and @a latest. It does this by either producing either the
+ * literal content of both versions in a compressed format, or by describing
+ * one way transforms.
+ *
+ * Either @a original or @a latest may be NULL to describe that the version
+ * didn't exist.
+ *
+ * Writes the ouput to @a output_stream.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_diff_output_binary(svn_stream_t *output_stream,
+                       svn_stream_t *original,
+                       svn_stream_t *latest,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *scratch_pool);
 
 /* Diffs on in-memory structures */
 
@@ -797,8 +854,35 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
  * final line use the text "\ No newline at end of property" instead of
  * "\ No newline at end of file".
  *
- * @since New in 1.7. Hunk delimiter "##" has the special meaning since 1.8.
+ * If @a context_size is not negative, then this number of context lines
+ * will be used in the generated diff output. Otherwise the legacy compile
+ * time default will be used.
+ *
+ * @since New in 1.9
  */
+svn_error_t *
+svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
+                                    svn_diff_t *diff,
+                                    svn_boolean_t with_diff_header,
+                                    const char *hunk_delimiter,
+                                    const char *original_header,
+                                    const char *modified_header,
+                                    const char *header_encoding,
+                                    const svn_string_t *original,
+                                    const svn_string_t *modified,
+                                    int context_size,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
+                                    apr_pool_t *pool);
+
+/** Similar to svn_diff_mem_string_output_unified3() but without
+ * cancel support and with @a context_size set to -1.
+ *
+ * @since New in 1.7. Hunk delimiter "##" has the special meaning since 1.8.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
                                     svn_diff_t *diff,
@@ -816,7 +900,10 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
  * set to NULL.
  *
  * @since New in 1.5.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.8 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
                                    svn_diff_t *diff,
@@ -837,8 +924,30 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
  *
  * @a conflict_style dictates how conflicts are displayed.
  *
- * @since New in 1.6.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
+                                  svn_diff_t *diff,
+                                  const svn_string_t *original,
+                                  const svn_string_t *modified,
+                                  const svn_string_t *latest,
+                                  const char *conflict_original,
+                                  const char *conflict_modified,
+                                  const char *conflict_latest,
+                                  const char *conflict_separator,
+                                  svn_diff_conflict_display_style_t style,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *pool);
+
+/** Similar to svn_diff_mem_string_output_merge2(), but without cancel support.
+ *
+ * @since New in 1.6.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                   svn_diff_t *diff,
@@ -947,7 +1056,7 @@ typedef struct svn_diff_hunk_t svn_diff_hunk_t;
 /**
  * Allocate @a *stringbuf in @a result_pool, and read into it one line
  * of the diff text of @a hunk. The hunk header is not returned only the
- * unidiff data lines (starting with '+', '-', or ' ') are returned.  
+ * unidiff data lines (starting with '+', '-', or ' ') are returned.
  * If the @a hunk is being interpreted in reverse (i.e. the reverse
  * parameter of svn_diff_parse_next_patch() was @c TRUE), the diff
  * text will be returned in reversed form.
@@ -958,7 +1067,7 @@ typedef struct svn_diff_hunk_t svn_diff_hunk_t;
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @note The hunk header information can be retrieved with the following
- * functions: 
+ * functions:
  * @see svn_diff_hunk_get_original_start()
  * @see svn_diff_hunk_get_original_length()
  * @see svn_diff_hunk_get_modified_start()
@@ -1109,6 +1218,14 @@ typedef struct svn_patch_t {
   /**
    * Indicates whether the patch is being interpreted in reverse. */
   svn_boolean_t reverse;
+
+  /**
+   * Mergeinfo parsed from svn:mergeinfo diff data, with one entry for
+   * forward merges and one for reverse merges.
+   * Either entry can be @c NULL if no such merges are part of the diff.
+   * @since New in 1.9. */
+  svn_mergeinfo_t mergeinfo;
+  svn_mergeinfo_t reverse_mergeinfo;
 } svn_patch_t;
 
 /** An opaque type representing an open patch file.

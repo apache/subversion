@@ -57,7 +57,8 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_fs_fs__revision_file_t *file;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, right, iterpool);
+      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, right, iterpool,
+                                             iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
         {
           svn_error_clear(err);
@@ -80,7 +81,8 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_fs_fs__revision_file_t *file;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, probe, iterpool);
+      err = svn_fs_fs__open_pack_or_rev_file(&file, fs, probe, iterpool,
+                                             iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
         {
           svn_error_clear(err);
@@ -161,7 +163,7 @@ recover_find_max_ids(svn_fs_t *fs,
 
   baton.stream = rev_file->stream;
   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool));
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool, pool));
 
   /* Check that this is a directory.  It should be. */
   if (noderev->kind != svn_node_dir)
@@ -184,14 +186,14 @@ recover_find_max_ids(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rev, NULL,
                                  noderev->data_rep->item_index, pool));
   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool, pool));
   if (header->type != svn_fs_fs__rep_plain)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a deltified directory "
                               "representation"));
 
   /* Now create a stream that's allowed to read only as much data as is
-     stored in the representation.  Note that this is a directory, i.e. 
+     stored in the representation.  Note that this is a directory, i.e.
      represented using the hash format on disk and can never have 0 length. */
   baton.pool = pool;
   baton.remaining = noderev->data_rep->expanded_size
@@ -214,11 +216,11 @@ recover_find_max_ids(svn_fs_t *fs,
       char *str_val;
       char *str;
       svn_node_kind_t kind;
-      svn_fs_id_t *id;
+      const svn_fs_id_t *id;
       const svn_fs_fs__id_part_t *rev_item;
       apr_uint64_t node_id, copy_id;
       apr_off_t child_dir_offset;
-      const svn_string_t *path = svn__apr_hash_index_val(hi);
+      const svn_string_t *path = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -244,7 +246,7 @@ recover_find_max_ids(svn_fs_t *fs,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
+      SVN_ERR(svn_fs_fs__id_parse(&id, str, iterpool));
 
       rev_item = svn_fs_fs__id_rev_item(id);
       if (rev_item->revision != rev)
@@ -321,29 +323,6 @@ recover_get_root_offset(apr_off_t *root_offset,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__find_max_ids(svn_fs_t *fs,
-                        svn_revnum_t youngest,
-                        apr_uint64_t *max_node_id,
-                        apr_uint64_t *max_copy_id,
-                        apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  apr_off_t root_offset;
-  svn_fs_fs__revision_file_t *rev_file;
-
-  /* call this function for old repo formats only */
-  SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
-
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
-  SVN_ERR(recover_get_root_offset(&root_offset, youngest, rev_file, pool));
-  SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
-                               max_node_id, max_copy_id, pool));
-  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
-
-  return SVN_NO_ERROR;
-}
-
 /* Baton used for recover_body below. */
 struct recover_baton {
   svn_fs_t *fs;
@@ -366,8 +345,10 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
 
-  /* Lose potentially corrupted data in temp files */
-  SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(fs));
+  /* The admin may have created a plain copy of this repo before attempting
+     to recover it (hotcopy may or may not work with corrupted repos).
+     Bump the instance ID. */
+  SVN_ERR(svn_fs_fs__set_uuid(fs, fs->uuid, NULL, pool));
 
   /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
@@ -425,13 +406,20 @@ recover_body(void *baton, apr_pool_t *pool)
 
       for (rev = 0; rev <= max_rev; rev++)
         {
+          svn_fs_fs__revision_file_t *rev_file;
+          apr_off_t root_offset;
+
           svn_pool_clear(iterpool);
 
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(svn_fs_fs__find_max_ids(fs, rev, &next_node_id,
-                                          &next_copy_id, iterpool));
+          SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool,
+                                                   iterpool));
+          SVN_ERR(recover_get_root_offset(&root_offset, rev, rev_file, pool));
+          SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
+                                       &next_node_id, &next_copy_id, pool));
+          SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
         }
       svn_pool_destroy(iterpool);
 
@@ -507,5 +495,5 @@ svn_fs_fs__recover(svn_fs_t *fs,
   b.fs = fs;
   b.cancel_func = cancel_func;
   b.cancel_baton = cancel_baton;
-  return svn_fs_fs__with_write_lock(fs, recover_body, &b, pool);
+  return svn_fs_fs__with_all_locks(fs, recover_body, &b, pool);
 }

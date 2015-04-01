@@ -223,15 +223,12 @@ random_eol_marker(void)
 static svn_error_t *
 create_file(const char *fname, const char *eol_str, apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   apr_file_t *f;
   apr_size_t i, j;
 
-  apr_err = apr_file_open(&f, fname,
+  SVN_ERR(svn_io_file_open(&f, fname,
                           (APR_WRITE | APR_CREATE | APR_EXCL | APR_BINARY),
-                          APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_create(apr_err, NULL, fname);
+                          APR_OS_DEFAULT, pool));
 
   for (i = 0; i < (sizeof(lines) / sizeof(*lines)); i++)
     {
@@ -243,44 +240,12 @@ create_file(const char *fname, const char *eol_str, apr_pool_t *pool)
          fprintf() doing a newline conversion? */
       for (j = 0; this_eol_str[j]; j++)
         {
-          apr_err = apr_file_putc(this_eol_str[j], f);
-          if (apr_err)
-            return svn_error_create(apr_err, NULL, fname);
+          SVN_ERR(svn_io_file_putc(this_eol_str[j], f, pool));
         }
     }
 
-  apr_err = apr_file_close(f);
-  if (apr_err)
-    return svn_error_create(apr_err, NULL, fname);
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_io_file_close(f, pool));
 }
-
-
-/* If FNAME is a regular file, remove it; if it doesn't exist at all,
-   return success.  Otherwise, return error. */
-static svn_error_t *
-remove_file(const char *fname, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  apr_finfo_t finfo;
-
-  if (apr_stat(&finfo, fname, APR_FINFO_TYPE, pool) == APR_SUCCESS)
-    {
-      if (finfo.filetype == APR_REG)
-        {
-          apr_err = apr_file_remove(fname, pool);
-          if (apr_err)
-            return svn_error_create(apr_err, NULL, fname);
-        }
-      else
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "non-file '%s' is in the way", fname);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Set up, run, and verify the results of a substitution.
  *
@@ -331,8 +296,8 @@ substitute_and_verify(const char *test_name,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /** Clean up from previous tests, set up src data, and convert. **/
-  SVN_ERR(remove_file(src_fname, pool));
-  SVN_ERR(remove_file(dst_fname, pool));
+  SVN_ERR(svn_io_remove_file2(src_fname, TRUE, pool));
+  SVN_ERR(svn_io_remove_file2(dst_fname, TRUE, pool));
   SVN_ERR(create_file(src_fname, src_eol, pool));
 
   if (rev)
@@ -395,7 +360,7 @@ substitute_and_verify(const char *test_name,
       else
         {
           svn_error_clear(err);
-          SVN_ERR(remove_file(src_fname, pool));
+          SVN_ERR(svn_io_remove_file2(src_fname, FALSE, pool));
           return SVN_NO_ERROR;
         }
 
@@ -769,8 +734,8 @@ substitute_and_verify(const char *test_name,
     }
 
   /* Clean up this test, since successful. */
-  SVN_ERR(remove_file(src_fname, pool));
-  SVN_ERR(remove_file(dst_fname, pool));
+  SVN_ERR(svn_io_remove_file2(src_fname, FALSE, pool));
+  SVN_ERR(svn_io_remove_file2(dst_fname, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

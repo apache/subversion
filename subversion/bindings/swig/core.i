@@ -379,19 +379,19 @@
 #ifdef SWIGPYTHON
 %typemap(in) (char *buffer, apr_size_t *len) ($*2_type temp) {
     if (PyLong_Check($input)) {
-        temp = PyLong_AsLong($input);
+        temp = PyLong_AsUnsignedLong($input);
     }
     else if (PyInt_Check($input)) {
-        temp = PyInt_AsLong($input);
+        /* wish there was a PyInt_AsUnsignedLong but there isn't
+           the mask version doesn't do bounds checking for us.
+           I can't see a good way to do the bounds checking ourselves
+           so just stick our head in the sand.  With Python3 this
+           problem goes away because PyInt is gone anyway. */
+        temp = PyInt_AsUnsignedLongMask($input);
     }
     else {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
-        SWIG_fail;
-    }
-    if (temp < 0) {
-        PyErr_SetString(PyExc_ValueError,
-                        "buffer size must be a positive integer");
         SWIG_fail;
     }
     $1 = malloc(temp);
@@ -800,10 +800,11 @@ core_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGPYTHON
-# The auth baton depends on the providers, so we preserve a
-# reference to them inside the wrapper. This way, if all external
-# references to the providers are gone, they will still be alive,
-# keeping the baton valid.
+/* The auth baton depends on the providers, so we preserve a
+   reference to them inside the wrapper. This way, if all external
+   references to the providers are gone, they will still be alive,
+   keeping the baton valid.
+ */
 %feature("pythonappend") svn_auth_open %{
   val.__dict__["_deps"] = list(args[0])
 %}

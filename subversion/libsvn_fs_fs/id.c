@@ -48,12 +48,67 @@ typedef struct fs_fs__id_t
 
 
 
+/** Like strtol but with a fixed base of 10, locale independent and limited
+ * to non-negative values.  Overflows are indicated by a FALSE return value
+ * in which case *RESULT_P will not be modified.
+ *
+ * This allows the compiler to generate massively faster code.
+ * (E.g. Avoiding locale specific processing).  ID parsing is one of the
+ * most CPU consuming parts of FSFS data access.  Better be quick.
+ */
+static svn_boolean_t
+locale_independent_strtol(long *result_p,
+                          const char* buffer,
+                          const char** end)
+{
+  /* We allow positive values only.  We use unsigned arithmetics to get
+   * well-defined overflow behavior.  It also happens to allow for a wider
+   * range of compiler-side optimizations. */
+  unsigned long result = 0;
+  while (1)
+    {
+      unsigned long c = (unsigned char)*buffer - (unsigned char)'0';
+      unsigned long next;
+
+      /* This implies the NUL check. */
+      if (c > 9)
+        break;
+
+      /* Overflow check.  Passing this, NEXT can be no more than ULONG_MAX+9
+       * before being truncated to ULONG but it still covers 0 .. ULONG_MAX.
+       */
+      if (result > ULONG_MAX / 10)
+        return FALSE;
+
+      next = result * 10 + c;
+
+      /* Overflow check.  In case of an overflow, NEXT is 0..9.
+       * In the non-overflow case, RESULT is either >= 10 or RESULT and NEXT
+       * are both 0. */
+      if (next < result)
+        return FALSE;
+
+      result = next;
+      ++buffer;
+    }
+
+  *end = buffer;
+  if (result > LONG_MAX)
+    return FALSE;
+
+  *result_p = (long)result;
+
+  return TRUE;
+}
+
 /* Parse the NUL-terminated ID part at DATA and write the result into *PART.
  * Return TRUE if no errors were detected. */
 static svn_boolean_t
 part_parse(svn_fs_fs__id_part_t *part,
            const char *data)
 {
+  const char *end;
+
   /* special case: ID inside some transaction */
   if (data[0] == '_')
     {
@@ -78,9 +133,7 @@ part_parse(svn_fs_fs__id_part_t *part,
       return *data == '\0';
     }
 
-  part->revision = SVN_STR_TO_REV(++data);
-
-  return TRUE;
+  return locale_independent_strtol(&part->revision, data+1, &end);
 }
 
 /* Parse the transaction id in DATA and store the result in *TXN_ID.
@@ -90,12 +143,16 @@ static svn_boolean_t
 txn_id_parse(svn_fs_fs__id_part_t *txn_id,
              const char *data)
 {
-  txn_id->revision = SVN_STR_TO_REV(data);
-  data = strchr(data, '-');
-  if (data == NULL)
+  const char *end;
+  if (!locale_independent_strtol(&txn_id->revision, data, &end))
     return FALSE;
-  
-  txn_id->number = svn__base36toui64(&data, ++data);
+
+  data = end;
+  if (*data != '-')
+    return FALSE;
+
+  ++data;
+  txn_id->number = svn__base36toui64(&data, data);
   return *data == '\0';
 }
 
@@ -175,7 +232,7 @@ svn_fs_fs__id_txn_unparse(const svn_fs_fs__id_part_t *txn_id,
 {
   char string[2 * SVN_INT64_BUFFER_SIZE + 1];
   char *p = string;
-  
+
   p += svn__i64toa(p, txn_id->revision);
   *(p++) = '-';
   p += svn__ui64tobase36(p, txn_id->number);
@@ -287,8 +344,14 @@ svn_fs_fs__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return memcmp(&id_a->private_id, &id_b->private_id,
-                sizeof(id_a->private_id)) == 0;
+  return svn_fs_fs__id_part_eq(&id_a->private_id.node_id,
+                               &id_b->private_id.node_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.copy_id,
+                               &id_b->private_id.copy_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
+                               &id_b->private_id.txn_id)
+      && svn_fs_fs__id_part_eq(&id_a->private_id.rev_item,
+                               &id_b->private_id.rev_item);
 }
 
 
@@ -355,7 +418,7 @@ svn_fs_fs__id_txn_create_root(const svn_fs_fs__id_part_t *txn_id,
   fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
   /* node ID and copy ID are "0" */
-  
+
   id->private_id.txn_id = *txn_id;
   id->private_id.rev_item.revision = SVN_INVALID_REVNUM;
 
@@ -424,26 +487,21 @@ svn_fs_id_t *
 svn_fs_fs__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
   const fs_fs__id_t *id = (const fs_fs__id_t *)source;
-  fs_fs__id_t *new_id = apr_palloc(pool, sizeof(*new_id));
+  fs_fs__id_t *new_id = apr_pmemdup(pool, id, sizeof(*new_id));
 
-  *new_id = *id;
   new_id->generic_id.fsap_data = new_id;
 
   return (svn_fs_id_t *)new_id;
 }
 
-
-svn_fs_id_t *
-svn_fs_fs__id_parse(const char *data,
-                    apr_size_t len,
-                    apr_pool_t *pool)
+/* Return an ID resulting from parsing the string DATA, or NULL if DATA is
+   an invalid ID string. *DATA will be modified / invalidated by this call. */
+static svn_fs_id_t *
+id_parse(char *data,
+         apr_pool_t *pool)
 {
   fs_fs__id_t *id;
-  char *data_copy, *str;
-
-  /* Dup the ID data into POOL.  Our returned ID will have references
-     into this memory. */
-  data_copy = apr_pstrmemdup(pool, data, len);
+  char *str;
 
   /* Alloc a new svn_fs_id_t structure. */
   id = apr_pcalloc(pool, sizeof(*id));
@@ -457,40 +515,43 @@ svn_fs_fs__id_parse(const char *data,
      string.*/
 
   /* Node Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->private_id.node_id, str))
     return NULL;
 
   /* Copy Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
   if (! part_parse(&id->private_id.copy_id, str))
     return NULL;
 
   /* Txn/Rev Id */
-  str = svn_cstring_tokenize(".", &data_copy);
+  str = svn_cstring_tokenize(".", &data);
   if (str == NULL)
     return NULL;
 
   if (str[0] == 'r')
     {
       apr_int64_t val;
+      const char *tmp;
       svn_error_t *err;
 
       /* This is a revision type ID */
       id->private_id.txn_id.revision = SVN_INVALID_REVNUM;
       id->private_id.txn_id.number = 0;
 
-      data_copy = str + 1;
-      str = svn_cstring_tokenize("/", &data_copy);
+      data = str + 1;
+      str = svn_cstring_tokenize("/", &data);
       if (str == NULL)
         return NULL;
-      id->private_id.rev_item.revision = SVN_STR_TO_REV(str);
+      if (!locale_independent_strtol(&id->private_id.rev_item.revision,
+                                     str, &tmp))
+        return NULL;
 
-      err = svn_cstring_atoi64(&val, data_copy);
+      err = svn_cstring_atoi64(&val, data);
       if (err)
         {
           svn_error_clear(err);
@@ -513,6 +574,21 @@ svn_fs_fs__id_parse(const char *data,
   return (svn_fs_id_t *)id;
 }
 
+svn_error_t *
+svn_fs_fs__id_parse(const svn_fs_id_t **id_p,
+                    char *data,
+                    apr_pool_t *pool)
+{
+  svn_fs_id_t *id = id_parse(data, pool);
+  if (id == NULL)
+    return svn_error_createf(SVN_ERR_FS_MALFORMED_NODEREV_ID, NULL,
+                             "Malformed node revision ID string");
+
+  *id_p = id;
+
+  return SVN_NO_ERROR;
+}
+
 /* (de-)serialization support */
 
 /* Serialize an ID within the serialization CONTEXT.
@@ -522,7 +598,7 @@ svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
                         const svn_fs_id_t * const *in)
 {
   const fs_fs__id_t *id = (const fs_fs__id_t *)*in;
-  
+
   /* nothing to do for NULL ids */
   if (id == NULL)
     return;

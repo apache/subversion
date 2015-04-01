@@ -1299,7 +1299,7 @@ svn_path_resolve_repos_relative_url(const char **absolute_url,
                              _("Improper relative URL '%s'"),
                              relative_url);
 
-  /* No assumptions are made about the canonicalization of the inut
+  /* No assumptions are made about the canonicalization of the input
    * arguments, it is presumed that the output will be canonicalized after
    * this function, which will remove any duplicate path separator.
    */

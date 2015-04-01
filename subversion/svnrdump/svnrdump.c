@@ -39,6 +39,7 @@
 
 #include "svnrdump.h"
 
+#include "private/svn_repos_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_ra_private.h"
 
@@ -84,6 +85,11 @@ enum svn_svnrdump__longopt_t
     opt_force_interactive,
     opt_incremental,
     opt_trust_server_cert,
+    opt_trust_server_cert_unknown_ca,
+    opt_trust_server_cert_cn_mismatch,
+    opt_trust_server_cert_expired,
+    opt_trust_server_cert_not_yet_valid,
+    opt_trust_server_cert_other_failure,
     opt_version
   };
 
@@ -93,6 +99,11 @@ enum svn_svnrdump__longopt_t
                                    opt_auth_password, \
                                    opt_auth_nocache, \
                                    opt_trust_server_cert, \
+                                   opt_trust_server_cert_unknown_ca, \
+                                   opt_trust_server_cert_cn_mismatch, \
+                                   opt_trust_server_cert_expired, \
+                                   opt_trust_server_cert_not_yet_valid, \
+                                   opt_trust_server_cert_other_failure, \
                                    opt_non_interactive, \
                                    opt_force_interactive
 
@@ -154,11 +165,29 @@ static const apr_getopt_option_t svnrdump__options[] =
                          "                             "
                          "    servers:global:http-library=serf")},
     {"trust-server-cert", opt_trust_server_cert, 0,
-                      N_("accept SSL server certificates from unknown\n"
+                      N_("deprecated; same as --trust-unknown-ca")},
+    {"trust-unknown-ca", opt_trust_server_cert_unknown_ca, 0,
+                      N_("with --non-interactive, accept SSL server\n"
                          "                             "
-                         "certificate authorities without prompting (but only\n"
+                         "certificates from unknown certificate authorities")},
+    {"trust-cn-mismatch", opt_trust_server_cert_cn_mismatch, 0,
+                      N_("with --non-interactive, accept SSL server\n"
                          "                             "
-                         "with '--non-interactive')") },
+                         "certificates even if the server hostname does not\n"
+                         "                             "
+                         "match the certificate's common name attribute")},
+    {"trust-expired", opt_trust_server_cert_expired, 0,
+                      N_("with --non-interactive, accept expired SSL server\n"
+                         "                             "
+                         "certificates")},
+    {"trust-not-yet-valid", opt_trust_server_cert_not_yet_valid, 0,
+                      N_("with --non-interactive, accept SSL server\n"
+                         "                             "
+                         "certificates from the future")},
+    {"trust-other-failure", opt_trust_server_cert_other_failure, 0,
+                      N_("with --non-interactive, accept SSL server\n"
+                         "                             "
+                         "certificates with failures other than the above")},
     {0, 0, 0, 0}
   };
 
@@ -201,38 +230,13 @@ replay_revstart(svn_revnum_t revision,
 {
   struct replay_baton *rb = replay_baton;
   apr_hash_t *normal_props;
-  svn_stringbuf_t *propstring;
-  svn_stream_t *stdout_stream;
-  svn_stream_t *revprop_stream;
 
-  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
-
-  /* Revision-number: 19 */
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                            ": %ld\n", revision));
+  /* Normalize and dump the revprops */
   SVN_ERR(svn_rdump__normalize_props(&normal_props, rev_props, pool));
-  propstring = svn_stringbuf_create_ensure(0, pool);
-  revprop_stream = svn_stream_from_stringbuf(propstring, pool);
-  SVN_ERR(svn_hash_write2(normal_props, revprop_stream, "PROPS-END", pool));
-  SVN_ERR(svn_stream_close(revprop_stream));
-
-  /* Prop-content-length: 13 */
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n", propstring->len));
-
-  /* Content-length: 29 */
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n\n", propstring->len));
-
-  /* Property data. */
-  SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
-                           &(propstring->len)));
-
-  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
-  SVN_ERR(svn_stream_close(stdout_stream));
+  SVN_ERR(svn_repos__dump_revision_record(rb->stdout_stream, revision, NULL,
+                                          normal_props,
+                                          TRUE /*props_section_always*/,
+                                          pool));
 
   SVN_ERR(svn_rdump__get_dump_editor(editor, edit_baton, revision,
                                      rb->stdout_stream, rb->extra_ra_session,
@@ -275,38 +279,13 @@ replay_revstart_v2(svn_revnum_t revision,
 {
   struct replay_baton *rb = replay_baton;
   apr_hash_t *normal_props;
-  svn_stringbuf_t *propstring;
-  svn_stream_t *stdout_stream;
-  svn_stream_t *revprop_stream;
 
-  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
-
-  /* Revision-number: 19 */
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                            ": %ld\n", revision));
+  /* Normalize and dump the revprops */
   SVN_ERR(svn_rdump__normalize_props(&normal_props, rev_props, pool));
-  propstring = svn_stringbuf_create_ensure(0, pool);
-  revprop_stream = svn_stream_from_stringbuf(propstring, pool);
-  SVN_ERR(svn_hash_write2(normal_props, revprop_stream, "PROPS-END", pool));
-  SVN_ERR(svn_stream_close(revprop_stream));
-
-  /* Prop-content-length: 13 */
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n", propstring->len));
-
-  /* Content-length: 29 */
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n\n", propstring->len));
-
-  /* Property data. */
-  SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
-                           &(propstring->len)));
-
-  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
-  SVN_ERR(svn_stream_close(stdout_stream));
+  SVN_ERR(svn_repos__dump_revision_record(rb->stdout_stream, revision,
+                                          normal_props,
+                                          TRUE /*props_section_always*/,
+                                          pool));
 
   SVN_ERR(svn_rdump__get_dump_editor_v2(editor, revision,
                                         rb->stdout_stream,
@@ -352,7 +331,11 @@ init_client_context(svn_client_ctx_t **ctx_p,
                     const char *config_dir,
                     const char *repos_url,
                     svn_boolean_t no_auth_cache,
-                    svn_boolean_t trust_server_cert,
+                    svn_boolean_t trust_unknown_ca,
+                    svn_boolean_t trust_cn_mismatch,
+                    svn_boolean_t trust_expired,
+                    svn_boolean_t trust_not_yet_valid,
+                    svn_boolean_t trust_other_failure,
                     apr_array_header_t *config_options,
                     apr_pool_t *pool)
 {
@@ -416,11 +399,14 @@ init_client_context(svn_client_ctx_t **ctx_p,
   ctx->cancel_func = check_cancel;
 
   /* Default authentication providers for non-interactive use */
-  SVN_ERR(svn_cmdline_create_auth_baton(&(ctx->auth_baton), non_interactive,
-                                        username, password, config_dir,
-                                        no_auth_cache, trust_server_cert,
-                                        cfg_config, ctx->cancel_func,
-                                        ctx->cancel_baton, pool));
+  SVN_ERR(svn_cmdline_create_auth_baton2(&(ctx->auth_baton), non_interactive,
+                                         username, password, config_dir,
+                                         no_auth_cache, trust_unknown_ca,
+                                         trust_cn_mismatch, trust_expired,
+                                         trust_not_yet_valid,
+                                         trust_other_failure,
+                                         cfg_config, ctx->cancel_func,
+                                         ctx->cancel_baton, pool));
   *ctx_p = ctx;
   return SVN_NO_ERROR;
 }
@@ -436,35 +422,12 @@ dump_revision_header(svn_ra_session_t *session,
                      apr_pool_t *pool)
 {
   apr_hash_t *prophash;
-  svn_stringbuf_t *propstring;
-  svn_stream_t *propstream;
 
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                            ": %ld\n", revision));
-
-  prophash = apr_hash_make(pool);
-  propstring = svn_stringbuf_create_empty(pool);
   SVN_ERR(svn_ra_rev_proplist(session, revision, &prophash, pool));
-
-  propstream = svn_stream_from_stringbuf(propstring, pool);
-  SVN_ERR(svn_hash_write2(prophash, propstream, "PROPS-END", pool));
-  SVN_ERR(svn_stream_close(propstream));
-
-  /* Property-content-length: 14; Content-length: 14 */
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n",
-                            propstring->len));
-  SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                            ": %" APR_SIZE_T_FMT "\n\n",
-                            propstring->len));
-  /* The properties */
-  SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
-                           &(propstring->len)));
-  SVN_ERR(svn_stream_puts(stdout_stream, "\n"));
-
+  SVN_ERR(svn_repos__dump_revision_record(stdout_stream, revision, NULL,
+                                          prophash,
+                                          TRUE /*props_section_always*/,
+                                          pool));
   return SVN_NO_ERROR;
 }
 
@@ -837,7 +800,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   const char *username = NULL;
   const char *password = NULL;
   svn_boolean_t no_auth_cache = FALSE;
-  svn_boolean_t trust_server_cert = FALSE;
+  svn_boolean_t trust_unknown_ca = FALSE;
+  svn_boolean_t trust_cn_mismatch = FALSE;
+  svn_boolean_t trust_expired = FALSE;
+  svn_boolean_t trust_not_yet_valid = FALSE;
+  svn_boolean_t trust_other_failure = FALSE;
   svn_boolean_t non_interactive = FALSE;
   svn_boolean_t force_interactive = FALSE;
   apr_array_header_t *config_options = NULL;
@@ -959,8 +926,21 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
           svn_hash_sets(opt_baton->skip_revprops, opt_arg, opt_arg);
           break;
-        case opt_trust_server_cert:
-          trust_server_cert = TRUE;
+        case opt_trust_server_cert: /* backward compat */
+        case opt_trust_server_cert_unknown_ca:
+          trust_unknown_ca = TRUE;
+          break;
+        case opt_trust_server_cert_cn_mismatch:
+          trust_cn_mismatch = TRUE;
+          break;
+        case opt_trust_server_cert_expired:
+          trust_expired = TRUE;
+          break;
+        case opt_trust_server_cert_not_yet_valid:
+          trust_not_yet_valid = TRUE;
+          break;
+        case opt_trust_server_cert_other_failure:
+          trust_other_failure = TRUE;
           break;
         case opt_config_option:
           if (!config_options)
@@ -1076,12 +1056,29 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
 
-  /* --trust-server-cert can only be used with --non-interactive */
-  if (trust_server_cert && !non_interactive)
+  /* --trust-* can only be used with --non-interactive */
+  if (!non_interactive)
     {
+      if (trust_unknown_ca)
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--trust-server-cert requires "
+                              _("--trust-unknown-ca requires "
                                 "--non-interactive"));
+      if (trust_cn_mismatch)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-cn-mismatch requires "
+                                  "--non-interactive"));
+      if (trust_expired)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-expired requires "
+                                  "--non-interactive"));
+      if (trust_not_yet_valid)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-not-yet-valid requires "
+                                  "--non-interactive"));
+      if (trust_other_failure)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-other-failure requires "
+                                  "--non-interactive"));
     }
 
   /* Expect one more non-option argument:  the repository URL. */
@@ -1107,7 +1104,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (strcmp(subcommand->name, "load") == 0)
     {
-      /* 
+      /*
        * By default (no --*-interactive options given), the 'load' subcommand
        * is interactive unless username and password were provided on the
        * command line. This allows prompting for auth creds to work without
@@ -1128,7 +1125,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                               config_dir,
                               opt_baton->url,
                               no_auth_cache,
-                              trust_server_cert,
+                              trust_unknown_ca,
+                              trust_cn_mismatch,
+                              trust_expired,
+                              trust_not_yet_valid,
+                              trust_other_failure,
                               config_options,
                               pool));
 

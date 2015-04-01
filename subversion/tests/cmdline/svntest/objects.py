@@ -156,7 +156,7 @@ class SvnRepository:
 
     """Run 'svnadmin dump' on the repository."""
     exit_code, stdout, stderr = \
-      actions.run_and_verify_svnadmin(None, None, None,
+      actions.run_and_verify_svnadmin(None, None,
                                       'dump', self.repo_absdir)
     ldumpfile = local_path(output_dir + "/svnadmin.dump")
     main.file_write(ldumpfile, ''.join(stderr))
@@ -167,7 +167,7 @@ class SvnRepository:
     make, and each directory is a path relative to the repository root,
     neither starting nor ending with a slash."""
     urls = [self.repo_url + '/' + dir for dir in dirs]
-    actions.run_and_verify_svn(None, None, [],
+    actions.run_and_verify_svn(None, [],
                                'mkdir', '-m', 'svn_mkdirs()', '--parents',
                                *urls)
     self.head_rev += 1
@@ -207,7 +207,7 @@ class SvnWC:
 
   def svn_mkdir(self, rpath):
     lpath = local_path(rpath)
-    actions.run_and_verify_svn(None, None, [], 'mkdir', lpath)
+    actions.run_and_verify_svn(None, [], 'mkdir', lpath)
 
     self.state.add({
       rpath : wc.StateItem(status='A ')
@@ -216,7 +216,7 @@ class SvnWC:
 #  def propset(self, pname, pvalue, *rpaths):
 #    "Set property 'pname' to value 'pvalue' on each path in 'rpaths'"
 #    local_paths = tuple([local_path(rpath) for rpath in rpaths])
-#    actions.run_and_verify_svn(None, None, [], 'propset', pname, pvalue,
+#    actions.run_and_verify_svn(None, [], 'propset', pname, pvalue,
 #                               *local_paths)
 
   def svn_set_props(self, rpath, props):
@@ -224,10 +224,10 @@ class SvnWC:
     """
     lpath = local_path(rpath)
     #for prop in path's existing props:
-    #  actions.run_and_verify_svn(None, None, [], 'propdel',
+    #  actions.run_and_verify_svn(None, [], 'propdel',
     #                             prop, lpath)
     for prop in props:
-      actions.run_and_verify_svn(None, None, [], 'propset',
+      actions.run_and_verify_svn(None, [], 'propset',
                                  prop, props[prop], lpath)
     self.state.tweak(rpath, props=props)
 
@@ -240,7 +240,7 @@ class SvnWC:
       content = "This is the file '" + filename + "'.\n" + \
                 "Last changed in '$Revision$'.\n"
     main.file_write(lpath, content)
-    actions.run_and_verify_svn(None, None, [], 'add', lpath)
+    actions.run_and_verify_svn(None, [], 'add', lpath)
 
     self.state.add({
       rpath : wc.StateItem(status='A ')
@@ -257,7 +257,7 @@ class SvnWC:
     lpath = local_path(rpath)
     if content is not None:
       #main.file_append(lpath, "An extra line.\n")
-      #actions.run_and_verify_svn(None, None, [], 'propset',
+      #actions.run_and_verify_svn(None, [], 'propset',
       #                           'newprop', 'v', lpath)
       main.file_write(lpath, content)
       self.state.tweak(rpath, content=content)
@@ -274,7 +274,7 @@ class SvnWC:
     args = [lpath1, lpath2]
     if parents:
       args += ['--parents']
-    actions.run_and_verify_svn(None, None, [], 'copy', *args)
+    actions.run_and_verify_svn(None, [], 'copy', *args)
     self.state.add({
       rpath2: self.state.desc[rpath1]
     })
@@ -292,7 +292,7 @@ class SvnWC:
       args += ['-r', rev]
     if parents:
       args += ['--parents']
-    actions.run_and_verify_svn(None, None, [], 'copy', *args)
+    actions.run_and_verify_svn(None, [], 'copy', *args)
     self.state.add({
       rpath2: self.state.desc[rpath1]
     })
@@ -303,12 +303,12 @@ class SvnWC:
     args = []
     if even_if_modified:
       args += ['--force']
-    actions.run_and_verify_svn(None, None, [], 'delete', lpath, *args)
+    actions.run_and_verify_svn(None, [], 'delete', lpath, *args)
 
   def svn_commit(self, rpath='', log=''):
     "Commit a WC path (recursively). Return the new revision number."
     lpath = local_path(rpath)
-    actions.run_and_verify_svn(None, verify.AnyOutput, [],
+    actions.run_and_verify_svn(verify.AnyOutput, [],
                                'commit', '-m', log, lpath)
     actions.run_and_verify_update(lpath, None, None, None)
     self.repo.head_rev += 1
@@ -332,6 +332,6 @@ class SvnWC:
 #      exp_1 = "--- Merging r.* into '" + target_re + ".*':"
 #      exp_2 = "(A |D |[UG] | [UG]|[UG][UG])   " + target_re + ".*"
 #      exp_out = verify.RegexOutput(exp_1 + "|" + exp_2)
-#    actions.run_and_verify_svn(None, exp_out, [],
+#    actions.run_and_verify_svn(exp_out, [],
 #                               'merge', rev_spec, lsource, ltarget)
 

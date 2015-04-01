@@ -102,7 +102,7 @@ def patch(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -377,7 +377,7 @@ def patch_offset(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -546,7 +546,7 @@ def patch_chopped_leading_spaces(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -716,7 +716,7 @@ def patch_strip1(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -869,7 +869,7 @@ def patch_no_index_line(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   unidiff_patch = [
     "--- A/D/gamma\t(revision 1)\n",
     "+++ A/D/gamma\t(working copy)\n",
@@ -1079,9 +1079,9 @@ def patch_remove_empty_dirs(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   F_path = sbox.ospath('A/B/F')
-  svntest.actions.run_and_verify_svn("Deleting F failed", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', F_path)
-  svntest.actions.run_and_verify_svn("Update failed", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', wc_dir)
 
   # We should be able to handle one path beeing missing.
@@ -1148,7 +1148,7 @@ def patch_reject(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   patch_file_path = make_patch_path(sbox)
 
@@ -1219,7 +1219,7 @@ def patch_keywords(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   patch_file_path = make_patch_path(sbox)
 
@@ -1308,7 +1308,7 @@ def patch_with_fuzz(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                      expected_status, None, wc_dir)
+                                      expected_status)
 
   unidiff_patch = [
     "Index: mu\n",
@@ -1444,7 +1444,7 @@ def patch_reverse(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -1673,7 +1673,7 @@ def patch_no_svn_eol_style(sbox):
                                            1) # dry-run
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
 
 def patch_with_svn_eol_style(sbox):
   "patch target with svn:eol-style"
@@ -1788,7 +1788,7 @@ def patch_with_svn_eol_style(sbox):
                                            1) # dry-run
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
 
 def patch_with_svn_eol_style_uncommitted(sbox):
   "patch target with uncommitted svn:eol-style"
@@ -1897,7 +1897,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
                                            1) # dry-run
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(None, expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
 
 def patch_with_ignore_whitespace(sbox):
   "ignore whitespace when patching"
@@ -1943,7 +1943,7 @@ def patch_with_ignore_whitespace(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch with leading and trailing spaces removed and tabs transformed
   # to spaces. The patch should match and the hunks should be written to the
@@ -2077,7 +2077,7 @@ def patch_replace_locally_deleted_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Locally delete mu
   svntest.main.run_svn(None, 'rm', mu_path)
@@ -2143,7 +2143,7 @@ def patch_no_eol_at_eof(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   unidiff_patch = [
     "--- iota\t(revision 1)\n",
     "+++ iota\t(working copy)\n",
@@ -2213,7 +2213,7 @@ def patch_with_properties(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   # Apply patch
 
   unidiff_patch = [
@@ -2306,7 +2306,7 @@ def patch_same_twice(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -2491,7 +2491,7 @@ def patch_dir_properties(sbox):
   expected_status.tweak('', wc_rev=2)
   expected_status.tweak('A/B', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   # Apply patch
 
   unidiff_patch = [
@@ -2713,7 +2713,7 @@ def patch_prop_offset(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -2888,7 +2888,7 @@ def patch_prop_with_fuzz(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                      expected_status, None, wc_dir)
+                                      expected_status)
 
   unidiff_patch = [
     "Index: mu\n",
@@ -3072,7 +3072,7 @@ def patch_old_target_names(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -3198,7 +3198,7 @@ def patch_reverse_revert(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
 
@@ -3520,7 +3520,7 @@ def patch_moved_away(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Move mu away
   sbox.simple_move("A/mu", "A/mu2")
@@ -3681,7 +3681,7 @@ def patch_deletes_prop(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Apply patch
   unidiff_patch = [
@@ -3828,7 +3828,7 @@ def patch_reversed_add_with_props2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'newfile' : Item(wc_rev=2, status='  ')})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Now, we'll try to reverse-apply the very diff we just created.  We
   # expect the original state of the working copy in r1 plus 'newfile'
@@ -4019,7 +4019,7 @@ def patch_target_no_eol_at_eof(sbox):
   expected_status.tweak('iota', wc_rev=2)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   unidiff_patch = [
     "Index: A/mu\n",
     "===================================================================\n",
@@ -4222,22 +4222,20 @@ def patch_change_symlink_target(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'link'       : Item(verb='Adding'),
   })
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None)
 
   patch_output = [
     'U         %s\n' % sbox.ospath('link'),
   ]
 
-  svntest.actions.run_and_verify_svn(None, patch_output, [],
+  svntest.actions.run_and_verify_svn(patch_output, [],
                                      'patch', patch_file_path, wc_dir)
 
   # r3 - Store result
   expected_output = svntest.wc.State(wc_dir, {
     'link'       : Item(verb='Sending'),
   })
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None)
 
   # r4 - Now as symlink
   sbox.simple_rm('link')
@@ -4245,10 +4243,9 @@ def patch_change_symlink_target(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'link'       : Item(verb='Replacing'),
   })
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None)
 
-  svntest.actions.run_and_verify_svn(None, patch_output, [],
+  svntest.actions.run_and_verify_svn(patch_output, [],
                                      'patch', patch_file_path, wc_dir)
 
   # TODO: when it passes, verify that the on-disk 'link' is correct ---
@@ -4357,7 +4354,7 @@ def patch_replace_dir_with_file_and_vv(sbox):
     'A         %s\n' % sbox.ospath('iota'),
   ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'patch', patch_file_path, sbox.wc_dir)
 
 @Issue(4297)
@@ -4391,7 +4388,7 @@ def single_line_mismatch(sbox):
     '>         rejected hunk @@ -1,1 +1,1 @@\n',
   ] + svntest.main.summary_of_conflicts(text_conflicts=1)
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'patch', patch_file_path, wc_dir)
 
 @Issue(3644)
@@ -4442,7 +4439,7 @@ def patch_empty_file(sbox):
   ]
 
   # Current result: lf.txt patched ok, new created, empty succeeds with offset.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'patch', patch_file_path, wc_dir)
 
   expected_disk = svntest.main.greek_state.copy()
@@ -4556,7 +4553,7 @@ def patch_apply_no_fuz(sbox):
   ]
 
   # Current result: lf.txt patched ok, new created, empty succeeds with offset.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'patch', patch_path, wc_dir)
 
   if not filecmp.cmp(sbox.ospath('test.txt'), sbox.ospath('test_v2.txt')):
@@ -4657,6 +4654,788 @@ def patch_with_custom_keywords(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+def patch_git_rename(sbox):
+  """--git patch with rename header"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # a simple --git rename patch
+  unidiff_patch = [
+    "diff --git a/iota b/iota2\n",
+    "similarity index 100%\n",
+    "rename from iota\n",
+    "rename to iota2\n",
+  ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [ 'A         %s\n' % sbox.ospath('iota2'),
+                      'D         %s\n' % sbox.ospath('iota')]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_disk.add({'iota2' : Item(contents="This is the file 'iota'.\n")})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'iota2' : Item(status='A ', copied='+', wc_rev='-', moved_from='iota'),
+  })
+  expected_status.tweak('iota', status='D ', wc_rev=1, moved_to='iota2')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+@Issue(4533)
+def patch_hunk_avoid_reorder(sbox):
+  """avoid reordering hunks"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n', truncate=True)
+  sbox.simple_commit()
+
+  # two hunks, first matches at offset +18, second matches at both -13
+  # and +18 but we want the second match as it is after the first
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -13,6 +13,7 @@\n",
+    " MM\n",
+    " NN\n",
+    " OO\n",
+    "+11111\n",
+    " PP\n",
+    " QQ\n",
+    " RR\n",
+    "@@ -20,6 +20,7 @@\n",
+    " TT\n",
+    " UU\n",
+    " VV\n",
+    "+22222\n",
+    " WW\n",
+    " XX\n",
+    " YY\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -13,6 +13,7 @@ with offset 18\n',
+    '>         applied hunk @@ -20,6 +20,7 @@ with offset 18\n'
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' '11111\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' '22222\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  sbox.simple_revert('A/mu')
+
+  # change patch so second hunk matches at both -14 and +17, we still
+  # want the second match
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -13,6 +13,7 @@\n",
+    " MM\n",
+    " NN\n",
+    " OO\n",
+    "+11111\n",
+    " PP\n",
+    " QQ\n",
+    " RR\n",
+    "@@ -21,6 +21,7 @@\n",
+    " TT\n",
+    " UU\n",
+    " VV\n",
+    "+22222\n",
+    " WW\n",
+    " XX\n",
+    " YY\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -13,6 +13,7 @@ with offset 18\n',
+    '>         applied hunk @@ -21,6 +21,7 @@ with offset 17\n'
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' '11111\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' '22222\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  sbox.simple_revert('A/mu')
+
+@Issue(4533)
+def patch_hunk_avoid_reorder2(sbox):
+  """avoid reordering hunks 2"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n', truncate=True)
+  sbox.simple_commit()
+
+  # two hunks, first matches at offset +18, second matches at both -13
+  # change patch so second hunk matches at both -12 and +19, we still
+  # want the second match
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -13,6 +13,7 @@\n",
+    " MM\n",
+    " NN\n",
+    " OO\n",
+    "+11111\n",
+    " PP\n",
+    " QQ\n",
+    " RR\n",
+    "@@ -19,6 +19,7 @@\n",
+    " TT\n",
+    " UU\n",
+    " VV\n",
+    "+22222\n",
+    " WW\n",
+    " XX\n",
+    " YY\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -13,6 +13,7 @@ with offset 18\n',
+    '>         applied hunk @@ -19,6 +19,7 @@ with offset 19\n'
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'TT\n' 'UU\n' 'VV\n' 'WW\n' 'XX\n' 'YY\n'
+                     'GG\n' 'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     '33333\n' '33333\n' '33333\n'
+                     'MM\n' 'NN\n' 'OO\n' '11111\n' 'PP\n' 'QQ\n' 'RR\n'
+                     'SS\n' 'TT\n' 'UU\n' 'VV\n' '22222\n' 'WW\n' 'XX\n'
+                     'YY\n' 'ZZ\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+@Issue(4533)
+def patch_hunk_reorder(sbox):
+  """hunks that reorder"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n' 'GG\n'
+                     'HH\n' 'II\n' 'JJ\n' 'KK\n' 'LL\n' 'MM\n' 'NN\n',
+                     truncate=True)
+  sbox.simple_commit()
+
+  # Two hunks match in opposite order
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -2,6 +2,7 @@\n",
+    " II\n",
+    " JJ\n",
+    " KK\n",
+    "+11111\n",
+    " LL\n",
+    " MM\n",
+    " NN\n",
+    "@@ -9,6 +10,7 @@\n",
+    " BB\n",
+    " CC\n",
+    " DD\n",
+    "+22222\n",
+    " EE\n",
+    " FF\n",
+    " GG\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -9,6 +10,7 @@ with offset -7\n',
+    '>         applied hunk @@ -2,6 +2,7 @@ with offset 7\n',
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' '22222\n' 'EE\n' 'FF\n' 'GG\n'
+                     'HH\n' 'II\n' 'JJ\n' 'KK\n' '11111\n' 'LL\n' 'MM\n' 'NN\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # In the following case the reordered hunk2 is smaller offset
+  # magnitude than hunk2 at the end and the reorder is preferred.
+  sbox.simple_revert('A/mu')
+  sbox.simple_append('A/mu',
+                     'x\n' * 2  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 2  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10  +
+                     '1\n' '2\n' '3\n' 'hunk1\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 100  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n',
+                     truncate=True)
+  sbox.simple_commit()
+
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -28,7 +28,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk1\n",
+    "+hunk1-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    "@@ -44,7 +44,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk2\n",
+    "+hunk2-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -44,7 +44,7 @@ with offset -32\n',
+    '>         applied hunk @@ -28,7 +28,7 @@ with offset 1\n',
+    ]
+  expected_disk.tweak('A/mu', contents=
+                      'x\n' * 2  +
+                      '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 2  +
+                      '1\n' '2\n' '3\n' 'hunk2-mod\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 10  +
+                      '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 100  +
+                      '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n')
+
+  expected_status.tweak('A/mu', status='M ', wc_rev=3)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+  sbox.simple_revert('A/mu')
+
+  # In this case the reordered hunk2 is further than hunk2 at the end
+  # and the reordered is not preferred.
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -28,7 +28,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk1\n",
+    "+hunk1-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    "@@ -110,7 +110,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk2\n",
+    "+hunk2-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -28,7 +28,7 @@ with offset 1\n',
+    '>         applied hunk @@ -110,7 +110,7 @@ with offset 26\n',
+    ]
+  expected_disk.tweak('A/mu', contents=
+                      'x\n' * 2  +
+                      '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 2  +
+                      '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 10  +
+                      '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                      'x\n' * 100  +
+                      '1\n' '2\n' '3\n' 'hunk2-mod\n' '4\n' '5\n' '6\n')
+
+  expected_status.tweak('A/mu', status='M ', wc_rev=3)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+@XFail()
+def patch_hunk_overlap(sbox):
+  """hunks that overlap"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' 'EE\n' 'FF\n'
+                     'GG\n' 'HH\n' 'II\n', truncate=True)
+  sbox.simple_commit()
+
+  # Two hunks that overlap when applied, GNU patch can apply both hunks.
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -2,6 +2,7 @@\n",
+    " BB\n",
+    " CC\n",
+    " DD\n",
+    "+11111\n",
+    " EE\n",
+    " FF\n",
+    " GG\n",
+    "@@ -9,6 +10,7 @@\n",
+    " DD\n",
+    " EE\n",
+    " FF\n",
+    "+22222\n",
+    " GG\n",
+    " HH\n",
+    " II\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -9,6 +10,7 @@ with offset -5\n',
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=
+                     'AA\n' 'BB\n' 'CC\n' 'DD\n' '11111\n' 'EE\n' 'FF\n'
+                     '22222\n' 'GG\n' 'HH\n' 'II\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+def patch_delete_modified(sbox):
+  """patch delete modified"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A patch that deletes beta.
+  unidiff_patch = [
+    "Index: A/B/E/beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta	(revision 1)\n",
+    "+++ A/B/E/beta	(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+    ]
+
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  # First application deletes beta
+  expected_output = [
+    'D         %s\n' % sbox.ospath('A/B/E/beta'),
+    ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/beta')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/beta', status='D ')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Second application skips
+  expected_output = [
+    'Skipped \'%s\'\n' % sbox.ospath('A/B/E/beta'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/E/beta') :  Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Third application, with file present even though state is 'D', also skips
+  sbox.simple_append('A/B/E/beta', 'Modified', truncate=True)
+  expected_disk.add({'A/B/E/beta' : Item(contents='Modified')})
+  expected_output = [
+    'Skipped \'%s\'\n' % sbox.ospath('A/B/E/beta'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/E/beta') :  Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Revert and modify beta, fourth application gives a text conflict.
+  sbox.simple_revert('A/B/E/beta')
+  sbox.simple_append('A/B/E/beta', 'Modified', truncate=True)
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/B/E/beta'),
+    '>         rejected hunk @@ -1,1 +0,0 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_skip = wc.State('', { })
+  reject_file_contents = [
+    "--- A/B/E/beta\n",
+    "+++ A/B/E/beta\n",
+    "@@ -1,1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+  expected_disk.add({'A/B/E/beta.svnpatch.rej'
+                     : Item(contents=''.join(reject_file_contents))
+                     })
+  expected_status.tweak('A/B/E/beta', status='M ')
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+def patch_closest(sbox):
+  "find closest hunk"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -47,7 +47,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk1\n",
+    "+hunk1-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    "@@ -66,7 +66,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-rejected-hunk2-\n",
+    "+rejected-hunk2-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    "@@ -180,7 +180,7 @@\n",
+    " 1\n",
+    " 2\n",
+    " 3\n",
+    "-hunk3\n",
+    "+hunk3-mod\n",
+    " 4\n",
+    " 5\n",
+    " 6\n",
+    ]
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  # Previous offset for hunk3 is +4, hunk3 matches at relative offsets
+  # of -19 and +18, prefer +18 gives final offset +22
+  sbox.simple_append('A/mu',
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk1\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 30  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10,
+                     truncate=True)
+  sbox.simple_commit()
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
+    '>         applied hunk @@ -180,7 +180,7 @@ with offset 22\n',
+    '>         rejected hunk @@ -66,7 +66,7 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'A/mu.svnpatch.rej' : Item(contents=
+    "--- A/mu\n" +
+    "+++ A/mu\n" +
+    "@@ -66,7 +66,7 @@\n" +
+    " 1\n" +
+    " 2\n" +
+    " 3\n" +
+    "-rejected-hunk2-\n" +
+    "+rejected-hunk2-mod\n" +
+    " 4\n" +
+    " 5\n" +
+    " 6\n")})
+  expected_disk.tweak('A/mu', contents=
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 30  +
+                     '1\n' '2\n' '3\n' 'hunk3-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Previous offset for hunk3 is +4, hunk3 matches at relative offsets
+  # of -19 and +20, prefer -19 gives final offset -15
+  sbox.simple_append('A/mu',
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk1\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 32  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10,
+                     truncate=True)
+  sbox.simple_commit()
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
+    '>         applied hunk @@ -180,7 +180,7 @@ with offset -15\n',
+    '>         rejected hunk @@ -66,7 +66,7 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_disk.tweak('A/mu', contents=
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk3-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 32  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=3)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Previous offset for hunk3 is +4, hunk3 matches at relative offsets
+  # of -19 and +19, prefer -19 gives final offset -15
+  sbox.simple_append('A/mu',
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk1\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 31  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10,
+                     truncate=True)
+  sbox.simple_commit()
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
+    '>         applied hunk @@ -180,7 +180,7 @@ with offset -15\n',
+    '>         rejected hunk @@ -66,7 +66,7 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_disk.tweak('A/mu', contents=
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk3-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 31  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=4)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Previous offset for hunk3 is +4, hunk3 matches at relative offsets
+  # of +173 and -173, prefer +173 gives final offset +177
+  sbox.simple_append('A/mu',
+                     'x\n' * 10  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 33 +
+                     '1\n' '2\n' '3\n' 'hunk1\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 242  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10,
+                     truncate=True)
+  sbox.simple_commit()
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
+    '>         applied hunk @@ -180,7 +180,7 @@ with offset 177\n',
+    '>         rejected hunk @@ -66,7 +66,7 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_disk.tweak('A/mu', contents=
+                     'x\n' * 10  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 33  +
+                     '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 242  +
+                     '1\n' '2\n' '3\n' 'hunk3-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=5)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Previous offset for hunk3 is +4, hunk3 matches at relative offsets
+  # of +174 and -173, prefer -173 gives final offset -169
+  sbox.simple_append('A/mu',
+                     'x\n' * 10  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 33 +
+                     '1\n' '2\n' '3\n' 'hunk1\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 243  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10,
+                     truncate=True)
+  sbox.simple_commit()
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -180,7 +180,7 @@ with offset -169\n',
+    '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
+    '>         rejected hunk @@ -66,7 +66,7 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_disk.tweak('A/mu', contents=
+                     'x\n' * 10  +
+                     '1\n' '2\n' '3\n' 'hunk3-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 33  +
+                     '1\n' '2\n' '3\n' 'hunk1-mod\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 50  +
+                     '1\n' '2\n' '3\n' 'hunk2\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 243  +
+                     '1\n' '2\n' '3\n' 'hunk3\n' '4\n' '5\n' '6\n' +
+                     'x\n' * 10)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ', wc_rev=6)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
 
 ########################################################################
 #Run the tests
@@ -4710,6 +5489,13 @@ test_list = [ None,
               patch_apply_no_fuz,
               patch_lacking_trailing_eol_on_context,
               patch_with_custom_keywords,
+              patch_git_rename,
+              patch_hunk_avoid_reorder,
+              patch_hunk_avoid_reorder2,
+              patch_hunk_reorder,
+              patch_hunk_overlap,
+              patch_delete_modified,
+              patch_closest,
             ]
 
 if __name__ == '__main__':

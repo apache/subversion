@@ -22,7 +22,8 @@
  */
 
 
-
+
+
 #include <apr_uri.h>
 #include <serf.h>
 
@@ -44,7 +45,8 @@
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
 
-
+
+
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
@@ -60,8 +62,6 @@ enum log_state_e {
   HAS_CHILDREN,
   ADDED_PATH,
   REPLACED_PATH,
-  MOVED_PATH,
-  MOVE_REPLACED_PATH,
   DELETED_PATH,
   MODIFIED_PATH,
   SUBTRACTIVE_MERGE
@@ -78,7 +78,6 @@ typedef struct log_context_t {
   svn_boolean_t changed_paths;
   svn_boolean_t strict_node_history;
   svn_boolean_t include_merged_revisions;
-  svn_move_behavior_t move_behavior;
   const apr_array_header_t *revprops;
   int nest_level; /* used to track mergeinfo nesting levels */
   int count; /* only incremented when nest_level == 0 */
@@ -139,14 +138,6 @@ static const svn_ra_serf__xml_transition_t log_ttable[] = {
     TRUE, { "?node-kind", "?text-mods", "?prop-mods",
             "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
-  { ITEM, S_, "moved-path", MOVED_PATH,
-    TRUE, { "?node-kind", "?text-mods", "?prop-mods",
-            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
-
-  { ITEM, S_, "replaced-by-moved-path", MOVE_REPLACED_PATH,
-    TRUE, { "?node-kind", "?text-mods", "?prop-mods",
-            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
-
   { ITEM, S_, "deleted-path", DELETED_PATH,
     TRUE, { "?node-kind", "?text-mods", "?prop-mods", NULL }, TRUE },
 
@@ -156,7 +147,8 @@ static const svn_ra_serf__xml_transition_t log_ttable[] = {
   { 0 }
 };
 
-
+
+
 /* Store CDATA into REVPROPS, associated with PROPNAME. If ENCODING is not
    NULL, then it must base "base64" and CDATA will be decoded first.
 
@@ -401,10 +393,6 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
         action = 'A';
       else if (leaving_state == REPLACED_PATH)
         action = 'R';
-      else if (leaving_state == MOVED_PATH)
-        action = 'V';
-      else if (leaving_state == MOVE_REPLACED_PATH)
-        action = 'E';
       else if (leaving_state == DELETED_PATH)
         action = 'D';
       else
@@ -424,7 +412,8 @@ static svn_error_t *
 create_log_body(serf_bucket_t **body_bkt,
                 void *baton,
                 serf_bucket_alloc_t *alloc,
-                apr_pool_t *pool)
+                apr_pool_t *pool /* request pool */,
+                apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   log_context_t *log_ctx = baton;
@@ -454,32 +443,22 @@ create_log_body(serf_bucket_t **body_bkt,
 
   if (log_ctx->changed_paths)
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:discover-changed-paths", NULL,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:discover-changed-paths",
+                                         SVN_VA_NULL);
     }
 
   if (log_ctx->strict_node_history)
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:strict-node-history", NULL,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:strict-node-history", SVN_VA_NULL);
     }
 
   if (log_ctx->include_merged_revisions)
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:include-merged-revisions", NULL,
-                                   alloc);
-    }
-
-  if (log_ctx->move_behavior != svn_move_behavior_no_moves)
-    {
-      const char *value = svn_move_behavior_to_word(log_ctx->move_behavior);
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:move-behavior",
-                                   value,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:include-merged-revisions",
+                                         SVN_VA_NULL);
     }
 
   if (log_ctx->revprops)
@@ -494,16 +473,14 @@ create_log_body(serf_bucket_t **body_bkt,
         }
       if (log_ctx->revprops->nelts == 0)
         {
-          svn_ra_serf__add_tag_buckets(buckets,
-                                       "S:no-revprops", NULL,
-                                       alloc);
+          svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                             "S:no-revprops", SVN_VA_NULL);
         }
     }
   else
     {
-      svn_ra_serf__add_tag_buckets(buckets,
-                                   "S:all-revprops", NULL,
-                                   alloc);
+      svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                         "S:all-revprops", SVN_VA_NULL);
     }
 
   if (log_ctx->paths)
@@ -518,9 +495,8 @@ create_log_body(serf_bucket_t **body_bkt,
         }
     }
 
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:encode-binary-props", NULL,
-                               alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc,
+                                     "S:encode-binary-props", SVN_VA_NULL);
 
   svn_ra_serf__add_close_tag_buckets(buckets, alloc,
                                      "S:log-report");
@@ -538,7 +514,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
-                     svn_move_behavior_t move_behavior,
                      const apr_array_header_t *revprops,
                      svn_log_entry_receiver_t receiver,
                      void *receiver_baton,
@@ -563,7 +538,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->changed_paths = discover_changed_paths;
   log_ctx->strict_node_history = strict_node_history;
   log_ctx->include_merged_revisions = include_merged_revisions;
-  log_ctx->move_behavior = move_behavior;
   log_ctx->revprops = revprops;
   log_ctx->nest_level = 0;
 
@@ -606,7 +580,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   peg_rev = (start == SVN_INVALID_REVNUM || start > end) ? start : end;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
+                                      session,
                                       NULL /* url */, peg_rev,
                                       pool, pool));
 
@@ -614,15 +588,13 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                            log_opened, log_closed, NULL,
                                            log_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_log_body;
   handler->body_delegate_baton = log_ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 

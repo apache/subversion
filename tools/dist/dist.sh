@@ -22,7 +22,7 @@
 
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
 #                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|pre PRE_NUM]
-#                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
+#                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL]
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-serf PATH-TO-SERF] [-zlib PATH-TO-ZLIB]
 #                  [-sqlite PATH-TO-SQLITE] [-zip] [-sign]
@@ -47,13 +47,13 @@
 #   working copy, so you may wish to create a dist-resources directory
 #   containing the apr/, apr-util/, neon/, serf/, zlib/ and sqlite/
 #   dependencies, and run dist.sh from that.
-#  
+#
 #   When building alpha, beta or rc tarballs pass the appropriate flag
 #   followed by a number.  For example "-alpha 5", "-beta 3", "-rc 2".
-# 
+#
 #   If neither an -alpha, -beta, -pre or -rc option is specified, a release
 #   tarball will be built.
-#  
+#
 #   To build a Windows zip file package, additionally pass -zip and the
 #   path to apr-iconv with -apri.
 
@@ -119,7 +119,7 @@ if [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$NIGHTLY" ] && [ -n "$PRE" ] ||
   exit 1
 elif [ -n "$ALPHA" ] ; then
   VER_TAG="Alpha $ALPHA"
-  VER_NUMTAG="-alpha$ALPHA" 
+  VER_NUMTAG="-alpha$ALPHA"
 elif [ -n "$BETA" ] ; then
   VER_TAG="Beta $BETA"
   VER_NUMTAG="-beta$BETA"
@@ -181,20 +181,6 @@ type pax > /dev/null 2>&1
 if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
   echo "ERROR: pax could not be found"
   exit 1
-fi
-
-# Default to 'wget', but allow 'curl' to be used if available.
-HTTP_FETCH=wget
-HTTP_FETCH_OUTPUT="-O"
-type wget > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  type curl > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "Neither curl or wget found."
-    exit 2
-  fi
-  HTTP_FETCH=curl
-  HTTP_FETCH_OUTPUT="-o"
 fi
 
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
@@ -305,6 +291,15 @@ if [ -z "$ZIP" ] ; then
   echo "Running ./autogen.sh in sandbox, to create ./configure ..."
   (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 fi
+
+# Generate the .pot file, for use by translators.
+echo "Running po-update.sh in sandbox, to create subversion.pot..."
+# Can't use the po-update.sh in the packaged export since it might have CRLF
+# line endings, in which case it won't run.  So first we export it again.
+${svn:-svn} export -q -r "$REVISION"  \
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/tools/po/po-update.sh" \
+     --username none --password none "$DIST_SANDBOX/po-update.sh"
+(cd "$DISTPATH" && ../po-update.sh pot) || exit 1
 
 # Pre-translate the various sql-derived header files
 echo "Generating SQL-derived headers..."

@@ -77,7 +77,7 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
                                         ctx->notify_func2, ctx->notify_baton2,
                                         iterpool));
 
-      if (conflicts_remain)
+      if (conflicts_remain && !*conflicts_remain)
         {
           svn_error_t *err;
           svn_boolean_t text_c, prop_c, tree_c;

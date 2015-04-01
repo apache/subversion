@@ -76,6 +76,12 @@ svn_boolean_t
 svn_fs_fs__is_packed_revprop(svn_fs_t *fs,
                              svn_revnum_t rev);
 
+/* Return the first revision in the pack / rev file containing REVISION in
+ * filesystem FS.  For non-packed revs, this will simply be REVISION. */
+svn_revnum_t
+svn_fs_fs__packed_base_rev(svn_fs_t *fs,
+                           svn_revnum_t revision);
+
 /* Return the full path of the rev shard directory that will contain
  * revision REV in FS.  Allocate the result in POOL.
  */
@@ -123,6 +129,13 @@ const char *
 svn_fs_fs__path_lock(svn_fs_t *fs,
                      apr_pool_t *pool);
 
+/* Return the full path of the pack operation lock file in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_pack_lock(svn_fs_t *fs,
+                          apr_pool_t *pool);
+
 /* Return the full path of the revprop generation file in FS.
  * Allocate the result in POOL.
  */
@@ -169,30 +182,19 @@ svn_fs_fs__path_revprops(svn_fs_t *fs,
                          svn_revnum_t rev,
                          apr_pool_t *pool);
 
-/* Return the path of the file containing the log-to-phys index for the
- * file containing revision REV in FS. The result will be allocated in POOL.
- */
-const char *
-svn_fs_fs__path_l2p_index(svn_fs_t *fs,
-                          svn_revnum_t rev,
-                          svn_boolean_t packed,
-                          apr_pool_t *pool);
-
-/* Return the path of the file containing the phys-to-log index for the
- * file containing revision REV in FS. The result will be allocated in POOL.
- */
-const char *
-svn_fs_fs__path_p2l_index(svn_fs_t *fs,
-                          svn_revnum_t rev,
-                          svn_boolean_t packed,
-                          apr_pool_t *pool);
-
 /* Return the path of the file storing the oldest non-packed revision in FS.
  * The result will be allocated in POOL.
  */
 const char *
 svn_fs_fs__path_min_unpacked_rev(svn_fs_t *fs,
                                  apr_pool_t *pool);
+
+/* Return the path of the 'transactions' directory in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txns_dir(svn_fs_t *fs,
+                         apr_pool_t *pool);
 
 /* Return the path of the directory containing the transaction TXN_ID in FS.
  * The result will be allocated in POOL.
@@ -201,6 +203,13 @@ const char *
 svn_fs_fs__path_txn_dir(svn_fs_t *fs,
                         const svn_fs_fs__id_part_t *txn_id,
                         apr_pool_t *pool);
+
+/* Return the path of the 'txn-protorevs' directory in FS, even if that
+ * folder may not exist in FS.  The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_proto_revs(svn_fs_t *fs,
+                               apr_pool_t *pool);
 
 /* Return the path of the proto-revision file for transaction TXN_ID in FS.
  * The result will be allocated in POOL.
@@ -315,6 +324,18 @@ svn_fs_fs__write_min_unpacked_rev(svn_fs_t *fs,
                                   svn_revnum_t revnum,
                                   apr_pool_t *scratch_pool);
 
+/* Set *REV, *NEXT_NODE_ID and *NEXT_COPY_ID to the values read from the
+ * 'current' file.  For new FS formats, which only store the youngest
+ * revision, set the *NEXT_NODE_ID and *NEXT_COPY_ID to 0.  Perform
+ * temporary allocations in POOL.
+ */
+svn_error_t *
+svn_fs_fs__read_current(svn_revnum_t *rev,
+                        apr_uint64_t *next_node_id,
+                        apr_uint64_t *next_copy_id,
+                        svn_fs_t *fs,
+                        apr_pool_t *pool);
+
 /* Atomically update the 'current' file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be 0 if the FS format does not use them.)
@@ -380,13 +401,8 @@ svn_fs_fs__move_into_place(const char *old_filename,
                            const char *perms_reference,
                            apr_pool_t *pool);
 
-/* Return TRUE, iff revision REV in FS requires logical addressing. */
+/* Return TRUE, iff FS uses logical addressing. */
 svn_boolean_t
-svn_fs_fs__use_log_addressing(svn_fs_t *fs,
-                              svn_revnum_t rev);
-
-/* Return TRUE if FS's format supports moves to be recorded natively. */
-svn_boolean_t
-svn_fs_fs__supports_move(svn_fs_t *fs);
+svn_fs_fs__use_log_addressing(svn_fs_t *fs);
 
 #endif

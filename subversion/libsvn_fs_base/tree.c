@@ -1237,7 +1237,7 @@ base_node_prop(svn_string_t **value_p,
   args.propname = propname;
   SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_prop, &args,
                                  FALSE, scratch_pool));
-  *value_p = value ? svn_string_dup(value, pool) : NULL;
+  *value_p = svn_string_dup(value, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
@@ -1615,7 +1615,7 @@ base_dir_optimal_order(apr_array_header_t **ordered_p,
   apr_array_header_t *result = apr_array_make(pool, apr_hash_count(entries),
                                               sizeof(svn_fs_dirent_t *));
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = svn__apr_hash_index_val(hi);
+    APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = apr_hash_this_val(hi);
 
   *ordered_p = result;
   return SVN_NO_ERROR;
@@ -3316,18 +3316,6 @@ base_revision_link(svn_fs_root_t *from_root,
 }
 
 
-static svn_error_t *
-base_move(svn_fs_root_t *from_root,
-          const char *from_path,
-          svn_fs_root_t *to_root,
-          const char *to_path,
-          apr_pool_t *pool)
-{
-  /* BDB supports MOVes only as backward compatible ADD-with-history */
-  return base_copy(from_root, from_path, to_root, to_path, pool);
-}
-
-
 struct copied_from_args
 {
   svn_fs_root_t *root;      /* Root for the node whose ancestry we seek. */
@@ -4224,7 +4212,8 @@ static svn_error_t *
 base_node_history(svn_fs_history_t **history_p,
                   svn_fs_root_t *root,
                   const char *path,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
 
@@ -4233,15 +4222,16 @@ base_node_history(svn_fs_history_t **history_p,
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
   /* And we require that the path exist in the root. */
-  SVN_ERR(base_check_path(&kind, root, path, pool));
+  SVN_ERR(base_check_path(&kind, root, path, scratch_pool));
   if (kind == svn_node_none)
     return SVN_FS__NOT_FOUND(root, path);
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs,
-                                svn_fs__canonicalize_abspath(path, pool),
+                                svn_fs__canonicalize_abspath(path,
+                                                             result_pool),
                                 root->rev, FALSE, NULL,
-                                SVN_INVALID_REVNUM, pool);
+                                SVN_INVALID_REVNUM, result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -4491,7 +4481,8 @@ static svn_error_t *
 base_history_prev(svn_fs_history_t **prev_history_p,
                   svn_fs_history_t *history,
                   svn_boolean_t cross_copies,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   svn_fs_history_t *prev_history = NULL;
   base_history_data_t *bhd = history->fsap_data;
@@ -4505,10 +4496,12 @@ base_history_prev(svn_fs_history_t **prev_history_p,
     {
       if (! bhd->is_interesting)
         prev_history = assemble_history(fs, "/", bhd->revision,
-                                        1, NULL, SVN_INVALID_REVNUM, pool);
+                                        1, NULL, SVN_INVALID_REVNUM,
+                                        result_pool);
       else if (bhd->revision > 0)
         prev_history = assemble_history(fs, "/", bhd->revision - 1,
-                                        1, NULL, SVN_INVALID_REVNUM, pool);
+                                        1, NULL, SVN_INVALID_REVNUM,
+                                        result_pool);
     }
   else
     {
@@ -4522,9 +4515,9 @@ base_history_prev(svn_fs_history_t **prev_history_p,
           args.prev_history_p = &prev_history;
           args.history = prev_history;
           args.cross_copies = cross_copies;
-          args.pool = pool;
+          args.pool = result_pool;
           SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_history_prev, &args,
-                                         FALSE, pool));
+                                         FALSE, result_pool));
           if (! prev_history)
             break;
           bhd = prev_history->fsap_data;
@@ -5492,7 +5485,6 @@ static root_vtable_t root_vtable = {
   base_delete_node,
   base_copy,
   base_revision_link,
-  base_move,
   base_copied_from,
   base_closest_copy,
   base_node_prop,

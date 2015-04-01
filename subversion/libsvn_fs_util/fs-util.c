@@ -38,6 +38,14 @@
 #include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
+
+const svn_version_t *
+svn_fs_util__version(void)
+{
+  SVN_VERSION_BODY;
+}
+
+
 /* Return TRUE, if PATH of PATH_LEN > 0 chars starts with a '/' and does
  * not end with a '/' and does not contain duplicate '/'.
  */
@@ -199,6 +207,7 @@ svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
   change->node_rev_id = node_rev_id;
   change->change_kind = change_kind;
   change->mergeinfo_mod = svn_tristate_unknown;
+  change->copyfrom_rev = SVN_INVALID_REVNUM;
 
   return change;
 }
@@ -214,8 +223,8 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
   *output = apr_hash_make(pool);
   for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
 
       svn_hash_sets(*output,
                     svn_fspath__join(path, rel_path, pool),

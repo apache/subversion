@@ -71,11 +71,11 @@ typedef struct svn_fs_x__reps_baton_t
 
 /* Create and populate noderev containers. */
 
-/* Create and return a new builder object, allocated in POOL.
+/* Create and return a new builder object, allocated in RESULT_POOL.
  */
 svn_fs_x__reps_builder_t *
 svn_fs_x__reps_builder_create(svn_fs_t *fs,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 /* To BUILDER, add reference to the fulltext currently stored in
  * representation REP.  Substrings matching with any of the base reps
@@ -91,15 +91,16 @@ svn_fs_x__reps_builder_create(svn_fs_t *fs,
  */
 svn_error_t *
 svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
-                        representation_t *rep,
+                        svn_fs_x__representation_t *rep,
                         int priority,
                         apr_pool_t *scratch_pool);
 
 /* Add the byte string CONTENTS to BUILDER.  Return the item index under
- * which the fulltext can be retrieved from the final container.
+ * which the fulltext can be retrieved from the final container in *REP_IDX.
  */
-apr_size_t
-svn_fs_x__reps_add(svn_fs_x__reps_builder_t *builder,
+svn_error_t *
+svn_fs_x__reps_add(apr_size_t *rep_idx,
+                   svn_fs_x__reps_builder_t *builder,
                    const svn_string_t *contents);
 
 /* Return a rough estimate in bytes for the serialized representation
@@ -140,12 +141,12 @@ svn_fs_x__extractor_drive(svn_stringbuf_t** contents,
 /* I/O interface. */
 
 /* Write a serialized representation of the final container described by
- * BUILDER to STREAM.  Use POOL for temporary allocations.
+ * BUILDER to STREAM.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_reps_container(svn_stream_t *stream,
                                const svn_fs_x__reps_builder_t *builder,
-                               apr_pool_t *pool);
+                               apr_pool_t *scratch_pool);
 
 /* Read a representations container from its serialized representation in
  * STREAM.  Allocate the result in RESULT_POOL and return it in *CONTAINER.

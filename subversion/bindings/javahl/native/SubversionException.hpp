@@ -41,11 +41,11 @@ class SubversionException : public ::Java::Exception
 {
 public:
   explicit SubversionException(::Java::Env env)
-    : Java::Exception(env, ::Java::ClassCache::get_subversion_exception())
+    : Java::Exception(env, ::Java::ClassCache::get_subversion_exception(env))
     {}
 
 private:
-  friend class ::Java::ClassCache;
+  friend class ::Java::ClassCacheImpl;
   static const char* const m_class_name;
 };
 

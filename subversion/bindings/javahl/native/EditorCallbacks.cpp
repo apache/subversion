@@ -36,38 +36,36 @@ namespace JavaHL {
 const char* const ProvideBaseCallback::m_class_name =
   JAVA_PACKAGE"/ISVNEditor$ProvideBaseCallback";
 
-::Java::MethodID ProvideBaseCallback::m_mid_get_contents;
+ProvideBaseCallback::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
+  : ::Java::Object::ClassImpl(env, cls),
+    m_mid_get_contents(
+        env.GetMethodID(cls,
+                        "getContents",
+                        "(Ljava/lang/String;)"
+                        "L"JAVA_PACKAGE
+                        "/ISVNEditor$ProvideBaseCallback$ReturnValue;"))
+{}
 
-void ProvideBaseCallback::static_init(::Java::Env env)
-{
-  m_mid_get_contents =
-    env.GetMethodID(::Java::ClassCache::get_editor_provide_base_cb(),
-                    "getContents",
-                    "(Ljava/lang/String;)"
-                    "L"JAVA_PACKAGE
-                    "/ISVNEditor$ProvideBaseCallback$ReturnValue;");
-}
+ProvideBaseCallback::ClassImpl::~ClassImpl() {}
 
 
 const char* const ProvideBaseCallback::ReturnValue::m_class_name =
   JAVA_PACKAGE"/ISVNEditor$ProvideBaseCallback$ReturnValue";
 
-::Java::FieldID ProvideBaseCallback::ReturnValue::m_fid_contents;
-::Java::FieldID ProvideBaseCallback::ReturnValue::m_fid_revision;
+ProvideBaseCallback::ReturnValue::ClassImpl::ClassImpl(
+    ::Java::Env env, jclass cls)
+  : ::Java::Object::ClassImpl(env, cls),
+    m_fid_contents(env.GetFieldID(cls, "contents", "Ljava/io/InputStream;")),
+    m_fid_revision(env.GetFieldID(cls, "revision", "J"))
+{}
 
-void ProvideBaseCallback::ReturnValue::static_init(::Java::Env env)
-{
-  const jclass cls =
-    ::Java::ClassCache::get_editor_provide_base_cb_return_value();
-  m_fid_contents = env.GetFieldID(cls, "contents", "Ljava/io/InputStream;");
-  m_fid_revision = env.GetFieldID(cls, "revision", "J");
-}
+ProvideBaseCallback::ReturnValue::ClassImpl::~ClassImpl() {}
 
 
 svn_stream_t*
 ProvideBaseCallback::ReturnValue::get_global_stream(apr_pool_t* pool) const
 {
-  jobject jstream = m_env.GetObjectField(m_jthis, m_fid_contents);
+  jobject jstream = m_env.GetObjectField(m_jthis, impl().m_fid_contents);
   return ::Java::InputStream::get_global_stream(m_env, jstream, pool);
 }
 
@@ -77,37 +75,35 @@ ProvideBaseCallback::ReturnValue::get_global_stream(apr_pool_t* pool) const
 const char* const ProvidePropsCallback::m_class_name =
   JAVA_PACKAGE"/ISVNEditor$ProvidePropsCallback";
 
+ProvidePropsCallback::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
+  : ::Java::Object::ClassImpl(env, cls),
+    m_mid_get_props(
+        env.GetMethodID(cls,
+                        "getProperties",
+                        "(Ljava/lang/String;)"
+                        "L"JAVA_PACKAGE
+                        "/ISVNEditor$ProvidePropsCallback$ReturnValue;"))
+{}
 
-::Java::MethodID ProvidePropsCallback::m_mid_get_props;
+ProvidePropsCallback::ClassImpl::~ClassImpl() {}
 
-void ProvidePropsCallback::static_init(::Java::Env env)
-{
-  m_mid_get_props =
-    env.GetMethodID(::Java::ClassCache::get_editor_provide_props_cb(),
-                    "getProperties",
-                    "(Ljava/lang/String;)"
-                    "L"JAVA_PACKAGE
-                    "/ISVNEditor$ProvidePropsCallback$ReturnValue;");
-}
 
 const char* const ProvidePropsCallback::ReturnValue::m_class_name =
   JAVA_PACKAGE"/ISVNEditor$ProvidePropsCallback$ReturnValue";
 
-::Java::FieldID ProvidePropsCallback::ReturnValue::m_fid_properties;
-::Java::FieldID ProvidePropsCallback::ReturnValue::m_fid_revision;
+ProvidePropsCallback::ReturnValue::ClassImpl::ClassImpl(
+    ::Java::Env env, jclass cls)
+  : ::Java::Object::ClassImpl(env, cls),
+    m_fid_properties(env.GetFieldID(cls, "properties", "Ljava/util/Map;")),
+    m_fid_revision(env.GetFieldID(cls, "revision", "J"))
+{}
 
-void ProvidePropsCallback::ReturnValue::static_init(::Java::Env env)
-{
-  const jclass cls =
-    ::Java::ClassCache::get_editor_provide_props_cb_return_value();
-  m_fid_properties = env.GetFieldID(cls, "properties", "Ljava/util/Map;");
-  m_fid_revision = env.GetFieldID(cls, "revision", "J");
-}
+ProvidePropsCallback::ReturnValue::ClassImpl::~ClassImpl() {}
 
 apr_hash_t*
 ProvidePropsCallback::ReturnValue::get_property_hash(apr_pool_t* pool) const
 {
-  jobject jproperties = m_env.GetObjectField(m_jthis, m_fid_properties);
+  jobject jproperties = m_env.GetObjectField(m_jthis, impl().m_fid_properties);
   return Util::make_property_hash(m_env, jproperties, pool);
 }
 
@@ -117,15 +113,14 @@ ProvidePropsCallback::ReturnValue::get_property_hash(apr_pool_t* pool) const
 const char* const GetNodeKindCallback::m_class_name =
   JAVA_PACKAGE"/ISVNEditor$GetNodeKindCallback";
 
-::Java::MethodID GetNodeKindCallback::m_mid_get_kind;
+GetNodeKindCallback::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
+  : ::Java::Object::ClassImpl(env, cls),
+    m_mid_get_kind(
+        env.GetMethodID(cls,
+                        "getKind",
+                        "(Ljava/lang/String;J)"
+                        "L"JAVA_PACKAGE"/types/NodeKind;"))
+{}
 
-void GetNodeKindCallback::static_init(::Java::Env env)
-{
-  m_mid_get_kind =
-    env.GetMethodID(::Java::ClassCache::get_editor_get_kind_cb(),
-                    "getKind",
-                    "(Ljava/lang/String;J)"
-                    "L"JAVA_PACKAGE"/types/NodeKind;");
-}
-
+GetNodeKindCallback::ClassImpl::~ClassImpl() {}
 } // namespace JavaHL

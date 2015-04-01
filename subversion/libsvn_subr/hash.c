@@ -31,10 +31,14 @@
 #include <apr_hash.h>
 #include <apr_file_io.h>
 
+#ifndef SVN_HASH__GETS_SETS
+#define SVN_HASH__GETS_SETS
+#endif
+#include "svn_hash.h"
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
-#include "svn_hash.h"
 #include "svn_sorts.h"
 #include "svn_io.h"
 #include "svn_pools.h"
@@ -44,7 +48,6 @@
 #include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
-
 
 
 
@@ -535,7 +538,7 @@ svn_hash_keys(apr_array_header_t **array,
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
     {
-      APR_ARRAY_PUSH(*array, const char *) = svn__apr_hash_index_key(hi);
+      APR_ARRAY_PUSH(*array, const char *) = apr_hash_this_key(hi);
     }
 
   return SVN_NO_ERROR;
@@ -557,6 +560,20 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
     }
   *hash_p = hash;
   return SVN_NO_ERROR;
+}
+
+
+void *
+svn_hash__gets(apr_hash_t *ht, const char *key)
+{
+  return apr_hash_get(ht, key, APR_HASH_KEY_STRING);
+}
+
+
+void
+svn_hash__sets(apr_hash_t *ht, const char *key, const void *val)
+{
+  apr_hash_set(ht, key, APR_HASH_KEY_STRING, val);
 }
 
 
@@ -597,14 +614,14 @@ svn_hash__get_bool(apr_hash_t *hash, const char *key,
 
 /*** Optimized hash function ***/
 
-/* apr_hashfunc_t optimized for the key that we use in SVN: paths and 
+/* apr_hashfunc_t optimized for the key that we use in SVN: paths and
  * property names.  Its primary goal is speed for keys of known length.
- * 
+ *
  * Since strings tend to spawn large value spaces (usually differ in many
  * bits with differences spanning a larger section of the key), we can be
  * quite sloppy extracting a hash value.  The more keys there are in a
  * hash container, the more bits of the value returned by this function
- * will be used.  For a small number of string keys, choosing bits from any 
+ * will be used.  For a small number of string keys, choosing bits from any
  * any fix location close to the tail of those keys would usually be good
  * enough to prevent high collision rates.
  */

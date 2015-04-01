@@ -309,7 +309,7 @@ first_non_fsm_start_char_cstring(const char *data)
 
   /* Scan the input one machine word at a time. */
 #ifndef SVN_UTF_NO_UNINITIALISED_ACCESS
-  /* This may read allocated but initialised bytes beyond the
+  /* This may read allocated but uninitialised bytes beyond the
      terminating null.  Any such bytes are always readable and this
      code operates correctly whatever the uninitialised values happen
      to be.  However memory checking tools such as valgrind and GCC

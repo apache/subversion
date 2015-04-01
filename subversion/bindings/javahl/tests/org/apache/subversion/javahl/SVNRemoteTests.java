@@ -78,8 +78,11 @@ public class SVNRemoteTests extends SVNTests
             RemoteFactory factory = new RemoteFactory();
             factory.setConfigDirectory(configDirectory);
             factory.setUsername(USERNAME);
-            factory.setPassword(PASSWORD);
-            factory.setPrompt(new DefaultPromptUserPassword());
+            // Do not set default password, exercise prompter instead.
+            if (DefaultAuthn.useDeprecated())
+                factory.setPrompt(DefaultAuthn.getDeprecated());
+            else
+                factory.setPrompt(DefaultAuthn.getDefault());
 
             ISVNRemote raSession = factory.openRemoteSession(url);
             assertNotNull("Null session was returned by factory", raSession);
@@ -111,12 +114,20 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote session;
         try
         {
-            session = new RemoteFactory(
-                super.conf.getAbsolutePath(),
-                USERNAME, PASSWORD,
-                new DefaultPromptUserPassword(),
-                null, null, null)
-                .openRemoteSession(getTestRepoUrl());
+            if (DefaultAuthn.useDeprecated())
+                session = new RemoteFactory(
+                    super.conf.getAbsolutePath(),
+                    USERNAME, null, // Do not set default password.
+                    DefaultAuthn.getDeprecated(),
+                    null, null, null)
+                    .openRemoteSession(getTestRepoUrl());
+            else
+                session = new RemoteFactory(
+                    super.conf.getAbsolutePath(),
+                    USERNAME, null, // Do not set default password.
+                    DefaultAuthn.getDefault(),
+                    null, null, null)
+                    .openRemoteSession(getTestRepoUrl());
         }
         catch (ClientException ex)
         {
@@ -139,10 +150,19 @@ public class SVNRemoteTests extends SVNTests
             try {
                 String prefix = getTestRepoUrl().substring(
                     0, 1 + getTestRepoUrl().lastIndexOf("/"));
+
+            if (DefaultAuthn.useDeprecated())
                 new RemoteFactory(
                     super.conf.getAbsolutePath(),
-                    USERNAME, PASSWORD,
-                    new DefaultPromptUserPassword(),
+                    USERNAME, null, // Do not set default password.
+                    DefaultAuthn.getDeprecated(),
+                    null, null, null)
+                    .openRemoteSession(prefix + "repositorydoesnotexisthere");
+            else
+                new RemoteFactory(
+                    super.conf.getAbsolutePath(),
+                    USERNAME, null, // Do not set default password.
+                    DefaultAuthn.getDefault(),
                     null, null, null)
                     .openRemoteSession(prefix + "repositorydoesnotexisthere");
             }
@@ -985,12 +1005,20 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote session;
         try
         {
-            session = new RemoteFactory(
-                super.conf.getAbsolutePath(),
-                USERNAME, PASSWORD,
-                new DefaultPromptUserPassword(),
-                null, handler, null)
-                .openRemoteSession(getTestRepoUrl());
+            if (DefaultAuthn.useDeprecated())
+                session = new RemoteFactory(
+                    super.conf.getAbsolutePath(),
+                    USERNAME, null, // Do not set default password.
+                    DefaultAuthn.getDeprecated(),
+                    null, handler, null)
+                    .openRemoteSession(getTestRepoUrl());
+            else
+                session = new RemoteFactory(
+                    super.conf.getAbsolutePath(),
+                    USERNAME, null, // Do not set default password.
+                    DefaultAuthn.getDefault(),
+                    null, handler, null)
+                    .openRemoteSession(getTestRepoUrl());
         }
         catch (ClientException ex)
         {
@@ -1035,6 +1063,13 @@ public class SVNRemoteTests extends SVNTests
                 return this.relpath.equals(that.relpath);
             }
 
+            @Override
+            public int hashCode()
+            {
+                return this.relpath.hashCode();
+            }
+
+            @Override
             public int compareTo(StatInfo that)
             {
                 return this.relpath.compareTo(that.relpath);
@@ -1363,6 +1398,7 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote.FileRevision rev = result.get(0);
         assertEquals("/iota", rev.getPath());
         assertFalse(rev.isResultOfMerge());
+        assertTrue(rev.hasTextDelta());
     }
 
     // This test is a result of a threading bug that was identified in

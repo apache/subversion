@@ -651,7 +651,15 @@ public class ClientNotifyInformation extends EventObject
         /** The operation failed because the operation (E.g. commit)
          * is only valid if the operation includes this path.
          * @since New in 1.9. */
-        failed_requires_target ("failed requires target");
+        failed_requires_target ("failed requires target"),
+
+        /** Running info on an external module.
+         * @since New in 1.9. */
+        info_external ("info external"),
+
+        /** Finalizing commit.
+         * @since New in 1.9. */
+        commit_finalizing ("commit finalizing");
 
         /**
          * The description of the action.

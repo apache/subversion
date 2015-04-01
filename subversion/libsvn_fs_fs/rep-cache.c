@@ -96,7 +96,7 @@ open_rep_cache(void *baton,
 #endif
   SVN_ERR(svn_sqlite__open(&sdb, db_path,
                            svn_sqlite__mode_rwcreate, statements,
-                           0, NULL,
+                           0, NULL, 0,
                            fs->pool, pool));
 
   SVN_ERR(svn_sqlite__read_schema_version(&version, sdb, pool));

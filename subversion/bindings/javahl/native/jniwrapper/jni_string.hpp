@@ -27,6 +27,8 @@
 #include <cstring>
 #include <string>
 
+#include <apr_pools.h>
+
 #include "jni_object.hpp"
 
 namespace Java {
@@ -39,37 +41,47 @@ namespace Java {
  *
  * @since New in 1.9.
  */
-class String : public Object
+class String
 {
 public:
   /**
    * Constructs a wrapper around an existing string @a str.
    */
   explicit String(Env env, jstring str)
-    : Object(env, ClassCache::get_string(), str)
+    : m_env(env),
+      m_jthis(str)
     {}
 
   /**
    * Constructs a new string and wrapper from @a text.
    */
   explicit String(Env env, const char* text)
-    : Object(env, ClassCache::get_string(), env.NewStringUTF(text))
+    : m_env(env),
+      m_jthis(env.NewStringUTF(text))
     {}
 
   /**
    * Constructs a new string and wrapper from @a text.
    */
   explicit String(Env env, const std::string& text)
-    : Object(env, ClassCache::get_string(), env.NewStringUTF(text.c_str()))
+    : m_env(env),
+      m_jthis(env.NewStringUTF(text.c_str()))
     {}
 
   /**
-   * Returns the wrapped JNI object reference. Overridden from the
-   * base class in order to return the correct JNI reference type.
+   * Returns the wrapped JNI object reference.
    */
   jstring get() const
     {
-      return jstring(Object::get());
+      return m_jthis;
+    }
+
+  /**
+   * Returns the wrapped enviromnment reference.
+   */
+  Env get_env() const
+    {
+      return m_env;
     }
 
   /**
@@ -88,6 +100,12 @@ public:
     {
       return m_env.GetStringUTFLength(get());
     }
+
+  /**
+   * Copies the contents of the modified UTF-8 representation of the
+   * string into @a pool.
+   */
+  const char* strdup(apr_pool_t* pool) const;
 
   /**
    * Accessor class for the contents of the string.
@@ -203,9 +221,28 @@ public:
   };
 
 private:
+  const Env m_env;
+  const jstring m_jthis;
+
+  /**
+   * This object's implementation details.
+   */
+  class ClassImpl : public Object::ClassImpl
+  {
+    friend class ClassCacheImpl;
+
+  protected:
+    explicit ClassImpl(Env env, jclass cls)
+      : Object::ClassImpl(env, cls)
+      {}
+
+  public:
+    virtual ~ClassImpl();
+  };
+
   friend class Contents;
   friend class MutableContents;
-  friend class ClassCache;
+  friend class ClassCacheImpl;
   static const char* const m_class_name;
 };
 

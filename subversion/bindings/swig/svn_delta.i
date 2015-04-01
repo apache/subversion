@@ -173,7 +173,7 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 %ignore svn_txdelta_window_t::ops;
 %extend svn_txdelta_window_t {
 
-void _ops_get(int *num_ops, svn_txdelta_op_t **ops)
+void _ops_get(int *num_ops, const svn_txdelta_op_t **ops)
 {
   *num_ops = self->num_ops;
   *ops = self->ops;
@@ -205,11 +205,11 @@ void _ops_get(int *num_ops, svn_txdelta_op_t **ops)
 %include svn_delta_h.swg
 
 #ifdef SWIGPYTHON
-%pythoncode {
+%pythoncode %{
 # This function is for backwards compatibility only.
 # Use svn_txdelta_window_t.ops instead.
 svn_txdelta_window_t_ops_get = svn_txdelta_window_t._ops_get
-}
+%}
 #endif
 
 #ifdef SWIGRUBY

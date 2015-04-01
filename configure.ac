@@ -90,13 +90,8 @@ AC_SUBST([MKDIR])
 
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
-dnl The specific reason we require APR 0.9.7 is:
-dnl   It contains fixes to its file writing routines
-dnl   now generating errors instead of silently ignoring
-dnl   them.  Only .7 and later can guarantee repository
-dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["1\.[345]\. 2\."]
+APR_VER_REGEXES=["1\.[3-9]\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 
@@ -112,7 +107,7 @@ if test `expr $apr_version : 2` -ne 0; then
   SVN_APR_MAJOR_VERSION=2
 else
   svn_lib_ver=0
-  APU_VER_REGEXES=["1\.[345]\."]
+  APU_VER_REGEXES=["1\.[3-9]\."]
   SVN_LIB_APRUTIL($APU_VER_REGEXES)
   SVN_APR_MAJOR_VERSION=1
 fi
@@ -323,18 +318,6 @@ case $host in
     ;;
 esac
 AC_SUBST(LT_NO_UNDEFINED)
-
-AC_MSG_CHECKING([whether to avoid circular linkage at all costs])
-case $host in
-  *-*-cygwin*)
-    AC_MSG_RESULT([yes])
-    AC_DEFINE([SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK], 1,
-              [Define if circular linkage is not possible on this platform.])
-    ;;
-  *)
-    AC_MSG_RESULT([no])
-    ;;
-esac
 
 dnl Check for trang.
 trang=yes
@@ -773,12 +756,16 @@ AH_BOTTOM([
 # define SVN__FORCE_INLINE
 # define SVN__PREVENT_INLINE
 #elif defined(__GNUC__)
-# define SVN__FORCE_INLINE __attribute__ ((always_inline))
+# define SVN__FORCE_INLINE APR_INLINE __attribute__ ((always_inline))
 # define SVN__PREVENT_INLINE __attribute__ ((noinline))
 #else
-# define SVN__FORCE_INLINE
+# define SVN__FORCE_INLINE APR_INLINE
 # define SVN__PREVENT_INLINE
 #endif
+
+/* Macro used to specify that a variable is intentionally left unused.
+   Supresses compiler warnings about the variable being unused.  */
+#define SVN_UNUSED(v) ( (void)(v) )
 ])
 
 dnl Used to simulate makefile conditionals.
@@ -1062,14 +1049,13 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
-        SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
         SVN_CFLAGS_ADD_IFELSE([-Wmissing-variable-declarations])
 
         CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"
 
         dnl Add flags that all versions of GCC (should) support
-        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long $CMAINTAINERFLAGS"
+        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
       fi
       if test "$GXX" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
@@ -1309,7 +1295,7 @@ AC_PATH_PROG(PERL, perl, none)
 if test -n "$RUBY"; then
   AC_PATH_PROG(RUBY, "$RUBY", none)
 else
-  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18 ruby1.9 ruby1 ruby1.9.3 ruby193, none)
+  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18 ruby1.9 ruby1 ruby1.9.3 ruby193 ruby2.0 ruby2.1, none)
 fi
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
@@ -1318,7 +1304,7 @@ if test "$RUBY" != "none"; then
     if test -n "$RDOC"; then
       AC_PATH_PROG(RDOC, "$RDOC", none)
     else
-      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193, none)
+      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193 rdoc2.0 rdoc2.1, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
@@ -1343,10 +1329,6 @@ if test "$RUBY" != "none"; then
       RUBY="none"
       AC_MSG_WARN([The detected Ruby is between 1.9 and 1.9.3])
       AC_MSG_WARN([Only 1.8.x and 1.9.3 releases are supported at this time])
-    elif test \(  "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -eq "9" -a "$RUBY_TEENY" -eq "3" \); then
-      #Warn about 1.9.3 support
-      AC_MSG_WARN([WARNING: The detected Ruby is 1.9.3])
-      AC_MSG_WARN([WARNING: Only 1.8.x releases are fully supported, 1.9.3 support is new])
     fi
   else
     AC_MSG_RESULT([no])
@@ -1483,8 +1465,15 @@ if test "$do_javahl_build" = "yes"; then
   # it.
   AC_MSG_CHECKING([for additional flags to link C++ libraries])
   if test "x$ac_compiler_gnu" = "xyes"; then
-    LT_CXX_LIBADD="-lstdc++"
-    AC_MSG_RESULT([$LT_CXX_LIBADD])
+    case "$host" in
+      *freebsd10*)
+        AC_MSG_RESULT([none needed])
+      ;;
+      *)
+        LT_CXX_LIBADD="-lstdc++"
+        AC_MSG_RESULT([$LT_CXX_LIBADD])
+      ;;
+    esac
   else
     AC_MSG_RESULT([none needed])
   fi

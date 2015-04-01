@@ -345,10 +345,11 @@ svn_cl__status(apr_getopt_t *os,
 
       /* Retrieve a hash of status structures with the information
          requested by the user. */
-      SVN_ERR(svn_cl__try(svn_client_status5(&repos_rev, ctx, target, &rev,
+      SVN_ERR(svn_cl__try(svn_client_status6(&repos_rev, ctx, target, &rev,
                                              opt_state->depth,
                                              opt_state->verbose,
                                              opt_state->update,
+                                             TRUE /* check_working_copy */,
                                              opt_state->no_ignore,
                                              opt_state->ignore_externals,
                                              FALSE /* depth_as_sticky */,
@@ -378,8 +379,8 @@ svn_cl__status(apr_getopt_t *os,
       for (hi = apr_hash_first(scratch_pool, master_cl_hash); hi;
            hi = apr_hash_next(hi))
         {
-          const char *changelist_name = svn__apr_hash_index_key(hi);
-          apr_array_header_t *path_array = svn__apr_hash_index_val(hi);
+          const char *changelist_name = apr_hash_this_key(hi);
+          apr_array_header_t *path_array = apr_hash_this_val(hi);
           int j;
 
           /* ### TODO: For non-XML output, we shouldn't print the

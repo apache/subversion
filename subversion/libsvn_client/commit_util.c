@@ -467,10 +467,12 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
+  SVN_ERR_ASSERT(commit_relpath != NULL);
+
   /* A function to retrieve not present children would be nice to have */
-  SVN_ERR(svn_wc__node_get_children_of_working_node(
-                                    &children, wc_ctx, local_abspath, TRUE,
-                                    scratch_pool, iterpool));
+  SVN_ERR(svn_wc__node_get_not_present_children(&children, wc_ctx,
+                                                local_abspath,
+                                                scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
@@ -486,13 +488,10 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
                                           this_abspath, FALSE, scratch_pool));
 
       if (!not_present)
-        continue;
+        continue; /* Node is replaced */
 
-      if (commit_relpath == NULL)
-        this_commit_relpath = NULL;
-      else
-        this_commit_relpath = svn_relpath_join(commit_relpath, name,
-                                              iterpool);
+      this_commit_relpath = svn_relpath_join(commit_relpath, name,
+                                             iterpool);
 
       /* We should check if we should really add a delete operation */
       if (check_url_func)
@@ -779,7 +778,6 @@ harvest_status_callback(void *status_baton,
                                       wc_ctx, svn_dirent_dirname(local_abspath,
                                                                  scratch_pool),
                                       FALSE /* ignore_enoent */,
-                                      FALSE /* show_hidden */,
                                       scratch_pool, scratch_pool));
 
       if (copy_mode_root || status->switched || node_rev != dir_rev)
@@ -1257,13 +1255,13 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
   /* Make sure that every path in danglers is part of the commit. */
   for (hi = apr_hash_first(scratch_pool, danglers); hi; hi = apr_hash_next(hi))
     {
-      const char *dangling_parent = svn__apr_hash_index_key(hi);
+      const char *dangling_parent = apr_hash_this_key(hi);
 
       svn_pool_clear(iterpool);
 
       if (! look_up_committable(*committables, dangling_parent, iterpool))
         {
-          const char *dangling_child = svn__apr_hash_index_val(hi);
+          const char *dangling_child = apr_hash_this_val(hi);
 
           if (ctx->notify_func2 != NULL)
             {
@@ -1381,7 +1379,10 @@ svn_client__get_copy_committables(svn_client__committables_t **committables,
 }
 
 
-int svn_client__sort_commit_item_urls(const void *a, const void *b)
+/* A svn_sort__array()/qsort()-compatible sort routine for sorting
+   an array of svn_client_commit_item_t *'s by their URL member. */
+static int
+sort_commit_item_urls(const void *a, const void *b)
 {
   const svn_client_commit_item3_t *item1
     = *((const svn_client_commit_item3_t * const *) a);
@@ -1405,7 +1406,7 @@ svn_client__condense_commit_items(const char **base_url,
   SVN_ERR_ASSERT(ci && ci->nelts);
 
   /* Sort our commit items by their URLs. */
-  svn_sort__array(ci, svn_client__sort_commit_item_urls);
+  svn_sort__array(ci, sort_commit_item_urls);
 
   /* Loop through the URLs, finding the longest usable ancestor common
      to all of them, and making sure there are no duplicate URLs.  */
@@ -1560,7 +1561,7 @@ do_item_commit(void **dir_baton,
     file_pool = pool;
 
   /* Subpools are cheap, but memory isn't */
-  file_pool = svn_pool_create(file_pool); 
+  file_pool = svn_pool_create(file_pool);
 
   /* Call the cancellation function. */
   if (ctx->cancel_func)
@@ -1650,7 +1651,7 @@ do_item_commit(void **dir_baton,
         {
           notify->kind = item->kind;
           notify->path_prefix = icb->notify_path_prefix;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, pool);
         }
     }
 
@@ -1887,7 +1888,7 @@ svn_client__do_commit(const char *base_url,
        hi;
        hi = apr_hash_next(hi))
     {
-      struct file_mod_t *mod = svn__apr_hash_index_val(hi);
+      struct file_mod_t *mod = apr_hash_this_val(hi);
       const svn_client_commit_item3_t *item = mod->item;
       const svn_checksum_t *new_text_base_md5_checksum;
       const svn_checksum_t *new_text_base_sha1_checksum;
@@ -1936,6 +1937,15 @@ svn_client__do_commit(const char *base_url,
         svn_hash_sets(*sha1_checksums, item->path, new_text_base_sha1_checksum);
 
       svn_pool_destroy(mod->file_pool);
+    }
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify_url(base_url,
+                                        svn_wc_notify_commit_finalizing,
+                                        iterpool);
+      ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
     }
 
   svn_pool_destroy(iterpool);

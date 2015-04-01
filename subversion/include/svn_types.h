@@ -32,6 +32,7 @@
 #include <limits.h> /* for ULONG_MAX */
 
 #include <apr.h>         /* for apr_size_t, apr_int64_t, ... */
+#include <apr_version.h>
 #include <apr_errno.h>   /* for apr_status_t */
 #include <apr_pools.h>   /* for apr_pool_t */
 #include <apr_hash.h>    /* for apr_hash_t */
@@ -149,10 +150,16 @@ typedef int svn_boolean_t;
 
 
 
-/** Declaration of the null pointer constant type. */
+/** Declaration of the null pointer constant type.
+ *
+ * @since New in 1.9.
+ */
 struct svn_null_pointer_constant_stdarg_sentinel_t;
 
-/** Null pointer constant used as a sentinel in variable argument lists. */
+/** Null pointer constant used as a sentinel in variable argument lists.
+ *
+ * @since New in 1.9.
+ */
 #define SVN_VA_NULL ((struct svn_null_pointer_constant_stdarg_sentinel_t*)0)
 /* See? (char*)NULL -- They have the same length, but the cast looks ugly. */
 
@@ -239,21 +246,26 @@ typedef struct svn_version_t svn_version_t;
  * These functions enable the caller to dereference an APR hash table index
  * without type casts or temporary variables.
  *
- * ### These are private, and may go away when APR implements them natively.
+ * These functions are provided by APR itself from version 1.5.
+ * Definitions are provided here for when using older versions of APR.
  * @{
  */
 
+#if !APR_VERSION_AT_LEAST(1, 5, 0)
+
 /** Return the key of the hash table entry indexed by @a hi. */
 const void *
-svn__apr_hash_index_key(const apr_hash_index_t *hi);
+apr_hash_this_key(apr_hash_index_t *hi);
 
 /** Return the key length of the hash table entry indexed by @a hi. */
 apr_ssize_t
-svn__apr_hash_index_klen(const apr_hash_index_t *hi);
+apr_hash_this_key_len(apr_hash_index_t *hi);
 
 /** Return the value of the hash table entry indexed by @a hi. */
 void *
-svn__apr_hash_index_val(const apr_hash_index_t *hi);
+apr_hash_this_val(apr_hash_index_t *hi);
+
+#endif
 
 /** @} */
 
@@ -815,7 +827,7 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
  */
 typedef struct svn_log_changed_path2_t
 {
-  /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify, mo'V'ed, move-replac'E'd */
+  /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
   char action;
 
   /** Source path of copy (if any). */
@@ -1053,48 +1065,6 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
   const char *date,  /* use svn_time_from_cstring() if need apr_time_t */
   const char *message,
   apr_pool_t *pool);
-
-/**
- * This enumeration contains the various options how SVN shall report
- * and process explicit MOVes as well as ADD+DEL pairs.
- *
- * @since New in 1.9.
- */
-typedef enum svn_move_behavior_t
-{
-  /** report all moves as ADD with history.
-     This also provides backward compatibility with 1.8 clients. */
-  svn_move_behavior_no_moves = 0,
-
-  /** report all changes, including moves, as they were reported.
-     This is option with the least overhead. */
-  svn_move_behavior_explicit_moves,
-
-  /** in addition to explicit moves, try to find matching DEL + ADD pairs
-     and report the ADD in those as moves as well.  Which of the eligible
-     DEL + ADD pairs will be detected is implementation-dependent. */
-  svn_move_behavior_auto_moves
-} svn_move_behavior_t;
-
-/** Return a constant string expressing @a value as an English word,
- * e.g., "none", "explicit", etc.  The string is not localized,
- * as it may be used for client<->server communications.
- *
- * @since New in 1.9.
- */
-const char *
-svn_move_behavior_to_word(svn_move_behavior_t value);
-
-/** Return the appropriate move behavior for @a word.  @a word is as
- * returned from svn_move_behavior_to_word().  If @a word does not
- * represent a recognized behavior, return #svn_move_behavior_explicit_moves.
- *
- * @since New in 1.9.
- */
-svn_move_behavior_t
-svn_move_behavior_from_word(const char *word);
-
-
 
 
 /** Callback function type for commits.

@@ -28,6 +28,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_version.h"
 
 #include "wc.h"
@@ -42,7 +43,7 @@
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
-
+/* #define VERIFY_ON_CLOSE */
 
 /* Get the format version from a wc-1 directory. If it is not a working copy
    directory, then it sets VERSION to zero and returns no error.  */
@@ -162,6 +163,27 @@ svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb)
   return SVN_NO_ERROR;
 }
 
+#if defined(VERIFY_ON_CLOSE) && defined(SVN_DEBUG)
+/* Implements svn_wc__db_verify_cb_t */
+static svn_error_t *
+verify_db_cb(void *baton,
+             const char *wc_abspath,
+             const char *local_relpath,
+             int op_depth,
+             int id,
+             const char *msg,
+             apr_pool_t *scratch_pool)
+{
+  if (op_depth >= 0)
+    SVN_DBG(("DB-VRFY: %s: %s (%d): SV%04d %s",
+              wc_abspath, local_relpath, op_depth, id, msg));
+  else
+    SVN_DBG(("DB-VRFY: %s: %s: SV%04d %s",
+              wc_abspath, local_relpath, id, msg));
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 /* */
 static apr_status_t
@@ -171,6 +193,18 @@ close_wcroot(void *data)
   svn_error_t *err;
 
   SVN_ERR_ASSERT_NO_RETURN(wcroot->sdb != NULL);
+
+#if defined(VERIFY_ON_CLOSE) && defined(SVN_DEBUG)
+  if (getenv("SVN_CMDLINE_VERIFY_SQL_AT_CLOSE"))
+    {
+      apr_pool_t *scratch_pool = svn_pool_create(NULL);
+
+      svn_error_clear(svn_wc__db_verify_db_full_internal(
+                                    wcroot, verify_db_cb, NULL, scratch_pool));
+
+      svn_pool_destroy(scratch_pool);
+    }
+#endif
 
   err = svn_sqlite__close(wcroot->sdb);
   wcroot->sdb = NULL;
@@ -206,6 +240,7 @@ svn_wc__db_open(svn_wc__db_t **db,
     {
       svn_error_t *err;
       svn_boolean_t sqlite_exclusive = FALSE;
+      apr_int64_t timeout;
 
       err = svn_config_get_bool(config, &sqlite_exclusive,
                                 SVN_CONFIG_SECTION_WORKING_COPY,
@@ -217,6 +252,15 @@ svn_wc__db_open(svn_wc__db_t **db,
         }
       else
         (*db)->exclusive = sqlite_exclusive;
+
+      err = svn_config_get_int64(config, &timeout,
+                                 SVN_CONFIG_SECTION_WORKING_COPY,
+                                 SVN_CONFIG_OPTION_SQLITE_BUSY_TIMEOUT,
+                                 0);
+      if (err || timeout < 0 || timeout > APR_INT32_MAX)
+        svn_error_clear(err);
+      else
+        (*db)->timeout = (apr_int32_t)timeout;
     }
 
   return SVN_NO_ERROR;
@@ -235,8 +279,8 @@ svn_wc__db_close(svn_wc__db_t *db)
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
-      const char *local_abspath = svn__apr_hash_index_key(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
+      const char *local_abspath = apr_hash_this_key(hi);
 
       if (wcroot->sdb)
         svn_hash_sets(roots, wcroot->abspath, wcroot);
@@ -352,7 +396,7 @@ svn_wc__db_close_many_wcroots(apr_hash_t *roots,
 
   for (hi = apr_hash_first(scratch_pool, roots); hi; hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
       apr_status_t result;
 
       result = apr_pool_cleanup_run(state_pool, wcroot, close_wcroot);
@@ -542,7 +586,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
              as the filesystem allows. */
           err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
                                         svn_sqlite__mode_readwrite,
-                                        db->exclusive, NULL,
+                                        db->exclusive, db->timeout, NULL,
                                         db->state_pool, scratch_pool);
           if (err == NULL)
             {
@@ -658,11 +702,9 @@ try_symlink_as_dir:
       if (err)
         {
           if (err->apr_err == SVN_ERR_WC_CORRUPT)
-            return svn_error_quick_wrap(
-              err, apr_psprintf(scratch_pool,
-                                _("Missing a row in WCROOT for '%s'."),
-                                svn_dirent_local_style(original_abspath,
-                                                       scratch_pool)));
+            return svn_error_quick_wrapf(
+              err, _("Missing a row in WCROOT for '%s'."),
+              svn_dirent_local_style(original_abspath, scratch_pool));
           return svn_error_trace(err);
         }
 
@@ -906,10 +948,10 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
 
       if (wcroot == root_wcroot)
-        svn_hash_sets(db->dir_data, svn__apr_hash_index_key(hi), NULL);
+        svn_hash_sets(db->dir_data, apr_hash_this_key(hi), NULL);
     }
 
   result = apr_pool_cleanup_run(db->state_pool, root_wcroot, close_wcroot);

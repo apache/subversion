@@ -98,6 +98,8 @@ Commit access for specific areas:
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python b.)
           vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (JavaHL bindings)
        rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig bindings)
+        stilor   Alexey Neyman <stilor@att.net>              (Python bindings,
+                                                             svn-vendor.py)
 
   Packages:
 
@@ -160,9 +162,9 @@ Commit access for specific areas:
          arwin   Arwin Arni <arwin@collab.net>               (svn-bisect)
           joes   Joe Schaefer <joe_schaefer@yahoo.com>       (svnpubsub)
      humbedooh   Daniel Gruno <humbedooh@apache.org>         (svnpubsub)
-      prabhugs   Prabhu Gnana Sundar <prabhugs@collab.net>   (verify-keep-going)
+      prabhugs   Prabhu Gnana Sundar <pprabhugs@gmail.com>   (verify-keep-going)
         schabi   Markus Schaber <schabi@apache.org>          (testsuite)
-
+           gbg   Gabriela Gibson <gabriela.gibson@gmail.com> (gtest) 
 
   Translation of message files:
 

@@ -73,6 +73,18 @@ svn_io__is_finfo_read_only(svn_boolean_t *read_only,
                            apr_pool_t *pool);
 
 
+/**
+ * Lock file at @a lock_file. If that file does not exist, create an empty
+ * file.
+ *
+ * Lock will be automatically released when @a pool is cleared or destroyed.
+ * Use @a pool for memory allocations.
+ */
+svn_error_t *
+svn_io__file_lock_autocreate(const char *lock_file,
+                             apr_pool_t *pool);
+
+
 /** Buffer test handler function for a generic stream. @see svn_stream_t
  * and svn_stream__is_buffered().
  *

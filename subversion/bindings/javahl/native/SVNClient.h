@@ -63,13 +63,18 @@ class SVNClient :public SVNBase
 {
  public:
   jobject openRemoteSession(const char* path, int);
+  void vacuum(const char *path,
+              bool remove_unversioned_items, bool remove_ignored_items,
+              bool fix_recorded_timestamps, bool remove_unused_pristines,
+              bool include_externals);
   void patch(const char *patchPath, const char *targetPath, bool dryRun,
              int stripCount, bool reverse, bool ignoreWhitespace,
              bool removeTempfiles, PatchCallback *callback);
-  void info2(const char *path,
-             Revision &revision, Revision &pegRevision, svn_depth_t depth,
-             svn_boolean_t fetchExcluded, svn_boolean_t fetchActualOnly,
-             StringArray &changelists, InfoCallback *callback);
+  void info(const char *path,
+            Revision &revision, Revision &pegRevision, svn_depth_t depth,
+            svn_boolean_t fetchExcluded, svn_boolean_t fetchActualOnly,
+            svn_boolean_t includeExternals,
+            StringArray &changelists, InfoCallback *callback);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
   jobject revProperties(const char *path, Revision &revision);
@@ -77,11 +82,13 @@ class SVNClient :public SVNBase
   void blame(const char *path, Revision &pegRevision,
              Revision &revisionStart, Revision &revisionEnd,
              bool ignoreMimeType, bool includeMergedRevisions,
-             BlameCallback *callback);
+             BlameCallback *callback, DiffOptions const& options);
   void relocate(const char *from, const char *to, const char *path,
                 bool ignoreExternals);
-  void streamFileContent(const char *path, Revision &revision,
-                         Revision &pegRevision, OutputStream &outputStream);
+  apr_hash_t *streamFileContent(const char *path,
+                                Revision &revision, Revision &pegRevision,
+                                bool expand_keywords, bool return_props,
+                                OutputStream &outputStream);
   void propertySetLocal(Targets &targets, const char *name, JNIByteArray &value,
                         svn_depth_t depth, StringArray &changelists,
                         bool force);
@@ -128,7 +135,12 @@ class SVNClient :public SVNBase
                  svn_depth_t depth, const char *nativeEOL);
   void resolve(const char *path, svn_depth_t depth,
                svn_wc_conflict_choice_t choice);
-  void cleanup(const char *path);
+  void cleanup(const char *path,
+               bool break_locks,
+               bool fix_recorded_timestamps,
+               bool clear_dav_cache,
+               bool remove_unused_pristines,
+               bool include_externals);
   void mkdir(Targets &targets, CommitMessage *message, bool makeParents,
              PropertyTable &revprops, CommitCallback *callback);
   void move(Targets &srcPaths, const char *destPath,
@@ -137,8 +149,9 @@ class SVNClient :public SVNBase
             PropertyTable &revprops, CommitCallback *callback);
   void copy(CopySources &copySources, const char *destPath,
             CommitMessage *message, bool copyAsChild, bool makeParents,
-            bool ignoreExternals, PropertyTable &revprops,
-            CommitCallback *callback);
+            bool ignoreExternals, bool metaDataOnly, bool pinExternals,
+            jobject jexternalsToPin,
+            PropertyTable &revprops, CommitCallback *callback);
   void commit(Targets &targets, CommitMessage *message, svn_depth_t depth,
               bool noUnlock, bool keepChangelist,
               StringArray &changelists, PropertyTable &revprops,
@@ -148,7 +161,8 @@ class SVNClient :public SVNBase
                     bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force,
            bool no_ignore, bool no_autoprops, bool add_parents);
-  void revert(StringArray &paths, svn_depth_t depth, StringArray &changelists);
+  void revert(StringArray &paths, svn_depth_t depth, StringArray &changelists,
+              bool clear_changelists, bool metadata_only);
   void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, PropertyTable &revprops,
               CommitCallback *callback);
@@ -159,7 +173,7 @@ class SVNClient :public SVNBase
                    std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
                    StringArray &revProps,
-                   long limit, LogMessageCallback *callback);
+                   int limit, LogMessageCallback *callback);
   jobject getVersionExtended(bool verbose);
   jstring getAdminDirectoryName();
   jboolean isAdminDirectory(const char *name);
@@ -169,9 +183,11 @@ class SVNClient :public SVNBase
                              StringArray &changelists);
   void getChangelists(const char *path, StringArray *changelists,
                       svn_depth_t depth, ChangelistCallback *callback);
-  void status(const char *path, svn_depth_t depth, bool onServer,
-              bool getAll, bool noIgnore, bool ignoreExternals,
-              StringArray &changelists, StatusCallback *callback);
+  void status(const char *path, svn_depth_t depth,
+              bool onServer, bool onDisk, bool getAll,
+              bool noIgnore, bool ignoreExternals,
+              bool depthAsSticky, StringArray &changelists,
+              StatusCallback *callback);
   void list(const char *url, Revision &revision, Revision &pegRevision,
             svn_depth_t depth, int direntFields, bool fetchLocks,
             ListCallback *callback);

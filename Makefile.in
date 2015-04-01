@@ -89,6 +89,9 @@ swig_pldir = @libdir@/svn-perl
 swig_rbdir = $(SWIG_RB_SITE_ARCH_DIR)/svn/ext
 toolsdir = @bindir@/svn-tools
 
+# where to install pkg-config files
+pkgconfig_dir = $(datadir)/pkgconfig
+
 javahl_javadir = @libdir@/svn-javahl
 javahl_javahdir = @libdir@/svn-javahl/include
 javahl_libdir = @libdir@
@@ -210,10 +213,35 @@ COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
 COMPILE_JAVAHL_COMPAT_JAVAC = $(JAVAC) $(JAVAC_COMPAT_FLAGS)
 
-# export an env variable so that the tests can run without being installed
+# On Mac OS X, export an env variable so that the tests can run without
+# being installed. OS X needs the DYLD_LIBRARY_PATH env variable set in
+# order to find the libraries to link against, because we can't effectively
+# use rpath due to way rpath is implemented in the Mach executable format.
 TEST_SHLIB_VAR_JAVAHL=\
   if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
     for d in $(abs_builddir)/subversion/libsvn_*; do \
+      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
+        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
+      else \
+        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
+      fi; \
+    done; \
+    export @SVN_APR_SHLIB_PATH_VAR@; \
+  fi;
+TEST_SHLIB_VAR_SWIG_PY=\
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
+    for d in $(SWIG_PY_DIR)/libsvn_swig_py $(SWIG_PY_DIR)/../../../libsvn_*; do \
+      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
+        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
+      else \
+        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
+      fi; \
+    done; \
+    export @SVN_APR_SHLIB_PATH_VAR@; \
+  fi;
+TEST_SHLIB_VAR_SWIG_RB=\
+  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
+    for d in $(SWIG_RB_DIR)/libsvn_swig_ruby $(SWIG_RB_DIR)/../../../libsvn_*; do \
       if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
         @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
       else \
@@ -313,19 +341,6 @@ INSTALL_EXTRA_SWIG_PY=\
     compileall.compile_dir("$(DESTDIR)$(swig_pydir_extra)", 1, \
     "$(swig_pydir_extra)");'
 
-# export an env variable so that the tests can run without being installed
-TEST_SHLIB_VAR_SWIG_PY=\
-  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
-    for d in $(SWIG_PY_DIR)/libsvn_swig_py $(SWIG_PY_DIR)/../../../libsvn_*; do \
-      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
-        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
-      else \
-        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
-      fi; \
-    done; \
-    export @SVN_APR_SHLIB_PATH_VAR@; \
-  fi;
-
 # The path to generated and complementary source files for the SWIG
 # bindings.
 SWIG_PL_DIR = $(abs_builddir)/subversion/bindings/swig/perl
@@ -356,20 +371,8 @@ INSTALL_EXTRA_SWIG_RB=\
     $(INSTALL_DATA) "$$i" $(DESTDIR)$(SWIG_RB_SITE_LIB_DIR)/svn; \
   done
 
-# export an env variable so that the tests can run without being installed
-TEST_SHLIB_VAR_SWIG_RB=\
-  if [ "@SVN_APR_SHLIB_PATH_VAR@" = "DYLD_LIBRARY_PATH" ]; then \
-    for d in $(SWIG_RB_DIR)/libsvn_swig_ruby $(SWIG_RB_DIR)/../../../libsvn_*; do \
-      if [ -n "$$DYLD_LIBRARY_PATH" ]; then \
-        @SVN_APR_SHLIB_PATH_VAR@="$$@SVN_APR_SHLIB_PATH_VAR@:$$d/.libs"; \
-      else \
-        @SVN_APR_SHLIB_PATH_VAR@="$$d/.libs"; \
-      fi; \
-    done; \
-    export @SVN_APR_SHLIB_PATH_VAR@; \
-  fi;
-
 APXS = @APXS@
+HTTPD_VERSION = @HTTPD_VERSION@
 
 PYTHON = @PYTHON@
 PERL = @PERL@
@@ -443,6 +446,7 @@ local-distclean: local-clean
 	  libtool mkmf.log subversion/svn_private_config.h \
 	  subversion/bindings/javahl/classes \
 	  subversion/bindings/javahl/include \
+	  subversion/libsvn_*/*.pc \
 	$(SVN_CONFIG_SCRIPT_FILES)
 	rm -f Makefile
 
@@ -496,16 +500,21 @@ clean-javahl:
 check-tigris-javahl: javahl-compat
 	@FIX_JAVAHL_LIB@
 	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
 
 check-apache-javahl: javahl
 	@FIX_JAVAHL_LIB@
 	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
+	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
+
+check-deprecated-authn-javahl: javahl
+	@FIX_JAVAHL_LIB@
+	$(TEST_SHLIB_VAR_JAVAHL) \
+	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.tests=$(JAVAHL_TESTS)" "-Dtest.authn.deprecated=true" org.apache.subversion.javahl.RunTests
 
 check-javahl: check-apache-javahl
 
-check-all-javahl: check-apache-javahl check-tigris-javahl
+check-all-javahl: check-apache-javahl check-tigris-javahl check-deprecated-authn-javahl
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
@@ -519,11 +528,20 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(BASE_URL)" != ""; then                                  \
 	    flags="--url $(BASE_URL) $$flags";                               \
 	  fi;                                                                \
+	  if test "$(SKIP_C_TESTS)" != ""; then                              \
+	    flags="--skip-c-tests $$flags";                                  \
+	  fi;                                                                \
+	  if test "$(DUMP_LOAD_CROSS_CHECK)" != ""; then                     \
+	    flags="--dump-load-cross-check $$flags";                         \
+	  fi;                                                                \
 	  if test "$(FS_TYPE)" != ""; then                                   \
 	    flags="--fs-type $(FS_TYPE) $$flags";                            \
 	  fi;                                                                \
 	  if test "$(HTTP_LIBRARY)" != ""; then                              \
 	    flags="--http-library $(HTTP_LIBRARY) $$flags";                  \
+	  fi;                                                                \
+	  if test "$(HTTPD_VERSION)" != ""; then                             \
+	     flags="--httpd-version $(HTTPD_VERSION) $$flags";               \
 	  fi;                                                                \
 	  if test "$(SERVER_MINOR_VERSION)" != ""; then                      \
 	    flags="--server-minor-version $(SERVER_MINOR_VERSION) $$flags";  \
@@ -691,17 +709,29 @@ doc-clean:
 	rm -rf $(abs_builddir)/doc/javadoc
 
 # Converting from the .rnc XML schemas to various other schema formats.
-SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \
-              $(SCHEMA_DIR)/list.dtd $(SCHEMA_DIR)/log.dtd \
-              $(SCHEMA_DIR)/status.dtd $(SCHEMA_DIR)/props.dtd
+SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd \
+              $(SCHEMA_DIR)/diff.dtd \
+              $(SCHEMA_DIR)/info.dtd \
+              $(SCHEMA_DIR)/list.dtd \
+              $(SCHEMA_DIR)/log.dtd \
+              $(SCHEMA_DIR)/props.dtd \
+              $(SCHEMA_DIR)/status.dtd
 
-SCHEMAS_RNG = $(SCHEMA_DIR)/blame.rng $(SCHEMA_DIR)/info.rng \
-              $(SCHEMA_DIR)/list.rng $(SCHEMA_DIR)/log.rng \
-              $(SCHEMA_DIR)/status.rng $(SCHEMA_DIR)/props.rng
+SCHEMAS_RNG = $(SCHEMA_DIR)/blame.rng \
+              $(SCHEMA_DIR)/diff.rng \
+              $(SCHEMA_DIR)/info.rng \
+              $(SCHEMA_DIR)/list.rng \
+              $(SCHEMA_DIR)/log.rng \
+              $(SCHEMA_DIR)/props.rng \
+              $(SCHEMA_DIR)/status.rng
 
-SCHEMAS_XSD = $(SCHEMA_DIR)/blame.xsd $(SCHEMA_DIR)/info.xsd \
-              $(SCHEMA_DIR)/list.xsd $(SCHEMA_DIR)/log.xsd \
-              $(SCHEMA_DIR)/status.xsd $(SCHEMA_DIR)/props.xsd
+SCHEMAS_XSD = $(SCHEMA_DIR)/blame.xsd \
+              $(SCHEMA_DIR)/diff.xsd \
+              $(SCHEMA_DIR)/info.xsd \
+              $(SCHEMA_DIR)/list.xsd \
+              $(SCHEMA_DIR)/log.xsd \
+              $(SCHEMA_DIR)/props.xsd \
+              $(SCHEMA_DIR)/status.xsd
 
 schema: mkdir-init schema-rng schema-dtd schema-xsd
 
@@ -809,7 +839,7 @@ $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
 
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
-	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
+	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL PREFIX=$(prefix)
 
 # There is a "readlink -f" command on some systems for the same purpose,
 # but it's not as portable (e.g. Mac OS X doesn't have it).  These should
@@ -953,4 +983,5 @@ INSTALL_EXTRA_TOOLS=\
   ln -sf svnmucc$(EXEEXT) $(DESTDIR)$(bindir)/svnsyitf$(EXEEXT); \
   if test "$(DESTDIR)$(bindir)" != "$(DESTDIR)$(toolsdir)"; then \
     ln -sf $(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
+    ln -sf $(bindir)/svnbench$(EXEEXT) $(DESTDIR)$(toolsdir)/svn-bench$(EXEEXT); \
   fi

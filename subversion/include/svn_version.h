@@ -61,7 +61,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      9
+#define SVN_VER_MINOR      10
 
 /**
  * Patch number.
@@ -82,7 +82,7 @@ extern "C" {
 
 /** Version tag: a string describing the version.
  *
- * This tag remains " (dev build)" in the repository so that we can
+ * This tag remains " (under development)" in the repository so that we can
  * always see from "svn --version" that the software has been built
  * from the repository rather than a "blessed" distribution.
  *
@@ -175,10 +175,25 @@ struct svn_version_t
  * Generate the implementation of a version query function.
  *
  * @since New in 1.1.
+ * @since Since 1.9, embeds a string into the compiled object
+ *        file that can be queried with the 'what' utility.
  */
-#define SVN_VERSION_BODY \
-  SVN_VERSION_DEFINE(versioninfo);              \
-  return &versioninfo
+#define SVN_VERSION_BODY            \
+  static struct versioninfo_t       \
+    {                               \
+      const char *const str;        \
+      const svn_version_t num;      \
+    } const versioninfo =           \
+    {                               \
+      "@(#)" SVN_VERSION,           \
+      {                             \
+        SVN_VER_MAJOR,              \
+        SVN_VER_MINOR,              \
+        SVN_VER_PATCH,              \
+        SVN_VER_NUMTAG              \
+      }                             \
+    };                              \
+  return &versioninfo.num
 
 /**
  * Check library version compatibility. Return #TRUE if the client's
@@ -290,6 +305,11 @@ typedef struct svn_version_extended_t svn_version_extended_t;
  * is #TRUE, collect extra information that may be expensive to
  * retrieve (for example, the OS release name, list of shared
  * libraries, etc.).  Use @a pool for all allocations.
+ *
+ * @note This function may allocate significant auxiliary resources
+ * (memory and file descriptors) in @a pool.  It is recommended to
+ * copy the returned data to suitable longer-lived memory and clear
+ * @a pool after calling this function.
  *
  * @since New in 1.8.
  */

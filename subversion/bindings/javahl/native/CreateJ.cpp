@@ -71,7 +71,8 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "L"JAVA_PACKAGE"/types/ConflictVersion;"
-                              "L"JAVA_PACKAGE"/types/ConflictVersion;)V");
+                              "L"JAVA_PACKAGE"/types/ConflictVersion;"
+                              "Ljava/lang/String;[B[B[B[B)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
     }
@@ -118,6 +119,33 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
   jobject joperation = EnumMapper::mapOperation(desc->operation);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
+  jstring jpropRejectAbspath = JNIUtil::makeJString(desc->prop_reject_abspath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueBase = (
+      !desc->prop_value_base ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_base->data,
+                               int(desc->prop_value_base->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueWorking = (
+      !desc->prop_value_working ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_working->data,
+                               int(desc->prop_value_working->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueIncomingOld = (
+      !desc->prop_value_incoming_old ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_incoming_old->data,
+                               int(desc->prop_value_incoming_old->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueIncomingNew = (
+      !desc->prop_value_incoming_new ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_incoming_new->data,
+                               int(desc->prop_value_incoming_new->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath, jconflictKind,
@@ -125,7 +153,10 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
                                  (jboolean) desc->is_binary, jmimeType,
                                  jconflictAction, jconflictReason, joperation,
                                  jbasePath, jreposPath, juserPath,
-                                 jmergedPath, jsrcLeft, jsrcRight);
+                                 jmergedPath, jsrcLeft, jsrcRight,
+                                 jpropRejectAbspath, jpropValueBase,
+                                 jpropValueWorking, jpropValueIncomingOld,
+                                 jpropValueIncomingNew);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -523,8 +554,8 @@ CreateJ::LockMap(const apr_hash_t *locks, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, (apr_hash_t *) locks); hi;
         hi = apr_hash_next(hi), ++i)
     {
-      const char *key = (const char *) svn__apr_hash_index_key(hi);
-      const svn_lock_t *lock = (const svn_lock_t *) svn__apr_hash_index_val(hi);
+      const char *key = (const char *) apr_hash_this_key(hi);
+      const svn_lock_t *lock = (const svn_lock_t *) apr_hash_this_val(hi);
 
       jstring jpath = JNIUtil::makeJString(key);
       if (JNIUtil::isJavaExceptionThrown())
@@ -1096,8 +1127,7 @@ void fill_property_map(jobject map,
                        apr_hash_t* prop_hash, apr_array_header_t* prop_diffs,
                        apr_pool_t* scratch_pool, jmethodID put_mid)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!prop_hash != !prop_diffs
-                           || !prop_hash && !prop_diffs);
+  SVN_ERR_ASSERT_NO_RETURN(!(prop_hash && prop_diffs));
 
   if (!map || (prop_hash == NULL && prop_diffs == NULL))
     return;
@@ -1178,7 +1208,7 @@ void fill_property_map(jobject map,
     {
       for (int i = 0; i < prop_diffs->nelts; ++i)
         {
-          svn_prop_t* prop = APR_ARRAY_IDX(prop_diffs, i, svn_prop_t*);
+          svn_prop_t* prop = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
           loop_body(prop->name, prop->value);
           if (JNIUtil::isJavaExceptionThrown())
             POP_AND_RETURN_NOTHING();
@@ -1189,8 +1219,7 @@ void fill_property_map(jobject map,
 jobject property_map(apr_hash_t *prop_hash, apr_array_header_t* prop_diffs,
                      apr_pool_t* scratch_pool)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!prop_hash != !prop_diffs
-                           || !prop_hash && !prop_diffs);
+  SVN_ERR_ASSERT_NO_RETURN(!(prop_hash && prop_diffs));
 
   if (prop_hash == NULL && prop_diffs == NULL)
     return NULL;

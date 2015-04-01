@@ -59,6 +59,7 @@ repository) is:
   current             File specifying current revision and next node/copy id
   fs-type             File identifying this filesystem as an FSFS filesystem
   write-lock          Empty file, locked to serialise writers
+  pack-lock           Empty file, locked to serialise 'svnadmin pack' (f. 7+)
   txn-current-lock    Empty file, locked to serialise 'txn-current'
   uuid                File containing the UUID of the repository
   format              File containing the format number of this filesystem
@@ -78,9 +79,19 @@ The "write-lock" file is an empty file which is locked before the
 final stage of a commit and unlocked after the new "current" file has
 been moved into place to indicate that a new revision is present.  It
 is also locked during a revprop propchange while the revprop file is
-read in, mutated, and written out again.  Note that readers are never
-blocked by any operation - writers must ensure that the filesystem is
-always in a consistent state.
+read in, mutated, and written out again.  Furthermore, it will be used
+to serialize the repository structure changes during 'svnadmin pack'
+(see also next section).  Note that readers are never blocked by any
+operation - writers must ensure that the filesystem is always in a
+consistent state.
+
+The "pack-lock" file is an empty file which is locked before an 'svnadmin
+pack' operation commences.  Thus, only one process may attempt to modify
+the repository structure at a time while other processes may still read
+and write (commit) to the repository during most of the pack procedure.
+It is only available with format 7 and newer repositories.  Older formats
+use the global write-lock instead which disables commits completely
+for the duration of the pack process.
 
 The "txn-current" file is a file with a single line of text that
 contains only a base-36 number.  The current value will be used in the

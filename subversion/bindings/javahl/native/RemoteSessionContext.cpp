@@ -33,7 +33,7 @@
 RemoteSessionContext::RemoteSessionContext(
     SVN::Pool &pool, const char* configDirectory,
     const char* usernameStr, const char* passwordStr,
-    Prompter* prompter, jobject jcfgcb, jobject jtunnelcb)
+    Prompter::UniquePtr prompter, jobject jcfgcb, jobject jtunnelcb)
   : OperationContext(pool), m_raCallbacks(NULL)
 {
   setConfigDirectory(configDirectory);
@@ -109,7 +109,6 @@ void RemoteSessionContext::activate(jobject jremoteSession, jobject jprogress)
     return;
 
   env->CallVoidMethod(m_jctx, mid, jprogress);
-  env->DeleteLocalRef(jprogress);
   m_raCallbacks->progress_baton = m_jctx;
 }
 

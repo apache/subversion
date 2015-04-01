@@ -114,7 +114,7 @@ struct block
    (our delta window size much much smaller then 4GB).
    That reduces the hash table size by 50% from 32to 16KB
    and makes it easier to fit into the CPU's L1 cache. */
-  apr_uint32_t pos;			/* NO_POSITION -> block is not used */
+  apr_uint32_t pos;    /* NO_POSITION -> block is not used */
 };
 
 /* A hash table, using open addressing, of the blocks of the source. */

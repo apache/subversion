@@ -3179,6 +3179,25 @@ test_delete_repos(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Prepare a commit for the filename_with_control_chars() tests */
+static svn_error_t *
+fwcc_prepare(const svn_delta_editor_t **editor_p,
+             void **edit_baton_p,
+             void **root_baton,
+             svn_repos_t *repos,
+             apr_pool_t *scratch_pool)
+{
+  /* Checks for control characters are implemented in the commit editor,
+   * not in the FS API. */
+  SVN_ERR(svn_repos_get_commit_editor4(editor_p, edit_baton_p, repos,
+                                       NULL, "file://test", "/",
+                                       "plato", "test commit",
+                                       dummy_commit_cb, NULL, NULL, NULL,
+                                       scratch_pool));
+  SVN_ERR((*editor_p)->open_root(*edit_baton_p, 1, scratch_pool, root_baton));
+  return SVN_NO_ERROR;
+}
+
 /* Related to issue 4340, "filenames containing \n corrupt FSFS repositories" */
 static svn_error_t *
 filename_with_control_chars(const svn_test_opts_t *opts,
@@ -3218,17 +3237,6 @@ filename_with_control_chars(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
-  /* Checks for control characters are implemented in the commit editor,
-   * not in the FS API. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
-  SVN_ERR(svn_repos_get_commit_editor4(&editor, &edit_baton, repos,
-                                       txn, "file://test", "/",
-                                       "plato", "test commit",
-                                       dummy_commit_cb, NULL, NULL, NULL,
-                                       pool));
-
-  SVN_ERR(editor->open_root(edit_baton, 1, pool, &root_baton));
-
   /* Attempt to copy /foo to a bad path P. This should fail. */
   i = 0;
   do
@@ -3237,8 +3245,13 @@ filename_with_control_chars(const svn_test_opts_t *opts,
       if (p == NULL)
         break;
       svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
       err = editor->add_directory(p, root_baton, "/foo", 1, subpool,
                                   &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
       SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
   } while (p);
 
@@ -3250,8 +3263,13 @@ filename_with_control_chars(const svn_test_opts_t *opts,
       if (p == NULL)
         break;
       svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
       err = editor->add_file(p, root_baton, NULL, SVN_INVALID_REVNUM,
                              subpool, &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
       SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
   } while (p);
 
@@ -3264,12 +3282,15 @@ filename_with_control_chars(const svn_test_opts_t *opts,
       if (p == NULL)
         break;
       svn_pool_clear(subpool);
+
+      SVN_ERR(fwcc_prepare(&editor, &edit_baton, &root_baton, repos, subpool));
       err = editor->add_directory(p, root_baton, NULL, SVN_INVALID_REVNUM,
                                   subpool, &out_baton);
+      if (!err)
+        err = editor->close_edit(edit_baton, subpool);
+      svn_error_clear(editor->abort_edit(edit_baton, subpool));
       SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
   } while (p);
-
-  SVN_ERR(editor->abort_edit(edit_baton, subpool));
 
   return SVN_NO_ERROR;
 }
@@ -3331,6 +3352,7 @@ test_config_pool(const svn_test_opts_t *opts,
   svn_fs_root_t *root, *rev_root;
   svn_revnum_t rev;
   const char *repo_root_url;
+  const char *srcdir;
   svn_error_t *err;
 
   svn_repos__config_pool_t *config_pool;
@@ -3348,9 +3370,10 @@ test_config_pool(const svn_test_opts_t *opts,
                                         config_pool_pool));
 
   /* have two different configurations  */
+  SVN_ERR(svn_test_get_srcdir(&srcdir, opts, pool));
   SVN_ERR(svn_stringbuf_from_file2(
                         &cfg_buffer1,
-                        svn_dirent_join(opts->srcdir,
+                        svn_dirent_join(srcdir,
                                         "../libsvn_subr/config-test.cfg",
                                         pool),
                         pool));
@@ -3531,68 +3554,60 @@ test_repos_fs_type(const svn_test_opts_t *opts,
   SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
 
   /* Re-open repository and verify fs-type again. */
-  SVN_ERR(svn_repos_open2(&repos, svn_repos_path(repos, pool), NULL, pool));
+  SVN_ERR(svn_repos_open3(&repos, svn_repos_path(repos, pool), NULL,
+                          pool, pool));
 
   SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
 
   return SVN_NO_ERROR;
 }
 
-/* Notification receiver for test_dump_bad_mergeinfo(). This does not
-   need to do anything, it just needs to exist.
- */
-static void
-dump_r0_mergeinfo_notifier(void *baton,
-                           const svn_repos_notify_t *notify,
-                           apr_pool_t *scratch_pool)
-{
-}
-
-/* Regression test for part the 'dump' part of issue #4476 "Mergeinfo
-   containing r0 makes svnsync and svnadmin dump fail". */
 static svn_error_t *
-test_dump_r0_mergeinfo(const svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+deprecated_access_context_api(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
 {
   svn_repos_t *repos;
-  svn_fs_t *fs;
+  svn_fs_access_t *access;
   svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  svn_revnum_t youngest_rev = 0;
-  const svn_string_t *bad_mergeinfo = svn_string_create("/foo:0", pool);
+  svn_fs_root_t *root;
+  const char *conflict;
+  svn_revnum_t new_rev;
+  const char *hook;
 
-  SVN_ERR(svn_test__create_repos(&repos, "test-repo-dump-r0-mergeinfo",
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_repos(&repos,
+                                 "test-repo-deprecated-access-context-api",
                                  opts, pool));
-  fs = svn_repos_fs(repos);
 
-  /* Revision 1:  Any commit will do, here  */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  /* Set an empty pre-commit hook. */
+#ifdef WIN32
+  hook = apr_pstrcat(pool, svn_repos_pre_commit_hook(repos, pool), ".bat",
+                     SVN_VA_NULL);
+  SVN_ERR(svn_io_file_create(hook,
+                             "exit 0" APR_EOL_STR,
+                             pool));
+#else
+  hook = svn_repos_pre_commit_hook(repos, pool);
+  SVN_ERR(svn_io_file_create(hook,
+                             "#!/bin/sh" APR_EOL_STR "exit 0" APR_EOL_STR,
+                             pool));
+  SVN_ERR(svn_io_set_file_executable(hook, TRUE, FALSE, pool));
+#endif
 
-  /* Revision 2:  Add bad mergeinfo */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_change_node_prop(txn_root, "/bar", "svn:mergeinfo", bad_mergeinfo, pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  /* Set some access context using svn_fs_access_add_lock_token(). */
+  SVN_ERR(svn_fs_create_access(&access, "jrandom", pool));
+  SVN_ERR(svn_fs_access_add_lock_token(access, "opaquelocktoken:abc"));
+  SVN_ERR(svn_fs_set_access(svn_repos_fs(repos), access));
 
-  /* Test that a dump completes without error. In order to exercise the
-     functionality under test -- that is, in order for the dump to try to
-     parse the mergeinfo it is dumping -- the dump must start from a
-     revision greater than 1 and must take a notification callback. */
-  {
-    svn_stringbuf_t *stringbuf = svn_stringbuf_create_empty(pool);
-    svn_stream_t *stream = svn_stream_from_stringbuf(stringbuf, pool);
+  /* Commit a new revision. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&txn, repos, 0,
+                                             apr_hash_make(pool), pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(root, "/whatever", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(&conflict, repos, &new_rev, txn, pool));
 
-    SVN_ERR(svn_repos_dump_fs3(repos, stream, 2, SVN_INVALID_REVNUM,
-                               FALSE, FALSE,
-                               dump_r0_mergeinfo_notifier, NULL,
-                               NULL, NULL,
-                               pool));
-  }
+  SVN_TEST_STRING_ASSERT(conflict, NULL);
+  SVN_TEST_ASSERT(new_rev == 1);
 
   return SVN_NO_ERROR;
 }
@@ -3650,8 +3665,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos__config_pool_*"),
     SVN_TEST_OPTS_PASS(test_repos_fs_type,
                        "test test_repos_fs_type"),
-    SVN_TEST_OPTS_PASS(test_dump_r0_mergeinfo,
-                       "test dumping with r0 mergeinfo"),
+    SVN_TEST_OPTS_PASS(deprecated_access_context_api,
+                       "test deprecated access context api"),
     SVN_TEST_NULL
   };
 

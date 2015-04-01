@@ -43,7 +43,7 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
-#include "svn_client_mtcc.h"
+#include "private/svn_client_mtcc.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -56,6 +56,7 @@
 #include "svn_version.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_subr_private.h"
 
 /* Version compatibility check */
 static svn_error_t *
@@ -135,16 +136,16 @@ execute(const apr_array_header_t *actions,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
-  svn_client_mtcc_t *mtcc;
+  svn_client__mtcc_t *mtcc;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
   int i;
 
-  SVN_ERR(svn_client_mtcc_create(&mtcc, anchor,
-                                 SVN_IS_VALID_REVNUM(base_revision)
-                                    ? base_revision
-                                    : SVN_INVALID_REVNUM,
-                                 ctx, pool, iterpool));
+  SVN_ERR(svn_client__mtcc_create(&mtcc, anchor,
+                                  SVN_IS_VALID_REVNUM(base_revision)
+                                     ? base_revision
+                                     : SVN_INVALID_REVNUM,
+                                  ctx, pool, iterpool));
 
   for (i = 0; i < actions->nelts; ++i)
     {
@@ -159,29 +160,29 @@ execute(const apr_array_header_t *actions,
         case ACTION_MV:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);
-          SVN_ERR(svn_client_mtcc_add_move(path1, path2, mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_move(path1, path2, mtcc, iterpool));
           break;
         case ACTION_CP:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);
-          SVN_ERR(svn_client_mtcc_add_copy(path1, action->rev, path2,
-                                           mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_copy(path1, action->rev, path2,
+                                            mtcc, iterpool));
           break;
         case ACTION_RM:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(svn_client_mtcc_add_delete(path1, mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_delete(path1, mtcc, iterpool));
           break;
         case ACTION_MKDIR:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(svn_client_mtcc_add_mkdir(path1, mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_mkdir(path1, mtcc, iterpool));
           break;
         case ACTION_PUT:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(svn_client_mtcc_check_path(&kind, path1, TRUE, mtcc, pool));
+          SVN_ERR(svn_client__mtcc_check_path(&kind, path1, TRUE, mtcc, pool));
 
           if (kind == svn_node_dir)
             {
-              SVN_ERR(svn_client_mtcc_add_delete(path1, mtcc, pool));
+              SVN_ERR(svn_client__mtcc_add_delete(path1, mtcc, pool));
               kind = svn_node_none;
             }
 
@@ -196,20 +197,20 @@ execute(const apr_array_header_t *actions,
 
 
             if (kind == svn_node_file)
-              SVN_ERR(svn_client_mtcc_add_update_file(path1, src, NULL,
-                                                      NULL, NULL,
-                                                      mtcc, iterpool));
+              SVN_ERR(svn_client__mtcc_add_update_file(path1, src, NULL,
+                                                       NULL, NULL,
+                                                       mtcc, iterpool));
             else if (kind == svn_node_none)
-              SVN_ERR(svn_client_mtcc_add_add_file(path1, src, NULL,
-                                                   mtcc, iterpool));
+              SVN_ERR(svn_client__mtcc_add_add_file(path1, src, NULL,
+                                                    mtcc, iterpool));
           }
           break;
         case ACTION_PROPSET:
         case ACTION_PROPDEL:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(svn_client_mtcc_add_propset(path1, action->prop_name,
-                                              action->prop_value, FALSE,
-                                              mtcc, iterpool));
+          SVN_ERR(svn_client__mtcc_add_propset(path1, action->prop_name,
+                                               action->prop_value, FALSE,
+                                               mtcc, iterpool));
           break;
         case ACTION_PROPSETF:
         default:
@@ -217,11 +218,11 @@ execute(const apr_array_header_t *actions,
         }
     }
 
-  err = svn_client_mtcc_commit(revprops, commit_callback, NULL,
-                               mtcc, iterpool);
+  err = svn_client__mtcc_commit(revprops, commit_callback, NULL,
+                                mtcc, iterpool);
 
   svn_pool_destroy(iterpool);
-  return svn_error_trace(err);;
+  return svn_error_trace(err);
 }
 
 static svn_error_t *
@@ -250,14 +251,21 @@ sanitize_url(const char *url,
   return svn_uri_canonicalize(url, pool);
 }
 
+static void
+usage(apr_pool_t *pool)
+{
+  svn_error_clear(svn_cmdline_fprintf
+                  (stderr, pool, _("Type 'svnmucc --help' for usage.\n")));
+}
+
 /* Print a usage message on STREAM. */
 static void
-usage(FILE *stream, apr_pool_t *pool)
+help(FILE *stream, apr_pool_t *pool)
 {
   svn_error_clear(svn_cmdline_fputs(
     _("usage: svnmucc ACTION...\n"
       "Subversion multiple URL command client.\n"
-      "Type 'svnmucc --version' to see the program version.\n"
+      "Type 'svnmucc --version' to see the program version and RA modules.\n"
       "\n"
       "  Perform one or more Subversion repository URL-based ACTIONs, committing\n"
       "  the result as a (single) new revision.\n"
@@ -287,9 +295,18 @@ usage(FILE *stream, apr_pool_t *pool)
       "                           prompt only if standard input is a terminal)\n"
       "  --force-interactive    : do interactive prompting even if standard\n"
       "                           input is not a terminal\n"
-      "  --trust-server-cert    : accept SSL server certificates from unknown\n"
-      "                           certificate authorities without prompting (but\n"
-      "                           only with '--non-interactive')\n"
+      "  --trust-server-cert    : deprecated; same as --trust-unknown-ca\n"
+      "  --trust-unknown-ca     : with --non-interactive, accept SSL server\n"
+      "                           certificates from unknown certificate authorities\n"
+      "  --trust-cn-mismatch    : with --non-interactive, accept SSL server\n"
+      "                           certificates even if the server hostname does not\n"
+      "                           match the certificate's common name attribute\n"
+      "  --trust-expired        : with --non-interactive, accept expired SSL server\n"
+      "                           certificates\n"
+      "  --trust-not-yet-valid  : with --non-interactive, accept SSL server\n"
+      "                           certificates from the future\n"
+      "  --trust-other-failure  : with --non-interactive, accept SSL server\n"
+      "                           certificates with failures other than the above\n"
       "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
       "                           use \"-\" to read from standard input)\n"
       "  --config-dir ARG       : use ARG to override the config directory\n"
@@ -307,7 +324,7 @@ insufficient(void)
 }
 
 static svn_error_t *
-display_version(apr_getopt_t *os, apr_pool_t *pool)
+display_version(apr_pool_t *pool)
 {
   const char *ra_desc_start
     = "The following repository access (RA) modules are available:\n\n";
@@ -316,7 +333,7 @@ display_version(apr_getopt_t *os, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(os, "svnmucc", TRUE, FALSE, FALSE,
+  SVN_ERR(svn_opt_print_help4(NULL, "svnmucc", TRUE, FALSE, FALSE,
                               version_footer->data,
                               NULL, NULL, NULL, NULL, NULL, pool));
 
@@ -366,10 +383,7 @@ sanitize_log_sources(const char **final_message,
       if (message)
         return mutually_exclusive_logs_error();
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&message, filedata->data,
-                                      scratch_pool));
-
-      *final_message = apr_pstrdup(result_pool, message);
+      *final_message = apr_pstrdup(result_pool, filedata->data);
     }
   else if (message)
     {
@@ -401,7 +415,15 @@ log_message_func(const char **log_msg,
 
   if (lmb->log_message)
     {
-      *log_msg = apr_pstrdup(pool, lmb->log_message);
+      svn_string_t *message = svn_string_create(lmb->log_message, pool);
+
+      SVN_ERR_W(svn_subst_translate_string2(&message, NULL, NULL,
+                                            message, NULL, FALSE,
+                                            pool, pool),
+                _("Error normalizing log message to internal format"));
+
+      *log_msg = message->data;
+
       return SVN_NO_ERROR;
     }
 
@@ -449,7 +471,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     with_revprop_opt,
     non_interactive_opt,
     force_interactive_opt,
-    trust_server_cert_opt
+    trust_server_cert_opt,
+    trust_server_cert_unknown_ca_opt,
+    trust_server_cert_cn_mismatch_opt,
+    trust_server_cert_expired_opt,
+    trust_server_cert_not_yet_valid_opt,
+    trust_server_cert_other_failure_opt,
   };
   static const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
@@ -465,6 +492,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"non-interactive", non_interactive_opt, 0, ""},
     {"force-interactive", force_interactive_opt, 0, ""},
     {"trust-server-cert", trust_server_cert_opt, 0, ""},
+    {"trust-unknown-ca", trust_server_cert_unknown_ca_opt, 0, ""},
+    {"trust-cn-mismatch", trust_server_cert_cn_mismatch_opt, 0, ""},
+    {"trust-expired", trust_server_cert_expired_opt, 0, ""},
+    {"trust-not-yet-valid", trust_server_cert_not_yet_valid_opt, 0, ""},
+    {"trust-other-failure", trust_server_cert_other_failure_opt, 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
@@ -479,8 +511,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
   svn_boolean_t force_interactive = FALSE;
-  svn_boolean_t trust_server_cert = FALSE;
+  svn_boolean_t trust_unknown_ca = FALSE;
+  svn_boolean_t trust_cn_mismatch = FALSE;
+  svn_boolean_t trust_expired = FALSE;
+  svn_boolean_t trust_not_yet_valid = FALSE;
+  svn_boolean_t trust_other_failure = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
+  svn_boolean_t show_version = FALSE;
+  svn_boolean_t show_help = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   apr_hash_t *revprops = apr_hash_make(pool);
@@ -508,7 +546,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        return svn_error_wrap_apr(status, "getopt failure");
+        {
+          usage(pool);
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
+        }
       switch(opt)
         {
         case 'm':
@@ -561,8 +603,21 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         case force_interactive_opt:
           force_interactive = TRUE;
           break;
-        case trust_server_cert_opt:
-          trust_server_cert = TRUE;
+        case trust_server_cert_opt: /* backward compat */
+        case trust_server_cert_unknown_ca_opt:
+          trust_unknown_ca = TRUE;
+          break;
+        case trust_server_cert_cn_mismatch_opt:
+          trust_cn_mismatch = TRUE;
+          break;
+        case trust_server_cert_expired_opt:
+          trust_expired = TRUE;
+          break;
+        case trust_server_cert_not_yet_valid_opt:
+          trust_not_yet_valid = TRUE;
+          break;
+        case trust_server_cert_other_failure_opt:
+          trust_other_failure = TRUE;
           break;
         case config_dir_opt:
           SVN_ERR(svn_utf_cstring_to_utf8(&config_dir, arg, pool));
@@ -576,13 +631,25 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           no_auth_cache = TRUE;
           break;
         case version_opt:
-          SVN_ERR(display_version(opts, pool));
-          return SVN_NO_ERROR;
+          show_version = TRUE;
+          break;
         case 'h':
         case '?':
-          usage(stdout, pool);
-          return SVN_NO_ERROR;
+          show_help = TRUE;
+          break;
         }
+    }
+
+  if (show_help)
+    {
+      help(stdout, pool);
+      return SVN_NO_ERROR;
+    }
+
+  if (show_version)
+    {
+      SVN_ERR(display_version(pool));
+      return SVN_NO_ERROR;
     }
 
   if (non_interactive && force_interactive)
@@ -595,11 +662,28 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     non_interactive = !svn_cmdline__be_interactive(non_interactive,
                                                    force_interactive);
 
-  if (trust_server_cert && !non_interactive)
+  if (!non_interactive)
     {
+      if (trust_unknown_ca)
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--trust-server-cert requires "
+                              _("--trust-unknown-ca requires "
                                 "--non-interactive"));
+      if (trust_cn_mismatch)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-cn-mismatch requires "
+                                  "--non-interactive"));
+      if (trust_expired)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-expired requires "
+                                  "--non-interactive"));
+      if (trust_not_yet_valid)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-not-yet-valid requires "
+                                  "--non-interactive"));
+      if (trust_other_failure)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-other-failure requires "
+                                  "--non-interactive"));
     }
 
   /* Copy the rest of our command-line arguments to an array,
@@ -640,13 +724,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           svn_handle_warning2(stderr, err, "svnmucc: ");
           svn_error_clear(err);
-          cfg_hash = NULL;
+
+          SVN_ERR(svn_config__get_default_config(&cfg_hash, pool));
         }
       else
         return err;
     }
 
-  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
   if (config_options)
     {
       svn_error_clear(
@@ -656,17 +740,23 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   SVN_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
 
-  SVN_ERR(svn_cmdline_create_auth_baton(&ctx->auth_baton,
-                                        non_interactive,
-                                        username,
-                                        password,
-                                        config_dir,
-                                        no_auth_cache,
-                                        trust_server_cert,
-                                        cfg_config,
-                                        ctx->cancel_func,
-                                        ctx->cancel_baton,
-                                        pool));
+  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
+  SVN_ERR(svn_cmdline_create_auth_baton2(
+            &ctx->auth_baton,
+            non_interactive,
+            username,
+            password,
+            config_dir,
+            no_auth_cache,
+            trust_unknown_ca,
+            trust_cn_mismatch,
+            trust_expired,
+            trust_not_yet_valid,
+            trust_other_failure,
+            cfg_config,
+            ctx->cancel_func,
+            ctx->cancel_baton,
+            pool));
 
   lmb.non_interactive = non_interactive;
   lmb.ctx = ctx;
@@ -704,7 +794,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       else if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
                || ! strcmp(action_string, "help"))
         {
-          usage(stdout, pool);
+          help(stdout, pool);
           return SVN_NO_ERROR;
         }
       else
@@ -865,7 +955,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   if (! actions->nelts)
     {
       *exit_code = EXIT_FAILURE;
-      usage(stderr, pool);
+      help(stderr, pool);
       return SVN_NO_ERROR;
     }
 

@@ -1,0 +1,8 @@
+Trunk Stabilization for 1.9
+===========================
+
+Bindings
+--------
+
+* 'make swig-py' is broken with Swig 3.0.x.
+

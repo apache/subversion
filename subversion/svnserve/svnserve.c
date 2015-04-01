@@ -126,7 +126,7 @@ enum run_mode {
  *
  * Since very slow connections will hog a full thread for a potentially
  * long time before timing out, be sure to not set this limit too low.
- * 
+ *
  * On the other hand, keep in mind that every thread will allocate up to
  * 4MB of unused RAM in the APR allocator of its root pool.  32 bit servers
  * must hence do with fewer threads.
@@ -150,7 +150,7 @@ enum run_mode {
  *
  * Larger values improve scalability with lots of small requests coming
  * on over long latency networks.
- * 
+ *
  * The OS may actually use a lower limit than specified here.
  */
 #define ACCEPT_BACKLOG 128
@@ -207,6 +207,9 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_SINGLE_CONN     268
 #define SVNSERVE_OPT_CLIENT_SPEED    269
 #define SVNSERVE_OPT_VIRTUAL_HOST    270
+#define SVNSERVE_OPT_MIN_THREADS     271
+#define SVNSERVE_OPT_MAX_THREADS     272
+#define SVNSERVE_OPT_BLOCK_READ      273
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -268,7 +271,9 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "Default is 16.\n"
         "                             "
-        "[used for FSFS repositories only]")},
+        "0 switches to dynamically sized caches.\n"
+        "                             "
+        "[used for FSFS and FSX repositories only]")},
     {"cache-txdeltas", SVNSERVE_OPT_CACHE_TXDELTAS, 1,
      N_("enable or disable caching of deltas between older\n"
         "                             "
@@ -276,13 +281,13 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "Default is yes.\n"
         "                             "
-        "[used for FSFS repositories only]")},
+        "[used for FSFS and FSX repositories only]")},
     {"cache-fulltexts", SVNSERVE_OPT_CACHE_FULLTEXTS, 1,
      N_("enable or disable caching of file contents\n"
         "                             "
         "Default is yes.\n"
         "                             "
-        "[used for FSFS repositories only]")},
+        "[used for FSFS and FSX repositories only]")},
     {"cache-revprops", SVNSERVE_OPT_CACHE_REVPROPS, 1,
      N_("enable or disable caching of revision properties.\n"
         "                             "
@@ -290,7 +295,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "Default is no.\n"
         "                             "
-        "[used for FSFS repositories only]")},
+        "[used for FSFS and FSX repositories only]")},
     {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
      N_("Optimize network handling based on the assumption\n"
         "                             "
@@ -299,20 +304,55 @@ static const apr_getopt_option_t svnserve__options[] =
         "ARG Mbit/s.\n"
         "                             "
         "Default is 0 (optimizations disabled).")},
+    {"block-read", SVNSERVE_OPT_BLOCK_READ, 1,
+     N_("Parse and cache all data found in block instead\n"
+        "                             "
+        "of just the requested item.\n"
+        "                             "
+        "Default is no.\n"
+        "                             "
+        "[used for FSFS repositories in 1.9 format only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
     {"threads",          'T', 0, N_("use threads instead of fork "
                                     "[mode: daemon]")},
+    {"min-threads",      SVNSERVE_OPT_MIN_THREADS, 1,
+     N_("Minimum number of server threads, even if idle.\n"
+        "                             "
+        "Caped to max-threads; minimum value is 0.\n"
+        "                             "
+        "Default is 1.\n"
+        "                             "
+        "[used only with --threads]")},
+#if (APR_SIZEOF_VOIDP <= 4)
+    {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
+     N_("Maximum number of server threads, even if there\n"
+        "                             "
+        "are more connections.  Minimum value is 1.\n"
+        "                             "
+        "Default is 64.\n"
+        "                             "
+        "[used only with --threads]")},
+#else
+    {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
+     N_("Maximum number of server threads, even if there\n"
+        "                             "
+        "are more connections.  Minimum value is 1.\n"
+        "                             "
+        "Default is 256.\n"
+        "                             "
+        "[used only with --threads]")},
+#endif
 #endif
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
      N_("run in foreground (useful for debugging)\n"
         "                             "
         "[mode: daemon]")},
     {"single-thread",    SVNSERVE_OPT_SINGLE_CONN, 0,
-     N_("handle one connection at a time in the parent process\n"
+     N_("handle one connection at a time in the parent\n"
         "                             "
-        "(useful for debugging)")},
+        "process (useful for debugging)")},
     {"log-file",         SVNSERVE_OPT_LOG_FILE, 1,
      N_("svnserve log file")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
@@ -435,7 +475,7 @@ static apr_status_t redirect_stdout(void *arg)
 /* Wait for the next client connection to come in from SOCK.  Allocate
  * the connection in a root pool from CONNECTION_POOLS and assign PARAMS.
  * Return the connection object in *CONNECTION.
- * 
+ *
  * Use HANDLING_MODE for proper internal cleanup.
  */
 static svn_error_t *
@@ -446,30 +486,30 @@ accept_connection(connection_t **connection,
                   apr_pool_t *pool)
 {
   apr_status_t status;
-  
+
   /* Non-standard pool handling.  The main thread never blocks to join
    *         the connection threads so it cannot clean up after each one.  So
    *         separate pools that can be cleared at thread exit are used. */
-  
+
   apr_pool_t *connection_pool = svn_pool_create(pool);
   *connection = apr_pcalloc(connection_pool, sizeof(**connection));
   (*connection)->pool = connection_pool;
   (*connection)->params = params;
   (*connection)->ref_count = 1;
-  
+
   do
     {
       #ifdef WIN32
       if (winservice_is_stopping())
         exit(0);
       #endif
-      
+
       status = apr_socket_accept(&(*connection)->usock, sock,
                                  connection_pool);
       if (handling_mode == connection_mode_fork)
         {
           apr_proc_t proc;
-          
+
           /* Collect any zombie child processes. */
           while (apr_proc_wait_all_procs(&proc, NULL, NULL, APR_NOWAIT,
             connection_pool) == APR_CHILD_DONE)
@@ -479,7 +519,7 @@ accept_connection(connection_t **connection,
   while (APR_STATUS_IS_EINTR(status)
     || APR_STATUS_IS_ECONNABORTED(status)
     || APR_STATUS_IS_ECONNRESET(status));
-  
+
   return status
        ? svn_error_wrap_apr(status, _("Can't accept client connection"))
        : SVN_NO_ERROR;
@@ -562,6 +602,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
                         get_client_info(connection->conn, connection->params,
                                         pool));
       svn_error_clear(err);
+      done = TRUE;
     }
   svn_root_pools__release_pool(pool, connection_pools);
 
@@ -570,7 +611,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
     close_connection(connection);
   else
     apr_thread_pool_push(threads, serve_thread, connection, 0, NULL);
-    
+
   return NULL;
 }
 
@@ -641,6 +682,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t cache_fulltexts = TRUE;
   svn_boolean_t cache_txdeltas = TRUE;
   svn_boolean_t cache_revprops = FALSE;
+  svn_boolean_t use_block_read = FALSE;
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
   int family = APR_INET;
@@ -656,7 +698,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   const char *pid_filename = NULL;
   const char *log_filename = NULL;
   svn_node_kind_t kind;
-
+  apr_size_t min_thread_count = THREADPOOL_MIN_SIZE;
+  apr_size_t max_thread_count = THREADPOOL_MAX_SIZE;
 #ifdef SVN_HAVE_SASL
   SVN_ERR(cyrus_init(pool));
 #endif
@@ -827,6 +870,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           cache_revprops = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
+        case SVNSERVE_OPT_BLOCK_READ:
+          use_block_read = svn_tristate__from_word(arg) == svn_tristate_true;
+          break;
+
         case SVNSERVE_OPT_CLIENT_SPEED:
           {
             apr_size_t bandwidth = (apr_size_t)apr_strtoi64(arg, NULL, 0);
@@ -842,6 +889,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                 params.error_check_interval = bandwidth * 120;
               }
           }
+          break;
+
+        case SVNSERVE_OPT_MIN_THREADS:
+          min_thread_count = (apr_size_t)apr_strtoi64(arg, NULL, 0);
+          break;
+
+        case SVNSERVE_OPT_MAX_THREADS:
+          max_thread_count = (apr_size_t)apr_strtoi64(arg, NULL, 0);
           break;
 
 #ifdef WIN32
@@ -927,6 +982,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                 cache_fulltexts ? "1" :"0");
   svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                 cache_revprops ? "2" :"0");
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                use_block_read ? "1" :"0");
 
   SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
                                         is_multi_threaded,
@@ -944,7 +1001,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
       SVN_ERR(svn_repos__config_pool_get(&params.cfg, NULL,
                                          params.config_pool,
-                                         config_filename, 
+                                         config_filename,
                                          TRUE, /* must_exist */
                                          FALSE, /* names_case_sensitive */
                                          NULL,
@@ -1181,10 +1238,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (handling_mode == connection_mode_thread)
     {
-      /* create the thread pool */
+      /* create the thread pool with a valid range of threads */
+      if (max_thread_count < 1)
+        max_thread_count = 1;
+      if (min_thread_count > max_thread_count)
+        min_thread_count = max_thread_count;
+
       status = apr_thread_pool_create(&threads,
-                                      THREADPOOL_MIN_SIZE,
-                                      THREADPOOL_MAX_SIZE,
+                                      min_thread_count,
+                                      max_thread_count,
                                       pool);
       if (status)
         {

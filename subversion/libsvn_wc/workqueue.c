@@ -143,8 +143,7 @@ run_base_remove(work_item_baton_t *wqb,
 
   SVN_ERR(svn_wc__db_base_remove(db, local_abspath,
                                  FALSE /* keep_as_working */,
-                                 TRUE /* queue_deletes */,
-                                 FALSE /* remove_locks */,
+                                 SVN_IS_VALID_REVNUM(not_present_rev), FALSE,
                                  not_present_rev,
                                  NULL, NULL, scratch_pool));
 
@@ -1016,8 +1015,8 @@ svn_error_t *
 svn_wc__wq_build_dir_install(svn_skel_t **work_item,
                              svn_wc__db_t *db,
                              const char *local_abspath,
-                             apr_pool_t *scratch_pool,
-                             apr_pool_t *result_pool)
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
 
@@ -1107,7 +1106,7 @@ run_prej_install(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
                                    scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__conflict_read_prop_conflict(&prejfile_abspath,
@@ -1116,14 +1115,15 @@ run_prej_install(work_item_baton_t *wqb,
                                               scratch_pool, scratch_pool));
 
   if (arg1->next != NULL)
-    prop_conflict_skel = arg1->next;
+    prop_conflict_skel = arg1->next; /* Before Subversion 1.9 */
   else
-    SVN_ERR_MALFUNCTION();  /* ### wc_db can't provide it ... yet.  */
+    prop_conflict_skel = NULL; /* Read from DB */
 
   /* Construct a property reject file in the temporary area.  */
   SVN_ERR(svn_wc__create_prejfile(&tmp_prejfile_abspath,
                                   db, local_abspath,
                                   prop_conflict_skel,
+                                  cancel_func, cancel_baton,
                                   scratch_pool, scratch_pool));
 
   /* ... and atomically move it into place.  */
@@ -1139,21 +1139,21 @@ svn_error_t *
 svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
-                              svn_skel_t *conflict_skel,
+                              /*svn_skel_t *conflict_skel,*/
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
   *work_item = svn_skel__make_empty_list(result_pool);
 
-  /* ### gotta have this, today  */
-  SVN_ERR_ASSERT(conflict_skel != NULL);
-
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
-  if (conflict_skel != NULL)
-    svn_skel__prepend(conflict_skel, *work_item);
+  /* ### In Subversion 1.7 and 1.8 we created a legacy property conflict skel
+         here:
+    if (conflict_skel != NULL)
+      svn_skel__prepend(conflict_skel, *work_item);
+   */
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
   svn_skel__prepend_str(OP_PREJ_INSTALL, *work_item, result_pool);
 
@@ -1286,7 +1286,7 @@ run_set_text_conflict_markers(work_item_baton_t *wqb,
     /* Check if we should combine with a property conflict... */
     svn_skel_t *conflicts;
 
-    SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+    SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
 
     if (! conflicts)
@@ -1352,7 +1352,7 @@ run_set_property_conflict_marker(work_item_baton_t *wqb,
     svn_skel_t *conflicts;
     apr_hash_t *prop_names;
 
-    SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+    SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
                                      scratch_pool, scratch_pool));
 
     if (! conflicts)
@@ -1489,8 +1489,11 @@ svn_wc__wq_run(svn_wc__db_t *db,
   {
     static int count = 0;
     const char *count_env_var = getenv("SVN_DEBUG_WORK_QUEUE");
+    int count_env_val;
 
-    if (count_env_var && ++count == atoi(count_env_var))
+    SVN_ERR(svn_cstring_atoi(&count_env_val, count_env_var));
+
+    if (count_env_var && ++count == count_env_val)
       return svn_error_create(SVN_ERR_CANCELLED, NULL, "fake cancel");
   }
 #endif

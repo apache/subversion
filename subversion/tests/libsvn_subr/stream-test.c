@@ -771,6 +771,38 @@ test_stringbuf_from_stream(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+empty_read_full_fn(void *baton, char *buffer, apr_size_t *len)
+{
+    *len = 0;
+    return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_compressed_read_full(apr_pool_t *pool)
+{
+  svn_stream_t *stream, *empty_stream;
+  char buf[1];
+  apr_size_t len;
+
+  /* Reading an empty stream with read_full only support should not error. */
+  empty_stream = svn_stream_create(NULL, pool);
+
+  /* Create stream with only full read support. */
+  svn_stream_set_read2(empty_stream, NULL, empty_read_full_fn);
+
+  stream = svn_stream_compressed(empty_stream, pool);
+  len = sizeof(buf);
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
+  if (len > 0)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Got unexpected result.");
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 1;
@@ -800,6 +832,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "base64 decoding allocation problem"),
     SVN_TEST_PASS2(test_stringbuf_from_stream,
                    "test svn_stringbuf_from_stream"),
+    SVN_TEST_PASS2(test_stream_compressed_read_full,
+                   "test compression for streams without partial read"),
     SVN_TEST_NULL
   };
 

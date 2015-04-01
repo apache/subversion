@@ -3,6 +3,17 @@ use warnings;
 use strict;
 use feature qw/switch say/;
 
+use v5.10.0; # needed for $^V
+
+# The given/when smartmatch facility, introduced in Perl v5.10, was made
+# experimental and "subject to change" in v5.18 (see perl5180delta).  Every
+# use of it now triggers a warning.
+#
+# As of Perl v5.20.1, the semantics of given/when provided by Perl are
+# compatible with those expected by the script, so disable the warning for
+# those Perls.
+no if $^V le v5.20.1, warnings => 'experimental::smartmatch';
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -26,6 +37,8 @@ use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Basename qw/basename dirname/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
+use IO::Select ();
+use IPC::Open3 qw/open3/;
 use POSIX qw/ctermid strftime isprint isspace/;
 use Text::Wrap qw/wrap/;
 use Tie::File ();
@@ -35,7 +48,6 @@ use Tie::File ();
 # Programs we use.
 #
 # TODO: document which are interpreted by sh and which should point to binary.
-my $SVNAUTH = $ENV{SVNAUTH} // 'svnauth'; # optional dependency
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
@@ -43,11 +55,17 @@ my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
 my $PAGER = $ENV{PAGER} // 'less' // 'cat';
 
 # Mode flags.
-#    svn-role:      YES=1 MAY_COMMIT=1      (plus '--renormalize')
-#    conflicts-bot: YES=1 MAY_COMMIT=0
-#    interactive:   YES=0 MAY_COMMIT=0      (default)
+package Mode {
+  use constant {
+    AutoCommitApproveds => 1, # used by nightly commits (svn-role)
+    Conflicts => 2,           # used by the hourly conflicts-detection buildbot
+    Interactive => 3,
+  };
+};
 my $YES = ($ENV{YES} // "0") =~ /^(1|yes|true)$/i; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
+my $MODE = ($YES ? ($MAY_COMMIT ? Mode::AutoCommitApproveds : Mode::Conflicts )
+                 : Mode::Interactive );
 
 # Other knobs.
 my $VERBOSE = 0;
@@ -58,17 +76,33 @@ my @sh = qw/false true/;
 die if grep { ($sh[$_] eq 'true') != !!$_ } $DEBUG, $MAY_COMMIT, $VERBOSE, $YES;
 
 # Username for entering votes.
-my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';            
+my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';
 my ($AVAILID) = $ENV{AVAILID} // do {
-  local $_ = `$SVNAUTH list 2>/dev/null`;
+  local $_ = `$SVN auth svn.apache.org:443 2>/dev/null`; # TODO: pass $SVN_A_O_REALM
   ($? == 0 && /Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/) ? $1 : undef
 } // do {
   local $/; # slurp mode
+  my $fh;
+  my $dir = "$ENV{HOME}/.subversion/auth/svn.simple/";
   my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
-  `cat $ENV{HOME}/.subversion/auth/svn.simple/$filename`
-  =~ /K 8\nusername\nV \d+\n(.*)/ and $1 or undef
+  open $fh, '<', "$dir/$filename"
+  and <$fh> =~ /K 8\nusername\nV \d+\n(.*)/
+  ? $1
+  : undef
+};
+
+unless (defined $AVAILID) {
+  unless ($MODE == Mode::Conflicts) {
+    warn "Username for commits (of votes/merges) not found; "
+         ."it will be possible to review nominations but not to commit votes "
+         ."or merges.\n";
+    warn "Press the 'any' key to continue...\n";
+    die if $MODE == Mode::AutoCommitApproveds; # unattended mode; can't prompt.
+    ReadMode 'cbreak';
+    ReadKey 0;
+    ReadMode 'restore';
+  }
 }
-// warn "Username for commits (of votes/merges) not found";
 
 ############## End of reading values from the environment ##############
 
@@ -76,10 +110,16 @@ my ($AVAILID) = $ENV{AVAILID} // do {
 my $STATUS = './STATUS';
 my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
+my $TRUNK = '^/subversion/trunk';
 $ENV{LC_ALL} = "C";  # since we parse 'svn info' output and use isprint()
 
 # Globals.
 my %ERRORS = ();
+# TODO: can $MERGED_SOMETHING be removed and references to it replaced by scalar(@MERGES_TODAY) ?
+#       alternately, does @MERGES_TODAY need to be purged whenever $MERGED_SOMETHING is reset?
+#       The scalar is only used in interactive runs, but the array is used in
+#       svn-role batch mode too.
+my @MERGES_TODAY;
 my $MERGED_SOMETHING = 0;
 my $SVNq;
 
@@ -147,12 +187,36 @@ y:   Open a shell.
 d:   View a diff.
 N:   Move to the next entry.
 
-There is also a batch mode (normally used only by cron jobs and buildbot tasks,
-rather than interactively): when \$YES and \$MAY_COMMIT are defined to '1' in
-the environment, this script will iterate the "Approved:" section, and merge
-and commit each entry therein.  If only \$YES is defined, the script will
-merge every nomination (including unapproved and vetoed ones), and complain
-to stderr if it notices any conflicts.
+To commit a merge, you have two options: either answer 'y' to the second prompt
+to open a shell, and manually run 'svn commit' therein; or set \$MAY_COMMIT=1
+in the environment before running the script, in which case answering 'y'
+to the first prompt will not only run the merge but also commit it.
+
+There are two batch modes.  The first mode is used by the nightly svn-role
+mergebot.  It is enabled by setting \$YES and \$MAY_COMMIT to '1' in the
+environment.  In this mode, the script will iterate the "Approved changes:"
+section and merge and commit each entry therein.  To prevent an entry from
+being auto-merged, veto it or move it to a new section named "Approved, but
+merge manually:".
+
+The second batch mode is used by the hourly conflicts detector bot.  It is
+triggered by having \$YES defined in the environment to '1' and \$MAY_COMMIT
+undefined.  In this mode, the script will locally merge every nomination
+(including unapproved and vetoed ones), and complain to stderr if the merge
+failed due to a conflict.  This mode never commits anything.
+
+The hourly conflicts detector bot turns red if any entry produced a merge
+conflict.  When entry A depends on entry B for a clean merge, put a "Depends:"
+header on entry A to instruct the bot not to turn red due to A.  (The header
+is not parsed; only its presence or absence matters.)
+
+Both batch modes also perform a basic sanity-check on entries that declare
+backport branches (via the "Branch:" header): if a backport branch is used, but
+at least one of the revisions enumerated in the entry title had neither been
+merged from $TRUNK to the branch root, nor been committed
+directly to the backport branch, the hourly bot will turn red and 
+nightly bot will skip the entry and email its admins.  (The nightly bot does
+not email the list on failure, since it doesn't use buildbot.)
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
@@ -160,6 +224,7 @@ EOF
 }
 
 sub nominate_usage {
+  my $availid = $AVAILID // "(your username)";
   my $basename = basename $0;
   print <<EOF;
 nominate.pl: a tool for adding entries to STATUS.
@@ -172,7 +237,7 @@ Will add:
    Justification:
      \$Some_justification
    Votes:
-     +1: $AVAILID
+     +1: $availid
 to STATUS.  Backport branches are detected automatically.
 
 The STATUS file in the current directory is used (unless argv[0] is "n", in
@@ -184,6 +249,18 @@ EOF
 # TODO: Look for backport branches named after issues.
 # TODO: Do a dry-run merge on added entries.
 # TODO: Do a dry-run merge on interactively-edited entries in backport.pl
+}
+
+# If $AVAILID is undefined, warn about it and return true.
+# Else return false.
+#
+# $_[0] is a string for inclusion in generated error messages.
+sub warned_cannot_commit {
+  my $caller_error_string = shift;
+  return 0 if defined $AVAILID;
+
+  warn "$0: $caller_error_string: unable to determine your username via \$AVAILID or svnauth(1) or ~/.subversion/auth/";
+  return 1;
 }
 
 sub digest_string {
@@ -232,18 +309,19 @@ sub prompt {
 #     >>> shell_escape(q[foo'bar]) eq q['foo'\''bar']
 #     True
 sub shell_escape {
-  map {
+  my (@reply) = map {
     local $_ = $_; # the LHS $_ is mutable; the RHS $_ may not be.
     s/\x27/'\\\x27'/g;
     "'$_'"
-  } @_
+  } @_;
+  wantarray ? @reply : $reply[0]
 }
 
 sub shell_safe_path_or_url($) {
   local $_ = shift;
-  return m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/;
+  return (m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/);
 }
-  
+
 # Shell-safety-validating wrapper for File::Temp::tempfile
 sub my_tempfile {
   my ($fh, $fn) = tempfile();
@@ -252,9 +330,47 @@ sub my_tempfile {
   return ($fh, $fn);
 }
 
+# The first argument is a shell script.  Run it and return the shell's
+# exit code, and stdout and stderr as references to arrays of lines.
+sub run_in_shell($) {
+  my $script = shift;
+  my $pid = open3 \*SHELL_IN, \*SHELL_OUT, \*SHELL_ERR, qw#/bin/sh#;
+  # open3 raises exception when it fails; no need to error check
+
+  print SHELL_IN $script;
+  close SHELL_IN;
+
+  # Read loop: tee stdout,stderr to arrays.
+  my $select = IO::Select->new(\*SHELL_OUT, \*SHELL_ERR);
+  my (@readable, $outlines, $errlines);
+  while (@readable = $select->can_read) {
+    for my $fh (@readable) {
+      my $line = <$fh>;
+      $select->remove($fh) if eof $fh or not defined $line;
+      next unless defined $line;
+
+      if ($fh == \*SHELL_OUT) {
+        push @$outlines, $line;
+        print STDOUT $line;
+      }
+      if ($fh == \*SHELL_ERR) {
+        push @$errlines, $line;
+        print STDERR $line;
+      }
+    }
+  }
+  waitpid $pid, 0; # sets $?
+  return $?, $outlines, $errlines;
+}
+
 
+# EXPECTED_ERROR_P is subref called with EXIT_CODE, OUTLINES, ERRLINES,
+# expected to return TRUE if the error should be considered fatal (cause
+# backport.pl to exit non-zero) or not.  It may be undef for default behaviour.
 sub merge {
-  my %entry = @_;
+  my %entry = %{ +shift };
+  my $expected_error_p = shift // sub { 0 }; # by default, errors are unexpected
+  my $parno = $entry{parno} - scalar grep { $_->{parno} < $entry{parno} } @MERGES_TODAY;
 
   my ($logmsg_fh, $logmsg_filename) = my_tempfile();
   my (@mergeargs);
@@ -309,11 +425,21 @@ if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
   fi
 fi
 if $sh[$MAY_COMMIT]; then
-  # Remove the approved entry.  The sentinel guarantees the right number of blank
-  # lines is removed, which prevents spurious '--renormalize' commits tomorrow.
-  echo "sentinel" >> $STATUS
-  $VIM -e -s -n -N -i NONE -u NONE -c ':0normal! $entry{parno}\x{7d}kdap' -c wq $STATUS
-  $VIM -e -s -n -N -i NONE -u NONE -c '\$d' -c wq $STATUS
+  # Remove the approved entry.  The sentinel is important when the entry being
+  # removed is the very last one in STATUS, and in that case it has two effects:
+  # (1) keeps STATUS from ending in a run of multiple empty lines;
+  # (2) makes the \x{7d}k motion behave the same as in all other cases.
+  #
+  # Use a tempfile because otherwise backport_main() would see the "sentinel paragraph".
+  # Since backport_main() has an open descriptor, it will continue to see
+  # the STATUS inode that existed when control flow entered backport_main();
+  # since we replace the file on disk, when this block of code runs in the
+  # next iteration, it will see the new contents.
+  cp $STATUS $STATUS.t
+  (echo; echo; echo "sentinel paragraph") >> $STATUS.t
+  $VIM -e -s -n -N -i NONE -u NONE -c ':0normal! $parno\x{7d}kdap' -c wq $STATUS.t
+  $VIM -e -s -n -N -i NONE -u NONE -c '\$normal! dap' -c wq $STATUS.t
+  mv $STATUS.t $STATUS
   $SVNq commit -F $logmsg_filename
 elif ! $sh[$YES]; then
   echo "Would have committed:"
@@ -324,6 +450,11 @@ elif ! $sh[$YES]; then
   echo ']]]'
 fi
 EOF
+
+  if ($MAY_COMMIT) {
+    # STATUS has been edited and the change has been committed
+    push @MERGES_TODAY, \%entry;
+  }
 
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
@@ -352,12 +483,26 @@ EOF
   revert(verbose => 0, discard_STATUS => $MAY_COMMIT);
 
   $MERGED_SOMETHING++;
-  open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
-  print SHELL $script;
-  close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
-  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
+  my ($exit_code, $outlines, $errlines) = run_in_shell $script;
+  unless ($! == 0) {
+    die "system() failed to spawn subshell ($!); aborting";
+  }
+  unless ($exit_code == 0) {
+    warn "$0: subshell exited with code $exit_code (in '$entry{header}') "
+        ."(maybe due to 'set -e'?)";
 
-  unlink $logmsg_filename unless $? or $!;
+    # If we're committing, don't attempt to guess the problem and gracefully
+    # continue; just abort.
+    if ($MAY_COMMIT) {
+      die "Lost track of paragraph numbers; aborting";
+    }
+
+    # Record the error, unless the caller wants not to.
+    $ERRORS{$entry{id}} = [\%entry, "subshell exited with code $exit_code"]
+      unless $expected_error_p->($exit_code, $outlines, $errlines);
+  }
+
+  unlink $logmsg_filename unless $exit_code;
 }
 
 # Input formats:
@@ -438,8 +583,8 @@ sub parse_entry {
         $notes .= shift while @_ and $_[0] !~ /^\w/;
         my %accepts = map { $_ => 1 } ($notes =~ /--accept[ =]([a-z-]+)/g);
         given (scalar keys %accepts) {
-          when (0) { } 
-          when (1) { $accept = [keys %accepts]->[0]; } 
+          when (0) { }
+          when (1) { $accept = [keys %accepts]->[0]; }
           default  {
             warn "Too many --accept values at '",
                  logsummarysummary({ logsummary => [@logsummary] }),
@@ -513,6 +658,11 @@ sub vote {
   my @votesarray;
   return unless %$approved or %$votes;
 
+  # If $AVAILID is undef, we can only process 'edit' pseudovotes; handle_entry() is
+  # supposed to prevent numeric (±1,±0) votes from getting to this point.
+  die "Assertion failed" if not defined $AVAILID
+                            and grep { $_ ne 'edit' } map { $_->[0] } values %$votes;
+
   my $had_empty_line;
 
   $. = 0;
@@ -556,7 +706,7 @@ sub vote {
       (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
-    
+
     s/^(\s*\Q$vote\E:.*)/"$1, $AVAILID"/me
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header}, trailing_eol => 2
@@ -579,7 +729,7 @@ sub vote {
     grep { !$approvedcheck{$_} } keys %$approved
     if scalar(keys %$approved) != scalar(keys %approvedcheck);
   prompt "Press the 'any' key to continue...\n", dontprint => 1
-    if scalar(keys %$approved) != scalar(keys %approvedcheck) 
+    if scalar(keys %$approved) != scalar(keys %approvedcheck)
     or scalar(keys %$votes) != scalar(keys %votescheck);
   move "$STATUS.$$.tmp", $STATUS;
 
@@ -741,6 +891,38 @@ sub exit_stage_left {
   exit scalar keys %ERRORS;
 }
 
+# Given an ENTRY, check whether all ENTRY->{revisions} have been merged
+# into ENTRY->{branch}, if it has one.  If revisions are missing, record
+# a warning in $ERRORS.  Return TRUE If the entry passed the validation
+# and FALSE otherwise.
+sub validate_branch_contains_named_revisions {
+  my %entry = @_;
+  return 1 unless defined $entry{branch};
+  my %present;
+
+  return "Why are you running so old versions?" # true in boolean context
+    if $SVNvsn < 1_005_000;     # doesn't have the 'mergeinfo' subcommand
+
+  my $shell_escaped_branch = shell_escape($entry{branch});
+  %present = do {
+    my @present = `$SVN mergeinfo --show-revs=merged -- $TRUNK $BRANCHES/$shell_escaped_branch &&
+                   $SVN mergeinfo --show-revs=eligible -- $BRANCHES/$shell_escaped_branch`;
+    chomp @present;
+    @present = map /(\d+)/g, @present;
+    map +($_ => 1), @present;
+  };
+
+  my @absent = grep { not exists $present{$_} } @{$entry{revisions}};
+
+  if (@absent) {
+    $ERRORS{$entry{id}} //= [\%entry,
+      sprintf("Revisions '%s' nominated but not included in branch",
+              (join ", ", map { "r$_" } @absent)),
+    ];
+  }
+  return @absent ? 0 : 1;
+}
+
 sub handle_entry {
   my $in_approved = shift;
   my $approved = shift;
@@ -760,10 +942,23 @@ sub handle_entry {
     unless (@vetoes) {
       if ($MAY_COMMIT and $in_approved) {
         # svn-role mode
-        merge %entry;
+        merge \%entry if validate_branch_contains_named_revisions %entry;
       } elsif (!$MAY_COMMIT) {
         # Scan-for-conflicts mode
-        merge %entry;
+
+        # First, sanity-check the entry.  We ignore the result; even if it
+        # failed, we do want to check for conflicts, in the remainder of this
+        # block.
+        validate_branch_contains_named_revisions %entry;
+
+        # E155015 is SVN_ERR_WC_FOUND_CONFLICT
+        my $expected_error_p = sub {
+          my ($exit_code, $outlines, $errlines) = @_;
+          ($exit_code == 0)
+            or
+          (grep /svn: E155015:/, @$errlines)
+        };
+        merge \%entry, ($entry{depends} ? $expected_error_p : undef);
 
         my $output = `$SVN status`;
 
@@ -823,10 +1018,13 @@ sub handle_entry {
     given (prompt 'Run a merge? [y,l,v,±1,±0,q,e,a, ,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
-        merge %entry;
-        while (1) { 
+        #validate_branch_contains_named_revisions %entry;
+        merge \%entry;
+        while (1) {
           given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
             when (/^y/i) {
+              # TODO: if $MAY_COMMIT, save the log message to a file (say,
+              #       backport.logmsg in the wcroot).
               system($SHELL) == 0
                 or warn "Creating an interactive subshell failed ($?): $!"
             }
@@ -875,11 +1073,14 @@ sub handle_entry {
         next PROMPT;
       }
       when (/^([+-][01])\s*$/i) {
+        next QUESTION if warned_cannot_commit "Entering a vote failed";
         $votes->{$key} = [$1, \%entry];
         say "Your '$1' vote has been recorded." if $VERBOSE;
         last PROMPT;
       }
       when (/^e/i) {
+        prompt "Press the 'any' key to continue...\n"
+            if warned_cannot_commit "Committing this edit later on may fail";
         my $original = $entry{raw};
         $entry{raw} = edit_string $entry{raw}, $entry{header},
                         trailing_eol => 2;
@@ -906,9 +1107,6 @@ sub handle_entry {
     # NOTREACHED
     die "Unreachable code reached.";
   }
-
-  # TODO: merge() changes ./STATUS, which we're reading below, but
-  #       on my system the loop in main() doesn't seem to care.
 
   1;
 }
@@ -1004,6 +1202,8 @@ sub nominate_main {
   my (@revnums) = (+shift) =~ /(\d+)/g;
   my $justification = shift;
 
+  die "Unable to proceed." if warned_cannot_commit "Nominating failed";
+
   @revnums = sort { $a <=> $b } keys %{{ map { $_ => 1 } @revnums }};
   die "No revision numbers specified" unless @revnums;
 
@@ -1018,7 +1218,7 @@ sub nominate_main {
   # Construct entry.
   my $logmsg = `$SVN propget --revprop -r $revnums[0] --strict svn:log '^/'`;
   die "Can't fetch log message of r$revnums[0]: $!" unless $logmsg;
-  
+
   unless ($logmsg =~ s/^(.*?)\n\n.*/$1/s) {
     # "* file\n  (symbol): Log message."
 

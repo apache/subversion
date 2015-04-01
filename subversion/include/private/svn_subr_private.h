@@ -270,8 +270,33 @@ svn_checksum__from_digest_fnv1a_32x4(const unsigned char *digest,
 
 
 /**
+ * Return a stream that calculates a checksum of type @a kind over all
+ * data written to the @a inner_stream.  When the returned stream gets
+ * closed, write the checksum to @a *checksum.
+ * Allocate the result in @a pool.
+ *
+ * @note The stream returned only supports #svn_stream_write and
+ * #svn_stream_close.
+ */
+svn_stream_t *
+svn_checksum__wrap_write_stream(svn_checksum_t **checksum,
+                                svn_stream_t *inner_stream,
+                                svn_checksum_kind_t kind,
+                                apr_pool_t *pool);
+
+/**
+ * Return a stream that calculates a 32 bit modified FNV-1a checksum
+ * over all data written to the @a inner_stream and writes the digest
+ * to @a *digest when the returned stream gets closed.
+ * Allocate the stream in @a pool.
+ */
+svn_stream_t *
+svn_checksum__wrap_write_stream_fnv1a_32x4(apr_uint32_t *digest,
+                                           svn_stream_t *inner_stream,
+                                           apr_pool_t *pool);
+
+/**
  * Return a 32 bit FNV-1a checksum for the first @a len bytes in @a input.
- * The representation is in Big Endian.
  *
  * @since New in 1.9
  */
@@ -280,8 +305,8 @@ svn__fnv1a_32(const void *input, apr_size_t len);
 
 /**
  * Return a 32 bit modified FNV-1a checksum for the first @a len bytes in
- * @a input.  The representation is in Big Endian.
- * 
+ * @a input.
+ *
  * @note This is a proprietary checksumming algorithm based FNV-1a with
  *       approximately the same strength.  It is up to 4 times faster
  *       than plain FNV-1a for longer data blocks.
@@ -391,7 +416,7 @@ typedef struct svn_hash__entry_t
 /** Reads a single key-value pair from @a stream and returns it in the
  * caller-provided @a *entry (members don't need to be pre-initialized).
  * @a pool is used to allocate members of @a *entry and for tempoaries.
- * 
+ *
  * @see #svn_hash_read2 for more details.
  *
  * @since New in 1.9.
@@ -607,6 +632,54 @@ void
 svn_config__shallow_replace_section(svn_config_t *target,
                                     svn_config_t *source,
                                     const char *section);
+
+/* Allocate *CFG_HASH and populate it with default, empty,
+ * svn_config_t for the configuration categories (@c
+ * SVN_CONFIG_CATEGORY_SERVERS, @c SVN_CONFIG_CATEGORY_CONFIG, etc.).
+ * This returns a hash equivalent to svn_config_get_config when the
+ * config files are empty.
+ */
+svn_error_t *
+svn_config__get_default_config(apr_hash_t **cfg_hash,
+                               apr_pool_t *pool);
+
+/** @} */
+
+
+/**
+ * @defgroup svn_bit_array Packed bit array handling API
+ * @{
+ */
+
+/* This opaque data struct is an alternative to an INT->VOID hash.
+ *
+ * Technically, it is an automatically growing packed bit array.
+ * All indexes not previously set are implicitly 0 and setting it will
+ * grow the array as needed.
+ */
+typedef struct svn_bit_array__t svn_bit_array__t;
+
+/* Return a new bit array allocated in POOL.  MAX is a mere hint for
+ * the initial size of the array in bits.
+ */
+svn_bit_array__t *
+svn_bit_array__create(apr_size_t max,
+                      apr_pool_t *pool);
+
+/* Set bit at index IDX in ARRAY to VALUE.  If necessary, grow the
+ * underlying data buffer, i.e. any IDX is valid unless we run OOM.
+ */
+void
+svn_bit_array__set(svn_bit_array__t *array,
+                   apr_size_t idx,
+                   svn_boolean_t value);
+
+/* Get the bit value at index IDX in ARRAY.  Bits not previously accessed
+ * are implicitly 0 (or FALSE).  That implies IDX can never be out-of-range.
+ */
+svn_boolean_t
+svn_bit_array__get(svn_bit_array__t *array,
+                   apr_size_t idx);
 
 /** @} */
 

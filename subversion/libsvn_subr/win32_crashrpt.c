@@ -60,12 +60,13 @@ HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 
 /*** Code. ***/
 
-/* Convert a wide-character string to utf-8. This function will create a buffer
- * large enough to hold the result string, the caller should free this buffer.
+/* Convert a wide-character string to the current windows locale, suitable
+ * for directly using stdio. This function will create a buffer large
+ * enough to hold the result string, the caller should free this buffer.
  * If the string can't be converted, NULL is returned.
  */
 static char *
-convert_wbcs_to_utf8(const wchar_t *str)
+convert_wbcs_to_ansi(const wchar_t *str)
 {
   size_t len = wcslen(str);
   char *utf8_str = malloc(sizeof(wchar_t) * len + 1);
@@ -169,7 +170,7 @@ write_module_info_callback(void *data,
       FILE *log_file = (FILE *)data;
       MINIDUMP_MODULE_CALLBACK module = callback_input->Module;
 
-      char *buf = convert_wbcs_to_utf8(module.FullPath);
+      char *buf = convert_wbcs_to_ansi(module.FullPath);
       fprintf(log_file, FORMAT_PTR, module.BaseOfImage);
       fprintf(log_file, "  %s", buf);
       free(buf);
@@ -251,9 +252,9 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 context->R12, context->R13, context->R14, context->R15);
 
   fprintf(log_file,
-                "cs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x  ss=%04x\n",
-                context->SegCs, context->SegDs, context->SegEs,
-                context->SegFs, context->SegGs, context->SegSs);
+                "cs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x\n",
+                context->SegCs, context->SegSs, context->SegDs,
+                context->SegEs, context->SegFs, context->SegGs);
 #else
 #error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif
@@ -335,7 +336,7 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
           if (SymGetTypeInfo_(proc, mod_base, type, TI_GET_SYMNAME,
                               &type_name_wbcs))
             {
-              char *type_name = convert_wbcs_to_utf8(type_name_wbcs);
+              char *type_name = convert_wbcs_to_ansi(type_name_wbcs);
               LocalFree(type_name_wbcs);
 
               if (ptr == 0)
@@ -421,7 +422,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
   if (log_params && sym_info->Flags & SYMFLAG_PARAMETER)
     {
       if (last_nr_of_frame == nr_of_frame)
-        fprintf(log_file, ", ", 2);
+        fprintf(log_file, ", ");
       else
         last_nr_of_frame = nr_of_frame;
 

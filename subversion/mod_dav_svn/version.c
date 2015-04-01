@@ -841,7 +841,7 @@ cleanup_deltify(void *data)
      subpool, then destroy it before exiting. */
   apr_pool_t *subpool = svn_pool_create(cdb->pool);
 
-  err = svn_repos_open2(&repos, cdb->repos_path, NULL, subpool);
+  err = svn_repos_open3(&repos, cdb->repos_path, NULL, subpool, subpool);
   if (err)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,
@@ -972,7 +972,7 @@ dav_svn__checkin(dav_resource *resource,
             {
               const char *post_commit_err = svn_repos__post_commit_error_str
                                               (serr, resource->pool);
-              ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err,
+              ap_log_perror(APLOG_MARK, APLOG_ERR, APR_EGENERAL,
                             resource->pool,
                             "commit of r%ld succeeded, but an error occurred "
                             "after the commit: '%s'",
@@ -1354,6 +1354,23 @@ dav_svn__push_locks(dav_resource *resource,
   return NULL;
 }
 
+/* Implements svn_fs_lock_callback_t. */
+static svn_error_t *
+unlock_many_cb(void *lock_baton,
+               const char *path,
+               const svn_lock_t *lock,
+               svn_error_t *fs_err,
+               apr_pool_t *pool)
+{
+  request_rec *r = lock_baton;
+
+  if (fs_err)
+    ap_log_rerror(APLOG_MARK, APLOG_ERR, fs_err->apr_err, r,
+                  "%s", fs_err->message);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Helper for merge().  Free every lock in LOCKS.  The locks
    live in REPOS.  Log any errors for REQUEST.  Use POOL for temporary
@@ -1364,30 +1381,12 @@ release_locks(apr_hash_t *locks,
               request_rec *r,
               apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *targets = apr_hash_make(subpool);
-  apr_hash_t *results;
   svn_error_t *err;
 
-  for (hi = apr_hash_first(subpool, locks); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = svn__apr_hash_index_key(hi);
-      const char *token = svn__apr_hash_index_val(hi);
+  err = svn_repos_fs_unlock_many(repos, locks, FALSE, unlock_many_cb, r,
+                                 subpool, subpool);
 
-      svn_hash_sets(targets, path, token);
-    }
-
-  err = svn_repos_fs_unlock2(&results, repos, targets, FALSE, subpool, subpool);
-
-  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-      if (result->err)
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, result->err->apr_err, r,
-                      "%s", result->err->message);
-      svn_error_clear(result->err);
-    }
   if (err) /* If we got an error, just log it and move along. */
     ap_log_rerror(APLOG_MARK, APLOG_ERR, err->apr_err, r,
                   "%s", err->message);
@@ -1488,6 +1487,11 @@ merge(dav_resource *target,
              ### client some other way than hijacking the post-commit
              ### error message.*/
           post_commit_err = svn_repos__post_commit_error_str(serr, pool);
+          ap_log_perror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, pool,
+                        "commit of r%ld succeeded, but an error occurred "
+                        "after the commit: '%s'",
+                        new_rev,
+                        post_commit_err);
           svn_error_clear(serr);
           serr = SVN_NO_ERROR;
         }

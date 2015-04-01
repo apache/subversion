@@ -86,8 +86,6 @@ OperationContext::attachJavaObject(
 
 OperationContext::~OperationContext()
 {
-  delete m_prompter;
-
   JNIEnv *env = JNIUtil::getEnv();
   env->DeleteGlobalRef(m_jctx);
   if (m_jcfgcb)
@@ -154,12 +152,12 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
       svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
       void *plaintext_passphrase_prompt_baton;
 
-      if (m_prompter != NULL)
+      if (m_prompter.get())
         {
           plaintext_prompt_func = Prompter::plaintext_prompt;
-          plaintext_prompt_baton = m_prompter;
+          plaintext_prompt_baton = m_prompter.get();
           plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
-          plaintext_passphrase_prompt_baton = m_prompter;
+          plaintext_passphrase_prompt_baton = m_prompter.get();
         }
       else
         {
@@ -196,24 +194,24 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
       providers = apr_array_make(pool, 0, sizeof(svn_auth_provider_object_t *));
     }
 
-  if (m_prompter != NULL)
+  if (m_prompter.get())
     {
       /* Two basic prompt providers: username/password, and just username.*/
-      provider = m_prompter->getProviderSimple(in_pool);
+      provider = m_prompter->get_provider_simple(in_pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-      provider = m_prompter->getProviderUsername(in_pool);
+      provider = m_prompter->get_provider_username(in_pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
       /* Three ssl prompt providers, for server-certs, client-certs,
        * and client-cert-passphrases.  */
-      provider = m_prompter->getProviderServerSSLTrust(in_pool);
+      provider = m_prompter->get_provider_server_ssl_trust(in_pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-      provider = m_prompter->getProviderClientSSL(in_pool);
+      provider = m_prompter->get_provider_client_ssl(in_pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-      provider = m_prompter->getProviderClientSSLPassword(in_pool);
+      provider = m_prompter->get_provider_client_ssl_password(in_pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 
@@ -253,9 +251,8 @@ OperationContext::password(const char *pi_password)
 }
 
 void
-OperationContext::setPrompt(Prompter *prompter)
+OperationContext::setPrompt(Prompter::UniquePtr prompter)
 {
-  delete m_prompter;
   m_prompter = prompter;
 }
 
@@ -310,9 +307,11 @@ OperationContext::getPassword() const
   return (m_passWord.empty() ? NULL : m_passWord.c_str());
 }
 
-const Prompter& OperationContext::getPrompter() const
+Prompter::UniquePtr OperationContext::clonePrompter() const
 {
-  return *m_prompter;
+  if (m_prompter.get())
+    return m_prompter->clone();
+  return Prompter::UniquePtr(NULL);
 }
 
 void OperationContext::setTunnelCallback(jobject jtunnelcb)

@@ -196,7 +196,37 @@ public class ReposNotifyInformation extends EventObject
          * The structure of a revision is being verified.
          * @since 1.8
          */
-        verify_rev_structure;
+        verify_rev_structure,
+
+        /**
+         * A revision is found with corruption/errors.
+         * @since 1.9
+         */
+        failure,
+
+        /**
+         * A revprop shard got packed. @
+         * @since 1.9
+         */
+        pack_revprops,
+
+        /**
+         * A non-packed revprop shard got removed.
+         * @since 1.9
+         */
+        cleanup_revprops,
+
+        /**
+         * The repository format got bumped.
+         * @since 1.9
+         */
+        format_bumped,
+
+        /**
+         * A revision range was copied.
+         * @since 1.9
+         */
+        hotcopy_rev_range;
     }
 
     public enum NodeAction

@@ -138,6 +138,15 @@ svn_repos_get_commit_editor(const svn_delta_editor_t **editor,
 }
 
 svn_error_t *
+svn_repos_open2(svn_repos_t **repos_p,
+                const char *path,
+                apr_hash_t *fs_config,
+                apr_pool_t *pool)
+{
+  return svn_repos_open3(repos_p, path, fs_config, pool, pool);
+}
+
+svn_error_t *
 svn_repos_open(svn_repos_t **repos_p,
                const char *path,
                apr_pool_t *pool)
@@ -215,6 +224,30 @@ svn_repos_upgrade(const char *path,
   rb.start_callback_baton = start_callback_baton;
 
   return svn_repos_upgrade2(path, nonblocking, recovery_started, &rb, pool);
+}
+
+svn_error_t *
+svn_repos_hotcopy2(const char *src_path,
+                   const char *dst_path,
+                   svn_boolean_t clean_logs,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_hotcopy3(src_path, dst_path, clean_logs,
+                                            incremental, NULL, NULL,
+                                            cancel_func, cancel_baton, pool));
+}
+
+svn_error_t *
+svn_repos_hotcopy(const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t clean_logs,
+                  apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_hotcopy2(src_path, dst_path, clean_logs,
+                                            FALSE, NULL, NULL, pool));
 }
 
 /*** From reporter.c ***/
@@ -472,30 +505,6 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 
 
 /*** From logs.c ***/
-svn_error_t *
-svn_repos_get_logs4(svn_repos_t *repos,
-                    const apr_array_header_t *paths,
-                    svn_revnum_t start,
-                    svn_revnum_t end,
-                    int limit,
-                    svn_boolean_t discover_changed_paths,
-                    svn_boolean_t strict_node_history,
-                    svn_boolean_t include_merged_revisions,
-                    const apr_array_header_t *revprops,
-                    svn_repos_authz_func_t authz_read_func,
-                    void *authz_read_baton,
-                    svn_log_entry_receiver_t receiver,
-                    void *receiver_baton,
-                    apr_pool_t *pool)
-{
-  return svn_repos_get_logs5(repos, paths, start, end, limit,
-                             discover_changed_paths, strict_node_history,
-                             include_merged_revisions,
-                             svn_move_behavior_no_moves, revprops,
-                             authz_read_func, authz_read_baton,
-                             receiver, receiver_baton, pool);
-}
-
 svn_error_t *
 svn_repos_get_logs3(svn_repos_t *repos,
                     const apr_array_header_t *paths,
@@ -765,6 +774,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
                                               end_rev,
                                               FALSE,
                                               FALSE,
+                                              FALSE,
                                               notify_func,
                                               notify_baton,
                                               cancel_func,
@@ -984,6 +994,35 @@ svn_repos_load_fs(svn_repos_t *repos,
   return svn_repos_load_fs2(repos, dumpstream, feedback_stream,
                             uuid_action, parent_dir, FALSE, FALSE,
                             cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
+svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_revnum_t start_rev,
+                               svn_revnum_t end_rev,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool)
+{
+  SVN_ERR(svn_repos_get_fs_build_parser5(callbacks, parse_baton,
+                                         repos,
+                                         start_rev, end_rev,
+                                         use_history,
+                                         validate_props,
+                                         uuid_action,
+                                         parent_dir,
+                                         FALSE, FALSE, /*hooks */
+                                         FALSE /*ignore_dates*/,
+                                         notify_func,
+                                         notify_baton,
+                                         pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

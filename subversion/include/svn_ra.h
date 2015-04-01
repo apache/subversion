@@ -306,7 +306,7 @@ typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
  * This function will be called when the pool that owns the tunnel
  * connection is cleared or destroyed.
  *
- * @a tunnel_context is the baton as returned from the 
+ * @a tunnel_context is the baton as returned from the
  * svn_ra_open_tunnel_func_t.
  *
  * @a tunnel_baton was returned by the open-tunnel callback.
@@ -807,32 +807,6 @@ svn_ra_open(svn_ra_session_t **session_p,
             apr_hash_t *config,
             apr_pool_t *pool);
 
-/**
- * Open a new ra session @a *new_session to the same repository as an existing
- * ra session @a old_session, copying the callbacks, auth baton, etc. from the
- * old session. This essentially limits the lifetime of the new, duplicated
- * session to the lifetime of the old session. If the new session should
- * outlive the new session, creating a new session using svn_ra_open4() is
- * recommended.
- *
- * If @a session_url is not NULL, parent the new session at session_url. Note
- * that @a session_url MUST BE in the same repository as @a old_session or an
- * error will be returned. When @a session_url NULL the same session root
- * will be used.
- *
- * Allocate @a new_session in @a result_pool. Perform temporary allocations
- * in @a scratch_pool.
- *
- * @since New in 1.9.
- */
-svn_error_t *
-svn_ra_dup_session(svn_ra_session_t **new_session,
-                   svn_ra_session_t *old_session,
-                   const char *session_url,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool);
-
-
 /** Change the root URL of an open @a ra_session to point to a new path in the
  * same repository.  @a url is the new root URL.  Use @a pool for
  * temporary allocations.
@@ -1033,6 +1007,10 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  *
  * @since New in 1.5.
+ *
+ * @note Like most commit editors, the returned editor requires that the
+ * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
+ * methods is a URL, not a relative path.
  */
 svn_error_t *
 svn_ra_get_commit_editor3(svn_ra_session_t *session,
@@ -1612,9 +1590,6 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
- * @a move_behavior defines which changes are being reported as moves.
- * See #svn_move_behavior_t for the various options.
- *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
  * (i.e. retrieve none if the array is empty).
@@ -1642,32 +1617,8 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * revprops is NULL or contains a revprop other than svn:author, svn:date,
  * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.
  *
- * @since New in 1.9.
- */
-
-svn_error_t *
-svn_ra_get_log3(svn_ra_session_t *session,
-                const apr_array_header_t *paths,
-                svn_revnum_t start,
-                svn_revnum_t end,
-                int limit,
-                svn_boolean_t discover_changed_paths,
-                svn_boolean_t strict_node_history,
-                svn_boolean_t include_merged_revisions,
-                svn_move_behavior_t move_behavior,
-                const apr_array_header_t *revprops,
-                svn_log_entry_receiver_t receiver,
-                void *receiver_baton,
-                apr_pool_t *pool);
-
-/**
- * Similar to svn_ra_get_log3(), but with @a move_behavior being set to
- * #svn_move_behavior_no_moves.
- *
  * @since New in 1.5.
- * @deprecated Provided for backward compatibility with the 1.8 API.
  */
-SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_log2(svn_ra_session_t *session,
                 const apr_array_header_t *paths,
@@ -1977,8 +1928,12 @@ svn_ra_unlock(svn_ra_session_t *session,
 
 /**
  * If @a path is locked, set @a *lock to an svn_lock_t which
- * represents the lock, allocated in @a pool.  If @a path is not
- * locked, set @a *lock to NULL.
+ * represents the lock, allocated in @a pool.
+ *
+ * If @a path is not locked or does not exist in HEAD, set @a *lock to NULL.
+ *
+ * @note Before 1.9, this function could return SVN_ERR_FS_NOT_FOUND
+ * when @a path didn't exist in HEAD on specific ra layers.
  *
  * @since New in 1.2.
  */

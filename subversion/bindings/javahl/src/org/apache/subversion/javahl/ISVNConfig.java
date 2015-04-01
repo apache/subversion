@@ -59,6 +59,7 @@ public interface ISVNConfig
     public static final String LOG_ENCODING              = "log-encoding";
     public static final String USE_COMMIT_TIMES          = "use-commit-times";
     public static final String ENABLE_AUTO_PROPS         = "enable-auto-props";
+    public static final String ENABLE_MAGIC_FILE         = "enable-magic-file";
     public static final String NO_UNLOCK                 = "no-unlock";
     public static final String MIMETYPES_FILE            = "mime-types-file";
     public static final String PRESERVED_CF_EXTS         = "preserved-conflict-file-exts";
@@ -73,6 +74,7 @@ public interface ISVNConfig
     public static final String SECTION_WORKING_COPY  = "working-copy";
     public static final String SQLITE_EXCLUSIVE          = "exclusive-locking";
     public static final String SQLITE_EXCLUSIVE_CLIENTS  = "exclusive-locking-clients";
+    public static final String SQLITE_BUSY_TIMEOUT       = "busy-timeout";
 
     /**
      * Returns a reference to the "servers" configuration category.
@@ -110,6 +112,8 @@ public interface ISVNConfig
     public static final String HTTP_BULK_UPDATES         = "http-bulk-updates";
     public static final String HTTP_MAX_CONNECTIONS      = "http-max-connections";
     public static final String HTTP_CHUNKED_REQUESTS     = "http-chunked-requests";
+    public static final String SERF_LOG_COMPONENTS       = "serf-log-components";
+    public static final String SERF_LOG_LEVEL            = "serf-log-level";
 
     /**
      * "true" value in configuration. One of the values returned by

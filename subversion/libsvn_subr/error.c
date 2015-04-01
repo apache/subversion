@@ -28,6 +28,10 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 
+#if defined(SVN_DEBUG) && APR_HAS_THREADS
+#include <apr_thread_proc.h>
+#endif
+
 #include <zlib.h>
 
 #ifndef SVN_ERR__TRACING
@@ -38,21 +42,62 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 
-#ifdef SVN_DEBUG
-/* XXX FIXME: These should be protected by a thread mutex.
-   svn_error__locate and make_error_internal should cooperate
-   in locking and unlocking it. */
+#include "private/svn_error_private.h"
+#include "svn_private_config.h"
 
-/* XXX TODO: Define mutex here #if APR_HAS_THREADS */
+#if defined(SVN_DEBUG) && APR_HAS_THREADS
+#include "private/svn_atomic.h"
+#include "pools.h"
+#endif
+
+
+#ifdef SVN_DEBUG
+#  if APR_HAS_THREADS
+static apr_threadkey_t *error_file_key = NULL;
+static apr_threadkey_t *error_line_key = NULL;
+
+/* No-op destructor for apr_threadkey_private_create(). */
+static void null_threadkey_dtor(void *stuff) {}
+
+/* Handler for svn_atomic__init_once used by svn_error__locate to
+   initialize the thread-local error location storage.
+   This function will never return an error. */
+static svn_error_t *
+locate_init_once(void *ignored_baton, apr_pool_t *ignored_pool)
+{
+  /* Strictly speaking, this is a memory leak, since we're creating an
+     unmanaged, top-level pool and never destroying it.  We do this
+     because this pool controls the lifetime of the thread-local
+     storage for error locations, and that storage must always be
+     available. */
+  apr_pool_t *threadkey_pool = svn_pool__create_unmanaged(TRUE);
+  apr_status_t status;
+
+  status = apr_threadkey_private_create(&error_file_key,
+                                        null_threadkey_dtor,
+                                        threadkey_pool);
+  if (status == APR_SUCCESS)
+    status = apr_threadkey_private_create(&error_line_key,
+                                          null_threadkey_dtor,
+                                          threadkey_pool);
+
+  /* If anything went wrong with the creation of the thread-local
+     storage, we'll revert to the old, thread-agnostic behaviour */
+  if (status != APR_SUCCESS)
+    error_file_key = error_line_key = NULL;
+
+  return SVN_NO_ERROR;
+}
+#  endif  /* APR_HAS_THREADS */
+
+/* These location variables will be used in no-threads mode or if
+   thread-local storage is not available. */
 static const char * volatile error_file = NULL;
 static long volatile error_line = -1;
 
 /* file_line for the non-debug case. */
 static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #endif /* SVN_DEBUG */
-
-#include "svn_private_config.h"
-#include "private/svn_error_private.h"
 
 
 /*
@@ -67,6 +112,7 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #undef svn_error_create
 #undef svn_error_createf
 #undef svn_error_quick_wrap
+#undef svn_error_quick_wrapf
 #undef svn_error_wrap_apr
 
 /* Note: Although this is a "__" function, it was historically in the
@@ -75,44 +121,41 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 void
 svn_error__locate(const char *file, long line)
 {
-#if defined(SVN_DEBUG)
-  /* XXX TODO: Lock mutex here */
+#ifdef SVN_DEBUG
+#  if APR_HAS_THREADS
+  static volatile svn_atomic_t init_status = 0;
+  svn_error_clear(svn_atomic__init_once(&init_status,
+                                        locate_init_once,
+                                        NULL, NULL));
+
+  if (error_file_key && error_line_key)
+    {
+      apr_status_t status;
+      status = apr_threadkey_private_set((char*)file, error_file_key);
+      if (status == APR_SUCCESS)
+        status = apr_threadkey_private_set((void*)line, error_line_key);
+      if (status == APR_SUCCESS)
+        return;
+    }
+#  endif  /* APR_HAS_THREADS */
+
   error_file = file;
   error_line = line;
-#endif
+#endif /* SVN_DEBUG */
 }
 
 
 /* Cleanup function for errors.  svn_error_clear () removes this so
    errors that are properly handled *don't* hit this code. */
-#if defined(SVN_DEBUG)
-/* GCC >= 4.6 has support for diagnostic pragmas that let us
- * turn off warnings.  clang also supports the same pragmas */
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) \
-     || defined(__clang__))
-  #define IGNORING_UNUSED_WARNING
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wunused-variable"
-#endif /* supports diagnostic pragmas */
 static apr_status_t err_abort(void *data)
 {
   svn_error_t *err = data;  /* For easy viewing in a debugger */
-#ifndef IGNORING_UNUSED_WARNING
-  /* Fake a use for the variable to avoid compiler warnings if we can't turn
-   * them off via pragmas. */
-  err = err;
-#endif /* IGNORING_UNUSED_WARNING */
+  SVN_UNUSED(err);
 
   if (!getenv("SVN_DBG_NO_ABORT_ON_ERROR_LEAK"))
     abort();
   return APR_SUCCESS;
 }
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) \
-     || defined(__clang__))
-  #undef IGNORING_UNUSED_WARNING
-  #pragma GCC diagnostic pop
-#endif /* supports diagnostic pragmas */
-#endif
 
 
 static svn_error_t *
@@ -121,6 +164,7 @@ make_error_internal(apr_status_t apr_err,
 {
   apr_pool_t *pool;
   svn_error_t *new_error;
+  apr_status_t status = APR_SUCCESS;
 
   /* Reuse the child's pool, or create our own. */
   if (child)
@@ -139,16 +183,34 @@ make_error_internal(apr_status_t apr_err,
   new_error->apr_err = apr_err;
   new_error->child   = child;
   new_error->pool    = pool;
-#if defined(SVN_DEBUG)
-  new_error->file    = error_file;
-  new_error->line    = error_line;
-  /* XXX TODO: Unlock mutex here */
+
+#ifdef SVN_DEBUG
+#if APR_HAS_THREADS
+  if (error_file_key && error_line_key)
+    {
+      void *item;
+      status = apr_threadkey_private_get(&item, error_file_key);
+      if (status == APR_SUCCESS)
+        {
+          new_error->file = item;
+          status = apr_threadkey_private_get(&item, error_line_key);
+          if (status == APR_SUCCESS)
+            new_error->line = (long)item;
+        }
+    }
+#  endif  /* APR_HAS_THREADS */
+
+  if (status != APR_SUCCESS)
+    {
+      new_error->file = error_file;
+      new_error->line = error_line;
+    }
 
   if (! child)
       apr_pool_cleanup_register(pool, new_error,
                                 err_abort,
                                 apr_pool_cleanup_null);
-#endif
+#endif /* SVN_DEBUG */
 
   return new_error;
 }
@@ -243,6 +305,26 @@ svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
                           new_msg);
 }
 
+svn_error_t *
+svn_error_quick_wrapf(svn_error_t *child,
+                      const char *fmt,
+                      ...)
+{
+  svn_error_t *err;
+  va_list ap;
+
+  if (child == SVN_NO_ERROR)
+    return SVN_NO_ERROR;
+
+  err = make_error_internal(child->apr_err, child);
+
+  va_start(ap, fmt);
+  err->message = apr_pvsprintf(err->pool, fmt, ap);
+  va_end(ap);
+
+  return err;
+}
+
 /* Messages in tracing errors all point to this static string. */
 static const char error_tracing_link[] = "traced call";
 
@@ -307,6 +389,8 @@ svn_error_compose(svn_error_t *chain, svn_error_t *new_err)
       *chain = *new_err;
       if (chain->message)
         chain->message = apr_pstrdup(pool, new_err->message);
+      if (chain->file)
+        chain->file = apr_pstrdup(pool, new_err->file);
       chain->pool = pool;
 #if defined(SVN_DEBUG)
       if (! new_err->child)
@@ -355,10 +439,13 @@ svn_error_find_cause(svn_error_t *err, apr_status_t apr_err)
 }
 
 svn_error_t *
-svn_error_dup(svn_error_t *err)
+svn_error_dup(const svn_error_t *err)
 {
   apr_pool_t *pool;
   svn_error_t *new_err = NULL, *tmp_err = NULL;
+
+  if (!err)
+    return SVN_NO_ERROR;
 
   pool = svn_pool_create(NULL);
   if (!pool)
@@ -380,6 +467,8 @@ svn_error_dup(svn_error_t *err)
       tmp_err->pool = pool;
       if (tmp_err->message)
         tmp_err->message = apr_pstrdup(pool, tmp_err->message);
+      if (tmp_err->file)
+        tmp_err->file = apr_pstrdup(pool, tmp_err->file);
     }
 
 #if defined(SVN_DEBUG)
@@ -406,7 +495,7 @@ svn_error_clear(svn_error_t *err)
 }
 
 svn_boolean_t
-svn_error__is_tracing_link(svn_error_t *err)
+svn_error__is_tracing_link(const svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
   /* ### A strcmp()?  Really?  I think it's the best we can do unless
@@ -441,10 +530,8 @@ svn_error_purge_tracing(svn_error_t *err)
       if (! err)
         return svn_error_create(
                  SVN_ERR_ASSERTION_ONLY_TRACING_LINKS,
-                 svn_error_compose_create(
-                   svn_error__malfunction(TRUE, __FILE__, __LINE__,
-                                          NULL /* ### say something? */),
-                   err),
+                 svn_error__malfunction(TRUE, __FILE__, __LINE__,
+                                        NULL /* ### say something? */),
                  NULL);
 
       /* Copy the current error except for its child error pointer
@@ -553,12 +640,6 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
 }
 
 void
-svn_handle_error(svn_error_t *err, FILE *stream, svn_boolean_t fatal)
-{
-  svn_handle_error2(err, stream, fatal, "svn: ");
-}
-
-void
 svn_handle_error2(svn_error_t *err,
                   FILE *stream,
                   svn_boolean_t fatal,
@@ -577,10 +658,6 @@ svn_handle_error2(svn_error_t *err,
   apr_array_header_t *empties;
   svn_error_t *tmp_err;
 
-  /* ### The rest of this file carefully avoids using svn_pool_*(),
-     preferring apr_pool_*() instead.  I can't remember why -- it may
-     be an artifact of r843793, or it may be for some deeper reason --
-     but I'm playing it safe and using apr_pool_*() here too. */
   subpool = svn_pool_create(err->pool);
   empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
 
@@ -629,15 +706,8 @@ svn_handle_error2(svn_error_t *err,
     }
 }
 
-
 void
-svn_handle_warning(FILE *stream, svn_error_t *err)
-{
-  svn_handle_warning2(stream, err, "svn: ");
-}
-
-void
-svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
+svn_handle_warning2(FILE *stream, const svn_error_t *err, const char *prefix)
 {
   char buf[256];
 #ifdef SVN_DEBUG
@@ -660,7 +730,7 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 }
 
 const char *
-svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
+svn_err_best_message(const svn_error_t *err, char *buf, apr_size_t bufsize)
 {
   /* Skip over any trace records.  */
   while (svn_error__is_tracing_link(err))

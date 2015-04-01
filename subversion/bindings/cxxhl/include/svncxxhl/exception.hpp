@@ -94,8 +94,8 @@ public:
     /**
      * Create a message object given an error code and error message.
      */
-    Message(int errno, const std::string& message)
-      : m_errno(errno),
+    Message(int errval, const std::string& message)
+      : m_errno(errval),
         m_message(message),
         m_trace(false)
       {}
@@ -104,8 +104,8 @@ public:
      * Create a message object given an error code and error message,
      * and set the flag that tells if this is a debugging traceback entry.
      */
-    Message(int errno, const std::string& message, bool trace)
-      : m_errno(errno),
+    Message(int errval, const std::string& message, bool trace)
+      : m_errno(errval),
         m_message(message),
         m_trace(trace)
       {}

@@ -682,28 +682,48 @@ svn_io_files_contents_three_same_p(svn_boolean_t *same12,
                                    const char *file3,
                                    apr_pool_t *scratch_pool);
 
-/** Create file at utf8-encoded @a file with contents @a contents.
- * @a file must not already exist.
+/** Create a file at utf8-encoded path @a file with the contents given
+ * by the null-terminated string @a contents.
+ *
+ * @a file must not already exist. If an error occurs while writing or
+ * closing the file, attempt to delete the file before returning the error.
+ *
+ * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a contents
+ * is null, create an empty file.
+ *
  * Use @a pool for memory allocations.
+ *
+ * @since
  */
 svn_error_t *
 svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool);
 
-/** Create file at utf8-encoded @a file with binary contents @a contents
- * of @a length bytes.  @a file must not already exist.
+/** Create a file at utf8-encoded path @a file with the contents given
+ * by @a contents of @a length bytes.
+ *
+ * @a file must not already exist. If an error occurs while writing or
+ * closing the file, attempt to delete the file before returning the error.
+ *
+ * Write the data in 'binary' mode (#APR_FOPEN_BINARY). If @a length is
+ * zero, create an empty file; in this case @a contents may be null.
+ *
  * Use @a pool for memory allocations.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_io_file_create_binary(const char *file,
-                          const char *contents,
-                          apr_size_t length,
-                          apr_pool_t *pool);
+svn_io_file_create_bytes(const char *file,
+                         const void *contents,
+                         apr_size_t length,
+                         apr_pool_t *pool);
 
-/** Create empty file at utf8-encoded @a file, which must not already exist.
+/** Create an empty file at utf8-encoded path @a file.
+ *
+ * @a file must not already exist. If an error occurs while
+ * closing the file, attempt to delete the file before returning the error.
+ *
  * Use @a pool for memory allocations.
  *
  * @since New in 1.9.
@@ -1265,6 +1285,8 @@ svn_stream_read(svn_stream_t *stream,
  * of reads or a simple seek operation. If the stream implementation has
  * not provided a skip function, this will read from the stream and
  * discard the data.
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_stream_skip(svn_stream_t *stream,
@@ -1533,6 +1555,10 @@ typedef svn_error_t *
  *
  * If the only "access" the returned stream gets is to close it
  * then @a open_func will only be called if @a open_on_close is TRUE.
+ *
+ * Allocate the returned stream in @a result_pool. Also arrange for
+ * @a result_pool to be passed as the @c result_pool parameter to
+ * @a open_func when it is called.
  *
  * @since New in 1.8.
  */

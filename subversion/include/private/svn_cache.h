@@ -188,6 +188,10 @@ typedef struct svn_cache__info_t
  * if they are strings.  Cached values will be copied in and out of
  * the cache using @a serialize_func and @a deserialize_func, respectively.
  *
+ * If @a deserialize_func is NULL, then the data is returned as an
+ * svn_stringbuf_t; if @a serialize_func is NULL, then the data is
+ * assumed to be an svn_stringbuf_t.
+ *
  * The cache stores up to @a pages * @a items_per_page items at a
  * time.  The exact cache invalidation strategy is not defined here,
  * but in general, a lower value for @a items_per_page means more
@@ -230,7 +234,7 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
  * other caches.  @a *cache_p will be allocated in @a result_pool.
  *
  * If @a deserialize_func is NULL, then the data is returned as an
- * svn_string_t; if @a serialize_func is NULL, then the data is
+ * svn_stringbuf_t; if @a serialize_func is NULL, then the data is
  * assumed to be an svn_stringbuf_t.
  *
  * These caches are always thread safe.
@@ -253,7 +257,8 @@ svn_cache__create_memcache(svn_cache__t **cache_p,
  * Given @a config, returns an APR memcached interface in @a
  * *memcache_p allocated in @a result_pool if @a config contains entries in
  * the SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS section describing
- * memcached servers; otherwise, sets @a *memcache_p to NULL.
+ * memcached servers; otherwise, sets @a *memcache_p to NULL.  Use
+ * @a scratch_pool for temporary allocations.
  *
  * If Subversion was not built with apr_memcache_support, then raises
  * SVN_ERR_NO_APR_MEMCACHE if and only if @a config is configured to
@@ -262,7 +267,8 @@ svn_cache__create_memcache(svn_cache__t **cache_p,
 svn_error_t *
 svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                      svn_config_t *config,
-                                     apr_pool_t *result_pool);
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 /**
  * Creates a new membuffer cache object in @a *cache. It will contain
@@ -341,10 +347,11 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
  * form multiple caches, @a prefix should be specified to differentiate
  * this cache from other caches.  All entries written through this cache
  * interface will be assigned into the given @a priority class.  @a *cache_p
- * will be allocated in @a result_pool.
+ * will be allocated in @a result_pool.  @a scratch_pool is used for
+ * temporary allocations.
  *
  * If @a deserialize_func is NULL, then the data is returned as an
- * svn_string_t; if @a serialize_func is NULL, then the data is
+ * svn_stringbuf_t; if @a serialize_func is NULL, then the data is
  * assumed to be an svn_stringbuf_t.
  *
  * If @a thread_safe is true, and APR is compiled with threads, all
@@ -362,7 +369,8 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   const char *prefix,
                                   apr_uint32_t priority,
                                   svn_boolean_t thread_safe,
-                                  apr_pool_t *result_pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /**
  * Sets @a handler to be @a cache's error handling routine.  If any
@@ -533,6 +541,15 @@ svn_cache__get_global_membuffer_cache(void);
  */
 svn_cache__info_t *
 svn_cache__membuffer_get_global_info(apr_pool_t *pool);
+
+/**
+ * Remove all current contents from CACHE.
+ *
+ * NOTE:  In a multi-threaded environment, new contents may have been put
+ * into the cache by the time this function returns.
+ */
+svn_error_t *
+svn_cache__membuffer_clear(svn_membuffer_t *cache);
 
 /** @} */
 

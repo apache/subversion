@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_compat.h
+ * @file svn_dep_compat.h
  * @brief Compatibility macros and functions.
  * @since New in 1.5.0.
  */
@@ -44,6 +44,19 @@ extern "C" {
     && !defined(SVN_ALLOW_SHORT_INTS) \
     && (INT_MAX < 0x7FFFFFFFl)
 #error int is shorter than 32 bits and may break Subversion. Define SVN_ALLOW_SHORT_INTS to skip this check.
+#endif
+
+/**
+ * We assume that 'char' is 8 bits wide.  The critical interfaces are
+ * our repository formats and RA encodings.  E.g. a 32 bit wide char may
+ * mess up UTF8 parsing, how we interpret size values etc.
+ *
+ * @since New in 1.9.
+ */
+#if    defined(CHAR_BIT) \
+    && !defined(SVN_ALLOW_NON_8_BIT_CHARS) \
+    && (CHAR_BIT != 8)
+#error char is not 8 bits and may break Subversion. Define SVN_ALLOW_NON_8_BIT_CHARS to skip this check.
 #endif
 
 /**

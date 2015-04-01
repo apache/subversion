@@ -437,6 +437,68 @@ class SubversionClientTestCase(unittest.TestCase):
                      self.proplist_receiver_dir1, self.client_ctx)
     self.assertEquals(self.proplist_receiver_dir1_calls, 1)
 
+  def test_update4(self):
+    """Test update and the notify function callbacks"""
+
+    rev = core.svn_opt_revision_t()
+    rev.kind = core.svn_opt_revision_number
+    rev.value.number = 0
+
+    path = self.temper.alloc_empty_dir('-update')
+
+    self.assertRaises(ValueError, client.checkout2,
+                      self.repos_uri, path, None, None, True, True,
+                      self.client_ctx)
+
+    client.checkout2(self.repos_uri, path, rev, rev, True, True,
+            self.client_ctx)
+
+    def notify_func(path, action, kind, mime_type, content_state, prop_state, rev):
+        self.notified_paths.append(path)
+
+    self.client_ctx.notify_func = client.svn_swig_py_notify_func
+    self.client_ctx.notify_baton = notify_func
+    rev.value.number = 1
+    self.notified_paths = []
+    client.update4((path,), rev, core.svn_depth_unknown, True, False, False,
+                   False, False, self.client_ctx)
+    expected_paths = [
+        path,
+        os.path.join(path, 'branches'),
+        os.path.join(path, 'tags'),
+        os.path.join(path, 'trunk'),
+        path,
+        path
+    ]
+    # All normal subversion apis process paths in Subversion's canonical format,
+    # which isn't the platform specific format
+    expected_paths = [x.replace(os.path.sep, '/') for x in expected_paths]
+    self.notified_paths.sort()
+    expected_paths.sort()
+
+    self.assertEquals(self.notified_paths, expected_paths)
+
+    def notify_func2(notify, pool):
+        self.notified_paths.append(notify.path)
+
+    self.client_ctx.notify_func2 = client.svn_swig_py_notify_func2
+    self.client_ctx.notify_baton2 = notify_func2
+    rev.value.number = 2
+    self.notified_paths = []
+    expected_paths = [
+        path,
+        os.path.join(path, 'trunk', 'README.txt'),
+        os.path.join(path, 'trunk'),
+        path,
+        path
+    ]
+    expected_paths = [x.replace(os.path.sep, '/') for x in expected_paths]
+    client.update4((path,), rev, core.svn_depth_unknown, True, False, False,
+                   False, False, self.client_ctx)
+    self.notified_paths.sort()
+    expected_paths.sort()
+    self.assertEquals(self.notified_paths, expected_paths)
+
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(

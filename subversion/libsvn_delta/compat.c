@@ -295,7 +295,7 @@ get_children(struct ev2_edit_baton *eb,
 
   for (hi = apr_hash_first(pool, eb->changes); hi; hi = apr_hash_next(hi))
     {
-      const char *repos_relpath = svn__apr_hash_index_key(hi);
+      const char *repos_relpath = apr_hash_this_key(hi);
       const char *child;
 
       /* Find potential children. */
@@ -1233,12 +1233,12 @@ alter_file_cb(void *baton,
   if (contents)
     {
       /* We may need to re-checksum these contents */
-      if (!(checksum && checksum->kind == svn_checksum_md5))
+      if (checksum && checksum->kind == svn_checksum_md5)
+        md5_checksum = (svn_checksum_t *)checksum;
+      else
         contents = svn_stream_checksummed2(contents, &md5_checksum, NULL,
                                            svn_checksum_md5, TRUE,
                                            scratch_pool);
-      else
-        md5_checksum = (svn_checksum_t *)checksum;
 
       /* Spool the contents to a tempfile, and provide that to the driver. */
       SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_filename, NULL,

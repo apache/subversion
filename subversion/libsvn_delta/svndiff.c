@@ -360,7 +360,7 @@ decode_size(apr_size_t *val,
   const unsigned char *result = svn__decode_uint(&temp, p, end);
   if (temp > APR_SIZE_MAX)
     return NULL;
-  
+
   *val = (apr_size_t)temp;
   return result;
 }
@@ -494,7 +494,7 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
   compressed.data = (char *)in;
   compressed.len = inLen;
   compressed.blocksize = inLen + 1;
-  
+
   return svn__decompress(&compressed, out, limit);
 }
 
@@ -526,8 +526,6 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
       svn_stringbuf_t *instout = svn_stringbuf_create_empty(pool);
       svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
 
-      /* these may in fact simply return references to insend */
-
       SVN_ERR(zlib_decode(insend, newlen, ndout,
                           SVN_DELTA_WINDOW_SIZE));
       SVN_ERR(zlib_decode(data, insend - data, instout,
@@ -542,7 +540,13 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
     }
   else
     {
-      new_data->data = (const char *) insend;
+      /* Copy the data because an svn_string_t must have the invariant
+         data[len]=='\0'. */
+      char *buf = apr_palloc(pool, newlen + 1);
+
+      memcpy(buf, insend, newlen);
+      buf[newlen] = '\0';
+      new_data->data = buf;
       new_data->len = newlen;
     }
 
@@ -574,6 +578,10 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
   return SVN_NO_ERROR;
 }
 
+static const char SVNDIFF_V0[] = { 'S', 'V', 'N', 0 };
+static const char SVNDIFF_V1[] = { 'S', 'V', 'N', 1 };
+#define SVNDIFF_HEADER_SIZE (sizeof(SVNDIFF_V0))
+
 static svn_error_t *
 write_handler(void *baton,
               const char *buffer,
@@ -586,14 +594,14 @@ write_handler(void *baton,
   apr_size_t buflen = *len;
 
   /* Chew up four bytes at the beginning for the header.  */
-  if (db->header_bytes < 4)
+  if (db->header_bytes < SVNDIFF_HEADER_SIZE)
     {
-      apr_size_t nheader = 4 - db->header_bytes;
+      apr_size_t nheader = SVNDIFF_HEADER_SIZE - db->header_bytes;
       if (nheader > buflen)
         nheader = buflen;
-      if (memcmp(buffer, "SVN\0" + db->header_bytes, nheader) == 0)
+      if (memcmp(buffer, SVNDIFF_V0 + db->header_bytes, nheader) == 0)
         db->version = 0;
-      else if (memcmp(buffer, "SVN\1" + db->header_bytes, nheader) == 0)
+      else if (memcmp(buffer, SVNDIFF_V1 + db->header_bytes, nheader) == 0)
         db->version = 1;
       else
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_HEADER, NULL,
@@ -788,7 +796,7 @@ read_one_byte(unsigned char *byte, svn_stream_t *stream)
   return SVN_NO_ERROR;
 }
 
-/* Read and decode one integer from STREAM into *SIZE. 
+/* Read and decode one integer from STREAM into *SIZE.
    Increment *BYTE_COUNTER by the number of chars we have read. */
 static svn_error_t *
 read_one_size(apr_size_t *size,

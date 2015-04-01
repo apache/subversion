@@ -200,6 +200,15 @@ svn_client_args_to_target_array2(apr_array_header_t **targets_p,
           SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, &peg_rev,
                                                      utf8_target, pool));
 
+          /* Reject the form "@abc", a peg specifier with no path. */
+          if (true_target[0] == '\0' && peg_rev[0] != '\0')
+            {
+              return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                                       _("'%s' is just a peg revision. "
+                                         "Maybe try '%s@' instead?"),
+                                       utf8_target, utf8_target);
+            }
+
           /* URLs and wc-paths get treated differently. */
           if (svn_path_is_url(true_target))
             {

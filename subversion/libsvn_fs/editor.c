@@ -63,8 +63,6 @@ struct edit_baton {
 };
 
 #define FSPATH(relpath, pool) apr_pstrcat(pool, "/", relpath, SVN_VA_NULL)
-#define UNUSED(x) ((void)(x))
-
 
 static svn_error_t *
 get_root(svn_fs_root_t **root,
@@ -94,8 +92,8 @@ add_new_props(svn_fs_root_t *root,
   for (hi = apr_hash_first(scratch_pool, props); hi;
        hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      const svn_string_t *value = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      const svn_string_t *value = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
 
@@ -522,7 +520,8 @@ alter_symlink_cb(void *baton,
 {
   struct edit_baton *eb = baton;
 
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
+  SVN_UNUSED(eb);
+  SVN__NOT_IMPLEMENTED();
 }
 
 
@@ -778,16 +777,24 @@ svn_fs__editor_commit(svn_revnum_t *revision,
   /* Clean up internal resources (eg. eb->root). This also allows the
      editor infrastructure to know this editor is "complete".  */
   err = svn_editor_complete(editor);
+  if (err)
+    {
+      svn_fs_txn_t *txn = eb->txn;
+
+      eb->txn = NULL;
+      return svn_error_trace(svn_error_compose_create(
+                  err,
+                  svn_fs_abort_txn(txn, scratch_pool)));
+    }
 
   /* Note: docco for svn_fs_commit_txn() states that CONFLICT_PATH will
      be allocated in the txn's pool. But it lies. Regardless, we want
      it placed into RESULT_POOL.  */
 
-  if (!err)
-    err = svn_fs_commit_txn(&inner_conflict_path,
-                             revision,
-                             eb->txn,
-                             scratch_pool);
+  err = svn_fs_commit_txn(&inner_conflict_path,
+                          revision,
+                          eb->txn,
+                          scratch_pool);
   if (SVN_IS_VALID_REVNUM(*revision))
     {
       if (err)

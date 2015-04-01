@@ -197,10 +197,20 @@ pristine_read_txn(svn_stream_t **contents,
     }
 
   /* Open the file as a readable stream.  It will remain readable even when
-   * deleted from disk; APR guarantees that on Windows as well as Unix. */
+   * deleted from disk; APR guarantees that on Windows as well as Unix.
+   *
+   * We also don't enable APR_BUFFERED on this file to maximize throughput
+   * e.g. for fulltext comparison.  As we use SVN__STREAM_CHUNK_SIZE buffers
+   * where needed in streams, there is no point in having another layer of
+   * buffers. */
   if (contents)
-    SVN_ERR(svn_stream_open_readonly(contents, pristine_abspath,
-                                     result_pool, scratch_pool));
+    {
+      apr_file_t *file;
+      SVN_ERR(svn_io_file_open(&file, pristine_abspath, APR_READ,
+                               APR_OS_DEFAULT, result_pool));
+      *contents = svn_stream_from_aprfile2(file, FALSE, result_pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -325,6 +335,7 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
     apr_finfo_t finfo;
     SVN_ERR(svn_stream__install_get_info(&finfo, install_stream, APR_FINFO_SIZE,
                                          scratch_pool));
+    SVN_ERR(svn_io_set_file_read_write(pristine_abspath, TRUE, scratch_pool));
     SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
                                         TRUE, scratch_pool));
 
@@ -334,6 +345,8 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
     SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+    SVN_ERR(svn_io_set_file_read_only(pristine_abspath, FALSE, scratch_pool));
   }
 
   return SVN_NO_ERROR;

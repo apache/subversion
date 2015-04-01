@@ -29,6 +29,7 @@
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>] [--http-proxy=<host>:<port>]
+            [--httpd-version=<version>]
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
             <abs_srcdir> <abs_builddir>
@@ -44,7 +45,7 @@ separated list of test numbers; the default is to run all the tests in it.
 '''
 
 # A few useful constants
-SVN_VER_MINOR = 9
+SVN_VER_MINOR = 10
 
 import os, re, subprocess, sys, imp, threading, traceback, exceptions
 from datetime import datetime
@@ -127,8 +128,10 @@ class TestHarness:
                list_tests=None, svn_bin=None, mode_filter=None,
                milestone_filter=None, set_log_level=None, ssl_cert=None,
                http_proxy=None, http_proxy_username=None,
-               http_proxy_password=None, exclusive_wc_locks=None,
-               memcached_server=None):
+               http_proxy_password=None, httpd_version=None,
+               exclusive_wc_locks=None,
+               memcached_server=None, skip_c_tests=None,
+               dump_load_cross_check=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -185,16 +188,33 @@ class TestHarness:
     self.http_proxy = http_proxy
     self.http_proxy_username = http_proxy_username
     self.http_proxy_password = http_proxy_password
+    self.httpd_version = httpd_version
     self.exclusive_wc_locks = exclusive_wc_locks
     self.memcached_server = memcached_server
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
+    self.skip_c_tests = (not not skip_c_tests)
+    self.dump_load_cross_check = (not not dump_load_cross_check)
+
+    # Parse out the FSFS version number
+    if self.fs_type is not None and self.fs_type.startswith('fsfs-v'):
+      self.fsfs_version = int(self.fs_type[6:])
+      self.fs_type = 'fsfs'
+    else:
+      self.fsfs_version = None
 
   def run(self, list):
     '''Run all test programs given in LIST. Print a summary of results, if
        there is a log file. Return zero iff all test programs passed.'''
     self._open_log('w')
     failed = 0
+
+    # If asked to skip C tests, remove non-Python tests from the list
+    if self.skip_c_tests:
+      def is_py_test(prog):
+        progpath, nums = self._split_nums(prog)
+        return progpath.endswith('.py')
+      list = filter(is_py_test, list)
 
     for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
@@ -367,12 +387,32 @@ class TestHarness:
     if self.config_file is not None:
       cmdline.append('--config-file=' + self.config_file)
 
+    if self.base_url is not None:
+      subdir = 'subversion/tests/cmdline/svn-test-work'
+
+      cmdline.append('--repos-url=%s' % self.base_url +
+                        '/svn-test-work/repositories')
+      cmdline.append('--repos-dir=%s'
+                     % os.path.abspath(
+                         os.path.join(self.builddir, subdir, 'repositories')))
+
+      # Enable access for http
+      if self.base_url.startswith('http'):
+        authzparent = os.path.join(self.builddir, subdir)
+        if not os.path.exists(authzparent):
+          os.makedirs(authzparent);
+        open(os.path.join(authzparent, 'authz'), 'w').write('[/]\n'
+                                                            '* = rw\n')
+
+    # ### Support --repos-template
     if self.verbose is not None:
       cmdline.append('--verbose')
     if self.cleanup is not None:
       cmdline.append('--cleanup')
     if self.fs_type is not None:
       cmdline.append('--fs-type=' + self.fs_type)
+    if self.fsfs_version is not None:
+      cmdline.append('--fsfs-version=%d' % self.fsfs_version)
     if self.server_minor_version is not None:
       cmdline.append('--server-minor-version=' + self.server_minor_version)
     if self.list_tests is not None:
@@ -459,7 +499,7 @@ class TestHarness:
       svntest.main.options.enable_sasl = True
     if self.parallel is not None:
       try:
-        num_parallel = int(self.parallel) 
+        num_parallel = int(self.parallel)
       except exceptions.ValueError:
         num_parallel = svntest.main.default_num_threads
       if num_parallel > 1:
@@ -474,6 +514,8 @@ class TestHarness:
       svntest.main.options.cleanup = True
     if self.fs_type is not None:
       svntest.main.options.fs_type = self.fs_type
+    if self.fsfs_version is not None:
+      svntest.main.options.fsfs_version = self.fsfs_version
     if self.http_library is not None:
       svntest.main.options.http_library = self.http_library
     if self.server_minor_version is not None:
@@ -505,10 +547,14 @@ class TestHarness:
           svntest.main.options.http_proxy_username = self.http_proxy_username
     if self.http_proxy_password is not None:
         svntest.main.options.http_proxy_password = self.http_proxy_password
+    if self.httpd_version is not None:
+        svntest.main.options.httpd_version = self.httpd_version
     if self.exclusive_wc_locks is not None:
       svntest.main.options.exclusive_wc_locks = self.exclusive_wc_locks
     if self.memcached_server is not None:
       svntest.main.options.memcached_server = self.memcached_server
+    if self.dump_load_cross_check is not None:
+      svntest.main.options.dump_load_cross_check = self.dump_load_cross_check
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -578,6 +624,12 @@ class TestHarness:
 
     return failed
 
+  def _split_nums(self, prog):
+    test_nums = None
+    if '#' in prog:
+      prog, test_nums = prog.split('#')
+    return prog, test_nums
+
   def _run_test(self, prog, test_nr, total_tests):
     "Run a single test. Return the test's exit code."
 
@@ -586,10 +638,7 @@ class TestHarness:
     else:
       log = sys.stdout
 
-    test_nums = None
-    if '#' in prog:
-      prog, test_nums = prog.split('#')
-
+    prog, test_nums = self._split_nums(prog)
     progdir, progbase = os.path.split(prog)
     if self.log:
       # Using write here because we don't want even a trailing space
@@ -668,13 +717,16 @@ def main():
   try:
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
                            ['url=', 'fs-type=', 'verbose', 'cleanup',
+                            'skip-c-tests', 'skip-C-tests',
+                            'dump-load-cross-check',
                             'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel=', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
                             'mode-filter=', 'set-log-level=', 'ssl-cert=',
                             'http-proxy=', 'http-proxy-username=',
-                            'http-proxy-password=','exclusive-wc-locks',
+                            'http-proxy-password=', 'httpd-version=',
+                            'exclusive-wc-locks',
                             'memcached-server='])
   except getopt.GetoptError:
     args = []
@@ -683,13 +735,15 @@ def main():
     print(__doc__)
     sys.exit(2)
 
-  base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
-    server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
-    set_log_level, ssl_cert, http_proxy, http_proxy_username, \
-    http_proxy_password, exclusive_wc_locks, memcached_server = \
-            None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None, None, None, None, None, None, None, None
+  base_url, fs_type, verbose, cleanup, skip_c_tests, enable_sasl, \
+    http_library, server_minor_version, fsfs_sharding, fsfs_packing, \
+    parallel, config_file, log_to_stdout, list_tests, mode_filter, \
+    milestone_filter, set_log_level, ssl_cert, http_proxy, \
+    http_proxy_username, http_proxy_password, httpd_version, \
+    exclusive_wc_locks, memcached_server, dump_load_cross_check = \
+            None, None, None, None, None, None, None, None, None, None, \
+            None, None, None, None, None, None, None, None, None, None, \
+            None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -707,6 +761,10 @@ def main():
       verbose = 1
     elif opt in ['-c', '--cleanup']:
       cleanup = 1
+    elif opt in ['--skip-c-tests', '--skip-C-tests']:
+      skip_c_tests = 1
+    elif opt in ['--dump-load-cross-check']:
+      dump_load_cross_check = 1
     elif opt in ['--enable-sasl']:
       enable_sasl = 1
     elif opt in ['--parallel']:
@@ -731,6 +789,8 @@ def main():
       http_proxy_username = val
     elif opt in ['--http-proxy-password']:
       http_proxy_password = val
+    elif opt in ['--httpd-version']:
+      httpd_version = val
     elif opt in ['--exclusive-wc-locks']:
       exclusive_wc_locks = 1
     elif opt in ['--memcached-server']:
@@ -754,8 +814,11 @@ def main():
                    http_proxy=http_proxy,
                    http_proxy_username=http_proxy_username,
                    http_proxy_password=http_proxy_password,
+                   httpd_version=httpd_version,
                    exclusive_wc_locks=exclusive_wc_locks,
-                   memcached_server=memcached_server)
+                   memcached_server=memcached_server,
+                   skip_c_tests=skip_c_tests,
+                   dump_load_cross_check=dump_load_cross_check)
 
   failed = th.run(args[2:])
   if failed:

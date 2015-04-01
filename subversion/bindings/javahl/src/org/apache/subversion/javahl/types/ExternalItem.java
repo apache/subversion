@@ -31,8 +31,9 @@ import org.apache.subversion.javahl.SubversionException;
  */
 public class ExternalItem implements java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.
+    // Update the serialVersionUID when there is a incompatible change made to
+    // this class.  See the java documentation for when a change is incompatible.
+    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
     private static final long serialVersionUID = 1L;
 
     /**
@@ -125,6 +126,19 @@ public class ExternalItem implements java.io.Serializable
                 && this.url.equals(that.url)
                 && this.revision.equals(that.revision)
                 && this.pegRevision.equals(that.pegRevision));
+    }
+
+    /**
+     * Return a hash code for this object.
+     */
+    public int hashCode()
+    {
+        int hash = 17;
+        hash = hash * 33 + (null != targetDir ? targetDir.hashCode() : 0);
+        hash = hash * 33 + (null != url ? url.hashCode() : 0);
+        hash = hash * 33 + (null != revision ? revision.hashCode() : 0);
+        hash = hash * 33 + (null != pegRevision ? pegRevision.hashCode() : 0);
+        return hash;
     }
 
     /* Exception class for failed revision kind validation. */

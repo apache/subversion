@@ -28,7 +28,6 @@
 #define APR_WANT_STRFUNC
 #include <apr.h>
 #include <apr_want.h>
-#include <apr_fnmatch.h>
 
 #include <serf.h>
 #include <serf_bucket_types.h>
@@ -45,6 +44,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_auth_private.h"
+#include "private/svn_cert.h"
 
 #include "ra_serf.h"
 
@@ -231,36 +231,36 @@ ssl_server_cert(void *baton, int failures,
       ### This should really be handled by serf, which should pass an error
           for this case, but that has backwards compatibility issues. */
       apr_array_header_t *san;
-      svn_boolean_t found_san_entry = FALSE;
       svn_boolean_t found_matching_hostname = FALSE;
+      svn_string_t *actual_hostname =
+          svn_string_create(conn->session->session_url.hostname, scratch_pool);
 
       serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
 
       san = svn_hash_gets(serf_cert, "subjectAltName");
-      /* Try to find matching server name via subjectAltName first... */
-      if (san)
+      /* Match server certificate CN with the hostname of the server iff
+       * we didn't find any subjectAltName fields and try to match them.
+       * Per RFC 2818 they are authoritative if present and CommonName
+       * should be ignored.  NOTE: This isn't 100% correct since serf
+       * only loads the subjectAltName hash with dNSNames, technically
+       * we should ignore the CommonName if any subjectAltName entry
+       * exists even if it is one we don't support. */
+      if (san && san->nelts > 0)
         {
           int i;
-          found_san_entry = san->nelts > 0;
           for (i = 0; i < san->nelts; i++)
             {
               const char *s = APR_ARRAY_IDX(san, i, const char*);
-              if (APR_SUCCESS == apr_fnmatch(s,
-                                            conn->session->session_url.hostname,
-                                            APR_FNM_PERIOD |
-                                            APR_FNM_CASE_BLIND))
+              svn_string_t *cert_hostname = svn_string_create(s, scratch_pool);
+
+              if (svn_cert__match_dns_identity(cert_hostname, actual_hostname))
                 {
                   found_matching_hostname = TRUE;
                   break;
                 }
             }
         }
-
-      /* Match server certificate CN with the hostname of the server iff
-       * we didn't find any subjectAltName fields and try to match them.
-       * Per RFC 2818 they are authoritative if present and CommonName
-       * should be ignored. */
-      if (!found_matching_hostname && !found_san_entry)
+      else
         {
           const char *hostname = NULL;
 
@@ -269,11 +269,15 @@ ssl_server_cert(void *baton, int failures,
           if (subject)
             hostname = svn_hash_gets(subject, "CN");
 
-          if (hostname
-              && apr_fnmatch(hostname, conn->session->session_url.hostname,
-                             APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+          if (hostname)
             {
-              found_matching_hostname = TRUE;
+              svn_string_t *cert_hostname = svn_string_create(hostname,
+                                                              scratch_pool);
+
+              if (svn_cert__match_dns_identity(cert_hostname, actual_hostname))
+                {
+                  found_matching_hostname = TRUE;
+                }
             }
         }
 
@@ -563,6 +567,7 @@ accept_response(serf_request_t *request,
                 void *acceptor_baton,
                 apr_pool_t *pool)
 {
+  /* svn_ra_serf__handler_t *handler = acceptor_baton; */
   serf_bucket_t *c;
   serf_bucket_alloc_t *bkt_alloc;
 
@@ -580,6 +585,7 @@ accept_head(serf_request_t *request,
             void *acceptor_baton,
             apr_pool_t *pool)
 {
+  /* svn_ra_serf__handler_t *handler = acceptor_baton; */
   serf_bucket_t *response;
 
   response = accept_response(request, stream, acceptor_baton, pool);
@@ -597,7 +603,7 @@ connection_closed(svn_ra_serf__connection_t *conn,
 {
   if (why)
     {
-      return svn_error_wrap_apr(why, NULL);
+      return svn_ra_serf__wrap_err(why, NULL);
     }
 
   if (conn->session->using_ssl)
@@ -827,9 +833,14 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Accept-Encoding", accept_encoding);
     }
 
-  /* These headers need to be sent with every request except GET; see
+  /* These headers need to be sent with every request that might need
+     capability processing (e.g. during commit, reports, etc.), see
      issue #3255 ("mod_dav_svn does not pass client capabilities to
-     start-commit hooks") for why. */
+     start-commit hooks") for why.
+
+     Some request types like GET/HEAD/PROPFIND are unaware of capability
+     handling; and in some cases the responses can even be cached by
+     proxies, so we don't have to send these hearders there. */
   if (dav_headers)
     {
       serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
@@ -1374,7 +1385,7 @@ handle_response(serf_request_t *request,
       return svn_error_trace(
                 svn_ra_serf__handle_server_error(handler->server_error,
                                                  handler,
-                                                 request, response, 
+                                                 request, response,
                                                  serf_status,
                                                  scratch_pool));
     }
@@ -1406,12 +1417,13 @@ static apr_status_t
 handle_response_cb(serf_request_t *request,
                    serf_bucket_t *response,
                    void *baton,
-                   apr_pool_t *scratch_pool)
+                   apr_pool_t *response_pool)
 {
   svn_ra_serf__handler_t *handler = baton;
   svn_error_t *err;
   apr_status_t inner_status;
   apr_status_t outer_status;
+  apr_pool_t *scratch_pool = response_pool; /* Scratch pool needed? */
 
   err = svn_error_trace(handle_response(request, response,
                                         handler, &inner_status,
@@ -1466,9 +1478,8 @@ setup_request(serf_request_t *request,
     {
       serf_bucket_alloc_t *bkt_alloc = serf_request_get_alloc(request);
 
-      /* ### should pass the scratch_pool  */
       SVN_ERR(handler->body_delegate(&body_bkt, handler->body_delegate_baton,
-                                     bkt_alloc, request_pool));
+                                     bkt_alloc, request_pool, scratch_pool));
     }
   else
     {
@@ -1497,10 +1508,9 @@ setup_request(serf_request_t *request,
 
   if (handler->header_delegate)
     {
-      /* ### should pass the scratch_pool  */
       SVN_ERR(handler->header_delegate(headers_bkt,
                                        handler->header_delegate_baton,
-                                       request_pool));
+                                       request_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1517,27 +1527,29 @@ setup_request_cb(serf_request_t *request,
               void **acceptor_baton,
               serf_response_handler_t *s_handler,
               void **s_handler_baton,
-              apr_pool_t *pool)
+              apr_pool_t *request_pool)
 {
   svn_ra_serf__handler_t *handler = setup_baton;
+  apr_pool_t *scratch_pool;
   svn_error_t *err;
 
-  /* ### construct a scratch_pool? serf gives us a pool that will live for
-     ### the duration of the request.  */
-  apr_pool_t *scratch_pool = pool;
+  /* Construct a scratch_pool? serf gives us a pool that will live for
+     the duration of the request. But requests are retried in some cases */
+  scratch_pool = svn_pool_create(request_pool);
 
   if (strcmp(handler->method, "HEAD") == 0)
     *acceptor = accept_head;
   else
     *acceptor = accept_response;
-  *acceptor_baton = handler->session;
+  *acceptor_baton = handler;
 
   *s_handler = handle_response_cb;
   *s_handler_baton = handler;
 
   err = svn_error_trace(setup_request(request, handler, req_bkt,
-                                      pool /* request_pool */, scratch_pool));
+                                      request_pool, scratch_pool));
 
+  svn_pool_destroy(scratch_pool);
   return save_error(handler->session, err);
 }
 
@@ -1575,8 +1587,7 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 svn_error_t *
 svn_ra_serf__discover_vcc(const char **vcc_url,
                           svn_ra_serf__session_t *session,
-                          svn_ra_serf__connection_t *conn,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   const char *path;
   const char *relative_path;
@@ -1589,12 +1600,6 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       return SVN_NO_ERROR;
     }
 
-  /* If no connection is provided, use the default one. */
-  if (! conn)
-    {
-      conn = session->conns[0];
-    }
-
   path = session->session_url.path;
   *vcc_url = NULL;
   uuid = NULL;
@@ -1604,9 +1609,10 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       apr_hash_t *props;
       svn_error_t *err;
 
-      err = svn_ra_serf__fetch_node_props(&props, conn,
+      err = svn_ra_serf__fetch_node_props(&props, session,
                                           path, SVN_INVALID_REVNUM,
-                                          base_props, pool, pool);
+                                          base_props,
+                                          scratch_pool, scratch_pool);
       if (! err)
         {
           apr_hash_t *ns_props;
@@ -1634,7 +1640,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               svn_error_clear(err);
 
               /* Okay, strip off a component from PATH. */
-              path = svn_urlpath__dirname(path, pool);
+              path = svn_urlpath__dirname(path, scratch_pool);
             }
         }
     }
@@ -1660,7 +1666,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
     {
       svn_stringbuf_t *url_buf;
 
-      url_buf = svn_stringbuf_create(path, pool);
+      url_buf = svn_stringbuf_create(path, scratch_pool);
 
       svn_path_remove_components(url_buf,
                                  svn_path_component_count(relative_path));
@@ -1688,7 +1694,6 @@ svn_error_t *
 svn_ra_serf__get_relative_path(const char **rel_path,
                                const char *orig_path,
                                svn_ra_serf__session_t *session,
-                               svn_ra_serf__connection_t *conn,
                                apr_pool_t *pool)
 {
   const char *decoded_root, *decoded_orig;
@@ -1705,7 +1710,6 @@ svn_ra_serf__get_relative_path(const char **rel_path,
          promises to populate the session's root-url cache, and that's
          what we really want. */
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session,
-                                        conn ? conn : session->conns[0],
                                         pool));
     }
 
@@ -1719,7 +1723,6 @@ svn_ra_serf__get_relative_path(const char **rel_path,
 svn_error_t *
 svn_ra_serf__report_resource(const char **report_target,
                              svn_ra_serf__session_t *session,
-                             svn_ra_serf__connection_t *conn,
                              apr_pool_t *pool)
 {
   /* If we have HTTP v2 support, we want to report against the 'me'
@@ -1729,7 +1732,7 @@ svn_ra_serf__report_resource(const char **report_target,
 
   /* Otherwise, we'll use the default VCC. */
   else
-    SVN_ERR(svn_ra_serf__discover_vcc(report_target, session, conn, pool));
+    SVN_ERR(svn_ra_serf__discover_vcc(report_target, session, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1748,10 +1751,9 @@ svn_ra_serf__error_on_status(serf_status_line sline,
       case 308:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
                                  (sline.code == 301)
-                                 ? _("Repository moved permanently to '%s';"
-                                     " please relocate")
-                                 : _("Repository moved temporarily to '%s';"
-                                     " please relocate"), location);
+                                  ? _("Repository moved permanently to '%s'")
+                                  : _("Repository moved temporarily to '%s'"),
+                                 location);
       case 403:
         return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
                                  _("Access to '%s' forbidden"), path);
@@ -1834,7 +1836,7 @@ svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Shandard done_delegate handler */
+/* Shared/standard done_delegate handler */
 static svn_error_t *
 response_done(serf_request_t *request,
               void *handler_baton,
@@ -1850,9 +1852,13 @@ response_done(serf_request_t *request,
   if (handler->server_error)
     return svn_ra_serf__server_error_create(handler, scratch_pool);
 
-  if ((handler->sline.code >= 400 || handler->sline.code <= 199)
-      && !handler->session->pending_error
-      && !handler->no_fail_on_http_failure_status)
+  if (handler->sline.code >= 400 || handler->sline.code <= 199)
+    {
+      return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+    }
+
+  if ((handler->sline.code >= 300 && handler->sline.code < 399)
+      && !handler->no_fail_on_http_redirect_status)
     {
       return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
@@ -1873,7 +1879,7 @@ static apr_status_t
 handler_cleanup(void *baton)
 {
   svn_ra_serf__handler_t *handler = baton;
-  if (handler->scheduled && handler->conn)
+  if (handler->scheduled && handler->conn && handler->conn->conn)
     {
       serf_connection_reset(handler->conn->conn);
     }
@@ -1882,7 +1888,8 @@ handler_cleanup(void *baton)
 }
 
 svn_ra_serf__handler_t *
-svn_ra_serf__create_handler(apr_pool_t *result_pool)
+svn_ra_serf__create_handler(svn_ra_serf__session_t *session,
+                            apr_pool_t *result_pool)
 {
   svn_ra_serf__handler_t *handler;
 
@@ -1891,6 +1898,9 @@ svn_ra_serf__create_handler(apr_pool_t *result_pool)
 
   apr_pool_cleanup_register(result_pool, handler, handler_cleanup,
                             apr_pool_cleanup_null);
+
+  handler->session = session;
+  handler->conn = session->conns[0];
 
   /* Setup the default done handler, to handle server errors */
   handler->done_delegate_baton = handler;

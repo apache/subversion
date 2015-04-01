@@ -203,8 +203,8 @@ push_dir_info(svn_ra_session_t *ra_session,
       const char *path, *fs_path;
       svn_lock_t *lock;
       svn_client_info2_t *info;
-      const char *name = svn__apr_hash_index_key(hi);
-      svn_dirent_t *the_ent = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      svn_dirent_t *the_ent = apr_hash_this_val(hi);
       svn_client__pathrev_t *child_pathrev;
 
       svn_pool_clear(subpool);
@@ -388,8 +388,7 @@ svn_client_info4(const char *abspath_or_url,
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &pathrev,
                                             abspath_or_url, NULL, peg_revision,
                                             revision, ctx, pool));
-
-  svn_uri_split(NULL, &base_name, pathrev->url, pool);
+  base_name = svn_uri_basename(pathrev->url, pool);
 
   /* Get the dirent for the URL itself. */
   SVN_ERR(svn_ra_stat(ra_session, "", pathrev->rev, &the_ent, pool));
@@ -442,9 +441,7 @@ svn_client_info4(const char *abspath_or_url,
                                   pool);
 
           /* Catch specific errors thrown by old mod_dav_svn or svnserve. */
-          if (err &&
-              (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED
-               || err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
+          if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
             {
               svn_error_clear(err);
               locks = apr_hash_make(pool); /* use an empty hash */

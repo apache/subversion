@@ -99,9 +99,6 @@ parse_pathname(const char **input,
   if (!last_colon)
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                             _("Pathname not terminated by ':'"));
-  if (last_colon == *input)
-    return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                            _("No pathname preceding ':'"));
 
   /* Tolerate relative repository paths, but convert them to absolute.
      ### Efficiency?  1 string duplication here, 2 in canonicalize. */
@@ -612,7 +609,12 @@ svn_rangelist__parse(svn_rangelist_t **rangelist,
 }
 
 /* Return TRUE, if all ranges in RANGELIST are in ascending order and do
- * not overlap.  If this returns FALSE, you probaly want to qsort() the
+ * not overlap and are not adjacent.
+ *
+ * ### Can yield false negatives: ranges of differing inheritance are
+ * allowed to be adjacent.
+ *
+ * If this returns FALSE, you probaly want to qsort() the
  * ranges and then call svn_rangelist__combine_adjacent_ranges().
  */
 static svn_boolean_t
@@ -626,6 +628,20 @@ is_rangelist_normalized(svn_rangelist_t *rangelist)
       return FALSE;
 
   return TRUE;
+}
+
+svn_error_t *
+svn_rangelist__canonicalize(svn_rangelist_t *rangelist,
+                            apr_pool_t *scratch_pool)
+{
+  if (! is_rangelist_normalized(rangelist))
+    {
+      svn_sort__array(rangelist, svn_sort_compare_ranges);
+
+      SVN_ERR(svn_rangelist__combine_adjacent_ranges(rangelist, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -715,14 +731,9 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
 
   /* Sort the rangelist, combine adjacent ranges into single ranges, and
      make sure there are no overlapping ranges.  Luckily, most data in
-     svn:mergeinfo will already be in normalized form and we can skip this.
+     svn:mergeinfo will already be in normalized form and this will be quick.
    */
-  if (! is_rangelist_normalized(rangelist))
-    {
-      svn_sort__array(rangelist, svn_sort_compare_ranges);
-
-      SVN_ERR(svn_rangelist__combine_adjacent_ranges(rangelist, scratch_pool));
-    }
+  SVN_ERR(svn_rangelist__canonicalize(rangelist, scratch_pool));
 
   /* Handle any funky mergeinfo with relative merge source paths that
      might exist due to issue #3547.  It's possible that this issue allowed
@@ -1266,7 +1277,7 @@ svn_mergeinfo__set_inheritance(svn_mergeinfo_t mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
-          svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+          svn_rangelist_t *rangelist = apr_hash_this_val(hi);
 
           if (rangelist)
             svn_rangelist__set_inheritance(rangelist, inheritable);
@@ -1870,8 +1881,8 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
   for (hi = apr_hash_first(scratch_pool, mergeinfo1);
        hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *rangelist1 = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      svn_rangelist_t *rangelist1 = apr_hash_this_val(hi);
       svn_rangelist_t *rangelist2;
 
       svn_pool_clear(iterpool);
@@ -1992,10 +2003,26 @@ svn_mergeinfo_sort(svn_mergeinfo_t input, apr_pool_t *pool)
 
   for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
     {
-      apr_array_header_t *rl = svn__apr_hash_index_val(hi);
+      apr_array_header_t *rl = apr_hash_this_val(hi);
 
       svn_sort__array(rl, svn_sort_compare_ranges);
     }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo__canonicalize_ranges(svn_mergeinfo_t mergeinfo,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *rl = apr_hash_this_val(hi);
+
+      SVN_ERR(svn_rangelist__canonicalize(rl, scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -2010,8 +2037,8 @@ svn_mergeinfo_catalog_dup(svn_mergeinfo_catalog_t mergeinfo_catalog,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *key = svn__apr_hash_index_key(hi);
-      svn_mergeinfo_t val = svn__apr_hash_index_val(hi);
+      const char *key = apr_hash_this_key(hi);
+      svn_mergeinfo_t val = apr_hash_this_val(hi);
 
       svn_hash_sets(new_mergeinfo_catalog, apr_pstrdup(pool, key),
                     svn_mergeinfo_dup(val, pool));
@@ -2028,9 +2055,9 @@ svn_mergeinfo_dup(svn_mergeinfo_t mergeinfo, apr_pool_t *pool)
 
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t pathlen = svn__apr_hash_index_klen(hi);
-      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t pathlen = apr_hash_this_key_len(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
 
       apr_hash_set(new_mergeinfo, apr_pstrmemdup(pool, path, pathlen), pathlen,
                    svn_rangelist_dup(rangelist, pool));
@@ -2056,9 +2083,9 @@ svn_mergeinfo_inheritable2(svn_mergeinfo_t *output,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *key = svn__apr_hash_index_key(hi);
-      apr_ssize_t keylen = svn__apr_hash_index_klen(hi);
-      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *key = apr_hash_this_key(hi);
+      apr_ssize_t keylen = apr_hash_this_key_len(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
       svn_rangelist_t *inheritable_rangelist;
 
       if (!path || svn_path_compare_paths(path, key) == 0)
@@ -2141,8 +2168,8 @@ svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
       for (hi = apr_hash_first(scratch_pool, mergeinfo); hi;
            hi = apr_hash_next(hi))
         {
-          const char *path = svn__apr_hash_index_key(hi);
-          svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+          const char *path = apr_hash_this_key(hi);
+          svn_rangelist_t *rangelist = apr_hash_this_val(hi);
 
           if (rangelist->nelts == 0)
             {
@@ -2168,8 +2195,8 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
 
   for (hi = apr_hash_first(pool, in_catalog); hi; hi = apr_hash_next(hi))
     {
-      const char *original_path = svn__apr_hash_index_key(hi);
-      svn_mergeinfo_t value = svn__apr_hash_index_val(hi);
+      const char *original_path = apr_hash_this_key(hi);
+      svn_mergeinfo_t value = apr_hash_this_val(hi);
       const char *new_path;
 
       new_path = svn_fspath__skip_ancestor(prefix_path, original_path);
@@ -2196,8 +2223,8 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *original_path = svn__apr_hash_index_key(hi);
-      svn_mergeinfo_t value = svn__apr_hash_index_val(hi);
+      const char *original_path = apr_hash_this_key(hi);
+      svn_mergeinfo_t value = apr_hash_this_val(hi);
 
       if (original_path[0] == '/')
         original_path++;
@@ -2227,8 +2254,8 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *fspath = svn__apr_hash_index_key(hi);
-      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *fspath = apr_hash_this_key(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
 
       svn_hash_sets(*out_mergeinfo,
                     svn_fspath__join(fspath, suffix_relpath, result_pool),
@@ -2370,7 +2397,7 @@ svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
 
       for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
-          svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+          svn_rangelist_t *rangelist = apr_hash_this_val(hi);
 
           if (rangelist->nelts)
             {
@@ -2407,8 +2434,8 @@ svn_mergeinfo__filter_catalog_by_ranges(svn_mergeinfo_catalog_t *filtered_cat,
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      svn_mergeinfo_t mergeinfo = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      svn_mergeinfo_t mergeinfo = apr_hash_this_val(hi);
       svn_mergeinfo_t filtered_mergeinfo;
 
       SVN_ERR(svn_mergeinfo__filter_mergeinfo_by_ranges(&filtered_mergeinfo,
@@ -2452,8 +2479,8 @@ svn_mergeinfo__filter_mergeinfo_by_ranges(svn_mergeinfo_t *filtered_mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *path = svn__apr_hash_index_key(hi);
-          svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+          const char *path = apr_hash_this_key(hi);
+          svn_rangelist_t *rangelist = apr_hash_this_val(hi);
 
           if (rangelist->nelts)
             {
@@ -2489,8 +2516,8 @@ svn_mergeinfo__adjust_mergeinfo_rangelists(svn_mergeinfo_t *adjusted_mergeinfo,
            hi = apr_hash_next(hi))
         {
           int i;
-          const char *path = svn__apr_hash_index_key(hi);
-          svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+          const char *path = apr_hash_this_key(hi);
+          svn_rangelist_t *rangelist = apr_hash_this_val(hi);
           svn_rangelist_t *adjusted_rangelist =
             apr_array_make(result_pool, rangelist->nelts,
                            sizeof(svn_merge_range_t *));
@@ -2529,7 +2556,7 @@ svn_mergeinfo__is_noninheritable(svn_mergeinfo_t mergeinfo,
            hi;
            hi = apr_hash_next(hi))
         {
-          svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+          svn_rangelist_t *rangelist = apr_hash_this_val(hi);
           int i;
 
           for (i = 0; i < rangelist->nelts; i++)
@@ -2626,7 +2653,7 @@ svn_rangelist__merge_many(svn_rangelist_t *merged_rangelist,
            hi;
            hi = apr_hash_next(hi))
         {
-          svn_rangelist_t *subtree_rangelist = svn__apr_hash_index_val(hi);
+          svn_rangelist_t *subtree_rangelist = apr_hash_this_val(hi);
 
           svn_pool_clear(iterpool);
           SVN_ERR(svn_rangelist_merge2(merged_rangelist, subtree_rangelist,

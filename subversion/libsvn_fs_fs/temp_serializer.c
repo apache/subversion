@@ -205,7 +205,7 @@ static svn_temp_serializer__context_t *
 serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
 {
   dir_data_t dir_data;
-  apr_size_t i = 0;
+  int i = 0;
   svn_temp_serializer__context_t *context;
 
   /* calculate sizes */
@@ -597,8 +597,8 @@ svn_fs_fs__serialize_properties(void **data,
   /* populate it with the hash entries */
   for (hi = apr_hash_first(pool, hash), i=0; hi; hi = apr_hash_next(hi), ++i)
     {
-      properties.keys[i] = svn__apr_hash_index_key(hi);
-      properties.values[i] = svn__apr_hash_index_val(hi);
+      properties.keys[i] = apr_hash_this_key(hi);
+      properties.values[i] = apr_hash_this_val(hi);
     }
 
   /* serialize it */
@@ -1148,18 +1148,15 @@ svn_fs_fs__serialize_changes(void **data,
   svn_stringbuf_t *serialized;
   int i;
 
-  /* initialize our auxiliary data structure */
+  /* initialize our auxiliary data structure and link it to the
+   * array elements */
   changes.count = array->nelts;
-  changes.changes = apr_palloc(pool, sizeof(change_t*) * changes.count);
-
-  /* populate it with the array elements */
-  for (i = 0; i < changes.count; ++i)
-    changes.changes[i] = APR_ARRAY_IDX(array, i, change_t*);
+  changes.changes = (change_t **)array->elts;
 
   /* serialize it and all its elements */
   context = svn_temp_serializer__init(&changes,
                                       sizeof(changes),
-                                      changes.count * 100,
+                                      changes.count * 250,
                                       pool);
 
   svn_temp_serializer__push(context,
@@ -1188,19 +1185,21 @@ svn_fs_fs__deserialize_changes(void **out,
 {
   int i;
   changes_data_t *changes = (changes_data_t *)data;
-  apr_array_header_t *array = apr_array_make(pool, changes->count,
-                                             sizeof(change_t *));
+  apr_array_header_t *array = apr_array_make(pool, 0, sizeof(change_t *));
 
   /* de-serialize our auxiliary data structure */
   svn_temp_deserializer__resolve(changes, (void**)&changes->changes);
 
   /* de-serialize each entry and add it to the array */
   for (i = 0; i < changes->count; ++i)
-    {
-      deserialize_change(changes->changes,
-                         (change_t **)&changes->changes[i]);
-      APR_ARRAY_PUSH(array, change_t *) = changes->changes[i];
-    }
+    deserialize_change(changes->changes,
+                       (change_t **)&changes->changes[i]);
+
+  /* Use the changes buffer as the array's data buffer
+   * (DATA remains valid for at least as long as POOL). */
+  array->elts = (char *)changes->changes;
+  array->nelts = changes->count;
+  array->nalloc = changes->count;
 
   /* done */
   *out = array;
@@ -1269,7 +1268,7 @@ svn_fs_fs__serialize_mergeinfo(void **data,
   i = 0;
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      svn_rangelist_t *ranges = svn__apr_hash_index_val(hi);
+      svn_rangelist_t *ranges = apr_hash_this_val(hi);
       for (k = 0; k < ranges->nelts; ++k, ++i)
         merges.ranges[i] = *APR_ARRAY_IDX(ranges, k, svn_merge_range_t*);
     }

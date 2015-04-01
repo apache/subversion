@@ -360,8 +360,6 @@ svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,
    working copy or the nearest switched parent for an elision
    destination, if none is found check the repository, otherwise check
    as far as WC_ELISION_LIMIT_ABSPATH within the working copy.
-   TARGET_WCPATH and WC_ELISION_LIMIT_ABSPATH, if it exists, must both be
-   absolute or relative to the working directory.
 
    Elision occurs if:
 

@@ -110,6 +110,32 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"
 
+/** Enable / disable the FSFS format 7 "block read" feature.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_FSFS_BLOCK_READ           "fsfs-block-read"
+
+/** String with a decimal representation of the FSFS format shard size.
+ * Zero ("0") means that a repository with linear layout should be created.
+ *
+ * This option will only be used during the creation of new repositories
+ * and is otherwise ignored.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_FSFS_SHARD_SIZE           "fsfs-shard-size"
+
+/** Enable / disable the FSFS format 7 logical addressing feature for a
+ * newly created repository.
+ *
+ * This option will only be used during the creation of new repositories
+ * and is otherwise ignored.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_FSFS_LOG_ADDRESSING       "fsfs-log-addressing"
+
 /* Note to maintainers: if you add further SVN_FS_CONFIG_FSFS_CACHE_* knobs,
    update fs_fs.c:verify_as_revision_before_current_plus_plus(). */
 
@@ -126,7 +152,7 @@ typedef struct svn_fs_t svn_fs_t;
  *
  * It is not ready for general production use.  Please consult the
  * respective release notes on suggested usage scenarios.
- * 
+ *
  * @since New in 1.9.
  */
 #define SVN_FS_TYPE_FSX                         "fsx"
@@ -266,21 +292,35 @@ svn_fs_create(svn_fs_t **fs_p,
  * NULL, the options it contains modify the behavior of the
  * filesystem.  The interpretation of @a fs_config is specific to the
  * filesystem back-end.  The opened filesystem may be closed by
- * destroying @a pool.
+ * destroying @a result_pool.
  *
  * @note The lifetime of @a fs_config must not be shorter than @a
- * pool's. It's a good idea to allocate @a fs_config from @a pool or
- * one of its ancestors.
+ * result_pool's. It's a good idea to allocate @a fs_config from
+ * @a result_pool or one of its ancestors.
  *
  * Only one thread may operate on any given filesystem object at once.
  * Two threads may access the same filesystem simultaneously only if
  * they open separate filesystem objects.
  *
  * @note You probably don't want to use this directly.  Take a look at
- * svn_repos_open2() instead.
+ * svn_repos_open3() instead.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_open2(svn_fs_t **fs_p,
+             const char *path,
+             apr_hash_t *fs_config,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_open2(), but without @a scratch_pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_open(svn_fs_t **fs_p,
             const char *path,
@@ -306,12 +346,12 @@ typedef enum svn_fs_upgrade_notify_action_t
   svn_fs_upgrade_format_bumped
 } svn_fs_upgrade_notify_action_t;
 
-/** The type of a upgrade notification function.  @a number is specifc 
+/** The type of a upgrade notification function.  @a number is specifc
  * to @a action (see #svn_fs_upgrade_notify_action_t); @a action is the
  * type of action being performed.  @a baton is the corresponding baton
  * for the notification function, and @a pool can be used for temporary
  * allocations, but will be cleared between invocations.
- * 
+ *
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_fs_upgrade_notify_t)(void *baton,
@@ -353,7 +393,7 @@ svn_fs_upgrade2(const char *path,
  * Like svn_fs_upgrade2 but with notify_func, notify_baton, cancel_func
  * and cancel_baton being set to NULL.
  *
- * @deprecated Provided for backward compatibility with the 1.8 API. 
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.5.
  */
 SVN_DEPRECATED
@@ -409,7 +449,7 @@ svn_fs_path(svn_fs_t *fs,
  * Return a shallow copy of the configuration parameters used to open
  * @a fs, allocated in @a pool.  It may be @c NULL.  The contents of the
  * hash contents remains valid only for @a fs's lifetime.
- * 
+ *
  * @note This is just what was passed to svn_fs_create() or svn_fs_open().
  * You may not modify it.
  *
@@ -432,6 +472,16 @@ svn_error_t *
 svn_fs_delete_fs(const char *path,
                  apr_pool_t *pool);
 
+/** The type of a hotcopy notification function.  @a start_revision and
+ * @a end_revision indicate the copied revision range.  @a baton is the
+ * corresponding baton for the notification function, and @a pool can be
+ * used for temporary allocations, but will be cleared between invocations.
+ */
+typedef void (*svn_fs_hotcopy_notify_t)(void *baton,
+                                        svn_revnum_t start_revision,
+                                        svn_revnum_t end_revision,
+                                        apr_pool_t *pool);
+
 /**
  * Copy a possibly live Subversion filesystem from @a src_path to
  * @a dest_path.  If @a clean is @c TRUE, perform cleanup on the
@@ -444,10 +494,35 @@ svn_fs_delete_fs(const char *path,
  * incremental hotcopy is not implemented, raise
  * #SVN_ERR_UNSUPPORTED_FEATURE.
  *
+ * For each revision range copied, @a notify_func will be called with
+ * staring and ending revision numbers (both inclusive and not necessarily
+ * different) and with the @a notify_baton.  Currently, this notification
+ * is only supported in the FSFS backend.  @a notify_func may be @c NULL
+ * if this notification is not required.
+ *
  * Use @a scratch_pool for temporary allocations.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_hotcopy3(const char *src_path,
+                const char *dest_path,
+                svn_boolean_t clean,
+                svn_boolean_t incremental,
+                svn_fs_hotcopy_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_hotcopy3(), but with @a notify_func and @a notify_baton
+ * always passed as @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.8.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_hotcopy2(const char *src_path,
                 const char *dest_path,
@@ -523,6 +598,11 @@ typedef svn_error_t *(*svn_fs_freeze_func_t)(void *baton, apr_pool_t *pool);
 /**
  * Take an exclusive lock on @a fs to prevent commits and then invoke
  * @a freeze_func passing @a freeze_baton.
+ *
+ * @note @a freeze_func must not, directly or indirectly, call any function
+ * that attempts to take out a lock on the underlying repository.  These
+ * include functions for packing, hotcopying, setting revprops and commits.
+ * Attempts to do so may result in a deadlock.
  *
  * @note The BDB backend doesn't implement this feature so most
  * callers should not call this function directly but should use the
@@ -792,7 +872,7 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  */
 
 /** Defines the possible ways two arbitrary nodes may be related.
- * 
+ *
  * @since New in 1.9.
  */
 typedef enum svn_fs_node_relation_t
@@ -989,6 +1069,8 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 /** Allow the client to specify the final svn:date of the revision by
  * setting or deleting the corresponding transaction property rather
  * than have it set automatically when the transaction is committed.
+ *
+ * @since New in 1.9.
  */
 #define SVN_FS_TXN_CLIENT_DATE                   0x00004
 
@@ -1055,7 +1137,7 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * new revision will have svn:date set to the current time at some
  * point during the commit and any svn:date on the transaction will be
  * lost.
- * 
+ *
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of
@@ -1349,14 +1431,7 @@ typedef enum svn_fs_path_change_kind_t
   svn_fs_path_change_replace,
 
   /** ignore all previous change items for path (internal-use only) */
-  svn_fs_path_change_reset,
-
-  /** moved to this path in txn */
-  svn_fs_path_change_move,
-
-  /** path removed and replaced by moved path in txn */
-  svn_fs_path_change_movereplace
-
+  svn_fs_path_change_reset
 } svn_fs_path_change_kind_t;
 
 /** Change descriptor.
@@ -1364,6 +1439,11 @@ typedef enum svn_fs_path_change_kind_t
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
+ *
+ * @note The @c text_mod, @c prop_mod and @c mergeinfo_mod flags mean the
+ * text, properties and mergeinfo property (respectively) were "touched"
+ * by the commit API; this does not mean the new value is different from
+ * the old value.
  *
  * @since New in 1.6. */
 typedef struct svn_fs_path_change2_t
@@ -1374,10 +1454,23 @@ typedef struct svn_fs_path_change2_t
   /** kind of change */
   svn_fs_path_change_kind_t change_kind;
 
-  /** were there text mods? */
+  /** was the text touched?
+   * For node_kind=dir: always false. For node_kind=file:
+   *   modify:      true iff text touched.
+   *   add (copy):  true iff text touched.
+   *   add (plain): always true.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
   svn_boolean_t text_mod;
 
-  /** were there property mods? */
+  /** were the properties touched?
+   *   modify:      true iff props touched.
+   *   add (copy):  true iff props touched.
+   *   add (plain): true iff props touched.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
   svn_boolean_t prop_mod;
 
   /** what node kind is the path?
@@ -1390,7 +1483,12 @@ typedef struct svn_fs_path_change2_t
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
 
-  /** were there mergeinfo mods?
+  /** was the mergeinfo property touched?
+   *   modify:      } true iff svn:mergeinfo property add/del/mod
+   *   add (copy):  }          and fs format supports this flag.
+   *   add (plain): }
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
    * (Note: Pre-1.9 repositories will report #svn_tristate_unknown.)
    * @since New in 1.9. */
   svn_tristate_t mergeinfo_mod;
@@ -1491,8 +1589,24 @@ typedef struct svn_fs_history_t svn_fs_history_t;
 
 /** Set @a *history_p to an opaque node history object which
  * represents @a path under @a root.  @a root must be a revision root.
- * Use @a pool for all allocations.
+ * Allocate the result in @a result_pool and use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_fs_node_history2(svn_fs_history_t **history_p,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/** Same as svn_fs_node_history2() but using a single @a pool for all
+ * allocations.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_node_history(svn_fs_history_t **history_p,
                     svn_fs_root_t *root,
@@ -1525,7 +1639,25 @@ svn_fs_node_history(svn_fs_history_t **history_p,
  * the same age as the revision of that path in @a root.  That is, if
  * @a root is a revision root based on revision X, and @a path was
  * modified in some revision(s) younger than X, those revisions
- * younger than X will not be included for @a path.  */
+ * younger than X will not be included for @a path.
+ *
+ * Allocate the result in @a result_pool and use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.9. */
+svn_error_t *
+svn_fs_history_prev2(svn_fs_history_t **prev_history_p,
+                     svn_fs_history_t *history,
+                     svn_boolean_t cross_copies,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+/** Same as svn_fs_history_prev2() but using a single @a pool for all
+ * allocations.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_history_prev(svn_fs_history_t **prev_history_p,
                     svn_fs_history_t *history,
@@ -2020,37 +2152,6 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
                      const char *path,
                      apr_pool_t *pool);
 
-/** Create a copy of @a from_path in @a from_root named @a to_path in
- * @a to_root and record it as a Move.  If @a from_path in @a from_root is
- * a directory, copy the tree it refers to recursively.  @a from_root must
- * be @a to_root's base revision.
- *
- * The move will remember its source; use svn_fs_copied_from() to
- * access this information.
- *
- * @a to_root must be the root of a transaction based on that revision.
- * Further, @a to_root and @a from_root must represent the same filesystem.
- *
- * Do any necessary temporary allocation in @a pool.
- *
- * @note This will not implicitly delete the @a from_path in @a to_root
- *       but the deletion must be reported just as if this was a
- *       #svn_fs_copy call.
- *
- * @warning This function is marked as @b experimental.  That means this
- *          function will probably be supported in future releases but
- *          might change in signature or various aspects of its semantics.
- *
- * @since New in 1.9.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_fs_move(svn_fs_root_t *from_root,
-            const char *from_path,
-            svn_fs_root_t *to_root,
-            const char *to_path,
-            apr_pool_t *pool);
-
 
 /* Files.  */
 
@@ -2161,13 +2262,13 @@ typedef svn_error_t *
  * upon doing so.  Use @a pool for allocations.
  *
  * This function is intended to support zero copy data processing.  It may
- * not be implemented for all data backends or not applicable for certain
- * content.  In that case, @a *success will always be @c FALSE.  Also, this
- * is a best-effort function which means that there is no guarantee that
- * @a processor gets called at all for some content.
+ * not be implemented for all data backends or not be applicable for certain
+ * content.  In those cases, @a *success will always be @c FALSE.  Also,
+ * this is a best-effort function which means that there is no guarantee
+ * that @a processor gets called at all.
  *
- * @note @a processor is expected to be relatively short function with
- * at most O(content size) runtime.
+ * @note @a processor is expected to be a relatively simple function with
+ * a runtime of O(content size) or less.
  *
  * @since New in 1.8.
  */
@@ -2512,36 +2613,55 @@ svn_fs_set_uuid(svn_fs_t *fs,
  * expiration error (depending on the API).
  */
 
-/** The @a targets hash passed to svn_fs_lock2() has <tt>const char
- * *</tt> keys and <tt>svn_fs_lock_target_t *</tt> values.
+/** Lock information for use with svn_fs_lock_many() [and svn_repos_fs_...].
+ *
+ * @see svn_fs_lock_target_create().
  *
  * @since New in 1.9.
  */
-typedef struct svn_fs_lock_target_t
-{
-  const char *token;
-  svn_revnum_t current_rev;
+typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
 
-} svn_fs_lock_target_t;
-
-/** The @a results hash returned by svn_fs_lock2() and svn_fs_unlock2()
- * has <tt>const char *</tt> keys and <tt>svn_fs_lock_result_t *</tt>
- * values.
+/** Create an <tt>svn_fs_lock_target_t</tt> allocated in @a pool. @a
+ * token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
+ *
+ * The @a token is not duplicated and so must have a lifetime at least as
+ * long as the returned target object.
  *
  * @since New in 1.9.
  */
-typedef struct svn_fs_lock_result_t
-{
-  svn_lock_t *lock;
-  svn_error_t *err;
+svn_fs_lock_target_t *svn_fs_lock_target_create(const char *token,
+                                                svn_revnum_t current_rev,
+                                                apr_pool_t *pool);
 
-} svn_fs_lock_result_t;
-
-/** Lock the paths in @a targets in @a fs, and set @a *results to the
- * locks or errors representing each new lock.
+/** Update @a target changing the token to @a token, @a token can be NULL.
  *
- * @warning You may prefer to use svn_repos_fs_lock2() instead,
- * which see.
+ * The @a token is not duplicated and so must have a lifetime at least as
+ * long as @a target.
+ *
+ * @since New in 1.9.
+ */
+void svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
+                                  const char *token);
+
+/** The callback invoked by svn_fs_lock_many() and svn_fs_unlock_many().
+ *
+ * @a path and @a lock are allocated in the result_pool passed to
+ * svn_fs_lock_many/svn_fs_unlock_many and so will persist beyond the
+ * callback invocation. @a fs_err will be cleared after the callback
+ * returns, use svn_error_dup() to preserve the error.
+ *
+ * If the callback returns an error no further callbacks will be made
+ * and svn_fs_lock_many/svn_fs_unlock_many will return an error.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
+                                               const char *path,
+                                               const svn_lock_t *lock,
+                                               svn_error_t *fs_err,
+                                               apr_pool_t *pool);
+
+/** Lock the paths in @a lock_targets in @a fs.
  *
  * @a fs must have a username associated with it (see
  * #svn_fs_access_t), else return #SVN_ERR_FS_NO_USER.  Set the
@@ -2555,20 +2675,20 @@ typedef struct svn_fs_lock_result_t
  * to use it.  If in doubt, pass 0.
  *
  * The paths to be locked are passed as the <tt>const char *</tt> keys
- * of the @a targets hash.  The hash values are
+ * of the @a lock_targets hash.  The hash values are
  * <tt>svn_fs_lock_target_t *</tt> and provide the token and
- * current_rev for each path.  The token is a lock token such as can
+ * @a current_rev for each path.  The token is a lock token such as can
  * be generated using svn_fs_generate_lock_token() (indicating that
  * the caller wants to dictate the lock token used), or it is @c NULL
  * (indicating that the caller wishes to have a new token generated by
  * this function).  If the token is not @c NULL, and represents an
  * existing lock, then the path must match the path associated with
- * that existing lock.  If current_rev is a valid revnum, then do an
+ * that existing lock.  If @a current_rev is a valid revnum, then do an
  * out-of-dateness check.  If the revnum is less than the
  * last-changed-revision of the path (or if the path doesn't exist in
- * HEAD), yeild an #SVN_ERR_FS_OUT_OF_DATE error for this path.
+ * HEAD), yield an #SVN_ERR_FS_OUT_OF_DATE error for this path.
  *
- * If a path is already locked, then return #SVN_ERR_FS_PATH_ALREADY_LOCKED,
+ * If a path is already locked, then yield #SVN_ERR_FS_PATH_ALREADY_LOCKED,
  * unless @a steal_lock is TRUE, in which case "steal" the existing
  * lock, even if the FS access-context's username does not match the
  * current lock's owner: delete the existing lock on the path, and
@@ -2577,34 +2697,33 @@ typedef struct svn_fs_lock_result_t
  * If @a expiration_date is zero, then create a non-expiring lock.
  * Else, the lock will expire at @a expiration_date.
  *
- * The results are returned in @a *results hash where the keys are
- * <tt>const char *</tt> paths and the values are
- * <tt>svn_fs_lock_result_t *</tt>.  The error associated with each
- * path is returned as #svn_fs_lock_result_t->err. The lock associated
- * with each path is returned as #svn_fs_lock_result_t->lock; this
- * will be @c NULL if no lock was created. @a *results will always be
- * a valid hash and in all cases the caller must ensure that all
- * errors it contains are handled to avoid leaks.
+ * For each path in @a lock_targets @a lock_callback will be invoked
+ * passing @a lock_baton and the lock and error that apply to path.
+ * @a lock_callback can be NULL in which case it is not called.
  *
- * Allocate @a *results in @a result_pool. Use @a scratch_pool for
- * temporary allocations.
+ * The lock and path passed to @a lock_callback will be allocated in
+ * @a result_pool.  Use @a scratch_pool for temporary allocations.
  *
  * @note At this time, only files can be locked.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_fs_lock_many() instead.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_fs_lock2(apr_hash_t **results,
-             svn_fs_t *fs,
-             apr_hash_t *targets,
-             const char *comment,
-             svn_boolean_t is_dav_comment,
-             apr_time_t expiration_date,
-             svn_boolean_t steal_lock,
-             apr_pool_t *result_pool,
-             apr_pool_t *scratch_pool);
+svn_fs_lock_many(svn_fs_t *fs,
+                 apr_hash_t *lock_targets,
+                 const char *comment,
+                 svn_boolean_t is_dav_comment,
+                 apr_time_t expiration_date,
+                 svn_boolean_t steal_lock,
+                 svn_fs_lock_callback_t lock_callback,
+                 void *lock_baton,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
 
-/** Similar to svn_fs_lock2() but locks only a single @a path and
+/** Similar to svn_fs_lock_many() but locks only a single @a path and
  * returns the lock in @a *lock, allocated in @a pool, or an error.
  *
  * @since New in 1.2.
@@ -2634,13 +2753,12 @@ svn_fs_generate_lock_token(const char **token,
                            apr_pool_t *pool);
 
 
-/** Remove the locks on the paths in @a targets in @a fs, and return
- * the results in @a *results.
+/** Remove the locks on the paths in @a unlock_targets in @a fs.
  *
  * The paths to be unlocked are passed as <tt>const char *</tt> keys
- * of the @a targets hash with the corresponding lock tokens as
- * <tt>const char *</tt> values.  If the the token doesn't point to a
- * lock, yield an #SVN_ERR_FS_BAD_LOCK_TOKEN errot for this path.  If
+ * of the @a unlock_targets hash with the corresponding lock tokens as
+ * <tt>const char *</tt> values.  If the token doesn't point to a
+ * lock, yield an #SVN_ERR_FS_BAD_LOCK_TOKEN error for this path.  If
  * the token points to an expired lock, yield an
  * #SVN_ERR_FS_LOCK_EXPIRED error for this path.  If @a fs has no
  * username associated with it, yield an #SVN_ERR_FS_NO_USER unless @a
@@ -2652,35 +2770,29 @@ svn_fs_generate_lock_token(const char **token,
  * however, don't return error; allow the lock to be "broken" in any
  * case.  In the latter case, the token shall be @c NULL.
  *
- * The results are returned in @a *results hash where the keys are
- * <tt>const char *</tt> paths and the values are
- * <tt>svn_fs_lock_result_t *</tt>.  The error associated with each
- * path is returned as #svn_fs_lock_result_t->err.  @a *results will
- * always be a valid hash and in all cases the caller must ensure that
- * all errors it contains are handled to avoid leaks.
+ * For each path in @a unlock_targets @a lock_callback will be invoked
+ * passing @a lock_baton and error that apply to path.  The @a lock
+ * passed to the callback will be NULL.  @a lock_callback can be NULL
+ * in which case it is not called.
  *
- * @note #svn_fs_lock_target_t is used to allow @c NULL tokens to be
- * passed (it is not possible to pass @c NULL as a hash value
- * directly), #svn_fs_lock_target_t->current_rev is ignored.
+ * The path passed to lock_callback will be allocated in @a result_pool.
+ * Use @a scratch_pool for temporary allocations.
  *
- * @note #svn_fs_lock_result_t is used to allow @c SVN_NO_ERROR to
- * be returned (it is not possible to return @c SVN_NO_ERROR as a hash
- * value directly), #svn_fs_lock_result_t->lock is always NULL.
- *
- * Allocate @a *results in @a result_pool. Use @a scratch_pool for
- * temporary allocations.
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_fs_unlock_many() instead.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_fs_unlock2(apr_hash_t **results,
-               svn_fs_t *fs,
-               apr_hash_t *targets,
-               svn_boolean_t break_lock,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool);
+svn_fs_unlock_many(svn_fs_t *fs,
+                   apr_hash_t *unlock_targets,
+                   svn_boolean_t break_lock,
+                   svn_fs_lock_callback_t lock_callback,
+                   void *lock_baton,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
-/** Similar to svn_fs_unlock2() but only unlocks a single path.
+/** Similar to svn_fs_unlock_many() but only unlocks a single path.
  *
  * @since New in 1.2.
  */
@@ -2695,7 +2807,7 @@ svn_fs_unlock(svn_fs_t *fs,
 /** If @a path is locked in @a fs, set @a *lock to an svn_lock_t which
  *  represents the lock, allocated in @a pool.
  *
- * If @a path is not locked, set @a *lock to NULL.
+ * If @a path is not locked or does not exist in HEAD, set @a *lock to NULL.
  */
 svn_error_t *
 svn_fs_get_lock(svn_lock_t **lock,
@@ -2933,6 +3045,9 @@ typedef struct svn_fs_fsfs_info_t {
    * @note Zero (0) if (but not iff) the format does not support packing. */
   svn_revnum_t min_unpacked_rev;
 
+  /* TRUE if logical addressing is enabled for this repository.
+   * FALSE if repository uses physical addressing. */
+  svn_boolean_t log_addressing;
   /* ### TODO: information about fsfs.conf? rep-cache.db? write locks? */
 
   /* If you add fields here, check whether you need to extend svn_fs_info()

@@ -316,7 +316,7 @@ svn_log__lock(apr_hash_t *targets,
 
   for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = apr_hash_this_key(hi);
       svn_pool_clear(iterpool);
       if (space_separated_paths->len)
         svn_stringbuf_appendcstr(space_separated_paths, " ");
@@ -339,7 +339,7 @@ svn_log__unlock(apr_hash_t *targets,
 
   for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
+      const char *path = apr_hash_this_key(hi);
       svn_pool_clear(iterpool);
       if (space_separated_paths->len)
         svn_stringbuf_appendcstr(space_separated_paths, " ");

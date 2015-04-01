@@ -102,7 +102,8 @@ enum
     svnlook__ignore_properties,
     svnlook__properties_only,
     svnlook__diff_cmd,
-    svnlook__show_inherited_props
+    svnlook__show_inherited_props,
+    svnlook__no_newline
   };
 
 /*
@@ -142,6 +143,9 @@ static const apr_getopt_option_t options_table[] =
 
   {"properties-only",   svnlook__properties_only, 0,
    N_("show only properties during the operation")},
+
+  {"no-newline",        svnlook__no_newline, 0,
+   N_("do not output the trailing newline")},
 
   {"non-recursive",     'N', 0,
    N_("operate on single directory only")},
@@ -186,6 +190,8 @@ static const apr_getopt_option_t options_table[] =
       "  -w, --ignore-all-space: Ignore all white space\n"
       "                             "
       "  --ignore-eol-style: Ignore changes in EOL style\n"
+      "                             "
+      "  -U ARG, --context ARG: Show ARG lines of context\n"
       "                             "
       "  -p, --show-c-function: Show C function name")},
 
@@ -300,7 +306,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"youngest", subcommand_youngest, {0},
    N_("usage: svnlook youngest REPOS_PATH\n\n"
       "Print the youngest revision number.\n"),
-   {0} },
+   {svnlook__no_newline} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -333,6 +339,7 @@ struct svnlook_opt_state
   svn_boolean_t properties_only;    /* --properties-only */
   const char *diff_cmd;           /* --diff-cmd */
   svn_boolean_t show_inherited_props; /*  --show-inherited-props */
+  svn_boolean_t no_newline;       /* --no-newline */
 };
 
 
@@ -804,7 +811,9 @@ display_prop_diffs(svn_stream_t *outstream,
 
   SVN_ERR(svn_diff__display_prop_diffs(
             outstream, encoding, propchanges, original_props,
-            FALSE /* pretty_print_mergeinfo */, pool));
+            FALSE /* pretty_print_mergeinfo */,
+            -1 /* context_size */,
+            check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1062,7 +1071,7 @@ print_diff_tree(svn_stream_t *out_stream,
                            out_stream, diff, orig_path, new_path,
                            orig_label, new_label,
                            svn_cmdline_output_encoding(pool), NULL,
-                           opts->show_c_function, 
+                           opts->show_c_function, opts->context_size,
                            check_cancel, NULL, pool));
                   SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
                                                       "\n"));
@@ -1697,9 +1706,14 @@ do_pget(svnlook_ctxt_t *c,
        if (path == NULL)
          {
            /* We're operating on a revprop (e.g. c->is_revision). */
-           err_msg = apr_psprintf(pool,
-                                  _("Property '%s' not found on revision %ld"),
-                                  propname, c->rev_id);
+           if (SVN_IS_VALID_REVNUM(c->rev_id))
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on revision %ld"),
+                                    propname, c->rev_id);
+           else
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on transaction %s"),
+                                    propname, c->txn_name);
          }
        else
          {
@@ -1762,8 +1776,7 @@ do_pget(svnlook_ctxt_t *c,
               else
                 {
                   svn_string_t *propval =
-                    svn__apr_hash_index_val(apr_hash_first(pool,
-                                                           elt->prop_hash));
+                    apr_hash_this_val(apr_hash_first(pool, elt->prop_hash));
 
                   SVN_ERR(svn_stream_printf(
                     stdout_stream, pool, "%s - ",
@@ -1946,8 +1959,8 @@ do_plist(svnlook_ctxt_t *c,
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const char *pname = svn__apr_hash_index_key(hi);
-      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      const char *pname = apr_hash_this_key(hi);
+      svn_string_t *propval = apr_hash_this_val(hi);
 
       SVN_ERR(check_cancel(NULL));
 
@@ -2005,10 +2018,11 @@ do_plist(svnlook_ctxt_t *c,
       /* "</properties>" */
       svn_xml_make_close_tag(&sb, pool, "properties");
 
+      errno = 0;
       if (fputs(sb->data, stdout) == EOF)
         {
-          if (errno)
-            return svn_error_wrap_apr(errno, _("Write error"));
+          if (apr_get_os_error()) /* is errno on POSIX */
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
           else
             return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
         }
@@ -2076,8 +2090,8 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
 {
   svnlook_ctxt_t *baton = apr_pcalloc(pool, sizeof(*baton));
 
-  SVN_ERR(svn_repos_open2(&(baton->repos), opt_state->repos_path, NULL,
-                          pool));
+  SVN_ERR(svn_repos_open3(&(baton->repos), opt_state->repos_path, NULL,
+                          pool, pool));
   baton->fs = svn_repos_fs(baton->repos);
   svn_fs_set_warning_func(baton->fs, warning_func, NULL);
   baton->show_ids = opt_state->show_ids;
@@ -2412,7 +2426,8 @@ subcommand_youngest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(check_number_of_args(opt_state, 0));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
-  SVN_ERR(svn_cmdline_printf(pool, "%ld\n", c->rev_id));
+  SVN_ERR(svn_cmdline_printf(pool, "%ld%s", c->rev_id,
+                             opt_state->no_newline ? "" : "\n"));
   return SVN_NO_ERROR;
 }
 
@@ -2601,6 +2616,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         case svnlook__show_inherited_props:
           opt_state.show_inherited_props = TRUE;
+          break;
+
+        case svnlook__no_newline:
+          opt_state.no_newline = TRUE;
           break;
 
         default:

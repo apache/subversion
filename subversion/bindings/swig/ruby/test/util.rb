@@ -1,4 +1,4 @@
-# ==================================================================== 
+# ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
@@ -83,7 +83,7 @@ module SvnTestUtil
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
 
-    @config_path = "config"
+    @config_path = File.join(@tmp_path, "config")
     @greek = Greek.new(@tmp_path, @import_path, @wc_path, @repos_uri)
   end
 
@@ -91,7 +91,7 @@ module SvnTestUtil
     @need_svnserve = need_svnserve
     setup_default_variables
     setup_tmp
-    setup_tmp(@import_path) 
+    setup_tmp(@import_path)
     setup_repository
     add_hooks
     setup_svnserve if @need_svnserve
@@ -234,6 +234,7 @@ realm = #{@realm}
       cred.username = @author
       cred.may_save = false
     end
+    ctx.config = Svn::Core::Config.config(@config_path)
     setup_auth_baton(ctx.auth_baton)
     return ctx unless block_given?
     begin

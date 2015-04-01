@@ -432,6 +432,8 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__mark_resolved_text_conflict(svn_wc__db_t *db,
                                     const char *local_abspath,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
                                     apr_pool_t *scratch_pool);
 
 /* Mark as resolved any prop conflicts on the node at DB/LOCAL_ABSPATH.  */

@@ -175,26 +175,18 @@ apr_status_t cleanup_global_object(void* baton)
 // Class Java::InputStream
 
 const char* const InputStream::m_class_name = "java/io/InputStream";
+InputStream::ClassImpl::ClassImpl(Env env, jclass cls)
+  : Object::ClassImpl(env, cls),
+    m_mid_close(env.GetMethodID(cls, "close", "()V")),
+    m_mid_mark_supported(env.GetMethodID(cls, "markSupported", "()Z")),
+    m_mid_mark(env.GetMethodID(cls, "mark", "(I)V")),
+    m_mid_reset(env.GetMethodID(cls, "reset", "()V")),
+    m_mid_read_byte(env.GetMethodID(cls, "read", "()I")),
+    m_mid_read_bytearray(env.GetMethodID(cls, "read", "([BII)I")),
+    m_mid_skip(env.GetMethodID(cls, "skip", "(J)J"))
+{}
 
-MethodID InputStream::m_mid_close;
-MethodID InputStream::m_mid_mark_supported;
-MethodID InputStream::m_mid_mark;
-MethodID InputStream::m_mid_reset;
-MethodID InputStream::m_mid_read_byte;
-MethodID InputStream::m_mid_read_bytearray;
-MethodID InputStream::m_mid_skip;
-
-void InputStream::static_init(Env env)
-{
-  const jclass cls = ClassCache::get_input_stream();
-  m_mid_close = env.GetMethodID(cls, "close", "()V");
-  m_mid_mark_supported = env.GetMethodID(cls, "markSupported", "()Z");
-  m_mid_mark = env.GetMethodID(cls, "mark", "(I)V");
-  m_mid_reset = env.GetMethodID(cls, "reset", "()V");
-  m_mid_read_byte = env.GetMethodID(cls, "read", "()I");
-  m_mid_read_bytearray = env.GetMethodID(cls, "read", "([BII)I");
-  m_mid_skip = env.GetMethodID(cls, "skip", "(J)J");
-}
+InputStream::ClassImpl::~ClassImpl() {}
 
 svn_stream_t*
 InputStream::get_global_stream(Env env, jobject jstream,
@@ -260,17 +252,14 @@ jint InputStream::read(void* data, jint length)
 
 const char* const OutputStream::m_class_name = "java/io/OutputStream";
 
-MethodID OutputStream::m_mid_close;
-MethodID OutputStream::m_mid_write_byte;
-MethodID OutputStream::m_mid_write_bytearray;
+OutputStream::ClassImpl::ClassImpl(Env env, jclass cls)
+  : Object::ClassImpl(env, cls),
+    m_mid_close(env.GetMethodID(cls, "close", "()V")),
+    m_mid_write_byte(env.GetMethodID(cls, "write", "(I)V")),
+    m_mid_write_bytearray(env.GetMethodID(cls, "write", "([BII)V"))
+{}
 
-void OutputStream::static_init(Env env)
-{
-  const jclass cls = ClassCache::get_output_stream();
-  m_mid_close = env.GetMethodID(cls, "close", "()V");
-  m_mid_write_byte = env.GetMethodID(cls, "write", "(I)V");
-  m_mid_write_bytearray = env.GetMethodID(cls, "write", "([BII)V");
-}
+OutputStream::ClassImpl::~ClassImpl() {}
 
 svn_stream_t*
 OutputStream::get_global_stream(Env env, jobject jstream,

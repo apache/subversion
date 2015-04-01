@@ -30,6 +30,7 @@ import org.apache.subversion.javahl.types.Revision;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -586,5 +587,221 @@ public class UtilTests extends SVNTests
                 testout = null;
             }
         }
+    }
+
+
+    // Credentials definitions for testing the credentials utilities
+    private static final String util_cred_hash =
+        "4d7de6b1e103fbfc5e61565223ca23be";
+
+    private static final String util_cred_username =
+        "K 8\n" +
+        "username\n" +
+        "V 5\n" +
+        "mungo\n" +
+        "K 15\n" +
+        "svn:realmstring\n" +
+        "V 27\n" +
+        "https://svn.example.com:443\n" +
+        "END\n";
+
+    private static final String util_cred_simple =
+        "K 8\n" +
+        "passtype\n" +
+        "V 10\n" +
+        "javahltest\n" +
+        "K 8\n" +
+        "username\n" +
+        "V 5\n" +
+        "mungo\n" +
+        "K 8\n" +
+        "password\n" +
+        "V 6\n" +
+        "secret\n" +
+        "K 15\n" +
+        "svn:realmstring\n" +
+        "V 27\n" +
+        "https://svn.example.com:443\n" +
+        "END\n";
+
+    private static final String util_cred_ssl_server =
+        "K 10\n" +
+        "ascii_cert\n" +
+        "V 1616\n" +
+        "MIIEtzCCA5+gAwIBAgIQWGBOrapkezd+BWVsAtmtmTANBgkqhkiG9w0BAQsFADA8" +
+        "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMVGhhd3RlLCBJbmMuMRYwFAYDVQQDEw1U" +
+        "aGF3dGUgU1NMIENBMB4XDTE0MDQxMTAwMDAwMFoXDTE2MDQwNzIzNTk1OVowgYsx" +
+        "CzAJBgNVBAYTAlVTMREwDwYDVQQIEwhNYXJ5bGFuZDEUMBIGA1UEBxQLRm9yZXN0" +
+        "IEhpbGwxIzAhBgNVBAoUGkFwYWNoZSBTb2Z0d2FyZSBGb3VuZGF0aW9uMRcwFQYD" +
+        "VQQLFA5JbmZyYXN0cnVjdHVyZTEVMBMGA1UEAxQMKi5hcGFjaGUub3JnMIIBIjAN" +
+        "BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA+Tq4mH+stRoxe4xth8tUCgLt+P4L" +
+        "D/JWZz4a2IecaaAk57vIlTxEyP16fUShUfxVJnD0KV11zv2qaEUXNaA6hKd4H/oB" +
+        "u2OyGev+quRM+aFCjWqASkXt7fLGsIkHAwP3XwBVBpARbcXJeCjCBxqaYrQqS8LT" +
+        "wfPUD9eYncGlQ+ixb3Bosy7TmkWKeLsRdS90cAO/rdgQ8OI7kLT/1tr5GpF9RmXo" +
+        "RnVqMP+U0zGd/BNNSneg7emb7TxLzxeMKZ7QbF4MZi8RRN11spvx8/f92CiYrGGu" +
+        "y67VdOGPaomYc+VZ2syLwduHGK40ADrEK3+MQpsRFB0dM08j9bhpr5A44wIDAQAB" +
+        "o4IBYzCCAV8wFwYDVR0RBBAwDoIMKi5hcGFjaGUub3JnMAkGA1UdEwQCMAAwQgYD" +
+        "VR0gBDswOTA3BgpghkgBhvhFAQc2MCkwJwYIKwYBBQUHAgEWG2h0dHBzOi8vd3d3" +
+        "LnRoYXd0ZS5jb20vY3BzLzAOBgNVHQ8BAf8EBAMCBaAwHwYDVR0jBBgwFoAUp6KD" +
+        "uzRFQD381TBPErk+oQGf9tswOgYDVR0fBDMwMTAvoC2gK4YpaHR0cDovL3N2ci1v" +
+        "di1jcmwudGhhd3RlLmNvbS9UaGF3dGVPVi5jcmwwHQYDVR0lBBYwFAYIKwYBBQUH" +
+        "AwEGCCsGAQUFBwMCMGkGCCsGAQUFBwEBBF0wWzAiBggrBgEFBQcwAYYWaHR0cDov" +
+        "L29jc3AudGhhd3RlLmNvbTA1BggrBgEFBQcwAoYpaHR0cDovL3N2ci1vdi1haWEu" +
+        "dGhhd3RlLmNvbS9UaGF3dGVPVi5jZXIwDQYJKoZIhvcNAQELBQADggEBAF52BLvl" +
+        "x5or9/aO7+cPhxuPxwiNRgbvHdCakD7n8vzjNyct9fKp6/XxB6GQiTZ0nZPJOyIu" +
+        "Pi1QDLKOXvaPeLKDBilL/+mrn/ev3s/aRQSrUsieKDoQnqtmlxEHc/T3+Ni/RZob" +
+        "PD4GzPuNKpK3BIc0fk/95T8R1DjBSQ5/clvkzOKtcl3VffAwnHiE9TZx9js7kZwO" +
+        "b9nOKX8DFao3EpQcS7qn63Ibzbq5A6ry8ZNRQSIJK/xlCAWoyUd1uxnqGFnus8wb" +
+        "9RVZJQe8YvyytBjgbE3QjnfPOxoEJA3twupnPmH+OCTM6V3TZqpRZj/sZ5rtIQ++" +
+        "hI5FdJWUWVSgnSw=\n" +
+        "K 8\n" +
+        "failures\n" +
+        "V 1\n" +
+        "8\n" +
+        "K 15\n" +
+        "svn:realmstring\n" +
+        "V 26\n" +
+        "https://svn.apache.org:443\n" +
+        "END\n";
+
+    private static final String util_cred_ssl_client_passphrase =
+        "K 8\n" +
+        "passtype\n" +
+        "V 10\n" +
+        "javahltest\n" +
+        "K 10\n" +
+        "passphrase\n" +
+        "V 24\n" +
+        "secret with spaces in it\n" +
+        "K 15\n" +
+        "svn:realmstring\n" +
+        "V 27\n" +
+        "https://svn.example.com:443\n" +
+        "END\n";
+
+    // Initialize credentials used for testing credentials utilities
+    private void initCredentials() throws Throwable
+    {
+        File auth = new File(this.conf, "auth");
+        if (auth.exists())
+            removeDirOrFile(auth);
+        auth.mkdirs();
+
+        File store = new File(auth, "svn.username");
+        store.mkdir();
+        FileWriter cred = new FileWriter(new File(store, util_cred_hash));
+        cred.write(util_cred_username);
+        cred.close();
+
+        store = new File(auth, "svn.simple");
+        store.mkdir();
+        cred = new FileWriter(new File(store, util_cred_hash));
+        cred.write(util_cred_simple);
+        cred.close();
+
+        store = new File(auth, "svn.ssl.server");
+        store.mkdir();
+        cred = new FileWriter(new File(store, util_cred_hash));
+        cred.write(util_cred_ssl_server);
+        cred.close();
+
+        store = new File(auth, "svn.ssl.client-passphrase");
+        store.mkdir();
+        cred = new FileWriter(new File(store, util_cred_hash));
+        cred.write(util_cred_ssl_client_passphrase);
+        cred.close();
+    }
+
+    /**
+     * Test credentials search.
+     */
+    public void testCredentials() throws Throwable
+    {
+        initCredentials();
+
+        final String configDir = this.conf.getAbsolutePath();
+        SVNUtil.Credential cred;
+        List<SVNUtil.Credential> creds;
+
+        /* one username credential */
+        cred = SVNUtil.getCredential(configDir,
+                                     SVNUtil.Credential.Kind.username,
+                                     "https://svn.example.com:443");
+        assertNotNull(cred);
+        assertEquals(cred.getUsername(), "mungo");
+
+        /* one simple credential */
+        cred = SVNUtil.getCredential(configDir,
+                                     SVNUtil.Credential.Kind.simple,
+                                     "https://svn.example.com:443");
+        assertNotNull(cred);
+        assertEquals(cred.getUsername(), "mungo");
+        assertEquals(cred.getPassword(), "secret");
+        assertEquals(cred.getSecureStore(), "javahltest");
+
+        /* one SSL server trust credential */
+        cred = SVNUtil.getCredential(configDir,
+                                     SVNUtil.Credential.Kind.sslServer,
+                                     "https://svn.apache.org:443");
+        assertNotNull(cred);
+        assertEquals(cred.getServerCertInfo().getSubject(),
+                     "C=US, ST=Maryland, L=Forest Hill, " +
+                     "O=Apache Software Foundation, OU=Infrastructure, " +
+                     "CN=*.apache.org");
+
+        /* one SSL client passphrase credential */
+        cred = SVNUtil.getCredential(configDir,
+                                     SVNUtil.Credential.Kind.sslClientPassphrase,
+                                     "https://svn.example.com:443");
+        assertNotNull(cred);
+        assertEquals(cred.getClientCertPassphrase(), "secret with spaces in it");
+        assertEquals(cred.getSecureStore(), "javahltest");
+
+        /* search with no parameters (empty return) */
+        creds = SVNUtil.searchCredentials(configDir, null,
+                                          null, null, null, null);
+        assertNull(creds);
+
+        /* search with unmatched parameters */
+        creds = SVNUtil.searchCredentials(configDir,
+                                          SVNUtil.Credential.Kind.sslServer,
+                                          null, null, null, "*java*");
+        assertNull(creds);
+
+        /* search with unmatched parameters */
+        creds = SVNUtil.searchCredentials(configDir, null,
+                                          null, "*java*", null, null);
+        assertNull(creds);
+
+        /* search with match on kind */
+        creds = SVNUtil.searchCredentials(configDir,
+                                          SVNUtil.Credential.Kind.sslServer,
+                                          "*", null, null, null);
+        assertNotNull(creds);
+        assertEquals(creds.size(), 1);
+
+        /* search with match on passtype */
+        creds = SVNUtil.searchCredentials(configDir, null,
+                                          null, null, null, "*java*");
+        assertNotNull(creds);
+        assertEquals(creds.size(), 2);
+
+        /* search with match on username */
+        creds = SVNUtil.searchCredentials(configDir, null,
+                                          null, "mungo", null, null);
+        assertNotNull(creds);
+        assertEquals(creds.size(), 2);
+
+        /* search with match on subvject */
+        creds = SVNUtil.searchCredentials(configDir, null,
+                                          null, null, "\\*.apache.org", null);
+        assertNotNull(creds);
+        assertEquals(creds.size(), 1);
+
+        /* search with match on realm */
+        creds = SVNUtil.searchCredentials(configDir, null,
+                                          "*example*", null, null, null);
+        assertNotNull(creds);
+        assertEquals(creds.size(), 3);
     }
 }

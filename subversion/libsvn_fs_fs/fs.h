@@ -36,7 +36,6 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
-#include "private/svn_named_atomic.h"
 
 #include "id.h"
 
@@ -58,7 +57,8 @@ extern "C" {
 #define PATH_PACK_LOCK_FILE   "pack-lock"        /* Pack lock file */
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
-#define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
+#define PATH_TXNS_DIR         "transactions"     /* Directory of transactions in
+                                                    repos w/o log addressing */
 #define PATH_NODE_ORIGINS_DIR "node-origins"     /* Lazy node-origin cache */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
@@ -177,13 +177,23 @@ extern "C" {
 #define SVN_FS_FS__MIN_PACK_LOCK_FORMAT 7
 
 /* Minimum format number that stores mergeinfo-mode flag in changed paths */
-#define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT 7
+#define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGED_FORMAT 7
 
-/* Minimum format number that will record moves */
-#define SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT 7
+/* Minimum format number that supports per-instance filesystem IDs. */
+#define SVN_FS_FS__MIN_INSTANCE_ID_FORMAT 7
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
+
+/* On most operating systems apr implements file locks per process, not
+   per file.  On Windows apr implements the locking as per file handle
+   locks, so we don't have to add our own mutex for just in-process
+   synchronization. */
+#if APR_HAS_THREADS && !defined(WIN32)
+#define SVN_FS_FS__USE_LOCK_MUTEX 1
+#else
+#define SVN_FS_FS__USE_LOCK_MUTEX 0
+#endif
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -209,17 +219,6 @@ typedef struct fs_fs_shared_txn_data_t
   apr_pool_t *pool;
 } fs_fs_shared_txn_data_t;
 
-/* On most operating systems apr implements file locks per process, not
-   per file.  On Windows apr implements the locking as per file handle
-   locks, so we don't have to add our own mutex for just in-process
-   synchronization. */
-/* Compare ../libsvn_subr/named_atomic.c:USE_THREAD_MUTEX */
-#if APR_HAS_THREADS && !defined(WIN32)
-#define SVN_FS_FS__USE_LOCK_MUTEX 1
-#else
-#define SVN_FS_FS__USE_LOCK_MUTEX 0
-#endif
-
 /* Private FSFS-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
    Objects of this type are allocated in the common pool. */
@@ -234,6 +233,12 @@ typedef struct fs_fs_shared_data_t
   /* A free transaction object, or NULL if there is no free object.
      Access to this object is synchronised under TXN_LIST_LOCK. */
   fs_fs_shared_txn_data_t *free_txn;
+
+  /* The following lock must be taken out in reverse order of their
+     declaration here.  Any subset may be acquired and held at any given
+     time but their relative acquisition order must not change.
+
+     (lock 'txn-current' before 'pack' before 'write' before 'txn-list') */
 
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   svn_mutex__t *txn_list_lock;
@@ -297,30 +302,36 @@ typedef struct fs_fs_data_t
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
 
-  /* The first revision that uses logical addressing.  SVN_INVALID_REVNUM
-     if there is no such revision (pre-f7 or non-sharded).  May be a
-     future revision if the current shard started with physical addressing
-     and is not complete, yet. */
-  svn_revnum_t min_log_addressing_rev;
+  /* If set, this FS is using logical addressing. Otherwise, it is using
+     physical addressing. */
+  svn_boolean_t use_log_addressing;
 
-  /* Rev / pack file read granularity. */
+  /* Rev / pack file read granularity in bytes. */
   apr_int64_t block_size;
 
   /* Capacity in entries of log-to-phys index pages */
   apr_int64_t l2p_page_size;
 
-  /* Rev / pack file granularity covered by phys-to-log index pages */
+  /* Rev / pack file granularity (in bytes) covered by a single phys-to-log
+   * index page. */
   apr_int64_t p2l_page_size;
-  
+
+  /* If set, parse and cache *all* data of each block that we read
+   * (not just the one bit that we need, atm). */
+  svn_boolean_t use_block_read;
+
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
-  /* The fsfs.conf file, parsed.  Allocated in FS->pool. */
-  svn_config_t *config;
-
-  /* Caches of immutable data.  (Note that if these are created with
-     svn_cache__create_memcache, the data can be shared between
+  /* Caches of immutable data.  (Note that these may be shared between
      multiple svn_fs_t's for the same filesystem.) */
+
+  /* Access to the configured memcached instances.  May be NULL. */
+  svn_memcache_t *memcache;
+
+  /* If TRUE, don't ignore any cache-related errors.  If FALSE, errors from
+     e.g. memcached may be ignored as caching is an optional feature. */
+  svn_boolean_t fail_stop;
 
   /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
      (svn_fs_id_t *).  (Not threadsafe.) */
@@ -339,23 +350,8 @@ typedef struct fs_fs_data_t
   svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
-     rep key (revision/offset) to svn_string_t. */
+     rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
-
-  /* Access object to the atomics namespace used by revprop caching.
-     Will be NULL until the first access. */
-  svn_atomic_namespace__t *revprop_namespace;
-
-  /* Access object to the revprop "generation". Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_generation;
-
-  /* Access object to the revprop update timeout. Will be NULL until
-     the first access. */
-  svn_named_atomic__t *revprop_timeout;
-
-  /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
-  svn_cache__t *revprop_cache;
 
   /* Node properties cache.  Maps from rep key to apr_hash_t. */
   svn_cache__t *properties_cache;
@@ -467,9 +463,15 @@ typedef struct fs_fs_data_t
   /* Pack after every commit. */
   svn_boolean_t pack_after_commit;
 
+  /* Per-instance filesystem ID, which provides an additional level of
+     uniqueness for filesystems that share the same UUID, but should
+     still be distinguishable (e.g. backups produced by svn_fs_hotcopy()
+     or dump / load cycles). */
+  const char *instance_id;
+
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
-                               apr_pool_t *);
+                               apr_pool_t *, apr_pool_t *);
 } fs_fs_data_t;
 
 
@@ -534,7 +536,13 @@ typedef struct representation_t
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content. */
+     intra-node uniqification content.
+
+     This is no longer used by the 1.9 code but we have to keep
+     reading and writing it for old formats to remain compatible with
+     1.8, and earlier, that require it.  We also read/write it in
+     format 7 even though it is not currently required by any code
+     that handles that format. */
   struct
     {
       /* unique context, i.e. txn ID, in which the noderev (!) got created */

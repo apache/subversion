@@ -737,6 +737,92 @@ test_utf_is_normalized(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+test_utf_conversions(apr_pool_t *pool)
+{
+  static const struct cvt_test_t
+  {
+    svn_boolean_t sixteenbit;
+    svn_boolean_t bigendian;
+    const char *source;
+    const char *result;
+  } tests[] = {
+
+#define UTF_32_LE FALSE, FALSE
+#define UTF_32_BE FALSE, TRUE
+#define UTF_16_LE TRUE, FALSE
+#define UTF_16_BE TRUE, TRUE
+
+    /* Normal character conversion */
+    { UTF_32_LE, "t\0\0\0" "e\0\0\0" "s\0\0\0" "t\0\0\0" "\0\0\0\0", "test" },
+    { UTF_32_BE, "\0\0\0t" "\0\0\0e" "\0\0\0s" "\0\0\0t" "\0\0\0\0", "test" },
+    { UTF_16_LE, "t\0" "e\0" "s\0" "t\0" "\0\0", "test" },
+    { UTF_16_BE, "\0t" "\0e" "\0s" "\0t" "\0\0", "test" },
+
+    /* Valid surrogate pairs */
+    { UTF_16_LE, "\x00\xD8" "\x00\xDC" "\0\0", "\xf0\x90\x80\x80" }, /* U+010000 */
+    { UTF_16_LE, "\x34\xD8" "\x1E\xDD" "\0\0", "\xf0\x9d\x84\x9e" }, /* U+01D11E */
+    { UTF_16_LE, "\xFF\xDB" "\xFD\xDF" "\0\0", "\xf4\x8f\xbf\xbd" }, /* U+10FFFD */
+
+    { UTF_16_BE, "\xD8\x00" "\xDC\x00" "\0\0", "\xf0\x90\x80\x80" }, /* U+010000 */
+    { UTF_16_BE, "\xD8\x34" "\xDD\x1E" "\0\0", "\xf0\x9d\x84\x9e" }, /* U+01D11E */
+    { UTF_16_BE, "\xDB\xFF" "\xDF\xFD" "\0\0", "\xf4\x8f\xbf\xbd" }, /* U+10FFFD */
+
+    /* Swapped, single and trailing surrogate pairs */
+    { UTF_16_LE, "*\0" "\x00\xDC" "\x00\xD8" "*\0\0\0", "*\xed\xb0\x80" "\xed\xa0\x80*" },
+    { UTF_16_LE, "*\0" "\x1E\xDD" "*\0\0\0", "*\xed\xb4\x9e*" },
+    { UTF_16_LE, "*\0" "\xFF\xDB" "*\0\0\0", "*\xed\xaf\xbf*" },
+    { UTF_16_LE, "\x1E\xDD" "\0\0", "\xed\xb4\x9e" },
+    { UTF_16_LE, "\xFF\xDB" "\0\0", "\xed\xaf\xbf" },
+
+    { UTF_16_BE, "\0*" "\xDC\x00" "\xD8\x00" "\0*\0\0", "*\xed\xb0\x80" "\xed\xa0\x80*" },
+    { UTF_16_BE, "\0*" "\xDD\x1E" "\0*\0\0", "*\xed\xb4\x9e*" },
+    { UTF_16_BE, "\0*" "\xDB\xFF" "\0*\0\0", "*\xed\xaf\xbf*" },
+    { UTF_16_BE, "\xDD\x1E" "\0\0", "\xed\xb4\x9e" },
+    { UTF_16_BE, "\xDB\xFF" "\0\0", "\xed\xaf\xbf" },
+
+#undef UTF_32_LE
+#undef UTF_32_BE
+#undef UTF_16_LE
+#undef UTF_16_BE
+
+    { 0 }
+  };
+
+  const struct cvt_test_t *tc;
+  const svn_string_t *result;
+  int i;
+
+  for (i = 1, tc = tests; tc->source; ++tc, ++i)
+    {
+      if (tc->sixteenbit)
+        SVN_ERR(svn_utf__utf16_to_utf8(&result, (const void*)tc->source,
+                                       SVN_UTF__UNKNOWN_LENGTH,
+                                       tc->bigendian, pool, pool));
+      else
+        SVN_ERR(svn_utf__utf32_to_utf8(&result, (const void*)tc->source,
+                                       SVN_UTF__UNKNOWN_LENGTH,
+                                       tc->bigendian, pool, pool));
+      SVN_ERR_ASSERT(0 == strcmp(result->data, tc->result));
+    }
+
+  /* Test counted strings with NUL characters */
+  SVN_ERR(svn_utf__utf16_to_utf8(
+              &result, (void*)("x\0" "\0\0" "y\0" "*\0"), 3,
+              FALSE, pool, pool));
+  SVN_ERR_ASSERT(0 == memcmp(result->data, "x\0y", 3));
+
+  SVN_ERR(svn_utf__utf32_to_utf8(
+              &result,
+              (void*)("\0\0\0x" "\0\0\0\0" "\0\0\0y" "\0\0\0*"), 3,
+              TRUE, pool, pool));
+  SVN_ERR_ASSERT(0 == memcmp(result->data, "x\0y", 3));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -761,6 +847,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_utf__fuzzy_escape"),
     SVN_TEST_PASS2(test_utf_is_normalized,
                    "test svn_utf__is_normalized"),
+    SVN_TEST_PASS2(test_utf_conversions,
+                   "test svn_utf__utf{16,32}_to_utf8"),
     SVN_TEST_NULL
   };
 

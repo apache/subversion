@@ -184,8 +184,8 @@ env_from_env_hash(apr_hash_t *env_hash,
   for (hi = apr_hash_first(scratch_pool, env_hash); hi; hi = apr_hash_next(hi))
     {
       *envp = apr_psprintf(result_pool, "%s=%s",
-                           (const char *)svn__apr_hash_index_key(hi),
-                           (const char *)svn__apr_hash_index_val(hi));
+                           (const char *)apr_hash_this_key(hi),
+                           (const char *)apr_hash_this_val(hi));
       envp++;
     }
   *envp = NULL;
@@ -519,13 +519,22 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
   for (hi = apr_hash_first(pool, lock_tokens); hi;
        hi = apr_hash_next(hi))
     {
-      const char *token = svn__apr_hash_index_key(hi);
-      const char *path = svn__apr_hash_index_val(hi);
+      const char *token = apr_hash_this_key(hi);
+      const char *path = apr_hash_this_val(hi);
+
+      if (path == (const char *) 1)
+        {
+          /* Special handling for svn_fs_access_t * created by using deprecated
+             svn_fs_access_add_lock_token() function. */
+          path = "";
+        }
+      else
+        {
+          path = svn_path_uri_autoescape(path, pool);
+        }
 
       svn_stringbuf_appendstr(lock_str,
-        svn_stringbuf_createf(pool, "%s|%s\n",
-                              svn_path_uri_autoescape(path, pool),
-                              token));
+          svn_stringbuf_createf(pool, "%s|%s\n", path, token));
     }
 
   svn_stringbuf_appendcstr(lock_str, "\n");

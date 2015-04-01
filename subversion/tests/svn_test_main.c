@@ -101,9 +101,13 @@ enum test_options_e {
   server_minor_version_opt,
   allow_segfault_opt,
   srcdir_opt,
+  reposdir_opt,
+  reposurl_opt,
+  repostemplate_opt,
   mode_filter_opt,
   sqlite_log_opt,
-  parallel_opt
+  parallel_opt,
+  fsfs_version_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -116,6 +120,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("specify test config file ARG")},
   {"fs-type",       fstype_opt, 1,
                     N_("specify a filesystem backend type ARG")},
+  {"fsfs-version",  fsfs_version_opt, 1,
+                    N_("specify the FSFS version ARG")},
   {"list",          list_opt, 0,
                     N_("lists all the tests with their short description")},
   {"mode-filter",   mode_filter_opt, 1,
@@ -131,7 +137,13 @@ static const apr_getopt_option_t cl_options[] =
   {"allow-segfaults", allow_segfault_opt, 0,
                     N_("don't trap seg faults (useful for debugging)")},
   {"srcdir",        srcdir_opt, 1,
-                    N_("source directory")},
+                    N_("directory which contains test's C source files")},
+  {"repos-dir",     reposdir_opt, 1,
+                    N_("directory to create repositories in")},
+  {"repos-url",     reposurl_opt, 1,
+                    N_("the url to access reposdir as")},
+  {"repos-template",repostemplate_opt, 1,
+                    N_("the repository to use as template")},
   {"sqlite-logging", sqlite_log_opt, 0,
                     N_("enable SQLite logging")},
   {"parallel",      parallel_opt, 0,
@@ -146,29 +158,46 @@ static const apr_getopt_option_t cl_options[] =
 /* When non-zero, don't remove test directories */
 static svn_boolean_t skip_cleanup = FALSE;
 
-/* All cleanup actions are registered as cleanups on this pool. */
-#if !defined(thread_local) && APR_HAS_THREADS
+/* All cleanup actions are registered as cleanups on the cleanup_pool,
+ * which may be thread-specific. */
+#if APR_HAS_THREADS
+/* The thread-local data key for the cleanup pool. */
+static apr_threadkey_t *cleanup_pool_key = NULL;
 
-#  if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
-#    define thread_local _Thread_local
-#  elif defined(WIN32) && defined(_MSC_VER)
-#    define thread_local __declspec(thread)
-#  elif defined(__thread)
-     /* ### Might work somewhere? */
-#    define thread_local __thread
-#  else
-     /* gcc defines __thread in some versions, but not all.
-        ### Who knows how to check for this?
-        ### stackoverflow recommends __GNUC__ but that breaks on
-        ### openbsd. */
-#  endif
-#endif
+/* No-op destructor for apr_threadkey_private_create(). */
+static void null_threadkey_dtor(void *stuff) {}
 
-#ifdef thread_local
-#define HAVE_PER_THREAD_CLEANUP
-static thread_local apr_pool_t * cleanup_pool = NULL;
+/* Set the thread-specific cleanup pool. */
+static void set_cleanup_pool(apr_pool_t *pool)
+{
+  apr_status_t status = apr_threadkey_private_set(pool, cleanup_pool_key);
+  if (status)
+    {
+      printf("apr_threadkey_private_set() failed with code %ld.\n",
+             (long)status);
+      exit(1);
+    }
+}
+
+/* Get the thread-specific cleanup pool. */
+static apr_pool_t *get_cleanup_pool(void)
+{
+  void *data;
+  apr_status_t status = apr_threadkey_private_get(&data, cleanup_pool_key);
+  if (status)
+    {
+      printf("apr_threadkey_private_get() failed with code %ld.\n",
+             (long)status);
+      exit(1);
+    }
+  return data;
+}
+
+#  define cleanup_pool (get_cleanup_pool())
+#  define HAVE_PER_THREAD_CLEANUP
 #else
 static apr_pool_t *cleanup_pool = NULL;
+#  define set_cleanup_pool(p) (cleanup_pool = (p))
 #endif
 
 /* Used by test_thread to serialize access to stdout. */
@@ -212,7 +241,7 @@ svn_test_add_dir_cleanup(const char *path)
       err = svn_mutex__lock(log_mutex);
       if (err)
         {
-          if (verbose_mode) 
+          if (verbose_mode)
             printf("FAILED svn_mutex__lock in svn_test_add_dir_cleanup.\n");
           svn_error_clear(err);
           return;
@@ -229,7 +258,7 @@ svn_test_add_dir_cleanup(const char *path)
       err = svn_mutex__unlock(log_mutex, NULL);
       if (err)
         {
-          if (verbose_mode) 
+          if (verbose_mode)
             printf("FAILED svn_mutex__unlock in svn_test_add_dir_cleanup.\n");
           svn_error_clear(err);
         }
@@ -301,6 +330,7 @@ log_results(const char *progname,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
       skip = TRUE;
+      xfail = FALSE; /* Or all XFail tests reporting SKIP would be failing */
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
@@ -315,14 +345,18 @@ log_results(const char *progname,
 
   if (msg_only)
     {
+      const svn_boolean_t otoh = !!desc->predicate.description;
+
       if (run_this_test)
-        printf(" %3d    %-5s  %s%s%s%s\n",
+        printf(" %3d    %-5s  %s%s%s%s%s%s\n",
                test_num,
                (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
                msg ? msg : "(test did not provide name)",
                (wimp && verbose_mode) ? " [[" : "",
                (wimp && verbose_mode) ? desc->wip : "",
-               (wimp && verbose_mode) ? "]]" : "");
+               (wimp && verbose_mode) ? "]]" : "",
+               (otoh ? " / " : ""),
+               (otoh ? desc->predicate.description : ""));
     }
   else if (run_this_test && ((! quiet_mode) || test_failed))
     {
@@ -375,6 +409,7 @@ do_test_num(const char *progname,
   const struct svn_test_descriptor_t *desc;
   const int array_size = get_array_size(test_funcs);
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
+  enum svn_test_mode_t test_mode;
 
   /* Check our array bounds! */
   if (test_num < 0)
@@ -389,11 +424,18 @@ do_test_num(const char *progname,
     }
 
   desc = &test_funcs[test_num];
-  skip = desc->mode == svn_test_skip;
-  xfail = desc->mode == svn_test_xfail;
+  /* Check the test predicate. */
+  if (desc->predicate.func
+      && desc->predicate.func(opts, desc->predicate.value, pool))
+    test_mode = desc->predicate.alternate_mode;
+  else
+    test_mode = desc->mode;
+
+  skip = test_mode == svn_test_skip;
+  xfail = test_mode == svn_test_xfail;
   wimp = xfail && desc->wip;
   msg = desc->msg;
-  run_this_test = mode_filter == svn_test_all || mode_filter == desc->mode;
+  run_this_test = mode_filter == svn_test_all || mode_filter == test_mode;
 
   if (run_this_test && header_msg && *header_msg)
     {
@@ -422,13 +464,6 @@ do_test_num(const char *progname,
         err = (*desc->func2)(pool);
       else
         err = (*desc->func_opts)(opts, pool);
-
-      if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
-        {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-          skip = TRUE;
-        }
     }
   else
     err = svn_error_create(SVN_ERR_TEST_FAILED, NULL,
@@ -479,9 +514,10 @@ static void * APR_THREAD_FUNC
 test_thread(apr_thread_t *thread, void *data)
 {
   svn_boolean_t skip, xfail, wimp;
-  svn_error_t *err = NULL;
+  svn_error_t *err;
   const struct svn_test_descriptor_t *desc;
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
+  enum svn_test_mode_t test_mode;
   test_params_t *params = data;
   svn_atomic_t test_num;
   apr_pool_t *pool;
@@ -489,7 +525,7 @@ test_thread(apr_thread_t *thread, void *data)
     = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
 #ifdef HAVE_PER_THREAD_CLEANUP
-  cleanup_pool = svn_pool_create(thread_root);
+  set_cleanup_pool(svn_pool_create(thread_root));
 #endif
 
   pool = svn_pool_create(thread_root);
@@ -504,15 +540,22 @@ test_thread(apr_thread_t *thread, void *data)
 #endif
 
       desc = &params->test_funcs[test_num];
-      skip = desc->mode == svn_test_skip;
-      xfail = desc->mode == svn_test_xfail;
+      /* Check the test predicate. */
+      if (desc->predicate.func
+          && desc->predicate.func(params->opts, desc->predicate.value, pool))
+        test_mode = desc->predicate.alternate_mode;
+      else
+        test_mode = desc->mode;
+
+      skip = test_mode == svn_test_skip;
+      xfail = test_mode == svn_test_xfail;
       wimp = xfail && desc->wip;
       run_this_test = mode_filter == svn_test_all
-                   || mode_filter == desc->mode;
+                   || mode_filter == test_mode;
 
       /* Do test */
       if (skip || !run_this_test)
-        ; /* pass */
+        err = NULL; /* pass */
       else if (desc->func2)
         err = (*desc->func2)(pool);
       else
@@ -594,7 +637,7 @@ do_tests_concurrently(const char *progname,
       CHECK_STATUS(result,
                    "Test thread returned an error.");
     }
-  
+
   return params.got_error != FALSE;
 }
 
@@ -664,13 +707,61 @@ svn_test_data_path(const char *base_name, apr_pool_t *result_pool)
   return svn_dirent_join(data_path, base_name, result_pool);
 }
 
+svn_error_t *
+svn_test_get_srcdir(const char **srcdir,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  const char *cwd;
+
+  if (opts->srcdir)
+    {
+      *srcdir = opts->srcdir;
+      return SVN_NO_ERROR;
+    }
+
+  fprintf(stderr, "WARNING: missing '--srcdir' option");
+  SVN_ERR(svn_dirent_get_absolute(&cwd, ".", pool));
+  fprintf(stderr, ", assuming '%s'\n", cwd);
+  *srcdir = cwd;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_test__init_auth_baton(svn_auth_baton_t **ab,
+                          apr_pool_t *result_pool)
+{
+  svn_config_t *cfg_config;
+
+  SVN_ERR(svn_config_create2(&cfg_config, FALSE, FALSE, result_pool));
+
+  /* Disable the crypto backends that might not be entirely
+     threadsafe and/or compatible with running headless.
+
+     The windows system is just our own files, but then with user-key
+     encrypted data inside. */
+  svn_config_set(cfg_config,
+                 SVN_CONFIG_SECTION_AUTH,
+                 SVN_CONFIG_OPTION_PASSWORD_STORES,
+                 "windows-cryptoapi");
+
+  SVN_ERR(svn_cmdline_create_auth_baton(ab,
+                                        TRUE  /* non_interactive */,
+                                        "jrandom", "rayjandom",
+                                        NULL,
+                                        TRUE  /* no_auth_cache */,
+                                        FALSE /* trust_server_cert */,
+                                        cfg_config, NULL, NULL, result_pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Standard svn test program */
 int
 svn_test_main(int argc, const char *argv[], int max_threads,
               struct svn_test_descriptor_t *test_funcs)
 {
-  const char *prog_name;
   int i;
   svn_boolean_t got_error = FALSE;
   apr_pool_t *pool, *test_pool;
@@ -706,6 +797,19 @@ svn_test_main(int argc, const char *argv[], int max_threads,
       svn_error_clear(err);
     }
 
+  /* Set up the thread-local storage key for the cleanup pool. */
+#ifdef HAVE_PER_THREAD_CLEANUP
+  apr_err = apr_threadkey_private_create(&cleanup_pool_key,
+                                         null_threadkey_dtor,
+                                         pool);
+  if (apr_err)
+    {
+      printf("apr_threadkey_private_create() failed with code %ld.\n",
+             (long)apr_err);
+      exit(1);
+    }
+#endif /* HAVE_PER_THREAD_CLEANUP */
+
   /* Remember the command line */
   test_argc = argc;
   test_argv = argv;
@@ -728,21 +832,19 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   os->interleave = TRUE; /* Let options and arguments be interleaved */
 
   /* Strip off any leading path components from the program name.  */
-  prog_name = strrchr(argv[0], '/');
-  if (prog_name)
-    prog_name++;
-  else
-    {
-      /* Just check if this is that weird platform that uses \ instead
-         of / for the path separator. */
-      prog_name = strrchr(argv[0], '\\');
-      if (prog_name)
-        prog_name++;
-      else
-        prog_name = argv[0];
-    }
+  opts.prog_name = svn_dirent_internal_style(argv[0], pool);
+  opts.prog_name = svn_dirent_basename(opts.prog_name, NULL);
 
 #ifdef WIN32
+  /* Abuse cast in strstr() to remove .exe extension.
+     Value is allocated in pool by svn_dirent_internal_style() */
+  {
+    char *exe_ext = strstr(opts.prog_name, ".exe");
+
+    if (exe_ext)
+      *exe_ext = '\0';
+  }
+
 #if _MSC_VER >= 1400
   /* ### This should work for VC++ 2002 (=1300) and later */
   /* Show the abort message on STDERR instead of a dialog to allow
@@ -764,7 +866,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 #endif
 
   if (err)
-    return svn_cmdline_handle_exit_error(err, pool, prog_name);
+    return svn_cmdline_handle_exit_error(err, pool, opts.prog_name);
   while (1)
     {
       const char *opt_arg;
@@ -783,7 +885,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 
       switch (opt_id) {
         case help_opt:
-          help(prog_name, pool);
+          help(opts.prog_name, pool);
           exit(0);
         case cleanup_opt:
           cleanup_mode = TRUE;
@@ -797,6 +899,20 @@ svn_test_main(int argc, const char *argv[], int max_threads,
         case srcdir_opt:
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.srcdir, opt_arg, pool));
           opts.srcdir = svn_dirent_internal_style(opts.srcdir, pool);
+          break;
+        case reposdir_opt:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.repos_dir, opt_arg, pool));
+          opts.repos_dir = svn_dirent_internal_style(opts.repos_dir, pool);
+          break;
+        case reposurl_opt:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.repos_url, opt_arg, pool));
+          opts.repos_url = svn_uri_canonicalize(opts.repos_url, pool);
+          break;
+        case repostemplate_opt:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.repos_template, opt_arg,
+                                              pool));
+          opts.repos_template = svn_dirent_internal_style(opts.repos_template,
+                                                          pool);
           break;
         case list_opt:
           list_mode = TRUE;
@@ -853,6 +969,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 #endif
       }
     }
+  opts.verbose = verbose_mode;
 
   /* Disable sleeping for timestamps, to speed up the tests. */
   apr_env_set(
@@ -867,7 +984,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
     }
 
   /* Create an iteration pool for the tests */
-  cleanup_pool = svn_pool_create(pool);
+  set_cleanup_pool(svn_pool_create(pool));
   test_pool = svn_pool_create(pool);
 
   if (!allow_segfaults)
@@ -885,7 +1002,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
                        "------  -----  ----------------\n";
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num(prog_name, i, test_funcs,
+              if (do_test_num(opts.prog_name, i, test_funcs,
                               TRUE, &opts, &header_msg, test_pool))
                 got_error = TRUE;
 
@@ -906,7 +1023,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
                     continue;
 
                   ran_a_test = TRUE;
-                  if (do_test_num(prog_name, test_num, test_funcs,
+                  if (do_test_num(opts.prog_name, test_num, test_funcs,
                                   FALSE, &opts, NULL, test_pool))
                     got_error = TRUE;
 
@@ -928,7 +1045,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
         {
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num(prog_name, i, test_funcs,
+              if (do_test_num(opts.prog_name, i, test_funcs,
                               FALSE, &opts, NULL, test_pool))
                 got_error = TRUE;
 
@@ -940,7 +1057,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 #if APR_HAS_THREADS
       else
         {
-          got_error = do_tests_concurrently(prog_name, test_funcs,
+          got_error = do_tests_concurrently(opts.prog_name, test_funcs,
                                             array_size, max_threads,
                                             &opts, test_pool);
 
@@ -956,4 +1073,21 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   apr_terminate();
 
   return got_error;
+}
+
+
+svn_boolean_t
+svn_test__fs_type_is(const svn_test_opts_t *opts,
+                     const char *predicate_value,
+                     apr_pool_t *pool)
+{
+  return (0 == strcmp(predicate_value, opts->fs_type));
+}
+
+svn_boolean_t
+svn_test__fs_type_not(const svn_test_opts_t *opts,
+                      const char *predicate_value,
+                      apr_pool_t *pool)
+{
+  return (0 != strcmp(predicate_value, opts->fs_type));
 }

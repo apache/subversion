@@ -1,4 +1,4 @@
-/* fs-pack-test.c --- tests for the filesystem
+/* fs-fs-pack-test.c --- tests for the FSFS filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,8 +25,13 @@
 #include <apr_pools.h>
 
 #include "../svn_test.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "../../libsvn_fs_fs/fs.h"
+#include "../../libsvn_fs_fs/fs_fs.h"
+#include "../../libsvn_fs_fs/low_level.h"
+#include "../../libsvn_fs_fs/util.h"
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_fs.h"
@@ -38,63 +43,14 @@
 
 /*** Helper Functions ***/
 
-/* Write the format number and maximum number of files per directory
-   to a new format file in PATH, overwriting a previously existing
-   file.  Use POOL for temporary allocation.
-
-   (This implementation is largely stolen from libsvn_fs_fs/fs_fs.c.) */
-static svn_error_t *
-write_format(const char *path,
-             int format,
-             int max_files_per_dir,
-             apr_pool_t *pool)
+static void
+ignore_fs_warnings(void *baton, svn_error_t *err)
 {
-  const char *contents;
-
-  path = svn_dirent_join(path, "format", pool);
-
-  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
-    {
-      if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
-        {
-          if (max_files_per_dir)
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout sharded %d\n"
-                                    "addressing logical 0\n",
-                                    format, max_files_per_dir);
-          else
-            /* linear layouts never use logical addressing */
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout linear\n"
-                                    "addressing physical\n",
-                                    format);
-        }
-      else
-        {
-          if (max_files_per_dir)
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout sharded %d\n",
-                                    format, max_files_per_dir);
-          else
-            contents = apr_psprintf(pool,
-                                    "%d\n"
-                                    "layout linear\n",
-                                    format);
-        }
-    }
-  else
-    {
-      contents = apr_psprintf(pool, "%d\n", format);
-    }
-
-  SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
-                              NULL /* copy perms */, pool));
-
-  /* And set the perms to make it read only */
-  return svn_io_set_file_read_only(path, FALSE, pool);
+#ifdef SVN_DEBUG
+  SVN_DBG(("Ignoring FS warning %s\n",
+           svn_error_symbolic_name(err ? err->apr_err : 0)));
+#endif
+  return;
 }
 
 /* Return the expected contents of "iota" in revision REV. */
@@ -165,7 +121,7 @@ create_packed_filesystem(const char *dir,
   apr_pool_t *subpool = svn_pool_create(pool);
   struct pack_notify_baton pnb;
   apr_pool_t *iterpool;
-  int version;
+  apr_hash_t *fs_config;
 
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, "fsfs") != 0)
@@ -176,32 +132,19 @@ create_packed_filesystem(const char *dir,
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "pre-1.6 SVN doesn't support FSFS packing");
 
-  /* Create a filesystem, then close it */
-  SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
-  svn_pool_destroy(subpool);
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE,
+                apr_itoa(pool, shard_size));
 
-  subpool = svn_pool_create(pool);
-
-  /* Rewrite the format file.  (The rest of this function is backend-agnostic,
-     so we just avoid adding the FSFS-specific format information if we run on
-     some other backend.) */
-  if ((strcmp(opts->fs_type, "fsfs") == 0))
-    {
-      SVN_ERR(svn_io_read_version_file(&version,
-                                       svn_dirent_join(dir, "format", subpool),
-                                       subpool));
-      SVN_ERR(write_format(dir, version, shard_size, subpool));
-    }
-
-  /* Reopen the filesystem */
-  SVN_ERR(svn_fs_open(&fs, dir, NULL, subpool));
+  /* Create a filesystem. */
+  SVN_ERR(svn_test__create_fs2(&fs, dir, opts, fs_config, subpool));
 
   /* Revision 1: the Greek tree */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_LOG,
-                                 svn_string_create(R1_LOG_MSG, pool), 
+                                 svn_string_create(R1_LOG_MSG, pool),
                                  pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
@@ -249,7 +192,7 @@ prepare_revprop_repo(svn_fs_t **fs,
 
   /* Create the packed FS and open it. */
   SVN_ERR(create_packed_filesystem(repo_name, opts, max_rev, shard_size, pool));
-  SVN_ERR(svn_fs_open(fs, repo_name, NULL, pool));
+  SVN_ERR(svn_fs_open2(fs, repo_name, NULL, pool, pool));
 
   subpool = svn_pool_create(pool);
   /* Do a commit to trigger packing. */
@@ -346,26 +289,6 @@ pack_filesystem(const svn_test_opts_t *opts,
                                      "Expected manifest file '%s' not found",
                                      path);
         }
-      else
-        {
-          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                      "pack.l2p", SVN_VA_NULL);
-          SVN_ERR(svn_io_check_path(path, &kind, pool));
-          if (kind != svn_node_file)
-            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                     "Expected log-to-phys index file '%s' not found",
-                                     path);
-
-          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                      "pack.p2l", NULL);
-          SVN_ERR(svn_io_check_path(path, &kind, pool));
-          if (kind != svn_node_file)
-            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                     "Expected phys-to-log index file '%s' not found",
-                                     path);
-        }
 
       /* This directory should not exist. */
       path = svn_dirent_join_many(pool, REPO_NAME, "revs",
@@ -445,7 +368,7 @@ read_packed_fs(const svn_test_opts_t *opts,
   svn_revnum_t i;
 
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE, pool));
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
 
   for (i = 1; i < (MAX_REV + 1); i++)
     {
@@ -488,7 +411,7 @@ commit_packed_fs(const svn_test_opts_t *opts,
 
   /* Create the packed FS and open it. */
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, 5, pool));
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
 
   /* Now do a commit. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, pool));
@@ -576,7 +499,7 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
    * files but do not exceed the pack size limit. */
   for (rev = 0; rev <= MAX_REV; ++rev)
     SVN_ERR(svn_fs_change_rev_prop(fs, rev, SVN_PROP_REVISION_LOG,
-                                   large_log(rev, 15000, pool),
+                                   large_log(rev, 1000, pool),
                                    pool));
 
   /* verify */
@@ -585,20 +508,20 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
       SVN_ERR(svn_fs_revision_prop(&prop_value, fs, rev,
                                    SVN_PROP_REVISION_LOG, pool));
       SVN_TEST_STRING_ASSERT(prop_value->data,
-                             large_log(rev, 15000, pool)->data);
+                             large_log(rev, 1000, pool)->data);
     }
 
   /* Put a larger revprop into the last, some middle and the first revision
    * of a pack.  This should cause the packs to split in the middle. */
   SVN_ERR(svn_fs_change_rev_prop(fs, 3, SVN_PROP_REVISION_LOG,
                                  /* rev 0 is not packed */
-                                 large_log(3, 37000, pool),
+                                 large_log(3, 2400, pool),
                                  pool));
   SVN_ERR(svn_fs_change_rev_prop(fs, 5, SVN_PROP_REVISION_LOG,
-                                 large_log(5, 25000, pool),
+                                 large_log(5, 1500, pool),
                                  pool));
   SVN_ERR(svn_fs_change_rev_prop(fs, 8, SVN_PROP_REVISION_LOG,
-                                 large_log(8, 25000, pool),
+                                 large_log(8, 1500, pool),
                                  pool));
 
   /* verify */
@@ -609,13 +532,13 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
 
       if (rev == 3)
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 37000, pool)->data);
+                               large_log(rev, 2400, pool)->data);
       else if (rev == 5 || rev == 8)
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 25000, pool)->data);
+                               large_log(rev, 1500, pool)->data);
       else
         SVN_TEST_STRING_ASSERT(prop_value->data,
-                               large_log(rev, 15000, pool)->data);
+                               large_log(rev, 1000, pool)->data);
     }
 
   return SVN_NO_ERROR;
@@ -711,7 +634,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
 
   /* Add another revision, re-pack, re-recover. */
   subpool = svn_pool_create(pool);
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, subpool, subpool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "A/mu", "new-mu", subpool));
@@ -767,7 +690,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
 
   /* Reopen the filesystem */
   subpool = svn_pool_create(pool);
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, subpool, subpool));
 
   /* Revision = SHARD_SIZE */
   file_contents = get_rev_contents(SHARD_SIZE, subpool);
@@ -809,7 +732,7 @@ test_info(const svn_test_opts_t *opts,
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
   SVN_ERR(svn_fs_info(&info, fs, pool, pool));
   info = svn_fs_info_dup(info, pool, pool);
 
@@ -851,7 +774,7 @@ pack_shard_size_one(const svn_test_opts_t *opts,
 
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
-  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
   /* whitebox: revprop packing special-cases r0, which causes
      (start_rev==1, end_rev==0) in pack_revprops_shard().  So test that. */
   SVN_ERR(svn_fs_revision_prop(&propval, fs, 1, SVN_PROP_REVISION_LOG, pool));
@@ -863,7 +786,7 @@ pack_shard_size_one(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 #undef MAX_REV
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "get_set_multiple_huge_revprops_packed_fs"
+#define REPO_NAME "test-repo-get_set_multiple_huge_revprops_packed_fs"
 #define SHARD_SIZE 4
 #define MAX_REV 9
 static svn_error_t *
@@ -968,7 +891,8 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
     {
       /* upgrade to final repo format (using log addressing) and re-open */
       SVN_ERR(svn_fs_upgrade2(repo_name, NULL, NULL, NULL, NULL, pool));
-      SVN_ERR(svn_fs_open(&fs, repo_name, svn_fs_config(fs, pool), pool));
+      SVN_ERR(svn_fs_open2(&fs, repo_name, svn_fs_config(fs, pool), pool,
+                           pool));
     }
 
   /* Create 4 concurrent transactions */
@@ -1012,7 +936,8 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
     {
       /* upgrade to final repo format (using log addressing) and re-open */
       SVN_ERR(svn_fs_upgrade2(repo_name, NULL, NULL, NULL, NULL, pool));
-      SVN_ERR(svn_fs_open(&fs, repo_name, svn_fs_config(fs, pool), pool));
+      SVN_ERR(svn_fs_open2(&fs, repo_name, svn_fs_config(fs, pool), pool,
+                           pool));
     }
 
   /* Commit all transactions
@@ -1096,7 +1021,7 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
 }
 #undef SHARD_SIZE
 
-#define REPO_NAME "upgrade_new_txns_to_log_addressing"
+#define REPO_NAME "test-repo-upgrade_new_txns_to_log_addressing"
 #define MAX_REV 8
 static svn_error_t *
 upgrade_new_txns_to_log_addressing(const svn_test_opts_t *opts,
@@ -1111,7 +1036,7 @@ upgrade_new_txns_to_log_addressing(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "upgrade_old_txns_to_log_addressing"
+#define REPO_NAME "test-repo-upgrade_old_txns_to_log_addressing"
 #define MAX_REV 8
 static svn_error_t *
 upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
@@ -1127,6 +1052,326 @@ upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
 #undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-metadata_checksumming"
+static svn_error_t *
+metadata_checksumming(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  const char *repo_path, *r0_path;
+  apr_hash_t *fs_config = apr_hash_make(pool);
+  svn_stringbuf_t *r0;
+  svn_fs_root_t *root;
+  apr_hash_t *dir;
+
+  /* Skip this test unless we are FSFS f7+ */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 9)))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.9 SVN doesn't checksum metadata");
+
+  /* Create the file system to fiddle with. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  repo_path = svn_fs_path(fs, pool);
+
+  /* Manipulate the data on disk.
+   * (change id from '0.0.*' to '1.0.*') */
+  r0_path = svn_dirent_join_many(pool, repo_path, "revs", "0", "0",
+                                 SVN_VA_NULL);
+  SVN_ERR(svn_stringbuf_from_file2(&r0, r0_path, pool));
+  r0->data[21] = '1';
+  SVN_ERR(svn_io_remove_file2(r0_path, FALSE, pool));
+  SVN_ERR(svn_io_file_create_bytes(r0_path, r0->data, r0->len, pool));
+
+  /* Reading the corrupted data on the normal code path triggers no error.
+   * Use a separate namespace to avoid simply reading data from cache. */
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open2(&fs, repo_path, fs_config, pool, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, 0, pool));
+  SVN_ERR(svn_fs_dir_entries(&dir, root, "/", pool));
+
+  /* The block-read code path uses the P2L index information and compares
+   * low-level checksums.  Again, separate cache namespace. */
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "1");
+  SVN_ERR(svn_fs_open2(&fs, repo_path, fs_config, pool, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, 0, pool));
+  SVN_TEST_ASSERT_ERROR(svn_fs_dir_entries(&dir, root, "/", pool),
+                        SVN_ERR_CHECKSUM_MISMATCH);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-revprop_caching_on_off"
+static svn_error_t *
+revprop_caching_on_off(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs1;
+  svn_fs_t *fs2;
+  apr_hash_t *fs_config;
+  svn_string_t *value;
+  const svn_string_t *another_value_for_avoiding_warnings_from_a_broken_api;
+  const svn_string_t *new_value = svn_string_create("new", pool);
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Open two filesystem objects, enable revision property caching
+   * in one of them. */
+  SVN_ERR(svn_test__create_fs(&fs1, REPO_NAME, opts, pool));
+
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "1");
+
+  SVN_ERR(svn_fs_open2(&fs2, svn_fs_path(fs1, pool), fs_config, pool, pool));
+
+  /* With inefficient named atomics, the filesystem will output a warning
+     and disable the revprop caching, but we still would like to test
+     these cases.  Ignore the warning(s). */
+  svn_fs_set_warning_func(fs2, ignore_fs_warnings, NULL);
+
+  SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
+  another_value_for_avoiding_warnings_from_a_broken_api = value;
+  SVN_ERR(svn_fs_change_rev_prop2(
+              fs1, 0, "svn:date",
+              &another_value_for_avoiding_warnings_from_a_broken_api,
+              new_value, pool));
+
+  /* Expect the change to be visible through both objects.*/
+  SVN_ERR(svn_fs_revision_prop(&value, fs1, 0, "svn:date", pool));
+  SVN_TEST_STRING_ASSERT(value->data, "new");
+
+  SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
+  SVN_TEST_STRING_ASSERT(value->data, "new");
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
+
+static svn_error_t *
+id_parser_test(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+ #define LONG_MAX_STR #LONG_MAX
+
+  /* Verify the revision number parser (e.g. first element of a txn ID) */
+  svn_fs_fs__id_part_t id_part;
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "0-0"));
+
+#if LONG_MAX == 2147483647L
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "2147483647-0"));
+
+  /* Trigger all sorts of overflow conditions. */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2147483648-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "21474836470-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "21474836479-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967295-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967296-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967304-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4294967305-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "42949672950-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "42949672959-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  /* 0x120000000 = 4831838208.
+   * 483183820 < 10*483183820 mod 2^32 = 536870904 */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "4831838208-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+#else
+  SVN_ERR(svn_fs_fs__id_txn_parse(&id_part, "9223372036854775807-0"));
+
+  /* Trigger all sorts of overflow conditions. */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "9223372036854775808-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "92233720368547758070-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "92233720368547758079-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551615-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551616-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551624-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "18446744073709551625-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "184467440737095516150-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "184467440737095516159-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  /* 0x12000000000000000 = 20752587082923245568.
+   * 2075258708292324556 < 10*2075258708292324556 mod 2^32 = 2305843009213693944 */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part,
+                                                "20752587082923245568-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+#endif
+
+  /* Invalid characters */
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2e4-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+  SVN_TEST_ASSERT_ERROR(svn_fs_fs__id_txn_parse(&id_part, "2-4-0"),
+                        SVN_ERR_FS_MALFORMED_TXN_ID);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-plain_0_length"
+
+static svn_error_t *
+receive_index(const svn_fs_fs__p2l_entry_t *entry,
+              void *baton,
+              apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *entries = baton;
+  APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *)
+    = apr_pmemdup(entries->pool, entry, sizeof(*entry));
+
+  return SVN_NO_ERROR;
+}
+
+static apr_size_t
+stringbuf_find(svn_stringbuf_t *rev_contents,
+               const char *substring)
+{
+  apr_size_t i;
+  apr_size_t len = strlen(substring);
+
+  for (i = 0; i < rev_contents->len - len + 1; ++i)
+      if (!memcmp(rev_contents->data + i, substring, len))
+        return i;
+
+  return APR_SIZE_MAX;
+}
+
+static svn_error_t *
+plain_0_length(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  const char *rev_path;
+  svn_stringbuf_t *rev_contents;
+  apr_hash_t *fs_config;
+  svn_filesize_t file_length;
+  apr_size_t offset;
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Create a repo that does not deltify properties and does not share reps
+     on its own - makes it easier to do that later by hand. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  ffd = fs->fsap_data;
+  ffd->deltify_properties = FALSE;
+  ffd->rep_sharing_allowed = FALSE;
+
+  /* Create one file node with matching contents and property reps. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", "END\n", pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "foo", "x", NULL, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Redirect text rep to props rep. */
+  rev_path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
+  SVN_ERR(svn_stringbuf_from_file2(&rev_contents, rev_path, pool));
+
+  offset = stringbuf_find(rev_contents, "id: ");
+  if (offset != APR_SIZE_MAX)
+    {
+      node_revision_t *noderev;
+      svn_stringbuf_t *noderev_str;
+
+      /* Read the noderev. */
+      svn_stream_t *stream = svn_stream_from_stringbuf(rev_contents, pool);
+      SVN_ERR(svn_stream_skip(stream, offset));
+      SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool, pool));
+      SVN_ERR(svn_stream_close(stream));
+
+      /* Tweak the DATA_REP. */
+      noderev->data_rep->revision = noderev->prop_rep->revision;
+      noderev->data_rep->item_index = noderev->prop_rep->item_index;
+      noderev->data_rep->size = noderev->prop_rep->size;
+      noderev->data_rep->expanded_size = 0;
+
+      /* Serialize it back. */
+      noderev_str = svn_stringbuf_create_empty(pool);
+      stream = svn_stream_from_stringbuf(noderev_str, pool);
+      SVN_ERR(svn_fs_fs__write_noderev(stream, noderev, ffd->format,
+                                       svn_fs_fs__fs_supports_mergeinfo(fs),
+                                       pool));
+      SVN_ERR(svn_stream_close(stream));
+
+      /* Patch the revision contents */
+      memcpy(rev_contents->data + offset, noderev_str->data, noderev_str->len);
+    }
+
+  SVN_ERR(svn_io_write_atomic(rev_path, rev_contents->data,
+                              rev_contents->len, NULL, pool));
+
+  if (svn_fs_fs__use_log_addressing(fs))
+    {
+      /* Refresh index data (checksums). */
+      apr_array_header_t *entries = apr_array_make(pool, 4, sizeof(void *));
+      SVN_ERR(svn_fs_fs__dump_index(fs, rev, receive_index, entries,
+                                    NULL, NULL, pool));
+      SVN_ERR(svn_fs_fs__load_index(fs, rev, entries, pool));
+    }
+
+  /* Create an independent FS instances with separate caches etc. */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, fs_config, pool, pool));
+
+  /* Now, check that we get the correct file length. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_file_length(&file_length, root, "foo", pool));
+
+  SVN_TEST_ASSERT(file_length == 4);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -1163,6 +1408,14 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns to log addressing in shared FSFS"),
     SVN_TEST_OPTS_PASS(upgrade_old_txns_to_log_addressing,
                        "upgrade txns started before svnadmin upgrade"),
+    SVN_TEST_OPTS_PASS(metadata_checksumming,
+                       "metadata checksums being checked"),
+    SVN_TEST_OPTS_PASS(revprop_caching_on_off,
+                       "change revprops with enabled and disabled caching"),
+    SVN_TEST_OPTS_PASS(id_parser_test,
+                       "id parser test"),
+    SVN_TEST_OPTS_PASS(plain_0_length,
+                       "file with 0 expanded-length, issue #4554"),
     SVN_TEST_NULL
   };
 

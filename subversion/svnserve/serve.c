@@ -1029,7 +1029,7 @@ static svn_error_t *write_prop_diffs(svn_ra_svn_conn_t *conn,
 /* Write out a lock to the client. */
 static svn_error_t *write_lock(svn_ra_svn_conn_t *conn,
                                apr_pool_t *pool,
-                               svn_lock_t *lock)
+                               const svn_lock_t *lock)
 {
   const char *cdate, *edate;
 
@@ -1345,6 +1345,21 @@ static svn_error_t *add_lock_tokens(const apr_array_header_t *lock_tokens,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_fs_lock_callback_t. */
+static svn_error_t *
+lock_cb(void *baton,
+        const char *path,
+        const svn_lock_t *lock,
+        svn_error_t *fs_err,
+        apr_pool_t *pool)
+{
+  server_baton_t *sb = baton;
+
+  log_error(fs_err, sb);
+
+  return SVN_NO_ERROR;
+}
+
 /* Unlock the paths with lock tokens in LOCK_TOKENS, ignoring any errors.
    LOCK_TOKENS contains svn_ra_svn_item_t elements, assumed to be lists. */
 static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
@@ -1354,8 +1369,6 @@ static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *targets = apr_hash_make(subpool);
-  apr_hash_t *results;
-  apr_hash_index_t *hi;
   svn_error_t *err;
 
   for (i = 0; i < lock_tokens->nelts; ++i)
@@ -1378,15 +1391,8 @@ static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
 
   /* The lock may have become defunct after the commit, so ignore such
      errors. */
-  err = svn_repos_fs_unlock2(&results, sb->repository->repos, targets,
-                             FALSE, subpool, subpool);
-  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-
-      log_error(result->err, sb);
-      svn_error_clear(result->err);
-    }
+  err = svn_repos_fs_unlock_many(sb->repository->repos, targets, FALSE,
+                                 lock_cb, sb, subpool, subpool);
   log_error(err, sb);
   svn_error_clear(err);
 
@@ -1719,6 +1725,11 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           &ab, root, full_path,
                           pool));
 
+  /* Fetch the directories' entries before starting the response, to allow
+     proper error handling in cases like when FULL_PATH doesn't exist */
+  if (want_contents)
+      SVN_CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
+
   /* Begin response ... */
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(r(!", "success", rev));
   SVN_ERR(svn_ra_svn__write_proplist(conn, pool, props));
@@ -1730,15 +1741,13 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       /* Use epoch for a placeholder for a missing date.  */
       const char *missing_date = svn_time_to_cstring(0, pool);
 
-      SVN_CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
-
       /* Transform the hash table's FS entries into dirents.  This probably
        * belongs in libsvn_repos. */
       subpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
-          svn_fs_dirent_t *fsent = svn__apr_hash_index_val(hi);
+          const char *name = apr_hash_this_key(hi);
+          svn_fs_dirent_t *fsent = apr_hash_this_val(hi);
           const char *file_path;
 
           /* The fields in the entry tuple.  */
@@ -2094,8 +2103,8 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *key = svn__apr_hash_index_key(hi);
-      svn_mergeinfo_t value = svn__apr_hash_index_val(hi);
+      const char *key = apr_hash_this_key(hi);
+      svn_mergeinfo_t value = apr_hash_this_val(hi);
       svn_string_t *mergeinfo_string;
 
       svn_pool_clear(iterpool);
@@ -2154,8 +2163,8 @@ static svn_error_t *log_receiver(void *baton,
       for (h = apr_hash_first(pool, log_entry->changed_paths2); h;
                                                         h = apr_hash_next(h))
         {
-          const char *path = svn__apr_hash_index_key(h);
-          svn_log_changed_path2_t *change = svn__apr_hash_index_val(h);
+          const char *path = apr_hash_this_key(h);
+          svn_log_changed_path2_t *change = apr_hash_this_val(h);
 
           SVN_ERR(svn_ra_svn__write_data_log_changed_path(
                       conn, pool,
@@ -2170,7 +2179,7 @@ static svn_error_t *log_receiver(void *baton,
         }
     }
   SVN_ERR(svn_ra_svn__end_list(conn, pool));
-  
+
   /* send LOG_ENTRY main members */
   SVN_ERR(svn_ra_svn__write_data_log_entry(conn, pool,
                                            log_entry->revision,
@@ -2207,20 +2216,17 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_ra_svn_item_t *elt;
   int i;
   apr_uint64_t limit, include_merged_revs_param;
-  const char *move_behavior_param;
-  svn_move_behavior_t move_behavior;
   log_baton_t lb;
   authz_baton_t ab;
 
   ab.server = b;
   ab.conn = conn;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl?w", &paths,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
                                   &start_rev, &end_rev, &send_changed_paths,
                                   &strict_node, &limit,
                                   &include_merged_revs_param,
-                                  &revprop_word, &revprop_items,
-                                  &move_behavior_param));
+                                  &revprop_word, &revprop_items));
 
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
@@ -2251,8 +2257,6 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                              _("Unknown revprop word '%s' in log command"),
                              revprop_word);
-
-  move_behavior = svn_move_behavior_from_word(move_behavior_param);
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is
@@ -2285,12 +2289,11 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.fs_path = b->repository->fs_path->data;
   lb.conn = conn;
   lb.stack_depth = 0;
-  err = svn_repos_get_logs5(b->repository->repos, full_paths, start_rev,
+  err = svn_repos_get_logs4(b->repository->repos, full_paths, start_rev,
                             end_rev, (int) limit, send_changed_paths,
                             strict_node, include_merged_revisions,
-                            move_behavior, revprops,
-                            authz_check_access_cb_func(b),
-                            &ab, log_receiver, &lb, pool);
+                            revprops, authz_check_access_cb_func(b), &ab,
+                            log_receiver, &lb, pool);
 
   write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (write_err)
@@ -2446,8 +2449,8 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           for (iter = apr_hash_first(pool, fs_locations); iter;
               iter = apr_hash_next(iter))
             {
-              const svn_revnum_t *iter_key = svn__apr_hash_index_key(iter);
-              const char *iter_value = svn__apr_hash_index_val(iter);
+              const svn_revnum_t *iter_key = apr_hash_this_key(iter);
+              const char *iter_value = apr_hash_this_val(iter);
 
               SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "rc",
                                               *iter_key, iter_value));
@@ -2706,6 +2709,48 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+struct lock_result_t {
+  const svn_lock_t *lock;
+  svn_error_t *err;
+};
+
+struct lock_many_baton_t {
+  apr_hash_t *results;
+  apr_pool_t *pool;
+};
+
+/* Implements svn_fs_lock_callback_t. */
+static svn_error_t *
+lock_many_cb(void *baton,
+             const char *path,
+             const svn_lock_t *fs_lock,
+             svn_error_t *fs_err,
+             apr_pool_t *pool)
+{
+  struct lock_many_baton_t *b = baton;
+  struct lock_result_t *result = apr_palloc(b->pool,
+                                            sizeof(struct lock_result_t));
+
+  result->lock = fs_lock;
+  result->err = svn_error_dup(fs_err);
+  svn_hash_sets(b->results, apr_pstrdup(b->pool, path), result);
+
+  return SVN_NO_ERROR;
+}
+
+static void
+clear_lock_result_hash(apr_hash_t *results,
+                       apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, results); hi; hi = apr_hash_next(hi))
+    {
+      struct lock_result_t *result = apr_hash_this_val(hi);
+      svn_error_clear(result->err);
+    }
+}
+
 static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               apr_array_header_t *params, void *baton)
 {
@@ -2718,8 +2763,8 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_error_t *err, *write_err = SVN_NO_ERROR;
   apr_hash_t *targets = apr_hash_make(pool);
   apr_hash_t *authz_results = apr_hash_make(pool);
-  apr_hash_t *results;
   apr_hash_index_t *hi;
+  struct lock_many_baton_t lmb;
 
   SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?c)bl", &comment, &steal_lock,
                                   &path_revs));
@@ -2732,15 +2777,14 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      an error. */
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, TRUE));
 
-  /* Loop through the lock requests. */
+  /* Parse the lock requests from PATH_REVS into TARGETS. */
   for (i = 0; i < path_revs->nelts; ++i)
     {
       const char *path, *full_path;
       svn_revnum_t current_rev;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
                                                svn_ra_svn_item_t);
-      svn_fs_lock_target_t *target
-        = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
+      svn_fs_lock_target_t *target;
 
       svn_pool_clear(subpool);
 
@@ -2754,28 +2798,31 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
-      target->token = NULL;
-      target->current_rev = current_rev;
+      target = svn_fs_lock_target_create(NULL, current_rev, pool);
 
-      /* We could check for duplicate paths and reject the request? */
+      /* Any duplicate paths, once canonicalized, get collapsed into a
+         single path that is processed once.  The result is then
+         returned multiple times. */
       svn_hash_sets(targets, full_path, target);
     }
 
   SVN_ERR(log_command(b, conn, subpool, "%s",
                       svn_log__lock(targets, steal_lock, subpool)));
 
-  /* From here on we need to make sure any errors in authz_results, or
+  /* Check authz.
+
+     Note: From here on we need to make sure any errors in authz_results, or
      results, are cleared before returning from this function. */
   for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *full_path = svn__apr_hash_index_key(hi);
+      const char *full_path = apr_hash_this_key(hi);
 
       svn_pool_clear(subpool);
 
       if (! lookup_access(subpool, b, svn_authz_write, full_path, TRUE))
         {
-          svn_fs_lock_result_t *result
-            = apr_palloc(pool, sizeof(svn_fs_lock_result_t));
+          struct lock_result_t *result
+            = apr_palloc(pool, sizeof(struct lock_result_t));
 
           result->lock = NULL;
           result->err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED,
@@ -2785,19 +2832,23 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         }
     }
 
-  err = svn_repos_fs_lock2(&results, b->repository->repos, targets,
-                           comment, FALSE,
-                           0, /* No expiration time. */
-                           steal_lock, pool, subpool);
+  lmb.results = apr_hash_make(pool);
+  lmb.pool = pool;
 
-  /* The client expects results in the same order as paths were supplied. */
+  err = svn_repos_fs_lock_many(b->repository->repos, targets,
+                               comment, FALSE,
+                               0, /* No expiration time. */
+                               steal_lock, lock_many_cb, &lmb,
+                               pool, subpool);
+
+  /* Return results in the same order as the paths were supplied. */
   for (i = 0; i < path_revs->nelts; ++i)
     {
       const char *path, *full_path;
       svn_revnum_t current_rev;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
                                                svn_ra_svn_item_t);
-      svn_fs_lock_result_t *result;
+      struct lock_result_t *result;
 
       svn_pool_clear(subpool);
 
@@ -2805,17 +2856,24 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                           &current_rev);
       if (write_err)
         break;
-      
+
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    subpool);
 
-      result = svn_hash_gets(results, full_path);
+      result = svn_hash_gets(lmb.results, full_path);
       if (!result)
         result = svn_hash_gets(authz_results, full_path);
       if (!result)
-        /* No result?  Should we return some sort of placeholder error? */
-        break;
+        {
+          /* No result?  Something really odd happened, create a
+             placeholder error so that any other results can be
+             reported in the correct order. */
+          result = apr_palloc(pool, sizeof(struct lock_result_t));
+          result->err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED, 0,
+                                          _("No result for '%s'."), path);
+          svn_hash_sets(lmb.results, full_path, result);
+        }
 
       if (result->err)
         write_err = svn_ra_svn__write_cmd_failure(conn, subpool,
@@ -2833,16 +2891,8 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         break;
     }
 
-  for (hi = apr_hash_first(subpool, authz_results); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-      svn_error_clear(result->err);
-    }
-  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-      svn_error_clear(result->err);
-    }
+  clear_lock_result_hash(authz_results, subpool);
+  clear_lock_result_hash(lmb.results, subpool);
 
   svn_pool_destroy(subpool);
 
@@ -2892,11 +2942,11 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_array_header_t *unlock_tokens;
   int i;
   apr_pool_t *subpool;
-  svn_error_t *err = SVN_NO_ERROR, *write_err;
+  svn_error_t *err = SVN_NO_ERROR, *write_err = SVN_NO_ERROR;
   apr_hash_t *targets = apr_hash_make(pool);
   apr_hash_t *authz_results = apr_hash_make(pool);
-  apr_hash_t *results;
   apr_hash_index_t *hi;
+  struct lock_many_baton_t lmb;
 
   SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "bl", &break_lock,
                                   &unlock_tokens));
@@ -2906,7 +2956,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   subpool = svn_pool_create(pool);
 
-  /* Loop through the unlock requests. */
+  /* Parse the unlock requests from PATH_REVS into TARGETS. */
   for (i = 0; i < unlock_tokens->nelts; i++)
     {
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
@@ -2927,25 +2977,31 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
+
+      /* Any duplicate paths, once canonicalized, get collapsed into a
+         single path that is processed once.  The result is then
+         returned multiple times. */
       svn_hash_sets(targets, full_path, token);
     }
 
   SVN_ERR(log_command(b, conn, subpool, "%s",
                       svn_log__unlock(targets, break_lock, subpool)));
 
-  /* From here on we need to make sure any errors in authz_results, or
+  /* Check authz.
+
+     Note: From here on we need to make sure any errors in authz_results, or
      results, are cleared before returning from this function. */
   for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
     {
-      const char *full_path = svn__apr_hash_index_key(hi);
+      const char *full_path = apr_hash_this_key(hi);
 
       svn_pool_clear(subpool);
 
       if (! lookup_access(subpool, b, svn_authz_write, full_path,
                           ! break_lock))
         {
-          svn_fs_lock_result_t *result
-            = apr_palloc(pool, sizeof(svn_fs_lock_result_t));
+          struct lock_result_t *result
+            = apr_palloc(pool, sizeof(struct lock_result_t));
 
           result->lock = NULL;
           result->err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED,
@@ -2955,8 +3011,12 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         }
     }
 
-  err = svn_repos_fs_unlock2(&results, b->repository->repos, targets,
-                             break_lock, pool, subpool);
+  lmb.results = apr_hash_make(pool);
+  lmb.pool = pool;
+
+  err = svn_repos_fs_unlock_many(b->repository->repos, targets,
+                                 break_lock, lock_many_cb, &lmb,
+                                 pool, subpool);
 
   /* Return results in the same order as the paths were supplied. */
   for (i = 0; i < unlock_tokens->nelts; ++i)
@@ -2964,7 +3024,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       const char *path, *token, *full_path;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
                                                svn_ra_svn_item_t);
-      svn_fs_lock_result_t *result;
+      struct lock_result_t *result;
 
       svn_pool_clear(subpool);
 
@@ -2977,12 +3037,19 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
 
-      result = svn_hash_gets(results, full_path);
+      result = svn_hash_gets(lmb.results, full_path);
       if (!result)
         result = svn_hash_gets(authz_results, full_path);
       if (!result)
-        /* No result?  Should we return some sort of placeholder error? */
-        break;
+        {
+          /* No result?  Something really odd happened, create a
+             placeholder error so that any other results can be
+             reported in the correct order. */
+          result = apr_palloc(pool, sizeof(struct lock_result_t));
+          result->err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED, 0,
+                                          _("No result for '%s'."), path);
+          svn_hash_sets(lmb.results, full_path, result);
+        }
 
       if (result->err)
         write_err = svn_ra_svn__write_cmd_failure(conn, pool, result->err);
@@ -2993,16 +3060,8 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         break;
     }
 
-  for (hi = apr_hash_first(subpool, authz_results); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-      svn_error_clear(result->err);
-    }
-  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
-      svn_error_clear(result->err);
-    }
+  clear_lock_result_hash(authz_results, subpool);
+  clear_lock_result_hash(lmb.results, subpool);
 
   svn_pool_destroy(subpool);
 
@@ -3089,7 +3148,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "success"));
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      svn_lock_t *l = svn__apr_hash_index_val(hi);
+      svn_lock_t *l = apr_hash_this_val(hi);
 
       SVN_ERR(write_lock(conn, pool, l));
     }
@@ -3380,6 +3439,9 @@ repos_path_valid(const char *path)
  *
  * CONFIG_POOL and AUTHZ_POOL shall be used to load any object of the
  * respective type.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ *
  */
 static svn_error_t *
 find_repos(const char *url,
@@ -3391,7 +3453,8 @@ find_repos(const char *url,
            svn_repos__config_pool_t *config_pool,
            svn_repos__authz_pool_t *authz_pool,
            apr_hash_t *fs_config,
-           apr_pool_t *pool)
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
   const char *path, *full_path, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
@@ -3408,8 +3471,8 @@ find_repos(const char *url,
       if (path == NULL)
         path = "";
     }
-  path = svn_relpath_canonicalize(path, pool);
-  path = svn_path_uri_decode(path, pool);
+  path = svn_relpath_canonicalize(path, scratch_pool);
+  path = svn_path_uri_decode(path, scratch_pool);
 
   /* Ensure that it isn't possible to escape the root by disallowing
      '..' segments. */
@@ -3418,55 +3481,55 @@ find_repos(const char *url,
                             "Couldn't determine repository path");
 
   /* Join the server-configured root with the client path. */
-  full_path = svn_dirent_join(svn_dirent_canonicalize(root, pool),
-                              path, pool);
+  full_path = svn_dirent_join(svn_dirent_canonicalize(root, scratch_pool),
+                              path, scratch_pool);
 
   /* Search for a repository in the full path. */
-  repository->repos_root = svn_repos_find_root_path(full_path, pool);
+  repository->repos_root = svn_repos_find_root_path(full_path, result_pool);
   if (!repository->repos_root)
     return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
                              "No repository found in '%s'", url);
 
   /* Open the repository and fill in b with the resulting information. */
-  SVN_ERR(svn_repos_open2(&repository->repos, repository->repos_root,
-                          fs_config, pool));
+  SVN_ERR(svn_repos_open3(&repository->repos, repository->repos_root,
+                          fs_config, result_pool, scratch_pool));
   SVN_ERR(svn_repos_remember_client_capabilities(repository->repos,
                                                  repository->capabilities));
   repository->fs = svn_repos_fs(repository->repos);
   fs_path = full_path + strlen(repository->repos_root);
   repository->fs_path = svn_stringbuf_create(*fs_path ? fs_path : "/",
-                                             pool);
-  url_buf = svn_stringbuf_create(url, pool);
+                                             result_pool);
+  url_buf = svn_stringbuf_create(url, result_pool);
   svn_path_remove_components(url_buf,
                         svn_path_component_count(repository->fs_path->data));
   repository->repos_url = url_buf->data;
   repository->authz_repos_name = svn_dirent_is_child(root,
                                                      repository->repos_root,
-                                                     pool);
+                                                     result_pool);
   if (repository->authz_repos_name == NULL)
     repository->repos_name = svn_dirent_basename(repository->repos_root,
-                                                 pool);
+                                                 result_pool);
   else
     repository->repos_name = repository->authz_repos_name;
   repository->repos_name = svn_path_uri_encode(repository->repos_name,
-                                               pool);
+                                               result_pool);
 
   /* If the svnserve configuration has not been loaded then load it from the
    * repository. */
   if (NULL == cfg)
     {
-      repository->base = svn_repos_conf_dir(repository->repos, pool);
+      repository->base = svn_repos_conf_dir(repository->repos, result_pool);
 
       SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
                                          svn_repos_svnserve_conf
-                                            (repository->repos, pool),
+                                            (repository->repos, result_pool),
                                          FALSE, FALSE, repository->repos,
-                                         pool));
+                                         result_pool));
     }
 
-  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, pool));
+  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, result_pool));
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
-                            authz_pool, pool));
+                            authz_pool, result_pool));
 
 #ifdef SVN_HAVE_SASL
     {
@@ -3488,10 +3551,10 @@ find_repos(const char *url,
 #endif
 
   /* Use the repository UUID as the default realm. */
-  SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, pool));
+  SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, scratch_pool));
   svn_config_get(cfg, &repository->realm, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_REALM, repository->realm);
-  repository->realm = apr_pstrdup(pool, repository->realm);
+  repository->realm = apr_pstrdup(result_pool, repository->realm);
 
   /* Make sure it's possible for the client to authenticate.  Note
      that this doesn't take into account any authz configuration read
@@ -3503,9 +3566,9 @@ find_repos(const char *url,
   svn_config_get(cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
   if (hooks_env)
-    hooks_env = svn_dirent_internal_style(hooks_env, pool);
+    hooks_env = svn_dirent_internal_style(hooks_env, scratch_pool);
 
-  repository->hooks_env = apr_pstrdup(pool, hooks_env);
+  repository->hooks_env = apr_pstrdup(result_pool, hooks_env);
 
   return SVN_NO_ERROR;
 }
@@ -3692,7 +3755,7 @@ construct_server_baton(server_baton_t **baton,
   server_baton_t *b = apr_pcalloc(conn_pool, sizeof(*b));
   fs_warning_baton_t *warn_baton;
   svn_stringbuf_t *cap_log = svn_stringbuf_create_empty(scratch_pool);
-  
+
   b->repository = apr_pcalloc(conn_pool, sizeof(*b->repository));
   b->repository->username_case = params->username_case;
   b->repository->base = params->base;
@@ -3794,8 +3857,8 @@ construct_server_baton(server_baton_t **baton,
   err = handle_config_error(find_repos(client_url, params->root, b->vhost,
                                        b->read_only, params->cfg,
                                        b->repository, params->config_pool,
-                                       params->authz_pool, params->fs_config, 
-                                       conn_pool),
+                                       params->authz_pool, params->fs_config,
+                                       conn_pool, scratch_pool),
                             b);
   if (!err)
     {

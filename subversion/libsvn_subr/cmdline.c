@@ -507,31 +507,50 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
+struct trust_server_cert_non_interactive_baton {
+  svn_boolean_t trust_server_cert_unknown_ca;
+  svn_boolean_t trust_server_cert_cn_mismatch;
+  svn_boolean_t trust_server_cert_expired;
+  svn_boolean_t trust_server_cert_not_yet_valid;
+  svn_boolean_t trust_server_cert_other_failure;
+};
+
 /* This implements 'svn_auth_ssl_server_trust_prompt_func_t'.
 
    Don't actually prompt.  Instead, set *CRED_P to valid credentials
-   iff FAILURES is empty or is exactly SVN_AUTH_SSL_UNKNOWNCA.  If
-   there are any other failure bits, then set *CRED_P to null (that
-   is, reject the cert).
+   iff FAILURES is empty or may be accepted according to the flags
+   in BATON. If there are any other failure bits, then set *CRED_P
+   to null (that is, reject the cert).
 
    Ignore MAY_SAVE; we don't save certs we never prompted for.
 
-   Ignore BATON, REALM, and CERT_INFO,
+   Ignore REALM and CERT_INFO,
 
    Ignore any further films by George Lucas. */
 static svn_error_t *
-ssl_trust_unknown_server_cert
-  (svn_auth_cred_ssl_server_trust_t **cred_p,
-   void *baton,
-   const char *realm,
-   apr_uint32_t failures,
-   const svn_auth_ssl_server_cert_info_t *cert_info,
-   svn_boolean_t may_save,
-   apr_pool_t *pool)
+trust_server_cert_non_interactive(svn_auth_cred_ssl_server_trust_t **cred_p,
+                                  void *baton,
+                                  const char *realm,
+                                  apr_uint32_t failures,
+                                  const svn_auth_ssl_server_cert_info_t
+                                    *cert_info,
+                                  svn_boolean_t may_save,
+                                  apr_pool_t *pool)
 {
+  struct trust_server_cert_non_interactive_baton *b = baton;
   *cred_p = NULL;
 
-  if (failures == 0 || failures == SVN_AUTH_SSL_UNKNOWNCA)
+  if (failures == 0 ||
+      (b->trust_server_cert_unknown_ca &&
+       (failures & SVN_AUTH_SSL_UNKNOWNCA)) ||
+      (b->trust_server_cert_cn_mismatch &&
+       (failures & SVN_AUTH_SSL_CNMISMATCH)) ||
+      (b->trust_server_cert_expired &&
+       (failures & SVN_AUTH_SSL_EXPIRED)) ||
+      (b->trust_server_cert_not_yet_valid &&
+        (failures & SVN_AUTH_SSL_NOTYETVALID)) ||
+      (b->trust_server_cert_other_failure &&
+        (failures & SVN_AUTH_SSL_OTHER)))
     {
       *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
       (*cred_p)->may_save = FALSE;
@@ -542,17 +561,22 @@ ssl_trust_unknown_server_cert
 }
 
 svn_error_t *
-svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *auth_username,
-                              const char *auth_password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              svn_boolean_t trust_server_cert,
-                              svn_config_t *cfg,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool)
+svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
+                               svn_boolean_t non_interactive,
+                               const char *auth_username,
+                               const char *auth_password,
+                               const char *config_dir,
+                               svn_boolean_t no_auth_cache,
+                               svn_boolean_t trust_server_cert_unknown_ca,
+                               svn_boolean_t trust_server_cert_cn_mismatch,
+                               svn_boolean_t trust_server_cert_expired,
+                               svn_boolean_t trust_server_cert_not_yet_valid,
+                               svn_boolean_t trust_server_cert_other_failure,
+                               svn_config_t *cfg,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool)
+
 {
   svn_boolean_t store_password_val = TRUE;
   svn_boolean_t store_auth_creds_val = TRUE;
@@ -653,11 +677,22 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
           APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
         }
     }
-  else if (trust_server_cert)
+  else if (trust_server_cert_unknown_ca || trust_server_cert_cn_mismatch ||
+           trust_server_cert_expired || trust_server_cert_not_yet_valid ||
+           trust_server_cert_other_failure)
     {
+      struct trust_server_cert_non_interactive_baton *b;
+
+      b = apr_palloc(pool, sizeof(*b));
+      b->trust_server_cert_unknown_ca = trust_server_cert_unknown_ca;
+      b->trust_server_cert_cn_mismatch = trust_server_cert_cn_mismatch;
+      b->trust_server_cert_expired = trust_server_cert_expired;
+      b->trust_server_cert_not_yet_valid = trust_server_cert_not_yet_valid;
+      b->trust_server_cert_other_failure = trust_server_cert_other_failure;
+
       /* Remember, only register this provider if non_interactive. */
       svn_auth_get_ssl_server_trust_prompt_provider
-        (&provider, ssl_trust_unknown_server_cert, NULL, pool);
+        (&provider, trust_server_cert_non_interactive, b, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 
@@ -1165,12 +1200,12 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   apr_file_t *tmp_file;
   const char *tmpfile_name;
   const char *tmpfile_native;
-  const char *tmpfile_apr, *base_dir_apr;
+  const char *base_dir_apr;
   svn_string_t *translated_contents;
-  apr_status_t apr_err, apr_err2;
+  apr_status_t apr_err;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
-  svn_error_t *err = SVN_NO_ERROR, *err2;
+  svn_error_t *err = SVN_NO_ERROR;
   char *old_cwd;
   int sys_err;
   svn_boolean_t remove_file = TRUE;
@@ -1253,49 +1288,36 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
        the file we just created!! ***/
 
   /* Dump initial CONTENTS to TMP_FILE. */
-  apr_err = apr_file_write_full(tmp_file, translated_contents->data,
-                                translated_contents->len, &written);
+  err = svn_io_file_write_full(tmp_file, translated_contents->data,
+                               translated_contents->len, &written,
+                               pool);
 
-  apr_err2 = apr_file_close(tmp_file);
-  if (! apr_err)
-    apr_err = apr_err2;
+  err = svn_error_compose_create(err, svn_io_file_close(tmp_file, pool));
 
   /* Make sure the whole CONTENTS were written, else return an error. */
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't write to '%s'"),
-                               tmpfile_name);
-      goto cleanup;
-    }
-
-  err = svn_path_cstring_from_utf8(&tmpfile_apr, tmpfile_name, pool);
   if (err)
     goto cleanup;
 
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
-  apr_err = apr_stat(&finfo_before, tmpfile_apr,
-                     APR_FINFO_MTIME, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_before, tmpfile_name, APR_FINFO_MTIME, pool);
+  if (err)
+    goto cleanup;
 
   /* Backdate the file a little bit in case the editor is very fast
      and doesn't change the size.  (Use two seconds, since some
      filesystems have coarse granularity.)  It's OK if this call
      fails, so we don't check its return value.*/
-  apr_file_mtime_set(tmpfile_apr, finfo_before.mtime - 2000, pool);
+  err = svn_io_set_file_affected_time(finfo_before.mtime
+                                              - apr_time_from_sec(2),
+                                      tmpfile_name, pool);
+  svn_error_clear(err);
 
   /* Stat it again to get the mtime we actually set. */
-  apr_err = apr_stat(&finfo_before, tmpfile_apr,
-                     APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_before, tmpfile_name,
+                    APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  if (err)
+    goto cleanup;
 
   /* Prepare the editor command line.  */
   err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
@@ -1323,13 +1345,10 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     }
 
   /* Get information about the temporary file after the assumed editing. */
-  apr_err = apr_stat(&finfo_after, tmpfile_apr,
-                     APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_after, tmpfile_name,
+                    APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  if (err)
+    goto cleanup;
 
   /* If the file looks changed... */
   if ((finfo_before.mtime != finfo_after.mtime) ||
@@ -1345,7 +1364,7 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       /* Translate back to UTF8/LF if desired. */
       if (as_text)
         {
-          err = svn_subst_translate_string2(edited_contents, FALSE, FALSE,
+          err = svn_subst_translate_string2(edited_contents, NULL, NULL,
                                             *edited_contents, encoding, FALSE,
                                             pool, pool);
           if (err)
@@ -1367,13 +1386,9 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   if (remove_file)
     {
       /* Remove the file from disk.  */
-      err2 = svn_io_remove_file2(tmpfile_name, FALSE, pool);
-
-      /* Only report remove error if there was no previous error. */
-      if (! err && err2)
-        err = err2;
-      else
-        svn_error_clear(err2);
+      err = svn_error_compose_create(
+              err,
+              svn_io_remove_file2(tmpfile_name, FALSE, pool));
     }
 
  cleanup2:

@@ -25,6 +25,11 @@
 
 #include "fs.h"
 
+/* Read the 'format' file of fsfs filesystem FS and store its info in FS.
+ * Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_fs_fs__read_format_file(svn_fs_t *fs, apr_pool_t *scratch_pool);
+
 /* Open the fsfs filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations.
 
@@ -50,6 +55,17 @@ svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
+
+/* Return the shard size of filesystem FS.  Return 0 for non-shared ones. */
+int
+svn_fs_fs__shard_size(svn_fs_t *fs);
+
+/* Set *MIN_UNPACKED to the oldest non-packed revision in filesystem FS.
+   Do any temporary allocation in POOL. */
+svn_error_t *
+svn_fs_fs__min_unpacked_rev(svn_revnum_t *min_unpacked,
+                            svn_fs_t *fs,
+                            apr_pool_t *pool);
 
 /* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
    than the current youngest revision in FS or is simply not a valid
@@ -106,6 +122,25 @@ svn_error_t *svn_fs_fs__file_checksum(svn_checksum_t **checksum,
 /* Return whether or not the given FS supports mergeinfo metadata. */
 svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
 
+/* Under the repository db PATH, create a FSFS repository with FORMAT,
+ * the given SHARD_SIZE. If USE_LOG_ADDRESSING is non-zero, repository
+ * will use logical addressing. If not supported by the respective format,
+ * the latter two parameters will be ignored. FS will be updated.
+ *
+ * The only file not being written is the 'format' file.  This allows
+ * callers such as hotcopy to modify the contents before turning the
+ * tree into an accessible repository.
+ *
+ * Use POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_fs__create_file_tree(svn_fs_t *fs,
+                            const char *path,
+                            int format,
+                            int shard_size,
+                            svn_boolean_t use_log_addressing,
+                            apr_pool_t *pool);
+
 /* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
    temporary allocations from POOL.
 
@@ -115,11 +150,13 @@ svn_error_t *svn_fs_fs__create(svn_fs_t *fs,
                                const char *path,
                                apr_pool_t *pool);
 
-/* Set the uuid of repository FS to UUID, if UUID is not NULL;
-   otherwise, set the uuid of FS to a newly generated UUID.  Perform
-   temporary allocations in POOL. */
+/* Set the uuid of repository FS to UUID and the instance ID to INSTANCE_ID.
+   If any of them is NULL, use a newly generated UUID / ID instead.  Ignore
+   INSTANCE_ID whenever instance IDs are not supported by the FS format.
+   Perform temporary allocations in POOL. */
 svn_error_t *svn_fs_fs__set_uuid(svn_fs_t *fs,
                                  const char *uuid,
+                                 const char *instance_id,
                                  apr_pool_t *pool);
 
 /* Return the path to the 'current' file in FS.
@@ -164,6 +201,19 @@ svn_fs_fs__with_txn_current_lock(svn_fs_t *fs,
                                                       apr_pool_t *pool),
                                  void *baton,
                                  apr_pool_t *pool);
+
+/* Obtain all locks on the filesystem FS in a subpool of POOL, call BODY
+   with BATON and that subpool, destroy the subpool (releasing the locks)
+   and return what BODY returned.
+
+   This combines svn_fs_fs__with_write_lock, svn_fs_fs__with_pack_lock,
+   and svn_fs_fs__with_txn_current_lock, ensuring correct lock ordering. */
+svn_error_t *
+svn_fs_fs__with_all_locks(svn_fs_t *fs,
+                          svn_error_t *(*body)(void *baton,
+                                               apr_pool_t *pool),
+                          void *baton,
+                          apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
@@ -218,7 +268,7 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
 
 
 /* Initialize all session-local caches in FS according to the global
-   cache settings. Use POOL for allocations.
+   cache settings. Use POOL for temporary allocations.
 
    Please note that it is permissible for this function to set some
    or all of these caches to NULL, regardless of any setting. */

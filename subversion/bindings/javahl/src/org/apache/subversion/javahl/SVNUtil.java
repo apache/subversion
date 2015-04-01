@@ -92,6 +92,407 @@ public class SVNUtil
       }
 
     //
+    // Credentials management
+    //
+
+    /**
+     * Exception used by calling the wrong accessor on Credential for
+     * the given credential type.
+     */
+    public static class CredentialTypeMismatch extends SubversionException
+    {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
+        public CredentialTypeMismatch(Credential.Kind kind, String attribute)
+        {
+            super("Credential type '" + kind.toString()
+                  + "'  does not have the attribute '" + attribute + "'");
+        }
+    }
+
+    /**
+     * Generic credential description. Provides default accessors for
+     * concrete implementations.
+     */
+    public static class Credential implements java.io.Serializable
+    {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Describes the kind of the credential.
+         */
+        public static enum Kind
+        {
+            /** The username for a realm. */
+            username            ("svn.username"),
+
+            /** The username and password for a realm. */
+            simple              ("svn.simple"),
+
+            /** The trusted SSL server certificate for a realm. */
+            sslServer           ("svn.ssl.server"),
+
+            /** The client certificate passphrase for a realm. */
+            sslClientPassphrase ("svn.ssl.client-passphrase");
+
+            private String token;
+
+            Kind(String token)
+            {
+                this.token = token;
+            }
+
+            /** @return the string representation of the enumeration. */
+            public String toString()
+            {
+                return this.token;
+            }
+
+            /* Factory used by the native implementation */
+            private static Kind fromString(String stringrep)
+            {
+                for (Kind kind : Kind.values()) {
+                    if (kind.toString().equals(stringrep))
+                        return kind;
+                }
+                return null;
+            }
+        }
+
+        /** @return the kind of the credential. */
+        public Kind getKind()
+        {
+            return kind;
+        }
+
+        /** @return the realm that the credential is valid for. */
+        public String getRealm()
+        {
+            return realm;
+        }
+
+        /**
+         * @return the type of the secure store used for the secret
+         * parts of this credential; may be <code>null</code> if the
+         * credential does not contain any secrets bits.
+         */
+        public String getSecureStore()
+            throws CredentialTypeMismatch
+        {
+            if (kind != Kind.simple && kind != Kind.sslClientPassphrase)
+                throw new CredentialTypeMismatch(kind, "secure store");
+
+            return store;
+        }
+
+        /**
+         * @return the username associated with the credential, or
+         * <code>null</code>, if there is no username in the concrete
+         * credential type.
+         */
+        public String getUsername()
+            throws CredentialTypeMismatch
+        {
+            if (kind != Kind.username && kind != Kind.simple)
+                throw new CredentialTypeMismatch(kind, "username");
+
+            return username;
+        }
+
+        /**
+         * @return the password associated with the credential, or
+         * <code>null</code>, if there is no password in the concrete
+         * credential type.
+         */
+        public String getPassword()
+            throws CredentialTypeMismatch
+        {
+            if (kind != Kind.simple && kind != Kind.sslClientPassphrase)
+                throw new CredentialTypeMismatch(kind, "password");
+
+            return password;
+        }
+
+        /**
+         * @return the server certificate info associated with the
+         * credential, or <code>null</code>, if there is no server
+         * certificate in the concrete credential type.
+         */
+        public AuthnCallback.SSLServerCertInfo getServerCertInfo()
+            throws CredentialTypeMismatch
+        {
+            if (kind != Kind.sslServer)
+                throw new CredentialTypeMismatch(kind, "server cert info");
+
+            return info;
+        }
+
+        /**
+         * @return the accepted server certificate failures associated
+         * with the credential, or <code>null</code>, if there is no
+         * server certificate in the concrete credential type.
+         */
+        public AuthnCallback.SSLServerCertFailures getServerCertFailures()
+            throws CredentialTypeMismatch
+        {
+            if (kind != Kind.sslServer)
+                throw new CredentialTypeMismatch(kind, "server cert failures");
+
+            return failures;
+        }
+
+        /**
+         * @return the client certificate passphrase associated with
+         * the credential, or <code>null</code>, if there is no client
+         * certificate in the concrete credential type.
+         */
+        public String getClientCertPassphrase()
+            throws CredentialTypeMismatch
+        {
+            if (kind != Kind.sslClientPassphrase)
+                throw new CredentialTypeMismatch(kind, "passphrase");
+
+            return passphrase;
+        }
+
+        // ### TODO: There are currently no proper APIs in Subversion
+        //           for adding credentials. These factory methods are
+        //           placeholders.
+        //
+        ///**
+        // * Creates an "svn.username" credential.
+        // * @param realm The realm string.
+        // * @param username The username for <code>realm</code>.
+        // */
+        //public static Credential
+        //    createUsername(String realm, String username)
+        //{
+        //    return new Credential(Kind.username, realm, null,
+        //                          username, null, null, null, null);
+        //}
+        //
+        ///**
+        // * Creates an "svn.simple" credential.
+        // * @param realm The realm string.
+        // * @param username The username for <code>realm</code>.
+        // * @param password The password for <code>username</code>.
+        // */
+        //public static Credential
+        //    createSimple(String realm, String username, String password)
+        //{
+        //    return new Credential(Kind.simple, realm, null,
+        //                          username, password, null, null, null);
+        //}
+        //
+        ///** Creates an "svn.ssl.server" credential. */
+        //public static Credential
+        //    createSSLServerCertTrust(String realm,
+        //                             AuthnCallback.SSLServerCertInfo info,
+        //                             AuthnCallback.SSLServerCertFailures failures)
+        //{
+        //    return new Credential(Kind.sslServer, realm, null,
+        //                          null, null, info, failures, null);
+        //}
+        //
+        ///**
+        // * Creates an "svn.ssl.client-passphrase" credential.
+        // * @param realm The realm string.
+        // * @param passphrase The passphrase for for the client certificate
+        // *        used for <code>realm</code>.
+        // */
+        //public static Credential
+        //    createSSLClientCertPassphrase(String realm, String passphrase)
+        //{
+        //    return new Credential(Kind.simple, realm, null,
+        //                          null, null, null, null, passphrase);
+        //}
+
+        private Credential(Kind kind, String realm, String store,
+                           String username, String password,
+                           AuthnCallback.SSLServerCertInfo info,
+                           AuthnCallback.SSLServerCertFailures failures,
+                           String passphrase)
+        {
+            assert(kind != null && realm != null);
+            switch (kind) {
+            case username:
+                assert(username != null && password == null
+                       && info == null && failures == null
+                       && passphrase == null);
+                break;
+            case simple:
+                assert(username != null && password != null
+                       && info == null && failures == null
+                       && passphrase == null);
+                break;
+            case sslServer:
+                assert(username == null && password == null
+                       && info != null && failures != null
+                       && passphrase == null);
+                break;
+            case sslClientPassphrase:
+                assert(username == null && password == null
+                       && info == null && failures == null
+                       && passphrase != null);
+                break;
+            default:
+                assert(kind == Kind.username
+                       || kind == Kind.simple
+                       || kind == Kind.sslServer
+                       || kind == Kind.sslClientPassphrase);
+            }
+
+            this.kind = kind;
+            this.realm = realm;
+            this.store = store;
+            this.username = username;
+            this.password = password;
+            this.info = info;
+            this.failures = failures;
+            this.passphrase = passphrase;
+        }
+
+        private Kind kind;
+        private String realm;
+        private String store;
+        private String username;
+        private String password;
+        private AuthnCallback.SSLServerCertInfo info;
+        private AuthnCallback.SSLServerCertFailures failures;
+        private String passphrase;
+    }
+
+    /**
+     * Find a stored credential.
+     * Unlike {@link #searchCredentials}, the the realm name is not
+     * a glob pattern.
+     * <p>
+     * <b>Note:</b> If the native credentials store is disabled, this
+     *              method will always return <code>null</code>.
+     *
+     * @param configDir The path to the configuration directory; if
+     *        <code>null</code>, the default (system-specific) user
+     *        configuration path will be used.
+     * @param kind The kind of the credential; may not be <code>null</code>.
+     * @param realm The realm name; may not be <code>null</code>.
+     * @return the matching credential, or <code>null</code> if not found.
+     */
+    public static Credential getCredential(String configDir,
+                                           Credential.Kind kind,
+                                           String realm)
+        throws ClientException, SubversionException
+    {
+        return configLib.getCredential(configDir, kind, realm);
+    }
+
+    /**
+     * Remove a stored credential.
+     * Unlike {@link #deleteCredentials}, the the realm name is not
+     * a glob pattern.
+     * <p>
+     * <b>Note:</b> If the native credentials store is disabled, this
+     *              method will always return <code>null</code>.
+     *
+     * @param configDir The path to the configuration directory; if
+     *        <code>null</code>, the default (system-specific) user
+     *        configuration path will be used.
+     * @param kind The kind of the credential; may not be <code>null</code>.
+     * @param realm The realm name; may not be <code>null</code>.
+     * @return the deleted credential, or <code>null</code> if not found.
+     */
+    public static Credential removeCredential(String configDir,
+                                              Credential.Kind kind,
+                                              String realm)
+        throws ClientException, SubversionException
+    {
+        return configLib.removeCredential(configDir, kind, realm);
+    }
+
+    // ### TODO: There are currently no proper APIs in Subversion for
+    //           adding credentials. This method is a placeholder.
+    //
+    ///**
+    // * Store a new credential, or replace an existing credential.
+    // * <p>
+    // * <b>Note:</b> If the native credentials store is disabled, this
+    // *              method will always return <code>null</code>.
+    // *
+    // * @param configDir The path to the configuration directory; if
+    // *        <code>null</code>, the default (system-specific) user
+    // *        configuration path will be used.
+    // * @param credential The credential to store.
+    // * @param replace If <code>true</code>, any existing matching
+    // *        credential will be replaced.
+    // *
+    // * @return the stored credential. If <code>replace</code> was
+    // * <code>false</code>, and a credential with the same kind and
+    // * for the same realm exists, it will be returned. If the given
+    // * credential was successfully added, the same object reference
+    // * will be returned (the calling code can compare reference values
+    // * to determine this). Will return <code>null</code> if the
+    // * credential could not be stored for any reason.
+    // */
+    //public static Credential addCredential(String configDir,
+    //                                       Credential credential,
+    //                                       boolean replace)
+    //    throws ClientException, SubversionException
+    //{
+    //    return configLib.addCredential(configDir, credential, replace);
+    //}
+
+    /**
+     * Find stored credentials that match the given search criteria.
+     * <p>
+     * <b>Note:</b> If the native credentials store is disabled, this
+     *              method will always return <code>null</code>.
+     *
+     * @param configDir The path to the configuration directory; if
+     *        <code>null</code>, the default (system-specific) user
+     *        configuration path will be used.
+     * @param kind The kind of the credential; if <code>null</code>,
+     *             all matching credential types will be returned.
+     * @param realmPattern A glob pattern for the realm string;
+     *             if <code>null</code>, all realms will be considered;
+     *             otherwise, only those credentials whose realm matches
+     *             the pattern will be returned.
+     * @param usernamePattern A glob pattern for the username;
+     *             if <code>null</code>, all credentials will be considered;
+     *             otherwise, only those credentials that have a username,
+     *             and where the username matches the pattern, will be
+     *             returned.
+     * @param hostnamePattern A glob pattern for the hostnames of a
+     *             server certificate; if <code>null</code>, all
+     *             credntials will be considered; otherwise, only
+     *             those credentials that have a server certificate
+     *             with a hostname that matches the pattern will be
+     *             returned.
+     * @param textPattern A glob pattern that must match any textual
+     *             information in a credential, for example, a realm,
+     *             username, certificate details, etc; passwords, passphrases
+     *             and other info considered secret will not be matched;
+     * @return the list of matching credentials.
+     */
+    public static List<Credential>
+        searchCredentials(String configDir,
+                          Credential.Kind kind,
+                          String realmPattern,
+                          String usernamePattern,
+                          String hostnamePattern,
+                          String textPattern)
+        throws ClientException, SubversionException
+    {
+        return configLib.searchCredentials(configDir, kind, realmPattern,
+                                           usernamePattern, hostnamePattern,
+                                           textPattern);
+    }
+
+    //
     // Diff and Merge
     //
     private static final DiffLib diffLib = new DiffLib();
@@ -139,11 +540,32 @@ public class SVNUtil
             this.ignoreSpace = ignoreSpace;
             this.ignoreEolStyle = ignoreEolStyle;
             this.showCFunction = showCFunction;
+            this.contextSize = -1;
+        }
+
+        /**
+         * Like the {@see #DiffOptions(IgnoreSpace,boolean,boolean)},
+         * but with an additional parameter.
+         * @param contextSize If this is greater than 0, then this
+         * number of context lines will be used in the generated diff
+         * output. Otherwise the legacy compile time default will be
+         * used.
+         */
+        public DiffOptions(IgnoreSpace ignoreSpace,
+                           boolean ignoreEolStyle,
+                           boolean showCFunction,
+                           int contextSize)
+        {
+            this.ignoreSpace = ignoreSpace;
+            this.ignoreEolStyle = ignoreEolStyle;
+            this.showCFunction = showCFunction;
+            this.contextSize = contextSize;
         }
 
         public final IgnoreSpace ignoreSpace;
         public final boolean ignoreEolStyle;
         public final boolean showCFunction;
+        public final int contextSize;
     }
 
     /** Style for displaying conflicts in merge output. */
@@ -213,6 +635,7 @@ public class SVNUtil
                                    OutputStream resultStream)
         throws ClientException
     {
+        // ### TODO: Support cancellation as in svn_diff_file_output_unified3.
         return diffLib.fileDiff(originalFile, modifiedFile, diffOptions,
                                 originalHeader, modifiedHeader,
                                 headerEncoding,

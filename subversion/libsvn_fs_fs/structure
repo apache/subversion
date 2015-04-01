@@ -37,15 +37,13 @@ repository) is:
     <shard>.pack/     Pack directory, if the repo has been packed (see below)
       pack            Pack file, if the repository has been packed (see below)
       manifest        Pack manifest file, if a pack file exists (see below)
-      pack.l2p        Log-to-phys index file (format 7+, see below)
-      pack.p2l        Phys-to-log index file (format 7+, see below)
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
     <shard>.pack/     Pack directory, if the repo has been packed (see below)
       <rev>.<count>   Pack file, if the repository has been packed (see below)
       manifest        Pack manifest file, if a pack file exists (see below)
-    revprops.db       SQLite database of the packed revision properties
+    revprops.db       SQLite database of the packed revprops (format 5 only)
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
   txn-protorevs/      Subdirectory containing transaction proto-revision files
@@ -62,11 +60,11 @@ repository) is:
   write-lock          Empty file, locked to serialise writers
   pack-lock           Empty file, locked to serialise 'svnadmin pack' (f. 7+)
   txn-current-lock    Empty file, locked to serialise 'txn-current'
-  uuid                File containing the UUID of the repository
+  uuid                File containing the repository IDs
   format              File containing the format number of this filesystem
   fsfs.conf           Configuration file
   min-unpacked-rev    File containing the oldest revision not in a pack file
-  min-unpacked-revprop File containing the oldest revision of unpacked revprop
+  min-unpacked-revprop Same for revision properties (format 5 only)
   rep-cache.db        SQLite database mapping rep checksums to locations
 
 Files in the revprops directory are in the hash dump format used by
@@ -204,6 +202,10 @@ Addressing:
   Format 7+:  Logical addressing; uses item index that will be translated
     on-the-fly to the actual rev / pack file location
 
+Repository IDs:
+  Format 1+:  The first line of db/uuid contains the repository UUID
+  Format 7+:  The second line contains the instance ID (in UUID formatting)
+
 # Incomplete list.  See SVN_FS_FS__MIN_*_FORMAT
 
 
@@ -212,8 +214,8 @@ Filesystem format options
 
 Currently, the only recognised format options are "layout" and "addressing".
 The first specifies the paths that will be used to store the revision
-files and revision property files.  The second specifies for which
-revisions address translation is required.
+files and revision property files.  The second specifies that logical to
+physical address translation is required.
 
 The "layout" option is followed by the name of the filesystem layout
 and any required parameters.  The default layout, if no "layout"
@@ -253,11 +255,10 @@ The supported modes, and the parameters they require, are as follows:
   pairs with "offset" being the byte offset relative to the beginning of
   the revision in the respective rev or pack file.
 
-"logical <first-revision-to-use-it>"
-  'first-revision-to-use-it' specifies the first revision to use logical
-  addressing, must coincide with the beginning of a shard and may be a
-  future revision.  All earlier revisions use physical addressing.  It is
-  illegal to use logical addressing on non-sharded repositories.
+"logical"
+  All existing and future revision files will use logical
+  addressing. It is illegal to use logical addressing on non-sharded
+  repositories.
 
 
 Addressing modes
@@ -323,8 +324,10 @@ the pack file.  The offsets are stored as ASCII decimal, and separated by
 a newline character.
 
 Revision pack files using logical addressing don't use manifest files but
-index files instead.  The revisions inside a pack file will also get
-interleaved to reduce I/O for typical access patterns.
+appends index data to the revision contents.  The revisions inside a pack
+file will also get interleaved to reduce I/O for typical access patterns.
+There is no structural difference between packed and non-packed revision
+files in that mode.
 
 
 Packing revision properties (format 5: SQLite)
@@ -522,7 +525,8 @@ A revision file contains a concatenation of various kinds of data:
   * Text and property representations
   * Node-revisions
   * The changed-path data
-  * Two offsets at the very end (physical addressing mode only)
+  * Index data (logical addressing only)
+  * Revision / pack file footer (logical addressing only)
 
 A representation begins with a line containing either "PLAIN\n" or
 "DELTA\n" or "DELTA <rev> <item_index> <length>\n", where <rev>,
@@ -556,8 +560,7 @@ defined:
   props     "<rev> <item_index> <length> <size> <digest>" for props rep
             <rev> and <item_index> give location of rep
             <length> gives length of rep, sans header and trailer
-            <size> gives size of expanded rep; for props only, it may be 0
-             if equal to the length
+            <size> gives size of expanded rep (*)
             <digest> gives hex MD5 digest of expanded rep
             ### in formats >=4, also present:
             <sha1-digest> gives hex SHA1 digest of expanded rep
@@ -568,6 +571,15 @@ defined:
   minfo-cnt The number of nodes under (and including) this node
              which have svn:mergeinfo.
   minfo-here Exists if this node itself has svn:mergeinfo.
+
+(*) Earlier versions of this document would state that <size> may be 0
+    if the actual value matches <length>.  This is only true for property
+    and directory representations and should be avoided in general.  File
+    representations may not be handled correctly by SVN before 1.7.20,
+    1.8.12 and 1.9.0, if they have 0 <size> fields for non-empty contents.
+    Releases 1.8.0 through 1.8.11 may have falsely created instances of
+    that (see issue #4554).  Finally, 0 <size> fields are NEVER legal for
+    DELTA representations.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of
@@ -600,13 +612,22 @@ Starting with FS format 4, <action> may contain the kind ("file" or
 "dir") of the node, after a hyphen; for example, an added directory
 may be represented as "add-dir".
 
-Before with FS format 7, <mergeinfo-mod> flag is not available.  It may
+Prior to FS format 7, <mergeinfo-mod> flag is not available.  It may
 also be missing in revisions upgraded from pre-f7 formats.
 
 In physical addressing mode, at the very end of a rev file is a pair of
 lines containing "\n<root-offset> <cp-offset>\n", where <root-offset> is
 the offset of the root directory node revision and <cp-offset> is the
 offset of the changed-path data.
+
+In logical addressing mode, the revision footer has the form
+
+  <l2p offset> <l2p checksum> <p2l offset> <p2l checksum><terminal byte>
+
+The terminal byte contains the length (as plain 8 bit value) of the footer
+excluding that length byte.  The first offset is the start of the log-to-
+phys index, followed by the digest of the MD5 checksum over its content.
+The other pair gives the same of for the phys-to-log index.
 
 All numbers in the rev file format are unsigned and are represented as
 ASCII decimal.
@@ -728,11 +749,12 @@ digests, too, so you would simply iterate over those digests and
 consult the files they reference for lock information.
 
 
-Index files
------------
+Index Data
+----------
 
 Format 7 introduces logical addressing that requires item indexes
 to be translated / mapped to physical rev / pack file offsets.
+These indexes are appended to the respective rev / pack file.
 
 Details of the binary format used by these index files can be
 found in structure-indexes.

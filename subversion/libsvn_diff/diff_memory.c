@@ -356,6 +356,8 @@ typedef struct unified_output_baton_t
   source_tokens_t sources[2]; /* 0 == original; 1 == modified */
   apr_off_t current_token[2]; /* current token per source */
 
+  int context_size;
+
   /* Cached markers, in header_encoding,
      indexed using unified_output_e */
   const char *prefix_str[3];
@@ -461,7 +463,7 @@ output_unified_flush_hunk(output_baton_t *baton,
 
   /* Write the trailing context */
   target_token = baton->hunk_start[0] + baton->hunk_length[0]
-                 + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+                 + baton->context_size;
   SVN_ERR(output_unified_token_range(baton, 0 /*original*/,
                                      unified_output_context,
                                      target_token));
@@ -515,8 +517,8 @@ output_unified_diff_modified(void *baton,
   apr_off_t prev_context_end;
   svn_boolean_t init_hunk = FALSE;
 
-  if (original_start > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
-    context_prefix_length = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  if (original_start > output_baton->context_size)
+    context_prefix_length = output_baton->context_size;
   else
     context_prefix_length = original_start;
 
@@ -526,7 +528,7 @@ output_unified_diff_modified(void *baton,
     {
       prev_context_end = output_baton->hunk_start[0]
                          + output_baton->hunk_length[0]
-                         + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+                         + output_baton->context_size;
     }
   else
     {
@@ -608,7 +610,7 @@ static const svn_diff_output_fns_t mem_output_unified_vtable =
 
 
 svn_error_t *
-svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
+svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
                                     svn_diff_t *diff,
                                     svn_boolean_t with_diff_header,
                                     const char *hunk_delimiter,
@@ -617,6 +619,9 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
                                     const char *header_encoding,
                                     const svn_string_t *original,
                                     const svn_string_t *modified,
+                                    int context_size,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
                                     apr_pool_t *pool)
 {
 
@@ -634,6 +639,8 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
         = (hunk_delimiter == NULL || strcmp(hunk_delimiter, "##") != 0)
           ? APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_FILE APR_EOL_STR
           : APR_EOL_STR SVN_DIFF__NO_NEWLINE_AT_END_OF_PROPERTY APR_EOL_STR;
+      baton.context_size = context_size >= 0 ? context_size
+                                             : SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2
               (&(baton.prefix_str[unified_output_context]), " ",
@@ -655,8 +662,9 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
                     original_header, modified_header, pool));
         }
 
-      SVN_ERR(svn_diff_output(diff, &baton,
-                              &mem_output_unified_vtable));
+      SVN_ERR(svn_diff_output2(diff, &baton,
+                              &mem_output_unified_vtable,
+                              cancel_func, cancel_baton));
 
       SVN_ERR(output_unified_flush_hunk(&baton, hunk_delimiter));
 
@@ -666,28 +674,6 @@ svn_diff_mem_string_output_unified2(svn_stream_t *output_stream,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
-                                   svn_diff_t *diff,
-                                   const char *original_header,
-                                   const char *modified_header,
-                                   const char *header_encoding,
-                                   const svn_string_t *original,
-                                   const svn_string_t *modified,
-                                   apr_pool_t *pool)
-{
-  SVN_ERR(svn_diff_mem_string_output_unified2(output_stream,
-                                              diff,
-                                              TRUE,
-                                              NULL,
-                                              original_header,
-                                              modified_header,
-                                              header_encoding,
-                                              original,
-                                              modified,
-                                              pool));
-  return SVN_NO_ERROR;
-}
 
 
 
@@ -698,8 +684,9 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
    *pointers! */
 typedef struct context_saver_t {
   svn_stream_t *stream;
-  const char *data[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
-  apr_size_t len[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
+  int context_size;
+  const char **data; /* const char *data[context_size] */
+  apr_size_t *len;   /* apr_size_t len[context_size] */
   apr_size_t next_slot;
   apr_size_t total_written;
 } context_saver_t;
@@ -713,7 +700,7 @@ context_saver_stream_write(void *baton,
   context_saver_t *cs = baton;
   cs->data[cs->next_slot] = data;
   cs->len[cs->next_slot] = *len;
-  cs->next_slot = (cs->next_slot + 1) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  cs->next_slot = (cs->next_slot + 1) % cs->context_size;
   cs->total_written++;
   return SVN_NO_ERROR;
 }
@@ -733,6 +720,11 @@ typedef struct merge_output_baton_t
   const char *marker_eol;
 
   svn_diff_conflict_display_style_t conflict_style;
+  int context_size;
+
+  /* cancel support */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   /* The rest of the fields are for
      svn_diff_conflict_display_only_conflicts only.  Note that for
@@ -753,9 +745,9 @@ flush_context_saver(context_saver_t *cs,
                     svn_stream_t *output_stream)
 {
   int i;
-  for (i = 0; i < SVN_DIFF__UNIFIED_CONTEXT_SIZE; i++)
+  for (i = 0; i < cs->context_size; i++)
     {
-      apr_size_t slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      apr_size_t slot = (i + cs->next_slot) % cs->context_size;
       if (cs->data[slot])
         {
           apr_size_t len = cs->len[slot];
@@ -771,6 +763,8 @@ make_context_saver(merge_output_baton_t *mob)
 {
   context_saver_t *cs;
 
+  assert(mob->context_size > 0); /* Or nothing to save */
+
   svn_pool_clear(mob->pool);
   cs = apr_pcalloc(mob->pool, sizeof(*cs));
   cs->stream = svn_stream_empty(mob->pool);
@@ -778,10 +772,13 @@ make_context_saver(merge_output_baton_t *mob)
   svn_stream_set_write(cs->stream, context_saver_stream_write);
   mob->context_saver = cs;
   mob->output_stream = cs->stream;
+  cs->context_size = mob->context_size;
+  cs->data = apr_pcalloc(mob->pool, sizeof(*cs->data) * cs->context_size);
+  cs->len = apr_pcalloc(mob->pool, sizeof(*cs->len) * cs->context_size);
 }
 
 
-/* A stream which prints SVN_DIFF__UNIFIED_CONTEXT_SIZE lines to
+/* A stream which prints LINES_TO_PRINT (based on context_size) lines to
    BATON->REAL_OUTPUT_STREAM, and then changes BATON->OUTPUT_STREAM to
    a context_saver; used for *trailing* context. */
 
@@ -815,7 +812,7 @@ make_trailing_context_printer(merge_output_baton_t *btn)
   svn_pool_clear(btn->pool);
 
   tcp = apr_pcalloc(btn->pool, sizeof(*tcp));
-  tcp->lines_to_print = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  tcp->lines_to_print = btn->context_size;
   tcp->mob = btn;
   s = svn_stream_empty(btn->pool);
   svn_stream_set_baton(s, tcp);
@@ -913,7 +910,8 @@ output_conflict(void *baton,
   if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
       if (diff)
-        return svn_diff_output(diff, baton, &merge_output_vtable);
+        return svn_diff_output2(diff, baton, &merge_output_vtable,
+                                btn->cancel_func, btn->cancel_baton);
       else
         style = svn_diff_conflict_display_modified_latest;
     }
@@ -985,7 +983,7 @@ output_conflict_with_context(void *baton,
      trailing context)?  If so, flush it. */
   if (btn->output_stream == btn->context_saver->stream)
     {
-      if (btn->context_saver->total_written > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
+      if (btn->context_saver->total_written > btn->context_size)
         SVN_ERR(svn_stream_puts(btn->real_output_stream, "@@\n"));
       SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
     }
@@ -1056,7 +1054,7 @@ detect_eol(svn_string_t *token)
 }
 
 svn_error_t *
-svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
+svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
                                   svn_diff_t *diff,
                                   const svn_string_t *original,
                                   const svn_string_t *modified,
@@ -1066,6 +1064,8 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                   const char *conflict_latest,
                                   const char *conflict_separator,
                                   svn_diff_conflict_display_style_t style,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
                                   apr_pool_t *pool)
 {
   merge_output_baton_t btn;
@@ -1076,6 +1076,7 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
      ? &merge_only_conflicts_output_vtable : &merge_output_vtable;
 
   memset(&btn, 0, sizeof(btn));
+  btn.context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
   if (conflicts_only)
     {
@@ -1102,6 +1103,8 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
     eol = APR_EOL_STR;  /* use the platform default */
 
   btn.marker_eol = eol;
+  btn.cancel_func = cancel_func;
+  btn.cancel_baton = cancel_baton;
 
   SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[1],
                                     conflict_modified
@@ -1124,45 +1127,9 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                     : ">>>>>>> (latest)",
                                     pool));
 
-  SVN_ERR(svn_diff_output(diff, &btn, vtable));
+  SVN_ERR(svn_diff_output2(diff, &btn, vtable, cancel_func, cancel_baton));
   if (conflicts_only)
     svn_pool_destroy(btn.pool);
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
-                                 svn_diff_t *diff,
-                                 const svn_string_t *original,
-                                 const svn_string_t *modified,
-                                 const svn_string_t *latest,
-                                 const char *conflict_original,
-                                 const char *conflict_modified,
-                                 const char *conflict_latest,
-                                 const char *conflict_separator,
-                                 svn_boolean_t display_original_in_conflict,
-                                 svn_boolean_t display_resolved_conflicts,
-                                 apr_pool_t *pool)
-{
-  svn_diff_conflict_display_style_t style =
-    svn_diff_conflict_display_modified_latest;
-
-  if (display_resolved_conflicts)
-    style = svn_diff_conflict_display_resolved_modified_latest;
-
-  if (display_original_in_conflict)
-    style = svn_diff_conflict_display_modified_original_latest;
-
-  return svn_diff_mem_string_output_merge2(output_stream,
-                                           diff,
-                                           original,
-                                           modified,
-                                           latest,
-                                           conflict_original,
-                                           conflict_modified,
-                                           conflict_latest,
-                                           conflict_separator,
-                                           style,
-                                           pool);
 }

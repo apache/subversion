@@ -191,7 +191,8 @@ locks_closed(svn_ra_serf__xml_estate_t *xes,
 static svn_error_t *
 set_lock_headers(serf_bucket_t *headers,
                  void *baton,
-                 apr_pool_t *pool)
+                 apr_pool_t *pool /* request pool */,
+                 apr_pool_t *scratch_pool)
 {
   lock_ctx_t *lock_ctx = baton;
 
@@ -263,6 +264,7 @@ run_locks(svn_ra_serf__session_t *sess,
                                             ctx->handler->sline.reason);
                     break;
                   case 403:
+                    /* ### Authz can also lead to 403. */
                     err = svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH,
                                             NULL,
                                             _("Unlock of '%s' failed (%d %s)"),
@@ -314,6 +316,19 @@ run_locks(svn_ra_serf__session_t *sess,
                   && !SVN_ERR_IS_UNLOCK_ERROR(err)
                   && !SVN_ERR_IS_LOCK_ERROR(err))
                 {
+                  /* If the error that we are going to report is just about the
+                     POST unlock hook, we should first report that the operation
+                     succeeded, or the repository and working copy will be
+                     out of sync... */
+
+                  if (lock_func &&
+                      err->apr_err == SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED)
+                    {
+                      err = svn_error_compose_create(
+                                  err, lock_func(lock_baton, ctx->path, locking,
+                                                 NULL, NULL, ctx->pool));
+                    }
+
                   return svn_error_trace(err); /* Don't go through callbacks */
                 }
 
@@ -321,7 +336,7 @@ run_locks(svn_ra_serf__session_t *sess,
                 {
                   svn_lock_t *report_lock = NULL;
 
-                  if (locking)
+                  if (locking && ctx->lock->token)
                     report_lock = ctx->lock;
 
                   cb_err = lock_func(lock_baton, ctx->path, locking,
@@ -385,7 +400,8 @@ static svn_error_t *
 create_lock_body(serf_bucket_t **body_bkt,
                  void *baton,
                  serf_bucket_alloc_t *alloc,
-                 apr_pool_t *pool)
+                 apr_pool_t *pool /* request pool */,
+                 apr_pool_t *scratch_pool)
 {
   lock_ctx_t *ctx = baton;
   serf_bucket_t *buckets;
@@ -398,11 +414,11 @@ create_lock_body(serf_bucket_t **body_bkt,
                                     SVN_VA_NULL);
 
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockscope", SVN_VA_NULL);
-  svn_ra_serf__add_tag_buckets(buckets, "exclusive", NULL, alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc, "exclusive", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "lockscope");
 
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "locktype", SVN_VA_NULL);
-  svn_ra_serf__add_tag_buckets(buckets, "write", NULL, alloc);
+  svn_ra_serf__add_empty_tag_buckets(buckets, alloc, "write", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "locktype");
 
   if (ctx->lock->comment)
@@ -454,8 +470,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx = apr_pcalloc(scratch_pool, sizeof(*lock_ctx));
 
       lock_ctx->pool = lock_pool;
-      lock_ctx->path = svn__apr_hash_index_key(hi);
-      lock_ctx->revision = *((svn_revnum_t*)svn__apr_hash_index_val(hi));
+      lock_ctx->path = apr_hash_this_key(hi);
+      lock_ctx->revision = *((svn_revnum_t*)apr_hash_this_val(hi));
       lock_ctx->lock = svn_lock_create(lock_pool);
       lock_ctx->lock->path = lock_ctx->path;
       lock_ctx->lock->comment = comment;
@@ -468,7 +484,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
                                                NULL, locks_closed, NULL,
                                                lock_ctx,
                                                lock_pool);
-      handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, lock_pool);
+      handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL,
+                                                  lock_pool);
 
       handler->method = "LOCK";
       handler->path = req_url;
@@ -480,8 +497,6 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       if (session->cur_conn >= session->num_conns)
         session->cur_conn = 0;
-
-      handler->session = session;
 
       handler->header_delegate = set_lock_headers;
       handler->header_delegate_baton = lock_ctx;
@@ -514,7 +529,8 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 static svn_error_t *
 set_unlock_headers(serf_bucket_t *headers,
                    void *baton,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
 {
   lock_ctx_t *ctx = baton;
 
@@ -563,8 +579,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
           svn_pool_clear(iterpool);
 
-          path = svn__apr_hash_index_key(hi);
-          token = svn__apr_hash_index_val(hi);
+          path = apr_hash_this_key(hi);
+          token = apr_hash_this_val(hi);
 
           if (token && token[0])
             continue;
@@ -624,8 +640,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       lock_ctx->pool = lock_pool;
 
-      lock_ctx->path = svn__apr_hash_index_key(hi);
-      token = svn__apr_hash_index_val(hi);
+      lock_ctx->path = apr_hash_this_key(hi);
+      token = apr_hash_this_val(hi);
 
       lock_ctx->force = force;
       lock_ctx->token = apr_pstrcat(lock_pool, "<", token, ">", SVN_VA_NULL);
@@ -633,12 +649,10 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       req_url = svn_path_url_add_component2(session->session_url.path, lock_ctx->path,
                                             lock_pool);
 
-      handler = svn_ra_serf__create_handler(lock_pool);
+      handler = svn_ra_serf__create_handler(session, lock_pool);
 
       handler->method = "UNLOCK";
       handler->path = req_url;
-      handler->conn = session->conns[0];
-      handler->session = session;
 
       handler->header_delegate = set_unlock_headers;
       handler->header_delegate_baton = lock_ctx;

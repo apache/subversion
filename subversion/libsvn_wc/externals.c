@@ -68,6 +68,7 @@
  * the revision if the revision is found.  Set REV_IDX to the index in
  * LINE_PARTS where the revision specification starts.  Remove from
  * LINE_PARTS the element(s) that specify the revision.
+ * Set REV_STR to the element that specifies the revision.
  * PARENT_DIRECTORY_DISPLAY and LINE are given to return a nice error
  * string.
  *
@@ -76,6 +77,7 @@
  */
 static svn_error_t *
 find_and_remove_externals_revision(int *rev_idx,
+                                   const char **rev_str,
                                    const char **line_parts,
                                    int num_line_parts,
                                    svn_wc_external_item2_t *item,
@@ -137,6 +139,8 @@ find_and_remove_externals_revision(int *rev_idx,
             line_parts[j] = line_parts[j+shift_count];
           line_parts[num_line_parts-shift_count] = NULL;
 
+          *rev_str = apr_psprintf(pool, "-r%s", digits_ptr);
+
           /* Found the revision, so leave the function immediately, do
            * not continue looking for additional revisions. */
           return SVN_NO_ERROR;
@@ -158,22 +162,28 @@ find_and_remove_externals_revision(int *rev_idx,
 }
 
 svn_error_t *
-svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
-                                    const char *parent_directory,
+svn_wc__parse_externals_description(apr_array_header_t **externals_p,
+                                    apr_array_header_t **parser_infos_p,
+                                    const char *defining_directory,
                                     const char *desc,
                                     svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool)
 {
   int i;
   apr_array_header_t *externals = NULL;
+  apr_array_header_t *parser_infos = NULL;
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
-  const char *parent_directory_display = svn_path_is_url(parent_directory) ?
-    parent_directory : svn_dirent_local_style(parent_directory, pool);
+  const char *defining_directory_display = svn_path_is_url(defining_directory) ?
+    defining_directory : svn_dirent_local_style(defining_directory, pool);
 
   /* If an error occurs halfway through parsing, *externals_p should stay
    * untouched. So, store the list in a local var first. */
   if (externals_p)
     externals = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
+
+  if (parser_infos_p)
+    parser_infos =
+      apr_array_make(pool, 1, sizeof(svn_wc__externals_parser_info_t *));
 
   for (i = 0; i < lines->nelts; i++)
     {
@@ -186,10 +196,12 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       const char *token1;
       svn_boolean_t token0_is_url;
       svn_boolean_t token1_is_url;
+      svn_wc__externals_parser_info_t *info = NULL;
 
       /* Index into line_parts where the revision specification
          started. */
       int rev_idx = -1;
+      const char *rev_str = NULL;
 
       if ((! line) || (line[0] == '#'))
         continue;
@@ -208,6 +220,9 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       SVN_ERR(svn_wc_external_item2_create(&item, pool));
       item->revision.kind = svn_opt_revision_unspecified;
       item->peg_revision.kind = svn_opt_revision_unspecified;
+
+      if (parser_infos)
+        info = apr_pcalloc(pool, sizeof(*info));
 
       /*
        * There are six different formats of externals:
@@ -231,7 +246,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
           (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
            _("Error parsing %s property on '%s': '%s'"),
            SVN_PROP_EXTERNALS,
-           parent_directory_display,
+           defining_directory_display,
            line);
 
       /* To make it easy to check for the forms, find and remove -r N
@@ -240,9 +255,10 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
          set item->revision to the parsed revision. */
       /* ### ugh. stupid cast. */
       SVN_ERR(find_and_remove_externals_revision(&rev_idx,
+                                                 &rev_str,
                                                  (const char **)line_parts,
                                                  num_line_parts, item,
-                                                 parent_directory_display,
+                                                 defining_directory_display,
                                                  line, pool));
 
       token0 = line_parts[0];
@@ -258,7 +274,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
              "cannot use two absolute URLs ('%s' and '%s') in an external; "
              "one must be a path where an absolute or relative URL is "
              "checked out to"),
-           SVN_PROP_EXTERNALS, parent_directory_display, token0, token1);
+           SVN_PROP_EXTERNALS, defining_directory_display, token0, token1);
 
       if (0 == rev_idx && token1_is_url)
         return svn_error_createf
@@ -266,7 +282,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
            _("Invalid %s property on '%s': "
              "cannot use a URL '%s' as the target directory for an external "
              "definition"),
-           SVN_PROP_EXTERNALS, parent_directory_display, token1);
+           SVN_PROP_EXTERNALS, defining_directory_display, token1);
 
       if (1 == rev_idx && token0_is_url)
         return svn_error_createf
@@ -274,7 +290,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
            _("Invalid %s property on '%s': "
              "cannot use a URL '%s' as the target directory for an external "
              "definition"),
-           SVN_PROP_EXTERNALS, parent_directory_display, token0);
+           SVN_PROP_EXTERNALS, defining_directory_display, token0);
 
       /* The appearance of -r N or -rN forces the type of external.
          If -r is at the beginning of the line or the first token is
@@ -290,12 +306,34 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
           SVN_ERR(svn_opt_parse_path(&item->peg_revision, &item->url,
                                      token0, pool));
           item->target_dir = token1;
+
+          if (info)
+            {
+              info->format = svn_wc__external_description_format_2;
+
+              if (rev_str)
+                info->rev_str = apr_pstrdup(pool, rev_str);
+
+              if (item->peg_revision.kind != svn_opt_revision_unspecified)
+                info->peg_rev_str = strrchr(token0, '@');
+            }
         }
       else
         {
           item->target_dir = token0;
           item->url = token1;
           item->peg_revision = item->revision;
+
+          if (info)
+            {
+              info->format = svn_wc__external_description_format_1;
+
+              if (rev_str)
+                {
+                  info->rev_str = apr_pstrdup(pool, rev_str);
+                  info->peg_rev_str = info->rev_str;
+                }
+            }
         }
 
       SVN_ERR(svn_opt_resolve_revisions(&item->peg_revision,
@@ -316,7 +354,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
            _("Invalid %s property on '%s': "
              "target '%s' is an absolute path or involves '..'"),
            SVN_PROP_EXTERNALS,
-           parent_directory_display,
+           defining_directory_display,
            item->target_dir);
 
       if (canonicalize_url)
@@ -333,12 +371,31 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       if (externals)
         APR_ARRAY_PUSH(externals, svn_wc_external_item2_t *) = item;
+      if (parser_infos)
+        APR_ARRAY_PUSH(parser_infos, svn_wc__externals_parser_info_t *) = info;
     }
 
   if (externals_p)
     *externals_p = externals;
+  if (parser_infos_p)
+    *parser_infos_p = parser_infos;
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
+                                    const char *defining_directory,
+                                    const char *desc,
+                                    svn_boolean_t canonicalize_url,
+                                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_wc__parse_externals_description(externals_p,
+                                                             NULL,
+                                                             defining_directory,
+                                                             desc,
+                                                             canonicalize_url,
+                                                             pool));
 }
 
 svn_error_t *
@@ -417,8 +474,6 @@ struct edit_baton
   /* Introducing a new file external */
   svn_boolean_t added;
 
-  svn_wc_conflict_resolver_func2_t conflict_func;
-  void *conflict_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
   svn_wc_notify_func2_t notify_func;
@@ -604,7 +659,7 @@ change_file_prop(void *file_baton,
 
   propchange = apr_array_push(eb->propchanges);
   propchange->name = apr_pstrdup(eb->pool, name);
-  propchange->value = value ? svn_string_dup(value, eb->pool) : NULL;
+  propchange->value = svn_string_dup(value, eb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -945,29 +1000,62 @@ close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
 
-  if (!eb->file_closed
-      || eb->iprops)
+  if (!eb->file_closed)
     {
-      apr_hash_t *wcroot_iprops = NULL;
+      /* The file wasn't updated, but its url or revision might have...
+         e.g. switch between branches for relative externals.
 
-      if (eb->iprops)
-        {
-          wcroot_iprops = apr_hash_make(pool);
-          svn_hash_sets(wcroot_iprops, eb->local_abspath, eb->iprops);
-        }
+         Just bump the information as that is just as expensive as
+         investigating when we should and shouldn't update it...
+         and avoid hard to debug edge cases */
 
-      /* The node wasn't updated, so we just have to bump its revision */
-      SVN_ERR(svn_wc__db_op_bump_revisions_post_update(eb->db,
-                                                       eb->local_abspath,
-                                                       svn_depth_infinity,
-                                                       NULL, NULL, NULL,
-                                                       *eb->target_revision,
-                                                       apr_hash_make(pool),
-                                                       wcroot_iprops,
-                                                       TRUE /* empty update */,
-                                                       eb->notify_func,
-                                                       eb->notify_baton,
-                                                       pool));
+      svn_node_kind_t kind;
+      const char *old_repos_relpath;
+      svn_revnum_t changed_rev;
+      apr_time_t changed_date;
+      const char *changed_author;
+      const svn_checksum_t *checksum;
+      apr_hash_t *pristine_props;
+      const char *repos_relpath = svn_uri_skip_ancestor(eb->repos_root_url,
+                                                        eb->url, pool);
+
+      SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, NULL, &old_repos_relpath,
+                                       NULL, NULL, &changed_rev, &changed_date,
+                                       &changed_author, NULL, &checksum, NULL,
+                                       NULL, NULL, &pristine_props, NULL,
+                                       eb->db, eb->local_abspath,
+                                       pool, pool));
+
+      if (kind != svn_node_file)
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                   _("Node '%s' is no existing file external"),
+                                   svn_dirent_local_style(eb->local_abspath,
+                                                          pool));
+
+      SVN_ERR(svn_wc__db_external_add_file(
+                    eb->db,
+                    eb->local_abspath,
+                    eb->wri_abspath,
+                    repos_relpath,
+                    eb->repos_root_url,
+                    eb->repos_uuid,
+                    *eb->target_revision,
+                    pristine_props,
+                    eb->iprops,
+                    eb->changed_rev,
+                    eb->changed_date,
+                    eb->changed_author,
+                    checksum,
+                    NULL /* clear dav props */,
+                    eb->record_ancestor_abspath,
+                    eb->recorded_repos_relpath,
+                    eb->recorded_peg_revision,
+                    eb->recorded_revision,
+                    FALSE, NULL,
+                    TRUE /* keep_recorded_info */,
+                    NULL /* conflict_skel */,
+                    NULL /* work_items */,
+                    pool));
     }
 
   return SVN_NO_ERROR;
@@ -991,8 +1079,6 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const char *recorded_url,
                                  const svn_opt_revision_t *recorded_peg_rev,
                                  const svn_opt_revision_t *recorded_rev,
-                                 svn_wc_conflict_resolver_func2_t conflict_func,
-                                 void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
                                  svn_wc_notify_func2_t notify_func,
@@ -1041,8 +1127,6 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   else
     eb->recorded_revision = SVN_INVALID_REVNUM; /* Not fixed/HEAD */
 
-  eb->conflict_func = conflict_func;
-  eb->conflict_baton = conflict_baton;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
   eb->notify_func = notify_func;
@@ -1412,10 +1496,8 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
   else
     {
       SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
-                                     FALSE /* keep_as_working */,
-                                     TRUE /* queue_deletes */,
-                                     FALSE /* remove_locks */,
-                                     SVN_INVALID_REVNUM,
+                                     FALSE, TRUE, FALSE,
+                                     0,
                                      NULL, NULL, scratch_pool));
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
                              cancel_func, cancel_baton,

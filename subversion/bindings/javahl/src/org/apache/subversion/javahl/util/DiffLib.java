@@ -66,6 +66,8 @@ public class DiffLib
                                : diffOptions.ignoreEolStyle),
                               (diffOptions == null ? false
                                : diffOptions.showCFunction),
+                              (diffOptions == null ? -1
+                               : diffOptions.contextSize),
 
                               originalHeader, modifiedHeader, headerEncoding,
                               relativeToDir, resultStream);
@@ -79,6 +81,7 @@ public class DiffLib
                                int ignoreSpace,
                                boolean ignoreEolStyle,
                                boolean showCFunction,
+                               int contextSize,
 
                                String originalHeader,
                                String modifiedHeader,

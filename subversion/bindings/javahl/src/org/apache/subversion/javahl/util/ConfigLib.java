@@ -23,14 +23,18 @@
 
 package org.apache.subversion.javahl.util;
 
+import org.apache.subversion.javahl.callback.*;
+
 import org.apache.subversion.javahl.SVNUtil;
 import org.apache.subversion.javahl.ClientException;
 import org.apache.subversion.javahl.NativeResources;
+import org.apache.subversion.javahl.SubversionException;
 
-import org.apache.subversion.javahl.callback.*;
+import java.util.List;
 
 /**
- * Provides global configuration knobs.
+ * Provides global configuration knobs and
+ * Encapsulates utility functions for authentication credentials management.
  * @since 1.9
  */
 public class ConfigLib
@@ -54,4 +58,64 @@ public class ConfigLib
     /** @see SVNUtil.isNativeCredentialsStoreEnabled */
     public native boolean isNativeCredentialsStoreEnabled()
         throws ClientException;
+
+    //
+    // Credentials management
+    //
+
+    /** @see SVNUtil.getCredential */
+    public SVNUtil.Credential getCredential(String configDir,
+                                            SVNUtil.Credential.Kind kind,
+                                            String realm)
+        throws ClientException, SubversionException
+    {
+        return nativeGetCredential(configDir, kind.toString(), realm);
+    }
+
+    /** @see SVNUtil.removeCredential */
+    public SVNUtil.Credential removeCredential(String configDir,
+                                               SVNUtil.Credential.Kind kind,
+                                               String realm)
+        throws ClientException, SubversionException
+    {
+        return nativeRemoveCredential(configDir, kind.toString(), realm);
+    }
+
+    /** @see SVNUtil.searchCredentials */
+    public List<SVNUtil.Credential>
+        searchCredentials(String configDir,
+                          SVNUtil.Credential.Kind kind,
+                          String realmPattern,
+                          String usernamePattern,
+                          String hostnamePattern,
+                          String textPattern)
+        throws ClientException, SubversionException
+    {
+        return nativeSearchCredentials(
+            configDir,
+            (kind != null ? kind.toString() : null),
+            realmPattern, usernamePattern, hostnamePattern, textPattern);
+    }
+
+    private native SVNUtil.Credential
+        nativeGetCredential(String configDir,
+                               String kind,
+                               String realm)
+        throws ClientException, SubversionException;
+
+    private native SVNUtil.Credential
+        nativeRemoveCredential(String configDir,
+                               String kind,
+                               String realm)
+        throws ClientException, SubversionException;
+
+    private native List<SVNUtil.Credential>
+        nativeSearchCredentials(String configDir,
+                                String kind,
+                                String realmPattern,
+                                String usernamePattern,
+                                String hostnamePattern,
+                                String textPattern)
+        throws ClientException, SubversionException;
 }
+

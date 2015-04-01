@@ -74,57 +74,13 @@ ssl_server_trust_file_first_credentials(void **credentials,
       if (failstr)
         SVN_ERR(svn_cstring_atoui(&last_failures, failstr->data));
 
+      /* If the cert is trusted and there are no new failures, we
+       * accept it by clearing all failures. */
       if (trusted_cert &&
-          svn_string_compare(this_cert, trusted_cert))
+          svn_string_compare(this_cert, trusted_cert) &&
+          (*failures & ~last_failures) == 0)
         {
-          svn_boolean_t save_cert = FALSE;
-
-          /* If the cert is trusted and there are no new failures, we
-           * accept it by clearing all failures. */
-          if ((*failures & ~last_failures) == 0)
-            {
-              *failures = 0;
-            }
-
-          /* If the on-disk cert info is lacking new-in-1.9 human-readable
-             info, add the info now and save the cert. */
-          if (!svn_hash_gets(creds_hash, SVN_CONFIG_AUTHN_HOSTNAME_KEY))
-            {
-              svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_HOSTNAME_KEY,
-                            svn_string_create(cert_info->hostname, pool));
-              save_cert = TRUE;
-            }
-          if (!svn_hash_gets(creds_hash, SVN_CONFIG_AUTHN_FINGERPRINT_KEY))
-            {
-              svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_FINGERPRINT_KEY,
-                            svn_string_create(cert_info->fingerprint, pool));
-              save_cert = TRUE;
-            }
-          if (!svn_hash_gets(creds_hash, SVN_CONFIG_AUTHN_VALID_FROM_KEY))
-            {
-              svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_VALID_FROM_KEY,
-                            svn_string_create(cert_info->valid_from, pool));
-              save_cert = TRUE;
-            }
-          if (!svn_hash_gets(creds_hash, SVN_CONFIG_AUTHN_VALID_UNTIL_KEY))
-            {
-              svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_VALID_UNTIL_KEY,
-                            svn_string_create(cert_info->valid_until, pool));
-              save_cert = TRUE;
-            }
-          if (!svn_hash_gets(creds_hash, SVN_CONFIG_AUTHN_ISSUER_DN_KEY))
-            {
-              svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_ISSUER_DN_KEY,
-                            svn_string_create(cert_info->issuer_dname, pool));
-              save_cert = TRUE;
-            }
-
-          if (save_cert)
-            SVN_ERR(svn_config_write_auth_data(creds_hash,
-                                               SVN_AUTH_CRED_SSL_SERVER_TRUST,
-                                               realmstring,
-                                               config_dir,
-                                               pool));
+          *failures = 0;
         }
     }
 
@@ -167,16 +123,6 @@ ssl_server_trust_file_save_credentials(svn_boolean_t *saved,
   svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_FAILURES_KEY,
                 svn_string_createf(pool, "%lu",
                                    (unsigned long)creds->accepted_failures));
-  svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_HOSTNAME_KEY,
-                svn_string_create(cert_info->hostname, pool));
-  svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_FINGERPRINT_KEY,
-                svn_string_create(cert_info->fingerprint, pool));
-  svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_VALID_FROM_KEY,
-                svn_string_create(cert_info->valid_from, pool));
-  svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_VALID_UNTIL_KEY,
-                svn_string_create(cert_info->valid_until, pool));
-  svn_hash_sets(creds_hash, SVN_CONFIG_AUTHN_ISSUER_DN_KEY,
-                svn_string_create(cert_info->issuer_dname, pool));
 
   SVN_ERR(svn_config_write_auth_data(creds_hash,
                                      SVN_AUTH_CRED_SSL_SERVER_TRUST,

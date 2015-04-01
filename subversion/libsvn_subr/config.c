@@ -247,7 +247,7 @@ read_all(svn_config_t **cfgp,
 
 /* CONFIG_DIR provides an override for the default behavior of reading
    the default set of overlay files described by read_all()'s doc
-   string. */
+   string.  Returns non-NULL *CFG or an error. */
 static svn_error_t *
 get_category_config(svn_config_t **cfg,
                     const char *config_dir,
@@ -296,19 +296,29 @@ svn_config_get_config(apr_hash_t **cfg_hash,
   svn_config_t *cfg;
   *cfg_hash = apr_hash_make(pool);
 
-#define CATLEN (sizeof(SVN_CONFIG_CATEGORY_SERVERS) - 1)
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_SERVERS,
                               pool));
-  if (cfg)
-    apr_hash_set(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, CATLEN, cfg);
-#undef CATLEN
+  svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, cfg);
 
-#define CATLEN (sizeof(SVN_CONFIG_CATEGORY_CONFIG) - 1)
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_CONFIG,
                               pool));
-  if (cfg)
-    apr_hash_set(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, CATLEN, cfg);
-#undef CATLEN
+  svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, cfg);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_config__get_default_config(apr_hash_t **cfg_hash,
+                               apr_pool_t *pool)
+{
+  svn_config_t *empty_cfg;
+  *cfg_hash = apr_hash_make(pool);
+
+  SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
+  svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, empty_cfg);
+
+  SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
+  svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, empty_cfg);
 
   return SVN_NO_ERROR;
 }
@@ -504,14 +514,15 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
           expand_option_value(cfg, section, opt->value, &opt->x_value, tmp_pool);
           opt->expanded = TRUE;
 
-          if (!x_pool)
+          if (x_pool != cfg->x_pool)
             {
               /* Grab the fully expanded value from tmp_pool before its
                  disappearing act. */
               if (opt->x_value)
                 opt->x_value = apr_pstrmemdup(cfg->x_pool, opt->x_value,
                                               strlen(opt->x_value));
-              svn_pool_destroy(tmp_pool);
+              if (!x_pool)
+                svn_pool_destroy(tmp_pool);
             }
         }
       else
@@ -730,7 +741,7 @@ svn_config_set(svn_config_t *cfg,
   cfg_option_t *opt;
 
   /* Ignore write attempts to r/o configurations.
-   * 
+   *
    * Since we should never try to modify r/o data, trigger an assertion
    * in debug mode.
    */
@@ -1113,7 +1124,7 @@ svn_config_get_server_setting(svn_config_t *cfg,
 
 svn_error_t *
 svn_config_dup(svn_config_t **cfgp,
-               svn_config_t *src,
+               const svn_config_t *src,
                apr_pool_t *pool)
 {
   apr_hash_index_t *sectidx;

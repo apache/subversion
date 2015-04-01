@@ -94,9 +94,7 @@ index_revision_adds(int *count, svn_fs_t *fs,
       apr_hash_this(hi, &path, NULL, &val);
       change = val;
       if ((change->change_kind == svn_fs_path_change_add)
-          || (change->change_kind == svn_fs_path_change_replace)
-          || (change->change_kind == svn_fs_path_change_move)
-          || (change->change_kind == svn_fs_path_change_movereplace))
+          || (change->change_kind == svn_fs_path_change_replace))
         {
           if (! (change->copyfrom_path
                             && SVN_IS_VALID_REVNUM(change->copyfrom_rev)))
@@ -124,7 +122,7 @@ build_index(const char *repos_path, apr_pool_t *pool)
   apr_pool_t *subpool;
 
   /* Open the repository. */
-  SVN_ERR(svn_repos_open2(&repos, repos_path, NULL, pool));
+  SVN_ERR(svn_repos_open3(&repos, repos_path, NULL, pool, pool));
 
   /* Get a filesystem object. */
   fs = svn_repos_fs(repos);

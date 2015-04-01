@@ -800,7 +800,8 @@ authz_retrieve_config_repo(svn_config_t **cfg_p,
                              "Unable to find repository at '%s'", dirent);
 
   /* Attempt to open a repository at repos_root_dirent. */
-  SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
+  SVN_ERR(svn_repos_open3(&repos, repos_root_dirent, NULL, scratch_pool,
+                          scratch_pool));
 
   fs_path = &dirent[strlen(repos_root_dirent)];
 

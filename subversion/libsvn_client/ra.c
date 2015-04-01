@@ -327,17 +327,20 @@ progress_func(apr_off_t progress,
               apr_pool_t *pool)
 {
   callback_baton_t *b = baton;
-  svn_client_ctx_t *ctx = b->ctx;
+  svn_client_ctx_t *public_ctx = b->ctx;
+  svn_client__private_ctx_t *private_ctx =
+    svn_client__get_private_ctx(public_ctx);
 
-  ctx->progress += (progress - b->last_progress);
+  private_ctx->total_progress += (progress - b->last_progress);
   b->last_progress = progress;
 
-  if (ctx->progress_func)
+  if (public_ctx->progress_func)
     {
       /* All RA implementations currently provide -1 for total. So it doesn't
          make sense to develop some complex logic to combine total across all
          RA sessions. */
-      ctx->progress_func(ctx->progress, -1, ctx->progress_baton, pool);
+      public_ctx->progress_func(private_ctx->total_progress, -1,
+                                public_ctx->progress_baton, pool);
     }
 }
 
@@ -462,7 +465,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                 svn_wc_create_notify_url(corrected,
                                          svn_wc_notify_url_redirect,
                                          scratch_pool);
-              (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+              ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
             }
 
           /* Our caller will want to know what our final corrected URL was. */
@@ -734,7 +737,7 @@ repos_locations(const char **start_url,
           || (SVN_IS_VALID_REVNUM(end_revnum) && (end_revnum > youngest_rev)))
         return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                  _("No such revision %ld"),
-                                 (start_revnum > youngest_rev) 
+                                 (start_revnum > youngest_rev)
                                         ? start_revnum : end_revnum);
 
       if (start_url)
@@ -971,9 +974,9 @@ svn_client__calc_youngest_common_ancestor(svn_client__pathrev_t **ancestor_p,
      remembering the youngest matching location. */
   for (hi = apr_hash_first(scratch_pool, history1); hi; hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
-      svn_rangelist_t *ranges1 = svn__apr_hash_index_val(hi);
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t path_len = apr_hash_this_key_len(hi);
+      svn_rangelist_t *ranges1 = apr_hash_this_val(hi);
       svn_rangelist_t *ranges2, *common;
 
       ranges2 = apr_hash_get(history2, path, path_len);

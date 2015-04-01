@@ -352,6 +352,25 @@ file_open(apr_file_t **f,
 
   if (retry_on_failure)
     {
+#ifdef WIN32
+      if (status == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED))
+        {
+          if ((flag & (APR_CREATE | APR_EXCL)) == (APR_CREATE | APR_EXCL))
+            return status; /* Can't create if there is something */
+
+          if (flag & (APR_WRITE | APR_CREATE))
+            {
+              apr_finfo_t finfo;
+
+              if (!apr_stat(&finfo, fname_apr, SVN__APR_FINFO_READONLY, pool))
+                {
+                  if (finfo.protection & APR_FREADONLY)
+                    return status; /* Retrying won't fix this */
+                }
+            }
+        }
+#endif
+
       WIN32_RETRY_LOOP(status, apr_file_open(f, fname_apr, flag, perm, pool));
     }
   return status;
@@ -983,10 +1002,9 @@ svn_io_copy_perms(const char *src,
           svn_error_clear(err);
         else
           {
-            const char *message;
-            message = apr_psprintf(pool, _("Can't set permissions on '%s'"),
-                                   svn_dirent_local_style(dst, pool));
-            return svn_error_quick_wrap(err, message);
+            return svn_error_quick_wrapf(
+                     err, _("Can't set permissions on '%s'"),
+                     svn_dirent_local_style(dst, pool));
           }
       }
   }
@@ -1154,8 +1172,13 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
 
   apr_err = apr_dir_make_recursive(path_apr, APR_OS_DEFAULT, pool);
-  WIN32_RETRY_LOOP(apr_err, apr_dir_make_recursive(path_apr,
-                                                   APR_OS_DEFAULT, pool));
+#ifdef WIN32
+  /* Don't retry on ERROR_ACCESS_DENIED, as that typically signals a
+     permanent error */
+  if (apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
+    WIN32_RETRY_LOOP(apr_err, apr_dir_make_recursive(path_apr,
+                                                     APR_OS_DEFAULT, pool));
+#endif
 
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't make directory '%s'"),
@@ -1165,10 +1188,10 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_io_file_create_binary(const char *file,
-                          const char *contents,
-                          apr_size_t length,
-                          apr_pool_t *pool)
+svn_io_file_create_bytes(const char *file,
+                         const void *contents,
+                         apr_size_t length,
+                         apr_pool_t *pool)
 {
   apr_file_t *f;
   apr_size_t written;
@@ -1204,18 +1227,17 @@ svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool)
 {
-  return svn_error_trace(svn_io_file_create_binary(file, contents,
-                                                   contents
-                                                        ? strlen(contents)
-                                                        : 0,
-                                                   pool));
+  return svn_error_trace(svn_io_file_create_bytes(file, contents,
+                                                  contents ? strlen(contents)
+                                                           : 0,
+                                                  pool));
 }
 
 svn_error_t *
 svn_io_file_create_empty(const char *file,
                          apr_pool_t *pool)
 {
-  return svn_error_trace(svn_io_file_create_binary(file, "", 0, pool));
+  return svn_error_trace(svn_io_file_create_bytes(file, NULL, 0, pool));
 }
 
 svn_error_t *
@@ -1586,7 +1608,8 @@ io_set_file_perms(const char *path,
   status = apr_stat(&finfo, path_apr, APR_FINFO_PROT | APR_FINFO_LINK, pool);
   if (status)
     {
-      if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
+      if (ignore_enoent && (APR_STATUS_IS_ENOENT(status)
+                            || SVN__APR_STATUS_IS_ENOTDIR(status)))
         return SVN_NO_ERROR;
       else if (status != APR_ENOTIMPL)
         return svn_error_wrap_apr(status,
@@ -1947,7 +1970,8 @@ svn_io_set_file_read_only(const char *path,
                               pool);
 
   if (status && status != APR_ENOTIMPL)
-    if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
+    if (!(ignore_enoent && (APR_STATUS_IS_ENOENT(status)
+                            || SVN__APR_STATUS_IS_ENOTDIR(status))))
       return svn_error_wrap_apr(status,
                                 _("Can't set file '%s' read-only"),
                                 svn_dirent_local_style(path, pool));
@@ -2238,6 +2262,35 @@ svn_io_file_lock2(const char *lock_file,
   return svn_io_lock_open_file(lockfile_handle, exclusive, nonblocking, pool);
 }
 
+svn_error_t *
+svn_io__file_lock_autocreate(const char *lock_file,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err
+    = svn_io_file_lock2(lock_file, TRUE, FALSE, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* No lock file?  No big deal; these are just empty files anyway.
+         Create it and try again. */
+      svn_error_clear(err);
+
+      /* This file creation is racy.
+         We don't care as long as file gets created at all. */
+      err = svn_io_file_create_empty(lock_file, pool);
+      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+
+      /* Finally, lock the file - if it exists */
+      if (!err)
+        err = svn_io_file_lock2(lock_file, TRUE, FALSE, pool);
+    }
+
+  return svn_error_trace(err);
+}
+
 
 
 /* Data consistency/coherency operations. */
@@ -2333,7 +2386,7 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
                                          res_initial_len, &res->len,
                                          &eof, pool));
           res->data[res->len] = 0;
-          
+
           *result = res;
           return SVN_NO_ERROR;
         }
@@ -2421,11 +2474,6 @@ svn_io_remove_file2(const char *path,
   SVN_ERR(cstring_from_utf8(&path_apr, path, scratch_pool));
 
   apr_err = apr_file_remove(path_apr, scratch_pool);
-  if (!apr_err
-      || (ignore_enoent
-          && (APR_STATUS_IS_ENOENT(apr_err)
-              || SVN__APR_STATUS_IS_ENOTDIR(apr_err))))
-    return SVN_NO_ERROR;
 
 #ifdef WIN32
   /* If the target is read only NTFS reports EACCESS and FAT/FAT32
@@ -2441,30 +2489,36 @@ svn_io_remove_file2(const char *path,
         return SVN_NO_ERROR;
     }
 
+  /* Check to make sure we aren't trying to delete a directory */
+  if (apr_err == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED)
+      || apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
     {
-      apr_status_t os_err = APR_TO_OS_ERROR(apr_err);
-      /* Check to make sure we aren't trying to delete a directory */
-      if (os_err == ERROR_ACCESS_DENIED || os_err == ERROR_SHARING_VIOLATION)
+      apr_finfo_t finfo;
+
+      if (!apr_stat(&finfo, path_apr, APR_FINFO_TYPE, scratch_pool)
+          && finfo.filetype == APR_REG)
         {
-          apr_finfo_t finfo;
-
-          if (!apr_stat(&finfo, path_apr, APR_FINFO_TYPE, scratch_pool)
-              && finfo.filetype == APR_REG)
-            {
-              WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr,
-                                                        scratch_pool));
-            }
+          WIN32_RETRY_LOOP(apr_err, apr_file_remove(path_apr, scratch_pool));
         }
-
-      /* Just return the delete error */
     }
+
+  /* Just return the delete error */
 #endif
 
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
-                              svn_dirent_local_style(path, scratch_pool));
-
-  return SVN_NO_ERROR;
+  if (!apr_err)
+    {
+      return SVN_NO_ERROR;
+    }
+  else if (ignore_enoent && (APR_STATUS_IS_ENOENT(apr_err)
+                             || SVN__APR_STATUS_IS_ENOTDIR(apr_err)))
+    {
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      return svn_error_wrap_apr(apr_err, _("Can't remove file '%s'"),
+                                svn_dirent_local_style(path, scratch_pool));
+    }
 }
 
 
@@ -2519,7 +2573,8 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   if (err)
     {
       /* if the directory doesn't exist, our mission is accomplished */
-      if (ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
+      if (ignore_enoent && (APR_STATUS_IS_ENOENT(err->apr_err)
+                            || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
         {
           svn_error_clear(err);
           return SVN_NO_ERROR;
@@ -2529,8 +2584,8 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
 
   for (hi = apr_hash_first(subpool, dirents); hi; hi = apr_hash_next(hi))
     {
-      const char *name = svn__apr_hash_index_key(hi);
-      const svn_io_dirent2_t *dirent = svn__apr_hash_index_val(hi);
+      const char *name = apr_hash_this_key(hi);
+      const svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
       const char *fullpath;
 
       fullpath = svn_dirent_join(path, name, subpool);
@@ -2838,6 +2893,10 @@ svn_io_start_cmd3(apr_proc_t *cmd_proc,
   if (path)
     {
       const char *path_apr;
+
+      /* APR doesn't like our canonical path format for current directory */
+      if (path[0] == '\0')
+        path = ".";
 
       SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
       apr_err = apr_procattr_dir_set(cmdproc_attr, path_apr);
@@ -3624,7 +3683,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
          buffer and no I/O will actually happen in the FILL_BUFFER
          section below.
        */
-      SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
       fill_buffer = aligned_offset + file_buffer_size <= current
                  || current <= aligned_offset;
     }
@@ -3635,7 +3694,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
       apr_status_t status;
 
       /* seek to the start of the block and cause APR to read 1 block */
-      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &aligned_offset, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &aligned_offset, pool));
       status = apr_file_getc(&dummy, file);
 
       /* read may fail if we seek to or behind EOF.  That's ok then. */
@@ -3648,7 +3707,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
 
   /* finally, seek to the OFFSET the caller wants */
   desired_offset = offset;
-  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   if (desired_offset != offset)
     return do_io_file_wrapper_cleanup(file, APR_EOF,
                                       N_("Can't seek in file '%s'"),
@@ -4050,7 +4109,13 @@ dir_make(const char *path, apr_fileperms_t perm,
 #endif
 
   status = apr_dir_make(path_apr, perm, pool);
-  WIN32_RETRY_LOOP(status, apr_dir_make(path_apr, perm, pool));
+
+#ifdef WIN32
+  /* Don't retry on ERROR_ACCESS_DENIED, as that typically signals a
+     permanent error */
+  if (status == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
+    WIN32_RETRY_LOOP(status, apr_dir_make(path_apr, perm, pool));
+#endif
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't create directory '%s'"),
@@ -4499,7 +4564,6 @@ svn_io_read_version_file(int *version,
 
   return SVN_NO_ERROR;
 }
-
 
 
 /* Do a byte-for-byte comparison of FILE1 and FILE2. */
@@ -5004,8 +5068,22 @@ svn_io_open_unique_file3(apr_file_t **file,
    * case, but only if the umask allows it. */
   if (!using_system_temp_dir)
     {
+      svn_error_t *err;
+
       SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-      SVN_ERR(file_perms_set2(tempfile, perms, scratch_pool));
+      err = file_perms_set2(tempfile, perms, scratch_pool);
+      if (err)
+        {
+          if (APR_STATUS_IS_INCOMPLETE(err->apr_err) ||
+              APR_STATUS_IS_ENOTIMPL(err->apr_err))
+            svn_error_clear(err);
+          else
+            {
+              return svn_error_quick_wrapf(
+                       err, _("Can't set permissions on '%s'"),
+                       svn_dirent_local_style(tempname, scratch_pool));
+            }
+        }
     }
 #endif
 

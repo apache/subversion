@@ -162,12 +162,12 @@ _svn()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "up".
-	cmds='add blame annotate praise cat changelist cl checkout co cleanup'
+	cmds='add auth blame annotate praise cat changelist cl checkout co cleanup'
 	cmds="$cmds commit ci copy cp delete remove rm diff export help import"
 	cmds="$cmds info list ls lock log merge mergeinfo mkdir move mv rename"
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
-	cmds="$cmds switch unlock update upgrade youngest"
+	cmds="$cmds switch unlock update upgrade"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -781,7 +781,9 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive \
-	       --trust-server-cert --force-interactive"
+	       --trust-unknown-ca --trust-cn-mismatch \
+	       --trust-expired --trust-not-yet-valid --trust-other-failure \
+	       --force-interactive"
 	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
 	rOpts="-r --revision"
 	qOpts="-q --quiet"
@@ -797,6 +799,9 @@ _svn()
 	add)
 		cmdOpts="--auto-props --no-auto-props --force --targets \
 		         --no-ignore --parents $nOpts $qOpts $pOpts"
+		;;
+	auth)
+		cmdOpts="--remove --show-passwords $pOpts"
 		;;
 	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml \
@@ -824,7 +829,7 @@ _svn()
 		;;
 	copy|cp)
 		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts --parents \
-		         --ignore-externals"
+		         --ignore-externals --pin-externals"
 		;;
 	delete|del|remove|rm)
 		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts \
@@ -851,7 +856,8 @@ _svn()
 		;;
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive --depth \
-                         --include-externals --incremental --xml $cOpts"
+                         --include-externals --incremental --xml \
+                         --show-item --no-newline $cOpts"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
@@ -866,12 +872,12 @@ _svn()
 		         --incremental --xml $qOpts -l --limit -c --change \
                          $gOpts --with-all-revprops --with-revprop --depth \
 		         --diff --diff-cmd -x --extensions --internal-diff \
-		         --with-no-revprops --search --search-and --auto-moves"
+		         --with-no-revprops --search --search-and"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
 		         $pOpts --ignore-ancestry -c --change -x --extensions \
-                         --record-only --accept --reintegrate \
+                         --record-only --accept \
 		         --allow-mixed-revisions -v --verbose"
 		;;
 	mergeinfo)
@@ -900,7 +906,7 @@ _svn()
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		;;
 	propget|pget|pg)
-	        cmdOpts="-v --verbose -R --recursive $rOpts --strict \
+	        cmdOpts="-v --verbose -R --recursive $rOpts --no-newline \
 		         $pOpts $cOpts --depth --xml --show-inherited-props"
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
@@ -949,9 +955,6 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
-		;;
-	youngest)
-		cmdOpts="$pOpts --no-newline"
 		;;
 	*)
 		;;
@@ -1035,7 +1038,8 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='crashtest create deltify dump freeze help hotcopy info list-dblogs \
+	cmds='crashtest create delrevprop deltify dump freeze help hotcopy \
+	      info list-dblogs \
 	      list-unused-dblogs load lock lslocks lstxns pack recover rmlocks \
 	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
@@ -1098,8 +1102,9 @@ _svnadmin ()
 	setlog)
 		cmdOpts="-r --revision --bypass-hooks"
 		;;
-	setrevprop)
-		cmdOpts="-r --revision --use-pre-revprop-change-hook \
+	setrevprop|delrevprop)
+		cmdOpts="-r --revision -t --transaction \
+		         --use-pre-revprop-change-hook \
 		         --use-post-revprop-change-hook"
 		;;
 	verify)
@@ -1131,6 +1136,8 @@ _svnadmin ()
 		--help)          cmdOpts=${cmdOpts/ -h / } ;;
 		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
 		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
+		-t)              cmdOpts=${cmdOpts/ --transaction / } ;;
+		--transaction)   cmdOpts=${cmdOpts/ -t / } ;;
 		-F)              cmdOpts=${cmdOpts/ --file / } ;;
 		--file)          cmdOpts=${cmdOpts/ -F / } ;;
 		-M)              cmdOpts=${cmdOpts/ --memory-cache-size / } ;;

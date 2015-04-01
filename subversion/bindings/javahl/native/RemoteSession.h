@@ -48,13 +48,13 @@ class RemoteSession : public SVNBase
                         jstring jurl, jstring juuid,
                         jstring jconfigDirectory,
                         jstring jusername, jstring jpassword,
-                        jobject jprompter, jobject jprogress,
-                        jobject jcfgcb, jobject jtunnelcb);
+                        jobject jprompter, jobject jdeprecatedPrompter,
+                        jobject jprogress, jobject jcfgcb, jobject jtunnelcb);
     static jobject open(jint jretryAttempts,
                         const char* url, const char* uuid,
                         const char* configDirectory,
                         const char* username, const char* password,
-                        Prompter*& prompter, jobject jprogress,
+                        Prompter::UniquePtr prompter, jobject jprogress,
                         jobject jcfgcb, jobject jtunnelcb);
     ~RemoteSession();
 
@@ -119,7 +119,7 @@ class RemoteSession : public SVNBase
                   const char* url, const char* uuid,
                   const char* configDirectory,
                   const char* username, const char* password,
-                  Prompter*& prompter, jobject jcfgcb, jobject jtunnelcb);
+                  Prompter::UniquePtr prompter, jobject jcfgcb, jobject jtunnelcb);
 
     svn_ra_session_t* m_session;
     RemoteSessionContext* m_context;

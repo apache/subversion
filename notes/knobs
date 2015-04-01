@@ -55,6 +55,7 @@ SVN_SQLITE_MIN_VERSION_NUMBER
 SVN_SQLITE_MIN_VERSION
 SVN_SERF_NO_LOGGING
 SVN_ALLOW_SHORT_INTS
+SVN_ALLOW_NON_8_BIT_CHARS
 
 2.3 Debugging Support
 
@@ -65,7 +66,7 @@ SVN_DEBUG_CACHE_DUMP_STATS
 SVN_DEBUG_CACHE_MEMBUFFER
 SVN_DEBUG_DSO
 SVN_DEBUG_WORK_QUEUE
-PACK_AFTER_EVERY_COMMIT
+PACK_AFTER_EVERY_COMMIT [removed]
 DEBUG_DOUBLE_FREE
 SERF_VERBOSE
 SSL_VERBOSE
@@ -290,6 +291,18 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: not defined (to ensure correct behaviour)
 
+4.12 SVN_ALLOW_NON_8_BIT_CHARS
+
+  Scope:     global
+  Purpose:   Disables the size check for the 'char' type.  We assume char
+             has exactly 8 bits.  Other values may break the code reading,
+             interpreting and writing repository files.  Defining this option
+             will allow SVN to be compiled even if the size check would fail
+             for some reason.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined (to ensure correct behaviour)
+
 
 5 Defines controlling debug support
 ==================================
@@ -364,7 +377,9 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: defined, not defined
 
-5.8 PACK_AFTER_EVERY_COMMIT
+5.8 PACK_AFTER_EVERY_COMMIT [removed]
+
+  *** REMOVED in r1602871 (1.9-dev) ***
 
   Scope:     libsvn_fs (only affects libsvn_fs_fs)
   Purpose:   stress test 

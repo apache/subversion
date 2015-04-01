@@ -68,56 +68,45 @@ RemoteSession::open(jint jretryAttempts,
                     jstring jurl, jstring juuid,
                     jstring jconfigDirectory,
                     jstring jusername, jstring jpassword,
-                    jobject jprompter, jobject jprogress,
-                    jobject jcfgcb, jobject jtunnelcb)
+                    jobject jprompter, jobject jdeprecatedPrompter,
+                    jobject jprogress, jobject jcfgcb, jobject jtunnelcb)
 {
-  JNIEnv *env = JNIUtil::getEnv();
+  SVN_ERR_ASSERT_NO_RETURN(!(jprompter && jdeprecatedPrompter));
 
   SVN::Pool requestPool;
   URL url(jurl, requestPool);
   if (JNIUtil::isExceptionThrown())
     return NULL;
   SVN_JNI_ERR(url.error_occurred(), NULL);
-  env->DeleteLocalRef(jurl);
 
   JNIStringHolder uuid(juuid);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  env->DeleteLocalRef(juuid);
 
   Path configDirectory(jconfigDirectory, requestPool);
   if (JNIUtil::isExceptionThrown())
     return NULL;
   SVN_JNI_ERR(configDirectory.error_occurred(), NULL);
-  env->DeleteLocalRef(jconfigDirectory);
 
   JNIStringHolder usernameStr(jusername);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  env->DeleteLocalRef(jusername);
 
   JNIStringHolder passwordStr(jpassword);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  env->DeleteLocalRef(jpassword);
 
-  Prompter *prompter = NULL;
-  if (jprompter != NULL)
-    {
-      prompter = Prompter::makeCPrompter(jprompter);
-      if (JNIUtil::isExceptionThrown())
-        return NULL;
-    }
+  Prompter::UniquePtr prompter(jprompter ? Prompter::create(jprompter)
+                               : CompatPrompter::create(jdeprecatedPrompter));
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
 
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
       (jconfigDirectory ? configDirectory.c_str() : NULL),
       usernameStr, passwordStr, prompter, jprogress, jcfgcb, jtunnelcb);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
-    {
-      delete prompter;
-      jremoteSession = NULL;
-    }
+    jremoteSession = NULL;
   return jremoteSession;
 }
 
@@ -126,7 +115,7 @@ RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
                     const char* configDirectory,
                     const char*  usernameStr, const char*  passwordStr,
-                    Prompter*& prompter, jobject jprogress,
+                    Prompter::UniquePtr prompter, jobject jprogress,
                     jobject jcfgcb, jobject jtunnelcb)
 {
   RemoteSession* session = new RemoteSession(
@@ -193,7 +182,7 @@ RemoteSession::RemoteSession(int retryAttempts,
                              const char* url, const char* uuid,
                              const char* configDirectory,
                              const char*  username, const char*  password,
-                             Prompter*& prompter,
+                             Prompter::UniquePtr prompter,
                              jobject jcfgcb, jobject jtunnelcb)
   : m_session(NULL), m_context(NULL)
 {
@@ -201,14 +190,6 @@ RemoteSession::RemoteSession(int retryAttempts,
       pool, configDirectory, username, password, prompter, jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-
-  // Avoid double-free in RemoteSession::open and
-  // SVNClient::openRemoteSession if the svn_ra_open call fails. The
-  // prompter object is now owned by m_context.
-  //
-  // FIXME: Should be using smart pointers, really -- but JavaHL
-  // currently doesn't. Future enhancements FTW.
-  prompter = NULL;
 
   const char* corrected_url = NULL;
   bool cycle_detected = false;
@@ -252,7 +233,7 @@ RemoteSession::RemoteSession(int retryAttempts,
       static jmethodID exctor = 0;
       if (exctor == 0)
         {
-          exctor = env->GetMethodID(excls, "<init>", "(J)V");
+          exctor = env->GetMethodID(excls, "<init>", "(Ljava/lang/String;)V");
           if (JNIUtil::isJavaExceptionThrown())
             return;
         }
@@ -1193,7 +1174,9 @@ public:
         static_cast<FileRevisionHandler*>(baton);
       SVN_ERR_ASSERT(self->m_jcallback != NULL);
       self->call(path, revision, revision_props,
-                result_of_merge, prop_diffs, scratch_pool);
+                result_of_merge, prop_diffs,
+                (delta_handler != NULL),
+                scratch_pool);
       SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
       return SVN_NO_ERROR;
     }
@@ -1218,6 +1201,7 @@ private:
            apr_hash_t* revision_props,
            svn_boolean_t result_of_merge,
            apr_array_header_t* prop_diffs,
+           svn_boolean_t has_text_delta,
            apr_pool_t* scratch_pool)
     {
       JNIEnv* env = JNIUtil::getEnv();
@@ -1230,7 +1214,7 @@ private:
         {
           mid = env->GetMethodID(cls, "<init>",
                                  "(Ljava/lang/String;JZ"
-                                 "Ljava/util/Map;Ljava/util/Map;)V");
+                                 "Ljava/util/Map;Ljava/util/Map;Z)V");
           if (JNIUtil::isJavaExceptionThrown())
             return;
         }
@@ -1248,7 +1232,8 @@ private:
       env->CallVoidMethod(m_jcallback, m_call_mid,
                           env->NewObject(cls, mid, jpath, jlong(revision),
                                          jboolean(result_of_merge),
-                                         jrevprops, jpropdelta));
+                                         jrevprops, jpropdelta,
+                                         jboolean(has_text_delta)));
       if (JNIUtil::isJavaExceptionThrown())
         return;
       env->DeleteLocalRef(jpath);

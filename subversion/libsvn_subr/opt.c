@@ -417,7 +417,9 @@ svn_opt_subcommand_help3(const char *subcommand,
                               _("\"%s\": unknown command.\n\n"), subcommand);
 
   if (err) {
-    svn_handle_error2(err, stderr, FALSE, "svn: ");
+    /* Issue #3014: Don't print anything on broken pipes. */
+    if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+      svn_handle_error2(err, stderr, FALSE, "svn: ");
     svn_error_clear(err);
   }
 }
@@ -1010,13 +1012,6 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
 
   if (peg_start)
     {
-      /* Error out if target is the empty string. */
-      if (ptr == utf8_target)
-        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 _("'%s' is just a peg revision. "
-                                   "Maybe try '%s@' instead?"),
-                                 utf8_target, utf8_target);
-
       *true_target = apr_pstrmemdup(pool, utf8_target, ptr - utf8_target);
       if (peg_revision)
         *peg_revision = apr_pstrdup(pool, peg_start);

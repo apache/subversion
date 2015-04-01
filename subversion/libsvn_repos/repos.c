@@ -267,9 +267,9 @@ create_locks(svn_repos_t *repos, apr_pool_t *pool)
 
 
 #define HOOKS_ENVIRONMENT_TEXT                                                \
-  "# The hook program typically does not inherit the environment of"       NL \
-  "# its parent process.  For example, a common problem is for the"        NL \
-  "# PATH environment variable to not be set to its usual value, so"       NL \
+  "# The hook program runs in an empty environment, unless the server is"  NL \
+  "# explicitly configured otherwise.  For example, a common problem is for" NL \
+  "# the PATH environment variable to not be set to its usual value, so"   NL \
   "# that subprograms fail to launch unless invoked via absolute path."    NL \
   "# If you're having unexpected problems with a hook program, the"        NL \
   "# culprit may be unusual (or missing) environment variables."           NL
@@ -280,11 +280,87 @@ create_locks(svn_repos_t *repos, apr_pool_t *pool)
   "# http://svn.apache.org/repos/asf/subversion/trunk/tools/hook-scripts/ and"        NL \
   "# http://svn.apache.org/repos/asf/subversion/trunk/contrib/hook-scripts/"          NL
 
+#define HOOKS_QUOTE_ARGUMENTS_TEXT                                            \
+  "# CAUTION:"                                                             NL \
+  "# For security reasons, you MUST always properly quote arguments when"  NL \
+  "# you use them, as those arguments could contain whitespace or other"   NL \
+  "# problematic characters. Additionally, you should delimit the list"    NL \
+  "# of options with \"--\" before passing the arguments, so malicious"    NL \
+  "# clients cannot bootleg unexpected options to the commands your"       NL \
+  "# script aims to execute."                                              NL \
+  "# For similar reasons, you should also add a trailing @ to URLs which"  NL \
+  "# are passed to SVN commands accepting URLs with peg revisions."        NL
 
+/* Return template text for a hook script named SCRIPT_NAME. Include
+ * DESCRIPTION and SCRIPT in the template text.
+ */
+static const char *
+hook_template_text(const char *script_name,
+                   const char *description,
+                   const char *script,
+                   apr_pool_t *result_pool)
+{
+  return apr_pstrcat(result_pool,
+"#!/bin/sh"                                                                  NL
+""                                                                           NL,
+                     description,
+"#"                                                                          NL
+"# The default working directory for the invocation is undefined, so"        NL
+"# the program should set one explicitly if it cares."                       NL
+"#"                                                                          NL
+"# On a Unix system, the normal procedure is to have '", script_name, "'"    NL
+"# invoke other programs to do the real work, though it may do the"          NL
+"# work itself too."                                                         NL
+"#"                                                                          NL
+"# Note that '", script_name, "' must be executable by the user(s) who will" NL
+"# invoke it (typically the user httpd runs as), and that user must"         NL
+"# have filesystem-level permission to access the repository."               NL
+"#"                                                                          NL
+"# On a Windows system, you should name the hook program"                    NL
+"# '", script_name, ".bat' or '", script_name, ".exe',"                                                    NL
+"# but the basic idea is the same."                                          NL
+"#"                                                                          NL
+HOOKS_ENVIRONMENT_TEXT
+"#"                                                                          NL
+HOOKS_QUOTE_ARGUMENTS_TEXT
+"#"                                                                          NL
+"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
+PREWRITTEN_HOOKS_TEXT
+""                                                                           NL
+""                                                                           NL,
+                     script,
+                     SVN_VA_NULL);
+}
+
+/* Write a template file for a hook script named SCRIPT_NAME (appending
+ * '.tmpl' to that name) in REPOS. Include DESCRIPTION and SCRIPT in the
+ * template text.
+ */
+static svn_error_t *
+write_hook_template_file(svn_repos_t *repos, const char *script_name,
+                         const char *description,
+                         const char *script,
+                         apr_pool_t *pool)
+{
+  const char *template_path
+    = svn_dirent_join(repos->hook_path,
+                      apr_psprintf(pool, "%s%s",
+                                   script_name, SVN_REPOS__HOOK_DESC_EXT),
+                      pool);
+  const char *contents
+    = hook_template_text(script_name, description, script, pool);
+
+  SVN_ERR(svn_io_file_create(template_path, contents, pool));
+  SVN_ERR(svn_io_set_file_executable(template_path, TRUE, FALSE, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Write the hook template files in REPOS.
+ */
 static svn_error_t *
 create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 {
-  const char *this_path, *contents;
+  const char *description, *script;
 
   /* Create the hook directory. */
   SVN_ERR_W(create_repos_dir(repos->hook_path, pool),
@@ -293,16 +369,9 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
   /*** Write a default template for each standard hook file. */
 
   /* Start-commit hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_start_commit_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_START_COMMIT
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# START-COMMIT HOOK"                                                        NL
 "#"                                                                          NL
 "# The start-commit hook is invoked immediately after a Subversion txn is"   NL
@@ -333,31 +402,10 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# make security assumptions based on the capabilities list, nor should"     NL
 "# you assume that clients reliably report every capability they have."      NL
 "#"                                                                          NL
-"# The working directory for this hook program's invocation is undefined,"   NL
-"# so the program should set one explicitly if it cares."                    NL
-"#"                                                                          NL
 "# If the hook program exits with success, the commit continues; but"        NL
 "# if it exits with failure (non-zero), the commit is stopped before"        NL
-"# a Subversion txn is created, and STDERR is returned to the client."       NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"# "                                                                         NL
-HOOKS_ENVIRONMENT_TEXT
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
-PREWRITTEN_HOOKS_TEXT
-""                                                                           NL
-""                                                                           NL
+"# a Subversion txn is created, and STDERR is returned to the client."       NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "USER=\"$2\""                                                                NL
 ""                                                                           NL
@@ -367,25 +415,17 @@ PREWRITTEN_HOOKS_TEXT
 "# All checks passed, so allow the commit."                                  NL
 "exit 0"                                                                     NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating start-commit hook"));
+
 #undef SCRIPT_NAME
 
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating start-commit hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end start-commit hook */
 
   /* Pre-commit hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_commit_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_COMMIT
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# PRE-COMMIT HOOK"                                                          NL
 "#"                                                                          NL
 "# The pre-commit hook is invoked before a Subversion txn is"                NL
@@ -407,17 +447,10 @@ PREWRITTEN_HOOKS_TEXT
 "#   by the separator character '|', followed by the lock token string,"     NL
 "#   followed by a newline."                                                 NL
 "#"                                                                          NL
-"# The default working directory for the invocation is undefined, so"        NL
-"# the program should set one explicitly if it cares."                       NL
-"#"                                                                          NL
 "# If the hook program exits with success, the txn is committed; but"        NL
 "# if it exits with failure (non-zero), the txn is aborted, no commit"       NL
 "# takes place, and STDERR is returned to the client.   The hook"            NL
 "# program can use the 'svnlook' utility to help it examine the txn."        NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
 "#"                                                                          NL
 "#   ***  NOTE: THE HOOK PROGRAM MUST NOT MODIFY THE TXN, EXCEPT  ***"       NL
 "#   ***  FOR REVISION PROPERTIES (like svn:log or svn:author).   ***"       NL
@@ -427,22 +460,8 @@ PREWRITTEN_HOOKS_TEXT
 "#   hooks should not modify the versioned data in txns, or else come"       NL
 "#   up with a mechanism to make it safe to do so (by informing the"         NL
 "#   committing client of the changes).  However, right now neither"         NL
-"#   mechanism is implemented, so hook writers just have to be careful."     NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"#"                                                                          NL
-HOOKS_ENVIRONMENT_TEXT
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
-PREWRITTEN_HOOKS_TEXT
-""                                                                           NL
-""                                                                           NL
+"#   mechanism is implemented, so hook writers just have to be careful."     NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "TXN=\"$2\""                                                                 NL
 ""                                                                           NL
@@ -459,26 +478,17 @@ PREWRITTEN_HOOKS_TEXT
 "# All checks passed, so allow the commit."                                  NL
 "exit 0"                                                                     NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating pre-commit hook"));
+
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating pre-commit hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end pre-commit hook */
 
 
   /* Pre-revprop-change hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_revprop_change_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_REVPROP_CHANGE
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# PRE-REVPROP-CHANGE HOOK"                                                  NL
 "#"                                                                          NL
 "# The pre-revprop-change hook is invoked before a revision property"        NL
@@ -506,26 +516,8 @@ PREWRITTEN_HOOKS_TEXT
 "# will behave as if the hook were present, but failed.  The reason"         NL
 "# for this is that revision properties are UNVERSIONED, meaning that"       NL
 "# a successful propchange is destructive;  the old value is gone"           NL
-"# forever.  We recommend the hook back up the old value somewhere."         NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"#"                                                                          NL
-HOOKS_ENVIRONMENT_TEXT
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
-PREWRITTEN_HOOKS_TEXT
-""                                                                           NL
-""                                                                           NL
+"# forever.  We recommend the hook back up the old value somewhere."         NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
 "USER=\"$3\""                                                                NL
@@ -537,26 +529,17 @@ PREWRITTEN_HOOKS_TEXT
 "echo \"Changing revision properties other than svn:log is prohibited\" >&2" NL
 "exit 1"                                                                     NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating pre-revprop-change hook"));
+
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating pre-revprop-change hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end pre-revprop-change hook */
 
 
   /* Pre-lock hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_lock_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_LOCK
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# PRE-LOCK HOOK"                                                            NL
 "#"                                                                          NL
 "# The pre-lock hook is invoked before an exclusive lock is"                 NL
@@ -575,27 +558,10 @@ PREWRITTEN_HOOKS_TEXT
 "# this feature, you must guarantee the tokens generated are unique across"  NL
 "# the repository each time."                                                NL
 "#"                                                                          NL
-"# The default working directory for the invocation is undefined, so"        NL
-"# the program should set one explicitly if it cares."                       NL
-"#"                                                                          NL
 "# If the hook program exits with success, the lock is created; but"         NL
 "# if it exits with failure (non-zero), the lock action is aborted"          NL
-"# and STDERR is returned to the client."                                    NL
-""                                                                           NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"#"                                                                          NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter:"          NL
-""                                                                           NL
+"# and STDERR is returned to the client."                                    NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "PATH=\"$2\""                                                                NL
 "USER=\"$3\""                                                                NL
@@ -629,26 +595,17 @@ PREWRITTEN_HOOKS_TEXT
 "echo \"Error: $PATH already locked by ${LOCK_OWNER}.\" 1>&2"                NL
 "exit 1"                                                                     NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating pre-lock hook"));
+
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              "Creating pre-lock hook");
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end pre-lock hook */
 
 
   /* Pre-unlock hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_unlock_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_UNLOCK
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# PRE-UNLOCK HOOK"                                                          NL
 "#"                                                                          NL
 "# The pre-unlock hook is invoked before an exclusive lock is"               NL
@@ -662,27 +619,10 @@ PREWRITTEN_HOOKS_TEXT
 "#   [4] TOKEN        (the lock token to be destroyed)"                      NL
 "#   [5] BREAK-UNLOCK (1 if the user is breaking the lock, else 0)"          NL
 "#"                                                                          NL
-"# The default working directory for the invocation is undefined, so"        NL
-"# the program should set one explicitly if it cares."                       NL
-"#"                                                                          NL
 "# If the hook program exits with success, the lock is destroyed; but"       NL
 "# if it exits with failure (non-zero), the unlock action is aborted"        NL
-"# and STDERR is returned to the client."                                    NL
-""                                                                           NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"#"                                                                          NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter:"          NL
-""                                                                           NL
+"# and STDERR is returned to the client."                                    NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "PATH=\"$2\""                                                                NL
 "USER=\"$3\""                                                                NL
@@ -713,27 +653,17 @@ PREWRITTEN_HOOKS_TEXT
 "echo \"Error: $PATH locked by ${LOCK_OWNER}.\" 1>&2"                        NL
 "exit 1"                                                                     NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating pre-unlock hook"));
+
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              "Creating pre-unlock hook");
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  }  /* end pre-unlock hook */
-
 
 
   /* Post-commit hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_commit_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_COMMIT
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# POST-COMMIT HOOK"                                                         NL
 "#"                                                                          NL
 "# The post-commit hook is invoked after a commit.  Subversion runs"         NL
@@ -745,58 +675,28 @@ PREWRITTEN_HOOKS_TEXT
 "#   [2] REV          (the number of the revision just committed)"           NL
 "#   [3] TXN-NAME     (the name of the transaction that has become REV)"     NL
 "#"                                                                          NL
-"# The default working directory for the invocation is undefined, so"        NL
-"# the program should set one explicitly if it cares."                       NL
-"#"                                                                          NL
 "# Because the commit has already completed and cannot be undone,"           NL
 "# the exit code of the hook program is ignored.  The hook program"          NL
 "# can use the 'svnlook' utility to help it examine the"                     NL
-"# newly-committed tree."                                                    NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"# "                                                                         NL
-HOOKS_ENVIRONMENT_TEXT
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
-PREWRITTEN_HOOKS_TEXT
-""                                                                           NL
-""                                                                           NL
+"# newly-committed tree."                                                    NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
 "TXN_NAME=\"$3\""                                                            NL
                                                                              NL
 "mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating post-commit hook"));
+
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating post-commit hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  } /* end post-commit hook */
 
 
   /* Post-lock hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_lock_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_LOCK
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# POST-LOCK HOOK"                                                           NL
 "#"                                                                          NL
 "# The post-lock hook is run after a path is locked.  Subversion runs"       NL
@@ -809,55 +709,29 @@ PREWRITTEN_HOOKS_TEXT
 "#"                                                                          NL
 "# The paths that were just locked are passed to the hook via STDIN."        NL
 "#"                                                                          NL
-"# The default working directory for the invocation is undefined, so"        NL
-"# the program should set one explicitly if it cares."                       NL
-"#"                                                                          NL
 "# Because the locks have already been created and cannot be undone,"        NL
 "# the exit code of the hook program is ignored.  The hook program"          NL
 "# can use the 'svnlook' utility to examine the paths in the repository"     NL
 "# but since the hook is invoked asyncronously the newly-created locks"      NL
-"# may no longer be present."                                                NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter:"          NL
-""                                                                           NL
+"# may no longer be present."                                                NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "USER=\"$2\""                                                                NL
 ""                                                                           NL
 "# Send email to interested parties, let them know a lock was created:"      NL
 "mailer.py lock \"$REPOS\" \"$USER\" /path/to/mailer.conf"                   NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating post-lock hook"));
+
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              "Creating post-lock hook");
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  } /* end post-lock hook */
 
 
   /* Post-unlock hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_unlock_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_UNLOCK
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# POST-UNLOCK HOOK"                                                         NL
 "#"                                                                          NL
 "# The post-unlock hook runs after a path is unlocked.  Subversion runs"     NL
@@ -870,52 +744,26 @@ PREWRITTEN_HOOKS_TEXT
 "#"                                                                          NL
 "# The paths that were just unlocked are passed to the hook via STDIN."      NL
 "#"                                                                          NL
-"# The default working directory for the invocation is undefined, so"        NL
-"# the program should set one explicitly if it cares."                       NL
-"#"                                                                          NL
 "# Because the lock has already been destroyed and cannot be undone,"        NL
-"# the exit code of the hook program is ignored."                            NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter:"          NL
-""                                                                           NL
+"# the exit code of the hook program is ignored."                            NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "USER=\"$2\""                                                                NL
 ""                                                                           NL
 "# Send email to interested parties, let them know a lock was removed:"      NL
 "mailer.py unlock \"$REPOS\" \"$USER\" /path/to/mailer.conf"                 NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating post-unlock hook"));
+
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              "Creating post-unlock hook");
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  } /* end post-unlock hook */
 
 
   /* Post-revprop-change hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_revprop_change_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_REVPROP_CHANGE
 
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
+  description =
 "# POST-REVPROP-CHANGE HOOK"                                                 NL
 "#"                                                                          NL
 "# The post-revprop-change hook is invoked after a revision property"        NL
@@ -935,26 +783,8 @@ PREWRITTEN_HOOKS_TEXT
 "# Because the propchange has already completed and cannot be undone,"       NL
 "# the exit code of the hook program is ignored.  The hook program"          NL
 "# can use the 'svnlook' utility to help it examine the"                     NL
-"# new property value."                                                      NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"# "                                                                         NL
-HOOKS_ENVIRONMENT_TEXT
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
-PREWRITTEN_HOOKS_TEXT
-""                                                                           NL
-""                                                                           NL
+"# new property value."                                                      NL;
+  script =
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
 "USER=\"$3\""                                                                NL
@@ -964,13 +794,11 @@ PREWRITTEN_HOOKS_TEXT
 "mailer.py propchange2 \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
 "\"$ACTION\" /path/to/mailer.conf"                                           NL;
 
+  SVN_ERR_W(write_hook_template_file(repos, SCRIPT_NAME,
+                                     description, script, pool),
+            _("Creating post-revprop-change hook"));
+
 #undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating post-revprop-change hook"));
-
-    SVN_ERR(svn_io_set_file_executable(this_path, TRUE, FALSE, pool));
-  } /* end post-revprop-change hook */
 
   return SVN_NO_ERROR;
 }
@@ -1454,25 +1282,29 @@ get_repos(svn_repos_t **repos_p,
           svn_boolean_t nonblocking,
           svn_boolean_t open_fs,
           apr_hash_t *fs_config,
-          apr_pool_t *pool)
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
 {
   svn_repos_t *repos;
+  const char *fs_type;
 
   /* Allocate a repository object. */
-  repos = create_svn_repos_t(path, pool);
+  repos = create_svn_repos_t(path, result_pool);
 
   /* Verify the validity of our repository format. */
-  SVN_ERR(check_repos_format(repos, pool));
+  SVN_ERR(check_repos_format(repos, scratch_pool));
 
   /* Discover the FS type. */
-  SVN_ERR(svn_fs_type(&repos->fs_type, repos->db_path, pool));
+  SVN_ERR(svn_fs_type(&fs_type, repos->db_path, scratch_pool));
+  repos->fs_type = apr_pstrdup(result_pool, fs_type);
 
   /* Lock if needed. */
-  SVN_ERR(lock_repos(repos, exclusive, nonblocking, pool));
+  SVN_ERR(lock_repos(repos, exclusive, nonblocking, result_pool));
 
   /* Open up the filesystem only after obtaining the lock. */
   if (open_fs)
-    SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, fs_config, pool));
+    SVN_ERR(svn_fs_open2(&repos->fs, repos->db_path, fs_config,
+                         result_pool, scratch_pool));
 
 #ifdef SVN_DEBUG_CRASH_AT_REPOS_OPEN
   /* If $PATH/config/debug-abort exists, crash the server here.
@@ -1483,8 +1315,8 @@ get_repos(svn_repos_t **repos_p,
   {
     svn_node_kind_t kind;
     svn_error_t *err = svn_io_check_path(
-        svn_dirent_join(repos->conf_path, "debug-abort", pool),
-        &kind, pool);
+        svn_dirent_join(repos->conf_path, "debug-abort", scratch_pool),
+        &kind, scratch_pool);
     svn_error_clear(err);
     if (!err && kind == svn_node_file)
       SVN_ERR_MALFUNCTION_NO_RETURN();
@@ -1525,17 +1357,18 @@ svn_repos_find_root_path(const char *path,
   return candidate;
 }
 
-
 svn_error_t *
-svn_repos_open2(svn_repos_t **repos_p,
+svn_repos_open3(svn_repos_t **repos_p,
                 const char *path,
                 apr_hash_t *fs_config,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   /* Fetch a repository object initialized with a shared read/write
      lock on the database. */
 
-  return get_repos(repos_p, path, FALSE, FALSE, TRUE, fs_config, pool);
+  return get_repos(repos_p, path, FALSE, FALSE, TRUE, fs_config,
+                   result_pool, scratch_pool);
 }
 
 /* Baton used with fs_upgrade_notify, specifying the svn_repos layer
@@ -1608,7 +1441,8 @@ svn_repos_upgrade2(const char *path,
      least prevent others from trying to read or write to it while we
      run recovery. (Other backends should do their own locking; see
      lock_repos.) */
-  SVN_ERR(get_repos(&repos, path, TRUE, nonblocking, FALSE, NULL, subpool));
+  SVN_ERR(get_repos(&repos, path, TRUE, nonblocking, FALSE, NULL, subpool,
+                    subpool));
 
   if (notify_func)
     {
@@ -1656,7 +1490,7 @@ svn_repos_delete(const char *path,
   SVN_ERR(svn_fs_delete_fs(db_path, pool));
 
   /* ...then blow away everything else.  */
-  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
+  return svn_error_trace(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 }
 
 
@@ -1848,7 +1682,7 @@ svn_repos_recover4(const char *path,
   SVN_ERR(get_repos(&repos, path, TRUE, nonblocking,
                     FALSE,    /* don't try to open the db yet. */
                     NULL,
-                    subpool));
+                    subpool, subpool));
 
   if (notify_func)
     {
@@ -1876,6 +1710,9 @@ struct freeze_baton_t {
   int counter;
   svn_repos_freeze_func_t freeze_func;
   void *freeze_baton;
+
+  /* Scratch pool used for every freeze callback invocation. */
+  apr_pool_t *scratch_pool;
 };
 
 static svn_error_t *
@@ -1884,6 +1721,7 @@ multi_freeze(void *baton,
 {
   struct freeze_baton_t *fb = baton;
 
+  svn_pool_clear(fb->scratch_pool);
   if (fb->counter == fb->paths->nelts)
     {
       SVN_ERR(fb->freeze_func(fb->freeze_baton, pool));
@@ -1903,7 +1741,7 @@ multi_freeze(void *baton,
                         TRUE  /* exclusive (only applies to BDB) */,
                         FALSE /* non-blocking */,
                         FALSE /* open-fs */,
-                        NULL, subpool));
+                        NULL, subpool, fb->scratch_pool));
 
 
       if (strcmp(repos->fs_type, SVN_FS_TYPE_BDB) == 0)
@@ -1916,7 +1754,8 @@ multi_freeze(void *baton,
         }
       else
         {
-          SVN_ERR(svn_fs_open(&repos->fs, repos->db_path, NULL, subpool));
+          SVN_ERR(svn_fs_open2(&repos->fs, repos->db_path, NULL, subpool,
+                               fb->scratch_pool));
           SVN_ERR(svn_fs_freeze(svn_repos_fs(repos), multi_freeze, fb,
                                 subpool));
         }
@@ -1945,9 +1784,11 @@ svn_repos_freeze(apr_array_header_t *paths,
   fb.counter = 0;
   fb.freeze_func = freeze_func;
   fb.freeze_baton = freeze_baton;
+  fb.scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(multi_freeze(&fb, pool));
 
+  svn_pool_destroy(fb.scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1963,7 +1804,7 @@ svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
                     FALSE, FALSE,
                     FALSE,     /* Do not open fs. */
                     NULL,
-                    pool));
+                    pool, pool));
 
   SVN_ERR(svn_fs_berkeley_logfiles(logfiles,
                                    svn_repos_db_env(repos, pool),
@@ -2078,22 +1919,54 @@ lock_db_logs_file(svn_repos_t *repos,
 }
 
 
+/* Baton used with fs_hotcopy_notify(), specifying the svn_repos layer
+ * notification parameters.
+ */
+struct fs_hotcopy_notify_baton_t
+{
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
+};
+
+/* Implements svn_fs_hotcopy_notify_t as forwarding to a
+ * svn_repos_notify_func_t passed in a fs_hotcopy_notify_baton_t* BATON.
+ */
+static void
+fs_hotcopy_notify(void *baton,
+                  svn_revnum_t start_revision,
+                  svn_revnum_t end_revision,
+                  apr_pool_t *pool)
+{
+  struct fs_hotcopy_notify_baton_t *fs_baton = baton;
+  svn_repos_notify_t *notify;
+
+  notify = svn_repos_notify_create(svn_repos_notify_hotcopy_rev_range, pool);
+  notify->start_revision = start_revision;
+  notify->end_revision = end_revision;
+
+  fs_baton->notify_func(fs_baton->notify_baton, notify, pool);
+}
+
 /* Make a copy of a repository with hot backup of fs. */
 svn_error_t *
-svn_repos_hotcopy2(const char *src_path,
+svn_repos_hotcopy3(const char *src_path,
                    const char *dst_path,
                    svn_boolean_t clean_logs,
                    svn_boolean_t incremental,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  svn_repos_t *src_repos;
-  svn_repos_t *dst_repos;
+  svn_fs_hotcopy_notify_t fs_notify_func;
+  struct fs_hotcopy_notify_baton_t fs_notify_baton;
   struct hotcopy_ctx_t hotcopy_context;
-  svn_error_t *err;
   const char *src_abspath;
   const char *dst_abspath;
+  svn_repos_t *src_repos;
+  svn_repos_t *dst_repos;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&src_abspath, src_path, pool));
   SVN_ERR(svn_dirent_get_absolute(&dst_abspath, dst_path, pool));
@@ -2106,7 +1979,7 @@ svn_repos_hotcopy2(const char *src_path,
                     FALSE, FALSE,
                     FALSE,    /* don't try to open the db yet. */
                     NULL,
-                    pool));
+                    pool, pool));
 
   /* If we are going to clean logs, then get an exclusive lock on
      db-logs.lock, to ensure that no one else will work with logs.
@@ -2159,24 +2032,19 @@ svn_repos_hotcopy2(const char *src_path,
      No one should be accessing it at the moment */
   SVN_ERR(lock_repos(dst_repos, TRUE, FALSE, pool));
 
-  SVN_ERR(svn_fs_hotcopy2(src_repos->db_path, dst_repos->db_path,
+  fs_notify_func = notify_func ? fs_hotcopy_notify : NULL;
+  fs_notify_baton.notify_func = notify_func;
+  fs_notify_baton.notify_baton = notify_baton;
+
+  SVN_ERR(svn_fs_hotcopy3(src_repos->db_path, dst_repos->db_path,
                           clean_logs, incremental,
+                          fs_notify_func, &fs_notify_baton,
                           cancel_func, cancel_baton, pool));
 
   /* Destination repository is ready.  Stamp it with a format number. */
   return svn_io_write_version_file
           (svn_dirent_join(dst_repos->path, SVN_REPOS__FORMAT, pool),
            dst_repos->format, pool);
-}
-
-svn_error_t *
-svn_repos_hotcopy(const char *src_path,
-                  const char *dst_path,
-                  svn_boolean_t clean_logs,
-                  apr_pool_t *pool)
-{
-  return svn_error_trace(svn_repos_hotcopy2(src_path, dst_path, clean_logs,
-                                            FALSE, NULL, NULL, pool));
 }
 
 /* Return the library version number. */

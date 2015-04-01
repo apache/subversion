@@ -170,7 +170,7 @@ zero_cross_match(apr_pool_t *pool)
     {
       svn_checksum_t *i_zero;
       svn_checksum_t *i_A;
-    
+
       i_zero = svn_checksum_create(i_kind, pool);
       SVN_ERR(svn_checksum_clear(i_zero));
       SVN_ERR(svn_checksum(&i_A, i_kind, "A", 1, pool));
@@ -208,12 +208,14 @@ zlib_expansion_test(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   const char *data_path;
+  const char *srcdir;
   svn_stringbuf_t *deflated;
   Byte dst_buffer[256 * 1024];
   Byte *src_buffer;
   uInt sz;
 
-  data_path = svn_dirent_join(opts->srcdir, "zlib.deflated", pool);
+  SVN_ERR(svn_test_get_srcdir(&srcdir, opts, pool));
+  data_path = svn_dirent_join(srcdir, "zlib.deflated", pool);
 
   SVN_ERR(svn_stringbuf_from_file2(&deflated, data_path, pool));
   src_buffer = (Byte*)deflated->data;

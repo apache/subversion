@@ -160,10 +160,13 @@ get_node_revision(node_revision_t **noderev_p,
   if (! node->node_revision)
     {
       node_revision_t *noderev;
+      apr_pool_t *scratch_pool = svn_pool_create(node->node_pool);
 
       SVN_ERR(svn_fs_fs__get_node_revision(&noderev, node->fs,
-                                           node->id, node->node_pool));
+                                           node->id, node->node_pool,
+                                           scratch_pool));
       node->node_revision = noderev;
+      svn_pool_destroy(scratch_pool);
     }
 
   /* Now NODE->node_revision is set.  */
@@ -614,7 +617,7 @@ svn_fs_fs__dag_revision_root(dag_node_t **node_p,
   /* Construct the node. */
   new_node = apr_pcalloc(pool, sizeof(*new_node));
   new_node->fs = fs;
-  SVN_ERR(svn_fs_fs__rev_get_root(&new_node->id, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__rev_get_root(&new_node->id, fs, rev, pool, pool));
 
   /* Grab the contents so we can inspect the node's kind and created path. */
   new_node->node_pool = pool;
@@ -685,6 +688,10 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
 
   /* Find the node named NAME in PARENT's entries list if it exists. */
   SVN_ERR(svn_fs_fs__dag_open(&cur_entry, parent, name, pool, subpool));
+  if (! cur_entry)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FOUND, NULL,
+       "Attempted to open non-existent child node '%s'", name);
 
   /* Check for mutability in the node we found.  If it's mutable, we
      don't need to clone it. */
@@ -859,14 +866,20 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
     {
       apr_array_header_t *entries;
       int i;
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* Loop over directory entries */
       SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool));
       if (entries)
         for (i = 0; i < entries->nelts; ++i)
-          SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs,
-                        APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *)->id,
-                        pool));
+          {
+            svn_pool_clear(iterpool);
+            SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs,
+                          APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *)->id,
+                          iterpool));
+          }
+
+      svn_pool_destroy(iterpool);
     }
 
   /* ... then delete the node itself, after deleting any mutable
@@ -1117,7 +1130,7 @@ svn_fs_fs__dag_serialize(void **data,
 
   /* The deserializer will use its own pool. */
   svn_temp_serializer__set_null(context,
-				(const void * const *)&node->node_pool);
+                                (const void * const *)&node->node_pool);
 
   /* serialize other sub-structures */
   svn_fs_fs__id_serialize(context, (const svn_fs_id_t **)&node->id);
@@ -1174,9 +1187,10 @@ svn_fs_fs__dag_open(dag_node_t **child_p,
   SVN_ERR(dir_entry_id_from_node(&node_id, parent, name,
                                  scratch_pool, scratch_pool));
   if (! node_id)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, NULL,
-       "Attempted to open non-existent child node '%s'", name);
+    {
+      *child_p = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component(name))

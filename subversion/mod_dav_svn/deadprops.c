@@ -323,7 +323,7 @@ db_open(apr_pool_t *p,
   db->p = svn_pool_create(p);
 
   /* ### temp hack */
-  db->work = svn_stringbuf_ncreate("", 0, db->p);
+  db->work = svn_stringbuf_create_empty(db->p);
 
   /* make our path-based authz callback available to svn_repos_* funcs. */
   arb = apr_pcalloc(p, sizeof(*arb));
@@ -638,16 +638,14 @@ static void get_name(dav_db *db, dav_prop_name *pname)
     }
   else
     {
-      const void *name;
-
-      apr_hash_this(db->hi, &name, NULL, NULL);
+      const char *name = apr_hash_this_key(db->hi);
 
 #define PREFIX_LEN (sizeof(SVN_PROP_PREFIX) - 1)
       if (strncmp(name, SVN_PROP_PREFIX, PREFIX_LEN) == 0)
 #undef PREFIX_LEN
         {
           pname->ns = SVN_DAV_PROP_NS_SVN;
-          pname->name = (const char *)name + 4;
+          pname->name = name + 4;
         }
       else
         {

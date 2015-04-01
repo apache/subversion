@@ -150,6 +150,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE          "exclusive-locking"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE_CLIENTS  "exclusive-locking-clients"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_SQLITE_BUSY_TIMEOUT       "busy-timeout"
 /** @} */
 
 /** @name Repository conf directory configuration files strings
@@ -189,7 +191,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
   "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo __pycache__"
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
-  "*.rej *~ #*# .#* .*.swp .DS_Store"
+  "*.rej *~ #*# .#* .*.swp .DS_Store [Tt]humbs.db"
 #endif
 
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
@@ -729,31 +731,6 @@ svn_config_ensure(const char *config_dir,
  */
 #define SVN_CONFIG_AUTHN_FAILURES_KEY           "failures"
 
-/** A hash-key for a hostname, such as hostnames in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_HOSTNAME_KEY           "hostname"
-
-/** A hash-key for a fingerprint, such as fingerprints in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_FINGERPRINT_KEY        "fingerprint"
-
-/** A hash-key for a valid-from date, such as dates in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_VALID_FROM_KEY         "valid_from"
-
-/** A hash-key for a valid-to date, such as dates in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_VALID_UNTIL_KEY        "valid_until"
-
-/** A hash-key for an issuer distinguished name, such as issuer names
- * in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_ISSUER_DN_KEY        "issuer_dn"
 
 /** @} */
 
@@ -892,7 +869,7 @@ svn_config_get_user_config_path(const char **path,
  */
 svn_error_t *
 svn_config_dup(svn_config_t **cfgp,
-               svn_config_t *src,
+               const svn_config_t *src,
                apr_pool_t *pool);
 
 /** Create a deep copy of the config hash @a src_hash and return

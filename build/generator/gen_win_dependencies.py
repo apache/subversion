@@ -19,7 +19,7 @@
 #
 #
 #
-# gen_win_dependencies.py 
+# gen_win_dependencies.py
 #
 #   base class for generating windows projects, containing the
 #   dependency locator code shared between the test runner and
@@ -73,22 +73,22 @@ class SVNCommonLibrary:
       self.debug_lib_dir = debug_lib_dir
     else:
       self.debug_lib_dir = lib_dir
-      
+
     if debug_lib_name:
       self.debug_lib_name = debug_lib_name
     else:
       self.debug_lib_name = lib_name
-      
+
     if debug_dll_dir:
       self.debug_dll_dir = debug_dll_dir
     else:
       self.debug_dll_dir = dll_dir
-      
+
     if debug_dll_name:
       self.debug_dll_name = debug_dll_name
     else:
       self.debug_dll_name = dll_name
-      
+
     self.extra_bin = extra_bin
 
 class GenDependenciesBase(gen_base.GeneratorBase):
@@ -218,22 +218,22 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       elif opt == '-D':
         self.cpp_defines.append(val)
       elif opt == '--vsnet-version':
-        if val == '2002' or re.match('7(\.\d+)?$', val):
+        if val == '2002' or re.match('^7(\.\d+)?$', val):
           self.vs_version = '2002'
           self.sln_version = '7.00'
           self.vcproj_version = '7.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2003' or re.match('8(\.\d+)?$', val):
+        elif val == '2003' or re.match('^8(\.\d+)?$', val):
           self.vs_version = '2003'
           self.sln_version = '8.00'
           self.vcproj_version = '7.10'
           self.vcproj_extension = '.vcproj'
-        elif val == '2005' or re.match('9(\.\d+)?$', val):
+        elif val == '2005' or re.match('^9(\.\d+)?$', val):
           self.vs_version = '2005'
           self.sln_version = '9.00'
           self.vcproj_version = '8.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2008' or re.match('10(\.\d+)?$', val):
+        elif val == '2008' or re.match('^10(\.\d+)?$', val):
           self.vs_version = '2008'
           self.sln_version = '10.00'
           self.vcproj_version = '9.00'
@@ -252,10 +252,22 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.vs_version = '2013'
           self.sln_version = '12.00'
           self.vcproj_version = '12.0'
-          self.vcproj_extension = '.vcxproj'          
+          self.vcproj_extension = '.vcxproj'
+        elif val == '2015' or val == '14':
+          self.vs_version = '2015'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.0'
+          self.vcproj_extension = '.vcxproj'
+        elif re.match('^20\d+$', val):
+          print('WARNING: Unknown VS.NET version "%s",'
+                ' assuming VS2012. Your VS can probably upgrade')
+          self.vs_version = '2012'
+          self.sln_version = '12.00'
+          self.vcproj_version = '11.0'
+          self.vcproj_extension = '.vcxproj'
         elif re.match('^1\d+$', val):
-          self.vsversion = val
-          self.sln_version = val + '.00'
+          self.vs_version = val
+          self.sln_version = '12.00'
           self.vcproj_version = val + '.0'
           self.vcproj_extension = '.vcxproj'
         else:
@@ -278,7 +290,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if find_libs:
       self.find_libraries(False)
-      
+
   def find_libraries(self, show_warnings):
     "find required and optional libraries"
 
@@ -312,7 +324,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not self.apr_path:
       sys.stderr.write("ERROR: Use '--with-apr' option to configure APR " + \
                        "location.\n")
-      sys.exit(1)                       
+      sys.exit(1)
 
     inc_base = os.path.join(self.apr_path, 'include')
 
@@ -321,7 +333,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     elif os.path.isfile(os.path.join(inc_base, 'apr_version.h')):
       inc_path = inc_base
     else:
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path)
+      sys.stderr.write("ERROR: 'apr_version' not found.\n")
       sys.stderr.write("Use '--with-apr' option to configure APR location.\n")
       sys.exit(1)
 
@@ -391,18 +403,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     extra_bin = []
 
-    if dll_dir:        
+    if dll_dir:
       bin_files = os.listdir(dll_dir)
       if debug_dll_dir and os.path.isdir(debug_dll_dir):
         debug_bin_files = os.listdir(debug_dll_dir)
       else:
-        debug_bin_files = bin_files 
-      
+        debug_bin_files = bin_files
+
       for bin in bin_files:
         if bin in debug_bin_files:
           if re.match('^(lib)?apr[-_].*' + suffix + '(d)?.dll$', bin):
             extra_bin.append(bin)
-      
+
     self._libraries['apr'] = SVNCommonLibrary('apr', inc_path, lib_dir, lib_name,
                                               apr_version,
                                               debug_lib_dir=debug_lib_dir,
@@ -429,12 +441,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       sys.exit(1)
 
     version_file_path = os.path.join(inc_path, 'apu_version.h')
-
-    if not os.path.exists(version_file_path):
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
-      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
-      sys.exit(1)
-
     txt = open(version_file_path).read()
 
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
@@ -448,7 +454,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = (major, minor, patch)
     self.aprutil_version = aprutil_version = '%d.%d.%d' % version
-    
+
     if version < minimal_aprutil_version:
       sys.stderr.write("ERROR: apr-util %s or higher is required "
                        "(%s found)\n" % (
@@ -468,7 +474,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       debug_dll_dir = None
       dll_name = None
       defines.extend(["APU_DECLARE_STATIC"])
-      
+
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
         # Installed APR-Util instead of APR-Util-Source
@@ -479,7 +485,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       lib_name = 'libaprutil%s.lib' % suffix
       lib_dir = os.path.join(self.apr_util_path, 'Release')
-      
+
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
         # Installed APR-Util instead of APR-Util-Source
@@ -487,7 +493,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_lib_dir = lib_dir
       else:
         debug_lib_dir = os.path.join(self.apr_util_path, 'Debug')
-        
+
       dll_name = 'libaprutil%s.dll' % suffix
       if os.path.isfile(os.path.join(lib_dir, dll_name)):
         dll_dir = lib_dir
@@ -497,13 +503,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_dll_dir = None
 
     extra_bin = []
-    
+
     if dll_dir:
       bin_files = os.listdir(dll_dir)
       if debug_dll_dir and os.path.isdir(debug_dll_dir):
         debug_bin_files = os.listdir(debug_dll_dir)
       else:
-        debug_bin_files = bin_files 
+        debug_bin_files = bin_files
 
       for bin in bin_files:
         if bin in debug_bin_files:
@@ -564,7 +570,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                debug_lib_dir = debug_lib_dir,
                                                defines=['XML_STATIC'])
 
-  def _find_httpd(self, show_warning):
+  def _find_httpd(self, show_warnings):
     "Find Apache HTTPD and version"
 
     minimal_httpd_version = (2, 0, 0)
@@ -588,7 +594,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     elif os.path.isfile(os.path.join(inc_base, 'ap_release.h')):
       inc_path = inc_base
     else:
-      if show_warning:
+      if show_warnings:
         print('WARNING: \'ap_release.h\' not found')
         print("Use '--with-httpd' to configure openssl location.");
       return
@@ -612,7 +618,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     httpd_version = '%d.%d.%d' % version
 
     if version < minimal_httpd_version:
-      if show_warning:
+      if show_warnings:
         print("WARNING: httpd %s or higher is required "
                         "(%s found)\n" % (
                           '.'.join(str(v) for v in minimal_httpd_version),
@@ -649,7 +655,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Source location
       inc_path = os.path.join(lib_base, 'modules/dav/main')
     else:
-      if show_warning:
+      if show_warnings:
         print("WARNING: Can't find mod_dav.h in the httpd directory")
         return
 
@@ -666,7 +672,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       else:
         debug_lib_dir = None
     else:
-      if show_warning:
+      if show_warnings:
         print("WARNING: Can't find mod_dav.lib in the httpd directory")
         return
 
@@ -694,7 +700,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
         lib_name = 'zlibstatic.lib'
       else:
-        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)      
+        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)
         lib_name = 'zlib.lib'
       debug_lib_name = None
     else:
@@ -717,7 +723,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = tuple(map(int, vermatch.groups()))
     self.zlib_version = '%d.%d.%d' % version
-    
+
     if version < minimal_zlib_version:
       sys.stderr.write("ERROR: ZLib %s or higher is required "
                        "(%s found)\n" % (
@@ -810,10 +816,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
   def _find_openssl(self, show_warnings):
     "Find openssl"
-    
+
     if not self.openssl_path:
       return
-      
+
     version_path = os.path.join(self.openssl_path, 'inc32/openssl/opensslv.h')
     if os.path.isfile(version_path):
       # We have an OpenSSL Source location
@@ -836,7 +842,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       else:
         bin_dir = os.path.join(self.openssl_path, 'bin')
     else:
-      if show_warning:
+      if show_warnings:
         print('WARNING: \'opensslv.h\' not found')
         print("Use '--with-openssl' to configure openssl location.");
       return
@@ -844,14 +850,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     txt = open(version_path).read()
 
     vermatch = re.search(
-      r'#define OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
+      r'#\s*define\s+OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
       txt)
-  
-    version = (int(vermatch.group(2)), 
+
+    version = (int(vermatch.group(2)),
                int(vermatch.group(3)),
                int(vermatch.group(4)))
     openssl_version = vermatch.group(1)
-  
+
     self._libraries['openssl'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
                                                   'ssleay32.lib',
                                                   openssl_version,
@@ -868,15 +874,21 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     "Find the right perl library name to link swig bindings with"
 
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
+                  'print "$Config{libperl}\\n"; '
                   'print "$Config{PERL_REVISION}.$Config{PERL_VERSION}.'
                           '$Config{PERL_SUBVERSION}\\n"; '
                   'print "$Config{archlib}\\n"'), 'r')
     try:
       line = fp.readline()
       if line:
+        perl_lib = line.strip()
+      else:
+        return
+
+      line = fp.readline()
+      if line:
         perl_version = line.strip()
         perl_ver = perl_version.split('.')
-        perl_lib = 'perl%s%s.lib' % (perl_ver[0], perl_ver[1])
       else:
         return
 
@@ -1045,7 +1057,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       return
 
     if version < minimal_jdk_version:
-      if show_warning:
+      if show_warnings:
         print('Found java jdk %s, but >= %s is required. '
               'javahl will not be built.\n' % \
               (versionstr, '.'.join(str(v) for v in minimal_jdk_version)))
@@ -1102,7 +1114,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     swig_ver = '%d.%d.%d' % (swig_version)
     if swig_version < minimal_swig_version:
-      if show_warning:
+      if show_warnings:
         print('Found swig %s, but >= %s is required. '
               'the swig bindings will not be built.\n' %
               (swig_version, '.'.join(str(v) for v in minimal_swig_version)))
@@ -1167,7 +1179,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     return serf_ver_maj, serf_ver_min, serf_ver_patch
 
-  def _find_serf(self, show_warning):
+  def _find_serf(self, show_warnings):
     "Check if serf and its dependencies are available"
 
     minimal_serf_version = (1, 3, 4)
@@ -1193,7 +1205,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_dir = os.path.join(self.serf_path, 'lib')
       debug_lib_dir = None
     else:
-      if show_warning:
+      if show_warnings:
         print('WARNING: \'serf.h\' not found')
         print("Use '--with-serf' to configure serf location.");
       return
@@ -1202,7 +1214,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     serf_version = '.'.join(str(v) for v in version)
 
     if version < minimal_serf_version:
-      if show_warning:
+      if show_warnings:
         print('Found serf %s, but >= %s is required. '
               'ra_serf will not be built.\n' %
               (serf_version, '.'.join(str(v) for v in minimal_serf_version)))
@@ -1222,7 +1234,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                 debug_lib_dir=debug_lib_dir,
                                                 defines=defines)
 
-  def _find_sasl(self, show_warning):
+  def _find_sasl(self, show_warnings):
     "Check if sals is available"
 
     minimal_sasl_version = (2, 0, 0)
@@ -1235,7 +1247,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_dir, 'sasl.h')
 
     if not os.path.isfile(version_file_path):
-      if show_warning:
+      if show_warnings:
         print('WARNING: \'%s\' not found' % (version_file_path,))
         print("Use '--with-sasl' to configure sasl location.");
       return
@@ -1255,7 +1267,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     sasl_version = '.'.join(str(v) for v in version)
 
     if version < minimal_sasl_version:
-      if show_warning:
+      if show_warnings:
         print('Found sasl %s, but >= %s is required. '
               'sals support will not be built.\n' %
               (sasl_version, '.'.join(str(v) for v in minimal_serf_version)))
@@ -1280,7 +1292,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                dll_name=dll_name,
                                                defines=['SVN_HAVE_SASL'])
 
-  def _find_libintl(self, show_warning):
+  def _find_libintl(self, show_warnings):
     "Find gettext support"
     minimal_libintl_version = (0, 14, 1)
 
@@ -1308,7 +1320,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_name = 'intl.lib'
       dll_name = 'intl.dll'
     else:
-      if (show_warning):
+      if (show_warnings):
         print('WARNING: \'libintl.h\' not found')
         print("Use '--with-libintl' to configure libintl location.")
       return
@@ -1325,7 +1337,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     libintl_version = '.'.join(str(v) for v in version)
 
     if version < minimal_libintl_version:
-      if show_warning:
+      if show_warnings:
         print('Found libintl %s, but >= %s is required.\n' % \
               (libintl_version,
                '.'.join(str(v) for v in minimal_libintl_version)))
@@ -1378,10 +1390,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Amalgamation
       inc_dir = sqlite_base
       lib_dir = None
-      lib_name = None 
+      lib_name = None
       defines.append('SVN_SQLITE_INLINE')
     else:
-      sys.stderr.write("ERROR: SQLite not found\n" % self.sqlite_path)
+      sys.stderr.write("ERROR: SQLite not found\n")
       sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
       sys.exit(1)
 
