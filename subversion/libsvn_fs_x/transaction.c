@@ -932,19 +932,10 @@ fold_change(apr_hash_t *changed_paths,
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
 
-      /* Sanity check:  only allow unused node revision IDs in the
-         `reset' case. */
-      if ((! svn_fs_x__id_used(&change->noderev_id))
-           && (change->change_kind != svn_fs_path_change_reset))
-        return svn_error_create
-          (SVN_ERR_FS_CORRUPT, NULL,
-           _("Missing required node revision ID"));
-
       /* Sanity check: we should be talking about the same node
          revision ID as our last change except where the last change
          was a deletion. */
-      if (svn_fs_x__id_used(&change->noderev_id)
-          && (!svn_fs_x__id_eq(&old_change->noderev_id, &change->noderev_id))
+      if (!svn_fs_x__id_eq(&old_change->noderev_id, &change->noderev_id)
           && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -955,7 +946,6 @@ fold_change(apr_hash_t *changed_paths,
          thing to follow a deletion. */
       if ((old_change->change_kind == svn_fs_path_change_delete)
           && (! ((change->change_kind == svn_fs_path_change_replace)
-                 || (change->change_kind == svn_fs_path_change_reset)
                  || (change->change_kind == svn_fs_path_change_add))))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -964,8 +954,7 @@ fold_change(apr_hash_t *changed_paths,
       /* Sanity check: an add can't follow anything except
          a delete or reset.  */
       if ((change->change_kind == svn_fs_path_change_add)
-          && (old_change->change_kind != svn_fs_path_change_delete)
-          && (old_change->change_kind != svn_fs_path_change_reset))
+          && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
            _("Invalid change ordering: add change on preexisting path"));
@@ -973,12 +962,6 @@ fold_change(apr_hash_t *changed_paths,
       /* Now, merge that change in. */
       switch (change->change_kind)
         {
-        case svn_fs_path_change_reset:
-          /* A reset here will simply remove the path change from the
-             hash. */
-          apr_hash_set(changed_paths, path->data, path->len, NULL);
-          break;
-
         case svn_fs_path_change_delete:
           if (old_change->change_kind == svn_fs_path_change_add)
             {

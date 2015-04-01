@@ -56,7 +56,6 @@
 #define ACTION_ADD         "add"
 #define ACTION_DELETE      "delete"
 #define ACTION_REPLACE     "replace"
-#define ACTION_RESET       "reset"
 
 /* True and False flags. */
 #define FLAG_TRUE          "true"
@@ -845,10 +844,6 @@ read_change(svn_fs_x__change_t **change_p,
     {
       change->change_kind = svn_fs_path_change_replace;
     }
-  else if (strcmp(str, ACTION_RESET) == 0)
-    {
-      change->change_kind = svn_fs_path_change_reset;
-    }
   else
     {
       return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1035,9 +1030,6 @@ write_change_entry(svn_stream_t *stream,
       break;
     case svn_fs_path_change_replace:
       change_string = ACTION_REPLACE;
-      break;
-    case svn_fs_path_change_reset:
-      change_string = ACTION_RESET;
       break;
     default:
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
