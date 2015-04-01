@@ -242,16 +242,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1663355
-   Fix #include guards and Doxygen mark-up that does not match a file's actual
-   name.
-   Justification:
-     Simple corrections to documentation and source code; no functional
-     change. The only public symbol affected is the include-guard symbol
-     SVN_OPTS_H renamed to SVN_OPT_H.
-   Votes:
-     +1: julianfoad, rhuijben, stefan2
-
  * r1665318
    Make lock/unlock result reporting consistent over ra layers and fs backends
    Justification:
