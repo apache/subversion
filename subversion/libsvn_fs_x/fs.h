@@ -124,7 +124,11 @@ extern "C" {
    Note: If you bump this, please update the switch statement in
          svn_fs_x__create() as well.
  */
-#define SVN_FS_X__FORMAT_NUMBER   1
+#define SVN_FS_X__FORMAT_NUMBER   2
+
+/* Latest experimental format number.  Experimental formats are only
+   compatible with themselves. */
+#define SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER   2
 
 /* On most operating systems apr implements file locks per process, not
    per file.  On Windows apr implements the locking as per file handle

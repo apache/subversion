@@ -95,8 +95,16 @@ check_format(int format)
 {
   /* Put blacklisted versions here. */
 
-  /* We support all formats from 1-current simultaneously */
-  if (1 <= format && format <= SVN_FS_X__FORMAT_NUMBER)
+  /* We don't support experimental formats except when it matches the
+   * current format. */
+  if (   SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER < format
+      || format == SVN_FS_X__FORMAT_NUMBER)
+    return SVN_NO_ERROR;
+
+  /* By default, we will support any non-experimental format released so far.
+   */
+  if (   SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER < format
+      && format <= SVN_FS_X__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
   return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
@@ -1207,8 +1215,11 @@ svn_fs_x__info_format(int *fs_format,
     {
     case 1:
       break;
+    case 2:
+      (*supports_version)->minor = 10;
+      break;
 #ifdef SVN_DEBUG
-# if SVN_FS_X__FORMAT_NUMBER != 1
+# if SVN_FS_X__FORMAT_NUMBER != 2
 #  error "Need to add a 'case' statement here"
 # endif
 #endif
