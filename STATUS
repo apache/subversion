@@ -242,14 +242,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1670329
-   Fixes to the public svn_client API documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2, rhuijben
-
  * r1663355
    Fix #include guards and Doxygen mark-up that does not match a file's actual
    name.
@@ -278,4 +270,3 @@ Approved changes:
      here. Check r1665319 for details on what is ensured on trunk now.
    Votes:
      +1: rhuijben, philip, stefan2
-
