@@ -12,8 +12,8 @@ Git repository are accessed via the following URL schemes:
   git+http://     git protocol via http
   git+https://    git protocol via https
 
-All git operations are performed with libgit2.
-See http://libgit2.github.com/
+All git operations are performed with libgit2. This code works with
+libgit2 v0.22.x. See http://libgit2.github.com/
 
 A bare git repository is stored in .svn/git. The svn working copy
 acts like the git working tree. For commands which don't use a 

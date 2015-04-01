@@ -780,12 +780,12 @@ blob_relatedness_cb(const git_diff_delta *delta, float progress, void *payload)
   
   /* At least one of the oids should match, else we're not looking
    * at the right blob. */
-  if (!git_oid_equal(&delta->old_file.oid, git_blob_id(b->blob)) &&
-      !git_oid_equal(&delta->new_file.oid, git_blob_id(b->other_blob)))
+  if (!git_oid_equal(&delta->old_file.id, git_blob_id(b->blob)) &&
+      !git_oid_equal(&delta->new_file.id, git_blob_id(b->other_blob)))
     return 0;
 
-  if (git_oid_iszero(&delta->old_file.oid) ||
-      git_oid_iszero(&delta->new_file.oid))
+  if (git_oid_iszero(&delta->old_file.id) ||
+      git_oid_iszero(&delta->new_file.id))
     {
       /* A zero oid means the blob doesn't actually exist on one side. */
       b->distance = -1;

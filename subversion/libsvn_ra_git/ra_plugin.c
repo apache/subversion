@@ -144,9 +144,9 @@ split_url(const char **remote_url,
       SVN_DBG(("trying remote url '%s'", remote_url_buf->data));
 
       /* Create an in-memory remote... */
-      git_err = git_remote_create_inmemory(&remote, repos,
-                                           RA_GIT_DEFAULT_REFSPEC,
-                                           remote_url_buf->data);
+      git_err = git_remote_create_anonymous(&remote, repos,
+                                            remote_url_buf->data,
+                                            RA_GIT_DEFAULT_REFSPEC);
       if (git_err)
         return svn_error_trace(svn_ra_git__wrap_git_error());
 
@@ -205,7 +205,7 @@ do_git_fetch(svn_ra_git__session_baton_t *sess)
 
   SVN_DBG(("fetching from %s\n", git_remote_url(sess->remote)));
 
-  git_err = git_remote_fetch(sess->remote);
+  git_err = git_remote_fetch(sess->remote, NULL, NULL, NULL);
   if (git_err)
     return svn_error_trace(svn_ra_git__wrap_git_error());
 
@@ -609,7 +609,7 @@ check_cancel_stop_remote(svn_ra_git__session_baton_t *sess)
     }
 }
 
-static int remote_progress_cb(const char *str, int len, void *data)
+static int remote_sideband_progress_cb(const char *str, int len, void *data)
 {
   svn_ra_git__session_baton_t *sess = data;
   svn_string_t *s;
@@ -660,7 +660,7 @@ static int remote_update_tips_cb(const char *refname,
 static svn_error_t *
 do_libgit_init(void *baton, apr_pool_t *pool)
 {
-  git_threads_init();
+  git_libgit2_init();
   return SVN_NO_ERROR;
 }
 
@@ -957,7 +957,7 @@ svn_ra_git__open(svn_ra_session_t *session,
                     sess->session_url, session->pool, sess->scratch_pool));
 
   /* Check if our remote already exists. */
-  git_err = git_remote_load(&sess->remote, sess->repos,
+  git_err = git_remote_lookup(&sess->remote, sess->repos,
                             RA_GIT_DEFAULT_REMOTE_NAME);
   if (git_err)
     {
@@ -981,7 +981,7 @@ svn_ra_git__open(svn_ra_session_t *session,
 
   remote_callbacks = apr_pcalloc(session->pool, sizeof(*remote_callbacks));
   remote_callbacks->version = GIT_REMOTE_CALLBACKS_VERSION;
-  remote_callbacks->progress = remote_progress_cb;
+  remote_callbacks->sideband_progress = remote_sideband_progress_cb;
   remote_callbacks->transfer_progress = remote_transfer_progress_cb;
   remote_callbacks->update_tips = remote_update_tips_cb;
   remote_callbacks->payload = sess;
@@ -1475,7 +1475,7 @@ compare_git_tree_entries(apr_hash_t *changed_paths,
               const char *entry_relpath;
 
               changed_path = svn_log_changed_path2_create(pool);
-              other_entry = git_tree_entry_byoid(other_tree, other_oid);
+              other_entry = git_tree_entry_byid(other_tree, other_oid);
               if (git_tree_entry_type(other_entry) == GIT_OBJ_BLOB)
                 changed_path->action = 'M';
               else
@@ -1526,7 +1526,7 @@ compare_git_tree_entries(apr_hash_t *changed_paths,
                                   other_entry_name, pool),
           svn_hash_sets(changed_paths, other_entry_relpath, changed_path);
 
-          other_entry = git_tree_entry_byoid(other_tree, other_entry_id);
+          other_entry = git_tree_entry_byid(other_tree, other_entry_id);
           if (git_tree_entry_type(other_entry) == GIT_OBJ_TREE)
             {
               git_tree *added_tree;
