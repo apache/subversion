@@ -202,6 +202,26 @@ def xtest_svnmover(repo_url, error_re_string, *varargs):
   expected_err = svntest.verify.RegexOutput(error_re_string, match_all=False)
   svntest.verify.verify_outputs(None, None, errlines, None, expected_err)
 
+def expected_ls_output(paths, subbranch_paths=[]):
+  """Return an expected output object matching the output of 'svnmover ls'
+     for the given plain PATHS and subbranch-root paths SUBBRANCH_PATHS.
+  """
+  expected_out = svntest.verify.UnorderedRegexListOutput(
+    [r'    e\d+ ' + re.escape(p) + '\n'
+     for p in paths] +
+    [r'    e\d+ ' + re.escape(p) + r' \(branch \^\.\d+\)' + '\n'
+     for p in subbranch_paths])
+  return expected_out
+
+def verify_paths_in_branch(sbox, branch_path, paths, subbranch_paths=[]):
+  """Verify that the branch in which BRANCH_PATH lies contains elements at
+     the paths PATHS and subbranch-roots at the paths SUBBRANCH_PATHS.
+  """
+  expected_out = expected_ls_output(paths, subbranch_paths)
+  svntest.actions.run_and_verify_svnmover(expected_out, None,
+                                          '-U', sbox.repo_url,
+                                          'ls', branch_path)
+
 ######################################################################
 
 def basic_svnmover(sbox):
@@ -911,38 +931,26 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
     test_svnmover2(sbox, '', None,
                    'rm', proj)
 
-  expected_out = svntest.verify.UnorderedRegexListOutput(
-    [l + '\n' for l in [
-      r'    e\d+ \.',
-      r'    e\d+ trunk \(branch \^\.\d+\)',
-      r'    e\d+ tags',
-      r'    e\d+ branches',
-      r'    e\d+ branches/br1 \(branch \^\.\d+\)',
-    ]])
-  svntest.actions.run_and_verify_svnmover(expected_out, None,
-                                          '-U', repo_url,
-                                          'ls', '.')
-  expected_out = svntest.verify.UnorderedRegexListOutput(
-    [l + '\n' for l in [
-      r'    e\d+ \.',
-      r'    e\d+ proj1',
-      r'    e\d+ proj1/README',
-      r'    e\d+ proj1/lib',
-      r'    e\d+ proj1/lib/foo',
-      r'    e\d+ proj1/lib/foo/file',
-      r'    e\d+ proj1/lib/foo/y2',
-      r'    e\d+ proj1/lib/foo/z',
-      r'    e\d+ proj2',
-      r'    e\d+ proj2/README',
-      r'    e\d+ proj2/lib',
-      r'    e\d+ proj2/lib/foo',
-      r'    e\d+ proj2/lib/foo/file',
-      r'    e\d+ proj2/lib/foo/y2',
-      r'    e\d+ proj2/lib/foo/z',
-    ]])
-  svntest.actions.run_and_verify_svnmover(expected_out, None,
-                                          '-U', repo_url,
-                                          'ls', 'trunk')
+  verify_paths_in_branch(sbox, '.',
+    ['.', 'tags', 'branches'],
+    ['trunk', 'branches/br1'])
+  verify_paths_in_branch(sbox, 'trunk', [
+      '.',
+      'proj1',
+      'proj1/README',
+      'proj1/lib',
+      'proj1/lib/foo',
+      'proj1/lib/foo/file',
+      'proj1/lib/foo/y2',
+      'proj1/lib/foo/z',
+      'proj2',
+      'proj2/README',
+      'proj2/lib',
+      'proj2/lib/foo',
+      'proj2/lib/foo/file',
+      'proj2/lib/foo/y2',
+      'proj2/lib/foo/z',
+    ])
 
   ### It's all very well to see that the dirs and files now appear at the
   ### right places, but what should we test to ensure the history is intact?
