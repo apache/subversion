@@ -192,16 +192,15 @@ Other candidate changes:
      Have a complete, correct and easily accessible API description.
      None of these changes should affect generated code nor the ABI.
    Votes:
-     +1: stefan2
-     +1: rhuijben (without r1670337)
+     +1: stefan2, rhuijben
 
  * r1670139, r1670149, r1670152, r1670347
    Lock-many pool handling and doc fixes as a result of API review.
    Justification:
      Better memory handling for callback, clearer documentation.
    Votes:
-     +1: philip, rhuijben (without r1670347)
-     +1: stefan2
+     +1: philip
+     +1: stefan2, rhuijben
 
  * r1670353
    In the SVN_VA_NULL macro, make the implementation type private.
