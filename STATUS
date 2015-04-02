@@ -199,7 +199,7 @@ Other candidate changes:
    Justification:
      Better memory handling for callback, clearer documentation.
    Votes:
-     +1: philip
+     +1: philip (without r1670347)
      +1: stefan2, rhuijben
 
  * r1670353
