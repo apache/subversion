@@ -27,7 +27,6 @@
 #include <apr_atomic.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
-#include <apr_thread_mutex.h>
 #include <apr_uuid.h>
 #include <apr_strings.h>
 
