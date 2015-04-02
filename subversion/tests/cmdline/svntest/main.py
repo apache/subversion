@@ -1378,6 +1378,24 @@ def is_plaintext_password_storage_disabled():
     return False
   return True
 
+
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
+__mod_dav_url_quoting_broken_versions = frozenset([
+    '2.2.27',
+    '2.2.26',
+    '2.2.25',
+    '2.4.9',
+    '2.4.8',
+    '2.4.7',
+    '2.4.6',
+    '2.4.5',
+])
+def is_mod_dav_url_quoting_broken():
+    if is_ra_type_dav():
+        return (options.httpd_version in __mod_dav_url_quoting_broken_versions)
+    return None
+
 ######################################################################
 
 
@@ -1435,6 +1453,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--ssl-cert=' + options.ssl_cert)
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
+    if options.httpd_version:
+      args.append('--httpd-version=' + options.httpd_version)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1780,6 +1800,8 @@ def _create_parser():
                     help='Path to SSL server certificate.')
   parser.add_option('--http-proxy', action='store',
                     help='Use the HTTP Proxy at hostname:port.')
+  parser.add_option('--httpd-version', action='store',
+                    help='Assume HTTPD is this version.')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
 
