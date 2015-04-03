@@ -215,14 +215,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1669749
-   Make the new svn_fs_dir_optimal_order use two pools.
-   Justification:
-     New code should use the two-pool paradigm.  Hence, all new API should
-     allow users to do so.
-   Notes:
-     This is not strictly blocking 1.9 but if we don't merge it, we need to
-     revert it on /trunk as well.
-   Votes:
-     +1: stefan2, rhuijben, brane

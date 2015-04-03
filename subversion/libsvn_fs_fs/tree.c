@@ -2392,9 +2392,11 @@ static svn_error_t *
 fs_dir_optimal_order(apr_array_header_t **ordered_p,
                      svn_fs_root_t *root,
                      apr_hash_t *entries,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  *ordered_p = svn_fs_fs__order_dir_entries(root->fs, entries, pool);
+  *ordered_p = svn_fs_fs__order_dir_entries(root->fs, entries, result_pool,
+                                            scratch_pool);
 
   return SVN_NO_ERROR;
 }

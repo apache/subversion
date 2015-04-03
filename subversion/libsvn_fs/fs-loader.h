@@ -361,7 +361,8 @@ typedef struct root_vtable_t
   svn_error_t *(*dir_optimal_order)(apr_array_header_t **ordered_p,
                                     svn_fs_root_t *root,
                                     apr_hash_t *entries,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
   svn_error_t *(*make_dir)(svn_fs_root_t *root, const char *path,
                            apr_pool_t *pool);
 
