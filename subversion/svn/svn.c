@@ -1638,8 +1638,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    !     C wc/qaz.c\n"
      "          >   local missing, incoming edit upon update\n"
      "    D       wc/qax.c\n"),
-    { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
-      opt_ignore_externals, opt_changelist},
+    { 'u', 'v', 'N', opt_depth, 'r', 'q', opt_no_ignore, opt_incremental,
+      opt_xml, opt_ignore_externals, opt_changelist},
     {{'q', N_("don't print unversioned items")}} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
