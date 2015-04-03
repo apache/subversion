@@ -288,8 +288,11 @@ svn_cl__status(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
-  /* We want our -u statuses to be against HEAD. */
-  rev.kind = svn_opt_revision_head;
+  /* We want our -u statuses to be against HEAD by default. */
+  if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+    rev.kind = svn_opt_revision_head;
+  else
+    rev = opt_state->start_revision;
 
   sb.had_print_error = FALSE;
 
