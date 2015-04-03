@@ -792,6 +792,9 @@ elif test_javahl:
     if (objdir == 'Debug'):
       args = args + ('-Xcheck:jni',)
 
+    if cleanup:
+      args = args + ('-Dtest.cleanup=1',)
+
     args = args + (
             '-Dtest.rootdir=' + os.path.join(abs_builddir, 'javahl'),
             '-Dtest.srcdir=' + os.path.join(abs_srcdir,
