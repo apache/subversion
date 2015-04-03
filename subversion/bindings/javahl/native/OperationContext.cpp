@@ -358,6 +358,9 @@ OperationContext::checkCancel(void *cancelBaton)
   OperationContext *that = static_cast<OperationContext *>(cancelBaton);
   if (that->isCancelledOperation())
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Operation cancelled"));
+  else if (JNIUtil::isJavaExceptionThrown())
+    return svn_error_create(SVN_ERR_CANCELLED, JNIUtil::wrapJavaException(),
+                            _("Operation cancelled"));
   else
     return SVN_NO_ERROR;
 }

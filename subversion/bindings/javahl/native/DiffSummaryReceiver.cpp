@@ -117,8 +117,5 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
 
   // Invoke the Java DiffSummaryReceiver callback.
   env->CallVoidMethod(m_receiver, callback, jDiffSummary);
-  // We return whether an exception was thrown or not.
-
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
