@@ -29,6 +29,16 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
+ * r1671164
+   Enable passing '-r' to 'svn status'
+   Justification:
+     Allows checking what changes when updating to some specific revision
+     vs only to HEAD.
+   Notes:
+     We supported this feature in the libsvn_client api since <= 1.0.
+   Votes:
+     +1: rhuijben (for 1.9.0 only)
+
 Other candidate changes:
 ========================
 
