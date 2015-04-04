@@ -76,7 +76,7 @@ svn_error_t *
 svn_fs_x__noderevs_get(svn_fs_x__noderev_t **noderev_p,
                        const svn_fs_x__noderevs_t *container,
                        apr_size_t idx,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* I/O interface. */
 
