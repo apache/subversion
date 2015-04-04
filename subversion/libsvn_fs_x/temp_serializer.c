@@ -1042,11 +1042,8 @@ svn_fs_x__serialize_rep_header(void **data,
                                void *in,
                                apr_pool_t *pool)
 {
-  svn_fs_x__rep_header_t *copy = apr_palloc(pool, sizeof(*copy));
-  *copy = *(svn_fs_x__rep_header_t *)in;
-
   *data_len = sizeof(svn_fs_x__rep_header_t);
-  *data = copy;
+  *data = in;
 
   return SVN_NO_ERROR;
 }
@@ -1057,10 +1054,6 @@ svn_fs_x__deserialize_rep_header(void **out,
                                  apr_size_t data_len,
                                  apr_pool_t *result_pool)
 {
-  svn_fs_x__rep_header_t *copy = apr_palloc(result_pool, sizeof(*copy));
-  SVN_ERR_ASSERT(data_len == sizeof(*copy));
-
-  *copy = *(svn_fs_x__rep_header_t *)data;
   *out = data;
 
   return SVN_NO_ERROR;
