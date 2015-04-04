@@ -78,7 +78,7 @@ svn_error_t *
 svn_fs_x__changes_get_list(apr_array_header_t **list,
                            const svn_fs_x__changes_t *changes,
                            apr_size_t idx,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /* I/O interface. */
 
