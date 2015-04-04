@@ -514,41 +514,11 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool, scratch_pool));
-
-      SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
-                           NULL,
-                           membuffer,
-                           0, 0, /* Do not use inprocess cache */
-                           svn_fs_x__serialize_mergeinfo,
-                           svn_fs_x__deserialize_mergeinfo,
-                           APR_HASH_KEY_STRING,
-                           apr_pstrcat(scratch_pool, prefix, "MERGEINFO",
-                                       SVN_VA_NULL),
-                           0,
-                           fs,
-                           no_handler,
-                           fs->pool, scratch_pool));
-
-      SVN_ERR(create_cache(&(ffd->mergeinfo_existence_cache),
-                           NULL,
-                           membuffer,
-                           0, 0, /* Do not use inprocess cache */
-                           /* Values are svn_stringbuf_t */
-                           NULL, NULL,
-                           APR_HASH_KEY_STRING,
-                           apr_pstrcat(scratch_pool, prefix, "HAS_MERGEINFO",
-                                       SVN_VA_NULL),
-                           0,
-                           fs,
-                           no_handler,
-                           fs->pool, scratch_pool));
     }
   else
     {
       ffd->fulltext_cache = NULL;
       ffd->properties_cache = NULL;
-      ffd->mergeinfo_cache = NULL;
-      ffd->mergeinfo_existence_cache = NULL;
     }
 
   /* if enabled, cache revprops */

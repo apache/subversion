@@ -264,22 +264,4 @@ svn_fs_x__deserialize_changes(void **out,
                               apr_size_t data_len,
                               apr_pool_t *result_pool);
 
-/**
- * Implements #svn_cache__serialize_func_t for #svn_mergeinfo_t objects.
- */
-svn_error_t *
-svn_fs_x__serialize_mergeinfo(void **data,
-                              apr_size_t *data_len,
-                              void *in,
-                              apr_pool_t *pool);
-
-/**
- * Implements #svn_cache__deserialize_func_t for #svn_mergeinfo_t objects.
- */
-svn_error_t *
-svn_fs_x__deserialize_mergeinfo(void **out,
-                                void *data,
-                                apr_size_t data_len,
-                                apr_pool_t *result_pool);
-
 #endif

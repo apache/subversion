@@ -345,15 +345,6 @@ typedef struct svn_fs_x__data_t
      (revision, item index) pair */
   svn_cache__t *rep_header_cache;
 
-  /* Cache for svn_mergeinfo_t objects; the key is a combination of
-     revision, inheritance flags and path. */
-  svn_cache__t *mergeinfo_cache;
-
-  /* Cache for presence of svn_mergeinfo_t on a noderev; the key is a
-     combination of revision, inheritance flags and path; value is "1"
-     if the node has mergeinfo, "0" if it doesn't. */
-  svn_cache__t *mergeinfo_existence_cache;
-
   /* Cache for l2p_header_t objects; the key is (revision, is-packed).
      Will be NULL for pre-format7 repos */
   svn_cache__t *l2p_header_cache;
