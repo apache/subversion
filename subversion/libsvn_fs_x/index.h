@@ -372,7 +372,7 @@ svn_error_t *
 svn_fs_x__deserialize_l2p_header(void **out,
                                  void *data,
                                  apr_size_t data_len,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool);
 
 /*
  * Implements svn_cache__serialize_func_t for l2p_page_t objects.
@@ -390,7 +390,7 @@ svn_error_t *
 svn_fs_x__deserialize_l2p_page(void **out,
                                void *data,
                                apr_size_t data_len,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /*
  * Implements svn_cache__serialize_func_t for p2l_header_t objects.
@@ -408,7 +408,7 @@ svn_error_t *
 svn_fs_x__deserialize_p2l_header(void **out,
                                  void *data,
                                  apr_size_t data_len,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool);
 
 /*
  * Implements svn_cache__serialize_func_t for apr_array_header_t objects
@@ -428,6 +428,6 @@ svn_error_t *
 svn_fs_x__deserialize_p2l_page(void **out,
                                void *data,
                                apr_size_t data_len,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 #endif

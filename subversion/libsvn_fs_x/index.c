@@ -3739,7 +3739,7 @@ svn_error_t *
 svn_fs_x__deserialize_l2p_header(void **out,
                                  void *data,
                                  apr_size_t data_len,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *result_pool)
 {
   l2p_header_t *header = (l2p_header_t *)data;
 
@@ -3793,7 +3793,7 @@ svn_error_t *
 svn_fs_x__deserialize_l2p_page(void **out,
                                void *data,
                                apr_size_t data_len,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool)
 {
   l2p_page_t *page = data;
 
@@ -3842,7 +3842,7 @@ svn_error_t *
 svn_fs_x__deserialize_p2l_header(void **out,
                                  void *data,
                                  apr_size_t data_len,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *result_pool)
 {
   p2l_header_t *header = data;
 
@@ -3900,7 +3900,7 @@ svn_error_t *
 svn_fs_x__deserialize_p2l_page(void **out,
                                void *data,
                                apr_size_t data_len,
-                               apr_pool_t *pool)
+                               apr_pool_t *result_pool)
 {
   apr_array_header_t *page = (apr_array_header_t *)data;
   svn_fs_x__p2l_entry_t *entries;
@@ -3915,7 +3915,7 @@ svn_fs_x__deserialize_p2l_page(void **out,
     svn_temp_deserializer__resolve(entries, (void**)&entries[i].items);
 
   /* patch up members */
-  page->pool = pool;
+  page->pool = result_pool;
   page->nalloc = page->nelts;
 
   /* done */

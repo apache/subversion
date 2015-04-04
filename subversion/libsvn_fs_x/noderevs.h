@@ -114,7 +114,7 @@ svn_error_t *
 svn_fs_x__deserialize_noderevs_container(void **out,
                                           void *data,
                                           apr_size_t data_len,
-                                          apr_pool_t *pool);
+                                          apr_pool_t *result_pool);
 
 /* Implements svn_cache__partial_getter_func_t for svn_fs_x__noderevs_t,
  * setting *OUT to the svn_fs_x__noderev_t selected by the apr_uint32_t index

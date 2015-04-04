@@ -766,15 +766,15 @@ svn_error_t *
 svn_fs_x__deserialize_noderevs_container(void **out,
                                          void *data,
                                          apr_size_t data_len,
-                                         apr_pool_t *pool)
+                                         apr_pool_t *result_pool)
 {
   svn_fs_x__noderevs_t *noderevs = (svn_fs_x__noderevs_t *)data;
 
   /* de-serialize sub-structures */
   svn_fs_x__deserialize_string_table(noderevs, &noderevs->paths);
-  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->ids, pool);
-  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->reps, pool);
-  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->noderevs, pool);
+  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->ids, result_pool);
+  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->reps, result_pool);
+  svn_fs_x__deserialize_apr_array(noderevs, &noderevs->noderevs, result_pool);
 
   /* done */
   *out = noderevs;

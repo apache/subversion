@@ -900,7 +900,7 @@ svn_error_t *
 svn_fs_x__deserialize_reps_container(void **out,
                                      void *data,
                                      apr_size_t data_len,
-                                     apr_pool_t *pool)
+                                     apr_pool_t *result_pool)
 {
   svn_fs_x__reps_t *reps = (svn_fs_x__reps_t *)data;
 
