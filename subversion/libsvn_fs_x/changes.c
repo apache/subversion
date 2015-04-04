@@ -437,14 +437,14 @@ svn_error_t *
 svn_fs_x__deserialize_changes_container(void **out,
                                          void *data,
                                          apr_size_t data_len,
-                                         apr_pool_t *pool)
+                                         apr_pool_t *result_pool)
 {
   svn_fs_x__changes_t *changes = (svn_fs_x__changes_t *)data;
 
   /* de-serialize sub-structures */
   svn_fs_x__deserialize_string_table(changes, &changes->paths);
-  svn_fs_x__deserialize_apr_array(changes, &changes->changes, pool);
-  svn_fs_x__deserialize_apr_array(changes, &changes->offsets, pool);
+  svn_fs_x__deserialize_apr_array(changes, &changes->changes, result_pool);
+  svn_fs_x__deserialize_apr_array(changes, &changes->offsets, result_pool);
 
   /* done */
   *out = changes;
