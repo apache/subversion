@@ -242,7 +242,12 @@ svn_fs_x__path_revprops(svn_fs_t *fs,
   svn__i64toa(buffer, rev);
 
   assert(! svn_fs_x__is_packed_revprop(fs, rev));
-  return construct_shard_sub_path(fs, rev, TRUE, FALSE, buffer, result_pool);
+
+  /* Revprops for packed r0 are not packed, yet stored in the packed shard.
+     Hence, the second flag must check for packed _rev_ - not revprop. */
+  return construct_shard_sub_path(fs, rev, TRUE,
+                                  svn_fs_x__is_packed_rev(fs, rev) /* sic! */,
+                                  buffer, result_pool);
 }
 
 const char *
