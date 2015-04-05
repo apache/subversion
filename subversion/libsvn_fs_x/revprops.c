@@ -1752,12 +1752,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST,
                                        scratch_pool);
 
-  /* Remove any existing pack file for this shard, since it is incomplete. */
-  SVN_ERR(svn_io_remove_dir2(pack_file_dir, TRUE, cancel_func, cancel_baton,
-                             scratch_pool));
-
-  /* Create the new directory and manifest file stream. */
-  SVN_ERR(svn_io_dir_make(pack_file_dir, APR_OS_DEFAULT, scratch_pool));
+  /* Create the manifest file stream. */
   SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
                                    scratch_pool, scratch_pool));
 
@@ -1838,20 +1833,6 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
 
   svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_x__delete_revprops_shard(const char *shard_path,
-                                apr_int64_t shard,
-                                int max_files_per_dir,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_io_remove_dir2(shard_path, TRUE,
-                             cancel_func, cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -99,21 +99,6 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool);
 
-/* Delete the non-packed revprop SHARD at SHARD_PATH with exactly
- * MAX_FILES_PER_DIR revprop files in it.  If this is shard 0, keep the
- * revprop file for revision 0.
- *
- * CANCEL_FUNC and CANCEL_BATON are used in the usual way.  Temporary
- * allocations are done in SCRATCH_POOL.
- */
-svn_error_t *
-svn_fs_x__delete_revprops_shard(const char *shard_path,
-                                apr_int64_t shard,
-                                int max_files_per_dir,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
