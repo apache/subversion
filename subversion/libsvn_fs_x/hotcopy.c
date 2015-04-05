@@ -636,16 +636,6 @@ hotcopy_body(void *baton,
                                         cancel_func, cancel_baton,
                                         scratch_pool));
 
-  /* Now copy the node-origins cache tree. */
-  src_subdir = svn_dirent_join(src_fs->path, PATH_NODE_ORIGINS_DIR,
-                               scratch_pool);
-  SVN_ERR(svn_io_check_path(src_subdir, &kind, scratch_pool));
-  if (kind == svn_node_dir)
-    SVN_ERR(hotcopy_io_copy_dir_recursively(NULL, src_subdir, dst_fs->path,
-                                            PATH_NODE_ORIGINS_DIR, TRUE,
-                                            cancel_func, cancel_baton,
-                                            scratch_pool));
-
   /*
    * NB: Data copied below is only read by writers, not readers.
    *     Writers are still locked out at this point.

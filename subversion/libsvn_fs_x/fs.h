@@ -57,7 +57,6 @@ extern "C" {
 #define PATH_PACK_LOCK_FILE   "pack-lock"        /* Pack lock file */
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
-#define PATH_NODE_ORIGINS_DIR "node-origins"     /* Lazy node-origin cache */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
