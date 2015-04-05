@@ -147,23 +147,18 @@ svn_fs_x__path_revprop_generation(svn_fs_t *fs,
 
 /* Return the full path of the file FILENAME within revision REV's shard in
  * FS.  If FILENAME is NULL, return the shard directory directory itself.
- * REVPROPS indicates the parent of the shard parent folder ("revprops" or
- * "revs").  PACKED says whether we want the packed shard's name.
+ * PACKED says whether we want the packed shard's name.
  *
  * Allocate the result in RESULT_POOL.
  */static const char*
 construct_shard_sub_path(svn_fs_t *fs,
                          svn_revnum_t rev,
-                         svn_boolean_t revprops,
                          svn_boolean_t packed,
                          const char *filename,
                          apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_PACKED_SHARD)] = { 0 };
-
-  /* Select the appropriate parent path constant. */
-  const char *parent = PATH_REVS_DIR;
 
   /* String containing the shard number. */
   apr_size_t len = svn__i64toa(buffer, rev / ffd->max_files_per_dir);
@@ -173,7 +168,7 @@ construct_shard_sub_path(svn_fs_t *fs,
     strncpy(buffer + len, PATH_EXT_PACKED_SHARD, sizeof(buffer) - len - 1);
 
   /* This will also work for NULL FILENAME as well. */
-  return svn_dirent_join_many(result_pool, fs->path, parent, buffer,
+  return svn_dirent_join_many(result_pool, fs->path, PATH_REVS_DIR, buffer,
                               filename, SVN_VA_NULL);
 }
 
@@ -184,15 +179,15 @@ svn_fs_x__path_rev_packed(svn_fs_t *fs,
                           apr_pool_t *result_pool)
 {
   assert(svn_fs_x__is_packed_rev(fs, rev));
-  return construct_shard_sub_path(fs, rev, FALSE, TRUE, kind, result_pool);
+  return construct_shard_sub_path(fs, rev, TRUE, kind, result_pool);
 }
 
 const char *
-svn_fs_x__path_rev_shard(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *result_pool)
+svn_fs_x__path_shard(svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_pool_t *result_pool)
 {
-  return construct_shard_sub_path(fs, rev, FALSE, FALSE, NULL, result_pool);
+  return construct_shard_sub_path(fs, rev, FALSE, NULL, result_pool);
 }
 
 const char *
@@ -205,7 +200,7 @@ svn_fs_x__path_rev(svn_fs_t *fs,
   svn__i64toa(buffer + 1, rev);
 
   assert(! svn_fs_x__is_packed_rev(fs, rev));
-  return construct_shard_sub_path(fs, rev, FALSE, FALSE, buffer, result_pool);
+  return construct_shard_sub_path(fs, rev, FALSE, buffer, result_pool);
 }
 
 const char *
@@ -219,19 +214,11 @@ svn_fs_x__path_rev_absolute(svn_fs_t *fs,
 }
 
 const char *
-svn_fs_x__path_revprops_shard(svn_fs_t *fs,
-                              svn_revnum_t rev,
-                              apr_pool_t *result_pool)
-{
-  return construct_shard_sub_path(fs, rev, TRUE, FALSE, NULL, result_pool);
-}
-
-const char *
-svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
+svn_fs_x__path_pack_shard(svn_fs_t *fs,
                                    svn_revnum_t rev,
                                    apr_pool_t *result_pool)
 {
-  return construct_shard_sub_path(fs, rev, TRUE, TRUE, NULL, result_pool);
+  return construct_shard_sub_path(fs, rev, TRUE, NULL, result_pool);
 }
 
 const char *
@@ -247,7 +234,7 @@ svn_fs_x__path_revprops(svn_fs_t *fs,
 
   /* Revprops for packed r0 are not packed, yet stored in the packed shard.
      Hence, the second flag must check for packed _rev_ - not revprop. */
-  return construct_shard_sub_path(fs, rev, TRUE,
+  return construct_shard_sub_path(fs, rev,
                                   svn_fs_x__is_packed_rev(fs, rev) /* sic! */,
                                   buffer, result_pool);
 }

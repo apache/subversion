@@ -691,8 +691,8 @@ get_revprop_packname(svn_fs_t *fs,
   min_filename_len = get_min_filename_len(revprops);
 
   /* Read the content of the manifest file */
-  revprops->folder
-    = svn_fs_x__path_revprops_pack_shard(fs, revprops->revision, result_pool);
+  revprops->folder = svn_fs_x__path_pack_shard(fs, revprops->revision,
+                                               result_pool);
   manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST,
                                        result_pool);
 
@@ -1580,8 +1580,7 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
   svn_stringbuf_t *content = NULL;
 
   /* try to read the manifest file */
-  const char *folder = svn_fs_x__path_revprops_pack_shard(fs, revision,
-                                                          scratch_pool);
+  const char *folder = svn_fs_x__path_pack_shard(fs, revision, scratch_pool);
   const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST,
                                               scratch_pool);
 

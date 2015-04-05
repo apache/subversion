@@ -945,13 +945,8 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
 
   /* Create the revision data directories. */
   SVN_ERR(svn_io_make_dir_recursively(
-                              svn_fs_x__path_rev_shard(fs, 0, scratch_pool),
+                              svn_fs_x__path_shard(fs, 0, scratch_pool),
                               scratch_pool));
-
-  /* Create the revprops directory. */
-  SVN_ERR(svn_io_make_dir_recursively(
-                         svn_fs_x__path_revprops_shard(fs, 0, scratch_pool),
-                         scratch_pool));
 
   /* Create the transaction directory. */
   SVN_ERR(svn_io_make_dir_recursively(

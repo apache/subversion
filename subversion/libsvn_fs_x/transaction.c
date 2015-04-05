@@ -3405,34 +3405,15 @@ commit_body(void *baton,
      fails because the shard already existed for some reason. */
   if (new_rev % ffd->max_files_per_dir == 0)
     {
-      /* Create the revs shard. */
-        {
-          const char *new_dir
-            = svn_fs_x__path_rev_shard(cb->fs, new_rev, subpool);
-          svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, subpool);
-          if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
-            return svn_error_trace(err);
-          svn_error_clear(err);
-          SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
-                                                    PATH_REVS_DIR,
-                                                    subpool),
-                                    new_dir, subpool));
-        }
-
-      /* Create the revprops shard. */
-      SVN_ERR_ASSERT(! svn_fs_x__is_packed_revprop(cb->fs, new_rev));
-        {
-          const char *new_dir
-            = svn_fs_x__path_revprops_shard(cb->fs, new_rev, subpool);
-          svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, subpool);
-          if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
-            return svn_error_trace(err);
-          svn_error_clear(err);
-          SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
-                                                    PATH_REVS_DIR,
-                                                    subpool),
-                                    new_dir, subpool));
-        }
+      const char *new_dir = svn_fs_x__path_shard(cb->fs, new_rev, subpool);
+      svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, subpool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
+        return svn_error_trace(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
+                                                PATH_REVS_DIR,
+                                                subpool),
+                                new_dir, subpool));
     }
 
   /* Move the finished rev file into place.
