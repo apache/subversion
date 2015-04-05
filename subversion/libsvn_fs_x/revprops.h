@@ -76,7 +76,8 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
 /****** Packing FSX shards *********/
 
 /* For the revprop SHARD at SHARD_PATH with exactly MAX_FILES_PER_DIR
- * revprop files in it, create a packed shared at PACK_FILE_DIR.
+ * revprop files in it, create a packed shared at PACK_FILE_DIR in
+ * filesystem FS.
  *
  * COMPRESSION_LEVEL defines how well the resulting pack file shall be
  * compressed or whether is shall be compressed at all.  Individual pack
@@ -87,7 +88,8 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
  * allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
-svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
+svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
+                              const char *pack_file_dir,
                               const char *shard_path,
                               apr_int64_t shard,
                               int max_files_per_dir,

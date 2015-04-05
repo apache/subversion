@@ -1730,7 +1730,8 @@ copy_revprops(const char *pack_file_dir,
 }
 
 svn_error_t *
-svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
+svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
+                              const char *pack_file_dir,
                               const char *shard_path,
                               apr_int64_t shard,
                               int max_files_per_dir,
@@ -1764,10 +1765,19 @@ svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
   start_rev = (svn_revnum_t) (shard * max_files_per_dir);
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
   if (start_rev == 0)
-    ++start_rev;
-    /* Special special case: if max_files_per_dir is 1, then at this point
-       start_rev == 1 and end_rev == 0 (!).  Fortunately, everything just
-       works. */
+    {
+      /* Never pack revprops for r0, just copy it. */
+      SVN_ERR(svn_io_copy_file(svn_fs_x__path_revprops(fs, 0, iterpool),
+                               svn_dirent_join(pack_file_dir, "0",
+                                               scratch_pool),
+                               TRUE,
+                               iterpool));
+
+      ++start_rev;
+      /* Special special case: if max_files_per_dir is 1, then at this point
+         start_rev == 1 and end_rev == 0 (!).  Fortunately, everything just
+         works. */
+    }
 
   /* initialize the revprop size info */
   sizes = apr_array_make(scratch_pool, max_files_per_dir, sizeof(apr_off_t));
@@ -1841,31 +1851,8 @@ svn_fs_x__delete_revprops_shard(const char *shard_path,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool)
 {
-  if (shard == 0)
-    {
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      int i;
-
-      /* delete all files except the one for revision 0 */
-      for (i = 1; i < max_files_per_dir; ++i)
-        {
-          const char *path;
-          svn_pool_clear(iterpool);
-
-          path = svn_dirent_join(shard_path,
-                                 apr_psprintf(iterpool, "%d", i),
-                                 iterpool);
-          if (cancel_func)
-            SVN_ERR((*cancel_func)(cancel_baton));
-
-          SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
-    }
-  else
-    SVN_ERR(svn_io_remove_dir2(shard_path, TRUE,
-                               cancel_func, cancel_baton, scratch_pool));
+  SVN_ERR(svn_io_remove_dir2(shard_path, TRUE,
+                             cancel_func, cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }

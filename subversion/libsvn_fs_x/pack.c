@@ -2185,7 +2185,8 @@ pack_shard(const char *revs_dir,
                    apr_psprintf(scratch_pool, "%" APR_INT64_T_FMT, shard),
                    scratch_pool);
 
-      SVN_ERR(svn_fs_x__pack_revprops_shard(revprops_pack_file_dir,
+      SVN_ERR(svn_fs_x__pack_revprops_shard(fs,
+                                            revprops_pack_file_dir,
                                             revprops_shard_path,
                                             shard, max_files_per_dir,
                                             (int)(0.9 * max_pack_size),
