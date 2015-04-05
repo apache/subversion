@@ -456,8 +456,7 @@ hotcopy_revisions(svn_fs_t *src_fs,
 
       /* Now that all revisions have moved into the pack, the original
        * rev dir can be removed. */
-      SVN_ERR(svn_io_remove_dir2(svn_fs_x__path_rev_shard(dst_fs, rev,
-                                                          iterpool),
+      SVN_ERR(svn_io_remove_dir2(svn_fs_x__path_shard(dst_fs, rev, iterpool),
                                  TRUE, cancel_func, cancel_baton, iterpool));
     }
 
