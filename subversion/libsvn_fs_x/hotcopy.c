@@ -243,6 +243,7 @@ hotcopy_io_copy_dir_recursively(svn_boolean_t *skipped_p,
  * to DST_SUBDIR. Assume a sharding layout based on MAX_FILES_PER_DIR.
  * Set *SKIPPED_P to FALSE only if the file was copied, do not change the
  * value in *SKIPPED_P otherwise. SKIPPED_P may be NULL if not required.
+ * If PROPS is set, copy the revprops file, otherwise copy the rev data file.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 hotcopy_copy_shard_file(svn_boolean_t *skipped_p,
@@ -250,6 +251,7 @@ hotcopy_copy_shard_file(svn_boolean_t *skipped_p,
                         const char *dst_subdir,
                         svn_revnum_t rev,
                         int max_files_per_dir,
+                        svn_boolean_t props,
                         apr_pool_t *scratch_pool)
 {
   const char *src_subdir_shard = src_subdir,
@@ -269,7 +271,9 @@ hotcopy_copy_shard_file(svn_boolean_t *skipped_p,
 
   SVN_ERR(hotcopy_io_dir_file_copy(skipped_p,
                                    src_subdir_shard, dst_subdir_shard,
-                                   apr_psprintf(scratch_pool, "%ld", rev),
+                                   apr_psprintf(scratch_pool, "%c%ld",
+                                                props ? 'p' : 'r',
+                                                rev),
                                    scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -329,18 +333,12 @@ hotcopy_copy_packed_shard(svn_boolean_t *skipped_p,
 
           SVN_ERR(hotcopy_copy_shard_file(skipped_p, src_subdir, dst_subdir,
                                           revprop_rev, max_files_per_dir,
-                                          iterpool));
+                                          TRUE, iterpool));
         }
       svn_pool_destroy(iterpool);
     }
   else
     {
-      /* revprop for revision 0 will never be packed */
-      if (rev == 0)
-        SVN_ERR(hotcopy_copy_shard_file(skipped_p, src_subdir, dst_subdir,
-                                        0, max_files_per_dir,
-                                        scratch_pool));
-
       /* packed revprops folder */
       packed_shard = apr_psprintf(scratch_pool, "%ld" PATH_EXT_PACKED_SHARD,
                                   rev / max_files_per_dir);
@@ -677,13 +675,13 @@ hotcopy_revisions(svn_fs_t *src_fs,
 
       /* Copy the rev file. */
       SVN_ERR(hotcopy_copy_shard_file(&skipped, src_revs_dir, dst_revs_dir,
-                                      rev, max_files_per_dir,
+                                      rev, max_files_per_dir, FALSE,
                                       iterpool));
 
       /* Copy the revprop file. */
       SVN_ERR(hotcopy_copy_shard_file(&skipped, src_revprops_dir,
                                       dst_revprops_dir,
-                                      rev, max_files_per_dir, 
+                                      rev, max_files_per_dir, TRUE,
                                       iterpool));
 
       /* Whenever this revision did not previously exist in the destination,

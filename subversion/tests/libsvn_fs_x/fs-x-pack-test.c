@@ -658,7 +658,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
      time we want to see an error! */
   SVN_ERR(svn_io_remove_file2(
               svn_dirent_join_many(pool, REPO_NAME, PATH_REVPROPS_DIR,
-                                   apr_psprintf(pool, "%ld/%ld",
+                                   apr_psprintf(pool, "%ld/p%ld",
                                                 after_rev / SHARD_SIZE,
                                                 after_rev),
                                    SVN_VA_NULL),

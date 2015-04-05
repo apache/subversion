@@ -1768,7 +1768,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
     {
       /* Never pack revprops for r0, just copy it. */
       SVN_ERR(svn_io_copy_file(svn_fs_x__path_revprops(fs, 0, iterpool),
-                               svn_dirent_join(pack_file_dir, "0",
+                               svn_dirent_join(pack_file_dir, "p0",
                                                scratch_pool),
                                TRUE,
                                iterpool));
