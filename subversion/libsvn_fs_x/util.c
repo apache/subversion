@@ -200,8 +200,9 @@ svn_fs_x__path_rev(svn_fs_t *fs,
                    svn_revnum_t rev,
                    apr_pool_t *result_pool)
 {
-  char buffer[SVN_INT64_BUFFER_SIZE];
-  svn__i64toa(buffer, rev);
+  char buffer[SVN_INT64_BUFFER_SIZE + 1];
+  buffer[0] = 'r';
+  svn__i64toa(buffer + 1, rev);
 
   assert(! svn_fs_x__is_packed_rev(fs, rev));
   return construct_shard_sub_path(fs, rev, FALSE, FALSE, buffer, result_pool);
@@ -238,8 +239,9 @@ svn_fs_x__path_revprops(svn_fs_t *fs,
                         svn_revnum_t rev,
                         apr_pool_t *result_pool)
 {
-  char buffer[SVN_INT64_BUFFER_SIZE];
-  svn__i64toa(buffer, rev);
+  char buffer[SVN_INT64_BUFFER_SIZE + 1];
+  buffer[0] = 'p';
+  svn__i64toa(buffer + 1, rev);
 
   assert(! svn_fs_x__is_packed_revprop(fs, rev));
 
