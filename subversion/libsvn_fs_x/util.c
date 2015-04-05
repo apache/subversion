@@ -163,7 +163,7 @@ construct_shard_sub_path(svn_fs_t *fs,
   char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_PACKED_SHARD)] = { 0 };
 
   /* Select the appropriate parent path constant. */
-  const char *parent = revprops ? PATH_REVPROPS_DIR : PATH_REVS_DIR;
+  const char *parent = PATH_REVS_DIR;
 
   /* String containing the shard number. */
   apr_size_t len = svn__i64toa(buffer, rev / ffd->max_files_per_dir);

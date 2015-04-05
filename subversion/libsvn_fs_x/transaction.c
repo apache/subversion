@@ -3429,7 +3429,7 @@ commit_body(void *baton,
             return svn_error_trace(err);
           svn_error_clear(err);
           SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
-                                                    PATH_REVPROPS_DIR,
+                                                    PATH_REVS_DIR,
                                                     subpool),
                                     new_dir, subpool));
         }
