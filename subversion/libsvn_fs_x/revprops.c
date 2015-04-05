@@ -1643,7 +1643,7 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
 /****** Packing FSX shards *********/
 
 /* Copy revprop files for revisions [START_REV, END_REV) from SHARD_PATH
- * to the pack file at PACK_FILE_NAME in PACK_FILE_DIR.
+ * in filesystem FS to the pack file at PACK_FILE_NAME in PACK_FILE_DIR.
  *
  * The file sizes have already been determined and written to SIZES.
  * Please note that this function will be executed while the filesystem
@@ -1659,7 +1659,8 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
  * are done in SCRATCH_POOL.
  */
 static svn_error_t *
-copy_revprops(const char *pack_file_dir,
+copy_revprops(svn_fs_t *fs,
+              const char *pack_file_dir,
               const char *pack_filename,
               const char *shard_path,
               svn_revnum_t start_rev,
@@ -1703,8 +1704,7 @@ copy_revprops(const char *pack_file_dir,
       svn_pool_clear(iterpool);
 
       /* Construct the file name. */
-      path = svn_dirent_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
-                             iterpool);
+      path = svn_fs_x__path_revprops(fs, rev, iterpool);
 
       /* Copy all the bits from the non-packed revprop file to the end of
        * the pack file. */
@@ -1793,8 +1793,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
       svn_pool_clear(iterpool);
 
       /* Get the size of the file. */
-      path = svn_dirent_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
-                             iterpool);
+      path = svn_fs_x__path_revprops(fs, rev, iterpool);
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
       /* if we already have started a pack file and this revprop cannot be
@@ -1802,7 +1801,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
       if (sizes->nelts != 0 &&
           total_size + SVN_INT64_BUFFER_SIZE + finfo.size > max_pack_size)
         {
-          SVN_ERR(copy_revprops(pack_file_dir, pack_filename,
+          SVN_ERR(copy_revprops(fs, pack_file_dir, pack_filename,
                                 shard_path, start_rev, rev-1,
                                 sizes, (apr_size_t)total_size,
                                 compression_level, cancel_func,
@@ -1829,7 +1828,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
 
   /* write the last pack file */
   if (sizes->nelts != 0)
-    SVN_ERR(copy_revprops(pack_file_dir, pack_filename, shard_path,
+    SVN_ERR(copy_revprops(fs, pack_file_dir, pack_filename, shard_path,
                           start_rev, rev-1, sizes,
                           (apr_size_t)total_size, compression_level,
                           cancel_func, cancel_baton, iterpool));
