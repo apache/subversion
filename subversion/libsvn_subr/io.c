@@ -4046,7 +4046,8 @@ svn_error_t *
 svn_io_file_move(const char *from_path, const char *to_path,
                  apr_pool_t *pool)
 {
-  svn_error_t *err = svn_io_file_rename(from_path, to_path, pool);
+  svn_error_t *err = svn_error_trace(svn_io_file_rename(from_path, to_path,
+                                                        pool));
 
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
@@ -4059,24 +4060,27 @@ svn_io_file_move(const char *from_path, const char *to_path,
                                        svn_io_file_del_none,
                                        pool, pool));
 
-      err = svn_io_copy_file(from_path, tmp_to_path, TRUE, pool);
+      err = svn_error_trace(svn_io_copy_file(from_path, tmp_to_path, TRUE,
+                                             pool));
       if (err)
         goto failed_tmp;
 
-      err = svn_io_file_rename(tmp_to_path, to_path, pool);
+      err = svn_error_trace(svn_io_file_rename(tmp_to_path, to_path, pool));
       if (err)
         goto failed_tmp;
 
-      err = svn_io_remove_file2(from_path, FALSE, pool);
+      err = svn_error_trace(svn_io_remove_file2(from_path, FALSE, pool));
       if (! err)
         return SVN_NO_ERROR;
 
-      svn_error_clear(svn_io_remove_file2(to_path, FALSE, pool));
-
-      return err;
+      return svn_error_compose_create(
+                  err,
+                  svn_error_trace(svn_io_remove_file2(to_path, FALSE, pool)));
 
     failed_tmp:
-      svn_error_clear(svn_io_remove_file2(tmp_to_path, FALSE, pool));
+      err = svn_error_compose_create(
+              err,
+              svn_error_trace(svn_io_remove_file2(tmp_to_path, FALSE, pool)));
     }
 
   return err;
