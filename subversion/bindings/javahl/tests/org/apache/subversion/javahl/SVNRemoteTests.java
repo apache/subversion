@@ -53,15 +53,35 @@ import java.security.NoSuchAlgorithmException;
  */
 public class SVNRemoteTests extends SVNTests
 {
+    /**
+     * Base name of all our tests.
+     */
+    public final static String testName = "remote_test";
+
     protected OneTest thisTest;
 
     public SVNRemoteTests()
     {
+        init();
     }
 
     public SVNRemoteTests(String name)
     {
         super(name);
+        init();
+    }
+
+    /**
+     * Initialize the testBaseName and the testCounter, if this is the
+     * first test of this class.
+     */
+    private void init()
+    {
+        if (!testName.equals(testBaseName))
+        {
+            testCounter = 0;
+            testBaseName = testName;
+        }
     }
 
     protected void setUp() throws Exception

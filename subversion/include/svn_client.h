@@ -4109,6 +4109,13 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * If @a remove_ignored_items is @c TRUE, remove ignored unversioned items
  * in @a dir after successful working copy cleanup.
  *
+ * If @a fix_recorded_timestamps is @c TRUE, this function fixes recorded
+ * timestamps for unmodified files in the working copy, reducing comparision
+ * time on future checks.
+ *
+ * If @a vacuum_pristines is @c TRUE, and @a dir_abspath points to the working
+ * copy root unreferenced files in the pristine store are removed.
+ *
  * When asked to remove unversioned or ignored items, and the working copy
  * is already locked, return #SVN_ERR_WC_LOCKED. This prevents accidental
  * working copy corruption in case users run the cleanup operation to

@@ -412,6 +412,9 @@ typedef enum svn_diff_conflict_display_style_t
 /** Given a vtable of @a output_fns/@a output_baton for consuming
  * differences, output the differences in @a diff.
  *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -628,6 +631,9 @@ svn_diff_file_diff4(svn_diff_t **diff,
  * will be used in the generated diff output. Otherwise the legacy compile
  * time default will be used.
  *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -645,7 +651,7 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool);
 
-/** Similar to svn_diff_file_output_unified3(), but without cancel
+/** Similar to svn_diff_file_output_unified4(), but without cancel
  * support and with @a context_size set to -1.
  *
  * @since New in 1.5.
@@ -707,6 +713,9 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
  * @a conflict_separator is @c NULL, a default marker will be displayed.
  * @a conflict_style dictates how conflicts are displayed. 
  * Uses @a scratch_pool for temporary allocations.
+ *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
  *
  * @since New in 1.9.
  */
@@ -783,7 +792,10 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
  * Either @a original or @a latest may be NULL to describe that the version
  * didn't exist.
  *
- * Writes the ouput to @a output_stream.
+ * Writes the output to @a output_stream.
+ *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
  *
  * @since New in 1.9.
  */
@@ -859,6 +871,9 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
  * will be used in the generated diff output. Otherwise the legacy compile
  * time default will be used.
  *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
+ *
  * Uses @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9
@@ -926,6 +941,9 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
  * each of these if @c NULL is passed.
  *
  * @a conflict_style dictates how conflicts are displayed.
+ *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
  *
  * Uses @a scratch_pool for temporary allocations.
  *

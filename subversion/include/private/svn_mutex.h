@@ -27,8 +27,6 @@
 #ifndef SVN_MUTEX_H
 #define SVN_MUTEX_H
 
-#include <apr_thread_mutex.h>
-
 #include "svn_error.h"
 
 #ifdef __cplusplus
