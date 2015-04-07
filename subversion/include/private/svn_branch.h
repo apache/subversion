@@ -555,11 +555,14 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
                              svn_branch_sibling_t *new_branch_def,
                              apr_pool_t *scratch_pool);
 
-/* Create a copy of NEW_SUBTREE at TO_BRANCH:TO_EID, generating new elements
- * for all elements in NEW_SUBTREE except the root. Set the root element's
- * parent to NEW_PARENT_EID and name to NEW_NAME.
+/* Create a copy of NEW_SUBTREE in TO_BRANCH, generating a new element
+ * for each non-root element in NEW_SUBTREE.
  *
- * Alter the 'to' element if it already exists, otherwise instantiate it.
+ * For the new subtree root element, if TO_EID is -1, generate a new EID,
+ * otherwise alter (if it exists) or instantiate the element TO_EID.
+ *
+ * Set the new subtree root element's parent to NEW_PARENT_EID and name to
+ * NEW_NAME.
  */
 svn_error_t *
 svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
