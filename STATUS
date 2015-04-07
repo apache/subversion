@@ -172,3 +172,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1668618, r1671388
+   Fix stack memory problem for SWIG Perl bindings.
+   Justification:
+     Possible stack corruption leading to SEGV.
+   Votes:
+     +1: philip
+     +0: rhuijben
