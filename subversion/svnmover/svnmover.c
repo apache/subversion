@@ -1,5 +1,5 @@
 /*
- * svnmover.c: Subversion Multiple URL Client
+ * svnmover.c: Concept Demo for Move Tracking and Branching
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -19,21 +19,7 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- *
  */
-
-/*  Multiple URL Command Client
-
-    Combine a list of mv, cp and rm commands on URLs into a single commit.
-
-    How it works: the command line arguments are parsed into an array of
-    action structures.  The action structures are interpreted to build a
-    tree of operation structures.  The tree of operation structures is
-    used to drive an RA commit editor to produce a single commit.
-
-    To build this client, type 'make svnmover' from the root of your
-    Subversion source directory.
-*/
 
 #include <stdio.h>
 #include <string.h>
