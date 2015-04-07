@@ -336,7 +336,7 @@ load_config(svn_ra_serf__session_t *session,
                                                  (apr_uint32_t)log_components,
                                                  SERF_LOG_DEFAULT_LAYOUT,
                                                  stderr,
-                                                 pool);
+                                                 result_pool);
 
       if (!status)
           serf_logging_add_output(session->context, output);
