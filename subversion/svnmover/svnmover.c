@@ -1510,9 +1510,13 @@ execute(const apr_array_header_t *actions,
       /* Before translating paths to/from elements, need a sequence point */
       svn_editor3_sequence_point(editor);
 
+      /* Convert each ACTION[j].{relpath, rev_spec} to
+         (EL_REV[j], PARENT_EL_REV[j], PATH_NAME[j], REVNUM[j]),
+         except for the local-path argument of a 'put' command. */
       for (j = 0; j < 3; j++)
         {
-          if (action->relpath[j])
+          if (action->relpath[j]
+              && ! (action->action == ACTION_PUT_FILE && j == 0))
             {
               const char *rrpath, *parent_rrpath;
 
@@ -2090,7 +2094,10 @@ parse_actions(apr_array_header_t **actions,
                                        "Argument '%s' is a URL; use "
                                        "--root-url (-U) instead", path);
             }
-          if (! svn_relpath_is_canonical(path))
+          /* These args must be relpaths, except for the 'local file' arg
+             of a 'put' command. */
+          if (! svn_relpath_is_canonical(path)
+              && ! (action->action == ACTION_PUT_FILE && k == 0))
             {
               return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                        "Argument '%s' is not a relative path "
