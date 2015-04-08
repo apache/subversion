@@ -1909,7 +1909,7 @@ insufficient(int i, apr_pool_t *pool)
 }
 
 static svn_error_t *
-display_version(apr_getopt_t *os, apr_pool_t *pool)
+display_version(apr_getopt_t *os, svn_boolean_t _quiet, apr_pool_t *pool)
 {
   const char *ra_desc_start
     = "The following repository access (RA) modules are available:\n\n";
@@ -1918,7 +1918,7 @@ display_version(apr_getopt_t *os, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(os, "svnmover", TRUE, FALSE, FALSE,
+  SVN_ERR(svn_opt_print_help4(NULL, "svnmover", TRUE, _quiet, FALSE,
                               version_footer->data,
                               NULL, NULL, NULL, NULL, NULL, pool));
 
@@ -2194,6 +2194,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   const char *anchor_url = NULL, *extra_args_file = NULL;
   const char *config_dir = NULL;
   apr_array_header_t *config_options;
+  svn_boolean_t show_version = FALSE;
   svn_boolean_t non_interactive = FALSE;
   svn_boolean_t force_interactive = FALSE;
   svn_boolean_t interactive_actions;
@@ -2302,13 +2303,19 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           no_auth_cache = TRUE;
           break;
         case version_opt:
-          SVN_ERR(display_version(opts, pool));
-          return SVN_NO_ERROR;
+          show_version = TRUE;
+          break;
         case 'h':
         case '?':
           usage(stdout, pool);
           return SVN_NO_ERROR;
         }
+    }
+
+  if (show_version)
+    {
+      SVN_ERR(display_version(opts, quiet, pool));
+      return SVN_NO_ERROR;
     }
 
   if (non_interactive && force_interactive)
