@@ -24,6 +24,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#define HAVE_LINENOISE
+#ifdef HAVE_LINENOISE
+#include "../libsvn_subr/linenoise/linenoise.c"
+#endif
 
 #include <apr_lib.h>
 
@@ -2101,6 +2105,38 @@ parse_actions(apr_array_header_t **actions,
   return SVN_NO_ERROR;
 }
 
+/* Display a prompt, read a line of input and split it into words.
+ *
+ * Set *WORDS to null if input is cancelled (by ctrl-C for example).
+ */
+static svn_error_t *
+read_words(apr_array_header_t **words,
+           const char *prompt,
+           apr_pool_t *result_pool)
+{
+#ifdef HAVE_LINENOISE
+  char *input;
+
+  input = linenoise(prompt);
+  if (! input)
+    {
+      *words = NULL;
+      return SVN_NO_ERROR;
+    }
+  *words = svn_cstring_split(input, " ", TRUE /*chop_whitespace*/, result_pool);
+  if ((*words)->nelts)
+    linenoiseHistoryAdd(input);
+  free(input);
+#else
+  const char *input;
+
+  SVN_ERR(svn_cmdline_prompt_user2(&input, prompt, NULL, pool));
+  *words = svn_cstring_split(input, " ", TRUE /*chop_whitespace*/, pool);
+#endif
+
+  return SVN_NO_ERROR;
+}
+
 /*
  * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
  * either return an error to be displayed, or set *EXIT_CODE to non-zero and
@@ -2399,14 +2435,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       /* Possibly read more actions from the command line */
       if (interactive_actions)
         {
-          const char *input;
-
-          SVN_ERR(svn_cmdline_prompt_user2(&input, "svnmover> ", NULL, pool));
-          action_args = svn_cstring_split(input, " ",
-                                          TRUE /*chop_whitespace*/, pool);
+          SVN_ERR(read_words(&action_args, "svnmover> ", pool));
         }
     }
-  while (interactive_actions);
+  while (interactive_actions && action_args);
 
   return SVN_NO_ERROR;
 }
