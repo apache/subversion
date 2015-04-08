@@ -510,6 +510,7 @@ def merges(sbox):
 def reported_br_diff(family, path1, path2):
   return [r'--- diff branch \^.* at /%s : \^.* at /%s, family %d' % (
            re.escape(path1), re.escape(path2), family)]
+
 def reported_del(path):
   return ['D   ' + re.escape(path)]
 
@@ -524,15 +525,21 @@ def reported_br_add(family, path):
   return ['A   ' + re.escape(path) + r' \(branch \^\..*\)',
           r'--- added branch \^.*, family %d, at /%s' % (family, re.escape(path))]
 
-def reported_move(path1, path2):
+def reported_move(path1, path2, branch_text=''):
   dir1, name1 = os.path.split(path1)
   dir2, name2 = os.path.split(path2)
   if dir1 == dir2:
-    return ['M r ' + re.escape(path2) + r' \(renamed from ' + re.escape('.../' + name1) + r'\)']
+    return ['M r ' + re.escape(path2) + branch_text
+            + r' \(renamed from ' + re.escape('.../' + name1) + r'\)']
   elif name1 == name2:
-    return ['Mv  ' + re.escape(path2) + r' \(moved from ' + re.escape(dir1 + '/...') + r'\)']
+    return ['Mv  ' + re.escape(path2) + branch_text
+            + r' \(moved from ' + re.escape(dir1 + '/...') + r'\)']
   else:
-    return ['Mvr ' + re.escape(path2) + r' \(moved\+renamed from ' + re.escape(path1) + r'\)']
+    return ['Mvr ' + re.escape(path2) + branch_text
+            + r' \(moved\+renamed from ' + re.escape(path1) + r'\)']
+
+def reported_br_move(path1, path2):
+  return reported_move(path1, path2, r' \(branch \^\..*\)')
 
 #@XFail()  # There is a bug in the conversion to old-style commits:
 #  in r6 'bar' is plain-added instead of copied.
@@ -717,6 +724,46 @@ def move_to_unrelated_branch(sbox):
                 'mv trunk/lib subdir/lib2',
                 )
 
+# Move a whole branch within the same parent branch.
+def move_branch_within_same_parent_branch(sbox):
+  "move branch within same parent branch"
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+  repo_url = sbox.repo_url
+
+  # make a subbranch
+  test_svnmover(repo_url, None,
+                'mkbranch trunk/sub'
+                )
+
+  # move trunk
+  test_svnmover2(sbox, '',
+                   reported_br_diff(0, '', '') +
+                   reported_add('D') +
+                   reported_add('D/E') +
+                   reported_br_move('trunk', 'D/E/trunk2'),
+                 'mkdir D',
+                 'mkdir D/E',
+                 'mv trunk D/E/trunk2')
+
+  # move trunk and also modify it
+  test_svnmover2(sbox, '',
+                   reported_br_diff(0, '', '') +
+                   reported_del('D') +
+                   reported_del('D/E') +
+                   reported_br_move('D/E/trunk2', 'trunk') +
+                   reported_br_diff(1, 'D/E/trunk2', 'trunk') +
+                   reported_add('new'),
+                 'mv D/E/trunk2 trunk',
+                 'rm D',
+                 'mkdir trunk/new')
+
+  # move a subbranch of trunk
+  test_svnmover2(sbox, 'trunk',
+                 reported_br_diff(1, 'trunk', 'trunk') +
+                 reported_br_move('sub', 'sub2'),
+                'mv sub sub2'
+                )
+
 # This tests one variant of rearranging a trunk/tags/branches structure.
 #
 # From a single set of branches (each branch containing multiple
@@ -852,6 +899,7 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
 # family, and so would be linked to their old history by the weaker "copied
 # from" relationship.)
 #
+@XFail()
 def restructure_repo_projects_ttb_to_ttb_projects(sbox):
   "restructure repo: projects/ttb to ttb/projects"
   sbox_build_svnmover(sbox, content=initial_content_projects_ttb)
@@ -967,6 +1015,7 @@ test_list = [ None,
               move_to_related_branch,
               move_to_related_branch_element_already_exists,
               move_to_unrelated_branch,
+              move_branch_within_same_parent_branch,
               restructure_repo_ttb_projects_to_projects_ttb,
               restructure_repo_projects_ttb_to_ttb_projects,
             ]

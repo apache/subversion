@@ -1474,6 +1474,33 @@ commit_callback(const svn_commit_info_t *commit_info,
 #define is_branch_root_element(branch, eid) \
   ((branch)->sibling_defn->root_eid == (eid))
 
+/* If EL_REV is the root element of a branch, return the corresponding
+ * subbranch-root element of its outer branch.
+ *
+ * If it is the repository root, return null.
+ *
+ * Otherwise, return itself.
+ */
+static svn_branch_el_rev_id_t *
+point_to_outer_element_instead(svn_branch_el_rev_id_t *el_rev,
+                               apr_pool_t *result_pool)
+{
+  svn_branch_el_rev_id_t *new_el_rev = el_rev;
+
+  if (is_branch_root_element(el_rev->branch, el_rev->eid))
+    {
+      if (! el_rev->branch->outer_branch)
+        return NULL;
+
+      new_el_rev = svn_branch_el_rev_id_create(el_rev->branch->outer_branch,
+                                               el_rev->branch->outer_eid,
+                                               el_rev->rev,
+                                               result_pool);
+    }
+
+  return new_el_rev;
+}
+
 static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor_url,
@@ -1683,6 +1710,13 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_MV:
+          /* If given a branch root element, look instead at the
+             subbranch-root element within the outer branch. */
+          el_rev[0] = point_to_outer_element_instead(el_rev[0], pool);
+          if (! el_rev[0])
+            return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                     _("mv: cannot move the repository root"));
+
           if (svn_relpath_skip_ancestor(action->relpath[0], action->relpath[1]))
             return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                      _("mv: cannot move to child of self"));
@@ -1711,27 +1745,17 @@ execute(const apr_array_header_t *actions,
           made_changes = TRUE;
           break;
         case ACTION_RM:
-          VERIFY_REV_UNSPECIFIED("rm", 0);
-          VERIFY_EID_EXISTS("rm", 0);
-          {
-            svn_branch_instance_t *branch = el_rev[0]->branch;
-            int eid = el_rev[0]->eid;
-
-            /* If given a branch root element, look instead at the
-               subbranch-root element within the outer branch. */
-            if (is_branch_root_element(branch, eid))
-              {
-                if (! branch->outer_branch)
-                  return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+          /* If given a branch root element, look instead at the
+             subbranch-root element within the outer branch. */
+          el_rev[0] = point_to_outer_element_instead(el_rev[0], pool);
+          if (! el_rev[0])
+            return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                      _("rm: cannot remove the repository root"));
 
-                eid = el_rev[0]->branch->outer_eid;
-                branch = el_rev[0]->branch->outer_branch;
-              }
-
-            SVN_ERR(svn_editor3_delete(editor, el_rev[0]->rev,
-                                       branch, eid));
-          }
+          VERIFY_REV_UNSPECIFIED("rm", 0);
+          VERIFY_EID_EXISTS("rm", 0);
+          SVN_ERR(svn_editor3_delete(editor, el_rev[0]->rev,
+                                     el_rev[0]->branch, el_rev[0]->eid));
           notify("D    %s", action->relpath[0]);
           made_changes = TRUE;
           break;
