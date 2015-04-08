@@ -62,7 +62,8 @@
 /* Is BRANCH1 an immediate child of BRANCH2? Compare by full branch-ids; don't
    require identical branch-instance objects. */
 #define BRANCH_IS_CHILD_OF_BRANCH(branch1, branch2, scratch_pool) \
-  BRANCH_IS_SAME_BRANCH((branch1)->outer_branch, branch2, scratch_pool)
+  ((branch1)->outer_branch && \
+   BRANCH_IS_SAME_BRANCH((branch1)->outer_branch, branch2, scratch_pool))
 
 svn_branch_repos_t *
 svn_branch_repos_create(apr_pool_t *result_pool)
@@ -1398,13 +1399,16 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
   /* FROM_BRANCH must be an immediate child branch of TO_OUTER_BRANCH. */
   if (! BRANCH_IS_CHILD_OF_BRANCH(from_branch, to_outer_branch, scratch_pool))
     {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("source and destination must be within same "
-                                 "outer branch; source is b%d inside b%d, "
-                                 "destination is in b%d"),
-                               from_branch->sibling_defn->bsid,
-                               from_branch->outer_branch->sibling_defn->bsid,
-                               to_outer_branch->sibling_defn->bsid);
+      return svn_error_createf(
+               SVN_ERR_BRANCHING, NULL,
+               _("The source branch %s is within outer branch %s; the target "
+                 "branch must be within the same outer branch, but the "
+                 "specified target is within outer branch %s"),
+               svn_branch_instance_get_id(from_branch, scratch_pool),
+               from_branch->outer_branch
+                 ? svn_branch_instance_get_id(from_branch->outer_branch, scratch_pool)
+                 : "(none)",
+               svn_branch_instance_get_id(to_outer_branch, scratch_pool));
     }
 
   /* assign new eid to root node (outer branch) */
