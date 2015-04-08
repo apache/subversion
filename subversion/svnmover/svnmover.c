@@ -1097,7 +1097,7 @@ get_subbranches(svn_branch_instance_t *branch,
         {
           svn_branch_instance_t *b = bi->val;
 
-          svn_hash_sets(result, svn_branch_get_root_rrpath(b, result_pool), b);
+          svn_hash_sets(result, svn_branch_instance_get_id(b, result_pool), b);
         }
     }
   return result;
