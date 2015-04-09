@@ -48,6 +48,11 @@
 #include <termios.h>
 #endif
 
+#undef HAVE_LINENOISE
+#ifdef HAVE_LINENOISE
+#include "linenoise/linenoise.c"
+#endif
+
 
 
 /* Descriptor of an open terminal */
@@ -925,10 +930,28 @@ svn_cmdline_prompt_user2(const char **result,
                          svn_cmdline_prompt_baton_t *baton,
                          apr_pool_t *pool)
 {
+#ifdef HAVE_LINENOISE
+  char *input;
+
+  input = linenoise(prompt_str);
+  if (! input)
+    {
+      return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+    }
+  /* add the line to the recallable history (if non-empty) */
+  if (! (input && *input))
+    {
+      linenoiseHistoryAdd(input);
+    }
+  *result = apr_pstrdup(pool, input);
+  free(input);
+  return SVN_NO_ERROR;
+#else
   /* XXX: We know prompt doesn't use the new members
    * of svn_cmdline_prompt_baton2_t. */
   return prompt(result, prompt_str, FALSE /* don't hide input */,
                 (svn_cmdline_prompt_baton2_t *)baton, pool);
+#endif
 }
 
 /* This implements 'svn_auth_gnome_keyring_unlock_prompt_func_t'. */

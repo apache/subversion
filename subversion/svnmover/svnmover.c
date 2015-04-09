@@ -24,10 +24,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#define HAVE_LINENOISE
-#ifdef HAVE_LINENOISE
-#include "../libsvn_subr/linenoise/linenoise.c"
-#endif
 
 #include <apr_lib.h>
 
@@ -2145,25 +2141,18 @@ read_words(apr_array_header_t **words,
            const char *prompt,
            apr_pool_t *result_pool)
 {
-#ifdef HAVE_LINENOISE
-  char *input;
-
-  input = linenoise(prompt);
-  if (! input)
-    {
-      *words = NULL;
-      return SVN_NO_ERROR;
-    }
-  *words = svn_cstring_split(input, " ", TRUE /*chop_whitespace*/, result_pool);
-  if ((*words)->nelts)
-    linenoiseHistoryAdd(input);
-  free(input);
-#else
+  svn_error_t *err;
   const char *input;
 
-  SVN_ERR(svn_cmdline_prompt_user2(&input, prompt, NULL, pool));
-  *words = svn_cstring_split(input, " ", TRUE /*chop_whitespace*/, pool);
-#endif
+  err = svn_cmdline_prompt_user2(&input, prompt, NULL, result_pool);
+  if (err && (err->apr_err == SVN_ERR_CANCELLED || err->apr_err == APR_EOF))
+    {
+      *words = NULL;
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+  *words = svn_cstring_split(input, " ", TRUE /*chop_whitespace*/, result_pool);
 
   return SVN_NO_ERROR;
 }
