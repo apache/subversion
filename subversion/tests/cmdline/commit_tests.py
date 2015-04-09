@@ -3087,6 +3087,32 @@ def mkdir_conflict_proper_error(sbox):
                                      'mkdir', repo_url + '/A',
                                      '-m', '')
 
+def commit_xml(sbox):
+  "commit an xml file"
+
+  sbox.build()
+
+  sbox.simple_add_text('index.xml', 'index.xml')
+  sbox.simple_add_text('index.html', 'index.html')
+  sbox.simple_propset('svn:mime-type', 'text/xml', 'index.xml')
+  sbox.simple_propset('svn:mime-type', 'text/html', 'index.xml')
+
+  # This currently (2015-04-09) makes mod_dav return a 'HTTP/1.1 201 Created'
+  # result with content type text/xml (copied from file), which used to
+  # invoke the error parsing.
+  #
+  # Depending on the Apache version and config, this may cause an xml error.
+  sbox.simple_commit()
+
+  # This currently (2015-04-09) makes mod_dav return a 'HTTP/1.1 204 Updated'
+  # result with content type text/xml (copied from file), which used to
+  # invoke the error parsing.
+  #
+  # Depending on the Apache version and config, this may cause an xml error.
+  sbox.simple_append('index.xml', '<Q></R>', True)
+  sbox.simple_append('index.html', '<Q></R>', True)
+  sbox.simple_commit()
+
 ########################################################################
 # Run the tests
 
@@ -3163,6 +3189,7 @@ test_list = [ None,
               commit_deep_deleted,
               commit_mergeinfo_ood,
               mkdir_conflict_proper_error,
+              commit_xml,
              ]
 
 if __name__ == '__main__':
