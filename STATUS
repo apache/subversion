@@ -37,7 +37,7 @@ Release blockers for 1.9.0:
      doesn't generate an error. I'm guessing you need an older httpd or
      a special setup to reproduce the problem.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
