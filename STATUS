@@ -230,6 +230,15 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693
+   Fix various problems with binary file conflicts.
+   Justification:
+     Conflict description API violates its own promises for binaries.
+     Current behaviour can cause user confusion since conflict prompt
+     options for binary files won't work as expected.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
