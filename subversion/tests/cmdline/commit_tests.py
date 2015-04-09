@@ -3095,7 +3095,7 @@ def commit_xml(sbox):
   sbox.simple_add_text('index.xml', 'index.xml')
   sbox.simple_add_text('index.html', 'index.html')
   sbox.simple_propset('svn:mime-type', 'text/xml', 'index.xml')
-  sbox.simple_propset('svn:mime-type', 'text/html', 'index.xml')
+  sbox.simple_propset('svn:mime-type', 'text/html', 'index.html')
 
   # This currently (2015-04-09) makes mod_dav return a 'HTTP/1.1 201 Created'
   # result with content type text/xml (copied from file), which used to
