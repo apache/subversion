@@ -1107,7 +1107,9 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
 
   hdrs = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(hdrs, "Content-Type");
-  if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
+  if (val
+      && (handler->sline.code < 200 || handler->sline.code >= 300)
+      && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
     {
       svn_ra_serf__server_error_t *server_err;
 
@@ -1120,7 +1122,7 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
     }
   else
     {
-      /* The body was not text/xml, so we don't know what to do with it.
+      /* The body was not text/xml, or we got a success code.
          Toss anything that arrives.  */
       handler->discard_body = TRUE;
     }
