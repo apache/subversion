@@ -48,7 +48,7 @@
 #include <termios.h>
 #endif
 
-#undef HAVE_LINENOISE
+#define HAVE_LINENOISE
 #ifdef HAVE_LINENOISE
 #include "linenoise/linenoise.c"
 #endif
@@ -939,7 +939,7 @@ svn_cmdline_prompt_user2(const char **result,
       return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
     }
   /* add the line to the recallable history (if non-empty) */
-  if (! (input && *input))
+  if (input && *input)
     {
       linenoiseHistoryAdd(input);
     }
