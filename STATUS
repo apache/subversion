@@ -220,6 +220,16 @@ Other candidate changes:
    Votes:
      +1: julianfoad, stefan2
 
+ * r1672295
+   Fix Sqlite 3.8.9 query performance regression on externals
+   Justification:
+     The regression tests shouldn't fail.
+     (And the query performance on working copies with an extreme
+      number of externals defined on different paths shouldn't
+      regress)
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
