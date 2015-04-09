@@ -26,7 +26,7 @@ Release blockers for 1.9.0:
    Votes:
      +1: stefan2
 
- * r1672372
+ * r1672372, r1672404
    Stop parsing the result of a succeeded PUT as xml error chain
    Justification:
      Reported as breaking compatibility with Sourceforge's setup.
