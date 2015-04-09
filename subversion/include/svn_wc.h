@@ -2105,7 +2105,7 @@ svn_wc_conflict_description_create_tree(
 /** Return a duplicate of @a conflict, allocated in @a result_pool.
  * A deep copy of all members will be made.
  *
- * @since New in 1.7.
+ * @since New in 1.9.
  */
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description2_dup(
@@ -4660,6 +4660,9 @@ svn_wc_delete(const char *path,
  *
  * If @a local_abspath does not exist as file, directory or symlink, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
+ *
+ * If @a notify_func is non-NULL, invoke it with @a notify_baton to report
+ * the item being added.
  *
  * ### TODO: Split into add_dir, add_file, add_symlink?
  *
@@ -7307,6 +7310,12 @@ svn_wc_get_pristine_copy_path(const char *path,
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically
  * #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * If @a notify_func is non-NULL, invoke it with @a notify_baton to report
+ * the progress of the operation.
+ *
+ * @note In 1.9, @a notify_func does not get called at all.  This may change
+ * in later releases.
  *
  * @since New in 1.9.
  */
