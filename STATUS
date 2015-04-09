@@ -236,6 +236,9 @@ Other candidate changes:
      Conflict description API violates its own promises for binaries.
      Current behaviour can cause user confusion since conflict prompt
      options for binary files won't work as expected.
+   Notes:
+     rhuijben: This nomination contains some revisions that are also in
+     the r1667228 nomination. Perhaps these should be combined.
    Votes:
      +1: stsp
 
