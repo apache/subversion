@@ -1911,8 +1911,9 @@ typedef struct svn_wc_conflict_description_t
   /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *path;
 
-  /** The node type of the path being operated on (for a tree conflict,
-   *  ### which version?) */
+  /** The local node type of the path being operated on (for a tree conflict,
+   *  this specifies the local node kind, which may be (and typically is)
+   *  different than the left and right kind) */
   svn_node_kind_t node_kind;
 
   /** What sort of conflict are we describing? */
@@ -2063,7 +2064,7 @@ svn_wc_conflict_description_create_prop(const char *path,
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
  * (which must be an absolute path), the @c kind field to
- * #svn_wc_conflict_kind_tree, the @c local_node_kind to @a local_node_kind,
+ * #svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind,
  * the @c operation to @a operation, the @c src_left_version field to
  * @a src_left_version, and the @c src_right_version field to
  * @a src_right_version.
@@ -2131,8 +2132,11 @@ svn_wc__conflict_description2_dup(
  */
 typedef enum svn_wc_conflict_choice_t
 {
-  /** Undefined; for internal use only.
-      This value is never returned in svn_wc_conflict_result_t.
+  /** Undefined; for private use only.
+      This value must never be returned in svn_wc_conflict_result_t,
+      but a separate value, unequal to all other pre-defined values may
+      be useful in conflict resolver implementations to signal that no
+      choice is made yet.
    * @since New in 1.9
    */
   svn_wc_conflict_choose_undefined = -1,
