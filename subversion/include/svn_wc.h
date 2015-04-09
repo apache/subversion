@@ -4672,7 +4672,7 @@ svn_wc_add_from_disk3(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_add_from_disk3(), but always passes FALSE for
- * @a skip_som_prop_canon
+ * @a skip_checks
  *
  * @since New in 1.8.
  * @deprecated Provided for backward compatibility with the 1.8 API.
