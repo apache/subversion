@@ -96,6 +96,15 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1667228, r1667234, r1667691
+   Fix conflict description for binary file conflicts.
+   Justification:
+     Conflict description API violates its own promises.
+   Branch:
+     ^/subversion/branches/1.8.x-r1667228
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
