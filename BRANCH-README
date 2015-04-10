@@ -34,12 +34,11 @@ Work on this branch:
 
     Implemented:
       basic edits including move, copy, delete
-      branching: branch, branchify, list-branches
+      branching: branch, list-branches
       diff
       merge
 
     UI things to do:
-      implement a 'dissolve' (unbranchify) command
       provide a way to specify a mixed-rev base state
       provide a UI for element-based addressing ('mv e101:foo e103:foo'?)
 
@@ -48,7 +47,6 @@ Work on this branch:
       heuristic conversion of old repositories:
         synthesize element tracking info (instead of aborting) when reading
         a revision that was committed by a non-move-tracking client
-      implement a back-in-history variant of branchify/unbranchify
 
 
   * The model.
