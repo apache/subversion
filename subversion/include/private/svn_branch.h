@@ -704,6 +704,21 @@ svn_branch_branch(svn_branch_instance_t **new_branch_p,
                   const char *new_name,
                   apr_pool_t *scratch_pool);
 
+/* Branch the subtree of FROM_BRANCH found at FROM_EID, to appear
+ * in the existing branch TO_BRANCH at TO_PARENT_EID:NEW_NAME.
+ *
+ * FROM_BRANCH must be in the same family as TO_BRANCH.
+ * No element of FROM_BRANCH:FROM_EID may already exist in TO_BRANCH.
+ * (### Or, perhaps, elements that already exist should be altered?)
+ */
+svn_error_t *
+svn_branch_branch_into(svn_branch_instance_t *from_branch,
+                       int from_eid,
+                       svn_branch_instance_t *to_branch,
+                       svn_branch_eid_t to_parent_eid,
+                       const char *new_name,
+                       apr_pool_t *scratch_pool);
+
 /* Get the full id of branch BRANCH.
  */
 const char *

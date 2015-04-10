@@ -1503,6 +1503,64 @@ svn_branch_branch(svn_branch_instance_t **new_branch_p,
 }
 
 svn_error_t *
+svn_branch_branch_into(svn_branch_instance_t *from_branch,
+                       int from_eid,
+                       svn_branch_instance_t *to_branch,
+                       svn_branch_eid_t to_parent_eid,
+                       const char *new_name,
+                       apr_pool_t *scratch_pool)
+{
+  svn_branch_subtree_t from_subtree
+    = svn_branch_map_get_subtree(from_branch, from_eid, scratch_pool);
+
+  /* Source element must exist */
+  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("cannot branch from b%d e%d: "
+                                 "does not exist"),
+                               from_branch->sibling_defn->bsid, from_eid);
+    }
+
+  /* FROM_BRANCH must be in the same family as TO_BRANCH. */
+  if (! BRANCHES_IN_SAME_FAMILY(from_branch, to_branch))
+    {
+      return svn_error_createf(
+               SVN_ERR_BRANCHING, NULL,
+               _("The source branch %s and target branch %s must be within "
+                 "the same family"),
+               svn_branch_instance_get_id(from_branch, scratch_pool),
+               svn_branch_instance_get_id(to_branch, scratch_pool));
+    }
+
+  /* Populate the new branch mapping */
+  SVN_ERR(svn_branch_instantiate_subtree(to_branch, to_parent_eid, new_name,
+                                         from_subtree, scratch_pool));
+
+  /* branch any subbranches under FROM_BRANCH:FROM_EID */
+  {
+    SVN_ITER_T(svn_branch_instance_t) *bi;
+
+    for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(
+                              from_branch, from_subtree.root_eid,
+                              scratch_pool, scratch_pool), scratch_pool))
+      {
+        svn_branch_instance_t *subbranch = bi->val;
+
+        /* branch this subbranch into NEW_BRANCH (recursing) */
+        SVN_ERR(svn_branch_branch_subtree_r2(NULL,
+                                             subbranch,
+                                             subbranch->sibling_defn->root_eid,
+                                             to_branch, subbranch->outer_eid,
+                                             subbranch->sibling_defn,
+                                             bi->iterpool));
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
                           svn_branch_instance_t *to_branch,
                           svn_branch_eid_t to_parent_eid,

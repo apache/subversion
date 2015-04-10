@@ -899,7 +899,6 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
 # family, and so would be linked to their old history by the weaker "copied
 # from" relationship.)
 #
-@XFail()
 def restructure_repo_projects_ttb_to_ttb_projects(sbox):
   "restructure repo: projects/ttb to ttb/projects"
   sbox_build_svnmover(sbox, content=initial_content_projects_ttb)
@@ -961,7 +960,8 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
                    reported_add(proj + '/lib/foo/file') +
                    reported_add(proj + '/lib/foo/y2') +
                    reported_add(proj + '/lib/foo/z'),
-                   'mv', proj + '/trunk', 'trunk/' + proj,
+                   'branch-into', proj + '/trunk', 'trunk/' + proj,
+                   'rm', proj + '/trunk',
                    )
     test_svnmover2(sbox, '',
                    reported_br_diff(0, '', '') +
@@ -973,7 +973,8 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
                    reported_add(proj + '/bar/file') +
                    reported_add(proj + '/bar/y2') +
                    reported_add(proj + '/bar/z'),
-                   'mv', proj + '/branches/br1', 'branches/br1/' + proj,
+                   'branch-into', proj + '/branches/br1', 'branches/br1/' + proj,
+                   'rm', proj + '/branches/br1',
                    )
     # Remove the old project directory
     test_svnmover2(sbox, '', None,
