@@ -225,14 +225,6 @@ Other candidate changes:
      +1: philip (without r1670347)
      +1: stefan2, rhuijben
 
- * r1670353
-   In the SVN_VA_NULL macro, make the implementation type private.
-   Justification:
-     No need to be public, so keep the API and its public documentation
-     smaller.
-   Votes:
-     +1: julianfoad, stefan2
-
  * r1672295
    Fix Sqlite 3.8.9 query performance regression on externals
    Justification:
@@ -260,3 +252,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1670353
+   In the SVN_VA_NULL macro, make the implementation type private.
+   Justification:
+     No need to be public, so keep the API and its public documentation
+     smaller.
+   Votes:
+     +1: julianfoad, stefan2, danielsh
+
