@@ -1655,7 +1655,7 @@ execute(const apr_array_header_t *actions,
           break;
         case ACTION_LS:
           {
-            VERIFY_EID_EXISTS("branches", 0);
+            VERIFY_EID_EXISTS("ls", 0);
             SVN_ERR(list_branch_elements(el_rev[0]->branch, iterpool));
           }
           break;
