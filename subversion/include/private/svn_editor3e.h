@@ -564,8 +564,6 @@ svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
  *
  *   operations on sub-branches
  *   - branch
- *   - branchify
- *   - unbranchify ("dissolve"?)
  *
  * Preconditions:
  *

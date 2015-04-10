@@ -226,7 +226,6 @@ typedef enum action_code_t {
   ACTION_LS,
   ACTION_BRANCH,
   ACTION_MKBRANCH,
-  ACTION_DISSOLVE,
   ACTION_MERGE,
   ACTION_MV,
   ACTION_MKDIR,
@@ -260,9 +259,6 @@ static const action_defn_t action_defn[] =
   {ACTION_MKBRANCH,         "mkbranch", 1, "ROOT",
     "make a directory that's the root of a new branch" NL
     "in a new branching family"},
-  {ACTION_DISSOLVE,         "dissolve", 1, "ROOT",
-    "change the existing sub-branch at ROOT into a" NL
-    "simple sub-tree of its parent branch"},
   {ACTION_DIFF,             "diff", 2, "LEFT RIGHT",
     "diff LEFT to RIGHT"},
   {ACTION_DIFF_E,           "diff-e", 2, "LEFT RIGHT",
@@ -1698,13 +1694,6 @@ execute(const apr_array_header_t *actions,
             notify("A    %s%s", action->relpath[0],
                    branch_str(new_branch, iterpool));
           }
-          made_changes = TRUE;
-          break;
-        case ACTION_DISSOLVE:
-          return svn_error_create(SVN_ERR_BRANCHING, NULL,
-                                  _("'dissolve' operation not implemented"));
-          VERIFY_REV_UNSPECIFIED("dissolve", 0);
-          VERIFY_EID_EXISTS("dissolve", 0);
           made_changes = TRUE;
           break;
         case ACTION_MERGE:
