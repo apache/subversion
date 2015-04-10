@@ -291,6 +291,10 @@ svn_cl__status(apr_getopt_t *os,
   /* We want our -u statuses to be against HEAD by default. */
   if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     rev.kind = svn_opt_revision_head;
+  else if (! opt_state->update)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                        _("--revision (-r) option valid only with "
+                          "--show-updates (-u) option"));
   else
     rev = opt_state->start_revision;
 
