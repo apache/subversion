@@ -880,11 +880,22 @@ editor3_add(void *baton,
 
   eid = svn_branch_family_add_new_element(branch->sibling_defn->family);
 
-  SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
-           /*branch->sibling->bsid,*/ eid, new_parent_eid,
-           new_name, svn_node_kind_to_word(new_content->kind)));
+  if (new_content)
+    {
+      SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
+               /*branch->sibling->bsid,*/ eid, new_parent_eid,
+               new_name, svn_node_kind_to_word(new_content->kind)));
 
-  svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
+      svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
+    }
+  else
+    {
+      SVN_DBG(("add subbranch-root (e%d): parent e%d, name '%s'",
+               /*branch->sibling->bsid,*/ eid, new_parent_eid, new_name));
+
+      svn_branch_map_update_as_subbranch_root(branch, eid,
+                                              new_parent_eid, new_name);
+    }
 
   *eid_p = eid;
   return SVN_NO_ERROR;
@@ -1577,7 +1588,7 @@ svn_delta__ev3_from_delta_for_commit2(
   /* Find what branch we are editing, based on BASE_RELPATH, and capture
      its initial state.
      ### TODO: Instead, have edit operations specify the branch(es) they
-         are operating on, since operations such as "branch", "branchify",
+         are operating on, since operations such as "branch"
          and those that recurse into sub-branches operate on more than one.
    */
   eb->edited_rev_root = branching_txn;
