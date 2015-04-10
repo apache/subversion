@@ -225,6 +225,7 @@ typedef enum action_code_t {
   ACTION_LIST_BRANCHES_R,
   ACTION_LS,
   ACTION_BRANCH,
+  ACTION_BRANCH_INTO,
   ACTION_MKBRANCH,
   ACTION_MERGE,
   ACTION_MV,
@@ -256,6 +257,10 @@ static const action_defn_t action_defn[] =
   {ACTION_BRANCH,           "branch", 2, "SRC DST",
     "branch the branch-root or branch-subtree at SRC" NL
     "to make a new branch at DST"},
+  {ACTION_BRANCH_INTO,      "branch-into", 2, "SRC DST",
+    "make a copy of the branch-root or branch-subtree at SRC" NL
+    "appear at DST in the existing branch that contains DST" NL
+    "(like merging the creation of the subtree at SRC to DST)"},
   {ACTION_MKBRANCH,         "mkbranch", 1, "ROOT",
     "make a directory that's the root of a new branch" NL
     "in a new branching family"},
@@ -1674,6 +1679,20 @@ execute(const apr_array_header_t *actions,
                                       iterpool));
             notify("A+   %s%s", action->relpath[1],
                    branch_str(new_branch, iterpool));
+          }
+          made_changes = TRUE;
+          break;
+        case ACTION_BRANCH_INTO:
+          VERIFY_EID_EXISTS("branch-into", 0);
+          VERIFY_REV_UNSPECIFIED("branch-into", 1);
+          VERIFY_EID_NONEXISTENT("branch-into", 1);
+          VERIFY_PARENT_EID_EXISTS("branch-into", 1);
+          {
+            SVN_ERR(svn_branch_branch_into(el_rev[0]->branch, el_rev[0]->eid,
+                                           el_rev[1]->branch,
+                                           parent_el_rev[1]->eid, path_name[1],
+                                           iterpool));
+            notify("A+   %s (subtree)", action->relpath[1]);
           }
           made_changes = TRUE;
           break;
