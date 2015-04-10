@@ -196,11 +196,12 @@ svn_editor3_add(svn_editor3_t *editor,
 {
   int eid = -1;
 
-  SVN_ERR_ASSERT(VALID_NODE_KIND(new_kind));
+  SVN_ERR_ASSERT(new_content ? VALID_NODE_KIND(new_kind)
+                             : new_kind == svn_node_unknown);
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
-  SVN_ERR_ASSERT(VALID_CONTENT(new_content));
-  SVN_ERR_ASSERT(new_content->kind == new_kind);
+  SVN_ERR_ASSERT(!new_content || VALID_CONTENT(new_content));
+  SVN_ERR_ASSERT(!new_content || new_content->kind == new_kind);
 
   DO_CALLBACK(editor, cb_add,
               6(&eid, new_kind,

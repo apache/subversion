@@ -704,38 +704,6 @@ svn_branch_branch(svn_branch_instance_t **new_branch_p,
                   const char *new_name,
                   apr_pool_t *scratch_pool);
 
-/* Replace the existing simple sub-tree at OUTER_BRANCH:OUTER_EID with a
- * new subtree that has identical content but is a sub-branch in a new
- * branch family.
- *
- * Delete the element OUTER_BRANCH:OUTER_EID. Create a new branch family
- * and a branch instance of it, nested in OUTER_BRANCH. Create a
- * subbranch-root element in OUTER_BRANCH (with a new EID) at the same
- * parent element and same name, and create child elements to match the
- * old subtree.
- *
- * Note: No mapping between the old and the new elements is recorded.
- *
- * Set *NEW_BRANCH_P to the new subbranch.
- *
- * The old element at OUTER_EID must be a 'dir' or 'file' element, and not
- * the root element of OUTER_BRANCH, and there must be no subbranch root
- * elements below it.
- *
- * ### Mixes pathwise ('select a subtree') and element-wise semantics.
- *
- * ### Should be built from simpler operations: 'branchify' is not a
- * fundamental operation and does not need to appear at this API level.
- *
- * TODO: Allow adding to an existing family, by specifying a mapping to
- * be used during the conversion.
- */
-svn_error_t *
-svn_branch_branchify(svn_branch_instance_t **new_branch_p,
-                     svn_branch_instance_t *outer_branch,
-                     svn_branch_eid_t outer_eid,
-                     apr_pool_t *scratch_pool);
-
 /* Get the full id of branch BRANCH.
  */
 const char *

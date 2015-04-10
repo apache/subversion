@@ -226,7 +226,6 @@ typedef enum action_code_t {
   ACTION_LS,
   ACTION_BRANCH,
   ACTION_MKBRANCH,
-  ACTION_BRANCHIFY,
   ACTION_DISSOLVE,
   ACTION_MERGE,
   ACTION_MV,
@@ -260,10 +259,7 @@ static const action_defn_t action_defn[] =
     "to make a new branch at DST"},
   {ACTION_MKBRANCH,         "mkbranch", 1, "ROOT",
     "make a directory that's the root of a new branch" NL
-    "in a new branching family; like mkdir+branchify"},
-  {ACTION_BRANCHIFY,        "branchify", 1, "ROOT",
-    "change the existing simple subtree at ROOT into" NL
-    "a sub-branch (presently, in a new branch family)"},
+    "in a new branching family"},
   {ACTION_DISSOLVE,         "dissolve", 1, "ROOT",
     "change the existing sub-branch at ROOT into a" NL
     "simple sub-tree of its parent branch"},
@@ -1409,6 +1405,43 @@ svn_branch_log(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+/* Make a subbranch at OUTER_BRANCH : OUTER_PARENT_EID : OUTER_NAME.
+ *
+ * The subbranch will consist of a single element given by CONTENT.
+ */
+static svn_error_t *
+mk_branch(svn_branch_instance_t **new_branch_p,
+          svn_editor3_t *editor,
+          svn_branch_instance_t *outer_branch,
+          int outer_parent_eid,
+          const char *outer_name,
+          svn_element_content_t *content,
+          apr_pool_t *iterpool)
+{
+  svn_branch_family_t *outer_family
+    = outer_branch->sibling_defn->family;
+  svn_branch_family_t *new_family
+    = outer_family->subfamily ? outer_family->subfamily :
+        svn_branch_family_add_new_subfamily(outer_family);
+  int new_root_eid = svn_branch_family_add_new_element(new_family);
+  svn_branch_sibling_t *new_branch_def
+    = svn_branch_family_add_new_branch_sibling(new_family,
+                                               new_root_eid);
+  int new_outer_eid;
+  svn_branch_instance_t *new_branch;
+
+  SVN_ERR(svn_editor3_add(editor, &new_outer_eid, svn_node_unknown,
+                          outer_branch, outer_parent_eid, outer_name,
+                          NULL /*content*/));
+  new_branch = svn_branch_add_new_branch_instance(
+                 outer_branch, new_outer_eid, new_branch_def,
+                 iterpool);
+  svn_branch_map_update(new_branch, new_root_eid,
+                        -1, "", content);
+  *new_branch_p = new_branch;
+  return SVN_NO_ERROR;
+}
+
 /* This commit callback prints not only a commit summary line but also
  * a log-style summary of the changes.
  */
@@ -1656,31 +1689,13 @@ execute(const apr_array_header_t *actions,
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_element_content_t *content
               = svn_element_content_create_dir(props, iterpool);
-            int new_eid;
             svn_branch_instance_t *new_branch;
 
-            SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
-                                    parent_el_rev[0]->branch,
-                                    parent_el_rev[0]->eid, path_name[0],
-                                    content));
-            SVN_ERR(svn_branch_branchify(&new_branch,
-                                         parent_el_rev[0]->branch, new_eid,
-                                         iterpool));
+            SVN_ERR(mk_branch(&new_branch,
+                              editor, parent_el_rev[0]->branch,
+                              parent_el_rev[0]->eid, path_name[0],
+                              content, iterpool));
             notify("A    %s%s", action->relpath[0],
-                   branch_str(new_branch, iterpool));
-          }
-          made_changes = TRUE;
-          break;
-        case ACTION_BRANCHIFY:
-          VERIFY_REV_UNSPECIFIED("branchify", 0);
-          VERIFY_EID_EXISTS("branchify", 0);
-          {
-            svn_branch_instance_t *new_branch;
-
-            SVN_ERR(svn_branch_branchify(&new_branch,
-                                         el_rev[0]->branch, el_rev[0]->eid,
-                                         iterpool));
-            notify("R    %s%s", action->relpath[0],
                    branch_str(new_branch, iterpool));
           }
           made_changes = TRUE;

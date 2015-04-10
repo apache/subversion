@@ -619,7 +619,9 @@ svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
- * Set the content to @a new_content.
+ * Set the content to @a new_content. If @a new_content is null, create a
+ * subbranch-root element instead of a normal element. (@a new_kind must
+ * be svn_node_unknown in this case.)
  *
  * @see #svn_editor3_t
  */
