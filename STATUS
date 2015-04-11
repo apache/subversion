@@ -247,6 +247,13 @@ Other candidate changes:
    Votes:
      +1: stsp
 
+ * r1672311
+   Fix some doc and pass problems on the deprecated svn_wc_add_from_disk2
+   Justification:
+     Simple fix to resolve a case where new properties are lost on add.
+   Votes:
+     +1: rhuijben, danielsh
+
 Veto-blocked changes:
 =====================
 
