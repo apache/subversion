@@ -252,12 +252,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1670353
-   In the SVN_VA_NULL macro, make the implementation type private.
-   Justification:
-     No need to be public, so keep the API and its public documentation
-     smaller.
-   Votes:
-     +1: julianfoad, stefan2, danielsh
-
