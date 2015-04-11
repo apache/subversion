@@ -95,21 +95,28 @@ check_format(int format)
 {
   /* Put blacklisted versions here. */
 
-  /* We don't support experimental formats except when it matches the
-   * current format. */
-  if (   SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER < format
-      || format == SVN_FS_X__FORMAT_NUMBER)
+  /* We support any format if it matches the current format. */
+  if (format == SVN_FS_X__FORMAT_NUMBER)
+    return SVN_NO_ERROR;
+
+  /* Experimental formats are only supported if they match the current, but
+   * that case has already been handled. So, reject any experimental format.
+   */
+  if (SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER >= format)
+    return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+      _("Unsupported experimental FSX format '%d' found; current format is '%d'"),
+      format, SVN_FS_X__FORMAT_NUMBER);
     return SVN_NO_ERROR;
 
   /* By default, we will support any non-experimental format released so far.
    */
-  if (   SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER < format
-      && format <= SVN_FS_X__FORMAT_NUMBER)
+  if (format <= SVN_FS_X__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
   return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-     _("Expected FS format between '1' and '%d'; found format '%d'"),
-     SVN_FS_X__FORMAT_NUMBER, format);
+     _("Expected FSX format between '%d' and '%d'; found format '%d'"),
+     SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER + 1, SVN_FS_X__FORMAT_NUMBER,
+     format);
 }
 
 /* Read the format file at PATH and set *PFORMAT to the format version found
