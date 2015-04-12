@@ -260,15 +260,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1672511
-   Correct a docstring in svn_repos.h
-   Justification:
-     Have a complete, correct and easily accessible API description.
-   Notes:
-     Docstring-only patch. Acceptable with a single vote.
-   Votes:
-     +1: stefan2
-
  * r1672512
    Correct docstrings for 1.9 functions in svn_wc.h
    Justification:
@@ -278,4 +269,3 @@ Approved changes:
      Via IRC, Bert gave his o.k. for the /trunk change.
    Votes:
      +1: stefan2
-
