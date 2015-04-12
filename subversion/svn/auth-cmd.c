@@ -177,11 +177,14 @@ match_certificate(const char *pattern,
     return TRUE;
 
   hostnames = svn_x509_certinfo_get_hostnames(certinfo);
-  for (i = 0; i < hostnames->nelts; i++)
+  if (hostnames)
     {
-      const char *hostname = APR_ARRAY_IDX(hostnames, i, const char *);
-      if (match_pattern(pattern, hostname, TRUE, scratch_pool))
-        return TRUE;
+      for (i = 0; i < hostnames->nelts; i++)
+        {
+          const char *hostname = APR_ARRAY_IDX(hostnames, i, const char *);
+          if (match_pattern(pattern, hostname, TRUE, scratch_pool))
+            return TRUE;
+        }
     }
 
   return FALSE;
