@@ -149,34 +149,35 @@ match_pattern(const char *pattern, const char *value,
 }
 
 static svn_boolean_t
-match_certificate(const char *pattern,
+match_certificate(svn_x509_certinfo_t **certinfo,
+                  const char *pattern,
                   const svn_string_t *ascii_cert,
+                  apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  svn_x509_certinfo_t *certinfo;
   const char *value;
   const svn_checksum_t *checksum;
   const apr_array_header_t *hostnames;
   int i;
 
-  certinfo = parse_certificate(ascii_cert, FALSE, scratch_pool, scratch_pool);
-  if (certinfo == NULL)
+  *certinfo = parse_certificate(ascii_cert, FALSE, result_pool, scratch_pool);
+  if (*certinfo == NULL)
     return FALSE;
 
-  value = svn_x509_certinfo_get_subject(certinfo, scratch_pool);
+  value = svn_x509_certinfo_get_subject(*certinfo, scratch_pool);
   if (match_pattern(pattern, value, FALSE, scratch_pool))
     return TRUE;
 
-  value = svn_x509_certinfo_get_issuer(certinfo, scratch_pool);
+  value = svn_x509_certinfo_get_issuer(*certinfo, scratch_pool);
   if (match_pattern(pattern, value, FALSE, scratch_pool))
     return TRUE;
 
-  checksum = svn_x509_certinfo_get_digest(certinfo);
+  checksum = svn_x509_certinfo_get_digest(*certinfo);
   value = svn_checksum_to_cstring_display(checksum, scratch_pool);
   if (match_pattern(pattern, value, TRUE, scratch_pool))
     return TRUE;
 
-  hostnames = svn_x509_certinfo_get_hostnames(certinfo);
+  hostnames = svn_x509_certinfo_get_hostnames(*certinfo);
   if (hostnames)
     {
       for (i = 0; i < hostnames->nelts; i++)
@@ -193,10 +194,12 @@ match_certificate(const char *pattern,
 
 static svn_error_t *
 match_credential(svn_boolean_t *match,
+                 svn_x509_certinfo_t **certinfo,
                  const char *cred_kind,
                  const char *realmstring,
                  apr_array_header_t *patterns,
                  apr_array_header_t *cred_items,
+                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
   int i;
@@ -228,7 +231,8 @@ match_credential(svn_boolean_t *match,
                   strcmp(key, SVN_CONFIG_AUTHN_PASSPHRASE_KEY) == 0)
                 continue; /* don't match secrets */
               else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
-                *match = match_certificate(pattern, value, iterpool);
+                *match = match_certificate(certinfo, pattern, value,
+                                           result_pool, iterpool);
               else
                 *match = match_pattern(pattern, value->data, FALSE, iterpool);
 
@@ -244,13 +248,13 @@ match_credential(svn_boolean_t *match,
 }
 
 static svn_error_t *
-show_cert(const svn_string_t *pem_cert, apr_pool_t *scratch_pool)
+show_cert(svn_x509_certinfo_t *certinfo, const svn_string_t *pem_cert,
+          apr_pool_t *scratch_pool)
 {
-  svn_x509_certinfo_t *certinfo;
   const apr_array_header_t *hostnames;
 
-
-  certinfo = parse_certificate(pem_cert, TRUE, scratch_pool, scratch_pool);
+  if (certinfo == NULL)
+    certinfo = parse_certificate(pem_cert, TRUE, scratch_pool, scratch_pool);
   if (certinfo == NULL)
     return SVN_NO_ERROR;
 
@@ -295,6 +299,7 @@ list_credential(const char *cred_kind,
                 const char *realmstring,
                 apr_array_header_t *cred_items,
                 svn_boolean_t show_passwords,
+                svn_x509_certinfo_t *certinfo,
                 apr_pool_t *scratch_pool)
 {
   int i;
@@ -341,7 +346,7 @@ list_credential(const char *cred_kind,
       else if (strcmp(key, SVN_CONFIG_AUTHN_USERNAME_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Username: %s\n"), value->data));
       else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
-       SVN_ERR(show_cert(value, iterpool));
+       SVN_ERR(show_cert(certinfo, value, iterpool));
       else if (strcmp(key, SVN_CONFIG_AUTHN_FAILURES_KEY) == 0)
         SVN_ERR(show_cert_failures(value->data, iterpool));
       else
@@ -364,6 +369,7 @@ walk_credentials(svn_boolean_t *delete_cred,
 {
   struct walk_credentials_baton_t *b = baton;
   apr_array_header_t *sorted_cred_items;
+  svn_x509_certinfo_t *certinfo = NULL;
 
   *delete_cred = FALSE;
 
@@ -374,9 +380,9 @@ walk_credentials(svn_boolean_t *delete_cred,
     {
       svn_boolean_t match;
 
-      SVN_ERR(match_credential(&match, cred_kind, realmstring,
+      SVN_ERR(match_credential(&match, &certinfo, cred_kind, realmstring,
                                b->patterns, sorted_cred_items,
-                               scratch_pool));
+                               scratch_pool, scratch_pool));
       if (!match)
         return SVN_NO_ERROR;
     }
@@ -385,7 +391,7 @@ walk_credentials(svn_boolean_t *delete_cred,
 
   if (b->list)
     SVN_ERR(list_credential(cred_kind, realmstring, sorted_cred_items,
-                            b->show_passwords, scratch_pool));
+                            b->show_passwords, certinfo, scratch_pool));
   if (b->delete)
     {
       *delete_cred = TRUE;
