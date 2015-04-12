@@ -254,6 +254,13 @@ Other candidate changes:
    Votes:
      +1: rhuijben, danielsh
 
+ * r1673044
+   Fix 2 error leaks in the X.509 code.
+   Justification:
+     Error leaks are bad and no reason to leave them unfixed.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
