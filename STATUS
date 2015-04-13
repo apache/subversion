@@ -307,6 +307,18 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1673197, r1673202, r1673204
+   Avoid filling the representation cache with unneeded property info
+   Justification:
+     Not reading actual properties during 'svn ls -v' avoids trashing the
+     memory cache that in this case might just drop the directory we are
+     currently processing, causing a significant performance drop on
+     tags directories above a certain size.
+   Notes:
+     Depends on the r1673170 group being backported to 1.9.0.
+   Votes:
+     +1: rhuijben (after stefan2 or another fsfs expert completes his review)
+
 Veto-blocked changes:
 =====================
 
