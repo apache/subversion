@@ -57,6 +57,15 @@ Release blockers for 1.9.0:
                    as the patch applied in r1667301; vote happened before
                    the '1.9.x-r1667233' backport branch)
 
+ * r1672311
+   Fix some doc and pass problems on the deprecated svn_wc_add_from_disk2
+   Justification:
+     Simple fix to resolve a case where new properties are lost on add.
+   Notes:
+     Regression from 1.8 for API users.
+   Votes:
+     +1: rhuijben (before promotion to release blocker), danielsh
+
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
@@ -279,13 +288,6 @@ Other candidate changes:
      the r1667228 nomination. Perhaps these should be combined.
    Votes:
      +1: stsp
-
- * r1672311
-   Fix some doc and pass problems on the deprecated svn_wc_add_from_disk2
-   Justification:
-     Simple fix to resolve a case where new properties are lost on add.
-   Votes:
-     +1: rhuijben, danielsh
 
  * r1673044
    Fix 2 error leaks in the X.509 code.
