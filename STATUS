@@ -45,13 +45,15 @@ Release blockers for 1.9.0:
      Security issue.
    Votes:
      +1: kotkov
+     -0: rhuijben (causes an svn protocol error without further patches such
+                   as the patch applied in r1667301)
 
  * r1667235
    Reject invalid transaction property change requests in mod_dav_svn.
    Justification:
      Security issue.
    Votes:
-     +1: kotkov
+     +1: kotkov, rhuijben
 
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
@@ -66,7 +68,7 @@ Candidate changes that cannot go into a later 1.9.x:
    Votes:
      +1: rhuijben (for 1.9.0 only)
 
- * r1673170
+ * r1673170, r1673172
    Introduce svn_fs_node_has_props() and use it where applicable
    Justification:
      Checking whether there are properties should be more efficient than
