@@ -1487,8 +1487,6 @@ ra_list_has_props(const svn_test_opts_t *opts,
 
       svn_pool_clear(iterpool);
 
-      SVN_DBG(("r%d", i+1));
-
       SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                         apr_hash_make(pool), NULL,
                                         NULL, NULL, FALSE, iterpool));
