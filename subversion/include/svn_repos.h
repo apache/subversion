@@ -250,7 +250,7 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_hotcopy_rev_range
 } svn_repos_notify_action_t;
 
-/** The type of error occurring.
+/** The type of warning occurring.
  *
  * @since New in 1.7.
  */

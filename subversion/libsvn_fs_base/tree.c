@@ -1285,6 +1285,21 @@ base_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+base_node_has_props(svn_boolean_t *has_props,
+                    svn_fs_root_t *root,
+                    const char *path,
+                    apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+
+  SVN_ERR(base_node_proplist(&props, root, path, scratch_pool));
+
+  *has_props = (0 < apr_hash_count(props));
+
+  return SVN_NO_ERROR;
+}
+
 
 struct change_node_prop_args {
   svn_fs_root_t *root;
@@ -5492,6 +5507,7 @@ static root_vtable_t root_vtable = {
   base_closest_copy,
   base_node_prop,
   base_node_proplist,
+  base_node_has_props,
   base_change_node_prop,
   base_props_changed,
   base_dir_entries,

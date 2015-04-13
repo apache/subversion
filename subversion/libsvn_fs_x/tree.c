@@ -1500,6 +1500,20 @@ x_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+x_node_has_props(svn_boolean_t *has_props,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+
+  SVN_ERR(x_node_proplist(&props, root, path, scratch_pool));
+
+  *has_props = (0 < apr_hash_count(props));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 increment_mergeinfo_up_tree(parent_path_t *pp,
@@ -4214,6 +4228,7 @@ static root_vtable_t root_vtable = {
   x_closest_copy,
   x_node_prop,
   x_node_proplist,
+  x_node_has_props,
   x_change_node_prop,
   x_props_changed,
   x_dir_entries,

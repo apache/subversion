@@ -619,6 +619,11 @@ INSERT OR REPLACE INTO sqlite_stat1(tbl, idx, stat) VALUES
 INSERT OR REPLACE INTO sqlite_stat1(tbl, idx, stat) VALUES
     ('WC_LOCK', 'sqlite_autoindex_WC_LOCK_1',           '100 100 1');
 
+INSERT OR REPLACE INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('EXTERNALS','sqlite_autoindex_EXTERNALS_1',        '100 100 1');
+INSERT OR REPLACE INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('EXTERNALS','I_EXTERNALS_DEFINED',                 '100 100 3 1');
+
 /* sqlite_autoindex_WORK_QUEUE_1 doesn't exist because WORK_QUEUE is
    a INTEGER PRIMARY KEY AUTOINCREMENT table */
 

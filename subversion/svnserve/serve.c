@@ -1779,12 +1779,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
           if (dirent_fields & SVN_DIRENT_HAS_PROPS)
             {
-              apr_hash_t *file_props;
-
               /* has_props */
-              SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
+              SVN_CMD_ERR(svn_fs_node_has_props(&has_props, root, file_path,
                                                subpool));
-              has_props = (apr_hash_count(file_props) > 0);
             }
 
           if ((dirent_fields & SVN_DIRENT_LAST_AUTHOR)

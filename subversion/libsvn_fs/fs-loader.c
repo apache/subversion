@@ -1196,6 +1196,16 @@ svn_fs_node_proplist(apr_hash_t **table_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_node_has_props(svn_boolean_t *has_props,
+                      svn_fs_root_t *root,
+                      const char *path,
+                      apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(root->vtable->node_has_props(has_props, root, path,
+                                                      scratch_pool));
+}
+
+svn_error_t *
 svn_fs_change_node_prop(svn_fs_root_t *root, const char *path,
                         const char *name, const svn_string_t *value,
                         apr_pool_t *pool)
