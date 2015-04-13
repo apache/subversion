@@ -68,8 +68,7 @@ Candidate changes that cannot go into a later 1.9.x:
    Notes:
      We supported this feature in the libsvn_client api since <= 1.0.
    Votes:
-     +1: rhuijben (for 1.9.0 only, not r1673228)
-     +1: philip (for 1.9.0 only)
+     +1: philip, rhuijben (for 1.9.0 only)
 
  * r1673170, r1673172
    Introduce svn_fs_node_has_props() and use it where applicable
