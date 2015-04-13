@@ -52,7 +52,7 @@ Release blockers for 1.9.0:
    Branch:
      ^/subversion/branches/1.9.x-r1667233
    Votes:
-     +1: kotkov
+     +1: kotkov, philip
      -0: rhuijben (causes an svn protocol error without further patches such
                    as the patch applied in r1667301; vote happened before
                    the '1.9.x-r1667233' backport branch)
