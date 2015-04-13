@@ -527,7 +527,9 @@ svn_fs_fs__dag_has_props(svn_boolean_t *has_props,
     {
       /* Properties are stored as a standard hash stream,
          always ending with "END\n" (4 bytes) */
-      *has_props = (noderev->prop_rep->expanded_size > 4);
+      *has_props = (noderev->prop_rep->expanded_size > 4
+                    || (noderev->prop_rep->expanded_size == 0
+                        && noderev->prop_rep->size > 4));
     }
 
   return SVN_NO_ERROR;
