@@ -498,6 +498,46 @@ svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__dag_has_props(svn_boolean_t *has_props,
+                         dag_node_t *node,
+                         apr_pool_t *scratch_pool)
+{
+  node_revision_t *noderev;
+
+  SVN_ERR(get_node_revision(&noderev, node));
+
+  if (! noderev->prop_rep)
+    {
+      *has_props = FALSE; /* Easy out */
+      return SVN_NO_ERROR;
+    }
+
+  if (svn_fs_fs__id_txn_used(&noderev->prop_rep->txn_id))
+    {
+      /* We are in a commit or something. Check actual properties */
+      apr_hash_t *proplist;
+
+      SVN_ERR(svn_fs_fs__get_proplist(&proplist, node->fs,
+                                      noderev, scratch_pool));
+
+      *has_props = proplist ? (0 < apr_hash_count(proplist)) : FALSE;
+    }
+  else
+    {
+      apr_hash_t *proplist;
+
+      /* ### Optimize further.
+          Stefan2 suggested: prop_rep exists and is longer than 4 bytes
+        */
+      SVN_ERR(svn_fs_fs__get_proplist(&proplist, node->fs,
+                                      noderev, scratch_pool));
+
+      *has_props = proplist ? (0 < apr_hash_count(proplist)) : FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__dag_set_proplist(dag_node_t *node,
