@@ -1440,6 +1440,85 @@ errors_from_callbacks(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ra_list_has_props(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const svn_delta_editor_t *editor;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+  void *edit_baton;
+  const char *trunk_url;
+
+  SVN_ERR(make_and_open_repos(&ra_session, "ra_list_has_props",
+                              opts, pool));
+
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL,
+                                    NULL, NULL, FALSE, iterpool));
+
+  /* Create initial layout*/
+  {
+    void *root_baton;
+    void *dir_baton;
+
+    SVN_ERR(editor->open_root(edit_baton, 0, pool, &root_baton));
+    SVN_ERR(editor->add_directory("trunk", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  iterpool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, iterpool));
+    SVN_ERR(editor->add_directory("tags", root_baton, NULL, SVN_INVALID_REVNUM,
+                                  iterpool, &dir_baton));
+    SVN_ERR(editor->close_directory(dir_baton, iterpool));
+    SVN_ERR(editor->close_directory(root_baton, iterpool));
+    SVN_ERR(editor->close_edit(edit_baton, iterpool));
+  }
+
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &trunk_url, pool));
+  trunk_url = svn_path_url_add_component2(trunk_url, "trunk", pool);
+
+  /* Create a few tags. Using a value like 8000 will take too long for a normal
+     testrun, but produces more realistic problems */
+  for (i = 0; i < 50; i++)
+    {
+      void *root_baton;
+      void *tags_baton;
+      void *dir_baton;
+
+      svn_pool_clear(iterpool);
+
+      SVN_DBG(("r%d", i+1));
+
+      SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                        apr_hash_make(pool), NULL,
+                                        NULL, NULL, FALSE, iterpool));
+
+      SVN_ERR(editor->open_root(edit_baton, i+1, pool, &root_baton));
+      SVN_ERR(editor->open_directory("tags", root_baton, i+1, iterpool,
+                                     &tags_baton));
+      SVN_ERR(editor->add_directory(apr_psprintf(iterpool, "tags/T%05d", i+1),
+                                    tags_baton, trunk_url, 1, iterpool,
+                                    &dir_baton));
+
+      SVN_ERR(editor->close_directory(dir_baton, iterpool));
+      SVN_ERR(editor->close_directory(tags_baton, iterpool));
+      SVN_ERR(editor->close_directory(root_baton, iterpool));
+      SVN_ERR(editor->close_edit(edit_baton, iterpool));
+    }
+
+  {
+    apr_hash_t *dirents;
+    svn_revnum_t fetched_rev;
+    apr_hash_t *props;
+
+    SVN_ERR(svn_ra_get_dir2(ra_session, &dirents, &fetched_rev, &props,
+                            "tags", SVN_INVALID_REVNUM,
+                            SVN_DIRENT_ALL, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1468,6 +1547,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "check how ra functions handle bad revisions"),
     SVN_TEST_OPTS_PASS(errors_from_callbacks,
                        "check how ra layers handle errors from callbacks"),
+    SVN_TEST_OPTS_PASS(ra_list_has_props,
+                       "check list has_props performance"),
     SVN_TEST_NULL
   };
 
