@@ -39,6 +39,20 @@ Release blockers for 1.9.0:
    Votes:
      +1: rhuijben, steveking
 
+ * r1667233
+   Reject invalid get-location-segments requests in mod_dav_svn and svnserve.
+   Justification:
+     Security issue.
+   Votes:
+     +1: kotkov
+
+ * r1667235
+   Reject invalid transaction property change requests in mod_dav_svn.
+   Justification:
+     Security issue.
+   Votes:
+     +1: kotkov
+
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
