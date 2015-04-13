@@ -57,13 +57,6 @@ Release blockers for 1.9.0:
                    as the patch applied in r1667301; vote happened before
                    the '1.9.x-r1667233' backport branch)
 
- * r1667235
-   Reject invalid transaction property change requests in mod_dav_svn.
-   Justification:
-     Security issue.
-   Votes:
-     +1: kotkov, rhuijben
-
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
@@ -332,3 +325,10 @@ Approved changes:
      Better memory handling for callback, clearer documentation.
    Votes:
      +1: stefan2, rhuijben, philip
+
+ * r1667235
+   Reject invalid transaction property change requests in mod_dav_svn.
+   Justification:
+     Security issue.
+   Votes:
+     +1: kotkov, rhuijben, philip
