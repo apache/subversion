@@ -83,6 +83,16 @@ Candidate changes that cannot go into a later 1.9.x:
    Votes:
      +1: rhuijben (for 1.9.0 only)
 
+ * r1673282
+   Rename svn_relpath_limit to svn_relpath_prefix in the public API.
+   Justification:
+     This is a more appropriate name for this new function.
+   Notes:
+     If this does not become part of 1.9.0, r1673282 needs to be reverted
+     on /trunk.
+   Votes:
+     +1: stefan2
+
 Other candidate changes:
 ========================
 
