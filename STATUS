@@ -220,7 +220,7 @@ Other candidate changes:
    Justification:
      ra operations shouldn't unnecessary grow the session pool.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1669743, r1669945
    Restore FSFS representation sharing to its previous effectiveness.
