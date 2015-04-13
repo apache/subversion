@@ -787,30 +787,58 @@ insert_prop_internal(const dav_resource *resource,
 
     case SVN_PROPID_deadprop_count:
       {
-        unsigned int propcount;
-        apr_hash_t *proplist;
-
         if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
           return DAV_PROP_INSERT_NOTSUPP;
 
-        serr = svn_fs_node_proplist(&proplist,
-                                    resource->info->root.root,
-                                    resource->info->repos_path, scratch_pool);
-        if (serr != NULL)
+        if (resource->info->repos->is_svn_client)
           {
-            ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
-                          resource->info->r,
-                          "Can't fetch proplist of '%s': "
-                          "%s",
-                          resource->info->repos_path,
-                          serr->message);
-            svn_error_clear(serr);
-            value = error_value;
-            break;
-          }
+            svn_boolean_t has_props;
+            /* Retrieving the actual properties is quite expensive while
+               svn clients only want to know if there are properties, and
+               in many cases aren't interested at all (see r1673153) */
+            serr = svn_fs_node_has_props(&has_props,
+                                         resource->info->root.root,
+                                         resource->info->repos_path,
+                                         scratch_pool);
 
-        propcount = apr_hash_count(proplist);
-        value = apr_psprintf(scratch_pool, "%u", propcount);
+            if (serr != NULL)
+              {
+                ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
+                              resource->info->r,
+                              "Can't fetch has props of '%s': "
+                              "%s",
+                              resource->info->repos_path,
+                              serr->message);
+                svn_error_clear(serr);
+                value = error_value;
+                break;
+              }
+
+            value = has_props ? "99" /* Magic (undocumented) value */ : "0";
+          }
+        else
+          {
+            unsigned int propcount;
+            apr_hash_t *proplist;
+            serr = svn_fs_node_proplist(&proplist,
+                                        resource->info->root.root,
+                                        resource->info->repos_path, scratch_pool);
+            if (serr != NULL)
+              {
+                ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
+                              resource->info->r,
+                              "Can't fetch proplist of '%s': "
+                              "%s",
+                              resource->info->repos_path,
+                              serr->message);
+                svn_error_clear(serr);
+                value = error_value;
+                break;
+              }
+
+            propcount = apr_hash_count(proplist);
+            value = apr_psprintf(scratch_pool, "%u", propcount);
+          }
         break;
       }
 
