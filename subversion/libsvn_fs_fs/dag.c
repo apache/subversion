@@ -525,15 +525,9 @@ svn_fs_fs__dag_has_props(svn_boolean_t *has_props,
     }
   else
     {
-      apr_hash_t *proplist;
-
-      /* ### Optimize further.
-          Stefan2 suggested: prop_rep exists and is longer than 4 bytes
-        */
-      SVN_ERR(svn_fs_fs__get_proplist(&proplist, node->fs,
-                                      noderev, scratch_pool));
-
-      *has_props = proplist ? (0 < apr_hash_count(proplist)) : FALSE;
+      /* Properties are stored as a standard hash stream,
+         always ending with "END\n" (4 bytes) */
+      *has_props = (noderev->prop_rep->expanded_size > 4);
     }
 
   return SVN_NO_ERROR;
