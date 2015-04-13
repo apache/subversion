@@ -269,6 +269,15 @@ Other candidate changes:
    Votes:
      +1: breser
 
+ * r1673153
+   Significantly improve 'svn ls -v' on tag directories
+   Justification:
+     Simple patch that avoids retrieving 'has_props' for every node, which
+     is then ignored saves 95% of the server side processing time on
+     customer reported case.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
