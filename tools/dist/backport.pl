@@ -765,7 +765,7 @@ sub vote {
         "Approve $_->{entry}->{header}."
       } @votesarray;
     (@sentences == 1)
-    ? $sentences[0]
+    ? "* STATUS: $sentences[0]"
     : "* STATUS:\n" . join "", map "  $_\n", @sentences;
   };
 
@@ -1287,7 +1287,7 @@ sub nominate_main {
   # Done!
   system "$SVN diff -- $STATUS";
   if (prompt "Commit this nomination? ") {
-    system "$SVN commit -m 'Nominate r$revnums[0].' -- $STATUS";
+    system "$SVN commit -m '* STATUS: Nominate r$revnums[0].' -- $STATUS";
     exit $?;
   }
   elsif (!$had_local_mods or prompt "Revert STATUS (destroying local mods)? ") {
