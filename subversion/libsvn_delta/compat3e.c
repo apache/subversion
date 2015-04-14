@@ -1159,16 +1159,12 @@ get_immediate_children_names(apr_hash_t *paths,
   return children;
 }
 
-/* Return true iff EL_REV1 and EL_REV2 identify the same branch-family
- * and element.
+/* Return true iff EL_REV1 and EL_REV2 identify the same element.
  */
 static svn_boolean_t
 same_family_and_element(const svn_branch_el_rev_id_t *el_rev1,
                         const svn_branch_el_rev_id_t *el_rev2)
 {
-  if (el_rev1->branch->sibling_defn->family->fid
-      != el_rev2->branch->sibling_defn->family->fid)
-    return FALSE;
   if (el_rev1->eid != el_rev2->eid)
     return FALSE;
 

@@ -507,23 +507,23 @@ def merges(sbox):
                            '-U', repo_url,
                            'merge', 'trunk@5', 'branches/br1', 'trunk@2')
 
-def reported_br_diff(family, path1, path2):
-  return [r'--- diff branch \^.* at /%s : \^.* at /%s, family %d' % (
-           re.escape(path1), re.escape(path2), family)]
+def reported_br_diff(path1, path2):
+  return [r'--- diff branch \^.* at /%s : \^.* at /%s' % (
+           re.escape(path1), re.escape(path2))]
 
 def reported_del(path):
   return ['D   ' + re.escape(path)]
 
-def reported_br_del(family, path):
+def reported_br_del(path):
   return ['D   ' + re.escape(path) + r' \(branch \^\..*\)',
-          r'--- deleted branch \^.*, family %d, at /%s' % (family, re.escape(path))]
+          r'--- deleted branch \^.* at /%s' % (re.escape(path),)]
 
 def reported_add(path):
   return ['A   ' + re.escape(path)]
 
-def reported_br_add(family, path):
+def reported_br_add(path):
   return ['A   ' + re.escape(path) + r' \(branch \^\..*\)',
-          r'--- added branch \^.*, family %d, at /%s' % (family, re.escape(path))]
+          r'--- added branch \^.* at /%s' % (re.escape(path),)]
 
 def reported_move(path1, path2, branch_text=''):
   dir1, name1 = os.path.split(path1)
@@ -569,7 +569,7 @@ def merge_edits_with_move(sbox):
 
   # on trunk: make edits under 'foo' (r4)
   test_svnmover2(sbox, 'trunk',
-                 reported_br_diff(1, 'trunk', 'trunk') +
+                 reported_br_diff('trunk', 'trunk') +
                  reported_del('lib/foo/x') +
                  reported_move('lib/foo/y', 'lib/foo/y2') +
                  reported_add('lib/foo/z'),
@@ -579,19 +579,19 @@ def merge_edits_with_move(sbox):
 
   # on branch: move/rename 'foo' (r5)
   test_svnmover2(sbox, 'branches/br1',
-                 reported_br_diff(1, 'branches/br1', 'branches/br1') +
+                 reported_br_diff('branches/br1', 'branches/br1') +
                  reported_move('lib/foo', 'bar'),
                 'mv lib/foo bar')
 
   # merge the move to trunk (r6)
   test_svnmover2(sbox, '',
-                 reported_br_diff(1, 'trunk', 'trunk') +
+                 reported_br_diff('trunk', 'trunk') +
                  reported_move('lib/foo', 'bar'),
                 'merge branches/br1@5 trunk trunk@2')
 
   # merge the edits in trunk (excluding the merge r6) to branch (r7)
   test_svnmover2(sbox, '',
-                 reported_br_diff(1, 'branches/br1', 'branches/br1') +
+                 reported_br_diff('branches/br1', 'branches/br1') +
                  reported_del('bar/x') +
                  reported_move('bar/y', 'bar/y2') +
                  reported_add('bar/z'),
@@ -632,7 +632,7 @@ def simple_moves_within_a_branch(sbox):
                 'mv lib/README.txt README'
                 )
 
-# Exercise moves from one branch to another in the same family. 'svnmover'
+# Exercise moves from one branch to another. 'svnmover'
 # executes these by branch-and-delete. In this test, the elements being moved
 # do not already exist in the target branch.
 def move_to_related_branch(sbox):
@@ -668,7 +668,7 @@ def move_to_related_branch(sbox):
                 'mv trunk/lib branches/br1/subdir/lib2',
                 )
 
-# Exercise moves from one branch to another in the same family. 'svnmover'
+# Exercise moves from one branch to another. 'svnmover'
 # executes these by branch-and-delete. In this test, there are existing
 # instances of the same elements in the target branch, which should be
 # overwritten.
@@ -737,7 +737,7 @@ def move_branch_within_same_parent_branch(sbox):
 
   # move trunk
   test_svnmover2(sbox, '',
-                   reported_br_diff(0, '', '') +
+                   reported_br_diff('', '') +
                    reported_add('D') +
                    reported_add('D/E') +
                    reported_br_move('trunk', 'D/E/trunk2'),
@@ -747,11 +747,11 @@ def move_branch_within_same_parent_branch(sbox):
 
   # move trunk and also modify it
   test_svnmover2(sbox, '',
-                   reported_br_diff(0, '', '') +
+                   reported_br_diff('', '') +
                    reported_del('D') +
                    reported_del('D/E') +
                    reported_br_move('D/E/trunk2', 'trunk') +
-                   reported_br_diff(1, 'D/E/trunk2', 'trunk') +
+                   reported_br_diff('D/E/trunk2', 'trunk') +
                    reported_add('new'),
                  'mv D/E/trunk2 trunk',
                  'rm D',
@@ -759,7 +759,7 @@ def move_branch_within_same_parent_branch(sbox):
 
   # move a subbranch of trunk
   test_svnmover2(sbox, 'trunk',
-                 reported_br_diff(1, 'trunk', 'trunk') +
+                 reported_br_diff('trunk', 'trunk') +
                  reported_br_move('sub', 'sub2'),
                 'mv sub sub2'
                 )
@@ -781,12 +781,6 @@ def move_branch_within_same_parent_branch(sbox):
 #                             \_______          +- BR1/...
 #
 # (UPPER CASE denotes a branch root.)
-#
-# All branches are necessarily in the same family in the first arrangement.
-# The rearranged form could have a separate family for each project if the
-# projects historically never shared any elements, but we keep them all in
-# the same family and this way can guarantee to accommodate them even if
-# they do share history.
 #
 # This rearrangement is achieved entirely by branching from subtrees of the
 # existing branches.
@@ -825,7 +819,7 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
 
   # merge the branch to trunk (r7)
   test_svnmover2(sbox, '',
-                 reported_br_diff(1, 'trunk', 'trunk') +
+                 reported_br_diff('trunk', 'trunk') +
                  reported_move('proj1/lib/foo', 'proj1/bar') +
                  reported_add('proj2') +
                  reported_add('proj2/bar') +
@@ -834,7 +828,7 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
 
   # merge the edits in trunk (excluding the merge r6) to branch (r7)
   test_svnmover2(sbox, '',
-                 reported_br_diff(1, 'branches/br1', 'branches/br1') +
+                 reported_br_diff('branches/br1', 'branches/br1') +
                  reported_del('proj1/bar/x') +
                  reported_move('proj1/bar/y', 'proj1/bar/y2') +
                  reported_add('proj1/bar/z'),
@@ -849,11 +843,11 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
                 )
   # Rearrange: {t,t,b}/{proj} => {proj}/{t,t,b}
   test_svnmover2(sbox, '',
-                 reported_br_diff(0, '', '') +
-                 reported_br_add(1, 'proj1/trunk') +
-                 reported_br_add(1, 'proj2/trunk') +
-                 reported_br_add(1, 'proj1/branches/br1') +
-                 reported_br_add(1, 'proj2/branches/br1'),
+                 reported_br_diff('', '') +
+                 reported_br_add('proj1/trunk') +
+                 reported_br_add('proj2/trunk') +
+                 reported_br_add('proj1/branches/br1') +
+                 reported_br_add('proj2/branches/br1'),
                 'branch trunk/proj1 proj1/trunk',
                 'branch trunk/proj2 proj2/trunk',
                 'branch branches/br1/proj1 proj1/branches/br1',
@@ -861,10 +855,10 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
                 )
   # Delete the remaining root dir of the old trunk and branches
   test_svnmover2(sbox, '',
-                 reported_br_diff(0, '', '') +
+                 reported_br_diff('', '') +
                  reported_del('branches') +
-                 reported_br_del(1, 'branches/br1') +
-                 reported_br_del(1, 'trunk'),
+                 reported_br_del('branches/br1') +
+                 reported_br_del('trunk'),
                 'rm trunk',
                 'rm branches',
                 )
@@ -889,15 +883,9 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
 #
 # (UPPER CASE denotes a branch root.)
 #
-# If all branches are in the same family in the first arrangement, then this
+# This
 # rearrangement is achieved entirely by branching the existing branches into
 # subtrees of the new big branches.
-#
-# (If there were a separate branch family for each project in the first
-# arrangement, then there is no simple branching/moving way to do this. The
-# elements of each old branch would have to be copied into the new branch
-# family, and so would be linked to their old history by the weaker "copied
-# from" relationship.)
 #
 def restructure_repo_projects_ttb_to_ttb_projects(sbox):
   "restructure repo: projects/ttb to ttb/projects"
@@ -926,7 +914,7 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
 
     # merge trunk to branch
     test_svnmover2(sbox, proj,
-                   reported_br_diff(1, proj + '/branches/br1', proj + '/branches/br1') +
+                   reported_br_diff(proj + '/branches/br1', proj + '/branches/br1') +
                    reported_del('bar/x') +
                    reported_move('bar/y', 'bar/y2') +
                    reported_add('bar/z'),
@@ -950,9 +938,9 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
   # of the 'mv' command, where it performs moving by 'branch-and-delete'.
   for proj in ['proj1', 'proj2']:
     test_svnmover2(sbox, '',
-                   reported_br_diff(0, '', '') +
-                   reported_br_del(1, proj + '/trunk') +
-                   reported_br_diff(1, 'trunk', 'trunk') +
+                   reported_br_diff('', '') +
+                   reported_br_del(proj + '/trunk') +
+                   reported_br_diff('trunk', 'trunk') +
                    reported_add(proj) +
                    reported_add(proj + '/README') +
                    reported_add(proj + '/lib') +
@@ -964,9 +952,9 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
                    'rm', proj + '/trunk',
                    )
     test_svnmover2(sbox, '',
-                   reported_br_diff(0, '', '') +
-                   reported_br_del(1, proj + '/branches/br1') +
-                   reported_br_diff(1, 'branches/br1', 'branches/br1') +
+                   reported_br_diff('', '') +
+                   reported_br_del(proj + '/branches/br1') +
+                   reported_br_diff('branches/br1', 'branches/br1') +
                    reported_add(proj) +
                    reported_add(proj + '/README') +
                    reported_add(proj + '/bar') +

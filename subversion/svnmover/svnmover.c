@@ -73,10 +73,6 @@ static svn_boolean_t quiet = FALSE;
   (strcmp(svn_branch_instance_get_id(branch1, scratch_pool), \
           svn_branch_instance_get_id(branch2, scratch_pool)) == 0)
 
-#define BRANCHES_IN_SAME_FAMILY(branch1, branch2) \
-  ((branch1)->sibling_defn->family->fid \
-   == (branch2)->sibling_defn->family->fid)
-
 /*  */
 __attribute__((format(printf, 1, 2)))
 static void
@@ -262,8 +258,7 @@ static const action_defn_t action_defn[] =
     "appear at DST in the existing branch that contains DST" NL
     "(like merging the creation of the subtree at SRC to DST)"},
   {ACTION_MKBRANCH,         "mkbranch", 1, "ROOT",
-    "make a directory that's the root of a new branch" NL
-    "in a new branching family"},
+    "make a directory that's the root of a new subbranch"},
   {ACTION_DIFF,             "diff", 2, "LEFT RIGHT",
     "diff LEFT to RIGHT"},
   {ACTION_DIFF_E,           "diff-e", 2, "LEFT RIGHT",
@@ -395,13 +390,10 @@ list_branch_elements(svn_branch_instance_t *branch,
 }
 
 /* List all branch instances in FAMILY.
- *
- * If RECURSIVE is true, include branches in nested families.
  */
 static svn_error_t *
 family_list_branch_instances(svn_branch_revision_root_t *rev_root,
                              svn_branch_family_t *family,
-                             svn_boolean_t recursive,
                              svn_boolean_t verbose,
                              apr_pool_t *scratch_pool)
 {
@@ -409,15 +401,13 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
 
   if (verbose)
     {
-      printf("family %d (BSIDs %d:%d, EIDs %d:%d)\n",
-             family->fid,
+      printf("branches (BSIDs %d:%d, EIDs %d:%d)\n",
              family->first_bsid, family->next_bsid,
              family->first_eid, family->next_eid);
     }
   else
     {
-      printf("branches in family %d:\n",
-             family->fid);
+      printf("branches:\n");
     }
 
   for (SVN_ARRAY_ITER(bi, svn_branch_family_get_branch_instances(
@@ -438,16 +428,6 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
           printf("  %s /%s\n",
                  svn_branch_instance_get_id(branch, bi->iterpool),
                  svn_branch_get_root_rrpath(branch, bi->iterpool));
-        }
-    }
-
-  if (recursive)
-    {
-      if (family->subfamily)
-        {
-          SVN_ERR(family_list_branch_instances(rev_root, family->subfamily,
-                                               recursive,
-                                               verbose, scratch_pool));
         }
     }
 
@@ -656,21 +636,17 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   int first_eid, next_eid, eid;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
 
-  SVN_ERR_ASSERT(src->branch->sibling_defn->family->fid
-                 == tgt->branch->sibling_defn->family->fid);
-  SVN_ERR_ASSERT(src->branch->sibling_defn->family->fid
-                 == yca->branch->sibling_defn->family->fid);
   SVN_ERR_ASSERT(src->eid == tgt->eid);
   SVN_ERR_ASSERT(src->eid == yca->eid);
 
-  SVN_DBG(("merge src: r%2ld f%d b%2d e%3d",
-           src->rev, src->branch->sibling_defn->family->fid,
+  SVN_DBG(("merge src: r%2ld b%2d e%3d",
+           src->rev,
            src->branch->sibling_defn->bsid, src->eid));
-  SVN_DBG(("merge tgt: r%2ld f%d b%2d e%3d",
-           tgt->rev, tgt->branch->sibling_defn->family->fid,
+  SVN_DBG(("merge tgt: r%2ld b%2d e%3d",
+           tgt->rev,
            tgt->branch->sibling_defn->bsid, tgt->eid));
-  SVN_DBG(("merge yca: r%2ld f%d b%2d e%3d",
-           yca->rev, yca->branch->sibling_defn->family->fid,
+  SVN_DBG(("merge yca: r%2ld b%2d e%3d",
+           yca->rev,
            yca->branch->sibling_defn->bsid, yca->eid));
 
   /*
@@ -805,10 +781,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
  *
  * If conflicts arise, just fail.
  *
- * SRC->BRANCH, TGT->BRANCH and YCA->BRANCH must be in the same family.
- *
- * SRC, TGT and YCA must be existing and corresponding (same EID) elements
- * of the branch family.
+ * SRC, TGT and YCA must be existing and corresponding (same EID) elements.
  *
  * None of SRC, TGT and YCA is a subbranch root element.
  *
@@ -822,15 +795,6 @@ svn_branch_merge(svn_editor3_t *editor,
                  svn_branch_el_rev_id_t *yca,
                  apr_pool_t *scratch_pool)
 {
-  if (src->branch->sibling_defn->family->fid != tgt->branch->sibling_defn->family->fid
-      || src->branch->sibling_defn->family->fid != yca->branch->sibling_defn->family->fid)
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("Merge branches must all be in same family "
-                               "(from: f%d, to: f%d, yca: f%d)"),
-                             src->branch->sibling_defn->family->fid,
-                             tgt->branch->sibling_defn->family->fid,
-                             yca->branch->sibling_defn->family->fid);
-
   /*SVN_ERR(verify_exists_in_branch(from, scratch_pool));*/
   /*SVN_ERR(verify_exists_in_branch(to, scratch_pool));*/
   /*SVN_ERR(verify_exists_in_branch(yca, scratch_pool));*/
@@ -861,16 +825,6 @@ svn_branch_diff_e(svn_editor3_t *editor,
   int first_eid, next_eid, eid;
   svn_boolean_t printed_header = FALSE;
 
-  if (left->branch->sibling_defn->family->fid
-      != right->branch->sibling_defn->family->fid)
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Left and right side of an element-based diff "
-                                 "must be in the same branch family "
-                                 "(left: f%d, right: f%d)"),
-                               left->branch->sibling_defn->family->fid,
-                               right->branch->sibling_defn->family->fid);
-    }
   SVN_ERR_ASSERT(left->eid >= 0 && right->eid >= 0);
 
   SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
@@ -968,16 +922,6 @@ svn_branch_diff(svn_editor3_t *editor,
   svn_array_t *diff_changes = svn_array_make(scratch_pool);
   SVN_ITER_T(diff_item_t) *ai;
 
-  if (left->branch->sibling_defn->family->fid
-      != right->branch->sibling_defn->family->fid)
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Left and right side of an element-based diff "
-                                 "must be in the same branch family "
-                                 "(left: f%d, right: f%d)"),
-                               left->branch->sibling_defn->family->fid,
-                               right->branch->sibling_defn->family->fid);
-    }
   SVN_ERR_ASSERT(left->eid >= 0 && right->eid >= 0);
 
   SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
@@ -1120,31 +1064,27 @@ svn_branch_diff_r(svn_editor3_t *editor,
   if (!left)
     {
       header = apr_psprintf(scratch_pool,
-                 "--- added branch %s, family %d, at /%s\n",
+                 "--- added branch %s at /%s\n",
                  svn_branch_instance_get_id(right->branch, scratch_pool),
-                 right->branch->sibling_defn->family->fid,
                  svn_branch_get_root_rrpath(right->branch, scratch_pool));
       printf("%s%s", prefix, header);
     }
   else if (!right)
     {
       header = apr_psprintf(scratch_pool,
-                 "--- deleted branch %s, family %d, at /%s\n",
+                 "--- deleted branch %s at /%s\n",
                  svn_branch_instance_get_id(left->branch, scratch_pool),
-                 left->branch->sibling_defn->family->fid,
                  svn_branch_get_root_rrpath(left->branch, scratch_pool));
       printf("%s%s", prefix, header);
     }
   else
     {
-      assert(BRANCHES_IN_SAME_FAMILY(left->branch, right->branch));
       header = apr_psprintf(scratch_pool,
-                 "--- diff branch %s at /%s : %s at /%s, family %d\n",
+                 "--- diff branch %s at /%s : %s at /%s\n",
                  svn_branch_instance_get_id(left->branch, scratch_pool),
                  svn_branch_get_root_rrpath(left->branch, scratch_pool),
                  svn_branch_instance_get_id(right->branch, scratch_pool),
-                 svn_branch_get_root_rrpath(right->branch, scratch_pool),
-                 right->branch->sibling_defn->family->fid);
+                 svn_branch_get_root_rrpath(right->branch, scratch_pool));
       SVN_ERR(diff_func(editor, left, right, prefix, header, scratch_pool));
     }
 
@@ -1206,10 +1146,8 @@ move_by_branch_and_delete(svn_editor3_t *editor,
   svn_branch_subtree_t subtree
     = svn_branch_map_get_subtree(el_rev->branch, el_rev->eid, scratch_pool);
 
-  SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(el_rev->branch, to_branch));
-
-  /* This is supposed to be used for moving to a *different* branch in the
-     same family. In fact, this method would also work for moving within one
+  /* This is supposed to be used for moving to a *different* branch.
+     In fact, this method would also work for moving within one
      branch, but we don't currently want to use it for that purpose. */
   SVN_ERR_ASSERT(! BRANCH_IS_SAME_BRANCH(el_rev->branch, to_branch,
                                          scratch_pool));
@@ -1234,7 +1172,7 @@ move_by_branch_and_delete(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/* Move by copy-and-delete into a different branch family.
+/* Move by copy-and-delete.
  *
  * The target branch is different from the source branch.
  *
@@ -1252,8 +1190,6 @@ move_by_copy_and_delete(svn_editor3_t *editor,
                         const char *to_name,
                         apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(! BRANCHES_IN_SAME_FAMILY(el_rev->branch, to_branch));
-
   SVN_ERR(svn_editor3_copy_tree(editor, el_rev,
                                 to_branch,
                                 to_parent_eid, to_name));
@@ -1266,16 +1202,12 @@ move_by_copy_and_delete(svn_editor3_t *editor,
  *
  *    if target is in same branch:
  *      move the element
- *    else if target is in another branch of same family:
+ *    else [target is in another branch]:
  *      delete from source branch
  *      instantiate in target branch
- *    else:
+ *    [else:
  *      copy into target branch
- *      delete from source branch
- *
- * ### Another available option is a variant of the second case:
- * if (parent branch of source branch) and (parent element of target) are in
- * the same family, then make a subtree-branch of the source subtree.
+ *      delete from source branch]
  */
 static svn_error_t *
 do_move(svn_editor3_t *editor,
@@ -1296,8 +1228,8 @@ do_move(svn_editor3_t *editor,
       return SVN_NO_ERROR;
     }
 
-  /* Instantiate same elements in another branch of same family, if possible */
-  if (BRANCHES_IN_SAME_FAMILY(el_rev->branch, to_parent_el_rev->branch))
+  /* Instantiate same elements in another branch */
+  if (1 /*###*/)
     {
       /* Here the elements moved from the source branch will overwrite any
          corresponding elements that already exist in the target branch.
@@ -1343,8 +1275,7 @@ svn_branch_revision_root_find_branch_by_id(const svn_branch_revision_root_t *rev
       branch = svn_branch_get_subbranch_at_eid(branch, eid, scratch_pool);
       pos += bytes;
     }
-  SVN_DBG(("branch found: f%db%de%d at '/%s'",
-           branch->sibling_defn->family->fid,
+  SVN_DBG(("branch found: b%de%d at '/%s'",
            branch->sibling_defn->bsid,
            branch->sibling_defn->root_eid,
            svn_branch_get_root_rrpath(branch, scratch_pool)));
@@ -1419,15 +1350,10 @@ mk_branch(svn_branch_instance_t **new_branch_p,
           svn_element_content_t *content,
           apr_pool_t *iterpool)
 {
-  svn_branch_family_t *outer_family
-    = outer_branch->sibling_defn->family;
-  svn_branch_family_t *new_family
-    = outer_family->subfamily ? outer_family->subfamily :
-        svn_branch_family_add_new_subfamily(outer_family);
-  int new_root_eid = svn_branch_family_add_new_element(new_family);
+  svn_branch_family_t *family = outer_branch->sibling_defn->family;
+  int new_root_eid = svn_branch_family_add_new_element(family);
   svn_branch_sibling_t *new_branch_def
-    = svn_branch_family_add_new_branch_sibling(new_family,
-                                               new_root_eid);
+    = svn_branch_family_add_new_branch_sibling(family, new_root_eid);
   int new_outer_eid;
   svn_branch_instance_t *new_branch;
 
@@ -1643,7 +1569,7 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(family_list_branch_instances(
                       el_rev[0]->branch->rev_root,
                       el_rev[0]->branch->sibling_defn->family,
-                      FALSE, FALSE, iterpool));
+                      FALSE, iterpool));
           }
           break;
         case ACTION_LIST_BRANCHES_R:
@@ -1655,7 +1581,7 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(family_list_branch_instances(
                       el_rev[0]->branch->rev_root,
                       el_rev[0]->branch->sibling_defn->family,
-                      TRUE, TRUE, iterpool));
+                      TRUE, iterpool));
           }
           break;
         case ACTION_LS:
