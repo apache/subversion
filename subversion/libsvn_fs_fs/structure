@@ -578,8 +578,9 @@ defined:
     representations may not be handled correctly by SVN before 1.7.20,
     1.8.12 and 1.9.0, if they have 0 <size> fields for non-empty contents.
     Releases 1.8.0 through 1.8.11 may have falsely created instances of
-    that (see issue #4554).  Finally, 0 <size> fields are NEVER legal for
-    DELTA representations.
+    that (see issue #4554).  Finally, 0 <size> fields are only ever legal
+    for DELTA representations if the reconstructed full-text is actually
+    empty.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of
