@@ -96,7 +96,7 @@ Other candidate changes:
      If caller just passed a scratch pool for a single request things would
      usually have worked fine, but if not...
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1666965, r1667120
    mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
