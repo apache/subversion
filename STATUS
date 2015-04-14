@@ -259,12 +259,13 @@ Other candidate changes:
    Votes:
      +1: stsp
 
- * r1673044
+ * r1673062
    Fix 2 error leaks in the X.509 code.
    Justification:
      Error leaks are bad and no reason to leave them unfixed.
    Votes:
-     +1: breser
+     +1: breser (cast when r1673044 proposed in error)
+     +1: philip
 
  * r1673044, r1673063, r1673065
    Allow the auth command to match on certficiate details
