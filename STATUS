@@ -69,6 +69,18 @@ Candidate changes that cannot go into a later 1.9.x:
    Votes:
      +1: stefan2
 
+ * r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693
+   Fix various problems with binary file conflicts.
+   Justification:
+     Conflict description API violates its own promises for binaries.
+     Current behaviour can cause user confusion since conflict prompt
+     options for binary files won't work as expected.
+   Notes:
+     rhuijben: This nomination contains some revisions that are also in
+     the r1667228 nomination. Perhaps these should be combined.
+   Votes:
+     +1: stsp
+
 Other candidate changes:
 ========================
 
@@ -227,18 +239,6 @@ Other candidate changes:
       regress)
    Votes:
      +1: rhuijben
-
- * r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693
-   Fix various problems with binary file conflicts.
-   Justification:
-     Conflict description API violates its own promises for binaries.
-     Current behaviour can cause user confusion since conflict prompt
-     options for binary files won't work as expected.
-   Notes:
-     rhuijben: This nomination contains some revisions that are also in
-     the r1667228 nomination. Perhaps these should be combined.
-   Votes:
-     +1: stsp
 
  * r1673062
    Fix 2 error leaks in the X.509 code.
