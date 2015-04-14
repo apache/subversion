@@ -15,24 +15,6 @@ Status of 1.9.0:
 Release blockers for 1.9.0:
 ===========================
 
- * r1667233, r1667301
-   Reject invalid get-location-segments requests in mod_dav_svn and svnserve.
-   Justification:
-     Security issue.
-   Notes:
-     r1667233 is the fix itself.  r1667301 fixes svnserve protocol violation
-     when the sanity check in get_location_segments() fails.  The backport
-     branch is required to avoid a trunk-specific behavior change in terms
-     of the error code, i.e., to still use the SVN_ERR_INCORRECT_PARAMS
-     instead of the SVN_ERR_FS_NO_SUCH_REVISION.
-   Branch:
-     ^/subversion/branches/1.9.x-r1667233
-   Votes:
-     +1: kotkov, philip
-     -0: rhuijben (causes an svn protocol error without further patches such
-                   as the patch applied in r1667301; vote happened before
-                   the '1.9.x-r1667233' backport branch)
-
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
@@ -342,3 +324,21 @@ Approved changes:
      on /trunk.
    Votes:
      +1: stefan2, rhuijben, philip
+
+ * r1667233, r1667301
+   Reject invalid get-location-segments requests in mod_dav_svn and svnserve.
+   Justification:
+     Security issue.
+   Notes:
+     r1667233 is the fix itself.  r1667301 fixes svnserve protocol violation
+     when the sanity check in get_location_segments() fails.  The backport
+     branch is required to avoid a trunk-specific behavior change in terms
+     of the error code, i.e., to still use the SVN_ERR_INCORRECT_PARAMS
+     instead of the SVN_ERR_FS_NO_SUCH_REVISION.
+   Branch:
+     ^/subversion/branches/1.9.x-r1667233
+   Votes:
+     +1: kotkov, philip, stefan2
+     -0: rhuijben (causes an svn protocol error without further patches such
+                   as the patch applied in r1667301; vote happened before
+                   the '1.9.x-r1667233' backport branch)
