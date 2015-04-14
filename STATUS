@@ -239,6 +239,7 @@ Other candidate changes:
       regress)
    Votes:
      +1: rhuijben
+     -0: philip (mail to dev, delete EXTERNALS as done for other tables?)
 
  * r1673062
    Fix 2 error leaks in the X.509 code.
