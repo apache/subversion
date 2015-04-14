@@ -601,10 +601,10 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
 
 /* The default branching metadata for a new repository. */
 static const char *default_repos_info
-  = "r0: fids 0 1 root-fid 0\n"
-    "f0: bsids 0 1 eids 0 1 parent-fid -1 b-instances 1\n"
-    "f0b0: root-eid 0 at .\n"
-    "f0b0e0: -1 .\n";
+  = "r0:\n"
+    "family: bsids 0 1 eids 0 1 b-instances 1\n"
+    "b0: root-eid 0 at .\n"
+    "b0e0: -1 .\n";
 
 /* Read the branching info string VALUE belonging to revision REVISION.
  */
@@ -685,7 +685,6 @@ write_rev_prop(svn_ra_session_t *ra_session,
  */
 static svn_error_t *
 svn_branch_revision_fetch_info(svn_branch_revision_root_t **rev_root_p,
-                               int *next_fid_p,
                                svn_branch_repos_t *repos,
                                svn_ra_session_t *ra_session,
                                const char *branch_info_dir,
@@ -713,7 +712,7 @@ svn_branch_revision_fetch_info(svn_branch_revision_root_t **rev_root_p,
   SVN_ERR_ASSERT(value);
   stream = svn_stream_from_string(value, scratch_pool);
 
-  SVN_ERR(svn_branch_revision_root_parse(&rev_root, next_fid_p, repos, stream,
+  SVN_ERR(svn_branch_revision_root_parse(&rev_root, repos, stream,
                                          result_pool, scratch_pool));
 
   /* Self-test: writing out the info should produce exactly the same string. */
@@ -721,7 +720,7 @@ svn_branch_revision_fetch_info(svn_branch_revision_root_t **rev_root_p,
     svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
 
     stream = svn_stream_from_stringbuf(buf, scratch_pool);
-    SVN_ERR(svn_branch_revision_root_serialize(stream, rev_root, *next_fid_p,
+    SVN_ERR(svn_branch_revision_root_serialize(stream, rev_root,
                                                scratch_pool));
     SVN_ERR(svn_stream_close(stream));
 
@@ -750,18 +749,15 @@ svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
 
   SVN_ERR(svn_ra_get_latest_revnum(ra_session, &base_revision, scratch_pool));
 
-  repos->next_fid = 0;
   for (r = 0; r <= base_revision; r++)
     {
       svn_branch_revision_root_t *rev_root;
-      int next_fid;
 
-      SVN_ERR(svn_branch_revision_fetch_info(&rev_root, &next_fid,
+      SVN_ERR(svn_branch_revision_fetch_info(&rev_root,
                                              repos, ra_session, branch_info_dir,
                                              r,
                                              result_pool, scratch_pool));
       APR_ARRAY_PUSH(repos->rev_roots, void *) = rev_root;
-      repos->next_fid = MAX(repos->next_fid, next_fid);
     }
 
   *repos_p = repos;
@@ -779,11 +775,9 @@ svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  int next_fid;
-
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(base_revision));
 
-  SVN_ERR(svn_branch_revision_fetch_info(rev_root_p, &next_fid,
+  SVN_ERR(svn_branch_revision_fetch_info(rev_root_p,
                                          repos, ra_session, branch_info_dir,
                                          base_revision,
                                          result_pool, scratch_pool));
@@ -799,12 +793,10 @@ store_repos_info(svn_branch_revision_root_t *rev_root,
                  const char *branch_info_dir,
                  apr_pool_t *scratch_pool)
 {
-  svn_branch_repos_t *repos = rev_root->repos;
   svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
   svn_stream_t *stream = svn_stream_from_stringbuf(buf, scratch_pool);
 
-  SVN_ERR(svn_branch_revision_root_serialize(stream, rev_root, repos->next_fid,
-                                             scratch_pool));
+  SVN_ERR(svn_branch_revision_root_serialize(stream, rev_root, scratch_pool));
 
   SVN_ERR(svn_stream_close(stream));
   /*SVN_DBG(("store_repos_info: %s", buf->data));*/

@@ -642,10 +642,6 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
 #define BRANCH_FAMILY_HAS_ELEMENT(branch, eid) \
    FAMILY_HAS_ELEMENT((branch)->sibling_defn->family, (eid))
 
-#define BRANCHES_IN_SAME_FAMILY(branch1, branch2) \
-  ((branch1)->sibling_defn->family->fid \
-   == (branch2)->sibling_defn->family->fid)
-
 /* Return the relative path to element EID within SUBTREE.
  *
  * Assumes the mapping is "complete" (has complete paths to SUBTREE and to EID).
@@ -690,7 +686,6 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
   /*SVN_DBG(("branch_element_differences(b%d r%ld, b%d r%ld, e%d)",
            left->branch->sibling->bsid, left->rev,
            right->branch->sibling->bsid, right->rev, right->eid));*/
-  SVN_ERR_ASSERT(BRANCHES_IN_SAME_FAMILY(left->branch, right->branch));
   SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, left->eid));
   SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, right->eid));
 

@@ -46,7 +46,7 @@ extern "C" {
 /* ### */
 #define SVN_ERR_BRANCHING 123456
 
-/** Element Identifier within a branch family.
+/** Element Identifier.
  *
  * This does not contain an implied revision number or branch identifier.
  */
@@ -62,15 +62,11 @@ typedef struct svn_branch_instance_t svn_branch_instance_t;
  */
 typedef struct svn_branch_repos_t
 {
-  /* The range of family ids assigned within this repos (starts at 0). */
-  int next_fid;
-
   /* Array of (svn_branch_revision_info_t *), indexed by revision number. */
   apr_array_header_t *rev_roots;
 
-  /* Hash of (int *fid -> svn_branch_family_t *), of all the branch family
-     objects. */
-  apr_hash_t *families;
+  /* The branch family object. */
+  struct svn_branch_family_t *family;
 
   /* The pool in which this object lives. */
   apr_pool_t *pool;
@@ -134,13 +130,6 @@ typedef struct svn_branch_family_t
   /* The repository in which this family exists. */
   svn_branch_repos_t *repos;
 
-  /* The outer family of which this is a sub-family. NULL if this is the
-     root family. */
-  /*struct svn_branch_family_t *outer_family;*/
-
-  /* The FID of this family within its repository. */
-  int fid;
-
   /* --- Contents of this object --- */
 
   /* The branch siblings in this family. */
@@ -152,9 +141,6 @@ typedef struct svn_branch_family_t
   /* The range of element ids assigned within this family. */
   int first_eid, next_eid;
 
-  /* The immediate sub-family of this family, or NULL if none. */
-  struct svn_branch_family_t *subfamily;
-
   /* The pool in which this object lives. */
   apr_pool_t *pool;
 } svn_branch_family_t;
@@ -162,7 +148,6 @@ typedef struct svn_branch_family_t
 /* Create a new branch family object */
 svn_branch_family_t *
 svn_branch_family_create(svn_branch_repos_t *repos,
-                         int fid,
                          int first_bsid,
                          int next_bsid,
                          int first_eid,
@@ -184,11 +169,6 @@ svn_branch_family_get_branch_instances(
 int
 svn_branch_family_add_new_element(svn_branch_family_t *family);
 
-/* Create a new, empty family in OUTER_FAMILY.
- */
-svn_branch_family_t *
-svn_branch_family_add_new_subfamily(svn_branch_family_t *outer_family);
-
 /* Add a new branch sibling definition to FAMILY, with root element id
  * ROOT_EID.
  */
@@ -196,38 +176,32 @@ svn_branch_sibling_t *
 svn_branch_family_add_new_branch_sibling(svn_branch_family_t *family,
                                          int root_eid);
 
-/* A branch.
+/* A branch sibling definition.
  *
- * A branch sibling object describes the characteristics of a branch
- * in a given family with a given BSID. This sibling is common to each
- * branch that has this same family and BSID: there can be one such instance
- * within each branch of its outer families.
+ * A branch sibling definition describes characteristics that may be
+ * shared by more than one branch.
  *
- * Often, all branches in a family have the same root element. For example,
+ * Often, branches have the same root element. For example,
  * branching /trunk to /branches/br1 results in:
  *
- *      family 1, branch 1, root-EID 100
+ *      branch 1: BSID=1 (root-EID=100)
  *          EID 100 => /trunk
  *          ...
- *      family 1, branch 2, root-EID 100
+ *      branch 2: BSID=1 (root-EID=100)
  *          EID 100 => /branches/br1
  *          ...
  *
  * However, the root element of one branch may correspond to a non-root
- * element of another branch; such a branch could be called a "subtree
- * branch". Using the same example, branching from the trunk subtree
+ * element of another branch.
+ *
+ * Continuing the same example, branching from the trunk subtree
  * /trunk/D (which is not itself a branch root) results in:
  *
- *      family 1, branch 3: root-EID = 104
+ *      branch 3: BSID=2 (root-EID=104)
  *          EID 100 => (nil)
  *          ...
  *          EID 104 => /branches/branch-of-trunk-subtree-D
  *          ...
- *
- * If family 1 were nested inside an outer family, then there could be
- * multiple branch-instances for each branch-sibling. In the above
- * example, all instances of (family 1, branch 1) will have root-EID 100,
- * and all instances of (family 1, branch 3) will have root-EID 104.
  */
 struct svn_branch_sibling_t
 {
@@ -236,15 +210,15 @@ struct svn_branch_sibling_t
   /* The family of which this branch is a member. */
   svn_branch_family_t *family;
 
-  /* The BSID of this branch within its family. */
+  /* The BSID of this branch. */
   int bsid;
 
-  /* The EID, within the outer family, of the branch root element. */
-  /*int outer_family_eid_of_branch_root;*/
+  /* The EID, within the outer branch, of the branch root element. */
+  /*int outer_eid_of_branch_root;*/
 
   /* --- Contents of this object --- */
 
-  /* The EID within its family of its pathwise root element. */
+  /* The EID of its pathwise root element. */
   int root_eid;
 };
 
@@ -257,8 +231,7 @@ svn_branch_sibling_create(svn_branch_family_t *family,
 
 /* A branch instance.
  *
- * A branch instance object describes one branch in this family. (There is
- * one instance of this branch within each branch of its outer families.)
+ * A branch instance object describes one version of one branch.
  */
 struct svn_branch_instance_t
 {
@@ -270,12 +243,12 @@ struct svn_branch_instance_t
   /* The revision to which this branch-revision-instance belongs */
   svn_branch_revision_root_t *rev_root;
 
-  /* The branch instance within the outer family that contains the
+  /* The outer branch instance that contains the subbranch
      root element of this branch. Null if this is the root branch. */
   struct svn_branch_instance_t *outer_branch;
 
-  /* The element in OUTER_BRANCH of the root of this branch, or -1
-   * if this is the root branch. */
+  /* The subbranch-root element in OUTER_BRANCH of the root of this branch.
+   * -1 if this is the root branch. */
   int outer_eid;
 
   /* --- Contents of this object --- */
@@ -420,8 +393,9 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
  * E_MAP may also contain entries that are not part of the subtree. Thus,
  * to select a sub-subtree, it is only necessary to change ROOT_EID.
  *
- * The EIDs used in here are in effect stand-alone, in their own name-space,
- * although they may actually be copied from the originating branch family.
+ * The EIDs used in here may be considered either as global EIDs (known to
+ * the repo), or as local stand-alone EIDs (in their own local name-space),
+ * according to the context.
  */
 typedef struct svn_branch_subtree_t
 {
@@ -583,8 +557,7 @@ svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
  * If FROM_EL_REV is the root of a subbranch and/or contains nested
  * subbranches, also copy them ...
  * ### What shall we do with a subbranch? Make plain copies of its raw
- *     elements; make a subbranch by branching the source subbranch in
- *     cases where possible; make a subbranch in a new family?
+ *     elements; make a subbranch by branching the source subbranch?
  *
  * TO_PARENT_EID must be a directory element in TO_BRANCH, and TO_NAME a
  * non-existing path in it.
@@ -676,7 +649,6 @@ svn_branch_find_nested_branch_element_by_rrpath(
  */
 svn_error_t *
 svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
-                               int *next_fid_p,
                                svn_branch_repos_t *repos,
                                svn_stream_t *stream,
                                apr_pool_t *result_pool,
@@ -687,7 +659,6 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
 svn_error_t *
 svn_branch_revision_root_serialize(svn_stream_t *stream,
                                    svn_branch_revision_root_t *rev_root,
-                                   int next_fid,
                                    apr_pool_t *scratch_pool);
 
 /* Branch the subtree of FROM_BRANCH found at FROM_EID, to create
@@ -707,7 +678,6 @@ svn_branch_branch(svn_branch_instance_t **new_branch_p,
 /* Branch the subtree of FROM_BRANCH found at FROM_EID, to appear
  * in the existing branch TO_BRANCH at TO_PARENT_EID:NEW_NAME.
  *
- * FROM_BRANCH must be in the same family as TO_BRANCH.
  * No element of FROM_BRANCH:FROM_EID may already exist in TO_BRANCH.
  * (### Or, perhaps, elements that already exist should be altered?)
  */
