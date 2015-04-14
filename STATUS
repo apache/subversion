@@ -176,13 +176,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1668320
-   ra_serf: resolve minor memory leak against very old servers
-   Justification:
-     ra operations shouldn't unnecessary grow the session pool.
-   Votes:
-     +1: rhuijben, philip
-
  * r1669743, r1669945
    Restore FSFS representation sharing to its previous effectiveness.
    Justification:
@@ -343,4 +336,11 @@ Approved changes:
      We supported this feature in the libsvn_client api since <= 1.0.
    Votes:
      +1: philip, rhuijben, stefan2 (for 1.9.0 only)
+
+ * r1668320
+   ra_serf: resolve minor memory leak against very old servers
+   Justification:
+     ra operations shouldn't unnecessary grow the session pool.
+   Votes:
+     +1: rhuijben, philip, stefan2
 
