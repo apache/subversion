@@ -208,8 +208,7 @@ Other candidate changes:
    Justification:
      Error leaks are bad and no reason to leave them unfixed.
    Votes:
-     +1: breser (cast when r1673044 proposed in error)
-     +1: philip
+     +1: breser, philip
 
  * r1673044, r1673063, r1673065
    Allow the auth command to match on certficiate details
