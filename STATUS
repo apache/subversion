@@ -330,10 +330,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1667235
-   Reject invalid transaction property change requests in mod_dav_svn.
-   Justification:
-     Security issue.
-   Votes:
-     +1: kotkov, rhuijben, philip
