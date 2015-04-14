@@ -2265,10 +2265,12 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * The pre-lock is run for every path in @a targets. Those targets for
  * which the pre-lock is successful are passed to svn_fs_lock_many and
  * the post-lock is run for those that are successfully locked.
+ * Pre-lock hook errors are passed to @a lock_callback.
  *
  * For each path in @a targets @a lock_callback will be invoked
  * passing @a lock_baton and the lock and error that apply to path.
- * @a lock_callback can be NULL in which case it is not called.
+ * @a lock_callback can be NULL in which case it is not called and any
+ * errors that would have been passed to the callback are not reported.
  *
  * If an error occurs when running the post-lock hook the error is
  * returned wrapped with #SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the
@@ -2280,6 +2282,9 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  *
  * The lock and path passed to @a lock_callback will be allocated in
  * @a result_pool.  Use @a scratch_pool for temporary allocations.
+ *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain unlocked while others may have been locked.
  *
  * @see svn_fs_lock_many
  *
@@ -2320,12 +2325,14 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * The pre-unlock hook is run for every path in @a targets. Those
  * targets for which the pre-unlock is successful are passed to
  * svn_fs_unlock_many and the post-unlock is run for those that are
- * successfully unlocked.
+ * successfully unlocked. Pre-unlock hook errors are passed to @a
+ * lock_callback.
  *
  * For each path in @a targets @a lock_callback will be invoked
  * passing @a lock_baton and error that apply to path.  The lock
  * passed to the callback will be NULL.  @a lock_callback can be NULL
- * in which case it is not called.
+ * in which case it is not called and any errors that would have been
+ * passed to the callback are not reported.
  *
  * If an error occurs when running the post-unlock hook, return the
  * original error wrapped with #SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.
@@ -2334,6 +2341,9 @@ svn_repos_fs_lock(svn_lock_t **lock,
  *
  * The path passed to @a lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
+ *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain locked while others may have been unlocked.
  *
  * @see svn_fs_unlock_many
  *

@@ -243,6 +243,7 @@ svn_fs_base__lock(svn_fs_t *fs,
   apr_hash_index_t *hi;
   svn_error_t *cb_err = SVN_NO_ERROR;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, scratch_pool));
@@ -255,6 +256,7 @@ svn_fs_base__lock(svn_fs_t *fs,
       svn_lock_t *lock;
       svn_error_t *err = NULL;
 
+      svn_pool_clear(iterpool);
       args.lock_p = &lock;
       args.path = svn_fs__canonicalize_abspath(path, result_pool);
       args.token = target->token;
@@ -275,11 +277,12 @@ svn_fs_base__lock(svn_fs_t *fs,
 
       if (!err)
         err = svn_fs_base__retry_txn(fs, txn_body_lock, &args, TRUE,
-                                     scratch_pool);
+                                     iterpool);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, args.path, lock, err, scratch_pool);
+        cb_err = lock_callback(lock_baton, args.path, lock, err, iterpool);
       svn_error_clear(err);
     }
+  svn_pool_destroy(iterpool);
 
   return svn_error_trace(cb_err);
 }
@@ -368,6 +371,7 @@ svn_fs_base__unlock(svn_fs_t *fs,
 {
   apr_hash_index_t *hi;
   svn_error_t *cb_err = SVN_NO_ERROR;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
@@ -378,16 +382,18 @@ svn_fs_base__unlock(svn_fs_t *fs,
       const char *token = apr_hash_this_val(hi);
       svn_error_t *err;
 
+      svn_pool_clear(iterpool);
       args.path = svn_fs__canonicalize_abspath(path, result_pool);
       args.token = token;
       args.break_lock = break_lock;
 
       err = svn_fs_base__retry_txn(fs, txn_body_unlock, &args, TRUE,
-                                   scratch_pool);
+                                   iterpool);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, path, NULL, err, scratch_pool);
+        cb_err = lock_callback(lock_baton, path, NULL, err, iterpool);
       svn_error_clear(err);
     }
+  svn_pool_destroy(iterpool);
 
   return svn_error_trace(cb_err);
 }

@@ -331,13 +331,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1670139, r1670149, r1670152, r1670347
-   Lock-many pool handling and doc fixes as a result of API review.
-   Justification:
-     Better memory handling for callback, clearer documentation.
-   Votes:
-     +1: stefan2, rhuijben, philip
-
  * r1667235
    Reject invalid transaction property change requests in mod_dav_svn.
    Justification:
