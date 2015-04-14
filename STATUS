@@ -204,7 +204,7 @@ Other candidate changes:
      This was part of the whole point of the auth command, but got dropped
      inadvertently as part of the conversion to using an X.509 parser.
    Votes:
-     +1: breser
+     +1: breser, stefan2
 
  * r1673153
    Significantly improve 'svn ls -v' on tag directories
