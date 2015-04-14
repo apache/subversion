@@ -198,13 +198,6 @@ Other candidate changes:
      +1: rhuijben
      -0: philip (mail to dev, delete EXTERNALS as done for other tables?)
 
- * r1673062
-   Fix 2 error leaks in the X.509 code.
-   Justification:
-     Error leaks are bad and no reason to leave them unfixed.
-   Votes:
-     +1: breser, philip
-
  * r1673044, r1673063, r1673065
    Allow the auth command to match on certficiate details
    Justification:
@@ -343,4 +336,11 @@ Approved changes:
      ra operations shouldn't unnecessary grow the session pool.
    Votes:
      +1: rhuijben, philip, stefan2
+
+ * r1673062
+   Fix 2 error leaks in the X.509 code.
+   Justification:
+     Error leaks are bad and no reason to leave them unfixed.
+   Votes:
+     +1: breser, philip, stefan2
 
