@@ -331,3 +331,13 @@ Approved changes:
      None of these changes should affect generated code nor the ABI.
    Votes:
      +1: stefan2, rhuijben, philip
+
+ * r1673445
+   Correct the FSFS structure description.
+   Justification:
+     Have correct documentation.
+   Notes:
+     This is a documentation-only fix and does not require additional
+     voting.
+   Votes:
+     +1: stefan2
