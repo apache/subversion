@@ -146,14 +146,6 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist,
                         node_revision_t *noderev,
                         apr_pool_t *pool);
 
-/* Set *HAS_PROPS to TRUE if NODEREV has properties in FS, otherwise
-   to FALSE. Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_fs_fs__has_props(svn_boolean_t *has_props,
-                     svn_fs_t *fs,
-                     node_revision_t *noderev,
-                     apr_pool_t *scratch_pool);
-
 /* Fetch the list of change in revision REV in FS and return it in *CHANGES.
  * Allocate the result in POOL.
  */
