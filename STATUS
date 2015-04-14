@@ -30,6 +30,8 @@ Candidate changes that cannot go into a later 1.9.x:
      filesystem implementation.
    Votes:
      +1: rhuijben (for 1.9.0 only)
+     -0: stefan2 (waiting for the resolution of the DAV deadprop-count
+                  issue currently being discussed; +1 once that's done)
 
  * r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693
    Fix various problems with binary file conflicts.
@@ -237,7 +239,7 @@ Other candidate changes:
    Notes:
      Depends on the r1673170 group being backported to 1.9.0.
    Votes:
-     +1: rhuijben (after stefan2 or another fsfs expert completes his review)
+     +1: rhuijben, stefan2
 
 Veto-blocked changes:
 =====================
