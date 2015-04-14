@@ -156,7 +156,7 @@ Other candidate changes:
      used to drive the old diff code. Some third party tools might hit this
      problem.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1664593, r1664594, r1664596, r1667715
    On Windows allow reading configuration from system services
