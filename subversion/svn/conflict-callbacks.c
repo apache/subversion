@@ -714,7 +714,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
 
   local_relpath = svn_cl__local_style_skip_ancestor(b->path_prefix,
                                                     desc->local_abspath,
-                                                    scratch_pool);;
+                                                    scratch_pool);
 
   if (desc->is_binary)
     SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
