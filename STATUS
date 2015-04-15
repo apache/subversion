@@ -76,7 +76,7 @@ Other candidate changes:
      To implement this some features had to be added to the generic
      base remove function.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1664664, r1664672, r1664674
    Make detection of invalid (newer than HEAD) base revision on commit behave
