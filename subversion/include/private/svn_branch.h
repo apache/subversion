@@ -356,7 +356,8 @@ typedef struct svn_branch_el_rev_content_t
   /* struct svn_branch_element_t *parent_element; */
   /* element name, or "" for root element; never null */
   const char *name;
-  /* content (kind, props, text, ...) */
+  /* content (kind, props, text, ...);
+   * null if this is a subbranch root element */
   svn_element_content_t *content;
 
 } svn_branch_el_rev_content_t;
@@ -405,6 +406,12 @@ typedef struct svn_branch_subtree_t
   /* Subtree root EID. (EID must be an existing key in E_MAP.) */
   int root_eid;
 } svn_branch_subtree_t;
+
+/* Create an empty subtree (no elements populated, not even ROOT_EID).
+ */
+svn_branch_subtree_t *
+svn_branch_subtree_create(int root_eid,
+                          apr_pool_t *result_pool);
 
 /* Return the subtree of BRANCH rooted at EID.
  */

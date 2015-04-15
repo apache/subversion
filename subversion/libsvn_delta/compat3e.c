@@ -998,7 +998,12 @@ editor3_alter(void *baton,
       new_content = svn_branch_map_get(branch, eid)->content;
     }
 
-  svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
+  if (new_content)
+    svn_branch_map_update(
+      branch, eid, new_parent_eid, new_name, new_content);
+  else
+    svn_branch_map_update_as_subbranch_root(
+      branch, eid, new_parent_eid, new_name);
 
   return SVN_NO_ERROR;
 }

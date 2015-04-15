@@ -604,7 +604,7 @@ static const char *default_repos_info
   = "r0:\n"
     "family: bsids 0 1 eids 0 1 b-instances 1\n"
     "b0: root-eid 0 at .\n"
-    "b0e0: -1 .\n";
+    "b0e0: normal -1 .\n";
 
 /* Read the branching info string VALUE belonging to revision REVISION.
  */
