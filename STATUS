@@ -235,13 +235,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1668320
-   ra_serf: resolve minor memory leak against very old servers
-   Justification:
-     ra operations shouldn't unnecessary grow the session pool.
-   Votes:
-     +1: rhuijben, philip, stefan2
-
  * r1673062
    Fix 2 error leaks in the X.509 code.
    Justification:
