@@ -37,17 +37,19 @@ Candidate changes that cannot go into a later 1.9.x:
                http://svn.haxx.se/dev/archive-2015-04/0068.shtml)
               (r1673170, r1673172 only)
 
- * r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693
+ * r1667228, r1667234, r1667249, r1667250, r1667258, r1667290, r1667691, r1667692, r1667693
    Fix various problems with binary file conflicts.
    Justification:
      Conflict description API violates its own promises for binaries.
      Current behaviour can cause user confusion since conflict prompt
      options for binary files won't work as expected.
    Notes:
-     rhuijben: This nomination contains some revisions that are also in
-     the r1667228 nomination. Perhaps these should be combined.
+     r1667258, r1667290 resolve a performance regression introduced by the
+     code which now needs the actual property values. It also avoids creating temporary
+     files for property conflicts in cases where a caller can never use them.
    Votes:
-     +1: stsp
+     +1: rhuijben
+     +1: stsp (r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693 only)
 
 Other candidate changes:
 ========================
@@ -141,16 +143,6 @@ Other candidate changes:
      github.
    Votes:
      +1: rhuijben, stefan2
-
- * r1667228, r1667234, r1667250, r1667258, r1667290
-   Improve binary file and property handling during conflict resolving
-   Justification:
-     Resolves a regression against 1.7 (and probably 1.8) where binary
-     files are not handled as such. The patch also contains some correctness
-     and performance fixes to avoid adding extra db operations on common
-     code paths.
-   Votes:
-     +1: rhuijben
 
  * r1667471
    Fix bad assertion in diff callbacks
