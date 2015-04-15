@@ -198,9 +198,9 @@ Shard packing:
     (i.e. same min packed revision)
 
 Addressing:
-  Format 1-6: Physical addressing; uses fixed positions within a rev file
+  Format 1+: Physical addressing; uses fixed positions within a rev file
   Format 7+:  Logical addressing; uses item index that will be translated
-    on-the-fly to the actual rev / pack file location
+    on-the-fly to the actual rev / pack file location (default for 7+ created)
 
 Repository IDs:
   Format 1+:  The first line of db/uuid contains the repository UUID
@@ -578,9 +578,8 @@ defined:
     representations may not be handled correctly by SVN before 1.7.20,
     1.8.12 and 1.9.0, if they have 0 <size> fields for non-empty contents.
     Releases 1.8.0 through 1.8.11 may have falsely created instances of
-    that (see issue #4554).  Finally, 0 <size> fields are only ever legal
-    for DELTA representations if the reconstructed full-text is actually
-    empty.
+    that (see issue #4554).  Finally, 0 <size> fields are NEVER legal for
+    DELTA representations.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of
