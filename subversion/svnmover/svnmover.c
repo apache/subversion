@@ -628,7 +628,9 @@ element_merge(svn_branch_el_rev_content_t **result_p,
   else if (side1 && side2)
     {
       /* Double add (as we already handled the case where YCA also exists) */
+      /* May be allowed for equal content of a normal element (not subbranch) */
       if (policy->merge_double_add
+          && side1->content && side2->content /* they are not subbranches */
           && svn_branch_el_rev_content_equal(side1, side2, scratch_pool))
         {
           SVN_DBG(("e%d double add",

@@ -94,6 +94,15 @@ svn_element_content_equal(const svn_element_content_t *left,
 {
   apr_array_header_t *prop_diffs;
 
+  if (!left && !right)
+    {
+      return TRUE;
+    }
+  else if (!left || !right)
+    {
+      return FALSE;
+    }
+
   /* references are not supported */
   SVN_ERR_ASSERT_NO_RETURN(! left->ref.relpath && ! right->ref.relpath);
   SVN_ERR_ASSERT_NO_RETURN(left->kind != svn_node_unknown
