@@ -80,7 +80,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t help;            /* print usage message */
   const char *auth_username;     /* auth username */ /* UTF-8! */
   const char *auth_password;     /* auth password */ /* UTF-8! */
-  const char *extensions;        /* subprocess extension args */ /* UTF-8! */
   apr_array_header_t *targets;   /* target list from file */ /* UTF-8! */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t stop_on_copy;    /* don't cross copies during processing */

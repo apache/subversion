@@ -301,8 +301,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  follow copy history by default.  Use --stop-on-copy to disable this\n"
      "  behavior, which can be useful for determining branchpoints.\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy,
-     'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     'x',},
+     'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -639,10 +638,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_trust_server_cert_other_failure:
         opt_state.trust_server_cert_other_failure = TRUE;
-        break;
-      case 'x':
-        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.extensions,
-                                            opt_arg, pool));
         break;
       case opt_config_dir:
         {
