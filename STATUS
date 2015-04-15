@@ -30,9 +30,6 @@ Candidate changes that cannot go into a later 1.9.x:
      filesystem implementation.
    Votes:
      +1: rhuijben, stefan2 (for 1.9.0 only)
-     -1: ivan (until mod_dav_svn deadprop-count concerns will be resolved
-               http://svn.haxx.se/dev/archive-2015-04/0068.shtml)
-              (r1673170, r1673172 only)
 
  * r1667228, r1667234, r1667249, r1667250, r1667258, r1667290, r1667691, r1667692, r1667693
    Fix various problems with binary file conflicts.
