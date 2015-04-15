@@ -235,15 +235,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1672311
-   Fix some doc and pass problems on the deprecated svn_wc_add_from_disk2
-   Justification:
-     Simple fix to resolve a case where new properties are lost on add.
-   Notes:
-     Regression from 1.8 for API users.
-   Votes:
-     +1: rhuijben, danielsh, philip
-
  * r1672372, r1672404
    Stop parsing the result of a succeeded PUT as xml error chain
    Justification:
@@ -345,4 +336,3 @@ Approved changes:
      Error leaks are bad and no reason to leave them unfixed.
    Votes:
      +1: breser, philip, stefan2
-
