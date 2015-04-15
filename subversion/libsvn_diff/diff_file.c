@@ -2360,7 +2360,7 @@ svn_diff_file_output_merge3(svn_stream_t *output_stream,
                             svn_diff_conflict_display_style_t style,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
-                            apr_pool_t *pool)
+                            apr_pool_t *scratch_pool)
 {
   svn_diff3__file_output_baton_t baton;
   apr_file_t *file[3];
@@ -2376,7 +2376,7 @@ svn_diff_file_output_merge3(svn_stream_t *output_stream,
   baton.context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
   if (conflicts_only)
     {
-      baton.pool = svn_pool_create(pool);
+      baton.pool = svn_pool_create(scratch_pool);
       make_context_saver(&baton);
       baton.real_output_stream = output_stream;
     }
@@ -2387,22 +2387,22 @@ svn_diff_file_output_merge3(svn_stream_t *output_stream,
   baton.path[2] = latest_path;
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_modified,
                                     conflict_modified ? conflict_modified
-                                    : apr_psprintf(pool, "<<<<<<< %s",
+                                    : apr_psprintf(scratch_pool, "<<<<<<< %s",
                                                    modified_path),
-                                    pool));
+                                    scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_original,
                                     conflict_original ? conflict_original
-                                    : apr_psprintf(pool, "||||||| %s",
+                                    : apr_psprintf(scratch_pool, "||||||| %s",
                                                    original_path),
-                                    pool));
+                                    scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_separator,
                                     conflict_separator ? conflict_separator
-                                    : "=======", pool));
+                                    : "=======", scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_latest,
                                     conflict_latest ? conflict_latest
-                                    : apr_psprintf(pool, ">>>>>>> %s",
+                                    : apr_psprintf(scratch_pool, ">>>>>>> %s",
                                                    latest_path),
-                                    pool));
+                                    scratch_pool));
 
   baton.conflict_style = style;
 
@@ -2413,7 +2413,7 @@ svn_diff_file_output_merge3(svn_stream_t *output_stream,
       SVN_ERR(map_or_read_file(&file[idx],
                                MMAP_T_ARG(mm[idx])
                                &baton.buffer[idx], &size,
-                               baton.path[idx], pool));
+                               baton.path[idx], scratch_pool));
 
       baton.curp[idx] = baton.buffer[idx];
       baton.endp[idx] = baton.buffer[idx];
@@ -2454,7 +2454,7 @@ svn_diff_file_output_merge3(svn_stream_t *output_stream,
 
       if (file[idx])
         {
-          SVN_ERR(svn_io_file_close(file[idx], pool));
+          SVN_ERR(svn_io_file_close(file[idx], scratch_pool));
         }
     }
 
