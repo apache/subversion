@@ -685,6 +685,8 @@ x509_get_ext(apr_array_header_t *dnsnames,
                   *p += len;
                   continue;
                 }
+
+              return svn_error_trace(err);
             }
           else
             {
@@ -1052,7 +1054,7 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
    */
   err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
-    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
   if (len != (end - p))
     {
