@@ -48,7 +48,7 @@ Candidate changes that cannot go into a later 1.9.x:
      +1: rhuijben, stefan2
      +1: stsp (r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693 only)
 
- * r1673785
+ * r1673785, r1673803
    Add a 'null-blame' command to svnbench
    Justification:
      Provides a tool to end users for diagnosing performance problems. Doesn't affect other
