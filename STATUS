@@ -235,16 +235,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1671164, r1672578, r1673228
-   Enable passing '-r' to 'svn status'
-   Justification:
-     Allows checking what changes when updating to some specific revision
-     vs only to HEAD.
-   Notes:
-     We supported this feature in the libsvn_client api since <= 1.0.
-   Votes:
-     +1: philip, rhuijben, stefan2 (for 1.9.0 only)
-
  * r1668320
    ra_serf: resolve minor memory leak against very old servers
    Justification:
