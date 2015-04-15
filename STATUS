@@ -105,7 +105,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1672295
+ * r1672295, r1673691
    Fix Sqlite 3.8.9 query performance regression on externals
    Justification:
      The regression tests shouldn't fail.
