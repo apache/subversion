@@ -176,7 +176,6 @@ svn_cl__null_blame(apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   svn_boolean_t end_revision_unspecified = FALSE;
-  svn_diff_file_options_t *diff_options = svn_diff_file_options_create(pool);
   svn_boolean_t seen_nonexistent_target = FALSE;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -213,13 +212,6 @@ svn_cl__null_blame(apr_getopt_t *os,
      so the EOL style should be the platform local one.
   */
   iterpool = svn_pool_create(pool);
-
-  if (opt_state->extensions)
-    {
-      apr_array_header_t *opts;
-      opts = svn_cstring_split(opt_state->extensions, " \t\n\r", TRUE, pool);
-      SVN_ERR(svn_diff_file_options_parse(diff_options, opts, pool));
-    }
 
   for (i = 0; i < targets->nelts; i++)
     {
