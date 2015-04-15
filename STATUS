@@ -18,7 +18,7 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
- * r1673170, r1673172, r1673692
+ * r1673170, r1673172, r1673692, r1673746
    Introduce svn_fs_node_has_props() and use it where applicable
    Justification:
      Checking whether there are properties should be more efficient than
