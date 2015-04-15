@@ -146,16 +146,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1667471
-   Fix bad assertion in diff callbacks
-   Justification:
-     Problem uncovered by 1.8.x code that still use these callbacks. On 1.9.x
-     this code is only used from some deprecated libsvn_wc functions that
-     used to drive the old diff code. Some third party tools might hit this
-     problem.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1664593, r1664594, r1664596, r1667715
    On Windows allow reading configuration from system services
    Justification:
@@ -231,3 +221,13 @@ Approved changes:
       regress)
    Votes:
      +1: rhuijben, philip, brane
+
+ * r1667471
+   Fix bad assertion in diff callbacks
+   Justification:
+     Problem uncovered by 1.8.x code that still use these callbacks. On 1.9.x
+     this code is only used from some deprecated libsvn_wc functions that
+     used to drive the old diff code. Some third party tools might hit this
+     problem.
+   Votes:
+     +1: rhuijben, stefan2, philip
