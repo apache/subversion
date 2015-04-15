@@ -219,6 +219,26 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {0} },
   /* This command is also invoked if we see option "--help", "-h" or "-?". */
 
+  { "null-blame", svn_cl__null_blame, {0}, N_
+    ("Fetch all versions of a file in a batch.\n"
+     "usage: null-blame [-rM:N] TARGET[@REV]...\n"
+     "\n"
+     "  With no revision range (same as -r0:REV), or with '-r M:N' where M < N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the last revision at or before rN that changed or added the line,\n"
+     "  looking back no further than rM.\n"
+     "\n"
+     "  With a reverse revision range '-r M:N' where M > N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the next revision after rN that changed or deleted the line,\n"
+     "  looking forward no further than rM.\n"
+     "\n"
+     "  If specified, REV determines in which revision the target is first\n"
+     "  looked up.\n"
+     "\n"
+     "  Write the annotated result to standard output.\n"),
+    {'r', 'g'} },
+
   { "null-export", svn_cl__null_export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: null-export [-r REV] URL[@PEGREV]\n"
