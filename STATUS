@@ -235,16 +235,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1673282
-   Rename svn_relpath_limit to svn_relpath_prefix in the public API.
-   Justification:
-     This is a more appropriate name for this new function.
-   Notes:
-     If this does not become part of 1.9.0, r1673282 needs to be reverted
-     on /trunk.
-   Votes:
-     +1: stefan2, rhuijben, philip
-
  * r1667233, r1667301
    Reject invalid get-location-segments requests in mod_dav_svn and svnserve.
    Justification:
