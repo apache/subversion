@@ -235,14 +235,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1668599, r1668608
-   Fixes to the public svn_io API declarations and documentation.
-   Justification:
-     Have a complete, correct and easily accessible API description.
-     None of these changes should affect generated code nor the ABI.
-   Votes:
-     +1: stefan2, rhuijben, philip
-
  * r1668607, r1670337
    Fixes to the public svn_diff API declarations and documentation.
    Justification:
