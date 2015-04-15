@@ -65,12 +65,8 @@ Other candidate changes:
    Justification:
      Allows introducing repository paths in the working copy, that don't
      reflect the repository state.
-   Notes:
-     The way this change makes assumptions about the name of the not-present
-     node will make it just a bit harder to make the working copy agnostic
-     to Unicode normalization forms. --brane
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1664035
    Keep track of changes when a file external is replace by a real file
