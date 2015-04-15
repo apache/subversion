@@ -651,6 +651,11 @@ svn_branch_find_nested_branch_element_by_rrpath(
                                 const char *rrpath,
                                 apr_pool_t *scratch_pool);
 
+/* Get the default branching metadata for r0 of a new repository.
+ */
+svn_string_t *
+svn_branch_get_default_r0_metadata(apr_pool_t *result_pool);
+
 /* Create a new revision-root object *REV_ROOT_P, initialized with info
  * parsed from STREAM, allocated in RESULT_POOL.
  */

@@ -913,6 +913,18 @@ svn_branch_delete_branch_instance_r(svn_branch_instance_t *branch,
  * ========================================================================
  */
 
+svn_string_t *
+svn_branch_get_default_r0_metadata(apr_pool_t *result_pool)
+{
+  static const char *default_repos_info
+    = "r0:\n"
+      "family: bsids 0 1 eids 0 1 b-instances 1\n"
+      "b0: root-eid 0 at .\n"
+      "b0e0: normal -1 .\n";
+
+  return svn_string_create(default_repos_info, result_pool);
+}
+
 /*  */
 static svn_error_t *
 parse_branch_line(int *bsid_p,

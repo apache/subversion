@@ -599,13 +599,6 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 
-/* The default branching metadata for a new repository. */
-static const char *default_repos_info
-  = "r0:\n"
-    "family: bsids 0 1 eids 0 1 b-instances 1\n"
-    "b0: root-eid 0 at .\n"
-    "b0e0: normal -1 .\n";
-
 /* Read the branching info string VALUE belonging to revision REVISION.
  */
 static svn_error_t *
@@ -703,7 +696,7 @@ svn_branch_revision_fetch_info(svn_branch_revision_root_t **rev_root_p,
                         scratch_pool));
   if (! value && revision == 0)
     {
-      value = svn_string_create(default_repos_info, scratch_pool);
+      value = svn_branch_get_default_r0_metadata(scratch_pool);
       SVN_DBG(("fetch_per_revision_info(r%ld): LOADED DEFAULT INFO:\n%s",
                revision, value->data));
       SVN_ERR(write_rev_prop(ra_session, branch_info_dir, revision, value,
