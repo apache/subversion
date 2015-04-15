@@ -883,6 +883,68 @@ svn_branch_delete_branch_instance_r(svn_branch_instance_t *branch,
  * ========================================================================
  */
 
+/*  */
+static svn_error_t *
+parse_branch_line(int *bsid_p,
+                  int *root_eid_p,
+                  const char **path_p,
+                  svn_stream_t *stream,
+                  apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+  int n;
+  int offset;
+
+  /* Read a line */
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+  SVN_ERR_ASSERT(!eof);
+
+  n = sscanf(line->data, "b%d: root-eid %d at%n",
+             bsid_p, root_eid_p, &offset);
+  SVN_ERR_ASSERT(n >= 2);  /* C std is unclear on whether '%n' counts */
+  SVN_ERR_ASSERT(line->data[offset] == ' ');
+  *path_p = line->data + offset + 1;
+
+  if (strcmp(*path_p, ".") == 0)
+    *path_p = "";
+
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_error_t *
+parse_element_line(int *bsid_p,
+                   int *eid_p,
+                   int *parent_eid_p,
+                   const char **name_p,
+                   svn_stream_t *stream,
+                   apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+  int n;
+  int offset;
+
+  /* Read a line */
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+  SVN_ERR_ASSERT(!eof);
+
+  n = sscanf(line->data, "b%de%d: %d%n",
+             bsid_p, eid_p,
+             parent_eid_p, &offset);
+  SVN_ERR_ASSERT(n >= 3);  /* C std is unclear on whether '%n' counts */
+  SVN_ERR_ASSERT(line->data[offset] == ' ');
+  *name_p = line->data + offset + 1;
+
+  if (strcmp(*name_p, "(null)") == 0)
+    *name_p = NULL;
+  else if (strcmp(*name_p, ".") == 0)
+    *name_p = "";
+
+  return SVN_NO_ERROR;
+}
+
 /* Create a new branch *NEW_BRANCH that belongs to FAMILY, initialized
  * with info parsed from STREAM, allocated in RESULT_POOL.
  */
@@ -894,26 +956,17 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *line;
-  svn_boolean_t eof;
-  int n;
   int bsid, root_eid;
   svn_branch_sibling_t *branch_sibling;
   svn_branch_instance_t *branch_instance;
-  char branch_root_path[100];
   const char *branch_root_rrpath;
   svn_branch_instance_t *outer_branch;
   int outer_eid;
   int eid;
 
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
-  SVN_ERR_ASSERT(! eof);
-  n = sscanf(line->data, "b%d: root-eid %d at %s\n",
-             &bsid, &root_eid, branch_root_path);
-  SVN_ERR_ASSERT(n == 3);
+  SVN_ERR(parse_branch_line(&bsid, &root_eid, &branch_root_rrpath,
+                            stream, scratch_pool));
 
-  branch_root_rrpath
-    = strcmp(branch_root_path, ".") == 0 ? "" : branch_root_path;
   branch_sibling = family_find_or_create_branch_sibling(family, bsid, root_eid);
   if (branch_root_rrpath[0])
     {
@@ -935,19 +988,16 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
   for (eid = family->first_eid; eid < family->next_eid; eid++)
     {
       int this_bsid, this_eid, this_parent_eid;
-      char this_name[20];
+      const char *this_name;
 
-      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
-      SVN_ERR_ASSERT(! eof);
-      n = sscanf(line->data, "b%de%d: %d %20s\n",
-                 &this_bsid, &this_eid,
-                 &this_parent_eid, this_name);
-      SVN_ERR_ASSERT(n == 4);
-      if (strcmp(this_name, "(null)") != 0)
+      SVN_ERR(parse_element_line(&this_bsid, &this_eid,
+                                 &this_parent_eid, &this_name,
+                                 stream, scratch_pool));
+
+      if (this_name)
         {
-          const char *name = strcmp(this_name, ".") == 0 ? "" : this_name;
           svn_branch_el_rev_content_t *node
-            = svn_branch_el_rev_content_create(this_parent_eid, name,
+            = svn_branch_el_rev_content_create(this_parent_eid, this_name,
                                                NULL /*content*/, result_pool);
 
           branch_map_set(branch_instance, this_eid, node);
@@ -1005,7 +1055,7 @@ svn_branch_family_parse(svn_branch_family_t **new_family,
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(!eof);
   n = sscanf(line->data, "family: bsids %d %d eids %d %d "
-                         "b-instances %d\n",
+                         "b-instances %d",
              &first_bsid, &next_bsid, &first_eid, &next_eid,
              num_branch_instances);
   SVN_ERR_ASSERT(n == 5);
@@ -1113,15 +1163,11 @@ svn_branch_instance_serialize(svn_stream_t *stream,
       svn_branch_el_rev_content_t *node = svn_branch_map_get(branch, eid);
       int parent_eid;
       const char *name;
-      const char *path;
 
       if (node)
         {
-          path = svn_branch_get_path_by_eid(branch, eid, scratch_pool);
-          SVN_ERR_ASSERT(path);
           parent_eid = node->parent_eid;
           name = node->name[0] ? node->name : ".";
-          path = path[0] ? path : ".";
         }
       else
         {
@@ -1129,7 +1175,6 @@ svn_branch_instance_serialize(svn_stream_t *stream,
                  parser currently can't handle that. */
           parent_eid = -1;
           name = "(null)";
-          path = "(null)";
         }
       SVN_ERR(svn_stream_printf(stream, scratch_pool,
                                 "b%de%d: %d %s\n",
