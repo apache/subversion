@@ -203,14 +203,6 @@ Other candidate changes:
      -0: philip (mail to dev, delete EXTERNALS as done for other tables?)
                 (r1672295 only)
 
- * r1673044, r1673063, r1673065
-   Allow the auth command to match on certficiate details
-   Justification:
-     This was part of the whole point of the auth command, but got dropped
-     inadvertently as part of the conversion to using an X.509 parser.
-   Votes:
-     +1: breser, stefan2
-
  * r1673153
    Significantly improve 'svn ls -v' on tag directories
    Justification:
@@ -237,3 +229,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1673044, r1673063, r1673065
+   Allow the auth command to match on certificate details
+   Justification:
+     This was part of the whole point of the auth command, but got dropped
+     inadvertently as part of the conversion to using an X.509 parser.
+   Votes:
+     +1: breser, stefan2
