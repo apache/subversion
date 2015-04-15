@@ -166,15 +166,6 @@ Other candidate changes:
      +1: stefan2, brane (not tested but change looks clear enough and
                          is limited to error handling on Windows)
 
- * r1673153
-   Significantly improve 'svn ls -v' on tag directories
-   Justification:
-     Simple patch that avoids retrieving 'has_props' for every node, which
-     is then ignored saves 95% of the server side processing time on
-     customer reported case.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1673197, r1673202, r1673204
    Avoid filling the representation cache with unneeded property info
    Justification:
@@ -229,5 +220,14 @@ Approved changes:
      this code is only used from some deprecated libsvn_wc functions that
      used to drive the old diff code. Some third party tools might hit this
      problem.
+   Votes:
+     +1: rhuijben, stefan2, philip
+
+ * r1673153
+   Significantly improve 'svn ls -v' on tag directories
+   Justification:
+     Simple patch that avoids retrieving 'has_props' for every node, which
+     is then ignored saves 95% of the server side processing time on
+     customer reported case.
    Votes:
      +1: rhuijben, stefan2, philip
