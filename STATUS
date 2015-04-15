@@ -183,16 +183,6 @@ Other candidate changes:
      +1: stefan2 (not tested but change looks clear enough and is
                   limited to error handling on Windows)
 
- * r1672295, r1673691
-   Fix Sqlite 3.8.9 query performance regression on externals
-   Justification:
-     The regression tests shouldn't fail.
-     (And the query performance on working copies with an extreme
-      number of externals defined on different paths shouldn't
-      regress)
-   Votes:
-     +1: rhuijben, philip
-
  * r1673153
    Significantly improve 'svn ls -v' on tag directories
    Justification:
@@ -238,3 +228,13 @@ Approved changes:
      r1669945 fixes the replacement condition and provides a test.
    Votes:
      +1: stefan2, danielsh, rhuijben
+
+ * r1672295, r1673691
+   Fix Sqlite 3.8.9 query performance regression on externals
+   Justification:
+     The regression tests shouldn't fail.
+     (And the query performance on working copies with an extreme
+      number of externals defined on different paths shouldn't
+      regress)
+   Votes:
+     +1: rhuijben, philip, brane
