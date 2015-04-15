@@ -162,7 +162,7 @@ Other candidate changes:
      Easier to review the combined result as most patches partially
      undo the previous one.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
      +1: stefan2, brane (not tested but change looks clear enough and
                          is limited to error handling on Windows)
 
