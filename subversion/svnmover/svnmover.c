@@ -243,7 +243,7 @@ typedef struct action_defn_t {
 static const action_defn_t action_defn[] =
 {
   {ACTION_LIST_BRANCHES,    "branches", 1, "PATH",
-    "list all branches in the same family as that at PATH"},
+    "list all branches rooted at the same element as PATH"},
   {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0, "",
     "list all branches, recursively"},
   {ACTION_LS,               "ls", 1, "PATH",
@@ -389,6 +389,56 @@ list_branch_elements(svn_branch_instance_t *branch,
   return SVN_NO_ERROR;
 }
 
+/* List all branch instances rooted at EID.
+ */
+static svn_error_t *
+branch_info(svn_branch_instance_t *branch,
+            svn_boolean_t verbose,
+            apr_pool_t *scratch_pool)
+{
+  if (verbose)
+    {
+      printf("  branch %s bsid=%d root=e%d /%s\n",
+             svn_branch_instance_get_id(branch, scratch_pool),
+             branch->sibling_defn->bsid, branch->sibling_defn->root_eid,
+             svn_branch_get_root_rrpath(branch, scratch_pool));
+      SVN_ERR(list_branch_elements(branch, scratch_pool));
+    }
+  else
+    {
+      printf("  %s /%s\n",
+             svn_branch_instance_get_id(branch, scratch_pool),
+             svn_branch_get_root_rrpath(branch, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* List all branch instances rooted at EID.
+ */
+static svn_error_t *
+list_branches(svn_branch_revision_root_t *rev_root,
+              int eid,
+              svn_boolean_t verbose,
+              apr_pool_t *scratch_pool)
+{
+  SVN_ITER_T(svn_branch_instance_t) *bi;
+
+  printf("branches rooted at e%d:\n", eid);
+
+  for (SVN_ARRAY_ITER(bi, svn_branch_family_get_branch_instances(
+                            rev_root, rev_root->root_branch->sibling_defn->family, scratch_pool), scratch_pool))
+    {
+      svn_branch_instance_t *branch = bi->val;
+
+      if (branch->sibling_defn->root_eid != eid)
+        continue;
+      SVN_ERR(branch_info(branch, verbose, bi->iterpool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* List all branch instances in FAMILY.
  */
 static svn_error_t *
@@ -415,20 +465,7 @@ family_list_branch_instances(svn_branch_revision_root_t *rev_root,
     {
       svn_branch_instance_t *branch = bi->val;
 
-      if (verbose)
-        {
-          printf("  branch %s bsid=%d root=e%d /%s\n",
-                 svn_branch_instance_get_id(branch, bi->iterpool),
-                 branch->sibling_defn->bsid, branch->sibling_defn->root_eid,
-                 svn_branch_get_root_rrpath(branch, bi->iterpool));
-          SVN_ERR(list_branch_elements(branch, bi->iterpool));
-        }
-      else
-        {
-          printf("  %s /%s\n",
-                 svn_branch_instance_get_id(branch, bi->iterpool),
-                 svn_branch_get_root_rrpath(branch, bi->iterpool));
-        }
+      SVN_ERR(branch_info(branch, verbose, bi->iterpool));
     }
 
   return SVN_NO_ERROR;
@@ -1566,9 +1603,9 @@ execute(const apr_array_header_t *actions,
         case ACTION_LIST_BRANCHES:
           {
             VERIFY_EID_EXISTS("branches", 0);
-            SVN_ERR(family_list_branch_instances(
+            SVN_ERR(list_branches(
                       el_rev[0]->branch->rev_root,
-                      el_rev[0]->branch->sibling_defn->family,
+                      el_rev[0]->eid,
                       FALSE, iterpool));
           }
           break;
