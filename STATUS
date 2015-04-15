@@ -180,8 +180,8 @@ Other candidate changes:
      undo the previous one.
    Votes:
      +1: rhuijben
-     +1: stefan2 (not tested but change looks clear enough and is
-                  limited to error handling on Windows)
+     +1: stefan2, brane (not tested but change looks clear enough and
+                         is limited to error handling on Windows)
 
  * r1673153
    Significantly improve 'svn ls -v' on tag directories
