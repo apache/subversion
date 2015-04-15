@@ -286,6 +286,98 @@ use_block_read(svn_fs_t *fs)
   return svn_fs_fs__use_log_addressing(fs) && ffd->use_block_read;
 }
 
+/* Resolve a FSFS quirk: if REP in REVISION_FILE within FS is a "PLAIN"
+ * representation, its EXPANDED_SIZE element may be 0, in which case its
+ * value has to be taken from SIZE.
+ *
+ * This function ensures that EXPANDED_SIZE in REP always contains the
+ * actual value. No-op if REP is NULL.  Uses SCRATCH_POOL for temporaries.
+ */
+static svn_error_t *
+fixup_expanded_size(svn_fs_t *fs,
+                    representation_t *rep,
+                    svn_fs_fs__revision_file_t *revision_file,
+                    apr_pool_t *scratch_pool)
+{
+  svn_checksum_t *empty_md5;
+  apr_off_t offset;
+  svn_fs_fs__rep_header_t *rep_header;
+
+  /* Anything to do at all?
+   *
+   * Note that a 0 SIZE is only possible for PLAIN reps due to the SVN\1
+   * magic prefix in any DELTA rep. */
+  if (!rep || rep->expanded_size != 0 || rep->size == 0)
+    return SVN_NO_ERROR;
+
+  /* This function may only be called for committed data. */
+  assert(!svn_fs_fs__id_txn_used(&rep->txn_id));
+
+  /* EXPANDED_SIZE is 0. If the MD5 does not match the one for empty
+   * contents, we know that we need to correct EXPANDED_SIZE. */
+  empty_md5 = svn_checksum_empty_checksum(svn_checksum_md5, scratch_pool);
+  if (memcmp(empty_md5->digest, rep->md5_digest, sizeof(rep->md5_digest)))
+    {
+      rep->expanded_size = rep->size;
+      return SVN_NO_ERROR;
+    }
+
+  /* Only two cases are left here.
+   * (1) A non-empty PLAIN rep with a MD5 collision on EMPTY_MD5.
+   * (2) An empty DELTA rep. */
+
+  /* SVN always stores an empty DELTA rep as an empty sequence of txdelta
+   * windows, i.e. as "SVN\1".  In that case, SIZE is 4 bytes.  There is
+   * no other possible DELTA rep of that size and any PLAIN rep of 4 bytes
+   * would produce a different MD5.  Hence, if SIZE is actually 4 here, we
+   * know that this is an empty DELTA rep.
+   *
+   * Note that it technically legal to have DELTA reps with a 0 length
+   * output window.  Their on-disk size would be longer.  We handle that
+   * case later together with the equally unlikely MD5 collision. */
+  if (rep->size == 4)
+    {
+      /* EXPANDED_SIZE is already 0. */
+      return SVN_NO_ERROR;
+    }
+
+  /* We still have the two options, PLAIN or DELTA rep.  At this point, we
+   * are in an extremely unlikely case and can spend some time to figure it
+   * out.  So, let's just look at the representation header. */
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, revision_file, rep->revision,
+                                 NULL, rep->item_index, scratch_pool));
+  SVN_ERR(aligned_seek(fs, revision_file->file, NULL, offset, scratch_pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, revision_file->stream,
+                                     scratch_pool, scratch_pool));
+
+  /* Only for PLAIN reps do we have to correct EXPANDED_SIZE. */
+  if (rep_header->type == svn_fs_fs__rep_plain)
+    rep->expanded_size = rep->size;
+
+  return SVN_NO_ERROR;
+}
+
+/* Correct known issues with committed NODEREV read from REVISION_FILE
+ * within FS. Uses SCRATCH_POOL for temporaries.
+ */
+static svn_error_t *
+fixup_node_revision(svn_fs_t *fs,
+                    node_revision_t *noderev,
+                    svn_fs_fs__revision_file_t *revision_file,
+                    apr_pool_t *scratch_pool)
+{
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  noderev->is_fresh_txn_root = FALSE;
+
+  /* Make sure EXPANDED_SIZE has the correct value for every rep. */
+  SVN_ERR(fixup_expanded_size(fs, noderev->data_rep, revision_file,
+                              scratch_pool));
+  SVN_ERR(fixup_expanded_size(fs, noderev->prop_rep, revision_file,
+                              scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -376,9 +468,8 @@ get_node_revision_body(node_revision_t **noderev_p,
                                           revision_file->stream,
                                           result_pool,
                                           scratch_pool));
-
-          /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-          (*noderev_p)->is_fresh_txn_root = FALSE;
+          SVN_ERR(fixup_node_revision(fs, *noderev_p, revision_file,
+                                      scratch_pool));
 
           /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
           if (ffd->node_revision_cache)
@@ -3200,9 +3291,7 @@ block_read_noderev(node_revision_t **noderev_p,
   /* read node rev from revision file */
   SVN_ERR(svn_fs_fs__read_noderev(noderev_p, stream,
                                   result_pool, scratch_pool));
-
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  (*noderev_p)->is_fresh_txn_root = FALSE;
+  SVN_ERR(fixup_node_revision(fs, *noderev_p, rev_file, scratch_pool));
 
   if (ffd->node_revision_cache)
     SVN_ERR(svn_cache__set(ffd->node_revision_cache, &key, *noderev_p,
