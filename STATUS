@@ -189,9 +189,7 @@ Other candidate changes:
       number of externals defined on different paths shouldn't
       regress)
    Votes:
-     +1: rhuijben
-     -0: philip (mail to dev, delete EXTERNALS as done for other tables?)
-                (r1672295 only)
+     +1: rhuijben, philip
 
  * r1673153
    Significantly improve 'svn ls -v' on tag directories
