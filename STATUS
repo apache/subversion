@@ -132,7 +132,7 @@ Other candidate changes:
      the EU mirror for me. By comparison, 'svn log --limit=1' takes
      0.2 seconds.
    Votes:
-     +1: rhuijben, philip
+     +1: rhuijben, philip, brane
      +0: julianfoad (reviewed but not tested;
                      figures given in justification are for a 1.8 server but
                      a 1.9 server should have vastly quicker log computation)
