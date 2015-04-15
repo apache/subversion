@@ -235,19 +235,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1672372, r1672404
-   Stop parsing the result of a succeeded PUT as xml error chain
-   Justification:
-     Reported as breaking compatibility with Sourceforge's setup.
-     Reported as release blocker in the 'error committing to 1.7 servers'
-     thread on dev@s.a.o.
-   Notes:
-     Apache Httpd 2.4 appears to return a proper xml result and as such
-     doesn't generate an error. I'm guessing you need an older httpd or
-     a special setup to reproduce the problem.
-   Votes:
-     +1: rhuijben, steveking, philip
-
  * r1668599, r1668608
    Fixes to the public svn_io API declarations and documentation.
    Justification:
