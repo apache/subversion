@@ -235,16 +235,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1673445
-   Correct the FSFS structure description.
-   Justification:
-     Have correct documentation.
-   Notes:
-     This is a documentation-only fix and does not require additional
-     voting.
-   Votes:
-     +1: stefan2
-
  * r1669746
    Rename svn_fs_node_same to svn_fs_node_unchanged in FS API.
    Justification:
