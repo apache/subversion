@@ -109,6 +109,7 @@ typedef struct svn_cl__cmd_baton_t
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__help,
+  svn_cl__null_blame,
   svn_cl__null_export,
   svn_cl__null_list,
   svn_cl__null_log,
