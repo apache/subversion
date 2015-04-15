@@ -29,10 +29,7 @@ Candidate changes that cannot go into a later 1.9.x:
      patches (that are not 1.9.0 only) may then improve performance per
      filesystem implementation.
    Votes:
-     +1: rhuijben (for 1.9.0 only)
-     -0: stefan2 (waiting for the resolution of the DAV deadprop-count
-                  issue currently being discussed; +1 once that's done)
-                 (r1673170, r1673172 only)
+     +1: rhuijben, stefan2 (for 1.9.0 only)
      -1: ivan (until mod_dav_svn deadprop-count concerns will be resolved
                http://svn.haxx.se/dev/archive-2015-04/0068.shtml)
               (r1673170, r1673172 only)
