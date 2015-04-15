@@ -181,17 +181,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1669743, r1669945
-   Restore FSFS representation sharing to its previous effectiveness.
-   Justification:
-     Without this patch, repositories may grow faster than necessary.
-     Effected users include those that use plain add instead of copy to
-     create branches and those that merge frequently between branches.
-   Notes:
-     r1669945 fixes the replacement condition and provides a test.
-   Votes:
-     +1: stefan2, danielsh
-
  * r1672295, r1673691
    Fix Sqlite 3.8.9 query performance regression on externals
    Justification:
@@ -238,3 +227,14 @@ Approved changes:
      inadvertently as part of the conversion to using an X.509 parser.
    Votes:
      +1: breser, stefan2, rhuijben
+
+ * r1669743, r1669945
+   Restore FSFS representation sharing to its previous effectiveness.
+   Justification:
+     Without this patch, repositories may grow faster than necessary.
+     Effected users include those that use plain add instead of copy to
+     create branches and those that merge frequently between branches.
+   Notes:
+     r1669945 fixes the replacement condition and provides a test.
+   Votes:
+     +1: stefan2, danielsh, rhuijben
