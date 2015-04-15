@@ -177,15 +177,34 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   if (! abs_path)
     return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "Not all parameters passed");
-  if (SVN_IS_VALID_REVNUM(start_rev)
-      && SVN_IS_VALID_REVNUM(end_rev)
-      && (end_rev > start_rev))
+
+  /* No START_REV or PEG_REVISION?  We'll use HEAD. */
+  if (!SVN_IS_VALID_REVNUM(start_rev) || !SVN_IS_VALID_REVNUM(peg_revision))
+    {
+      svn_revnum_t youngest;
+
+      serr = svn_fs_youngest_rev(&youngest, resource->info->repos->fs,
+                                 resource->pool);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not determine youngest revision",
+                                    resource->pool);
+
+      if (!SVN_IS_VALID_REVNUM(start_rev))
+        start_rev = youngest;
+      if (!SVN_IS_VALID_REVNUM(peg_revision))
+        peg_revision = youngest;
+    }
+
+  /* No END_REV?  We'll use 0. */
+  if (!SVN_IS_VALID_REVNUM(end_rev))
+    end_rev = 0;
+
+  if (end_rev > start_rev)
     return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "End revision must not be younger than "
                                   "start revision");
-  if (SVN_IS_VALID_REVNUM(peg_revision)
-      && SVN_IS_VALID_REVNUM(start_rev)
-      && (start_rev > peg_revision))
+  if (start_rev > peg_revision)
     return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "Start revision must not be younger than "
                                   "peg revision");
