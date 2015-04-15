@@ -18,7 +18,7 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
- * r1673170, r1673172
+ * r1673170, r1673172, r1673692
    Introduce svn_fs_node_has_props() and use it where applicable
    Justification:
      Checking whether there are properties should be more efficient than
@@ -32,8 +32,10 @@ Candidate changes that cannot go into a later 1.9.x:
      +1: rhuijben (for 1.9.0 only)
      -0: stefan2 (waiting for the resolution of the DAV deadprop-count
                   issue currently being discussed; +1 once that's done)
+                 (r1673170, r1673172 only)
      -1: ivan (until mod_dav_svn deadprop-count concerns will be resolved
                http://svn.haxx.se/dev/archive-2015-04/0068.shtml)
+              (r1673170, r1673172 only)
 
  * r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693
    Fix various problems with binary file conflicts.
@@ -189,7 +191,7 @@ Other candidate changes:
    Votes:
      +1: stefan2, danielsh
 
- * r1672295
+ * r1672295, r1673691
    Fix Sqlite 3.8.9 query performance regression on externals
    Justification:
      The regression tests shouldn't fail.
@@ -199,6 +201,7 @@ Other candidate changes:
    Votes:
      +1: rhuijben
      -0: philip (mail to dev, delete EXTERNALS as done for other tables?)
+                (r1672295 only)
 
  * r1673044, r1673063, r1673065
    Allow the auth command to match on certficiate details
