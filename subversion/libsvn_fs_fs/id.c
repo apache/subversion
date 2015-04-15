@@ -392,7 +392,7 @@ svn_fs_fs__id_compare(const svn_fs_id_t *a,
                       const svn_fs_id_t *b)
 {
   if (svn_fs_fs__id_eq(a, b))
-    return svn_fs_node_same;
+    return svn_fs_node_unchanged;
   return (svn_fs_fs__id_check_related(a, b) ? svn_fs_node_common_ancestor
                                             : svn_fs_node_unrelated);
 }

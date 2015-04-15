@@ -235,17 +235,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1669746
-   Rename svn_fs_node_same to svn_fs_node_unchanged in FS API.
-   Justification:
-     This clarifies the new "node relationship" concept introduced in 1.9.
-     Neither calling it "same" (too strict) nor "equal" (too loose) would
-     imply the intended semantics.  The sloppy and easily misinterpreted
-     semantics of the similar svn_fs_compare_ids lead to false and fragile
-     code (e.g. issue #4542).  Let's not repeat this.
-   Votes:
-     +1: stefan2, philip, stsp
-
  * r1673282
    Rename svn_relpath_limit to svn_relpath_prefix in the public API.
    Justification:

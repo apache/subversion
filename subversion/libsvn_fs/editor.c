@@ -249,7 +249,7 @@ can_modify(svn_fs_root_t *txn_root,
       svn_fs_close_root(rev_root);
 
       /* Has the target node changed in the future?  */
-      if (relation != svn_fs_node_same)
+      if (relation != svn_fs_node_unchanged)
         {
           /* Restarting the commit will base the txn on the future/new
              revision, allowing the modification at REVISION.  */
