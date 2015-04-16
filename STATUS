@@ -18,19 +18,6 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
- * r1673170, r1673172, r1673692, r1673746
-   Introduce svn_fs_node_has_props() and use it where applicable
-   Justification:
-     Checking whether there are properties should be more efficient than
-     retrieving all properties and then counting them. For directories above
-     a certain size this takes > 95% of the processing time of 'svn ls -v'
-   Notes:
-     This patch just provides the api and updates callers to use it. Further
-     patches (that are not 1.9.0 only) may then improve performance per
-     filesystem implementation.
-   Votes:
-     +1: rhuijben, stefan2 (for 1.9.0 only)
-
  * r1667228, r1667234, r1667249, r1667250, r1667258, r1667290, r1667691, r1667692, r1667693
    Fix various problems with binary file conflicts.
    Justification:
@@ -138,18 +125,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1673197, r1673202, r1673204
-   Avoid filling the representation cache with unneeded property info
-   Justification:
-     Not reading actual properties during 'svn ls -v' avoids trashing the
-     memory cache that in this case might just drop the directory we are
-     currently processing, causing a significant performance drop on
-     tags directories above a certain size.
-   Notes:
-     Depends on the r1673170 group being backported to 1.9.0.
-   Votes:
-     +1: rhuijben, stefan2
-
 Veto-blocked changes:
 =====================
 
@@ -185,3 +160,28 @@ Approved changes:
      +1: rhuijben, ivan
      +1: stefan2, brane, jcorvel (not tested but change looks clear enough
                                   and is limited to error handling on Windows)
+
+ * r1673170, r1673172, r1673692, r1673746
+   Introduce svn_fs_node_has_props() and use it where applicable
+   Justification:
+     Checking whether there are properties should be more efficient than
+     retrieving all properties and then counting them. For directories above
+     a certain size this takes > 95% of the processing time of 'svn ls -v'
+   Notes:
+     This patch just provides the api and updates callers to use it. Further
+     patches (that are not 1.9.0 only) may then improve performance per
+     filesystem implementation.
+   Votes:
+     +1: rhuijben, stefan2, philip (for 1.9.0 only)
+
+ * r1673197, r1673202, r1673204
+   Avoid filling the representation cache with unneeded property info
+   Justification:
+     Not reading actual properties during 'svn ls -v' avoids trashing the
+     memory cache that in this case might just drop the directory we are
+     currently processing, causing a significant performance drop on
+     tags directories above a certain size.
+   Notes:
+     Depends on the r1673170 group being backported to 1.9.0.
+   Votes:
+     +1: rhuijben, stefan2, philip
