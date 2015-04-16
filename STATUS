@@ -177,7 +177,7 @@ Other candidate changes:
      be interesting to test whether a server / backend can deliver the
      file revs faster in reverse.
    Votes:
-     +1: jcorvel
+     +1: jcorvel, rhuijben
 
 Veto-blocked changes:
 =====================
