@@ -927,6 +927,15 @@ test_schema_statistics(apr_pool_t *scratch_pool)
                    "VALUES (1, '', '')",
                    NULL, NULL, NULL));
 
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO EXTERNALS (wc_id, local_relpath,"
+                   "                       parent_relpath, repos_id,"
+                   "                       presence, kind, def_local_relpath,"
+                   "                       def_repos_relpath) "
+                   "VALUES (1, 'subdir', '', 1, 'normal', 'dir', '', '')",
+                   NULL, NULL, NULL));
+
   /* These are currently not necessary for query optimization, but it's better
      to tell Sqlite how we intend to use this table anyway */
   SQLITE_ERR(
