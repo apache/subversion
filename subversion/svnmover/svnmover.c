@@ -659,6 +659,80 @@ element_merge(svn_branch_el_rev_content_t **result_p,
   *conflict_p = conflict;
 }
 
+static svn_error_t *
+branch_merge_subtree_r(svn_editor3_t *editor,
+                       const svn_branch_el_rev_id_t *src,
+                       const svn_branch_el_rev_id_t *tgt,
+                       const svn_branch_el_rev_id_t *yca,
+                       apr_pool_t *scratch_pool);
+
+/* Merge the subbranch of {SRC, TGT, YCA} found at EID.
+ */
+static svn_error_t *
+merge_subbranch(svn_editor3_t *editor,
+                const svn_branch_el_rev_id_t *src,
+                const svn_branch_el_rev_id_t *tgt,
+                const svn_branch_el_rev_id_t *yca,
+                int eid,
+                apr_pool_t *scratch_pool)
+{
+  svn_branch_instance_t *src_subbranch
+    = svn_branch_get_subbranch_at_eid(src->branch, eid, scratch_pool);
+  svn_branch_instance_t *tgt_subbranch
+    = svn_branch_get_subbranch_at_eid(tgt->branch, eid, scratch_pool);
+  svn_branch_instance_t *yca_subbranch
+    = svn_branch_get_subbranch_at_eid(yca->branch, eid, scratch_pool);
+  svn_branch_el_rev_id_t *subbr_src = NULL;
+  svn_branch_el_rev_id_t *subbr_tgt = NULL;
+  svn_branch_el_rev_id_t *subbr_yca = NULL;
+
+  if (src_subbranch)
+    subbr_src = svn_branch_el_rev_id_create(
+                  src_subbranch, src_subbranch->sibling_defn->root_eid,
+                  src->rev, scratch_pool);
+  if (tgt_subbranch)
+    subbr_tgt = svn_branch_el_rev_id_create(
+                  tgt_subbranch, tgt_subbranch->sibling_defn->root_eid,
+                  tgt->rev, scratch_pool);
+  if (yca_subbranch)
+    subbr_yca = svn_branch_el_rev_id_create(
+                  yca_subbranch, yca_subbranch->sibling_defn->root_eid,
+                  yca->rev, scratch_pool);
+
+  if (subbr_src && subbr_tgt && subbr_yca)  /* ?edit vs. ?edit */
+    {
+      /* subbranch possibly changed in source => merge */
+      SVN_ERR(branch_merge_subtree_r(editor, subbr_src, subbr_tgt, subbr_yca,
+                                     scratch_pool));
+    }
+  else if (subbr_src && subbr_yca)  /* ?edit vs. delete */
+    {
+      /* ### possible conflict (edit vs. delete) */
+    }
+  else if (subbr_tgt && subbr_yca)  /* delete vs. ?edit */
+    {
+      /* ### possible conflict (delete vs. edit) */
+    }
+  else if (subbr_src && subbr_tgt)  /* double add */
+    {
+      /* ### conflict */
+    }
+  else if (subbr_src)  /* added on source branch */
+    {
+      /* ### add it on target */
+    }
+  else if (subbr_tgt)  /* added on target branch */
+    {
+      /* nothing to do */
+    }
+  else if (subbr_yca)  /* double delete */
+    {
+      /* ### conflict? policy option? */
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Merge ...
  *
  * Merge any sub-branches in the same way, recursively.
@@ -688,6 +762,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
            yca->rev,
            yca->branch->sibling_defn->bsid, yca->eid));
 
+  notify("merging into branch %s",
+         svn_branch_instance_get_id(tgt->branch, scratch_pool));
   /*
       for (eid, diff1) in element_differences(YCA, FROM):
         diff2 = element_diff(eid, YCA, TO)
@@ -729,6 +805,9 @@ branch_merge_subtree_r(svn_editor3_t *editor,
          TGT, YCA) exists, but we choose to skip it when SRC == YCA. */
       if (! e_yca_src)
         {
+          /* Still may need to merge a subbranch here */
+          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
+
           continue;
         }
 
@@ -755,6 +834,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
           SVN_ERR(svn_editor3_alter(editor, tgt->rev, tgt->branch, eid,
                                     result->parent_eid, result->name,
                                     result->content));
+
+          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
         }
       else if (e_tgt)
         {
@@ -768,12 +849,9 @@ branch_merge_subtree_r(svn_editor3_t *editor,
           svn_branch_instance_t *subbranch
             = svn_branch_get_subbranch_at_eid(src->branch, eid, scratch_pool);
 
-          if (subbranch)
-            notify("A    e%d %s%s",
-                   eid, result->name,
-                   subbranch_str(src->branch, eid, scratch_pool));
-          else
-            notify("A    e%d %s", eid, result->name);
+          notify("A    e%d %s%s",
+                 eid, result->name,
+                 subbranch_str(src->branch, eid, scratch_pool));
 
           /* In BRANCH, create an instance of the element EID with new content.
            *
@@ -798,6 +876,9 @@ branch_merge_subtree_r(svn_editor3_t *editor,
         }
     }
 
+  notify("merging into branch %s -- finished",
+         svn_branch_instance_get_id(tgt->branch, scratch_pool));
+
   if (had_conflict)
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
@@ -807,8 +888,6 @@ branch_merge_subtree_r(svn_editor3_t *editor,
     {
       SVN_DBG(("merge completed: no conflicts"));
     }
-
-  /* ### TODO: subbranches */
 
   return SVN_NO_ERROR;
 }
