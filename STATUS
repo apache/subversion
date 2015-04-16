@@ -175,14 +175,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1673044, r1673063, r1673065
-   Allow the auth command to match on certificate details
-   Justification:
-     This was part of the whole point of the auth command, but got dropped
-     inadvertently as part of the conversion to using an X.509 parser.
-   Votes:
-     +1: breser, stefan2, rhuijben
-
  * r1669743, r1669945
    Restore FSFS representation sharing to its previous effectiveness.
    Justification:
