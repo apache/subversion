@@ -314,7 +314,8 @@ fixup_expanded_size(svn_fs_t *fs,
   assert(!svn_fs_fs__id_txn_used(&rep->txn_id));
 
   /* EXPANDED_SIZE is 0. If the MD5 does not match the one for empty
-   * contents, we know that we need to correct EXPANDED_SIZE. */
+   * contents, we know that EXPANDED_SIZE == 0 is wrong and needs to
+   * be set to the actual value given by SIZE. */
   empty_md5 = svn_checksum_empty_checksum(svn_checksum_md5, scratch_pool);
   if (memcmp(empty_md5->digest, rep->md5_digest, sizeof(rep->md5_digest)))
     {
@@ -324,15 +325,15 @@ fixup_expanded_size(svn_fs_t *fs,
 
   /* Only two cases are left here.
    * (1) A non-empty PLAIN rep with a MD5 collision on EMPTY_MD5.
-   * (2) An empty DELTA rep. */
+   * (2) A DELTA rep with zero-length output. */
 
-  /* SVN always stores an empty DELTA rep as an empty sequence of txdelta
-   * windows, i.e. as "SVN\1".  In that case, SIZE is 4 bytes.  There is
-   * no other possible DELTA rep of that size and any PLAIN rep of 4 bytes
-   * would produce a different MD5.  Hence, if SIZE is actually 4 here, we
-   * know that this is an empty DELTA rep.
+  /* SVN always stores a DELTA rep with zero-length output as an empty
+   * sequence of txdelta windows, i.e. as "SVN\1".  In that case, SIZE is
+   * 4 bytes.  There is no other possible DELTA rep of that size and any
+   * PLAIN rep of 4 bytes would produce a different MD5.  Hence, if SIZE is
+   * actually 4 here, we know that this is an empty DELTA rep.
    *
-   * Note that it technically legal to have DELTA reps with a 0 length
+   * Note that it is technically legal to have DELTA reps with a 0 length
    * output window.  Their on-disk size would be longer.  We handle that
    * case later together with the equally unlikely MD5 collision. */
   if (rep->size == 4)
