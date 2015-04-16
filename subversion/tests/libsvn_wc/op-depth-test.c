@@ -12086,7 +12086,7 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_global_commit,
                        "test global commit"),
     SVN_TEST_OPTS_PASS(test_global_commit_switched,
-                       "test global commit"),
+                       "test global commit switched"),
     SVN_TEST_NULL
   };
 
