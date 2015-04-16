@@ -992,6 +992,52 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
   ### It's all very well to see that the dirs and files now appear at the
   ### right places, but what should we test to ensure the history is intact?
 
+# Brane's example on IRC 2015-04-14
+# "e.g., in our tree, libsvn_fs_x is a branch of libsvn_fs_fs; are we still
+# allowed to merge branches/foo to trunk, and will the merge correctly reflect
+# changes in these two sub-branches, and will a subsequent merge from fs_fs to
+# fs_x produce sane results?"
+def subbranches1(sbox):
+  "subbranches1"
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+  repo_url = sbox.repo_url
+  head = 1
+
+  # create content in a trunk subtree 'libsvn_fs_fs'
+  test_svnmover2(sbox, 'trunk', None,
+                 'mv lib libsvn_fs_fs',
+                 'put', mk_file(sbox, 'file.c'), 'libsvn_fs_fs/file.c')
+  # branch 'trunk/libsvn_fs_fs' to 'trunk/libsvn_fs_x'
+  test_svnmover2(sbox, 'trunk', None,
+                 'branch libsvn_fs_fs libsvn_fs_x')
+  # branch 'trunk' to 'branches/foo'
+  test_svnmover2(sbox, '', None,
+                 'branch trunk branches/foo')
+
+  # make edits in 'branches/foo' and its subbranch
+  test_svnmover2(sbox, 'branches/foo', None,
+                 'mkdir docs',
+                 'mv libsvn_fs_fs/file.c libsvn_fs_fs/file2.c')
+  test_svnmover2(sbox, 'branches/foo/libsvn_fs_x', None,
+                 'mkdir reps',
+                 'mv file.c reps/file.c')
+
+  # merge 'branches/foo' to 'trunk'
+  test_svnmover2(sbox, '',
+                 reported_br_diff('trunk', 'trunk') +
+                 reported_add('docs') +
+                 reported_move('libsvn_fs_fs/file.c', 'libsvn_fs_fs/file2.c') +
+                 reported_br_diff('trunk/libsvn_fs_x', 'trunk/libsvn_fs_x') +
+                 reported_add('reps') +
+                 reported_move('file.c', 'reps/file.c'),
+                 'merge branches/foo trunk trunk@4')
+
+  # merge 'trunk/libsvn_fs_fs' to 'trunk/libsvn_fs_x'
+  test_svnmover2(sbox, '',
+                 reported_br_diff('trunk/libsvn_fs_x', 'trunk/libsvn_fs_x') +
+                 reported_move('reps/file.c', 'reps/file2.c'),
+                 'merge trunk/libsvn_fs_fs trunk/libsvn_fs_x trunk/libsvn_fs_fs@4')
+
 
 ######################################################################
 
@@ -1007,6 +1053,7 @@ test_list = [ None,
               move_branch_within_same_parent_branch,
               restructure_repo_ttb_projects_to_projects_ttb,
               restructure_repo_projects_ttb_to_ttb_projects,
+              subbranches1,
             ]
 
 if __name__ == '__main__':
