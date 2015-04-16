@@ -1372,6 +1372,172 @@ plain_0_length(const svn_test_opts_t *opts,
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-rep_sharing_effectiveness"
+
+static int
+count_substring(svn_stringbuf_t *string,
+                const char *needle)
+{
+  int count = 0;
+  apr_size_t len = strlen(needle);
+  apr_size_t pos;
+
+  for (pos = 0; pos + len <= string->len; ++pos)
+    if (memcmp(string->data + pos, needle, len) == 0)
+      ++count;
+
+  return count;
+}
+
+static svn_error_t *
+count_representations(int *count,
+                      svn_fs_t *fs,
+                      svn_revnum_t revision,
+                      apr_pool_t *pool)
+{
+  svn_stringbuf_t *rev_contents;
+  const char *rev_path = svn_fs_fs__path_rev_absolute(fs, revision, pool);
+  SVN_ERR(svn_stringbuf_from_file2(&rev_contents, rev_path, pool));
+
+  *count = count_substring(rev_contents, "PLAIN")
+         + count_substring(rev_contents, "DELTA");
+
+  return SVN_NO_ERROR;
+}
+
+/* Repeat string S many times to make it big enough for deltification etc.
+   to kick in. */
+static const char*
+multiply_string(const char *s,
+                apr_pool_t *pool)
+{
+  svn_stringbuf_t *temp = svn_stringbuf_create(s, pool);
+
+  int i;
+  for (i = 0; i < 7; ++i)
+    svn_stringbuf_insert(temp, temp->len, temp->data, temp->len);
+
+  return temp->data;
+}
+
+static svn_error_t *
+rep_sharing_effectiveness(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  const char *hello_str = multiply_string("Hello, ", pool);
+  const char *world_str = multiply_string("World!", pool);
+  const char *goodbye_str = multiply_string("Goodbye!", pool);
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Create a repo that and explicitly enable rep sharing. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+
+  ffd = fs->fsap_data;
+  if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  ffd->rep_sharing_allowed = TRUE;
+
+  /* Revision 1: create 2 files with different content. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", hello_str, pool));
+  SVN_ERR(svn_fs_make_file(root, "bar", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "bar", world_str, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Revision 2: modify a file to match another file's r1 content and
+                 add another with the same content.
+                 (classic rep-sharing). */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", world_str, pool));
+  SVN_ERR(svn_fs_make_file(root, "baz", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "baz", hello_str, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Revision 3: modify all files to some new, identical content and add
+                 another with the same content.
+                 (in-revision rep-sharing). */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", goodbye_str, pool));
+  SVN_ERR(svn_test__set_file_contents(root, "bar", goodbye_str, pool));
+  SVN_ERR(svn_test__set_file_contents(root, "baz", goodbye_str, pool));
+  SVN_ERR(svn_fs_make_file(root, "qux", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "qux", goodbye_str, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Verify revision contents. */
+  {
+    const struct {
+      svn_revnum_t revision;
+      const char *file;
+      const char *contents;
+    } expected[] = {
+      { 1, "foo", "Hello, " },
+      { 1, "bar", "World!" },
+      { 2, "foo", "World!" },
+      { 2, "bar", "World!" },
+      { 2, "baz", "Hello, " },
+      { 3, "foo", "Goodbye!" },
+      { 3, "bar", "Goodbye!" },
+      { 3, "baz", "Goodbye!" },
+      { 3, "qux", "Goodbye!" },
+      { SVN_INVALID_REVNUM, NULL, NULL }
+    };
+
+    int i;
+    apr_pool_t *iterpool = svn_pool_create(pool);
+    for (i = 0; SVN_IS_VALID_REVNUM(expected[i].revision); ++i)
+      {
+        svn_stringbuf_t *str;
+
+        SVN_ERR(svn_fs_revision_root(&root, fs, expected[i].revision,
+                                     iterpool));
+        SVN_ERR(svn_test__get_file_contents(root, expected[i].file, &str,
+                                            iterpool));
+
+        SVN_TEST_STRING_ASSERT(str->data,
+                               multiply_string(expected[i].contents,
+                                               iterpool));
+      }
+
+    svn_pool_destroy(iterpool);
+  }
+
+  /* Verify that rep sharing eliminated most reps. */
+  {
+    /* Number of expected representations (including the root directory). */
+    const int expected[] = { 1, 3, 1, 2 } ;
+
+    svn_revnum_t i;
+    apr_pool_t *iterpool = svn_pool_create(pool);
+    for (i = 0; i <= rev; ++i)
+      {
+        int count;
+        SVN_ERR(count_representations(&count, fs, i, iterpool));
+        SVN_TEST_ASSERT(count == expected[i]);
+      }
+
+    svn_pool_destroy(iterpool);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -1416,6 +1582,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "id parser test"),
     SVN_TEST_OPTS_PASS(plain_0_length,
                        "file with 0 expanded-length, issue #4554"),
+    SVN_TEST_OPTS_PASS(rep_sharing_effectiveness,
+                       "rep-sharing effectiveness"),
     SVN_TEST_NULL
   };
 
