@@ -175,15 +175,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1673153
-   Significantly improve 'svn ls -v' on tag directories
-   Justification:
-     Simple patch that avoids retrieving 'has_props' for every node, which
-     is then ignored saves 95% of the server side processing time on
-     customer reported case.
-   Votes:
-     +1: rhuijben, stefan2, philip
-
  * r1673785, r1673803
    Add a 'null-blame' command to svnbench
    Justification:
