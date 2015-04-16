@@ -169,6 +169,16 @@ Other candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
+ * r1674015
+   Let 'svnbench null-blame' accept a revision range.
+   Justification:
+     Necessary to be able to benchmark 'prospective blame', since that
+     requires running the command with a reverse revision range. It would
+     be interesting to test whether a server / backend can deliver the
+     file revs faster in reverse.
+   Votes:
+     +1: jcorvel
+
 Veto-blocked changes:
 =====================
 
