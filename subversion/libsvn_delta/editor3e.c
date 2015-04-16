@@ -229,7 +229,7 @@ svn_editor3_instantiate(svn_editor3_t *editor,
   SVN_ERR_ASSERT(VALID_EID(local_eid));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
-  SVN_ERR_ASSERT(VALID_CONTENT(new_content));
+  SVN_ERR_ASSERT(!new_content || VALID_CONTENT(new_content));
   VERIFY(instantiate, new_parent_eid != local_eid);
   /* TODO: verify this element does not exist (in initial state) */
 

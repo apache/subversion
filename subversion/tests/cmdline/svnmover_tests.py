@@ -508,24 +508,61 @@ def merges(sbox):
                            'merge', 'trunk@5', 'branches/br1', 'trunk@2')
 
 def reported_br_diff(path1, path2):
+  """Return expected header lines for diff of a branch, or subtree in a branch.
+
+     PATH1 is the 'left' and PATH2 the 'right' side path. Both are full paths
+     from the repo root.
+  """
   return [r'--- diff branch \^.* at /%s : \^.* at /%s' % (
            re.escape(path1), re.escape(path2))]
 
 def reported_del(path):
+  """Return expected lines for deletion of an element.
+
+     PATH is the relpath of the element within its branch.
+  """
   return ['D   ' + re.escape(path)]
 
-def reported_br_del(path):
-  return ['D   ' + re.escape(path) + r' \(branch \^\..*\)',
-          r'--- deleted branch \^.* at /%s' % (re.escape(path),)]
+def reported_br_del(path1, path2=None):
+  """Return expected lines for deletion of a (sub)branch.
+
+     Parameters are either (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH) or for
+     a first-level branch just (SUBBRANCH_RPATH). 'FULLPATH' means relpath
+     from the repo root; 'RPATH' means relpath from the outer branch.
+  """
+  if path2 is None:
+    subbranch_rpath = path1
+    subbranch_fullpath = path1
+  else:
+    subbranch_rpath = path2
+    subbranch_fullpath = path1 + '/' + path2
+  return ['D   ' + re.escape(subbranch_rpath) + r' \(branch \^\..*\)',
+          r'--- deleted branch \^.* at /%s' % (re.escape(subbranch_fullpath),)]
 
 def reported_add(path):
+  """Return expected lines for addition of an element.
+
+     PATH is the relpath of the element within its branch.
+  """
   return ['A   ' + re.escape(path)]
 
-def reported_br_add(path):
-  return ['A   ' + re.escape(path) + r' \(branch \^\..*\)',
-          r'--- added branch \^.* at /%s' % (re.escape(path),)]
+def reported_br_add(path1, path2=None):
+  """Return expected lines for addition of a (sub)branch.
+
+     Parameters are as for 'reported_br_del'.
+  """
+  if path2 is None:
+    subbranch_rpath = path1
+    subbranch_fullpath = path1
+  else:
+    subbranch_rpath = path2
+    subbranch_fullpath = path1 + '/' + path2
+  return ['A   ' + re.escape(subbranch_rpath) + r' \(branch \^\..*\)',
+          r'--- added branch \^.* at /%s' % (re.escape(subbranch_fullpath),)]
 
 def reported_move(path1, path2, branch_text=''):
+  """Return expected lines for a move, optionally of a (sub)branch.
+  """
   dir1, name1 = os.path.split(path1)
   dir2, name2 = os.path.split(path2)
   if dir1 == dir2:
@@ -539,6 +576,8 @@ def reported_move(path1, path2, branch_text=''):
             + r' \(moved\+renamed from ' + re.escape(path1) + r'\)']
 
 def reported_br_move(path1, path2):
+  """Return expected lines for a move of a (sub)branch.
+  """
   return reported_move(path1, path2, r' \(branch \^\..*\)')
 
 #@XFail()  # There is a bug in the conversion to old-style commits:
@@ -1038,6 +1077,56 @@ def subbranches1(sbox):
                  reported_move('reps/file.c', 'reps/file2.c'),
                  'merge trunk/libsvn_fs_fs trunk/libsvn_fs_x trunk/libsvn_fs_fs@4')
 
+def merge_deleted_subbranch(sbox):
+  "merge deleted subbranch"
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+  repo_url = sbox.repo_url
+  head = 1
+
+  # add a subbranch in 'trunk'
+  test_svnmover2(sbox, 'trunk', None,
+                 'branch lib lib2')
+
+  yca_rev = 4
+
+  # branch 'trunk' to 'branches/foo'
+  test_svnmover2(sbox, '', None,
+                 'branch trunk branches/foo')
+  # delete a subbranch in 'trunk'
+  test_svnmover2(sbox, 'trunk', None,
+                 'rm lib2')
+
+  # merge 'trunk' to 'branches/foo'
+  #
+  # This should delete the subbranch 'lib2'
+  test_svnmover2(sbox, '',
+                 reported_br_diff('branches/foo', 'branches/foo') +
+                 reported_br_del('branches/foo', 'lib2'),
+                 'merge trunk branches/foo trunk@' + str(yca_rev))
+
+def merge_added_subbranch(sbox):
+  "merge added subbranch"
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+  repo_url = sbox.repo_url
+  head = 1
+
+  yca_rev = 3
+
+  # branch 'trunk' to 'branches/foo'
+  test_svnmover2(sbox, '', None,
+                 'branch trunk branches/foo')
+  # add a subbranch in 'trunk'
+  test_svnmover2(sbox, 'trunk', None,
+                 'branch lib lib2')
+
+  # merge 'trunk' to 'branches/foo'
+  #
+  # This should add the subbranch 'lib2'
+  test_svnmover2(sbox, '',
+                 reported_br_diff('branches/foo', 'branches/foo') +
+                 reported_br_add('branches/foo', 'lib2'),
+                 'merge trunk branches/foo trunk@' + str(yca_rev))
+
 
 ######################################################################
 
@@ -1054,6 +1143,8 @@ test_list = [ None,
               restructure_repo_ttb_projects_to_projects_ttb,
               restructure_repo_projects_ttb_to_ttb_projects,
               subbranches1,
+              merge_deleted_subbranch,
+              merge_added_subbranch,
             ]
 
 if __name__ == '__main__':

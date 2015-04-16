@@ -911,11 +911,22 @@ editor3_instantiate(void *baton,
                     const svn_element_content_t *new_content,
                     apr_pool_t *scratch_pool)
 {
-  SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
-           /*branch->sibling->bsid,*/ eid, new_parent_eid,
-           new_name, svn_node_kind_to_word(new_content->kind)));
+  if (new_content)
+    {
+      SVN_DBG(("instantiate(e%d): parent e%d, name '%s', kind %s",
+               eid, new_parent_eid, new_name,
+               svn_node_kind_to_word(new_content->kind)));
 
-  svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
+      svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
+    }
+  else
+    {
+      SVN_DBG(("instantiate subbranch-root(e%d): parent e%d, name '%s'",
+               eid, new_parent_eid, new_name));
+
+      svn_branch_map_update_as_subbranch_root(branch, eid,
+                                              new_parent_eid, new_name);
+    }
   return SVN_NO_ERROR;
 }
 
