@@ -719,7 +719,12 @@ merge_subbranch(svn_editor3_t *editor,
     }
   else if (subbr_src)  /* added on source branch */
     {
-      /* ### add it on target */
+      SVN_ERR(svn_branch_branch_subtree_r2(
+                NULL,
+                src_subbranch, src_subbranch->sibling_defn->root_eid,
+                tgt->branch, eid,
+                src_subbranch->sibling_defn,
+                scratch_pool));
     }
   else if (subbr_tgt)  /* added on target branch */
     {
@@ -805,7 +810,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
          TGT, YCA) exists, but we choose to skip it when SRC == YCA. */
       if (! e_yca_src)
         {
-          /* Still may need to merge a subbranch here */
+          /* Still need to merge subbranch */
           SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
 
           continue;
@@ -846,9 +851,6 @@ branch_merge_subtree_r(svn_editor3_t *editor,
         }
       else if (result)
         {
-          svn_branch_instance_t *subbranch
-            = svn_branch_get_subbranch_at_eid(src->branch, eid, scratch_pool);
-
           notify("A    e%d %s%s",
                  eid, result->name,
                  subbranch_str(src->branch, eid, scratch_pool));
@@ -864,15 +866,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                                           result->parent_eid, result->name,
                                           result->content));
 
-          if (subbranch)
-            {
-              SVN_ERR(svn_branch_branch_subtree_r2(
-                        NULL,
-                        subbranch, subbranch->sibling_defn->root_eid,
-                        tgt->branch, eid,
-                        subbranch->sibling_defn,
-                        scratch_pool));
-            }
+          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
         }
     }
 
