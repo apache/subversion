@@ -45,14 +45,6 @@ Candidate changes that cannot go into a later 1.9.x:
      +1: rhuijben, stefan2
      +1: stsp (r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693 only)
 
- * r1673785, r1673803
-   Add a 'null-blame' command to svnbench
-   Justification:
-     Provides a tool to end users for diagnosing performance problems. Doesn't affect other
-     code and otherwise we can only add it at 1.10.
-   Votes:
-     +1: rhuijben, stefan2 (although I wouldn't have a problem with it not getting in 1.9.0)
-
 Other candidate changes:
 ========================
 
@@ -230,3 +222,11 @@ Approved changes:
      customer reported case.
    Votes:
      +1: rhuijben, stefan2, philip
+
+ * r1673785, r1673803
+   Add a 'null-blame' command to svnbench
+   Justification:
+     Provides a tool to end users for diagnosing performance problems. Doesn't affect other
+     code and otherwise we can only add it at 1.10.
+   Votes:
+     +1: rhuijben, stefan2, jcorvel
