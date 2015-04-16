@@ -28,15 +28,13 @@
 #define SVN_VERSION_H
 
 /* Hack to prevent the resource compiler from including
-   apr_general.h.  It doesn't resolve the include paths
-   correctly and blows up without this.
- */
-#ifndef APR_STRINGIFY
+   apr and other headers. */
+#ifndef SVN_WIN32_RESOURCE_COMPILATION
 #include <apr_general.h>
-#endif
 #include <apr_tables.h>
 
 #include "svn_types.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,7 +70,7 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-#define SVN_VER_PATCH      12
+#define SVN_VER_PATCH      13
 
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */

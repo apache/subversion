@@ -685,7 +685,17 @@ def run_svn(error_expected, *varargs):
 def run_svnadmin(*varargs):
   """Run svnadmin with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnadmin_binary, 1, False, *varargs)
+
+  use_binary = ('dump' in varargs)
+
+  exit_code, stdout_lines, stderr_lines = \
+                       run_command(svnadmin_binary, 1, use_binary, *varargs)
+
+  if use_binary and sys.platform == 'win32':
+    # Callers don't expect binary output on stderr
+    stderr_lines = [x.replace('\r', '') for x in stderr_lines]
+
+  return exit_code, stdout_lines, stderr_lines
 
 # For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):

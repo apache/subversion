@@ -1026,6 +1026,14 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
+  svn_wc__db_status_t status;
+  svn_node_kind_t kind;
+  svn_boolean_t had_props;
+  svn_boolean_t props_mod;
+  const char *original_repos_relpath;
+  svn_revnum_t original_revision;
+  svn_diff_source_t *copyfrom_src = NULL;
+  apr_hash_t *pristine_props;
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool;
@@ -1038,6 +1046,47 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
   apr_hash_t *nodes;
   apr_hash_t *conflicts;
 
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &original_repos_relpath, NULL, NULL,
+                               &original_revision, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &had_props,
+                               &props_mod, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+  if (original_repos_relpath)
+    {
+      copyfrom_src = svn_diff__source_create(original_revision, scratch_pool);
+      copyfrom_src->repos_relpath = original_repos_relpath;
+    }
+
+  /* svn_wc__db_status_incomplete should never happen, as the result won't be
+     stable or guaranteed related to what is in the repository for this
+     revision, but without this it would be hard to diagnose that status... */
+  assert(kind == svn_node_dir
+         && (status == svn_wc__db_status_normal
+             || status == svn_wc__db_status_incomplete
+             || status == svn_wc__db_status_added
+             || (status == svn_wc__db_status_deleted && diff_pristine)));
+
+  if (status == svn_wc__db_status_deleted)
+    {
+      assert(diff_pristine);
+
+      SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, &had_props,
+                                            &pristine_props,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+      props_mod = FALSE;
+    }
+  else if (!had_props)
+    pristine_props = apr_hash_make(scratch_pool);
+  else
+    SVN_ERR(svn_wc__db_read_pristine_props(&pristine_props,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
   /* Report the addition of the directory's contents. */
   iterpool = svn_pool_create(scratch_pool);
 
@@ -1045,7 +1094,7 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                                 relpath,
                                 NULL,
                                 right_src,
-                                NULL /* copyfrom_src */,
+                                copyfrom_src,
                                 processor_parent_baton,
                                 processor,
                                 scratch_pool, iterpool));
@@ -1119,17 +1168,19 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
   if (!skip)
     {
       apr_hash_t *right_props;
-      if (diff_pristine)
-        SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
-                                               scratch_pool, scratch_pool));
+
+      if (props_mod && !diff_pristine)
+        SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
+                                      scratch_pool, scratch_pool));
       else
-        SVN_ERR(svn_wc__get_actual_props(&right_props, db, local_abspath,
-                                         scratch_pool, scratch_pool));
+        right_props = svn_prop_hash_dup(pristine_props, scratch_pool);
 
       SVN_ERR(processor->dir_added(relpath,
-                                   NULL /* copyfrom_src */,
+                                   copyfrom_src,
                                    right_src,
-                                   NULL,
+                                   copyfrom_src
+                                     ? pristine_props
+                                     : NULL,
                                    right_props,
                                    pdb,
                                    processor,
@@ -2362,8 +2413,8 @@ wrap_dir_opened(void **new_dir_baton,
   wc_diff_wrap_baton_t *wb = processor->baton;
   svn_boolean_t tree_conflicted = FALSE;
 
-  assert(left_source || right_source);
-  assert(!copyfrom_source || !right_source);
+  assert(left_source || right_source);      /* Must exist at one point. */
+  assert(!left_source || !copyfrom_source); /* Either existed or added. */
 
   /* Maybe store state and tree_conflicted in baton? */
   if (left_source != NULL)

@@ -209,8 +209,12 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
 
   return dest_sbox
 
-def verify_mirror(dest_sbox, src_sbox):
-  """Compare the contents of the DEST_SBOX repository with EXP_DUMP_FILE_CONTENTS."""
+def verify_mirror(dest_sbox, exp_dump_file_contents):
+  """Compare the contents of the mirror repository in DEST_SBOX with
+     EXP_DUMP_FILE_CONTENTS, by comparing the parsed dump stream content.
+
+     First remove svnsync rev-props from the DEST_SBOX repository.
+  """
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -222,10 +226,9 @@ def verify_mirror(dest_sbox, src_sbox):
 
   # Create a dump file from the mirror repository.
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
-  src_dump = svntest.actions.run_and_verify_dump(src_sbox.repo_dir)
 
   svntest.verify.compare_dump_files(
-    "Dump files", "DUMP", src_dump, dest_dump)
+    "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
 
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
              bypass_prop_validation=False, source_prop_encoding=None,
@@ -251,16 +254,12 @@ or another dump file."""
   # dump file (used to create the master repository) or another specified dump
   # file.
   if exp_dump_file_name:
-    build_repos(sbox)
-    svntest.actions.run_and_verify_load(sbox.repo_dir,
-                                        open(os.path.join(svnsync_tests_dir,
-                                                          exp_dump_file_name),
-                                             'rb').readlines())
-    src_sbox = sbox
+    exp_dump_file_contents = open(os.path.join(svnsync_tests_dir,
+                                  exp_dump_file_name), 'rb').readlines()
   else:
-    src_sbox = sbox
+    exp_dump_file_contents = master_dumpfile_contents
 
-  verify_mirror(dest_sbox, sbox)
+  verify_mirror(dest_sbox, exp_dump_file_contents)
 
 
 
@@ -564,9 +563,7 @@ def delete_revprops(sbox):
   run_copy_revprops(dest_sbox.repo_url, sbox.repo_url)
 
   # Does the result look as we expected?
-  build_repos(sbox)
-  svntest.actions.run_and_verify_load(sbox.repo_dir, expected_contents)
-  verify_mirror(dest_sbox, sbox)
+  verify_mirror(dest_sbox, expected_contents)
 
 @Issue(3870)
 @SkipUnless(svntest.main.is_posix_os)
@@ -575,6 +572,78 @@ def fd_leak_sync_from_serf_to_local(sbox):
   import resource
   resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
   run_test(sbox, "largemods.dump", is_src_ra_local=None, is_dest_ra_local=True)
+
+#----------------------------------------------------------------------
+
+@Issue(4476)
+def mergeinfo_contains_r0(sbox):
+  "mergeinfo contains r0"
+
+  def make_node_record(node_name, mi):
+    """Return a dumpfile node-record for adding a (directory) node named
+       NODE_NAME with mergeinfo MI. Return it as a list of newline-terminated
+       lines.
+    """
+    headers_tmpl = """\
+Node-path: %s
+Node-kind: dir
+Node-action: add
+Prop-content-length: %d
+Content-length: %d
+"""
+    content_tmpl = """\
+K 13
+svn:mergeinfo
+V %d
+%s
+PROPS-END
+"""
+    content = content_tmpl % (len(mi), mi)
+    headers = headers_tmpl % (node_name, len(content), len(content))
+    record = headers + '\n' + content + '\n\n'
+    return record.splitlines(True)
+
+  # The test case mergeinfo (before, after) syncing, separated here with
+  # spaces instead of newlines
+  test_mi = [
+    ("",            ""),  # unchanged
+    ("/a:1",        "/a:1"),
+    ("/a:1 /b:1*,2","/a:1 /b:1*,2"),
+    ("/:0:1",       "/:0:1"),  # unchanged; colon-zero in filename
+    ("/a:0",        ""),  # dropped entirely
+    ("/a:0*",       ""),
+    ("/a:0 /b:0*",  ""),
+    ("/a:1 /b:0",   "/a:1"),  # one kept, one dropped
+    ("/a:0 /b:1",   "/b:1"),
+    ("/a:0,1 /b:1", "/a:1 /b:1"),  # one kept, one changed
+    ("/a:1 /b:0,1", "/a:1 /b:1"),
+    ("/a:0,1 /b:0*,1 /c:0,2 /d:0-1 /e:0-1,3 /f:0-2 /g:0-3",
+     "/a:1 /b:1 /c:2 /d:1 /e:1,3 /f:1-2 /g:1-3"),  # all changed
+    ("/a:0:0-1",    "/a:0:1"),  # changed; colon-zero in filename
+    ]
+
+  # Get the constant prefix for each dumpfile
+  dump_file_name = "mergeinfo-contains-r0.dump"
+  svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnsync_tests_data')
+  dump_in = open(os.path.join(svnsync_tests_dir, dump_file_name),
+                 'rb').readlines()
+  dump_out = list(dump_in)  # duplicate the list
+
+  # Add dumpfile node records containing the test mergeinfo
+  for n, mi in enumerate(test_mi):
+    node_name = "D" + str(n)
+
+    mi_in = mi[0].replace(' ', '\n')
+    mi_out = mi[1].replace(' ', '\n')
+    dump_in.extend(make_node_record(node_name, mi_in))
+    dump_out.extend(make_node_record(node_name, mi_out))
+
+  # Run the sync
+  dest_sbox = setup_and_sync(sbox, dump_in, bypass_prop_validation=True)
+
+  # Compare the dump produced by the mirror repository with expected
+  verify_mirror(dest_sbox, dump_out)
 
 
 ########################################################################
@@ -612,6 +681,7 @@ test_list = [ None,
               descend_into_replace,
               delete_revprops,
               fd_leak_sync_from_serf_to_local, # calls setrlimit
+              mergeinfo_contains_r0,
              ]
 
 if __name__ == '__main__':

@@ -323,9 +323,9 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   # --skip-missing-merge-soruces which should strip out any revisions < 6.
   # Then we'll load the filtered result into an empty repository.  This
   # should offset the incoming mergeinfo by -5.  In addition, any mergeinfo
-  # revisions that are adjusted to r1 should be removed because that implies
-  # a merge of -r0:1, which is impossible.  The resulting mergeinfo should
-  # look like this:
+  # referring to the initial revision in the dump file (r6) should be
+  # removed because the change it refers to (r5:6) is not wholly within the
+  # dumpfile.  The resulting mergeinfo should look like this:
   #
   #   Properties on 'branches/B1':
   #     svn:mergeinfo

@@ -1439,6 +1439,47 @@ def upgrade_1_7_dir_external(sbox):
   # svn: warning: W200033: sqlite[S5]: database is locked
   svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
 
+def auto_analyze(sbox):
+  """automatic SQLite ANALYZE"""
+
+  sbox.build(create_wc = False)
+
+  replace_sbox_with_tarfile(sbox, 'wc-without-stat1.tar.bz2')
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            '52ec7e4b-e5f0-451d-829f-f05d5571b4ab')
+
+  # Don't use svn to do relocate as that will add the table.
+  svntest.wc.sqlite_exec(sbox.wc_dir,
+                         "update repository "
+                         "set root ='" + sbox.repo_url + "'")
+  val = svntest.wc.sqlite_stmt(sbox.wc_dir,
+                               "select 1 from sqlite_master "
+                               "where name = 'sqlite_stat1'")
+  if val != []:
+    raise svntest.Failure("initial state failed")
+
+  # Make working copy read-only (but not wc_dir itself as
+  # svntest.main.chmod_tree will not reset it.)
+  for path, subdirs, files in os.walk(sbox.wc_dir):
+    for d in subdirs:
+      os.chmod(os.path.join(path, d), 0555)
+    for f in files:
+      os.chmod(os.path.join(path, f), 0444)
+
+  state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, state)
+
+  svntest.main.chmod_tree(sbox.wc_dir, 0666, 0022)
+
+  state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, state)
+
+  val = svntest.wc.sqlite_stmt(sbox.wc_dir,
+                               "select 1 from sqlite_master "
+                               "where name = 'sqlite_stat1'")
+  if val != [(1,)]:
+    raise svntest.Failure("analyze failed")
+
 ########################################################################
 # Run the tests
 
@@ -1495,6 +1536,7 @@ test_list = [ None,
               iprops_upgrade1_6,
               changelist_upgrade_1_6,
               upgrade_1_7_dir_external,
+              auto_analyze,
              ]
 
 
