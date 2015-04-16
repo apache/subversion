@@ -169,6 +169,12 @@ Other candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1674015
    Let 'svnbench null-blame' accept a revision range.
    Justification:
@@ -177,10 +183,4 @@ Other candidate changes:
      be interesting to test whether a server / backend can deliver the
      file revs faster in reverse.
    Votes:
-     +1: jcorvel, rhuijben
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: jcorvel, rhuijben, danielsh
