@@ -219,6 +219,26 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {0} },
   /* This command is also invoked if we see option "--help", "-h" or "-?". */
 
+  { "null-blame", svn_cl__null_blame, {0}, N_
+    ("Fetch all versions of a file in a batch.\n"
+     "usage: null-blame [-rM:N] TARGET[@REV]...\n"
+     "\n"
+     "  With no revision range (same as -r0:REV), or with '-r M:N' where M < N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the last revision at or before rN that changed or added the line,\n"
+     "  looking back no further than rM.\n"
+     "\n"
+     "  With a reverse revision range '-r M:N' where M > N,\n"
+     "  annotate each line that is present in revision N of the file, with\n"
+     "  the next revision after rN that changed or deleted the line,\n"
+     "  looking forward no further than rM.\n"
+     "\n"
+     "  If specified, REV determines in which revision the target is first\n"
+     "  looked up.\n"
+     "\n"
+     "  Write the annotated result to standard output.\n"),
+    {'r', 'g'} },
+
   { "null-export", svn_cl__null_export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
      "usage: null-export [-r REV] URL[@PEGREV]\n"
@@ -281,8 +301,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  follow copy history by default.  Use --stop-on-copy to disable this\n"
      "  behavior, which can be useful for determining branchpoints.\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy,
-     'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     'x',},
+     'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -619,10 +638,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_trust_server_cert_other_failure:
         opt_state.trust_server_cert_other_failure = TRUE;
-        break;
-      case 'x':
-        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.extensions,
-                                            opt_arg, pool));
         break;
       case opt_config_dir:
         {
