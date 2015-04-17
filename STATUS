@@ -32,32 +32,6 @@ Candidate changes that cannot go into a later 1.9.x:
 Other candidate changes:
 ========================
 
- * r1666965, r1667120
-   mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
-   Justification:
-     A slow svn log makes users call Subversion slow. This fixes the
-     perceived performance problem by no longer optimizing just for
-     obtaining all the results fast, but also for obtaining the first
-     result fast.
-     .
-     Just the perceived slowness of common svn log operations might
-     make users switch to a DVCS, while this slowness is just a buffering
-     to make the total set of results come in faster. But I don't think
-     there are that many users that really wait for all results of
-     .
-     $ svn log -q ^/subversion/trunk
-     .
-     This currently takes > 10 seconds before the first result using
-     the EU mirror for me. By comparison, 'svn log --limit=1' takes
-     0.2 seconds.
-   Votes:
-     +1: rhuijben, philip, brane
-     +0: julianfoad (reviewed but not tested;
-                     figures given in justification are for a 1.8 server but
-                     a 1.9 server should have vastly quicker log computation)
-     -0.5: kotkov (could not reproduce the improvement with a real-world 1.9
-                   server; see my e-mail to <dev@subversion.apache.org>)
-
 Veto-blocked changes:
 =====================
 
@@ -143,3 +117,29 @@ Approved changes:
      base remove function.
    Votes:
      +1: rhuijben, brane, philip
+
+ * r1666965, r1667120
+   mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
+   Justification:
+     A slow svn log makes users call Subversion slow. This fixes the
+     perceived performance problem by no longer optimizing just for
+     obtaining all the results fast, but also for obtaining the first
+     result fast.
+     .
+     Just the perceived slowness of common svn log operations might
+     make users switch to a DVCS, while this slowness is just a buffering
+     to make the total set of results come in faster. But I don't think
+     there are that many users that really wait for all results of
+     .
+     $ svn log -q ^/subversion/trunk
+     .
+     This currently takes > 10 seconds before the first result using
+     the EU mirror for me. By comparison, 'svn log --limit=1' takes
+     0.2 seconds.
+   Votes:
+     +1: rhuijben, philip, brane
+     +0: julianfoad (reviewed but not tested;
+                     figures given in justification are for a 1.8 server but
+                     a 1.9 server should have vastly quicker log computation)
+     -0.5: kotkov (could not reproduce the improvement with a real-world 1.9
+                   server; see my e-mail to <dev@subversion.apache.org>)
