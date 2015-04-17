@@ -55,8 +55,11 @@ Other candidate changes:
      The error was visible when the http-v1 dav protocol was used. I think it
      is a better fix to backport the check to the other layers than to hide
      the problem.
+   Branch:
+     ^/subversion/1.9.x-r1664664
    Votes:
-     +1: rhuijben, stefan2
+     +1: rhuijben, philip
+     +1: stefan2 (before branch)
 
  * r1665213, r1665259, r1665609
    Fix cases of serf's svn_ra_get_dir2() and svn_ra_get_log2() breaking the
