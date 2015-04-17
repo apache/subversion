@@ -131,16 +131,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1674015
-   Let 'svnbench null-blame' accept a revision range.
-   Justification:
-     Necessary to be able to benchmark 'prospective blame', since that
-     requires running the command with a reverse revision range. It would
-     be interesting to test whether a server / backend can deliver the
-     file revs faster in reverse.
-   Votes:
-     +1: jcorvel, rhuijben, danielsh
-
  * r1664593, r1664594, r1664596, r1667715
    On Windows allow reading configuration from system services
    Justification:
@@ -190,4 +180,3 @@ Approved changes:
    doc: Update svn_ra_get_dir2()'s docstring.
    Votes:
      +1: danielsh
-

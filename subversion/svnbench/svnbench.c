@@ -857,7 +857,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   /* Only a few commands can accept a revision range; the rest can take at
      most one revision number. */
-  if (subcommand->cmd_func != svn_cl__null_log)
+  if (subcommand->cmd_func != svn_cl__null_blame
+      && subcommand->cmd_func != svn_cl__null_log)
     {
       if (opt_state.end_revision.kind != svn_opt_revision_unspecified)
         {
