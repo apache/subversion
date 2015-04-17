@@ -654,7 +654,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
         SVN_ERR(svn_cmdline__parse_config_option(opt_state.config_options,
-                                                     opt_arg, pool));
+                                                 opt_arg, "svnbench", pool));
         break;
       case opt_with_all_revprops:
         /* If --with-all-revprops is specified along with one or more
