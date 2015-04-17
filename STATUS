@@ -37,7 +37,7 @@ Candidate changes that cannot go into a later 1.9.x:
    Note:
      Has to be part of a .0 release because it affects public API semantics.
    Votes:
-     +1: brane
+     +1: brane, stsp
      +1: rhuijben (+1 on libsvn_client change.
                    +0 for the JavaHL testcase
                       (this part just tested, not 100% reviewed))
