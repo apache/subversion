@@ -388,7 +388,7 @@ class GeneratorBase:
 
     for kind in ('file', 'section', 'option'):
       macros = groupby[getattr(self.FileSectionOptionEnum, kind)]
-      lines.append('const char *svn__valid_config_%ss[] = {' % (kind,))
+      lines.append('static const char *svn__valid_config_%ss[] = {' % (kind,))
       for macro in macros:
         lines.append('  %s,' % (macro,))
       # Remove ',' for c89 compatibility
@@ -396,7 +396,7 @@ class GeneratorBase:
       lines.append('};')
       lines.append('')
 
-    lines.append('const char *svn__empty_config_sections[] = {');
+    lines.append('static const char *svn__empty_config_sections[] = {');
     for section in empty_sections:
       lines.append('  %s,' % (section,))
     # Remove ',' for c89 compatibility
