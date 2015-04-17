@@ -32,19 +32,6 @@ Candidate changes that cannot go into a later 1.9.x:
 Other candidate changes:
 ========================
 
- * r1664035
-   Keep track of changes when a file external is replace by a real file
-   Justification:
-     When a file-external is deleted, there might be a real node that
-     want to take its place. This patch makes svn update introduce a
-     not present marker node, so a follow-up update will bring in the
-     new file (that was previously reported as skipped)
-   Notes:
-     To implement this some features had to be added to the generic
-     base remove function.
-   Votes:
-     +1: rhuijben, brane
-
  * r1666965, r1667120
    mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
    Justification:
@@ -143,3 +130,16 @@ Approved changes:
      github.
    Votes:
      +1: rhuijben, stefan2, brane
+
+ * r1664035
+   Keep track of changes when a file external is replace by a real file
+   Justification:
+     When a file-external is deleted, there might be a real node that
+     want to take its place. This patch makes svn update introduce a
+     not present marker node, so a follow-up update will bring in the
+     new file (that was previously reported as skipped)
+   Notes:
+     To implement this some features had to be added to the generic
+     base remove function.
+   Votes:
+     +1: rhuijben, brane, philip
