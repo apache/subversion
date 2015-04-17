@@ -909,7 +909,6 @@ validate_config_option(svn_cmdline__config_argument_t *config_option,
 
       for (i = 0; i < ARRAYLEN(svn__empty_config_sections); i++)
         {
-        SVN_DBG(("Checking '%s'", svn__empty_config_sections[i]));
         if (!strcmp(config_option->section, svn__empty_config_sections[i]))
           arbitrary_keys = TRUE;
         }
