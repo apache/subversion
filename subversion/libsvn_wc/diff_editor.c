@@ -1220,10 +1220,8 @@ handle_local_only(struct dir_baton_t *pb,
 
   switch (info->status)
     {
-      case svn_wc__db_status_incomplete:
-        return SVN_NO_ERROR; /* Not local only */
-
       case svn_wc__db_status_normal:
+      case svn_wc__db_status_incomplete:
         if (!repos_delete)
           return SVN_NO_ERROR; /* Local and remote */
         svn_hash_sets(pb->deletes, name, NULL);
@@ -1611,6 +1609,7 @@ open_directory(const char *path,
         switch (info->status)
           {
             case svn_wc__db_status_normal:
+            case svn_wc__db_status_incomplete:
               break;
             case svn_wc__db_status_deleted:
               db->repos_only = TRUE;
@@ -1891,6 +1890,7 @@ open_file(const char *path,
         switch (info->status)
           {
             case svn_wc__db_status_normal:
+            case svn_wc__db_status_incomplete:
               break;
             case svn_wc__db_status_deleted:
               fb->repos_only = TRUE;
