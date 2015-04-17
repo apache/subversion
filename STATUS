@@ -71,19 +71,6 @@ Other candidate changes:
      -0.5: kotkov (could not reproduce the improvement with a real-world 1.9
                    server; see my e-mail to <dev@subversion.apache.org>)
 
- * r1663671, r1666832
-   Resolve an assertion on a bad update report involving incomplete status
-   Justification:
-     The tree conflict detection logic in the update editor wasn't
-     designed to handle BASE adds, where the is an existing basenode. This
-     patch makes the update logic handling properly handle this bad state
-     for incomplete nodes, like it already does for status normal nodes.
-     .
-     Resolves a reproducable assertion in an restarted checkout against
-     github.
-   Votes:
-     +1: rhuijben, stefan2
-
 Veto-blocked changes:
 =====================
 
@@ -143,3 +130,16 @@ Approved changes:
    Votes:
      +1: rhuijben, stefan2, brane, philip
      +1: stsp (r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693 only)
+
+ * r1663671, r1666832
+   Resolve an assertion on a bad update report involving incomplete status
+   Justification:
+     The tree conflict detection logic in the update editor wasn't
+     designed to handle BASE adds, where the is an existing basenode. This
+     patch makes the update logic handling properly handle this bad state
+     for incomplete nodes, like it already does for status normal nodes.
+     .
+     Resolves a reproducable assertion in an restarted checkout against
+     github.
+   Votes:
+     +1: rhuijben, stefan2, brane
