@@ -3622,6 +3622,17 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", rows));
   }
 
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  {
+    nodes_row_t rows[] = {
+      { 0, "",    "normal",      1, "" },
+      { 0, "f",   "normal",      1, "f" },
+      { 0, "g",   "normal",      1, "f", TRUE },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
   return SVN_NO_ERROR;
 }
 
