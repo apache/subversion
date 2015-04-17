@@ -18,6 +18,17 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
+ * r1674301, r1674305, r1674308
+   --config-option: Warn when the FILE:SECTION:OPTION combination may be
+   invalid.
+   Justification:
+     Silently accepting invalid input is bad.
+   Votes:
+     +1: danielsh (1.9.0 only) (for reason given by Bert; not a problem if it
+                                only gets released in 1.10.0)
+     +0.8: rhuijben (for 1.9.0. Last minute change)
+     -0.5: rhuijben (after 1.9.0. Changes error behavior. Might break scrips)
+
 Other candidate changes:
 ========================
 
@@ -72,16 +83,6 @@ Other candidate changes:
      github.
    Votes:
      +1: rhuijben, stefan2
-
- * r1674301, r1674305, r1674308
-   --config-option: Warn when the FILE:SECTION:OPTION combination may be
-   invalid.
-   Justification:
-     Silently accepting invalid input is bad.
-   Votes:
-     +1: danielsh (r1674301 only)
-     +0.8: rhuijben (for 1.9.0. Last minute change)
-     -0.5: rhuijben (after 1.9.0. Changes error behavior. Might break scrips)
 
 Veto-blocked changes:
 =====================
