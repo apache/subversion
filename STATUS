@@ -131,26 +131,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1664593, r1664594, r1664596, r1667715
-   On Windows allow reading configuration from system services
-   Justification:
-     In system services Subversion might be running as a very limited
-     user that doesn't have a user profile (including user registry)
-     loaded. In this case 1.9 currently fails without a proper error,
-     where somehow 1.8 didn't see an error at all.
-     .
-     Some SharpSvn users use Subversion directly from their webserver
-     to contact a Subversion server or read from an repository, to
-     present a management interface... This causes some problems for
-     these users.
-   Notes:
-     Easier to review the combined result as most patches partially
-     undo the previous one.
-   Votes:
-     +1: rhuijben, ivan
-     +1: stefan2, brane, jcorvel (not tested but change looks clear enough
-                                  and is limited to error handling on Windows)
-
  * r1673170, r1673172, r1673692, r1673746
    Introduce svn_fs_node_has_props() and use it where applicable
    Justification:
