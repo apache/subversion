@@ -286,21 +286,13 @@ use_block_read(svn_fs_t *fs)
   return svn_fs_fs__use_log_addressing(fs) && ffd->use_block_read;
 }
 
-/* Resolve a FSFS quirk: if REP in REVISION_FILE within FS is a "PLAIN"
- * representation, its EXPANDED_SIZE element may be 0, in which case its
- * value has to be taken from SIZE.
- *
- * This function ensures that EXPANDED_SIZE in REP always contains the
- * actual value. No-op if REP is NULL.  Uses SCRATCH_POOL for temporaries.
- */
-static svn_error_t *
-fixup_expanded_size(svn_fs_t *fs,
-                    representation_t *rep,
-                    svn_fs_fs__revision_file_t *revision_file,
-                    apr_pool_t *scratch_pool)
+svn_error_t *
+svn_fs_fs__fixup_expanded_size(svn_fs_t *fs,
+                               representation_t *rep,
+                               apr_pool_t *scratch_pool)
 {
   svn_checksum_t *empty_md5;
-  apr_off_t offset;
+  svn_fs_fs__revision_file_t *revision_file;
   svn_fs_fs__rep_header_t *rep_header;
 
   /* Anything to do at all?
@@ -345,11 +337,11 @@ fixup_expanded_size(svn_fs_t *fs,
   /* We still have the two options, PLAIN or DELTA rep.  At this point, we
    * are in an extremely unlikely case and can spend some time to figure it
    * out.  So, let's just look at the representation header. */
-  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, revision_file, rep->revision,
-                                 NULL, rep->item_index, scratch_pool));
-  SVN_ERR(aligned_seek(fs, revision_file->file, NULL, offset, scratch_pool));
+  SVN_ERR(open_and_seek_revision(&revision_file, fs, rep->revision,
+                                 rep->item_index, scratch_pool));
   SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, revision_file->stream,
                                      scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
 
   /* Only for PLAIN reps do we have to correct EXPANDED_SIZE. */
   if (rep_header->type == svn_fs_fs__rep_plain)
@@ -358,23 +350,22 @@ fixup_expanded_size(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Correct known issues with committed NODEREV read from REVISION_FILE
- * within FS. Uses SCRATCH_POOL for temporaries.
+/* Correct known issues with committed NODEREV in FS.
+ * Uses SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
 fixup_node_revision(svn_fs_t *fs,
                     node_revision_t *noderev,
-                    svn_fs_fs__revision_file_t *revision_file,
                     apr_pool_t *scratch_pool)
 {
   /* Workaround issue #4031: is-fresh-txn-root in revision files. */
   noderev->is_fresh_txn_root = FALSE;
 
   /* Make sure EXPANDED_SIZE has the correct value for every rep. */
-  SVN_ERR(fixup_expanded_size(fs, noderev->data_rep, revision_file,
-                              scratch_pool));
-  SVN_ERR(fixup_expanded_size(fs, noderev->prop_rep, revision_file,
-                              scratch_pool));
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, noderev->data_rep,
+                                         scratch_pool));
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, noderev->prop_rep,
+                                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -469,8 +460,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                           revision_file->stream,
                                           result_pool,
                                           scratch_pool));
-          SVN_ERR(fixup_node_revision(fs, *noderev_p, revision_file,
-                                      scratch_pool));
+          SVN_ERR(fixup_node_revision(fs, *noderev_p, scratch_pool));
 
           /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
           if (ffd->node_revision_cache)
@@ -3292,7 +3282,7 @@ block_read_noderev(node_revision_t **noderev_p,
   /* read node rev from revision file */
   SVN_ERR(svn_fs_fs__read_noderev(noderev_p, stream,
                                   result_pool, scratch_pool));
-  SVN_ERR(fixup_node_revision(fs, *noderev_p, rev_file, scratch_pool));
+  SVN_ERR(fixup_node_revision(fs, *noderev_p, scratch_pool));
 
   if (ffd->node_revision_cache)
     SVN_ERR(svn_cache__set(ffd->node_revision_cache, &key, *noderev_p,
