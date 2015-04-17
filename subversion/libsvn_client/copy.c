@@ -330,8 +330,16 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                               scratch_pool));
 
   if (externals_to_pin)
-    items_to_pin = svn_hash_gets((apr_hash_t *)externals_to_pin,
-                                 local_abspath_or_url);
+    {
+      items_to_pin = svn_hash_gets((apr_hash_t *)externals_to_pin,
+                                   local_abspath_or_url);
+      if (!items_to_pin)
+        {
+          /* No pinning at all for this path. */
+          *pinned_externals = svn_string_dup(externals_prop_val, result_pool);
+          return SVN_NO_ERROR;
+        }
+    }
   else
     items_to_pin = NULL;
 
