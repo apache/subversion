@@ -130,8 +130,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1674170
-   doc: Update svn_ra_get_dir2()'s docstring.
-   Votes:
-     +1: danielsh
