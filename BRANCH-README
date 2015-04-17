@@ -1,4 +1,4 @@
-A branch on which to try out move-tracking designs.
+A branch on which to prototype a model of move-tracking and branching.
 
 Merge policy:
 
@@ -7,34 +7,62 @@ Merge policy:
   The work on this branch may or may not eventually be wanted on trunk. It
   is not intended to be kept in a state where it could be merged to trunk.
 
-  Please don't review for implementation issues, not even big-O
-  complexity concerns etc. at this time.
 
-  Please do try it out.
+Reviewing:
 
-  If you can help me get my head around how the logic should work, I'd be
-  extremely glad of any discussion of that.
+  Please do try out the 'svnmover' utility, explore how branching and
+  subbranching and moving interact, and review and discuss the behavioural
+  aspects of the model being prototyped here.
+
+  Please don't review for 'quality of implementation' issues, not even
+  big-O complexity concerns etc. The goal of this work is for us to learn
+  about the behavioural model that we want. Designing a proper
+  implementation will come later.
+
+
+The model:
+
+    Imagine a user who:
+
+      - is familiar with version control concepts
+      - is not familiar with Subversion specifics
+      - expects directories to be versioned (not just files)
+      - expects move tracking (as opposed to move 'detection')
+
+    The design aims to satisfy such a user.
 
 
 Work on this branch:
 
-  * A proof-of-concept utility for playing with moves and branching
-    to see how well the logic works out in practice.
+  * 'svnmover'
 
-    It's called 'svnmover'. Like 'svnmucc', it operates directly on a repo,
-    completely avoiding any working copy considerations.
+    A proof-of-concept utility for playing with moves and branching.
+    'svnmover' is a user interface that lets us try out scenarios in
+    which branching and moving are significant, to see what we expect
+    and see if we can write code that delivers it.
 
-    The implementation is just a hack. It stores metadata in revprops
-    or flat files , with little concern for efficiency etc. at this
-    stage.
+    'svnmover' operates directly on a repo, like 'svnmucc'. Working copy
+    considerations -- mixed-rev states, sparse checkouts, conflicts, and
+    so on -- are completely avoided. A working copy is, in essence, a tool
+    for viewing and making changes to the versioned data, and so needs to
+    be designed to support the versioned data model. That comes *after*
+    designing the data model. Working copy considerations may be introduced
+    to 'svnmover' in due course in order to explore how they would work.
+
+    'svnmover' processes a series of commands given on the command line, and
+    then commits the result. In interactive mode (when run with no command
+    arguments) it makes one commit per line of input.
+
+    The implementation stores metadata either in revprops or in flat files
+    in the repository directory; the metadata is the same in either case.
 
     STATUS
 
     This is my current focus.
 
     Implemented:
-      basic edits including move, copy, delete
-      branching: branch, list-branches
+      basic edits: add file/dir, move, copy, delete
+      branching: branch, create new branch, list branches
       diff
       merge
 
@@ -117,13 +145,6 @@ Work on this branch:
     STATUS
 
     Not started.
-
-
-  * 'update'
-
-    STATUS
-
-    Needs design.
 
 
 Terminology:
