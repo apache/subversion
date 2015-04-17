@@ -228,12 +228,12 @@ def getopt_config_option(sbox):
   sbox.build(create_wc=False, read_only=True)
   expected_stderr = '.*W205000.*did you mean.*'
   expected_stdout = svntest.verify.AnyOutput
-  svntest.actions.run_and_verify_svn(expected_stdout, expected_stderr,
-                                     'info', 
-                                     '--config-option',
-                                     'config:miscellanous:diff-extensions=' +
-                                       '-u -p',
-                                     '--', sbox.repo_url)
+  svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr, 0,
+                                      'info', 
+                                      '--config-option',
+                                      'config:miscellanous:diff-extensions=' +
+                                        '-u -p',
+                                      sbox.repo_url)
 
 ########################################################################
 # Run the tests
