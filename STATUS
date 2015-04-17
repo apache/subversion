@@ -73,6 +73,14 @@ Other candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
+ * r1674301
+   --config-option: Warn when the FILE:SECTION:OPTION combination may be
+   invalid.
+   Justification:
+     Silently accepting invalid input is bad.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
