@@ -1963,9 +1963,7 @@ choose_delta_base(representation_t **rep,
 
       /* Very short rep bases are simply not worth it as we are unlikely
        * to re-coup the deltification space overhead of 20+ bytes. */
-      svn_filesize_t rep_size = (*rep)->expanded_size
-                              ? (*rep)->expanded_size
-                              : (*rep)->size;
+      svn_filesize_t rep_size = (*rep)->expanded_size;
       if (rep_size < 64)
         {
           *rep = NULL;
@@ -2213,12 +2211,8 @@ get_shared_rep(representation_t **old_rep,
   if (!*old_rep)
     return SVN_NO_ERROR;
 
-  /* We don't want 0-length PLAIN representations to replace non-0-length
-     ones (see issue #4554).  Take into account that EXPANDED_SIZE may be
-     0 in which case we have to check the on-disk SIZE.  Also, this doubles
-     as a simple guard against general rep-cache induced corruption. */
-  if (   ((*old_rep)->expanded_size != rep->expanded_size)
-      || ((rep->expanded_size == 0) && ((*old_rep)->size != rep->size)))
+  /* A simple guard against general rep-cache induced corruption. */
+  if ((*old_rep)->expanded_size != rep->expanded_size)
     {
       *old_rep = NULL;
     }
