@@ -2067,7 +2067,6 @@ svn_repos_stat(svn_dirent_t **dirent,
   svn_node_kind_t kind;
   svn_dirent_t *ent;
   const char *datestring;
-  apr_hash_t *prophash;
 
   SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
 
@@ -2083,9 +2082,7 @@ svn_repos_stat(svn_dirent_t **dirent,
   if (kind == svn_node_file)
     SVN_ERR(svn_fs_file_length(&(ent->size), root, path, pool));
 
-  SVN_ERR(svn_fs_node_proplist(&prophash, root, path, pool));
-  if (apr_hash_count(prophash) > 0)
-    ent->has_props = TRUE;
+  SVN_ERR(svn_fs_node_has_props(&ent->has_props, root, path, pool));
 
   SVN_ERR(svn_repos_get_committed_info(&(ent->created_rev),
                                        &datestring,

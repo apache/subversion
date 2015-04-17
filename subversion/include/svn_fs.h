@@ -1823,6 +1823,18 @@ svn_fs_node_proplist(apr_hash_t **table_p,
                      const char *path,
                      apr_pool_t *pool);
 
+/** Set @a *has_props to TRUE if the node @a path in @a root has properties
+ * and to FALSE if it doesn't have properties. Perform temporary allocations
+ * in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_node_has_props(svn_boolean_t *has_props,
+                      svn_fs_root_t *root,
+                      const char *path,
+                      apr_pool_t *scratch_pool);
+
 
 /** Change a node's property's value, or add/delete a property.
  *

@@ -131,19 +131,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1673170, r1673172, r1673692, r1673746
-   Introduce svn_fs_node_has_props() and use it where applicable
-   Justification:
-     Checking whether there are properties should be more efficient than
-     retrieving all properties and then counting them. For directories above
-     a certain size this takes > 95% of the processing time of 'svn ls -v'
-   Notes:
-     This patch just provides the api and updates callers to use it. Further
-     patches (that are not 1.9.0 only) may then improve performance per
-     filesystem implementation.
-   Votes:
-     +1: rhuijben, stefan2, philip, danielsh (for 1.9.0 only)
-
  * r1673197, r1673202, r1673204
    Avoid filling the representation cache with unneeded property info
    Justification:
