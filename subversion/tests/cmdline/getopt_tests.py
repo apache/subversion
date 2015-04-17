@@ -223,6 +223,18 @@ def getopt_help_bogus_cmd(sbox):
   "run svn help bogus-cmd"
   run_one_test(sbox, 'svn_help_bogus-cmd', 'help', 'bogus-cmd')
 
+def getopt_config_option(sbox):
+  "--config-option's spell checking"
+  sbox.build(create_wc=False, read_only=True)
+  expected_stderr = '.*W205000.*did you mean.*'
+  expected_stdout = svntest.verify.AnyOutput
+  svntest.actions.run_and_verify_svn(expected_stdout, expected_stderr,
+                                     'info', 
+                                     '--config-option',
+                                     'config:miscellanous:diff-extensions=' +
+                                       '-u -p',
+                                     '--', sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -237,6 +249,7 @@ test_list = [ None,
               getopt_help,
               getopt_help_bogus_cmd,
               getopt_help_log_switch,
+              getopt_config_option,
             ]
 
 if __name__ == '__main__':

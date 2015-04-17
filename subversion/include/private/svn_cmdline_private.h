@@ -88,11 +88,15 @@ typedef struct svn_cmdline__config_argument_t
  * containing svn_cmdline__config_argument_t* elements, allocating the option
  * data in @a pool
  *
+ * [Since 1.9/1.10:] If the file, section, or option value is not recognized,
+ * warn to @c stderr, using @a prefix as in svn_handle_warning2().
+ *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                  const char *opt_arg,
+                                 const char *prefix,
                                  apr_pool_t *pool);
 
 /** Sets the config options in @a config_options, an apr array containing
