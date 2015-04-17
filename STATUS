@@ -61,24 +61,6 @@ Other candidate changes:
      +1: rhuijben, philip
      +1: stefan2 (before branch)
 
- * r1665213, r1665259, r1665609
-   Fix cases of serf's svn_ra_get_dir2() and svn_ra_get_log2() breaking the
-   ra session for further operations.
-   Justification:
-     Without this fix the next session usage after this operation may
-     accidentally process the result of a still outstanding request.
-     .
-     svn_ra_get_dir2() and svn_ra_get_log2() are the easy to trigger examples,
-     but propfind requests are just as vulnerable for keeping requests
-     registered after returning with some error... If there wasn't a lucky pool
-     cleanup inbetween further ra operations might access already freed memory,
-     because the request continues processing.
-   Notes:
-     If caller just passed a scratch pool for a single request things would
-     usually have worked fine, but if not...
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1666965, r1667120
    mod_dav_svn: Emit the first few 'svn log' items as soon as they are available.
    Justification:
@@ -132,3 +114,21 @@ Approved changes:
      reflect the repository state.
    Votes:
      +1: rhuijben, philip, brane
+
+ * r1665213, r1665259, r1665609
+   Fix cases of serf's svn_ra_get_dir2() and svn_ra_get_log2() breaking the
+   ra session for further operations.
+   Justification:
+     Without this fix the next session usage after this operation may
+     accidentally process the result of a still outstanding request.
+     .
+     svn_ra_get_dir2() and svn_ra_get_log2() are the easy to trigger examples,
+     but propfind requests are just as vulnerable for keeping requests
+     registered after returning with some error... If there wasn't a lucky pool
+     cleanup inbetween further ra operations might access already freed memory,
+     because the request continues processing.
+   Notes:
+     If caller just passed a scratch pool for a single request things would
+     usually have worked fine, but if not...
+   Votes:
+     +1: rhuijben, stefan2, brane
