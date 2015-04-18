@@ -1926,12 +1926,22 @@ help_for_subcommand(const action_defn_t *action, apr_pool_t *pool)
   return apr_psprintf(pool, "  %-22s : %s\n", cmd, action->help);
 }
 
+/* Print a usage message on STREAM, listing only the actions. */
+static void
+usage_actions_only(FILE *stream, apr_pool_t *pool)
+{
+  int i;
+
+  for (i = 0; i < sizeof (action_defn) / sizeof (action_defn[0]); i++)
+    svn_error_clear(svn_cmdline_fputs(
+                      help_for_subcommand(&action_defn[i], pool),
+                      stream, pool));
+}
+
 /* Print a usage message on STREAM. */
 static void
 usage(FILE *stream, apr_pool_t *pool)
 {
-  int i;
-
   svn_error_clear(svn_cmdline_fputs(
     _("usage: svnmover -U REPO_URL [ACTION...]\n"
       "A client for experimenting with move tracking.\n"
@@ -1946,10 +1956,7 @@ usage(FILE *stream, apr_pool_t *pool)
       "\n"
       "Actions:\n"),
                   stream, pool));
-  for (i = 0; i < sizeof (action_defn) / sizeof (action_defn[0]); i++)
-    svn_error_clear(svn_cmdline_fputs(
-                      help_for_subcommand(&action_defn[i], pool),
-                      stream, pool));
+  usage_actions_only(stream, pool);
   svn_error_clear(svn_cmdline_fputs(
     _("\n"
       "Valid options:\n"
@@ -2124,7 +2131,7 @@ parse_actions(apr_array_header_t **actions,
       if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
           || ! strcmp(action_string, "help"))
         {
-          usage(stdout, pool);
+          usage_actions_only(stdout, pool);
           return SVN_NO_ERROR;
         }
       for (j = 0; j < sizeof(action_defn) / sizeof(action_defn[0]); j++)
@@ -2467,6 +2474,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                               "explicitly as revision properties"));
   svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
                 svn_string_create(log_msg, pool));
+
+  /* Help command: if given before any actions, then display full help
+     (and ANCHOR_URL need not have been provided). */
+  if (opts->ind < opts->argc && strcmp(opts->argv[opts->ind], "help") == 0)
+    {
+      usage(stdout, pool);
+      return SVN_NO_ERROR;
+    }
 
   if (!anchor_url)
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
