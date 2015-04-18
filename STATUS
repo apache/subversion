@@ -38,19 +38,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1663671, r1666832
-   Resolve an assertion on a bad update report involving incomplete status
-   Justification:
-     The tree conflict detection logic in the update editor wasn't
-     designed to handle BASE adds, where the is an existing basenode. This
-     patch makes the update logic handling properly handle this bad state
-     for incomplete nodes, like it already does for status normal nodes.
-     .
-     Resolves a reproducable assertion in an restarted checkout against
-     github.
-   Votes:
-     +1: rhuijben, stefan2, brane
-
  * r1664035
    Keep track of changes when a file external is replace by a real file
    Justification:

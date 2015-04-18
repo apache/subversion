@@ -1936,9 +1936,15 @@ add_directory(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
-      if (wc_kind == svn_node_dir)
+      svn_boolean_t root;
+
+      SVN_ERR(svn_wc__db_is_wcroot(&root, eb->db, db->local_abspath,
+                                   scratch_pool));
+
+      if (root)
         {
           /* !! We found the root of a working copy obstructing the wc !!
 
@@ -1950,8 +1956,15 @@ add_directory(const char *path,
              resolved.  Note that svn_wc__db_base_add_not_present_node()
              explicitly adds the node into the parent's node database. */
 
-          svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, db->name),
+          svn_hash_sets(pb->not_present_nodes,
+                        apr_pstrdup(pb->pool, db->name),
                         svn_node_kind_to_word(svn_node_dir));
+        }
+      else if (wc_kind == svn_node_dir)
+        {
+          /* We have an editor violation. Github sometimes does this
+             in its subversion compatibility code, when changing the
+             depth of a working copy, or on updates from incomplete */
         }
       else
         {
@@ -3110,20 +3123,35 @@ add_file(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
-      if (wc_kind == svn_node_dir)
+      svn_boolean_t root;
+
+      SVN_ERR(svn_wc__db_is_wcroot(&root, eb->db, fb->local_abspath,
+                                   scratch_pool));
+
+      if (root)
         {
           /* !! We found the root of a working copy obstructing the wc !!
 
              If the directory would be part of our own working copy then
-             we wouldn't have been called as an add_file().
+             we wouldn't have been called as an add_directory().
 
              The only thing we can do is add a not-present node, to allow
              a future update to bring in the new files when the problem is
-             resolved. */
-          svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, fb->name),
-                        svn_node_kind_to_word(svn_node_file));
+             resolved.  Note that svn_wc__db_base_add_not_present_node()
+             explicitly adds the node into the parent's node database. */
+
+          svn_hash_sets(pb->not_present_nodes,
+                        apr_pstrdup(pb->pool, fb->name),
+                        svn_node_kind_to_word(svn_node_dir));
+        }
+      else if (wc_kind == svn_node_dir)
+        {
+          /* We have an editor violation. Github sometimes does this
+             in its subversion compatibility code, when changing the
+             depth of a working copy, or on updates from incomplete */
         }
       else
         {
