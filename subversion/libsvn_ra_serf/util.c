@@ -947,6 +947,22 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
   return SVN_NO_ERROR;
 }
 
+/* Ensure that a handler is no longer scheduled on the connection.
+
+   Eventually serf will have a reliable way to cancel existing requests,
+   but currently it doesn't even have a way to relyable identify a request
+   after rescheduling, for auth reasons.
+
+   So the only thing we can do today is reset the connection, which
+   will cancel all outstanding requests and prepare the connection
+   for re-use.
+*/
+static void
+svn_ra_serf__unschedule_handler(svn_ra_serf__handler_t *handler)
+{
+  serf_connection_reset(handler->conn->conn);
+  handler->scheduled = FALSE;
+}
 
 svn_error_t *
 svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
@@ -960,6 +976,15 @@ svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
   /* Wait until the response logic marks its DONE status.  */
   err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
                                       scratch_pool);
+
+  if (handler->scheduled)
+    {
+      /* We reset the connection (breaking  pipelining, etc.), as
+         if we didn't the next data would still be handled by this handler,
+         which is done as far as our caller is concerned. */
+      svn_ra_serf__unschedule_handler(handler);
+    }
+
   return svn_error_trace(err);
 }
 
@@ -1455,7 +1480,13 @@ handle_response_cb(serf_request_t *request,
     {
       handler->discard_body = TRUE; /* Discard further data */
       handler->done = TRUE; /* Mark as done */
-      handler->scheduled = FALSE;
+      /* handler->scheduled is still TRUE, as we still expect data.
+         If we would return an error outer-status the connection
+         would have to be restarted. With scheduled still TRUE
+         destroying the handler's pool will still reset the
+         connection, avoiding the posibility of returning
+         an error for this handler when a new request is
+         scheduled. */
       outer_status = APR_EAGAIN; /* Exit context loop */
     }
 
@@ -1883,14 +1914,14 @@ response_done(serf_request_t *request,
    handlers registered in no freed memory.
 
    This fallback kills the connection for this case, which will make serf
-   unregister any*/
+   unregister any outstanding requests on it. */
 static apr_status_t
 handler_cleanup(void *baton)
 {
   svn_ra_serf__handler_t *handler = baton;
-  if (handler->scheduled && handler->conn && handler->conn->conn)
+  if (handler->scheduled)
     {
-      serf_connection_reset(handler->conn->conn);
+      svn_ra_serf__unschedule_handler(handler);
     }
 
   return APR_SUCCESS;
