@@ -2073,7 +2073,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
             SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
             SVN_ERR(svn_cmdline__parse_config_option(config_options,
-                                                     opt_arg, "svnsync", pool));
+                                                     opt_arg, "svnsync: ",
+                                                     pool));
             break;
 
           case svnsync_opt_source_prop_encoding:
