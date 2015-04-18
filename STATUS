@@ -38,15 +38,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1663991, r1666258, r1674032
-   Fix calculating the repository path after commits of nodes that are
-   shadowing a switched (not-present) node.
-   Justification:
-     Allows introducing repository paths in the working copy, that don't
-     reflect the repository state.
-   Votes:
-     +1: rhuijben, philip, brane
-
  * r1665213, r1665259, r1665609
    Fix cases of serf's svn_ra_get_dir2() and svn_ra_get_log2() breaking the
    ra session for further operations.
