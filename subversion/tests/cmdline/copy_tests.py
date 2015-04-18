@@ -5822,6 +5822,17 @@ def copy_subtree_deleted(sbox):
   svntest.actions.run_and_verify_commit(wc2_dir,
                                         expected_output, None)
 
+def resurrect_at_root(sbox):
+   "resurrect directory at root"
+
+   sbox.build(create_wc=False)
+
+   svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.repo_url + '/A',
+                                     '-m', '')
+
+   svntest.actions.run_and_verify_svn(None, [], 'cp',
+                                     sbox.repo_url + '/A/D/H@1',
+                                     sbox.repo_url + '/A', '-m', '')
 
 ########################################################################
 # Run the tests
@@ -5943,6 +5954,7 @@ test_list = [ None,
               copy_relocate,
               ext_wc_copy_deleted,
               copy_subtree_deleted,
+              resurrect_at_root,
              ]
 
 if __name__ == '__main__':
