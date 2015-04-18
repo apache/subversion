@@ -5476,6 +5476,18 @@ def copy_deleted_dir(sbox):
                                      'cp', sbox.ospath('A/D'),
                                      sbox.ospath('new_D'))
 
+def resurrect_at_root(sbox):
+   "resurrect directory at root"
+   sbox.build(create_wc=False)
+
+   svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                      sbox.repo_url + '/A',
+                                      '-m', '')
+
+   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                      sbox.repo_url + '/A/D/H@1',
+                                      sbox.repo_url + '/A', '-m', '')
+
 ########################################################################
 # Run the tests
 
@@ -5586,6 +5598,7 @@ test_list = [ None,
               case_only_rename,
               copy_and_move_conflicts,
               copy_deleted_dir,
+              resurrect_at_root,
              ]
 
 if __name__ == '__main__':
