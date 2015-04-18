@@ -422,7 +422,7 @@ static const resolver_option_t text_conflict_options[] =
                                   svn_wc_conflict_choose_undefined },
   { "df", N_("show diff"),        N_("show all changes made to merged file"),
                                   svn_wc_conflict_choose_undefined },
-  { "r",  N_("mark resolved"),   N_("accept merged version of file"),
+  { "r",  N_("mark resolved"),   N_("accept merged version of file  [working]"),
                                   svn_wc_conflict_choose_merged },
   { "",   "",                     "", svn_wc_conflict_choose_unspecified },
   { "dc", N_("display conflict"), N_("show all conflicts "
@@ -453,6 +453,28 @@ static const resolver_option_t text_conflict_options[] =
                                   svn_wc_conflict_choose_undefined },
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
                                      "  [postpone]"),
+                                  svn_wc_conflict_choose_postpone },
+  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+                                  svn_wc_conflict_choose_postpone },
+  { "s",  N_("show all options"), N_("show this list (also 'h', '?')"),
+                                  svn_wc_conflict_choose_undefined },
+  { NULL }
+};
+
+/* Resolver options for a binary file conflict. */
+static const resolver_option_t binary_conflict_options[] =
+{
+  /* Translators: keep long_desc below 70 characters (wrap with a left
+     margin of 9 spaces if needed); don't translate the words within square
+     brackets. */
+  { "r",  N_("mark resolved"),   N_("accept the working copy version of file "
+                                    " [working]"),
+                                  svn_wc_conflict_choose_merged },
+  { "tf", N_("their version"),    N_("accept the incoming version of file "
+                                     " [theirs-full]"),
+                                  svn_wc_conflict_choose_theirs_full },
+  { "p",  N_("postpone"),         N_("mark the conflict to be resolved later "
+                                     " [postpone]"),
                                   svn_wc_conflict_choose_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_wc_conflict_choose_postpone },
@@ -686,14 +708,22 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
   /* Have they done *something* (edit, look at diff, etc) to
      give them a rational basis for choosing (r)esolved? */
   svn_boolean_t knows_something = FALSE;
-
+  const char *local_relpath;
+  
   SVN_ERR_ASSERT(desc->kind == svn_wc_conflict_kind_text);
 
-  SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                              _("Conflict discovered in file '%s'.\n"),
-                              svn_cl__local_style_skip_ancestor(
-                                b->path_prefix, desc->local_abspath,
-                                scratch_pool)));
+  local_relpath = svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                    desc->local_abspath,
+                                                    scratch_pool);;
+
+  if (desc->is_binary)
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                _("Conflict discovered in binary file '%s'.\n"),
+                                local_relpath));
+  else
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                _("Conflict discovered in file '%s'.\n"),
+                                local_relpath));
 
   /* ### TODO This whole feature availability check is grossly outdated.
      DIFF_ALLOWED needs either to be redefined or to go away.
@@ -703,13 +733,17 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
      markers to the user (this is the typical 3-way merge
      scenario), or if no base is available, we can show a diff
      between mine and theirs. */
-  if ((desc->merged_file && desc->base_abspath)
-      || (!desc->base_abspath && desc->my_abspath && desc->their_abspath))
+  if (!desc->is_binary &&
+      ((desc->merged_file && desc->base_abspath)
+      || (!desc->base_abspath && desc->my_abspath && desc->their_abspath)))
     diff_allowed = TRUE;
 
   while (TRUE)
     {
-      const char *options[ARRAY_LEN(text_conflict_options)];
+      const resolver_option_t *conflict_options = desc->is_binary
+                                                    ? binary_conflict_options
+                                                    : text_conflict_options;
+      const char *options[ARRAY_LEN(conflict_options)];
       const char **next_option = options;
       const resolver_option_t *opt;
 
@@ -731,24 +765,26 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           if (knows_something)
             *next_option++ = "r";
 
-          if (! desc->is_binary)
-            {
-              *next_option++ = "mc";
-              *next_option++ = "tc";
-            }
+          *next_option++ = "mc";
+          *next_option++ = "tc";
         }
       else
         {
           if (knows_something)
             *next_option++ = "r";
-          *next_option++ = "mf";
+
+          /* The 'mine-full' option selects the ".mine" file so only offer
+           * it if that file exists. It does not exist for binary files,
+           * for example (questionable historical behaviour since 1.0). */
+          if (desc->my_abspath)
+            *next_option++ = "mf";
+
           *next_option++ = "tf";
         }
       *next_option++ = "s";
       *next_option++ = NULL;
 
-      SVN_ERR(prompt_user(&opt, text_conflict_options, options, b->pb,
-                          iterpool));
+      SVN_ERR(prompt_user(&opt, conflict_options, options, b->pb, iterpool));
       if (! opt)
         continue;
 
@@ -762,7 +798,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       else if (strcmp(opt->code, "s") == 0)
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "\n%s\n",
-                                      help_string(text_conflict_options,
+                                      help_string(conflict_options,
                                                   iterpool)));
         }
       else if (strcmp(opt->code, "dc") == 0)

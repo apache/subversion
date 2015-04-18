@@ -1812,6 +1812,7 @@ delete_entry(const char *path,
     {
       if (eb->conflict_func)
         SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                 kind,
                                                  tree_conflict,
                                                  NULL /* merge_options */,
                                                  eb->conflict_func,
@@ -2802,6 +2803,7 @@ close_directory(void *dir_baton,
 
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
+                                             svn_node_dir,
                                              conflict_skel,
                                              NULL /* merge_options */,
                                              eb->conflict_func,
@@ -2987,6 +2989,7 @@ absent_node(const char *path,
       {
         if (eb->conflict_func)
           SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                   kind,
                                                    tree_conflict,
                                                    NULL /* merge_options */,
                                                    eb->conflict_func,
@@ -4511,6 +4514,7 @@ close_file(void *file_baton,
 
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
+                                             svn_node_file,
                                              conflict_skel,
                                              NULL /* merge_options */,
                                              eb->conflict_func,

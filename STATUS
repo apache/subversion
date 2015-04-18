@@ -38,20 +38,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1667228, r1667234, r1667249, r1667250, r1667258, r1667290, r1667691, r1667692, r1667693
-   Fix various problems with binary file conflicts.
-   Justification:
-     Conflict description API violates its own promises for binaries.
-     Current behaviour can cause user confusion since conflict prompt
-     options for binary files won't work as expected.
-   Notes:
-     r1667258, r1667290 resolve a performance regression introduced by the
-     code which now needs the actual property values. It also avoids creating temporary
-     files for property conflicts in cases where a caller can never use them.
-   Votes:
-     +1: rhuijben, stefan2, brane, philip
-     +1: stsp (r1667228, r1667234, r1667249, r1667250, r1667691, r1667692, r1667693 only)
-
  * r1663671, r1666832
    Resolve an assertion on a bad update report involving incomplete status
    Justification:
