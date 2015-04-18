@@ -310,15 +310,16 @@ check_db_rows(svn_test__sandbox_t *b,
       row->repo_revnum = svn_sqlite__column_revnum(stmt, 3);
       row->repo_relpath = svn_sqlite__column_text(stmt, 4, b->pool);
       row->file_external = !svn_sqlite__column_is_null(stmt, 5);
-      if (row->file_external && svn_sqlite__column_is_null(stmt, 6))
-        comparison_baton.errors
-          = svn_error_createf(SVN_ERR_TEST_FAILED, comparison_baton.errors,
-                              "incomplete {%s}", print_row(row, b->pool));
       row->moved_to = svn_sqlite__column_text(stmt, 7, b->pool);
       row->moved_here = svn_sqlite__column_boolean(stmt, 8);
       SVN_ERR(svn_sqlite__column_properties(&props_hash, stmt, 9,
                                             b->pool, b->pool));
       row->props = props_hash_to_text(props_hash, b->pool);
+
+      if (row->file_external && svn_sqlite__column_is_null(stmt, 6))
+        comparison_baton.errors
+          = svn_error_createf(SVN_ERR_TEST_FAILED, comparison_baton.errors,
+                              "incomplete {%s}", print_row(row, b->pool));
 
       key = apr_psprintf(b->pool, "%d %s", row->op_depth, row->local_relpath);
       apr_hash_set(found_hash, key, APR_HASH_KEY_STRING, row);
@@ -3582,11 +3583,13 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   {
     nodes_row_t rows[] = {
-      { 0, "",    "normal", 1, "" },
-      { 0, "f",   "normal", 1, "f" },
-      { 1, "A",   "normal", NO_COPY_FROM },
-      { 0, "h",   "normal", 1, "f", TRUE },
-      { 0, "A/g", "normal", 1, "f", TRUE },
+      { 0, "",    "normal",      1, "" },
+      { 0, "f",   "normal",      1, "f" },
+      { 1, "A",   "normal",      NO_COPY_FROM },
+      { 0, "h",   "normal",      1, "f", TRUE },
+      { 0, "A/g", "normal",      1, "f", TRUE },
+
+      { 0, "g",   "not-present", 0, "g"},
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -3595,10 +3598,12 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_revert(&b, "", svn_depth_infinity));
   {
     nodes_row_t rows[] = {
-      { 0, "",    "normal", 1, "" },
-      { 0, "f",   "normal", 1, "f" },
-      { 0, "h",   "normal", 1, "f", TRUE },
-      { 0, "A/g", "normal", 1, "f", TRUE },
+      { 0, "",    "normal",      1, "" },
+      { 0, "f",   "normal",      1, "f" },
+      { 0, "h",   "normal",      1, "f", TRUE },
+      { 0, "A/g", "normal",      1, "f", TRUE },
+
+      { 0, "g",   "not-present", 0, "g"},
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -3607,9 +3612,11 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   {
     nodes_row_t rows[] = {
-      { 0, "",    "normal", 1, "" },
-      { 0, "f",   "normal", 1, "f" },
-      { 0, "g",   "normal", 1, "f", TRUE },
+      { 0, "",    "normal",      1, "" },
+      { 0, "f",   "normal",      1, "f" },
+      { 0, "g",   "normal",      1, "f", TRUE },
+
+      { 0, "h",   "not-present", 0, "h"},
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
