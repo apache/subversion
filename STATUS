@@ -37,16 +37,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1674406
-   Fix implementation of svn_client_copy7 with pin-externals enabled to match
-   the documented behaviour.
-   Justification:
-     The API docs were correct but the implementation was not.
-   Note:
-     Has to be part of a .0 release because it affects public API semantics.
-   Votes:
-     +1: brane, stsp
-     +1: rhuijben (+1 on libsvn_client change.
-                   +0 for the JavaHL testcase
-                      (this part just tested, not 100% reviewed))
