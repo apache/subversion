@@ -26,7 +26,7 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
- * r1674301, r1674305, r1674308, r1674339, r1674340
+ * r1674301, r1674305, r1674308, r1674339, r1674340, r1674475
    --config-option: Warn when the FILE:SECTION:OPTION combination may be
    invalid.
    Justification:
