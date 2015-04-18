@@ -42,6 +42,15 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1674580
+   Warn on SWIGH 3.0.0 and newer.
+   Justification:
+     SWIG 3.x versions have issues with our Python bindings and we don't
+     currently have a great way to work aroudn this.  Other languages work
+     fine so I left this as a warning.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
