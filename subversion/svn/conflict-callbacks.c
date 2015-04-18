@@ -44,6 +44,9 @@
 #include "svn_private_config.h"
 
 #define ARRAY_LEN(ary) ((sizeof (ary)) / (sizeof ((ary)[0])))
+#define MAX_ARRAY_LEN(aryx, aryz)               \
+  (ARRAY_LEN((aryx)) > ARRAY_LEN((aryz))        \
+   ? ARRAY_LEN((aryx)) : ARRAY_LEN((aryz)))
 
 
 
@@ -709,7 +712,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
      give them a rational basis for choosing (r)esolved? */
   svn_boolean_t knows_something = FALSE;
   const char *local_relpath;
-  
+
   SVN_ERR_ASSERT(desc->kind == svn_wc_conflict_kind_text);
 
   local_relpath = svn_cl__local_style_skip_ancestor(b->path_prefix,
@@ -740,21 +743,16 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
 
   while (TRUE)
     {
+      const char *options[1 + MAX_ARRAY_LEN(binary_conflict_options,
+                                            text_conflict_options)];
+
       const resolver_option_t *conflict_options = desc->is_binary
                                                     ? binary_conflict_options
                                                     : text_conflict_options;
-      const char **options;
-      const char **next_option;
+      const char **next_option = options;
       const resolver_option_t *opt;
 
       svn_pool_clear(iterpool);
-
-      options = apr_palloc(iterpool,
-                           sizeof (const char *) *
-                           (desc->is_binary
-                              ? ARRAY_LEN(binary_conflict_options)
-                              : ARRAY_LEN(text_conflict_options)));
-      next_option = options;
 
       *next_option++ = "p";
       if (diff_allowed)
