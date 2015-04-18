@@ -5828,11 +5828,11 @@ def resurrect_at_root(sbox):
    sbox.build(create_wc=False)
 
    svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.repo_url + '/A',
-                                     '-m', '')
+                                      '-m', '')
 
    svntest.actions.run_and_verify_svn(None, [], 'cp',
-                                     sbox.repo_url + '/A/D/H@1',
-                                     sbox.repo_url + '/A', '-m', '')
+                                      sbox.repo_url + '/A/D/H@1',
+                                      sbox.repo_url + '/A', '-m', '')
 
 ########################################################################
 # Run the tests
