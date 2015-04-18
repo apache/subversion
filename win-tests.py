@@ -569,6 +569,8 @@ class Httpd:
                                     'jrandom', 'rayjandom'])
     os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-bp',  self.httpd_users,
                                     'jconstant', 'rayjandom'])
+    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-bp',  self.httpd_users,
+                                    '__dumpster__', '__loadster__'])
 
   def _create_mime_types_file(self):
     "Create empty mime.types file"
