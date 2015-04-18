@@ -15,13 +15,14 @@ Status of 1.9.0:
 Release blockers for 1.9.0:
 ===========================
 
- * r1667699, r1667700
+ * r1667699, r1667700, r1674487
    Fix an array allocation problem in the r1667228 group
    Justification:
      Using a 0 element array to store values in doesn't really work and luckily
      some compilers warn us for this problem.
    Votes:
-     +1: rhuijben
+     +1: brane
+     +1: rhuijben (without r1674487)
 
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
