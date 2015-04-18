@@ -40,6 +40,16 @@ Candidate changes that cannot go into a later 1.9.x:
 Other candidate changes:
 ========================
 
+ * r1674455, r1674456
+   Make 'svn cp ^/A/D/H@1 ^/A' properly create A
+   Justification:
+     Resurrecting a child as its own ancestor should work, instead of produce
+     an error message on a non existing problem.
+   Notes:
+     Not a regression. Same issue exists in 1.7.x and 1.8.x
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
