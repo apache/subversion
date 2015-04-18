@@ -38,19 +38,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1664664, r1664672, r1664674
-   Make detection of invalid (newer than HEAD) base revision on commit behave
-   the same on all RA layers.
-   Justification:
-     The error was visible when the http-v1 dav protocol was used. I think it
-     is a better fix to backport the check to the other layers than to hide
-     the problem.
-   Branch:
-     ^/subversion/1.9.x-r1664664
-   Votes:
-     +1: rhuijben, philip, brane
-     +1: stefan2 (before branch)
-
  * r1667228, r1667234, r1667249, r1667250, r1667258, r1667290, r1667691, r1667692, r1667693
    Fix various problems with binary file conflicts.
    Justification:

@@ -397,6 +397,11 @@ open_root(void *edit_baton,
      dateness checks.  */
   SVN_ERR(svn_fs_youngest_rev(&youngest, eb->fs, eb->pool));
 
+  if (base_revision > youngest)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld (HEAD is %ld)"),
+                             base_revision, youngest);
+
   /* Unless we've been instructed to use a specific transaction, we'll
      make our own. */
   if (eb->txn_owner)
