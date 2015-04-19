@@ -2116,7 +2116,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 }
 
 /* For REP->SHA1_CHECKSUM, try to find an already existing representation
-   in FS and return it in *OUT_REP.  If no such representation exists or
+   in FS and return it in *OLD_REP.  If no such representation exists or
    if rep sharing has been disabled for FS, NULL will be returned.  Since
    there may be new duplicate representations within the same uncommitted
    revision, those can be passed in REPS_HASH (maps a sha1 digest onto
@@ -2142,7 +2142,7 @@ get_shared_rep(representation_t **old_rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out.  Start with the hash lookup
-     because it is cheepest. */
+     because it is cheapest. */
   if (reps_hash)
     *old_rep = apr_hash_get(reps_hash,
                             rep->sha1_digest,
