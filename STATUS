@@ -42,8 +42,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-issue4554
    Votes:
-     +1: stefan2
-     +0: rhuijben (patch looks sane, but hard to oversee consequences)
+     +1: stefan2, rhuijben
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
                    7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
