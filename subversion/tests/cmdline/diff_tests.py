@@ -4927,6 +4927,92 @@ def diff_incomplete(sbox):
                                     sbox.wc_dir,
                                     '--notice-ancestry')
 
+def diff_incomplete_props(sbox):
+  "incomplete set of properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('r2-1', 'r2', 'iota', 'A')
+  sbox.simple_propset('r2-2', 'r2', 'iota', 'A')
+  sbox.simple_propset('r', 'r2', 'iota', 'A')
+  sbox.simple_commit() # r2
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         'propset', 'r3-1', 'r3', 'iota',
+                                         'propset', 'r3-1', 'r3', 'A',
+                                         'propset', 'r3-2', 'r3', 'iota',
+                                         'propset', 'r3-2', 'r3', 'A',
+                                         'propset', 'r', 'r3', 'iota',
+                                         'propset', 'r', 'r3', 'A',
+                                         'propdel', 'r2-1', 'iota',
+                                         'propdel', 'r2-1', 'A',
+                                         'propdel', 'r2-2', 'iota',
+                                         'propdel', 'r2-2', 'A',
+                                         '-m', 'r3')
+
+  _, out1, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                  '-r', 'HEAD', wc_dir,
+                                                  '--notice-ancestry')
+
+  # Now simulate a broken update to r3
+  svntest.actions.set_incomplete(wc_dir, 3)
+  svntest.actions.set_incomplete(sbox.ospath('A'), 3)
+
+  # The properties are still at r2
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', 'A', props={'r2-1':'r2', 'r2-2':'r2', 'r':'r2'})
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
+
+  # But the working copy is incomplete at r3
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  expected_status.tweak('', 'A', wc_rev=3, status='! ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'    : Item(status=' U'),
+    'iota' : Item(status=' U'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_disk = svntest.main.greek_state.copy()
+
+  # Expect that iota and A have the expected sets of properties
+  # The r2 set is properly deleted where necessary
+  expected_disk.tweak('iota', 'A', props={'r3-2':'r3', 'r':'r3', 'r3-1':'r3'})
+
+  _, out2, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                  '-r', 'HEAD', wc_dir,
+                                                  '--notice-ancestry')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status, [], True)
+
+  # Ok, we tested that the update worked properly, but we also do this
+  # in the update tests... Let's see, what the diffs said
+
+  _, out3, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                  '-r', 'BASE:2', wc_dir,
+                                                  '--notice-ancestry')
+
+  # Filter out all headers (which include revisions, etc.)
+  out1 = [i for i in out1 if i[0].isupper()]
+  out1.sort()
+
+  out2 = [i for i in out2 if i[0].isupper()]
+  out2.sort()
+
+  out3 = [i for i in out3 if i[0].isupper()]
+  out3.sort()
+
+  svntest.verify.compare_and_display_lines('base vs incomplete', 'local diff',
+                                           out1, out2)
+
+  svntest.verify.compare_and_display_lines('base vs after', 'local diff',
+                                           out1, out3)
+
 ########################################################################
 #Run the tests
 
@@ -5019,6 +5105,7 @@ test_list = [ None,
               diff_local_copied_dir,
               diff_summarize_ignore_properties,
               diff_incomplete,
+              diff_incomplete_props,
               ]
 
 if __name__ == '__main__':

@@ -145,6 +145,9 @@ struct dir_baton_t
   /* TRUE if the node is to be compared with an unrelated node*/
   svn_boolean_t ignoring_ancestry;
 
+  /* TRUE if the directory was reported incomplete to the repository */
+  svn_boolean_t is_incomplete;
+
   /* Processor state */
   void *pdb;
   svn_boolean_t skip;
@@ -1606,26 +1609,47 @@ open_directory(const char *path,
         db->repos_only = TRUE;
 
       if (!db->repos_only)
-        switch (info->status)
-          {
-            case svn_wc__db_status_normal:
-            case svn_wc__db_status_incomplete:
-              break;
-            case svn_wc__db_status_deleted:
-              db->repos_only = TRUE;
-
-              if (!info->have_more_work)
-                svn_hash_sets(pb->compared,
-                              apr_pstrdup(pb->pool, db->name), "");
-              break;
-            case svn_wc__db_status_added:
-              if (eb->ignore_ancestry)
-                db->ignoring_ancestry = TRUE;
-              else
+        {
+          switch (info->status)
+            {
+              case svn_wc__db_status_normal:
+              case svn_wc__db_status_incomplete:
+                db->is_incomplete = (info->status ==
+                                     svn_wc__db_status_incomplete);
+                break;
+              case svn_wc__db_status_deleted:
                 db->repos_only = TRUE;
-              break;
-            default:
-              SVN_ERR_MALFUNCTION();
+
+                if (!info->have_more_work)
+                  svn_hash_sets(pb->compared,
+                                apr_pstrdup(pb->pool, db->name), "");
+                break;
+              case svn_wc__db_status_added:
+                if (eb->ignore_ancestry)
+                  db->ignoring_ancestry = TRUE;
+                else
+                  db->repos_only = TRUE;
+                break;
+              default:
+                SVN_ERR_MALFUNCTION();
+          }
+
+          if (info->status == svn_wc__db_status_added
+              || info->status == svn_wc__db_status_deleted)
+            {
+              svn_wc__db_status_t base_status;
+
+              /* Node is shadowed; check BASE */
+              SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               db, db->local_abspath,
+                                               dir_pool, dir_pool));
+
+              if (base_status == svn_wc__db_status_incomplete)
+                db->is_incomplete = TRUE;
+            }
         }
 
       if (!db->repos_only)
@@ -1713,7 +1737,7 @@ close_directory(void *dir_baton,
     {
       apr_hash_t *repos_props;
 
-      if (db->added)
+      if (db->added || db->is_incomplete)
         {
           repos_props = apr_hash_make(scratch_pool);
         }
