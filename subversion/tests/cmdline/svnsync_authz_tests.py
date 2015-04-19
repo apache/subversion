@@ -383,7 +383,7 @@ def identity_copy(sbox):
     except:
       pass
   if locale.setlocale(locale.LC_ALL) != other_locale:
-    raise svntest.Skip
+    raise svntest.Skip('Setting test locale failed')
 
   try:
     run_test(sbox, "copy-bad-encoding.expected.dump",

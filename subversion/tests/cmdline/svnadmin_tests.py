@@ -792,7 +792,7 @@ def verify_incremental_fsfs(sbox):
   # the listing itself is valid.
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   if r2.endswith('pack'):
-    raise svntest.Skip
+    raise svntest.Skip('Test doesn\'t handle packed revisions')
 
   fp = open(r2, 'wb')
   fp.write("""id: 0-2.0.r2/0
@@ -2646,7 +2646,7 @@ def fsfs_hotcopy_progress(sbox):
   # and incremental scenarios.  The progress output can be affected by
   # the --fsfs-packing option, so skip the test if that is the case.
   if svntest.main.options.fsfs_packing:
-    raise svntest.Skip
+    raise svntest.Skip('fsfs packing set')
 
   # Create an empty repository, configure three files per shard.
   sbox.build(create_wc=False, empty=True)
@@ -2760,7 +2760,7 @@ def fsfs_hotcopy_progress_with_revprop_changes(sbox):
   # The progress output can be affected by the --fsfs-packing
   # option, so skip the test if that is the case.
   if svntest.main.options.fsfs_packing:
-    raise svntest.Skip
+    raise svntest.Skip('fsfs packing set')
 
   # Create an empty repository, commit several revisions and hotcopy it.
   sbox.build(create_wc=False, empty=True)
