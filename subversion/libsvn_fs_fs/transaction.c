@@ -2548,6 +2548,7 @@ write_container_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
+  rep->expanded_size = whb->size;
   SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
                          scratch_pool));
 
@@ -2583,7 +2584,6 @@ write_container_rep(representation_t *rep,
 
       /* update the representation */
       rep->size = whb->size;
-      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -2687,6 +2687,7 @@ write_container_delta_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
+  rep->expanded_size = whb->size;
   SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
                          scratch_pool));
 
@@ -2722,7 +2723,6 @@ write_container_delta_rep(representation_t *rep,
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
 
       /* update the representation */
-      rep->expanded_size = whb->size;
       rep->size = rep_end - delta_start;
     }
 

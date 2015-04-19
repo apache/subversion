@@ -291,6 +291,7 @@ svn_fs_fs__fixup_expanded_size(svn_fs_t *fs,
                                representation_t *rep,
                                apr_pool_t *scratch_pool)
 {
+  svn_checksum_t checksum;
   svn_checksum_t *empty_md5;
   svn_fs_fs__revision_file_t *revision_file;
   svn_fs_fs__rep_header_t *rep_header;
@@ -307,12 +308,35 @@ svn_fs_fs__fixup_expanded_size(svn_fs_t *fs,
 
   /* EXPANDED_SIZE is 0. If the MD5 does not match the one for empty
    * contents, we know that EXPANDED_SIZE == 0 is wrong and needs to
-   * be set to the actual value given by SIZE. */
+   * be set to the actual value given by SIZE.
+   *
+   * Using svn_checksum_match() will also accept all-zero values for
+   * the MD5 digest and only report a mismatch if the MD5 has actually
+   * been given. */
   empty_md5 = svn_checksum_empty_checksum(svn_checksum_md5, scratch_pool);
-  if (memcmp(empty_md5->digest, rep->md5_digest, sizeof(rep->md5_digest)))
+
+  checksum.digest = rep->md5_digest;
+  checksum.kind = svn_checksum_md5;
+  if (!svn_checksum_match(empty_md5, &checksum))
     {
       rep->expanded_size = rep->size;
       return SVN_NO_ERROR;
+    }
+
+  /* Data in the rep-cache.db does not have MD5 checksums (all zero) on it.
+   * Compare SHA1 instead. */
+  if (rep->has_sha1)
+    {
+      svn_checksum_t *empty_sha1
+        = svn_checksum_empty_checksum(svn_checksum_sha1, scratch_pool);
+
+      checksum.digest = rep->sha1_digest;
+      checksum.kind = svn_checksum_sha1;
+      if (!svn_checksum_match(empty_sha1, &checksum))
+        {
+          rep->expanded_size = rep->size;
+          return SVN_NO_ERROR;
+        }
     }
 
   /* Only two cases are left here.
