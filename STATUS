@@ -67,7 +67,7 @@ Other candidate changes:
      Current HTTPD releases ship a mod_dav bug fix which broke
      'svn copy' constant time guarantees.
    Votes:
-     +1: stsp
+     +1: stsp, gstein
 
 Veto-blocked changes:
 =====================
