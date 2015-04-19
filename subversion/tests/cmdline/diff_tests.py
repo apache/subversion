@@ -4904,20 +4904,26 @@ def diff_incomplete(sbox):
   svntest.verify.compare_and_display_lines('local diff', 'local diff', out1b,
                                            out2b)
 
+  # And add a replacement on top of the incomplete, server side
   svntest.actions.run_and_verify_svn(None, [], 'cp',
                                      sbox.repo_url + '/A/D/H@1',
                                      sbox.repo_url + '/A', '-m', '')
 
-
-  # And add a replacement on top of the incomplete
   svntest.actions.run_and_verify_svn(None, [], 'diff',
                                      '-r', 'HEAD',
                                      sbox.wc_dir,
                                      '--notice-ancestry')
 
-
+  # And client side
+  svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.ospath('A'),
+                                     '--force')
+  sbox.simple_mkdir('A')
   svntest.actions.run_and_verify_svn(None, [], 'diff',
                                     '-r', 'HEAD',
+                                    sbox.wc_dir,
+                                    '--notice-ancestry')
+
+  svntest.actions.run_and_verify_svn(None, [], 'diff',
                                     sbox.wc_dir,
                                     '--notice-ancestry')
 
