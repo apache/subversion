@@ -56,11 +56,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1667699, r1667700, r1674487
-   Fix an array allocation problem in the r1667228 group
-   Justification:
-     Using a 0 element array to store values in doesn't really work and luckily
-     some compilers warn us for this problem.
-   Votes:
-     +1: brane, rhuijben, stsp
