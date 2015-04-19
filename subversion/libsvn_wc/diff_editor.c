@@ -1644,7 +1644,7 @@ open_directory(const char *path,
                                                NULL, NULL, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL, NULL,
                                                NULL, NULL, NULL,
-                                               db, db->local_abspath,
+                                               eb->db, db->local_abspath,
                                                dir_pool, dir_pool));
 
               if (base_status == svn_wc__db_status_incomplete)
