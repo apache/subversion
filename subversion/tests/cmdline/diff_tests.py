@@ -4867,6 +4867,59 @@ def diff_summarize_ignore_properties(sbox):
   svntest.actions.run_and_verify_diff_summarize_xml(
     [], wc_dir, paths, items, props, kinds, wc_dir, '--ignore-properties')
 
+def diff_incomplete(sbox):
+  "diff incomplete directory"
+
+  sbox.build()
+  svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.repo_url + '/A',
+                                     '-m', '')
+
+  # This works ok
+  _, out1a, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                   '-r', 'HEAD',
+                                                   sbox.wc_dir,
+                                                   '--notice-ancestry')
+
+  _, out1b, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                   sbox.wc_dir,
+                                                   '--notice-ancestry')
+
+
+  svntest.main.run_wc_incomplete_tester(sbox.ospath('A'), 1)
+
+  # And this used to miss certain changes
+  _, out2a, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                  '-r', 'HEAD',
+                                                  sbox.wc_dir,
+                                                  '--notice-ancestry')
+
+  _, out2b, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                   sbox.wc_dir,
+                                                   '--notice-ancestry')
+
+  # Ordering may be different, but length should match
+  if len(out1a) != len(out2a):
+    raise svntest.Failure('Different output when incomplete against repos')
+
+  svntest.verify.compare_and_display_lines('local diff', 'local diff', out1b,
+                                           out2b)
+
+  svntest.actions.run_and_verify_svn(None, [], 'cp',
+                                     sbox.repo_url + '/A/D/H@1',
+                                     sbox.repo_url + '/A', '-m', '')
+
+
+  # And add a replacement on top of the incomplete
+  svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                     '-r', 'HEAD',
+                                     sbox.wc_dir,
+                                     '--notice-ancestry')
+
+
+  svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                    '-r', 'HEAD',
+                                    sbox.wc_dir,
+                                    '--notice-ancestry')
 
 ########################################################################
 #Run the tests
@@ -4959,6 +5012,7 @@ test_list = [ None,
               diff_replaced_moved,
               diff_local_copied_dir,
               diff_summarize_ignore_properties,
+              diff_incomplete,
               ]
 
 if __name__ == '__main__':
