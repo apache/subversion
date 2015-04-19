@@ -61,6 +61,14 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1674627
+   Prevent a mod_dav tree walk on copy sources (issue #4351).
+   Justification:
+     Current HTTPD releases ship a mod_dav bug fix which broke
+     'svn copy' constant time guarantees.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
