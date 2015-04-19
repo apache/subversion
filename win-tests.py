@@ -637,6 +637,10 @@ class Httpd:
     else:
       self._start_daemon()
 
+    # Avoid output from starting and preparing between test results
+    sys.stderr.flush()
+    sys.stdout.flush()
+
   def stop(self):
     if self.service:
       self._stop_service()
