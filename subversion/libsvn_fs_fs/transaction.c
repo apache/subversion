@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <apr_sha1.h>
 
+#include "svn_error_codes.h"
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
@@ -2214,6 +2215,33 @@ get_shared_rep(representation_t **old_rep,
   /* A simple guard against general rep-cache induced corruption. */
   if ((*old_rep)->expanded_size != rep->expanded_size)
     {
+      /* Make the problem show up in the server log.
+
+         Because not sharing reps is always a save option,
+         completely terminating the server process would
+         be inappropriate.
+       */
+      svn_checksum_t checksum;
+      checksum.digest = rep->sha1_digest;
+      checksum.kind = svn_checksum_sha1;
+
+      err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                              "Rep size %s mismatches rep-cache.db value %s "
+                              "for SHA1 %s.\n"
+                              "You should delete the rep-cache.db and "
+                              "verify the repository. The cached rep will "
+                              "not be shared.",
+                              apr_psprintf(scratch_pool, "%" APR_OFF_T_FMT,
+                                           rep->expanded_size),
+                              apr_psprintf(scratch_pool, "%" APR_OFF_T_FMT,
+                                           (*old_rep)->expanded_size),
+                              svn_checksum_to_cstring_display(&checksum,
+                                                              scratch_pool));
+
+      (fs->warning)(fs->warning_baton, err);
+      svn_error_clear(err);
+
+      /* Ignore the shared rep. */
       *old_rep = NULL;
     }
   else
