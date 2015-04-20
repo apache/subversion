@@ -330,8 +330,16 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                               scratch_pool));
 
   if (externals_to_pin)
-    items_to_pin = svn_hash_gets((apr_hash_t *)externals_to_pin,
-                                 local_abspath_or_url);
+    {
+      items_to_pin = svn_hash_gets((apr_hash_t *)externals_to_pin,
+                                   local_abspath_or_url);
+      if (!items_to_pin)
+        {
+          /* No pinning at all for this path. */
+          *pinned_externals = svn_string_dup(externals_prop_val, result_pool);
+          return SVN_NO_ERROR;
+        }
+    }
   else
     items_to_pin = NULL;
 
@@ -1616,7 +1624,10 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           && (relpath != NULL && *relpath != '\0'))
         {
           info->resurrection = TRUE;
-          top_url = svn_uri_dirname(top_url, pool);
+          top_url = svn_uri_get_longest_ancestor(
+                            top_url,
+                            svn_uri_dirname(pair->dst_abspath_or_url, pool),
+                            pool);
           SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
         }
     }

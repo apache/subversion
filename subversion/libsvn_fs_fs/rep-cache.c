@@ -24,6 +24,7 @@
 
 #include "svn_private_config.h"
 
+#include "cached_data.h"
 #include "fs_fs.h"
 #include "fs.h"
 #include "rep-cache.h"
@@ -273,6 +274,8 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
       (*rep)->item_index = svn_sqlite__column_int64(stmt, 1);
       (*rep)->size = svn_sqlite__column_int64(stmt, 2);
       (*rep)->expanded_size = svn_sqlite__column_int64(stmt, 3);
+
+      SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, *rep, pool));
     }
   else
     *rep = NULL;

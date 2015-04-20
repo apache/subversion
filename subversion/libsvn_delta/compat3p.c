@@ -705,7 +705,7 @@ find_txn_path(apr_hash_t *changes,
      if it was existing, add it to the 'existing path', else stop there. */
   for (i = 1; *remainder_path; i++)
     {
-      const char *new_prefix_path = svn_relpath_limit(relpath, i, result_pool);
+      const char *new_prefix_path = svn_relpath_prefix(relpath, i, result_pool);
       change_node_t *change = svn_hash_gets(changes, new_prefix_path);
 
       if (change && change->action == RESTRUCTURE_ADD)

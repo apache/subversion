@@ -2067,7 +2067,6 @@ svn_repos_stat(svn_dirent_t **dirent,
   svn_node_kind_t kind;
   svn_dirent_t *ent;
   const char *datestring;
-  apr_hash_t *prophash;
 
   SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
 

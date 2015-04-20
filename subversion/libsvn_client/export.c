@@ -1508,7 +1508,7 @@ svn_client_export5(svn_revnum_t *result_rev,
       eib.ignore_keywords = ignore_keywords;
       eib.wc_ctx = ctx->wc_ctx;
       eib.native_eol = native_eol;
-      eib.notify_func = ctx->notify_func2;;
+      eib.notify_func = ctx->notify_func2;
       eib.notify_baton = ctx->notify_baton2;
       eib.origin_abspath = from_path_or_url;
       eib.exported = FALSE;

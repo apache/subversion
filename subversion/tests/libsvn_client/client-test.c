@@ -1287,6 +1287,123 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* issue #4560 */
+static svn_error_t *
+test_copy_pin_externals_select_subtree(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_opt_revision_t rev;
+  svn_opt_revision_t peg_rev;
+  const char *repos_url;
+  const char *A_copy_url;
+  const char *B_url;
+  const char *wc_path;
+  svn_client_ctx_t *ctx;
+  apr_hash_t *externals_to_pin;
+  apr_array_header_t *external_items;
+  apr_array_header_t *copy_sources;
+  svn_wc_external_item2_t item;
+  svn_client_copy_source_t copy_source;
+  apr_hash_t *props;
+  int i;
+  struct test_data {
+    const char *subtree_relpath;
+    const char *src_external_desc;
+    const char *expected_dst_external_desc;
+  } test_data[] = {
+    /* External on A/B will be pinned. */
+    { "B", "^/A/D/gamma gamma-ext", "^/A/D/gamma@3 gamma-ext" },
+
+    /* External on A/D won't be pinned. */
+    { "D", "^/A/B/F F-ext", "^/A/B/F F-ext" } ,
+
+    { NULL },
+  };
+
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "pin-externals-select-subtree",
+                             opts, pool));
+
+  wc_path = svn_test_data_path("pin-externals-select-subtree-wc", pool);
+
+  /* Remove old test data from the previous run */
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
+
+  rev.kind = svn_opt_revision_head;
+  peg_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  /* Configure externals. */
+  i = 0;
+  while (test_data[i].subtree_relpath)
+    {
+      const char *subtree_relpath;
+      const char *url;
+      const svn_string_t *propval;
+
+      subtree_relpath = test_data[i].subtree_relpath;
+      propval = svn_string_create(test_data[i].src_external_desc, pool);
+
+      url = apr_pstrcat(pool, repos_url, "/A/", subtree_relpath, SVN_VA_NULL);
+      SVN_ERR(svn_client_propset_remote(SVN_PROP_EXTERNALS, propval,
+                                        url, TRUE, 1, NULL,
+                                        NULL, NULL, ctx, pool));
+      i++;
+    }
+
+  /* Set up parameters for pinning externals on A/B. */
+  externals_to_pin = apr_hash_make(pool);
+
+  item.url = "^/A/D/gamma";
+  item.target_dir = "gamma-ext";
+
+  external_items = apr_array_make(pool, 2, sizeof(svn_wc_external_item2_t *));
+  APR_ARRAY_PUSH(external_items, svn_wc_external_item2_t *) = &item;
+  B_url = apr_pstrcat(pool, repos_url, "/A/B", SVN_VA_NULL);
+  svn_hash_sets(externals_to_pin, B_url, external_items);
+
+  /* Copy ^/A to ^/A_copy, pinning externals on ^/A/B. */
+  copy_source.path = apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL);
+  copy_source.revision = &rev;
+  copy_source.peg_revision = &peg_rev;
+  copy_sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  APR_ARRAY_PUSH(copy_sources, svn_client_copy_source_t *) = &copy_source;
+  A_copy_url = apr_pstrcat(pool, repos_url, "/A_copy", SVN_VA_NULL);
+  SVN_ERR(svn_client_copy7(copy_sources, A_copy_url, FALSE, FALSE,
+                           FALSE, FALSE, TRUE, externals_to_pin,
+                           NULL, NULL, NULL, ctx, pool));
+
+  /* Verify that externals were pinned as expected. */
+  i = 0;
+  while (test_data[i].subtree_relpath)
+    {
+      const char *subtree_relpath;
+      const char *url;
+      const svn_string_t *propval;
+      svn_stringbuf_t *externals_desc;
+      const char *expected_desc;
+
+      subtree_relpath = test_data[i].subtree_relpath;
+      url = apr_pstrcat(pool, A_copy_url, "/", subtree_relpath, SVN_VA_NULL);
+
+      SVN_ERR(svn_client_propget5(&props, NULL, SVN_PROP_EXTERNALS,
+                                  url, &peg_rev, &rev, NULL,
+                                  svn_depth_empty, NULL, ctx, pool, pool));
+      propval = svn_hash_gets(props, url);
+      SVN_TEST_ASSERT(propval);
+      externals_desc = svn_stringbuf_create(propval->data, pool);
+      svn_stringbuf_strip_whitespace(externals_desc);
+      expected_desc = test_data[i].expected_dst_external_desc;
+      SVN_TEST_STRING_ASSERT(externals_desc->data, expected_desc);
+
+      i++;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -1313,6 +1430,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_client_status6 with ignore_local_mods"),
     SVN_TEST_OPTS_PASS(test_copy_pin_externals,
                        "test svn_client_copy7 with externals_to_pin"),
+    SVN_TEST_OPTS_PASS(test_copy_pin_externals_select_subtree,
+                       "pin externals on selected subtrees only"),
     SVN_TEST_NULL
   };
 

@@ -1091,6 +1091,7 @@ public class BasicTests extends SVNTests
     private void setupPinExternalsTest(OneTest thisTest) throws Throwable
     {
         byte[] extref = ("^/A/D/H ADHext\n" +
+                         "^/A/D/H ADHext2\n" +
                          "^/A/D/H@1 peggedADHext\n" +
                          "-r1 ^/A/D/H revvedADHext\n").getBytes();
         Set<String> paths = new HashSet<String>();
@@ -1130,6 +1131,7 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H@2 revvedADHext\n");
         String actual =
@@ -1158,6 +1160,7 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H@2 revvedADHext\n");
         String actual =
@@ -1186,6 +1189,7 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H@2 revvedADHext\n");
         String actual =
@@ -1214,6 +1218,7 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H@2 revvedADHext\n");
         String actual =
@@ -1249,6 +1254,44 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H ADHext2\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-REPO copy with explicit pinned externals that
+     * don't correspond to actual externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2repo_corkscrew() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        String sourceUrl = thisTest.getUrl() + "/A/B";
+        Map<String, List<ExternalItem>> externalsToPin =
+            new HashMap<String, List<ExternalItem>>();
+        List<ExternalItem> items = new ArrayList<ExternalItem>(1);
+        items.add(new ExternalItem("ADHext", "^/A/D/H", null, null));
+        externalsToPin.put(sourceUrl + "/A", items);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(sourceUrl, null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false, false,
+                    true,       // pinExternals
+                    externalsToPin,
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H ADHext\n" +
+                           "^/A/D/H ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H revvedADHext\n");
         String actual =
