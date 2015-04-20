@@ -366,10 +366,9 @@ static svn_error_t *
 list_branch_elements(svn_branch_instance_t *branch,
                      apr_pool_t *scratch_pool)
 {
-  svn_branch_family_t *family = branch->sibling_defn->family;
   int eid;
 
-  for (eid = family->first_eid; eid < family->next_eid; eid++)
+  for (eid = branch->rev_root->first_eid; eid < branch->rev_root->next_eid; eid++)
     {
       const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
                                                         scratch_pool);
@@ -398,9 +397,9 @@ branch_info(svn_branch_instance_t *branch,
 {
   if (verbose)
     {
-      printf("  branch %s bsid=%d root=e%d /%s\n",
+      printf("  branch %s root=e%d /%s\n",
              svn_branch_instance_get_id(branch, scratch_pool),
-             branch->sibling_defn->bsid, branch->sibling_defn->root_eid,
+             branch->root_eid,
              svn_branch_get_root_rrpath(branch, scratch_pool));
       SVN_ERR(list_branch_elements(branch, scratch_pool));
     }
@@ -426,12 +425,12 @@ list_branches(svn_branch_revision_root_t *rev_root,
 
   printf("branches rooted at e%d:\n", eid);
 
-  for (SVN_ARRAY_ITER(bi, svn_branch_family_get_branch_instances(
-                            rev_root, rev_root->root_branch->sibling_defn->family, scratch_pool), scratch_pool))
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_branch_instances(
+                            rev_root, scratch_pool), scratch_pool))
     {
       svn_branch_instance_t *branch = bi->val;
 
-      if (branch->sibling_defn->root_eid != eid)
+      if (branch->root_eid != eid)
         continue;
       SVN_ERR(branch_info(branch, verbose, bi->iterpool));
     }
@@ -439,29 +438,19 @@ list_branches(svn_branch_revision_root_t *rev_root,
   return SVN_NO_ERROR;
 }
 
-/* List all branch instances in FAMILY.
+/* List all branch instances.
  */
 static svn_error_t *
-family_list_branch_instances(svn_branch_revision_root_t *rev_root,
-                             svn_branch_family_t *family,
-                             svn_boolean_t verbose,
-                             apr_pool_t *scratch_pool)
+list_all_branch_instances(svn_branch_revision_root_t *rev_root,
+                          svn_boolean_t verbose,
+                          apr_pool_t *scratch_pool)
 {
   SVN_ITER_T(svn_branch_instance_t) *bi;
 
-  if (verbose)
-    {
-      printf("branches (BSIDs %d:%d, EIDs %d:%d)\n",
-             family->first_bsid, family->next_bsid,
-             family->first_eid, family->next_eid);
-    }
-  else
-    {
-      printf("branches:\n");
-    }
+  printf("branches:\n");
 
-  for (SVN_ARRAY_ITER(bi, svn_branch_family_get_branch_instances(
-                            rev_root, family, scratch_pool), scratch_pool))
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_branch_instances(
+                            rev_root, scratch_pool), scratch_pool))
     {
       svn_branch_instance_t *branch = bi->val;
 
@@ -688,15 +677,15 @@ merge_subbranch(svn_editor3_t *editor,
 
   if (src_subbranch)
     subbr_src = svn_branch_el_rev_id_create(
-                  src_subbranch, src_subbranch->sibling_defn->root_eid,
+                  src_subbranch, src_subbranch->root_eid,
                   src->rev, scratch_pool);
   if (tgt_subbranch)
     subbr_tgt = svn_branch_el_rev_id_create(
-                  tgt_subbranch, tgt_subbranch->sibling_defn->root_eid,
+                  tgt_subbranch, tgt_subbranch->root_eid,
                   tgt->rev, scratch_pool);
   if (yca_subbranch)
     subbr_yca = svn_branch_el_rev_id_create(
-                  yca_subbranch, yca_subbranch->sibling_defn->root_eid,
+                  yca_subbranch, yca_subbranch->root_eid,
                   yca->rev, scratch_pool);
 
   if (subbr_src && subbr_tgt && subbr_yca)  /* ?edit vs. ?edit */
@@ -721,9 +710,9 @@ merge_subbranch(svn_editor3_t *editor,
     {
       SVN_ERR(svn_branch_branch_subtree_r2(
                 NULL,
-                src_subbranch, src_subbranch->sibling_defn->root_eid,
+                src_subbranch, src_subbranch->root_eid,
                 tgt->branch, eid,
-                src_subbranch->sibling_defn,
+                src_subbranch->root_eid,
                 scratch_pool));
     }
   else if (subbr_tgt)  /* added on target branch */
@@ -757,15 +746,15 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   SVN_ERR_ASSERT(src->eid == tgt->eid);
   SVN_ERR_ASSERT(src->eid == yca->eid);
 
-  SVN_DBG(("merge src: r%2ld b%2d e%3d",
+  SVN_DBG(("merge src: r%2ld b%s e%3d",
            src->rev,
-           src->branch->sibling_defn->bsid, src->eid));
-  SVN_DBG(("merge tgt: r%2ld b%2d e%3d",
+           svn_branch_instance_get_id(src->branch, scratch_pool), src->eid));
+  SVN_DBG(("merge tgt: r%2ld b%s e%3d",
            tgt->rev,
-           tgt->branch->sibling_defn->bsid, tgt->eid));
-  SVN_DBG(("merge yca: r%2ld b%2d e%3d",
+           svn_branch_instance_get_id(tgt->branch, scratch_pool), tgt->eid));
+  SVN_DBG(("merge yca: r%2ld b%s e%3d",
            yca->rev,
-           yca->branch->sibling_defn->bsid, yca->eid));
+           svn_branch_instance_get_id(yca->branch, scratch_pool), yca->eid));
 
   notify("merging into branch %s",
          svn_branch_instance_get_id(tgt->branch, scratch_pool));
@@ -787,10 +776,10 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                                          editor, yca, tgt,
                                          scratch_pool, scratch_pool));
 
-  first_eid = yca->branch->sibling_defn->family->first_eid;
-  next_eid = yca->branch->sibling_defn->family->next_eid;
-  next_eid = MAX(next_eid, src->branch->sibling_defn->family->next_eid);
-  next_eid = MAX(next_eid, tgt->branch->sibling_defn->family->next_eid);
+  first_eid = yca->branch->rev_root->first_eid;
+  next_eid = yca->branch->rev_root->next_eid;
+  next_eid = MAX(next_eid, src->branch->rev_root->next_eid);
+  next_eid = MAX(next_eid, tgt->branch->rev_root->next_eid);
 
   for (eid = first_eid; eid < next_eid; eid++)
     {
@@ -943,9 +932,9 @@ svn_branch_diff_e(svn_editor3_t *editor,
                                          editor, left, right,
                                          scratch_pool, scratch_pool));
 
-  first_eid = left->branch->sibling_defn->family->first_eid;
-  next_eid = MAX(left->branch->sibling_defn->family->next_eid,
-                 right->branch->sibling_defn->family->next_eid);
+  first_eid = left->branch->rev_root->first_eid;
+  next_eid = MAX(left->branch->rev_root->next_eid,
+                 right->branch->rev_root->next_eid);
 
   for (eid = first_eid; eid < next_eid; eid++)
     {
@@ -1040,9 +1029,9 @@ svn_branch_diff(svn_editor3_t *editor,
                                          editor, left, right,
                                          scratch_pool, scratch_pool));
 
-  first_eid = left->branch->sibling_defn->family->first_eid;
-  next_eid = MAX(left->branch->sibling_defn->family->next_eid,
-                 right->branch->sibling_defn->family->next_eid);
+  first_eid = left->branch->rev_root->first_eid;
+  next_eid = MAX(left->branch->rev_root->next_eid,
+                 right->branch->rev_root->next_eid);
 
   for (eid = first_eid; eid < next_eid; eid++)
     {
@@ -1218,14 +1207,14 @@ svn_branch_diff_r(svn_editor3_t *editor,
       if (branch_l)
         {
           sub_left = svn_branch_el_rev_id_create(branch_l,
-                                                 branch_l->sibling_defn->root_eid,
+                                                 branch_l->root_eid,
                                                  left->rev,
                                                  scratch_pool);
         }
       if (branch_r)
         {
           sub_right = svn_branch_el_rev_id_create(branch_r,
-                                                  branch_r->sibling_defn->root_eid,
+                                                  branch_r->root_eid,
                                                   right->rev,
                                                   scratch_pool);
         }
@@ -1266,7 +1255,7 @@ move_by_branch_and_delete(svn_editor3_t *editor,
 
   /* Delete the source subtree. If it's a whole branch, do so by deleting
      its root from the outer branch instead. */
-  if (el_rev->eid != el_rev->branch->sibling_defn->root_eid)
+  if (el_rev->eid != el_rev->branch->root_eid)
     {
       SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
                                  el_rev->branch, el_rev->eid));
@@ -1387,9 +1376,9 @@ svn_branch_revision_root_find_branch_by_id(const svn_branch_revision_root_t *rev
       branch = svn_branch_get_subbranch_at_eid(branch, eid, scratch_pool);
       pos += bytes;
     }
-  SVN_DBG(("branch found: b%de%d at '/%s'",
-           branch->sibling_defn->bsid,
-           branch->sibling_defn->root_eid,
+  SVN_DBG(("branch found: b%s root-eid %d at '/%s'",
+           svn_branch_instance_get_id(branch, scratch_pool),
+           branch->root_eid,
            svn_branch_get_root_rrpath(branch, scratch_pool)));
   return branch;
 }
@@ -1462,10 +1451,7 @@ mk_branch(svn_branch_instance_t **new_branch_p,
           svn_element_content_t *content,
           apr_pool_t *iterpool)
 {
-  svn_branch_family_t *family = outer_branch->sibling_defn->family;
-  int new_root_eid = svn_branch_family_add_new_element(family);
-  svn_branch_sibling_t *new_branch_def
-    = svn_branch_family_add_new_branch_sibling(family, new_root_eid);
+  int new_root_eid = svn_branch_allocate_new_eid(outer_branch->rev_root);
   int new_outer_eid;
   svn_branch_instance_t *new_branch;
 
@@ -1473,7 +1459,7 @@ mk_branch(svn_branch_instance_t **new_branch_p,
                           outer_branch, outer_parent_eid, outer_name,
                           NULL /*content*/));
   new_branch = svn_branch_add_new_branch_instance(
-                 outer_branch, new_outer_eid, new_branch_def,
+                 outer_branch, new_outer_eid, new_root_eid,
                  iterpool);
   svn_branch_map_update(new_branch, new_root_eid,
                         -1, "", content);
@@ -1540,7 +1526,7 @@ commit_callback(const svn_commit_info_t *commit_info,
                              op, svn_relpath_dirname(action->relpath[i], pool));
 
 #define is_branch_root_element(branch, eid) \
-  ((branch)->sibling_defn->root_eid == (eid))
+  ((branch)->root_eid == (eid))
 
 /* If EL_REV is the root element of a branch, return the corresponding
  * subbranch-root element of its outer branch.
@@ -1690,9 +1676,8 @@ execute(const apr_array_header_t *actions,
                       &el_rev[0], editor, SVN_INVALID_REVNUM, base_relpath,
                       pool, pool));
 
-            SVN_ERR(family_list_branch_instances(
+            SVN_ERR(list_all_branch_instances(
                       el_rev[0]->branch->rev_root,
-                      el_rev[0]->branch->sibling_defn->family,
                       TRUE, iterpool));
           }
           break;
