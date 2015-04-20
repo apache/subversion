@@ -54,8 +54,6 @@ typedef int svn_branch_eid_t;
 
 typedef struct svn_branch_el_rev_id_t svn_branch_el_rev_id_t;
 
-typedef struct svn_branch_sibling_t svn_branch_sibling_t;
-
 typedef struct svn_branch_instance_t svn_branch_instance_t;
 
 /* Per-repository branching info.
@@ -64,9 +62,6 @@ typedef struct svn_branch_repos_t
 {
   /* Array of (svn_branch_revision_info_t *), indexed by revision number. */
   apr_array_header_t *rev_roots;
-
-  /* The branch family object. */
-  struct svn_branch_family_t *family;
 
   /* The pool in which this object lives. */
   apr_pool_t *pool;
@@ -105,6 +100,9 @@ typedef struct svn_branch_revision_root_t
   /* If committed, the revision number; else SVN_INVALID_REVNUM. */
   svn_revnum_t rev;
 
+  /* The range of element ids assigned. */
+  int first_eid, next_eid;
+
   /* The root branch instance. */
   struct svn_branch_instance_t *root_branch;
 
@@ -121,73 +119,26 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 struct svn_branch_instance_t *root_branch,
                                 apr_pool_t *result_pool);
 
-/* A branch family.
- */
-typedef struct svn_branch_family_t
-{
-  /* --- Identity of this object --- */
-
-  /* The repository in which this family exists. */
-  svn_branch_repos_t *repos;
-
-  /* --- Contents of this object --- */
-
-  /* The branch siblings in this family. */
-  apr_array_header_t *branch_siblings;
-
-  /* The range of branch sibling ids assigned within this family. */
-  int first_bsid, next_bsid;
-
-  /* The range of element ids assigned within this family. */
-  int first_eid, next_eid;
-
-  /* The pool in which this object lives. */
-  apr_pool_t *pool;
-} svn_branch_family_t;
-
-/* Create a new branch family object */
-svn_branch_family_t *
-svn_branch_family_create(svn_branch_repos_t *repos,
-                         int first_bsid,
-                         int next_bsid,
-                         int first_eid,
-                         int next_eid,
-                         apr_pool_t *result_pool);
-
-/* Return the branch instances that are members of FAMILY in REV_ROOT.
+/* Return all the branch instances in REV_ROOT.
  *
  * Return an empty array if there are none.
  */
-apr_array_header_t *
-svn_branch_family_get_branch_instances(
-                                svn_branch_revision_root_t *rev_root,
-                                svn_branch_family_t *family,
-                                apr_pool_t *result_pool);
+const apr_array_header_t *
+svn_branch_get_all_branch_instances(svn_branch_revision_root_t *rev_root,
+                                    apr_pool_t *result_pool);
 
-/* Assign a new element id in FAMILY.
+/* Assign a new element id in REV_ROOT.
  */
 int
-svn_branch_family_add_new_element(svn_branch_family_t *family);
+svn_branch_allocate_new_eid(svn_branch_revision_root_t *rev_root);
 
-/* Add a new branch sibling definition to FAMILY, with root element id
- * ROOT_EID.
- */
-svn_branch_sibling_t *
-svn_branch_family_add_new_branch_sibling(svn_branch_family_t *family,
-                                         int root_eid);
-
-/* A branch sibling definition.
- *
- * A branch sibling definition describes characteristics that may be
- * shared by more than one branch.
- *
- * Often, branches have the same root element. For example,
+/* Often, branches have the same root element. For example,
  * branching /trunk to /branches/br1 results in:
  *
- *      branch 1: BSID=1 (root-EID=100)
+ *      branch 1: (root-EID=100)
  *          EID 100 => /trunk
  *          ...
- *      branch 2: BSID=1 (root-EID=100)
+ *      branch 2: (root-EID=100)
  *          EID 100 => /branches/br1
  *          ...
  *
@@ -197,37 +148,12 @@ svn_branch_family_add_new_branch_sibling(svn_branch_family_t *family,
  * Continuing the same example, branching from the trunk subtree
  * /trunk/D (which is not itself a branch root) results in:
  *
- *      branch 3: BSID=2 (root-EID=104)
+ *      branch 3: (root-EID=104)
  *          EID 100 => (nil)
  *          ...
  *          EID 104 => /branches/branch-of-trunk-subtree-D
  *          ...
  */
-struct svn_branch_sibling_t
-{
-  /* --- Identity of this object --- */
-
-  /* The family of which this branch is a member. */
-  svn_branch_family_t *family;
-
-  /* The BSID of this branch. */
-  int bsid;
-
-  /* The EID, within the outer branch, of the branch root element. */
-  /*int outer_eid_of_branch_root;*/
-
-  /* --- Contents of this object --- */
-
-  /* The EID of its pathwise root element. */
-  int root_eid;
-};
-
-/* Create a new branch sibling object */
-svn_branch_sibling_t *
-svn_branch_sibling_create(svn_branch_family_t *family,
-                          int bsid,
-                          int root_eid,
-                          apr_pool_t *result_pool);
 
 /* A branch instance.
  *
@@ -237,8 +163,8 @@ struct svn_branch_instance_t
 {
   /* --- Identity of this object --- */
 
-  /* The branch-sibling class to which this branch belongs */
-  svn_branch_sibling_t *sibling_defn;
+  /* The EID of its pathwise root element. */
+  int root_eid;
 
   /* The revision to which this branch-revision-instance belongs */
   svn_branch_revision_root_t *rev_root;
@@ -262,14 +188,14 @@ struct svn_branch_instance_t
  * element).
  */
 svn_branch_instance_t *
-svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
+svn_branch_instance_create(int root_eid,
                            svn_branch_revision_root_t *rev_root,
                            svn_branch_instance_t *outer_branch,
                            int outer_eid,
                            apr_pool_t *result_pool);
 
-/* Create a new branch instance at OUTER_BRANCH:OUTER_EID, of the branch class
- * BRANCH_SIBLING, with no elements (not even a root element).
+/* Create a new branch instance at OUTER_BRANCH:OUTER_EID, with no elements
+ * (not even a root element).
  *
  * Do not require that a subbranch root element exists in OUTER_BRANCH,
  * nor create one.
@@ -277,7 +203,7 @@ svn_branch_instance_create(svn_branch_sibling_t *branch_sibling,
 svn_branch_instance_t *
 svn_branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
                                    int outer_eid,
-                                   svn_branch_sibling_t *branch_sibling,
+                                   int root_eid,
                                    apr_pool_t *scratch_pool);
 
 /* Delete the branch instance BRANCH, and any subbranches recursively.
@@ -319,7 +245,6 @@ svn_branch_get_subbranch_at_eid(svn_branch_instance_t *branch,
 typedef struct svn_branch_element_t
 {
   int eid;
-  svn_branch_family_t *family;
   svn_node_kind_t node_kind;
 } svn_branch_element_t;
 */
@@ -533,7 +458,7 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
                              int from_eid,
                              svn_branch_instance_t *to_outer_branch,
                              svn_branch_eid_t to_outer_eid,
-                             svn_branch_sibling_t *new_branch_def,
+                             int new_branch_root_eid,
                              apr_pool_t *scratch_pool);
 
 /* Create a copy of NEW_SUBTREE in TO_BRANCH, generating a new element

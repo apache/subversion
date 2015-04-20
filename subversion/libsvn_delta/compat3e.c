@@ -878,12 +878,12 @@ editor3_add(void *baton,
 {
   int eid;
 
-  eid = svn_branch_family_add_new_element(branch->sibling_defn->family);
+  eid = svn_branch_allocate_new_eid(branch->rev_root);
 
   if (new_content)
     {
       SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
-               /*branch->sibling->bsid,*/ eid, new_parent_eid,
+               eid, new_parent_eid,
                new_name, svn_node_kind_to_word(new_content->kind)));
 
       svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
@@ -891,7 +891,7 @@ editor3_add(void *baton,
   else
     {
       SVN_DBG(("add subbranch-root (e%d): parent e%d, name '%s'",
-               /*branch->sibling->bsid,*/ eid, new_parent_eid, new_name));
+               eid, new_parent_eid, new_name));
 
       svn_branch_map_update_as_subbranch_root(branch, eid,
                                               new_parent_eid, new_name);
@@ -978,8 +978,8 @@ editor3_delete(void *baton,
                    svn_branch_eid_t eid,
                    apr_pool_t *scratch_pool)
 {
-  SVN_DBG(("delete(b%d e%d)",
-           branch->sibling_defn->bsid, eid));
+  SVN_DBG(("delete(b%s e%d)",
+           svn_branch_instance_get_id(branch, scratch_pool), eid));
 
   svn_branch_map_delete(branch, eid /* ### , since_rev? */);
 
@@ -998,7 +998,7 @@ editor3_alter(void *baton,
               apr_pool_t *scratch_pool)
 {
   SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
-           /*branch->sibling_defn->bsid,*/ eid,
+           eid,
            new_parent_eid,
            new_name ? new_name : "(same)",
            new_content ? svn_node_kind_to_word(new_content->kind) : "(same)"));
@@ -1049,18 +1049,18 @@ convert_branch_to_paths(apr_hash_t *paths,
          be specifying the element's content.
        */
       if (! ba
-          || eid == branch->sibling_defn->root_eid)
+          || eid == branch->root_eid)
         {
           ba = svn_branch_el_rev_id_create(branch, eid, branch->rev_root->rev,
                                            result_pool);
           svn_hash_sets(paths, rrpath, ba);
-          /*SVN_DBG(("branch-to-path[%d]: b%d e%d -> %s",
-                   i, branch->sibling_defn->bsid, eid, rrpath));*/
+          /*SVN_DBG(("branch-to-path[%d]: b%s e%d -> %s",
+                   i, svn_branch_instance_get_id(branch, scratch_pool), eid, rrpath));*/
         }
       else
         {
-          SVN_DBG(("branch-to-path: b%d e%d -> <already present; not overwriting> (%s)",
-                   branch->sibling_defn->bsid, eid, rrpath));
+          SVN_DBG(("branch-to-path: b%s e%d -> <already present; not overwriting> (%s)",
+                   svn_branch_instance_get_id(branch, scratch_pool), eid, rrpath));
         }
     }
 }
@@ -1080,8 +1080,9 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
 {
   SVN_ITER_T(svn_branch_instance_t) *bi;
 
-  /*SVN_DBG(("[%d] branch={b%de%d at '%s'}", idx,
-           branch->sibling_defn->bsid, branch->sibling_defn->root_eid, branch->branch_root_rrpath));*/
+  /*SVN_DBG(("[%d] branch={b%s e%d at '%s'}", idx,
+           svn_branch_instance_get_id(branch, scratch_pool), branch->root_eid,
+           svn_branch_get_root_rrpath(branch, scratch_pool)));*/
   convert_branch_to_paths(paths_union, branch,
                           result_pool, scratch_pool);
 

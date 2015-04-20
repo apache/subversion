@@ -291,7 +291,7 @@ svn_editor3_delete(svn_editor3_t *editor,
                    svn_branch_eid_t eid)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
-  SVN_ERR_ASSERT(eid != branch->sibling_defn->root_eid);
+  SVN_ERR_ASSERT(eid != branch->root_eid);
   /* TODO: verify this element exists (in initial state) */
 
   DO_CALLBACK(editor, cb_delete,
@@ -425,8 +425,10 @@ static const char *
 el_rev_str(const svn_branch_el_rev_id_t *el_rev,
            apr_pool_t *result_pool)
 {
-  return apr_psprintf(result_pool, "r%ldb%de%d",
-                      el_rev->rev, el_rev->branch->sibling_defn->bsid, el_rev->eid);
+  const char *bid = svn_branch_instance_get_id(el_rev->branch, result_pool);
+
+  return apr_psprintf(result_pool, "r%ldb%se%d",
+                      el_rev->rev, bid, el_rev->eid);
 }
 
 /* Return a human-readable string representation of EID. */
@@ -636,11 +638,9 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
  * ===================================================================
  */
 
-#define FAMILY_HAS_ELEMENT(family, eid) \
-  ((eid) >= (family)->first_eid && (eid) < (family)->next_eid)
-
-#define BRANCH_FAMILY_HAS_ELEMENT(branch, eid) \
-   FAMILY_HAS_ELEMENT((branch)->sibling_defn->family, (eid))
+/* Is EID allocated (no matter whether an element with this id exists)? */
+#define EID_IS_ALLOCATED(branch, eid) \
+  ((eid) >= (branch)->rev_root->first_eid && (eid) < (branch)->rev_root->next_eid)
 
 /* Return the relative path to element EID within SUBTREE.
  *
@@ -655,8 +655,8 @@ element_relpath_in_subtree(const svn_branch_el_rev_id_t *subtree,
   const char *element_path;
   const char *relpath = NULL;
 
-  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(subtree->branch, subtree->eid));
-  SVN_ERR_ASSERT_NO_RETURN(BRANCH_FAMILY_HAS_ELEMENT(subtree->branch, eid));
+  SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(subtree->branch, subtree->eid));
+  SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(subtree->branch, eid));
 
   subtree_path = svn_branch_get_path_by_eid(subtree->branch, subtree->eid,
                                             scratch_pool);
@@ -683,29 +683,30 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
   int first_eid, next_eid;
   int e;
 
-  /*SVN_DBG(("branch_element_differences(b%d r%ld, b%d r%ld, e%d)",
-           left->branch->sibling->bsid, left->rev,
-           right->branch->sibling->bsid, right->rev, right->eid));*/
-  SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, left->eid));
-  SVN_ERR_ASSERT(BRANCH_FAMILY_HAS_ELEMENT(left->branch, right->eid));
+  /*SVN_DBG(("svn_branch_subtree_differences(b%s r%ld, b%s r%ld, e%d)",
+           svn_branch_instance_get_id(left->branch, scratch_pool), left->rev,
+           svn_branch_instance_get_id(right->branch, scratch_pool), right->rev,
+           right->eid));*/
+  SVN_ERR_ASSERT(EID_IS_ALLOCATED(left->branch, left->eid));
+  SVN_ERR_ASSERT(EID_IS_ALLOCATED(left->branch, right->eid));
 
-  first_eid = left->branch->sibling_defn->family->first_eid;
-  next_eid = MAX(left->branch->sibling_defn->family->next_eid,
-                 right->branch->sibling_defn->family->next_eid);
+  first_eid = left->branch->rev_root->first_eid;
+  next_eid = MAX(left->branch->rev_root->next_eid,
+                 right->branch->rev_root->next_eid);
 
   for (e = first_eid; e < next_eid; e++)
     {
       svn_branch_el_rev_content_t *content_left = NULL;
       svn_branch_el_rev_content_t *content_right = NULL;
 
-      if (e < left->branch->sibling_defn->family->next_eid
+      if (e < left->branch->rev_root->next_eid
           && element_relpath_in_subtree(left, e, scratch_pool))
         {
           SVN_ERR(svn_editor3_el_rev_get(&content_left, editor,
                                          left->branch, e,
                                          result_pool, scratch_pool));
         }
-      if (e < right->branch->sibling_defn->family->next_eid
+      if (e < right->branch->rev_root->next_eid
           && element_relpath_in_subtree(right, e, scratch_pool))
         {
           SVN_ERR(svn_editor3_el_rev_get(&content_right, editor,
