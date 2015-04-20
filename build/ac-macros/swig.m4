@@ -88,10 +88,6 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
-    #   packages/rpm/redhat-8+/subversion.spec
-    #   packages/rpm/redhat-7.x/subversion.spec
-    #   packages/rpm/rhel-3/subversion.spec
-    #   packages/rpm/rhel-4/subversion.spec
     if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024" && \
        test "$SWIG_VERSION" -lt "300000"; then
       SWIG_SUITABLE=yes
