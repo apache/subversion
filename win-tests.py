@@ -83,6 +83,12 @@ def _usage_exit():
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
   print("  --ssl-cert             : Path to SSL server certificate to trust.")
+  print("  --exclusive-wc-locks   : Enable exclusive working copy locks")
+  print("  --memcached-server=    : Enable usage of the specified memcached server")
+  print("              <url:port>")
+  print("  --skip-c-tests         : Skip all C tests")
+  print("  --dump-load-cross-check: Run the dump load cross check after every test")
+
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --swig=language        : Run the swig perl/python/ruby tests instead of")
   print("                           the normal tests")
@@ -127,7 +133,9 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
-                        'ssl-cert='])
+                        'ssl-cert=', 'exclusive-wc-locks', 'memcached-server='
+                        'skip-c-tests', 'dump-load-cross-check'
+                        ])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
@@ -162,6 +170,10 @@ mode_filter=None
 tests_to_run = []
 log_level = None
 ssl_cert = None
+exclusive_wc_locks = None
+memcached_server = None
+skip_c_tests = None
+dump_load_cross_check = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -238,6 +250,14 @@ for opt, val in opts:
     log_level = val
   elif opt == '--ssl-cert':
     ssl_cert = val
+  elif opt == '--exclusive_wc_locks':
+    exclusive_wc_locks = 1
+  elif opt == 'memcached-server':
+    memcached_server = val
+  elif opt == 'skip-c-tests':
+    skip_c_tests = 1
+  elif opt == 'dump-load-cross-check':
+    dump_load_cross_check = 1
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -765,7 +785,11 @@ if not test_javahl and not test_swig:
                              fsfs_sharding, fsfs_packing,
                              list_tests, svn_bin, mode_filter,
                              milestone_filter,
-                             set_log_level=log_level, ssl_cert=ssl_cert)
+                             set_log_level=log_level, ssl_cert=ssl_cert,
+                             exclusive_wc_locks=exclusive_wc_locks,
+                             memcached_server=memcached_server,
+                             skip_c_tests=skip_c_tests,
+                             dump_load_cross_check=dump_load_cross_check)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)
