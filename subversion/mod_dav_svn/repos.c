@@ -2126,6 +2126,16 @@ get_resource(request_rec *r,
   xslt_uri = dav_svn__get_xslt_uri(r);
   fs_parent_path = dav_svn__get_fs_parent_path(r);
 
+  if (r->method_number == M_COPY)
+    {
+      /* Workaround for issue #4531: Avoid a depth-infinity walk on
+         the copy source by overriding the Depth header here.
+         mod_dav defaults to infinite depth if this header is not set
+         which makes copies O(size of source) rather than the desired O(1).
+         ### Should be fixed by an explicit provider API feature in mod_dav. */
+      apr_table_setn(r->headers_in, "Depth", "0");
+    }
+
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */
   if (dav_svn__is_parentpath_list(r))
