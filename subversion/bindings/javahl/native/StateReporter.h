@@ -61,13 +61,13 @@ private:
   bool m_valid;
   const svn_ra_reporter3_t* m_raw_reporter;
   void* m_report_baton;
-  EditorProxy* m_editor;
+  EditorProxy::UniquePtr m_editor;
 
   friend class RemoteSession;
   apr_pool_t* get_report_pool() const { return pool.getPool(); }
   void set_reporter_data(const svn_ra_reporter3_t* raw_reporter,
                          void* report_baton,
-                         EditorProxy* editor);
+                         EditorProxy::UniquePtr editor);
   svn_revnum_t m_target_revision;
 };
 

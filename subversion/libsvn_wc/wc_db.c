@@ -9434,8 +9434,8 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
                                                            moved_to_relpath,
                                                            result_pool);
 
-              shadow_op_relpath = svn_relpath_limit(child_relpath, op_depth,
-                                                    scratch_pool);
+              shadow_op_relpath = svn_relpath_prefix(child_relpath, op_depth,
+                                                     scratch_pool);
 
               moved_to->shadow_op_root_abspath =
                         svn_dirent_join(wcroot->abspath, shadow_op_relpath,
@@ -9624,8 +9624,8 @@ read_single_info(const struct svn_wc__db_info_t **info,
                                                    moved_to_relpath,
                                                    result_pool);
 
-          cur_relpath = svn_relpath_limit(local_relpath, op_depth,
-                                          scratch_pool);
+          cur_relpath = svn_relpath_prefix(local_relpath, op_depth,
+                                           scratch_pool);
 
           move->shadow_op_root_abspath = svn_dirent_join(wcroot->abspath,
                                                          cur_relpath,
@@ -12700,7 +12700,8 @@ scan_addition(svn_wc__db_status_t *status,
 
 
     /* Calculate the op root local path components */
-    op_root_relpath = svn_relpath_limit(local_relpath, op_depth, scratch_pool);
+    op_root_relpath = svn_relpath_prefix(local_relpath, op_depth,
+                                         scratch_pool);
     repos_prefix_path = svn_relpath_skip_ancestor(op_root_relpath,
                                                   local_relpath);
 
@@ -12819,8 +12820,8 @@ scan_addition(svn_wc__db_status_t *status,
             /* Skip to op_depth */
             tmp = op_root_relpath;
 
-            op_root_relpath = svn_relpath_limit(op_root_relpath, op_depth,
-                                                scratch_pool);
+            op_root_relpath = svn_relpath_prefix(op_root_relpath, op_depth,
+                                                 scratch_pool);
             repos_prefix_path = svn_relpath_join(
                                                  svn_relpath_skip_ancestor(op_root_relpath, tmp),
                                                  repos_prefix_path, scratch_pool);
@@ -13029,8 +13030,8 @@ svn_wc__db_scan_moved(const char **moved_from_abspath,
   /* The deleted node is either where we moved from, or one of its ancestors */
   if (moved_from_delete_abspath)
     {
-      const char *tmp = svn_relpath_limit(moved_from_op_root_relpath,
-                                          moved_from_op_depth, scratch_pool);
+      const char *tmp = svn_relpath_prefix(moved_from_op_root_relpath,
+                                           moved_from_op_depth, scratch_pool);
 
       *moved_from_delete_abspath = svn_dirent_join(wcroot->abspath, tmp,
                                                    scratch_pool);
@@ -13236,8 +13237,8 @@ svn_wc__db_scan_moved_to_internal(const char **move_src_relpath,
         *move_dst_relpath = apr_pstrdup(result_pool, dst_relpath);
 
       if (delete_relpath)
-        *delete_relpath = svn_relpath_limit(local_relpath, delete_op_depth,
-                                            result_pool);
+        *delete_relpath = svn_relpath_prefix(local_relpath, delete_op_depth,
+                                             result_pool);
     }
 
   return SVN_NO_ERROR;

@@ -490,9 +490,9 @@ create_node_tree_conflict(svn_skel_t **conflict_p,
 {
   update_move_baton_t *umb = nmb->umb;
   const char *dst_repos_relpath;
-  const char *dst_root_relpath = svn_relpath_limit(nmb->dst_relpath,
-                                                   nmb->umb->dst_op_depth,
-                                                   scratch_pool);
+  const char *dst_root_relpath = svn_relpath_prefix(nmb->dst_relpath,
+                                                    nmb->umb->dst_op_depth,
+                                                    scratch_pool);
 
   dst_repos_relpath =
             svn_relpath_join(nmb->umb->old_version->path_in_repos,
@@ -504,9 +504,9 @@ create_node_tree_conflict(svn_skel_t **conflict_p,
 
   return svn_error_trace(
             create_tree_conflict(conflict_p, umb->wcroot, dst_local_relpath,
-                                 svn_relpath_limit(dst_local_relpath,
-                                                   umb->dst_op_depth,
-                                                   scratch_pool),
+                                 svn_relpath_prefix(dst_local_relpath,
+                                                    umb->dst_op_depth,
+                                                    scratch_pool),
                                  umb->db,
                                  umb->old_version, umb->new_version,
                                  umb->operation, old_kind, new_kind,
@@ -2083,8 +2083,8 @@ bump_moved_layer(svn_boolean_t *recurse,
         can_bump = FALSE;
     }
 
-  src_root_relpath = svn_relpath_limit(src_relpath, src_del_depth,
-                                       scratch_pool);
+  src_root_relpath = svn_relpath_prefix(src_relpath, src_del_depth,
+                                        scratch_pool);
 
   if (!can_bump)
     {
@@ -2404,9 +2404,9 @@ svn_wc__db_op_raise_moved_away_internal(
                                  src_repos_relpath,
                                  svn_wc_conflict_reason_moved_away,
                                  action,
-                                 svn_relpath_limit(src_relpath,
-                                                   delete_op_depth,
-                                                   iterpool),
+                                 svn_relpath_prefix(src_relpath,
+                                                    delete_op_depth,
+                                                    iterpool),
                                  iterpool, iterpool);
 
       if (!err)

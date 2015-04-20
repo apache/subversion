@@ -737,9 +737,7 @@ copy_node_to_temp(pack_context_t *context,
     {
       path_order->rep_id.revision = noderev->data_rep->revision;
       path_order->rep_id.number = noderev->data_rep->item_index;
-      path_order->expanded_size = noderev->data_rep->expanded_size
-                                ? noderev->data_rep->expanded_size
-                                : noderev->data_rep->size;
+      path_order->expanded_size = noderev->data_rep->expanded_size;
     }
 
   /* Sort path is the key used for ordering noderevs and associated reps.

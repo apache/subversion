@@ -1377,38 +1377,9 @@ svn_fs_fs__file_length(svn_filesize_t *length,
       /* Treat "no representation" as "empty file". */
       *length = 0;
     }
-  else if (data_rep->expanded_size)
-    {
-      /* Standard case: a non-empty file. */
-      *length = data_rep->expanded_size;
-    }
   else
     {
-      /* Work around a FSFS format quirk (see issue #4554).
-
-         A plain representation may specify its EXPANDED LENGTH as "0"
-         in which case, the SIZE value is what we want.
-
-         Because EXPANDED_LENGTH will also be 0 for empty files, while
-         SIZE is non-null, we need to check wether the content is
-         actually empty.  We simply compare with the MD5 checksum of
-         empty content (sha-1 is not always available).
-       */
-      svn_checksum_t *empty_md5
-        = svn_checksum_empty_checksum(svn_checksum_md5, pool);
-
-      if (memcmp(empty_md5->digest, data_rep->md5_digest,
-                 sizeof(data_rep->md5_digest)))
-        {
-          /* Contents is not empty, i.e. EXPANDED_LENGTH cannot be the
-             actual file length. */
-          *length = data_rep->size;
-        }
-      else
-        {
-          /* Contents is empty. */
-          *length = 0;
-        }
+      *length = data_rep->expanded_size;
     }
 
   return SVN_NO_ERROR;

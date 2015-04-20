@@ -1521,13 +1521,12 @@ fs_node_has_props(svn_boolean_t *has_props,
                   const char *path,
                   apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props;
+  dag_node_t *node;
 
-  SVN_ERR(fs_node_proplist(&props, root, path, scratch_pool));
+  SVN_ERR(get_dag(&node, root, path, scratch_pool));
 
-  *has_props = (0 < apr_hash_count(props));
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_fs_fs__dag_has_props(has_props, node,
+                                                  scratch_pool));
 }
 
 static svn_error_t *

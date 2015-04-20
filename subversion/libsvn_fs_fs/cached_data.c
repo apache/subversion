@@ -286,6 +286,114 @@ use_block_read(svn_fs_t *fs)
   return svn_fs_fs__use_log_addressing(fs) && ffd->use_block_read;
 }
 
+svn_error_t *
+svn_fs_fs__fixup_expanded_size(svn_fs_t *fs,
+                               representation_t *rep,
+                               apr_pool_t *scratch_pool)
+{
+  svn_checksum_t checksum;
+  svn_checksum_t *empty_md5;
+  svn_fs_fs__revision_file_t *revision_file;
+  svn_fs_fs__rep_header_t *rep_header;
+
+  /* Anything to do at all?
+   *
+   * Note that a 0 SIZE is only possible for PLAIN reps due to the SVN\1
+   * magic prefix in any DELTA rep. */
+  if (!rep || rep->expanded_size != 0 || rep->size == 0)
+    return SVN_NO_ERROR;
+
+  /* This function may only be called for committed data. */
+  assert(!svn_fs_fs__id_txn_used(&rep->txn_id));
+
+  /* EXPANDED_SIZE is 0. If the MD5 does not match the one for empty
+   * contents, we know that EXPANDED_SIZE == 0 is wrong and needs to
+   * be set to the actual value given by SIZE.
+   *
+   * Using svn_checksum_match() will also accept all-zero values for
+   * the MD5 digest and only report a mismatch if the MD5 has actually
+   * been given. */
+  empty_md5 = svn_checksum_empty_checksum(svn_checksum_md5, scratch_pool);
+
+  checksum.digest = rep->md5_digest;
+  checksum.kind = svn_checksum_md5;
+  if (!svn_checksum_match(empty_md5, &checksum))
+    {
+      rep->expanded_size = rep->size;
+      return SVN_NO_ERROR;
+    }
+
+  /* Data in the rep-cache.db does not have MD5 checksums (all zero) on it.
+   * Compare SHA1 instead. */
+  if (rep->has_sha1)
+    {
+      svn_checksum_t *empty_sha1
+        = svn_checksum_empty_checksum(svn_checksum_sha1, scratch_pool);
+
+      checksum.digest = rep->sha1_digest;
+      checksum.kind = svn_checksum_sha1;
+      if (!svn_checksum_match(empty_sha1, &checksum))
+        {
+          rep->expanded_size = rep->size;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Only two cases are left here.
+   * (1) A non-empty PLAIN rep with a MD5 collision on EMPTY_MD5.
+   * (2) A DELTA rep with zero-length output. */
+
+  /* SVN always stores a DELTA rep with zero-length output as an empty
+   * sequence of txdelta windows, i.e. as "SVN\1".  In that case, SIZE is
+   * 4 bytes.  There is no other possible DELTA rep of that size and any
+   * PLAIN rep of 4 bytes would produce a different MD5.  Hence, if SIZE is
+   * actually 4 here, we know that this is an empty DELTA rep.
+   *
+   * Note that it is technically legal to have DELTA reps with a 0 length
+   * output window.  Their on-disk size would be longer.  We handle that
+   * case later together with the equally unlikely MD5 collision. */
+  if (rep->size == 4)
+    {
+      /* EXPANDED_SIZE is already 0. */
+      return SVN_NO_ERROR;
+    }
+
+  /* We still have the two options, PLAIN or DELTA rep.  At this point, we
+   * are in an extremely unlikely case and can spend some time to figure it
+   * out.  So, let's just look at the representation header. */
+  SVN_ERR(open_and_seek_revision(&revision_file, fs, rep->revision,
+                                 rep->item_index, scratch_pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, revision_file->stream,
+                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
+
+  /* Only for PLAIN reps do we have to correct EXPANDED_SIZE. */
+  if (rep_header->type == svn_fs_fs__rep_plain)
+    rep->expanded_size = rep->size;
+
+  return SVN_NO_ERROR;
+}
+
+/* Correct known issues with committed NODEREV in FS.
+ * Uses SCRATCH_POOL for temporaries.
+ */
+static svn_error_t *
+fixup_node_revision(svn_fs_t *fs,
+                    node_revision_t *noderev,
+                    apr_pool_t *scratch_pool)
+{
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  noderev->is_fresh_txn_root = FALSE;
+
+  /* Make sure EXPANDED_SIZE has the correct value for every rep. */
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, noderev->data_rep,
+                                         scratch_pool));
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, noderev->prop_rep,
+                                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -376,9 +484,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                           revision_file->stream,
                                           result_pool,
                                           scratch_pool));
-
-          /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-          (*noderev_p)->is_fresh_txn_root = FALSE;
+          SVN_ERR(fixup_node_revision(fs, *noderev_p, scratch_pool));
 
           /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
           if (ffd->node_revision_cache)
@@ -765,9 +871,7 @@ create_rep_state_body(rep_state_t **rep_state,
      Since we don't know the depth of the delta chain, let's assume, the
      whole contents get rewritten 3 times.
    */
-  estimated_window_storage
-    = 4 * (  (rep->expanded_size ? rep->expanded_size : rep->size)
-           + SVN_DELTA_WINDOW_SIZE);
+  estimated_window_storage = 4 * (rep->expanded_size + SVN_DELTA_WINDOW_SIZE);
   estimated_window_storage = MIN(estimated_window_storage, APR_SIZE_MAX);
 
   rs->window_cache =    ffd->txdelta_window_cache
@@ -1322,15 +1426,11 @@ set_cached_combined_window(svn_stringbuf_t *window,
    ID, and representation REP.
    Also, set *WINDOW_P to the base window content for *LIST, if it
    could be found in cache. Otherwise, *LIST will contain the base
-   representation for the whole delta chain.
-   Finally, return the expanded size of the representation in
-   *EXPANDED_SIZE. It will take care of cases where only the on-disk
-   size is known.  */
+   representation for the whole delta chain. */
 static svn_error_t *
 build_rep_list(apr_array_header_t **list,
                svn_stringbuf_t **window_p,
                rep_state_t **src_state,
-               svn_filesize_t *expanded_size,
                svn_fs_t *fs,
                representation_t *first_rep,
                apr_pool_t *pool)
@@ -1345,24 +1445,9 @@ build_rep_list(apr_array_header_t **list,
   *list = apr_array_make(pool, 1, sizeof(rep_state_t *));
   rep = *first_rep;
 
-  /* The value as stored in the data struct.
-     0 is either for unknown length or actually zero length. */
-  *expanded_size = first_rep->expanded_size;
-
   /* for the top-level rep, we need the rep_args */
   SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file, &rep, fs, pool,
                            iterpool));
-
-  /* Unknown size or empty representation?
-     That implies the this being the first iteration.
-     Usually size equals on-disk size, except for empty,
-     compressed representations (delta, size = 4).
-     Please note that for all non-empty deltas have
-     a 4-byte header _plus_ some data. */
-  if (*expanded_size == 0)
-    if (rep_header->type == svn_fs_fs__rep_plain || first_rep->size != 4)
-      *expanded_size = first_rep->size;
-
   while (1)
     {
       svn_pool_clear(iterpool);
@@ -1664,7 +1749,7 @@ get_combined_window(svn_stringbuf_t **result,
 }
 
 /* Returns whether or not the expanded fulltext of the file is cachable
- * based on its size SIZE.  The decision depends on the cache used by RB.
+ * based on its size SIZE.  The decision depends on the cache used by FFD.
  */
 static svn_boolean_t
 fulltext_size_is_cachable(fs_fs_data_t *ffd, svn_filesize_t size)
@@ -1997,8 +2082,9 @@ rep_read_contents(void *baton,
   if (!rb->rs_list)
     {
       /* Window stream not initialized, yet.  Do it now. */
+      rb->len = rb->rep.expanded_size;
       SVN_ERR(build_rep_list(&rb->rs_list, &rb->base_window,
-                             &rb->src_state, &rb->len, rb->fs, &rb->rep,
+                             &rb->src_state, rb->fs, &rb->rep,
                              rb->filehandle_pool));
 
       /* In case we did read from the fulltext cache before, make the
@@ -2065,7 +2151,6 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
       pair_cache_key_t fulltext_cache_key = { 0 };
@@ -2081,7 +2166,7 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
        * cache it. */
       if (ffd->fulltext_cache && cache_fulltext
           && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cachable(ffd, len))
+          && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
           rb->fulltext_cache = ffd->fulltext_cache;
         }
@@ -2469,9 +2554,7 @@ get_dir_contents(apr_array_header_t **entries,
       /* Undeltify content before parsing it. Otherwise, we could only
        * parse it byte-by-byte.
        */
-      apr_size_t len = noderev->data_rep->expanded_size
-                     ? (apr_size_t)noderev->data_rep->expanded_size
-                     : (apr_size_t)noderev->data_rep->size;
+      apr_size_t len = noderev->data_rep->expanded_size;
       svn_stringbuf_t *text;
 
       /* The representation is immutable.  Read it normally. */
@@ -3200,9 +3283,7 @@ block_read_noderev(node_revision_t **noderev_p,
   /* read node rev from revision file */
   SVN_ERR(svn_fs_fs__read_noderev(noderev_p, stream,
                                   result_pool, scratch_pool));
-
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  (*noderev_p)->is_fresh_txn_root = FALSE;
+  SVN_ERR(fixup_node_revision(fs, *noderev_p, scratch_pool));
 
   if (ffd->node_revision_cache)
     SVN_ERR(svn_cache__set(ffd->node_revision_cache, &key, *noderev_p,

@@ -1856,7 +1856,7 @@ io_win_file_attrs_set(const char *fname,
                                   _("Can't set attributes of file '%s'"),
                                   svn_dirent_local_style(fname, pool));
 
-    return SVN_NO_ERROR;;
+    return SVN_NO_ERROR;
 }
 
 static svn_error_t *win_init_dynamic_imports(void *baton, apr_pool_t *pool)
