@@ -49,7 +49,7 @@ Other candidate changes:
      currently have a great way to work aroudn this.  Other languages work
      fine so I left this as a warning.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
 
  * r1674522
    Skip the 'upgrade_tests.py 36: automatic SQLite ANALYZE' test on old pythons
