@@ -1151,6 +1151,16 @@ svn_branch_diff_func_t(svn_editor3_t *editor,
                        const char *header,
                        apr_pool_t *scratch_pool);
 
+/*  */
+static char *
+branch_id_and_path(svn_branch_instance_t *branch,
+                   apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool, "%s at /%s",
+                      svn_branch_instance_get_id(branch, result_pool),
+                      svn_branch_get_root_rrpath(branch, result_pool));
+}
+
 /* Display differences, referring to paths, recursing into sub-branches */
 static svn_error_t *
 svn_branch_diff_r(svn_editor3_t *editor,
@@ -1167,27 +1177,33 @@ svn_branch_diff_r(svn_editor3_t *editor,
   if (!left)
     {
       header = apr_psprintf(scratch_pool,
-                 "--- added branch %s at /%s\n",
-                 svn_branch_instance_get_id(right->branch, scratch_pool),
-                 svn_branch_get_root_rrpath(right->branch, scratch_pool));
+                 "--- added branch %s\n",
+                 branch_id_and_path(right->branch, scratch_pool));
       printf("%s%s", prefix, header);
     }
   else if (!right)
     {
       header = apr_psprintf(scratch_pool,
-                 "--- deleted branch %s at /%s\n",
-                 svn_branch_instance_get_id(left->branch, scratch_pool),
-                 svn_branch_get_root_rrpath(left->branch, scratch_pool));
+                 "--- deleted branch %s\n",
+                 branch_id_and_path(left->branch, scratch_pool));
       printf("%s%s", prefix, header);
     }
   else
     {
-      header = apr_psprintf(scratch_pool,
-                 "--- diff branch %s at /%s : %s at /%s\n",
-                 svn_branch_instance_get_id(left->branch, scratch_pool),
-                 svn_branch_get_root_rrpath(left->branch, scratch_pool),
-                 svn_branch_instance_get_id(right->branch, scratch_pool),
-                 svn_branch_get_root_rrpath(right->branch, scratch_pool));
+      if (strcmp(branch_id_and_path(left->branch, scratch_pool),
+                 branch_id_and_path(right->branch, scratch_pool)) == 0)
+        {
+          header = apr_psprintf(
+                     scratch_pool, "--- diff branch %s\n",
+                     branch_id_and_path(left->branch, scratch_pool));
+        }
+      else
+        {
+          header = apr_psprintf(
+                     scratch_pool, "--- diff branch %s : %s\n",
+                     branch_id_and_path(left->branch, scratch_pool),
+                     branch_id_and_path(right->branch, scratch_pool));
+        }
       SVN_ERR(diff_func(editor, left, right, prefix, header, scratch_pool));
     }
 
