@@ -133,7 +133,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
-                        'ssl-cert=', 'exclusive-wc-locks', 'memcached-server='
+                        'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
                         'skip-c-tests', 'dump-load-cross-check'
                         ])
 if len(args) > 1:
@@ -250,13 +250,13 @@ for opt, val in opts:
     log_level = val
   elif opt == '--ssl-cert':
     ssl_cert = val
-  elif opt == '--exclusive_wc_locks':
+  elif opt == '--exclusive-wc-locks':
     exclusive_wc_locks = 1
-  elif opt == 'memcached-server':
+  elif opt == '--memcached-server':
     memcached_server = val
-  elif opt == 'skip-c-tests':
+  elif opt == '--skip-c-tests':
     skip_c_tests = 1
-  elif opt == 'dump-load-cross-check':
+  elif opt == '--dump-load-cross-check':
     dump_load_cross_check = 1
 
 # Calculate the source and test directory names

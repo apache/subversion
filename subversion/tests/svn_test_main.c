@@ -104,6 +104,7 @@ enum test_options_e {
   reposdir_opt,
   reposurl_opt,
   repostemplate_opt,
+  memcached_server_opt,
   mode_filter_opt,
   sqlite_log_opt,
   parallel_opt,
@@ -144,6 +145,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("the url to access reposdir as")},
   {"repos-template",repostemplate_opt, 1,
                     N_("the repository to use as template")},
+  {"memcached-server", memcached_server_opt, 1,
+                    N_("the memcached server to use")},
   {"sqlite-logging", sqlite_log_opt, 0,
                     N_("enable SQLite logging")},
   {"parallel",      parallel_opt, 0,
@@ -914,6 +917,10 @@ svn_test_main(int argc, const char *argv[], int max_threads,
                                               pool));
           opts.repos_template = svn_dirent_internal_style(opts.repos_template,
                                                           pool);
+          break;
+        case memcached_server_opt:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.memcached_server, opt_arg,
+                                              pool));
           break;
         case list_opt:
           list_mode = TRUE;
