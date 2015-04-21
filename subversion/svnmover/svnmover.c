@@ -1359,29 +1359,6 @@ do_move(svn_editor3_t *editor,
 }
 
 /*  */
-static svn_branch_instance_t *
-svn_branch_revision_root_find_branch_by_id(const svn_branch_revision_root_t *rev_root,
-                                           const char *branch_instance_id,
-                                           apr_pool_t *scratch_pool)
-{
-  SVN_ITER_T(svn_branch_instance_t) *bi;
-  svn_branch_instance_t *branch = NULL;
-
-  for (SVN_ARRAY_ITER(bi, rev_root->branch_instances, scratch_pool))
-    {
-      svn_branch_instance_t *b = bi->val;
-
-      if (strcmp(svn_branch_instance_get_id(b, scratch_pool),
-                 branch_instance_id) == 0)
-        {
-          branch = b;
-          break;
-        }
-    }
-  return branch;
-}
-
-/*  */
 static svn_branch_el_rev_id_t *
 svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t *old_el_rev,
                                    apr_pool_t *result_pool)
@@ -1397,7 +1374,7 @@ svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t *old_el_rev,
 
   branch_id = svn_branch_instance_get_id(old_el_rev->branch, result_pool);
   rev_root = svn_array_get(repos->rev_roots, (int)(old_el_rev->rev - 1));
-  branch = svn_branch_revision_root_find_branch_by_id(rev_root, branch_id,
+  branch = svn_branch_get_branch_instance_by_id(rev_root, branch_id,
                                                       result_pool);
 
   new_el_rev = svn_branch_el_rev_id_create(branch, old_el_rev->eid,
