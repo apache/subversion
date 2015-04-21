@@ -264,7 +264,7 @@ static const action_defn_t action_defn[] =
   {ACTION_DIFF_E,           "diff-e", 2, "LEFT RIGHT",
     "diff LEFT to RIGHT (element-focused output)"},
   {ACTION_MERGE,            "merge", 3, "FROM TO YCA@REV",
-    "merge changes YCA->FROM and YCA->TO into TO"},
+    "3-way merge YCA->FROM into TO"},
   {ACTION_CP,               "cp", 2, "REV SRC DST",
     "copy SRC@REV to DST"},
   {ACTION_MV,               "mv", 2, "SRC DST",
