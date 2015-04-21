@@ -42,15 +42,6 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1674580
-   Warn on SWIG 3.0.0 and newer.
-   Justification:
-     SWIG 3.x versions have issues with our Python bindings and we don't
-     currently have a great way to work around this.  Other languages work
-     fine so I left this as a warning.
-   Votes:
-     +1: breser, rhuijben, philip
-
  * r1674522
    Skip the 'upgrade_tests.py 36: automatic SQLite ANALYZE' test on old pythons
    Justification:
