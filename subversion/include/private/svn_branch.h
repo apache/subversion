@@ -348,6 +348,12 @@ svn_branch_subtree_create(apr_hash_t *e_map,
 
 /* Return the subtree of BRANCH rooted at EID.
  * Recursive: includes subbranches.
+ *
+ * The result is limited by the lifetime of BRANCH. It includes a shallow
+ * copy of the element maps in BRANCH and its subbranches: the hash tables
+ * are duplicated but the keys and values (element content data) are not.
+ * It assumes that modifications on a svn_branch_instance_t treat element
+ * map keys and values as immutable -- which they do.
  */
 svn_branch_subtree_t *
 svn_branch_get_subtree(const svn_branch_instance_t *branch,
