@@ -42,7 +42,7 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
- * r1674580, r1674891
+ * r1674580
    Warn on SWIG 3.0.0 and newer.
    Justification:
      SWIG 3.x versions have issues with our Python bindings and we don't
