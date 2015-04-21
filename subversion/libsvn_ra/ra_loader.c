@@ -943,6 +943,46 @@ svn_ra_fetch(svn_node_kind_t *kind_p,
 }
 
 svn_error_t *
+svn_ra_load_branching_state(svn_branch_revision_root_t **branching_txn_p,
+                            svn_editor3__shim_fetch_func_t *fetch_func,
+                            void **fetch_baton,
+                            svn_ra_session_t *session,
+                            const char *branch_info_dir,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  svn_branch_repos_t *repos;
+  const char *repos_root_url, *session_url, *base_relpath;
+  struct fb_baton *fbb = apr_palloc(result_pool, sizeof (*fbb));
+
+  if (base_revision == SVN_INVALID_REVNUM)
+    {
+      SVN_ERR(svn_ra_get_latest_revnum(session, &base_revision, scratch_pool));
+    }
+
+  SVN_ERR(svn_branch_repos_fetch_info(&repos,
+                                      session, branch_info_dir,
+                                      result_pool, scratch_pool));
+  SVN_ERR(svn_branch_get_mutable_state(branching_txn_p,
+                                       repos, session, branch_info_dir,
+                                       base_revision,
+                                       result_pool, scratch_pool));
+
+  /* fetcher */
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, result_pool));
+  SVN_ERR(svn_ra_get_session_url(session, &session_url, scratch_pool));
+  base_relpath = svn_uri_skip_ancestor(repos_root_url, session_url, result_pool);
+  SVN_ERR(svn_ra__dup_session(&fbb->session, session, repos_root_url, result_pool, scratch_pool));
+  fbb->session_path = base_relpath;
+  fbb->repos_root_url = repos_root_url;
+  *fetch_func = svn_ra_fetch;
+  *fetch_baton = fbb;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                              svn_editor3_t **editor,
                              apr_hash_t *revprop_table,
@@ -953,23 +993,20 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                              const char *branch_info_dir,
                              apr_pool_t *pool)
 {
-  svn_revnum_t base_revision;
-  svn_branch_repos_t *repos;
   svn_branch_revision_root_t *branching_txn;
+  svn_editor3__shim_fetch_func_t fetch_func;
+  void *fetch_baton;
   const svn_delta_editor_t *deditor;
   void *dedit_baton;
   svn_editor3__shim_connector_t *shim_connector;
 
-  /* ### for element-branching, currently need to start from a single base revision */
-  SVN_ERR(svn_ra_get_latest_revnum(session, &base_revision, pool));
-
-  /* load branching info */
-  SVN_ERR(svn_branch_repos_fetch_info(&repos,
-                                      session, branch_info_dir, pool, pool));
-  SVN_ERR(svn_branch_get_mutable_state(&branching_txn,
-                                       repos, session, branch_info_dir,
-                                       base_revision,
-                                       pool, pool));
+  /* load branching info
+   * ### Currently we always start from a single base revision, never from
+   *     a mixed-rev state */
+  SVN_ERR(svn_ra_load_branching_state(&branching_txn, &fetch_func, &fetch_baton,
+                                      session, branch_info_dir,
+                                      SVN_INVALID_REVNUM /*base_revision*/,
+                                      pool, pool));
 
   /* arrange for branching info to be stored after commit */
   remap_commit_callback(&commit_callback, &commit_baton,
@@ -984,14 +1021,10 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
   /* Convert to Ev3 */
   {
     const char *repos_root_url, *session_url, *base_relpath;
-    struct fb_baton *fbb = apr_palloc(pool, sizeof(*fbb));
 
     SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
     SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
     base_relpath = svn_uri_skip_ancestor(repos_root_url, session_url, pool);
-    SVN_ERR(svn_ra__dup_session(&fbb->session, session, repos_root_url, pool, pool));
-    fbb->session_path = base_relpath;
-    fbb->repos_root_url = repos_root_url;
 
     /*if (! svn_dbg__quiet_mode())
       SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
@@ -1001,7 +1034,7 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                         &shim_connector,
                         deditor, dedit_baton, branching_txn,
                         repos_root_url, base_relpath,
-                        svn_ra_fetch, fbb,
+                        fetch_func, fetch_baton,
                         NULL, NULL /*cancel*/,
                         pool, pool));
   }
