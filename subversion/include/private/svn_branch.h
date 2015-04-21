@@ -434,30 +434,6 @@ svn_branch_instantiate_subtree(svn_branch_instance_t *to_branch,
                                svn_branch_subtree_t from_subtree,
                                apr_pool_t *scratch_pool);
 
-/* Branch a subtree.
- *
- * Adjust TO_OUTER_BRANCH and its subbranches (recursively),
- * to reflect branching a subtree from FROM_BRANCH:FROM_EID to
- * create a new subbranch of TO_OUTER_BRANCH at TO_OUTER_PARENT_EID:NEW_NAME.
- *
- * FROM_BRANCH must be an immediate child branch of OUTER_BRANCH.
- *
- * FROM_BRANCH:FROM_EID must be an existing element. It may be the
- * root of FROM_BRANCH. It must not be the root of a subbranch of
- * FROM_BRANCH.
- *
- * TO_OUTER_BRANCH:TO_OUTER_PARENT_EID must be an existing directory
- * and NEW_NAME must be nonexistent in that directory.
- */
-svn_error_t *
-svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
-                            svn_branch_instance_t *from_branch,
-                            int from_eid,
-                            svn_branch_instance_t *to_outer_branch,
-                            svn_branch_eid_t to_outer_parent_eid,
-                            const char *new_name,
-                            apr_pool_t *scratch_pool);
-
 /* Instantiate a new branch of the subtree FROM_SUBTREE, at the
  * existing branch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
  * Also branch, recursively, the subbranches in FROM_SUBTREE.
@@ -608,10 +584,19 @@ svn_branch_revision_root_serialize(svn_stream_t *stream,
                                    svn_branch_revision_root_t *rev_root,
                                    apr_pool_t *scratch_pool);
 
-/* Branch the subtree of FROM_BRANCH found at FROM_EID, to create
+/* Branch all or part of an existing branch, making a new branch.
+ *
+ * Branch the subtree of FROM_BRANCH found at FROM_EID, to create
  * a new branch at TO_OUTER_BRANCH:TO_OUTER_PARENT_EID:NEW_NAME.
  *
  * FROM_BRANCH must be an immediate sub-branch of TO_OUTER_BRANCH.
+ *
+ * FROM_BRANCH:FROM_EID must be an existing element. It may be the
+ * root of FROM_BRANCH. It must not be the root of a subbranch of
+ * FROM_BRANCH.
+ *
+ * TO_OUTER_BRANCH:TO_OUTER_PARENT_EID must be an existing directory
+ * and NEW_NAME must be nonexistent in that directory.
  */
 svn_error_t *
 svn_branch_branch(svn_branch_instance_t **new_branch_p,
