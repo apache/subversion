@@ -1364,23 +1364,20 @@ svn_branch_revision_root_find_branch_by_id(const svn_branch_revision_root_t *rev
                                            const char *branch_instance_id,
                                            apr_pool_t *scratch_pool)
 {
-  svn_branch_instance_t *branch = rev_root->root_branch;
-  int pos = 1;
+  SVN_ITER_T(svn_branch_instance_t) *bi;
+  svn_branch_instance_t *branch = NULL;
 
-  SVN_ERR_ASSERT_NO_RETURN(branch_instance_id[0] == '^');
-  while (branch_instance_id[pos])
+  for (SVN_ARRAY_ITER(bi, rev_root->branch_instances, scratch_pool))
     {
-      int n, eid, bytes;
-      n = sscanf(branch_instance_id + pos, ".%d%n", &eid, &bytes);
-      SVN_ERR_ASSERT_NO_RETURN(n == 1);
+      svn_branch_instance_t *b = bi->val;
 
-      branch = svn_branch_get_subbranch_at_eid(branch, eid, scratch_pool);
-      pos += bytes;
+      if (strcmp(svn_branch_instance_get_id(b, scratch_pool),
+                 branch_instance_id) == 0)
+        {
+          branch = b;
+          break;
+        }
     }
-  SVN_DBG(("branch found: b%s root-eid %d at '/%s'",
-           svn_branch_instance_get_id(branch, scratch_pool),
-           branch->root_eid,
-           svn_branch_get_root_rrpath(branch, scratch_pool)));
   return branch;
 }
 
