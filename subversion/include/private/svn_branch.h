@@ -330,20 +330,29 @@ typedef struct svn_branch_subtree_t
 
   /* Subtree root EID. (EID must be an existing key in E_MAP.) */
   int root_eid;
+
+  /* Subbranches to be included: each subbranch-root element in that is
+     hierarchically below ROOT_EID in E_MAP should have its subbranch
+     mapped here.
+
+     A mapping of (int)EID -> (svn_branch_subtree_t *). */
+  apr_hash_t *subbranches;
 } svn_branch_subtree_t;
 
 /* Create an empty subtree (no elements populated, not even ROOT_EID).
  */
 svn_branch_subtree_t *
-svn_branch_subtree_create(int root_eid,
+svn_branch_subtree_create(apr_hash_t *e_map,
+                          int root_eid,
                           apr_pool_t *result_pool);
 
 /* Return the subtree of BRANCH rooted at EID.
+ * Recursive: includes subbranches.
  */
-svn_branch_subtree_t
-svn_branch_map_get_subtree(const svn_branch_instance_t *branch,
-                           int eid,
-                           apr_pool_t *result_pool);
+svn_branch_subtree_t *
+svn_branch_get_subtree(const svn_branch_instance_t *branch,
+                       int eid,
+                       apr_pool_t *result_pool);
 
 /* Declare that the following function requires/implies that in BRANCH's
  * mapping, for each existing element, the parent also exists.
@@ -449,16 +458,17 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             const char *new_name,
                             apr_pool_t *scratch_pool);
 
-/* Instantiate a new branch of FROM_BRANCH, selecting only the subtree at
- * FROM_EID, at existing branch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
+/* Instantiate a new branch of the subtree FROM_SUBTREE, at the
+ * existing branch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
+ * Also branch, recursively, the subbranches in FROM_SUBTREE.
+ *
+ * TO_OUTER_BRANCH may be the same as or different from FROM_BRANCH.
  */
 svn_error_t *
 svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
-                             svn_branch_instance_t *from_branch,
-                             int from_eid,
+                             svn_branch_subtree_t from_subtree,
                              svn_branch_instance_t *to_outer_branch,
                              svn_branch_eid_t to_outer_eid,
-                             int new_branch_root_eid,
                              apr_pool_t *scratch_pool);
 
 /* Create a copy of NEW_SUBTREE in TO_BRANCH, generating a new element

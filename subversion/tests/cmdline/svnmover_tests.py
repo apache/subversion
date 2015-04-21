@@ -507,6 +507,38 @@ def merges(sbox):
                            '-U', repo_url,
                            'merge', 'trunk@5', 'branches/br1', 'trunk@2')
 
+
+######################################################################
+
+# Expected output of 'svnmover diff'
+
+def reported_element_del_line(rpath, branch_text=''):
+  return 'D   ' + re.escape(rpath) + branch_text
+
+def reported_element_add_line(rpath, branch_text=''):
+  return 'A   ' + re.escape(rpath) + branch_text
+
+def reported_branch_del_line(subbranch_fullpath):
+  return r'--- deleted branch \^.* at /%s' % (re.escape(subbranch_fullpath),)
+
+def reported_branch_add_line(subbranch_fullpath):
+  return r'--- added branch \^.* at /%s' % (re.escape(subbranch_fullpath),)
+
+def reported_br_params(path1, path2):
+  """Return (SUBBRANCH_RPATH, SUBBRANCH_FULLPATH).
+
+     Parameters are either (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH) or for
+     a first-level branch (SUBBRANCH_RPATH, None). 'FULLPATH' means relpath
+     from the repo root; 'RPATH' means relpath from the outer branch.
+  """
+  if path2 is None:
+    subbranch_rpath = path1
+    subbranch_fullpath = path1
+  else:
+    subbranch_rpath = path2
+    subbranch_fullpath = path1 + '/' + path2
+  return subbranch_rpath, subbranch_fullpath
+
 def reported_br_diff(path1, path2):
   """Return expected header lines for diff of a branch, or subtree in a branch.
 
@@ -526,18 +558,21 @@ def reported_del(path):
 def reported_br_del(path1, path2=None):
   """Return expected lines for deletion of a (sub)branch.
 
-     Parameters are either (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH) or for
-     a first-level branch just (SUBBRANCH_RPATH). 'FULLPATH' means relpath
-     from the repo root; 'RPATH' means relpath from the outer branch.
+     Params are (SUBBRANCH_RPATH) or (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH).
   """
-  if path2 is None:
-    subbranch_rpath = path1
-    subbranch_fullpath = path1
-  else:
-    subbranch_rpath = path2
-    subbranch_fullpath = path1 + '/' + path2
-  return ['D   ' + re.escape(subbranch_rpath) + r' \(branch \^\..*\)',
-          r'--- deleted branch \^.* at /%s' % (re.escape(subbranch_fullpath),)]
+  subbranch_rpath, subbranch_fullpath = reported_br_params(path1, path2)
+  return [reported_element_del_line(subbranch_rpath, r' \(branch \^\..*\)'),
+          reported_branch_del_line(subbranch_fullpath)]
+
+def reported_br_nested_del(path1, path2=None):
+  """Return expected lines for deletion of a subbranch that is nested inside
+     an outer branch that is also deleted: there is no accompanying 'deleted
+     element' line.
+
+     Params are (SUBBRANCH_RPATH) or (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH).
+  """
+  subbranch_rpath, subbranch_fullpath = reported_br_params(path1, path2)
+  return [reported_branch_del_line(subbranch_fullpath)]
 
 def reported_add(path):
   """Return expected lines for addition of an element.
@@ -549,16 +584,21 @@ def reported_add(path):
 def reported_br_add(path1, path2=None):
   """Return expected lines for addition of a (sub)branch.
 
-     Parameters are as for 'reported_br_del'.
+     Params are (SUBBRANCH_RPATH) or (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH).
   """
-  if path2 is None:
-    subbranch_rpath = path1
-    subbranch_fullpath = path1
-  else:
-    subbranch_rpath = path2
-    subbranch_fullpath = path1 + '/' + path2
-  return ['A   ' + re.escape(subbranch_rpath) + r' \(branch \^\..*\)',
-          r'--- added branch \^.* at /%s' % (re.escape(subbranch_fullpath),)]
+  subbranch_rpath, subbranch_fullpath = reported_br_params(path1, path2)
+  return [reported_element_add_line(subbranch_rpath, r' \(branch \^\..*\)'),
+          reported_branch_add_line(subbranch_fullpath)]
+
+def reported_br_nested_add(path1, path2=None):
+  """Return expected lines for addition of a subbranch that is nested inside
+     an outer branch that is also added: there is no accompanying 'added
+     element' line.
+
+     Params are (SUBBRANCH_RPATH) or (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH).
+  """
+  subbranch_rpath, subbranch_fullpath = reported_br_params(path1, path2)
+  return [reported_branch_add_line(subbranch_fullpath)]
 
 def reported_move(path1, path2, branch_text=''):
   """Return expected lines for a move, optionally of a (sub)branch.
@@ -579,6 +619,9 @@ def reported_br_move(path1, path2):
   """Return expected lines for a move of a (sub)branch.
   """
   return reported_move(path1, path2, r' \(branch \^\..*\)')
+
+
+######################################################################
 
 #@XFail()  # There is a bug in the conversion to old-style commits:
 #  in r6 'bar' is plain-added instead of copied.
@@ -1127,6 +1170,32 @@ def merge_added_subbranch(sbox):
                  reported_br_add('branches/foo', 'lib2'),
                  'merge trunk branches/foo trunk@' + str(yca_rev))
 
+def branch_to_subbranch_of_self(sbox):
+  "branch to subbranch of self"
+  # When branching, put the new branch inside the source subtree. This should
+  # not lead to infinite recursion.
+  #   * source is a { whole branch | subtree of a branch }
+  #   * target is a new path in { the source subtree |
+  #                               a subbranch in the source branch }
+  sbox_build_svnmover(sbox, content=initial_content_in_trunk)
+
+  # branch 'trunk' to 'trunk/foo'
+  test_svnmover2(sbox, '', None,
+                 'branch trunk trunk/foo')
+  # add another subbranch nested under that
+  test_svnmover2(sbox, 'trunk', None,
+                 'branch lib foo/lib2')
+
+  # branch 'trunk' to 'trunk/foo/lib2/x'
+  #
+  # This should not recurse infinitely
+  test_svnmover2(sbox, '',
+                 reported_br_diff('trunk/foo/lib2', 'trunk/foo/lib2') +
+                 reported_br_add('trunk/foo/lib2', 'x') +
+                 reported_br_nested_add('trunk/foo/lib2/x', 'foo') +
+                 reported_br_nested_add('trunk/foo/lib2/x/foo', 'lib2'),
+                 'branch trunk trunk/foo/lib2/x')
+
 
 ######################################################################
 
@@ -1145,6 +1214,7 @@ test_list = [ None,
               subbranches1,
               merge_deleted_subbranch,
               merge_added_subbranch,
+              branch_to_subbranch_of_self,
             ]
 
 if __name__ == '__main__':
