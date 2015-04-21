@@ -308,6 +308,18 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
                    svn_editor_t *editor,
                    apr_pool_t *scratch_pool);
 
+/* Load branching info.
+ */
+svn_error_t *
+svn_ra_load_branching_state(svn_branch_revision_root_t **branching_txn_p,
+                            svn_editor3__shim_fetch_func_t *fetch_func,
+                            void **fetch_baton,
+                            svn_ra_session_t *session,
+                            const char *branch_info_dir,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /* Ev3 version of svn_ra_get_commit_editor().
  *
  * If BRANCH_INFO_DIR is non-null, store branching info in that local
