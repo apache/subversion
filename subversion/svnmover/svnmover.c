@@ -124,7 +124,6 @@ mtcc_create(mtcc_t **mtcc_p,
 {
   apr_pool_t *mtcc_pool = svn_pool_create(result_pool);
   mtcc_t *mtcc = apr_pcalloc(mtcc_pool, sizeof(*mtcc));
-  const char *repos_root_url;
   const char *branch_info_dir = NULL;
 
   mtcc->pool = mtcc_pool;
@@ -151,13 +150,11 @@ mtcc_create(mtcc_t **mtcc_p,
   /* Choose whether to store branching info in a local dir or in revprops.
      (For now, just to exercise the options, we choose local files for
      RA-local and revprops for a remote repo.) */
-  SVN_ERR(svn_ra_get_repos_root2(mtcc->ra_session, &repos_root_url,
-                                 scratch_pool));
-  if (strncmp(repos_root_url, "file://", 7) == 0)
+  if (strncmp(mtcc->repos_root_url, "file://", 7) == 0)
     {
       const char *repos_dir;
 
-      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, repos_root_url,
+      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, mtcc->repos_root_url,
                                                scratch_pool));
       branch_info_dir = svn_dirent_join(repos_dir, "branch-info", scratch_pool);
     }
