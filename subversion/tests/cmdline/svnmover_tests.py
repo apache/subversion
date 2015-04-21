@@ -209,7 +209,7 @@ def expected_ls_output(paths, subbranch_paths=[]):
   expected_out = svntest.verify.UnorderedRegexListOutput(
     [r'    e\d+ ' + re.escape(p) + '\n'
      for p in paths] +
-    [r'    e\d+ ' + re.escape(p) + r' \(branch \^\.\d+\)' + '\n'
+    [r'    e\d+ ' + re.escape(p) + r' \(branch B[0-9.]+\)' + '\n'
      for p in subbranch_paths])
   return expected_out
 
@@ -519,10 +519,10 @@ def reported_element_add_line(rpath, branch_text=''):
   return 'A   ' + re.escape(rpath) + branch_text
 
 def reported_branch_del_line(subbranch_fullpath):
-  return r'--- deleted branch \^.* at /%s' % (re.escape(subbranch_fullpath),)
+  return r'--- deleted branch B[0-9.]+ at /%s' % (re.escape(subbranch_fullpath),)
 
 def reported_branch_add_line(subbranch_fullpath):
-  return r'--- added branch \^.* at /%s' % (re.escape(subbranch_fullpath),)
+  return r'--- added branch B[0-9.]+ at /%s' % (re.escape(subbranch_fullpath),)
 
 def reported_br_params(path1, path2):
   """Return (SUBBRANCH_RPATH, SUBBRANCH_FULLPATH).
@@ -545,7 +545,7 @@ def reported_br_diff(path1, path2):
      PATH1 is the 'left' and PATH2 the 'right' side path. Both are full paths
      from the repo root.
   """
-  return [r'--- diff branch \^.* at /%s : \^.* at /%s' % (
+  return [r'--- diff branch B[0-9.]+ at /%s : B[0-9.]+ at /%s' % (
            re.escape(path1), re.escape(path2))]
 
 def reported_del(path):
@@ -561,7 +561,7 @@ def reported_br_del(path1, path2=None):
      Params are (SUBBRANCH_RPATH) or (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH).
   """
   subbranch_rpath, subbranch_fullpath = reported_br_params(path1, path2)
-  return [reported_element_del_line(subbranch_rpath, r' \(branch \^\..*\)'),
+  return [reported_element_del_line(subbranch_rpath, r' \(branch B[0-9.]+\)'),
           reported_branch_del_line(subbranch_fullpath)]
 
 def reported_br_nested_del(path1, path2=None):
@@ -587,7 +587,7 @@ def reported_br_add(path1, path2=None):
      Params are (SUBBRANCH_RPATH) or (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH).
   """
   subbranch_rpath, subbranch_fullpath = reported_br_params(path1, path2)
-  return [reported_element_add_line(subbranch_rpath, r' \(branch \^\..*\)'),
+  return [reported_element_add_line(subbranch_rpath, r' \(branch B[0-9.]+\)'),
           reported_branch_add_line(subbranch_fullpath)]
 
 def reported_br_nested_add(path1, path2=None):
@@ -618,7 +618,7 @@ def reported_move(path1, path2, branch_text=''):
 def reported_br_move(path1, path2):
   """Return expected lines for a move of a (sub)branch.
   """
-  return reported_move(path1, path2, r' \(branch \^\..*\)')
+  return reported_move(path1, path2, r' \(branch B[0-9.]+\)')
 
 
 ######################################################################

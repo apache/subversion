@@ -813,7 +813,7 @@ svn_branch_get_default_r0_metadata(apr_pool_t *result_pool)
   static const char *default_repos_info
     = "r0:\n"
       "family: eids 0 1 b-instances 1\n"
-      "b^ root-eid 0 at .\n"
+      "B0 root-eid 0 at .\n"
       "e0: normal -1 .\n";
 
   return svn_string_create(default_repos_info, result_pool);
@@ -836,7 +836,7 @@ parse_branch_line(char *bid_p,
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(!eof);
 
-  n = sscanf(line->data, "b%s root-eid %d at%n",
+  n = sscanf(line->data, "%s root-eid %d at%n",
              bid_p, root_eid_p, &offset);
   SVN_ERR_ASSERT(n >= 2);  /* C std is unclear on whether '%n' counts */
   SVN_ERR_ASSERT(line->data[offset] == ' ');
@@ -1079,7 +1079,7 @@ svn_branch_instance_serialize(svn_stream_t *stream,
   int eid;
 
   SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "b%s root-eid %d at %s\n",
+                            "%s root-eid %d at %s\n",
                             svn_branch_instance_get_id(branch, scratch_pool),
                             branch->root_eid,
                             branch_root_rrpath[0] ? branch_root_rrpath : "."));
@@ -1236,15 +1236,20 @@ const char *
 svn_branch_instance_get_id(svn_branch_instance_t *branch,
                            apr_pool_t *result_pool)
 {
-  const char *id = "";
+  const char *id = NULL;
+
+  if (! branch->outer_branch)
+    return "B0";
 
   while (branch->outer_branch)
     {
-      id = apr_psprintf(result_pool, ".%d%s",
-                        branch->outer_eid, id);
+      if (id)
+        id = apr_psprintf(result_pool, "%d.%s", branch->outer_eid, id);
+      else
+        id = apr_psprintf(result_pool, "%d", branch->outer_eid);
       branch = branch->outer_branch;
     }
-  id = apr_psprintf(result_pool, "^%s", id);
+  id = apr_psprintf(result_pool, "B%s", id);
   return id;
 }
 
