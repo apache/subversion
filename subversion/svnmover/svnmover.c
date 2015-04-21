@@ -48,6 +48,7 @@
 #include "private/svn_ra_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_token.h"
 
 /* Version compatibility check */
 static svn_error_t *
@@ -66,6 +67,16 @@ check_lib_versions(void)
 }
 
 static svn_boolean_t quiet = FALSE;
+
+/* UI mode: whether to display output in terms of paths or elements */
+enum { UI_MODE_EIDS, UI_MODE_PATHS };
+static int the_ui_mode = UI_MODE_EIDS;
+static const svn_token_map_t ui_mode_map[]
+  = { {"eids", UI_MODE_EIDS},
+      {"e", UI_MODE_EIDS},
+      {"paths", UI_MODE_PATHS},
+      {"p", UI_MODE_PATHS},
+      {NULL, SVN_TOKEN_UNKNOWN} };
 
 /* Is BRANCH1 the same branch as BRANCH2? Compare by full branch-ids; don't
    require identical branch-instance objects. */
@@ -212,7 +223,6 @@ mtcc_commit(mtcc_t *mtcc,
 
 typedef enum action_code_t {
   ACTION_DIFF,
-  ACTION_DIFF_E,
   ACTION_LOG,
   ACTION_LIST_BRANCHES,
   ACTION_LIST_BRANCHES_R,
@@ -256,10 +266,8 @@ static const action_defn_t action_defn[] =
     "(like merging the creation of the subtree at SRC to DST)"},
   {ACTION_MKBRANCH,         "mkbranch", 1, "ROOT",
     "make a directory that's the root of a new subbranch"},
-  {ACTION_DIFF,             "diff", 2, "LEFT RIGHT",
-    "diff LEFT to RIGHT"},
-  {ACTION_DIFF_E,           "diff-e", 2, "LEFT RIGHT",
-    "diff LEFT to RIGHT (element-focused output)"},
+  {ACTION_DIFF,             "diff", 2, "LEFT@REV RIGHT@REV",
+    "show differences from subtree LEFT to subtree RIGHT"},
   {ACTION_MERGE,            "merge", 3, "FROM TO YCA@REV",
     "3-way merge YCA->FROM into TO"},
   {ACTION_CP,               "cp", 2, "REV SRC DST",
@@ -357,27 +365,66 @@ subbranch_str(svn_branch_instance_t *branch,
   return branch_str(subbranch, result_pool);
 }
 
-/* List all elements in branch-instance BRANCH.
+/* List all elements in branch-instance BRANCH, in path notation.
  */
 static svn_error_t *
 list_branch_elements(svn_branch_instance_t *branch,
                      apr_pool_t *scratch_pool)
 {
+  apr_hash_t *paths_to_eid = apr_hash_make(scratch_pool);
   int eid;
+  SVN_ITER_T(int) *pi;
 
   for (eid = branch->rev_root->first_eid; eid < branch->rev_root->next_eid; eid++)
     {
-      const char *rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
-                                                        scratch_pool);
+      const char *relpath = svn_branch_get_path_by_eid(branch, eid,
+                                                       scratch_pool);
 
-      if (rrpath)
+      if (relpath)
         {
-          const char *relpath
-            = svn_relpath_skip_ancestor(svn_branch_get_root_rrpath(
-                                          branch, scratch_pool), rrpath);
+          svn_hash_sets(paths_to_eid, relpath, apr_pmemdup(scratch_pool,
+                                                           &eid, sizeof(eid)));
+        }
+    }
+  for (SVN_HASH_ITER_SORTED(pi, paths_to_eid, svn_sort_compare_items_as_paths, scratch_pool))
+    {
+      const char *relpath = pi->key;
 
-          printf("    e%d %s%s\n",
-                 eid, relpath[0] ? relpath : ".",
+      eid = *(int *)pi->val;
+      printf("    %s%s\n",
+             relpath[0] ? relpath : ".",
+             subbranch_str(branch, eid, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* List all elements in branch-instance BRANCH, in element notation.
+ */
+static svn_error_t *
+list_branch_elements_by_eid(svn_branch_instance_t *branch,
+                            apr_pool_t *scratch_pool)
+{
+  int eid;
+  int eid_width = apr_snprintf(NULL, 0, "%d", branch->rev_root->next_eid - 1);
+
+  for (eid = branch->rev_root->first_eid; eid < branch->rev_root->next_eid; eid++)
+    {
+      svn_branch_el_rev_content_t *node = svn_branch_map_get(branch, eid);
+
+      if (node && node->parent_eid == -1)
+        {
+          /* root element of this branch */
+          printf("    e%-*d  %-*s .\n",
+                 eid_width, eid,
+                 eid_width, "");
+        }
+      else if (node)
+        {
+          printf("    e%-*d e%-*d/%s%s\n",
+                 eid_width, eid,
+                 eid_width, node->parent_eid,
+                 node->name,
                  subbranch_str(branch, eid, scratch_pool));
         }
     }
@@ -392,19 +439,22 @@ branch_info(svn_branch_instance_t *branch,
             svn_boolean_t verbose,
             apr_pool_t *scratch_pool)
 {
-  if (verbose)
-    {
-      printf("  branch %s root=e%d /%s\n",
-             svn_branch_instance_get_id(branch, scratch_pool),
-             branch->root_eid,
-             svn_branch_get_root_rrpath(branch, scratch_pool));
-      SVN_ERR(list_branch_elements(branch, scratch_pool));
-    }
-  else
+  if (the_ui_mode == UI_MODE_PATHS)
     {
       printf("  %s /%s\n",
              svn_branch_instance_get_id(branch, scratch_pool),
              svn_branch_get_root_rrpath(branch, scratch_pool));
+      if (verbose)
+        SVN_ERR(list_branch_elements(branch, scratch_pool));
+    }
+  else
+    {
+      printf("  %s /%s root=e%d\n",
+             svn_branch_instance_get_id(branch, scratch_pool),
+             svn_branch_get_root_rrpath(branch, scratch_pool),
+             branch->root_eid);
+      if (verbose)
+        SVN_ERR(list_branch_elements_by_eid(branch, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -419,8 +469,6 @@ list_branches(svn_branch_revision_root_t *rev_root,
               apr_pool_t *scratch_pool)
 {
   SVN_ITER_T(svn_branch_instance_t) *bi;
-
-  printf("branches rooted at e%d:\n", eid);
 
   for (SVN_ARRAY_ITER(bi, svn_branch_get_all_branch_instances(
                             rev_root, scratch_pool), scratch_pool))
@@ -912,86 +960,13 @@ svn_branch_merge(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/* Display differences, referring to elements */
-static svn_error_t *
-svn_branch_diff_e(svn_editor3_t *editor,
-                  svn_branch_el_rev_id_t *left,
-                  svn_branch_el_rev_id_t *right,
-                  const char *prefix,
-                  const char *header,
-                  apr_pool_t *scratch_pool)
-{
-  apr_hash_t *diff_yca_tgt;
-  int first_eid, next_eid, eid;
-  svn_boolean_t printed_header = FALSE;
-
-  SVN_ERR_ASSERT(left->eid >= 0 && right->eid >= 0);
-
-  SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
-                                         editor, left, right,
-                                         scratch_pool, scratch_pool));
-
-  first_eid = left->branch->rev_root->first_eid;
-  next_eid = MAX(left->branch->rev_root->next_eid,
-                 right->branch->rev_root->next_eid);
-
-  for (eid = first_eid; eid < next_eid; eid++)
-    {
-      svn_branch_el_rev_content_t **e_pair
-        = svn_int_hash_get(diff_yca_tgt, eid);
-      svn_branch_el_rev_content_t *e0, *e1;
-
-      if (! e_pair)
-        continue;
-
-      e0 = e_pair[0];
-      e1 = e_pair[1];
-
-      if (e0 || e1)
-        {
-          char status_mod = ' ', status_reparent = ' ', status_rename = ' ';
-
-          if (e0 && e1)
-            {
-              status_mod = 'M';
-              status_reparent = (e0->parent_eid != e1->parent_eid) ? 'v' : ' ';
-              status_rename  = (strcmp(e0->name, e1->name) != 0) ? 'r' : ' ';
-            }
-          else
-            {
-              status_mod = e0 ? 'D' : 'A';
-            }
-
-          if (header && ! printed_header)
-            {
-              printf("%s%s", prefix, header);
-              printed_header = TRUE;
-            }
-
-          printf("%s%c%c%c e%d  %s%s%s%s\n",
-                 prefix,
-                 status_mod, status_reparent, status_rename,
-                 eid,
-                 e1 ? apr_psprintf(scratch_pool, "e%d/%s",
-                                   e1->parent_eid, e1->name) : "",
-                 subbranch_str(e0 ? left->branch : right->branch, eid,
-                               scratch_pool),
-                 e0 && e1 ? " from " : "",
-                 e0 ? apr_psprintf(scratch_pool, "e%d/%s",
-                                   e0->parent_eid, e0->name) : "");
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /*  */
 typedef struct diff_item_t
 {
+  int eid;
+  svn_branch_el_rev_content_t *e0, *e1;
   char status_mod, status_reparent, status_rename;
   const char *major_path;
-  const char *from;
-  const char *subbranch_str;
 } diff_item_t;
 
 /*  */
@@ -1008,7 +983,17 @@ diff_ordering(const void *a, const void *b)
   return svn_path_compare_paths(item1->major_path, item2->major_path);
 }
 
-/* Display differences, referring to paths */
+/*  */
+static int
+diff_ordering_eids(const void *a, const void *b)
+{
+  return (a < b) ? -1 : (a > b) ? 1 : 0;
+}
+
+/* Display differences between branch subtrees LEFT and RIGHT.
+ *
+ * The output refers to paths or to elements according to THE_UI_MODE.
+ */
 static svn_error_t *
 svn_branch_diff(svn_editor3_t *editor,
                 svn_branch_el_rev_id_t *left,
@@ -1021,6 +1006,7 @@ svn_branch_diff(svn_editor3_t *editor,
   int first_eid, next_eid, eid;
   svn_array_t *diff_changes = svn_array_make(scratch_pool);
   SVN_ITER_T(diff_item_t) *ai;
+  int eid_width;
 
   SVN_ERR_ASSERT(left->eid >= 0 && right->eid >= 0);
 
@@ -1048,8 +1034,10 @@ svn_branch_diff(svn_editor3_t *editor,
         {
           diff_item_t *item = apr_palloc(scratch_pool, sizeof(*item));
           const char *path0 = NULL, *path1 = NULL;
-          const char *from = "";
 
+          item->eid = eid;
+          item->e0 = e0;
+          item->e1 = e1;
           item->status_mod = ' ';
           item->status_reparent = ' ';
           item->status_rename = ' ';
@@ -1068,6 +1056,28 @@ svn_branch_diff(svn_editor3_t *editor,
             path0 = svn_branch_get_path_by_eid(left->branch, eid, scratch_pool);
           if (e1)
             path1 = svn_branch_get_path_by_eid(right->branch, eid, scratch_pool);
+
+          item->major_path = (e1 ? path1 : path0);
+          SVN_ARRAY_PUSH(diff_changes) = item;
+        }
+    }
+
+  if (header && diff_changes->nelts)
+    printf("%s%s", prefix, header);
+  eid_width = apr_snprintf(NULL, 0, "%d", next_eid - 1);
+
+  for (SVN_ARRAY_ITER_SORTED(ai, diff_changes,
+                             (the_ui_mode == UI_MODE_EIDS)
+                               ? diff_ordering_eids : diff_ordering,
+                             scratch_pool))
+    {
+      diff_item_t *item = ai->val;
+      svn_branch_el_rev_content_t *e0 = item->e0, *e1 = item->e1;
+
+      if (the_ui_mode == UI_MODE_PATHS)
+        {
+          const char *from = "";
+
           if (e0 && e1
               && (e0->parent_eid != e1->parent_eid
                   || strcmp(e0->name, e1->name) != 0))
@@ -1085,29 +1095,32 @@ svn_branch_diff(svn_editor3_t *editor,
               else
                 from = apr_psprintf(scratch_pool,
                                     " (moved+renamed from %s)",
-                                    path0);
+                                    svn_branch_get_path_by_eid(left->branch,
+                                                               item->eid,
+                                                               scratch_pool));
             }
-          item->major_path = (e1 ? path1 : path0);
-          item->from = from;
-          item->subbranch_str = subbranch_str(e0 ? left->branch : right->branch,
-                                              eid, scratch_pool);
-          SVN_ARRAY_PUSH(diff_changes) = item;
+          printf("%s%c%c%c %s%s%s\n",
+                 prefix,
+                 item->status_mod, item->status_reparent, item->status_rename,
+                 item->major_path,
+                 subbranch_str(e0 ? left->branch : right->branch,
+                               item->eid, scratch_pool),
+                 from);
         }
-    }
-
-  if (header && diff_changes->nelts)
-    printf("%s%s", prefix, header);
-
-  for (SVN_ARRAY_ITER_SORTED(ai, diff_changes, diff_ordering, scratch_pool))
-    {
-      diff_item_t *item = ai->val;
-
-      printf("%s%c%c%c %s%s%s\n",
-             prefix,
-             item->status_mod, item->status_reparent, item->status_rename,
-             item->major_path,
-             item->subbranch_str,
-             item->from);
+      else
+        {
+          printf("%s%c%c%c e%-*d  %s%s%s%s\n",
+                 prefix,
+                 item->status_mod, item->status_reparent, item->status_rename,
+                 eid_width, item->eid,
+                 e1 ? apr_psprintf(scratch_pool, "e%-*d/%s",
+                                   eid_width, e1->parent_eid, e1->name) : "",
+                 subbranch_str(e0 ? left->branch : right->branch,
+                               item->eid, scratch_pool),
+                 e0 && e1 ? " from " : "",
+                 e0 ? apr_psprintf(scratch_pool, "e%-*d/%s",
+                                   eid_width, e0->parent_eid, e0->name) : "");
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1478,7 +1491,7 @@ commit_callback(const svn_commit_info_t *commit_info,
                                     pool, pool));
   SVN_ERR(svn_branch_diff_r(mtcc->editor,
                             el_rev_left, el_rev_right,
-                            svn_branch_diff_e, "   ",
+                            svn_branch_diff, "   ",
                             pool));
   return SVN_NO_ERROR;
 }
@@ -1628,17 +1641,6 @@ execute(const apr_array_header_t *actions,
                                       iterpool));
           }
           break;
-        case ACTION_DIFF_E:
-          VERIFY_EID_EXISTS("diff-e", 0);
-          VERIFY_EID_EXISTS("diff-e", 1);
-          {
-            SVN_ERR(svn_branch_diff_r(editor,
-                                      el_rev[0] /*from*/,
-                                      el_rev[1] /*to*/,
-                                      svn_branch_diff_e, "",
-                                      iterpool));
-          }
-          break;
         case ACTION_LOG:
           VERIFY_EID_EXISTS("log", 0);
           VERIFY_EID_EXISTS("log", 1);
@@ -1652,6 +1654,15 @@ execute(const apr_array_header_t *actions,
         case ACTION_LIST_BRANCHES:
           {
             VERIFY_EID_EXISTS("branches", 0);
+            if (the_ui_mode == UI_MODE_PATHS)
+              {
+                printf("branches rooted at same element as '%s':\n",
+                       action->relpath[0]);
+              }
+            else
+              {
+                printf("branches rooted at e%d:\n", el_rev[0]->eid);
+              }
             SVN_ERR(list_branches(
                       el_rev[0]->branch->rev_root,
                       el_rev[0]->eid,
@@ -1672,7 +1683,10 @@ execute(const apr_array_header_t *actions,
         case ACTION_LS:
           {
             VERIFY_EID_EXISTS("ls", 0);
-            SVN_ERR(list_branch_elements(el_rev[0]->branch, iterpool));
+            if (the_ui_mode == UI_MODE_PATHS)
+              SVN_ERR(list_branch_elements(el_rev[0]->branch, iterpool));
+            else
+              SVN_ERR(list_branch_elements_by_eid(el_rev[0]->branch, iterpool));
           }
           break;
         case ACTION_BRANCH:
@@ -1933,6 +1947,7 @@ usage(FILE *stream, apr_pool_t *pool)
   svn_error_clear(svn_cmdline_fputs(
     _("\n"
       "Valid options:\n"
+      "  --ui={eids|e|paths|p}  : display information as elements or as paths\n"
       "  -h, -? [--help]        : display this text\n"
       "  -v [--verbose]         : display debugging messages\n"
       "  -q [--quiet]           : suppress notifications\n"
@@ -2217,7 +2232,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     with_revprop_opt,
     non_interactive_opt,
     force_interactive_opt,
-    trust_server_cert_opt
+    trust_server_cert_opt,
+    ui_opt
   };
   static const apr_getopt_option_t options[] = {
     {"verbose", 'v', 0, ""},
@@ -2240,6 +2256,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"config-option",  config_inline_opt, 1, ""},
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
     {"version", version_opt, 0, ""},
+    {"ui", ui_opt, 1, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = "";
@@ -2358,6 +2375,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
         case version_opt:
           show_version = TRUE;
+          break;
+        case ui_opt:
+          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, arg, pool));
+          SVN_ERR(svn_token__from_word_err(&the_ui_mode, ui_mode_map, opt_arg));
           break;
         case 'h':
         case '?':
