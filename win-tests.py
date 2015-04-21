@@ -84,6 +84,7 @@ def _usage_exit():
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
   print("  --ssl-cert             : Path to SSL server certificate to trust.")
   print("  --exclusive-wc-locks   : Enable exclusive working copy locks")
+  print("  --memcached-dir=DIR    : Run memcached from dir")
   print("  --memcached-server=    : Enable usage of the specified memcached server")
   print("              <url:port>")
   print("  --skip-c-tests         : Skip all C tests")
@@ -134,7 +135,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
                         'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
-                        'skip-c-tests', 'dump-load-cross-check'
+                        'skip-c-tests', 'dump-load-cross-check', 'memcached-dir=',
                         ])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
@@ -171,7 +172,9 @@ tests_to_run = []
 log_level = None
 ssl_cert = None
 exclusive_wc_locks = None
+run_memcached = None
 memcached_server = None
+memcached_dir = None
 skip_c_tests = None
 dump_load_cross_check = None
 
@@ -258,6 +261,9 @@ for opt, val in opts:
     skip_c_tests = 1
   elif opt == '--dump-load-cross-check':
     dump_load_cross_check = 1
+  elif opt == '--memcached-dir':
+    memcached_dir = val
+    run_memcached = 1
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -698,6 +704,45 @@ class Httpd:
         pass
     print('Httpd.stop_daemon not implemented')
 
+class Memcached:
+  "Run memcached for tests"
+  def __init__(self, abs_memcached_dir, memcached_server):
+    self.name = 'memcached.exe'
+
+    self.memcached_host, self.memcached_port = memcached_server.split(':')
+    self.memcached_dir = abs_memcached_dir
+
+    self.proc = None
+    self.path = os.path.join(self.memcached_dir, self.name)
+
+    self.memcached_args = [
+                            self.name,
+                            '-p', self.memcached_port,
+                            '-l', self.memcached_host
+                          ]
+
+  def __del__(self):
+    "Stop memcached when the object is deleted"
+    self.stop()
+
+  def start(self):
+    "Start memcached as daemon"
+    print('Starting %s as daemon' % self.name)
+    print(self.memcached_args)
+    self.proc = subprocess.Popen([self.path] + self.memcached_args)
+
+  def stop(self):
+    "Stop memcached"
+    if self.proc is not None:
+      try:
+        print('Stopping %s' % self.name)
+        self.proc.poll();
+        if self.proc.returncode is None:
+          self.proc.kill();
+        return
+      except AttributeError:
+        pass
+
 # Move the binaries to the test directory
 create_target_dir(abs_builddir)
 locate_libs()
@@ -718,10 +763,15 @@ create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
 abs_builddir = fix_case(abs_builddir)
 
 daemon = None
+memcached = None
 # Run the tests
 
 # No need to start any servers if we are only listing the tests.
 if not list_tests:
+  if run_memcached:
+    memcached = Memcached(memcached_dir, memcached_server)
+    memcached.start()
+
   if run_svnserve:
     daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
@@ -1008,6 +1058,9 @@ elif test_swig == 'ruby':
 # Stop service daemon, if any
 if daemon:
   del daemon
+
+if memcached:
+  del memcached
 
 # Remove the execs again
 for tgt in copied_execs:
