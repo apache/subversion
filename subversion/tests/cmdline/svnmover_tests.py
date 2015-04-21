@@ -133,6 +133,7 @@ def test_svnmover2(sbox, relpath, expected_changes, *varargs):
 
   # Now, run 'svnmover diff -c HEAD'
   exit_code, outlines, errlines = svntest.main.run_svnmover('-U', sbox.repo_url,
+                                                            '--ui=paths',
                                                             'diff',
                                                             '.@' + str(commit_rev - 1),
                                                             '.@' + str(commit_rev))
@@ -207,9 +208,9 @@ def expected_ls_output(paths, subbranch_paths=[]):
      for the given plain PATHS and subbranch-root paths SUBBRANCH_PATHS.
   """
   expected_out = svntest.verify.UnorderedRegexListOutput(
-    [r'    e\d+ ' + re.escape(p) + '\n'
+    [r'    ' + re.escape(p) + '\n'
      for p in paths] +
-    [r'    e\d+ ' + re.escape(p) + r' \(branch B[0-9.]+\)' + '\n'
+    [r'    ' + re.escape(p) + r' \(branch B[0-9.]+\)' + '\n'
      for p in subbranch_paths])
   return expected_out
 
@@ -220,6 +221,7 @@ def verify_paths_in_branch(sbox, branch_path, paths, subbranch_paths=[]):
   expected_out = expected_ls_output(paths, subbranch_paths)
   svntest.actions.run_and_verify_svnmover(expected_out, None,
                                           '-U', sbox.repo_url,
+                                          '--ui=paths',
                                           'ls', branch_path)
 
 ######################################################################
