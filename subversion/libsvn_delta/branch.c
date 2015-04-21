@@ -97,6 +97,28 @@ svn_branch_get_all_branch_instances(svn_branch_revision_root_t *rev_root,
   return rev_root->branch_instances;
 }
 
+svn_branch_instance_t *
+svn_branch_get_branch_instance_by_id(const svn_branch_revision_root_t *rev_root,
+                                     const char *branch_instance_id,
+                                     apr_pool_t *scratch_pool)
+{
+  SVN_ITER_T(svn_branch_instance_t) *bi;
+  svn_branch_instance_t *branch = NULL;
+
+  for (SVN_ARRAY_ITER(bi, rev_root->branch_instances, scratch_pool))
+    {
+      svn_branch_instance_t *b = bi->val;
+
+      if (strcmp(svn_branch_instance_get_id(b, scratch_pool),
+                 branch_instance_id) == 0)
+        {
+          branch = b;
+          break;
+        }
+    }
+  return branch;
+}
+
 /* Assert BRANCH satisfies all its invariants.
  */
 static void

@@ -127,6 +127,15 @@ const apr_array_header_t *
 svn_branch_get_all_branch_instances(svn_branch_revision_root_t *rev_root,
                                     apr_pool_t *result_pool);
 
+/* Return the branch instance whose id is BRANCH_INSTANCE_ID in REV_ROOT.
+ *
+ * Return NULL if not found.
+ */
+svn_branch_instance_t *
+svn_branch_get_branch_instance_by_id(const svn_branch_revision_root_t *rev_root,
+                                     const char *branch_instance_id,
+                                     apr_pool_t *scratch_pool);
+
 /* Assign a new element id in REV_ROOT.
  */
 int
