@@ -215,13 +215,16 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
  */
 
 svn_branch_subtree_t *
-svn_branch_subtree_create(int root_eid,
+svn_branch_subtree_create(apr_hash_t *e_map,
+                          int root_eid,
                           apr_pool_t *result_pool)
 {
   svn_branch_subtree_t *subtree = apr_pcalloc(result_pool, sizeof(*subtree));
 
-  subtree->e_map = apr_hash_make(result_pool);
+  subtree->e_map = e_map ? apr_hash_copy(result_pool, e_map)
+                         : apr_hash_make(result_pool);
   subtree->root_eid = root_eid;
+  subtree->subbranches = apr_hash_make(result_pool);
   return subtree;
 }
 
@@ -349,17 +352,28 @@ svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
   branch_map_set(branch, eid, node);
 }
 
-svn_branch_subtree_t
-svn_branch_map_get_subtree(const svn_branch_instance_t *branch,
-                           int eid,
-                           apr_pool_t *result_pool)
+svn_branch_subtree_t *
+svn_branch_get_subtree(const svn_branch_instance_t *branch,
+                       int eid,
+                       apr_pool_t *result_pool)
 {
-  svn_branch_subtree_t new_subtree;
+  svn_branch_subtree_t *new_subtree;
+  SVN_ITER_T(svn_branch_instance_t) *bi;
 
   SVN_BRANCH_SEQUENCE_POINT(branch);
 
-  new_subtree.e_map = apr_hash_copy(result_pool, branch->e_map);
-  new_subtree.root_eid = eid;
+  new_subtree = svn_branch_subtree_create(branch->e_map, eid,
+                                          result_pool);
+
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(branch, eid,
+                                                     result_pool, result_pool),
+                      result_pool))
+    {
+      svn_branch_subtree_t *this_subtree
+        = svn_branch_get_subtree(bi->val, bi->val->root_eid, result_pool);
+
+      svn_int_hash_set(new_subtree->subbranches, bi->val->outer_eid, this_subtree);
+    }
   return new_subtree;
 }
 
@@ -568,6 +582,13 @@ svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
   apr_hash_index_t *hi;
   svn_branch_el_rev_content_t *new_root_content;
 
+  if (new_subtree.subbranches && apr_hash_count(new_subtree.subbranches))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Adding or copying a subtree containing "
+                                 "subbranches is not implemented"));
+    }
+
   /* Get a new EID for the root element, if not given. */
   if (to_eid == -1)
     {
@@ -598,6 +619,7 @@ svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
              as we might not have the node kind in the map.) */
           this_subtree.e_map = new_subtree.e_map;
           this_subtree.root_eid = this_from_eid;
+          this_subtree.subbranches = apr_hash_make(scratch_pool);
           SVN_ERR(svn_branch_map_add_subtree(to_branch, -1 /*to_eid*/,
                                              to_eid, from_node->name,
                                              this_subtree, scratch_pool));
@@ -641,6 +663,23 @@ svn_branch_instantiate_subtree(svn_branch_instance_t *to_branch,
           branch_map_set(to_branch, this_eid, this_node);
         }
     }
+
+  /* branch any subbranches */
+  {
+    SVN_ITER_T(svn_branch_subtree_t) *bi;
+
+    for (SVN_HASH_ITER(bi, scratch_pool, new_subtree.subbranches))
+      {
+        int this_outer_eid = svn_int_hash_this_key(bi->apr_hi);
+        svn_branch_subtree_t *this_subtree = bi->val;
+
+        /* branch this subbranch into NEW_BRANCH (recursing) */
+        SVN_ERR(svn_branch_branch_subtree_r2(NULL,
+                                             *this_subtree,
+                                             to_branch, this_outer_eid,
+                                             bi->iterpool));
+      }
+  }
 
   return SVN_NO_ERROR;
 }
@@ -884,7 +923,7 @@ svn_branch_instance_parse(svn_branch_instance_t **new_branch,
                                                result_pool);
 
   /* Read in the structure, leaving the content of each element as null */
-  tree = svn_branch_subtree_create(root_eid, scratch_pool);
+  tree = svn_branch_subtree_create(NULL, root_eid, scratch_pool);
   for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
     {
       int this_eid, this_parent_eid;
@@ -1218,6 +1257,7 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                             const char *new_name,
                             apr_pool_t *scratch_pool)
 {
+  svn_branch_subtree_t *from_subtree;
   int to_outer_eid;
 
   /* Source element must exist */
@@ -1230,6 +1270,11 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                                  from_branch, scratch_pool), from_eid);
     }
 
+  /* Fetch the subtree to be branched before creating the new subbranch root
+     element, as we don't want to recurse (endlessly) into that in the case
+     where it is an immediate subbranch of FROM_BRANCH. */
+  from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
+
   /* assign new eid to root node (outer branch) */
   to_outer_eid
     = svn_branch_allocate_new_eid(to_outer_branch->rev_root);
@@ -1237,9 +1282,8 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
                                           to_outer_parent_eid, new_name);
 
   SVN_ERR(svn_branch_branch_subtree_r2(new_branch_p,
-                                       from_branch, from_eid,
+                                       *from_subtree,
                                        to_outer_branch, to_outer_eid,
-                                       from_eid,
                                        scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1247,45 +1291,21 @@ svn_branch_branch_subtree_r(svn_branch_instance_t **new_branch_p,
 
 svn_error_t *
 svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
-                             svn_branch_instance_t *from_branch,
-                             int from_eid,
+                             svn_branch_subtree_t from_subtree,
                              svn_branch_instance_t *to_outer_branch,
                              svn_branch_eid_t to_outer_eid,
-                             int new_branch_root_eid,
                              apr_pool_t *scratch_pool)
 {
-  svn_branch_subtree_t from_subtree
-    = svn_branch_map_get_subtree(from_branch, from_eid, scratch_pool);
   svn_branch_instance_t *new_branch;
 
   /* create new inner branch instance */
   new_branch = svn_branch_add_new_branch_instance(to_outer_branch, to_outer_eid,
-                                                  new_branch_root_eid,
+                                                  from_subtree.root_eid,
                                                   scratch_pool);
 
   /* Populate the new branch mapping */
   SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", from_subtree,
                                          scratch_pool));
-
-  /* branch any subbranches under FROM_BRANCH:FROM_EID */
-  {
-    SVN_ITER_T(svn_branch_instance_t) *bi;
-
-    for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(
-                              from_branch, from_subtree.root_eid,
-                              scratch_pool, scratch_pool), scratch_pool))
-      {
-        svn_branch_instance_t *subbranch = bi->val;
-
-        /* branch this subbranch into NEW_BRANCH (recursing) */
-        SVN_ERR(svn_branch_branch_subtree_r2(NULL,
-                                             subbranch,
-                                             subbranch->root_eid,
-                                             new_branch, subbranch->outer_eid,
-                                             subbranch->root_eid,
-                                             bi->iterpool));
-      }
-  }
 
   if (new_branch_p)
     *new_branch_p = new_branch;
@@ -1318,8 +1338,7 @@ svn_branch_branch_into(svn_branch_instance_t *from_branch,
                        const char *new_name,
                        apr_pool_t *scratch_pool)
 {
-  svn_branch_subtree_t from_subtree
-    = svn_branch_map_get_subtree(from_branch, from_eid, scratch_pool);
+  svn_branch_subtree_t *from_subtree;
 
   /* Source element must exist */
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
@@ -1331,29 +1350,11 @@ svn_branch_branch_into(svn_branch_instance_t *from_branch,
                                  from_branch, scratch_pool), from_eid);
     }
 
+  from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
+
   /* Populate the new branch mapping */
   SVN_ERR(svn_branch_instantiate_subtree(to_branch, to_parent_eid, new_name,
-                                         from_subtree, scratch_pool));
-
-  /* branch any subbranches under FROM_BRANCH:FROM_EID */
-  {
-    SVN_ITER_T(svn_branch_instance_t) *bi;
-
-    for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(
-                              from_branch, from_subtree.root_eid,
-                              scratch_pool, scratch_pool), scratch_pool))
-      {
-        svn_branch_instance_t *subbranch = bi->val;
-
-        /* branch this subbranch into NEW_BRANCH (recursing) */
-        SVN_ERR(svn_branch_branch_subtree_r2(NULL,
-                                             subbranch,
-                                             subbranch->root_eid,
-                                             to_branch, subbranch->outer_eid,
-                                             subbranch->root_eid,
-                                             bi->iterpool));
-      }
-  }
+                                         *from_subtree, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1371,7 +1372,7 @@ svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
   /* copy the subtree, assigning new EIDs */
   SVN_ERR(svn_branch_map_add_subtree(to_branch, -1 /*to_eid*/,
                                      to_parent_eid, to_name,
-                                     svn_branch_map_get_subtree(
+                                     *svn_branch_get_subtree(
                                        from_el_rev->branch, from_el_rev->eid,
                                        scratch_pool),
                                      scratch_pool));

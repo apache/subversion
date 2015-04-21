@@ -708,11 +708,14 @@ merge_subbranch(svn_editor3_t *editor,
     }
   else if (subbr_src)  /* added on source branch */
     {
-      SVN_ERR(svn_branch_branch_subtree_r2(
-                NULL,
-                src_subbranch, src_subbranch->root_eid,
+      svn_branch_subtree_t *from_subtree
+        = svn_branch_get_subtree(src_subbranch,
+                                     src_subbranch->root_eid,
+                                     scratch_pool);
+
+      SVN_ERR(svn_branch_branch_subtree_r2(NULL,
+                *from_subtree,
                 tgt->branch, eid,
-                src_subbranch->root_eid,
                 scratch_pool));
     }
   else if (subbr_tgt)  /* added on target branch */
@@ -886,8 +889,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
  *
  * None of SRC, TGT and YCA is a subbranch root element.
  *
- * ### TODO:
- *     If ... contains nested subbranches, these will also be merged.
+ * Nested subbranches will also be merged.
  */
 static svn_error_t *
 svn_branch_merge(svn_editor3_t *editor,
@@ -1244,8 +1246,8 @@ move_by_branch_and_delete(svn_editor3_t *editor,
                           const char *to_name,
                           apr_pool_t *scratch_pool)
 {
-  svn_branch_subtree_t subtree
-    = svn_branch_map_get_subtree(el_rev->branch, el_rev->eid, scratch_pool);
+  svn_branch_subtree_t *subtree
+    = svn_branch_get_subtree(el_rev->branch, el_rev->eid, scratch_pool);
 
   /* This is supposed to be used for moving to a *different* branch.
      In fact, this method would also work for moving within one
@@ -1266,10 +1268,9 @@ move_by_branch_and_delete(svn_editor3_t *editor,
                                  el_rev->branch->outer_branch, el_rev->branch->outer_eid));
     }
   SVN_ERR(svn_branch_instantiate_subtree(to_branch,
-                                         to_parent_eid, to_name, subtree,
+                                         to_parent_eid, to_name, *subtree,
                                          scratch_pool));
 
-  /* ###  We need to move nested branches too. */
   return SVN_NO_ERROR;
 }
 
