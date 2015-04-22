@@ -91,7 +91,9 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Info about the branching in a specific revision (committed or uncommitted) */
+/* A container for all the branching metadata for a specific revision (or
+ * an uncommitted transaction).
+ */
 typedef struct svn_branch_revision_root_t
 {
   /* The repository in which this revision exists. */
@@ -106,8 +108,7 @@ typedef struct svn_branch_revision_root_t
   /* The root branch. */
   struct svn_branch_state_t *root_branch;
 
-  /* All branches. */
-  /* ### including root_branch */
+  /* All branches, including ROOT_BRANCH. */
   apr_array_header_t *branches;
 
 } svn_branch_revision_root_t;

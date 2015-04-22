@@ -432,7 +432,7 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
   return SVN_NO_ERROR;
 }
 
-/* List all branches rooted at EID.
+/* Show the id and path of BRANCH. If VERBOSE is true, alse list its elements.
  */
 static svn_error_t *
 branch_info(svn_branch_state_t *branch,
