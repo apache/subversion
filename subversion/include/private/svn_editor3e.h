@@ -627,7 +627,7 @@ svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
                 svn_branch_eid_t *eid,
                 svn_node_kind_t new_kind,
-                svn_branch_instance_t *branch,
+                svn_branch_state_t *branch,
                 svn_branch_eid_t new_parent_eid,
                 const char *new_name,
                 const svn_element_content_t *new_content);
@@ -648,7 +648,7 @@ svn_editor3_add(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_instantiate(svn_editor3_t *editor,
-                        svn_branch_instance_t *branch,
+                        svn_branch_state_t *branch,
                         svn_branch_eid_t eid,
                         svn_branch_eid_t new_parent_eid,
                         const char *new_name,
@@ -684,7 +684,7 @@ svn_editor3_instantiate(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
                      const svn_branch_el_rev_id_t *src_el_rev,
-                     svn_branch_instance_t *branch,
+                     svn_branch_state_t *branch,
                      svn_branch_eid_t local_eid,
                      svn_branch_eid_t new_parent_eid,
                      const char *new_name,
@@ -723,7 +723,7 @@ svn_editor3_copy_one(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_copy_tree(svn_editor3_t *editor,
                       const svn_branch_el_rev_id_t *src_el_rev,
-                      svn_branch_instance_t *branch,
+                      svn_branch_state_t *branch,
                       svn_branch_eid_t new_parent_eid,
                       const char *new_name);
 
@@ -773,7 +773,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
                    svn_revnum_t since_rev,
-                   svn_branch_instance_t *branch,
+                   svn_branch_state_t *branch,
                    svn_branch_eid_t eid);
 
 /** Alter the tree position and/or contents of the element identified
@@ -797,7 +797,7 @@ svn_editor3_delete(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
                   svn_revnum_t since_rev,
-                  svn_branch_instance_t *branch,
+                  svn_branch_state_t *branch,
                   svn_branch_eid_t eid,
                   svn_branch_eid_t new_parent_eid,
                   const char *new_name,
@@ -871,7 +871,7 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
   void *baton,
   svn_branch_eid_t *eid,
   svn_node_kind_t new_kind,
-  svn_branch_instance_t *branch,
+  svn_branch_state_t *branch,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
   const svn_element_content_t *new_content,
@@ -881,7 +881,7 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
   void *baton,
-  svn_branch_instance_t *branch,
+  svn_branch_state_t *branch,
   svn_branch_eid_t eid,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
@@ -893,7 +893,7 @@ typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
 typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
   void *baton,
   const svn_branch_el_rev_id_t *src_el_rev,
-  svn_branch_instance_t *branch,
+  svn_branch_state_t *branch,
   svn_branch_eid_t local_eid,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
@@ -905,7 +905,7 @@ typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
 typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
   void *baton,
   const svn_branch_el_rev_id_t *src_el_rev,
-  svn_branch_instance_t *branch,
+  svn_branch_state_t *branch,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
   apr_pool_t *scratch_pool);
@@ -915,7 +915,7 @@ typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
 typedef svn_error_t *(*svn_editor3_cb_delete_t)(
   void *baton,
   svn_revnum_t since_rev,
-  svn_branch_instance_t *branch,
+  svn_branch_state_t *branch,
   svn_branch_eid_t eid,
   apr_pool_t *scratch_pool);
 
@@ -924,7 +924,7 @@ typedef svn_error_t *(*svn_editor3_cb_delete_t)(
 typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   void *baton,
   svn_revnum_t since_rev,
-  svn_branch_instance_t *branch,
+  svn_branch_state_t *branch,
   svn_branch_eid_t eid,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
@@ -1027,7 +1027,7 @@ svn_editor3__get_baton(const svn_editor3_t *editor);
  * ### TODO: Clarify sequencing requirements.
  */
 void
-svn_editor3_find_branch_element_by_rrpath(svn_branch_instance_t **branch_p,
+svn_editor3_find_branch_element_by_rrpath(svn_branch_state_t **branch_p,
                                           int *eid_p,
                                           svn_editor3_t *editor,
                                           const char *rrpath,
@@ -1061,7 +1061,7 @@ svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
 svn_error_t *
 svn_editor3_el_rev_get(svn_branch_el_rev_content_t **node_p,
                       svn_editor3_t *editor,
-                      svn_branch_instance_t *branch,
+                      svn_branch_state_t *branch,
                       int eid,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);

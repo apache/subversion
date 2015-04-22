@@ -79,10 +79,10 @@ static const svn_token_map_t ui_mode_map[]
       {NULL, SVN_TOKEN_UNKNOWN} };
 
 /* Is BRANCH1 the same branch as BRANCH2? Compare by full branch-ids; don't
-   require identical branch-instance objects. */
+   require identical branch objects. */
 #define BRANCH_IS_SAME_BRANCH(branch1, branch2, scratch_pool) \
-  (strcmp(svn_branch_instance_get_id(branch1, scratch_pool), \
-          svn_branch_instance_get_id(branch2, scratch_pool)) == 0)
+  (strcmp(svn_branch_get_id(branch1, scratch_pool), \
+          svn_branch_get_id(branch2, scratch_pool)) == 0)
 
 /*  */
 __attribute__((format(printf, 1, 2)))
@@ -340,13 +340,13 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
  * Return "" if SUBBRANCH is null.
  */
 static const char *
-branch_str(svn_branch_instance_t *subbranch,
+branch_str(svn_branch_state_t *subbranch,
            apr_pool_t *result_pool)
 {
   if (subbranch)
     return apr_psprintf(result_pool,
                       " (branch %s)",
-                      svn_branch_instance_get_id(subbranch, result_pool));
+                      svn_branch_get_id(subbranch, result_pool));
   return "";
 }
 
@@ -355,20 +355,20 @@ branch_str(svn_branch_instance_t *subbranch,
  * Return "" if the element is not a subbranch root element.
  */
 static const char *
-subbranch_str(svn_branch_instance_t *branch,
+subbranch_str(svn_branch_state_t *branch,
               int eid,
               apr_pool_t *result_pool)
 {
-  svn_branch_instance_t *subbranch
+  svn_branch_state_t *subbranch
     = svn_branch_get_subbranch_at_eid(branch, eid, result_pool);
 
   return branch_str(subbranch, result_pool);
 }
 
-/* List all elements in branch-instance BRANCH, in path notation.
+/* List all elements in branch BRANCH, in path notation.
  */
 static svn_error_t *
-list_branch_elements(svn_branch_instance_t *branch,
+list_branch_elements(svn_branch_state_t *branch,
                      apr_pool_t *scratch_pool)
 {
   apr_hash_t *paths_to_eid = apr_hash_make(scratch_pool);
@@ -399,10 +399,10 @@ list_branch_elements(svn_branch_instance_t *branch,
   return SVN_NO_ERROR;
 }
 
-/* List all elements in branch-instance BRANCH, in element notation.
+/* List all elements in branch BRANCH, in element notation.
  */
 static svn_error_t *
-list_branch_elements_by_eid(svn_branch_instance_t *branch,
+list_branch_elements_by_eid(svn_branch_state_t *branch,
                             apr_pool_t *scratch_pool)
 {
   int eid;
@@ -432,17 +432,17 @@ list_branch_elements_by_eid(svn_branch_instance_t *branch,
   return SVN_NO_ERROR;
 }
 
-/* List all branch instances rooted at EID.
+/* List all branches rooted at EID.
  */
 static svn_error_t *
-branch_info(svn_branch_instance_t *branch,
+branch_info(svn_branch_state_t *branch,
             svn_boolean_t verbose,
             apr_pool_t *scratch_pool)
 {
   if (the_ui_mode == UI_MODE_PATHS)
     {
       printf("  %s /%s\n",
-             svn_branch_instance_get_id(branch, scratch_pool),
+             svn_branch_get_id(branch, scratch_pool),
              svn_branch_get_root_rrpath(branch, scratch_pool));
       if (verbose)
         SVN_ERR(list_branch_elements(branch, scratch_pool));
@@ -450,7 +450,7 @@ branch_info(svn_branch_instance_t *branch,
   else
     {
       printf("  %s /%s root=e%d\n",
-             svn_branch_instance_get_id(branch, scratch_pool),
+             svn_branch_get_id(branch, scratch_pool),
              svn_branch_get_root_rrpath(branch, scratch_pool),
              branch->root_eid);
       if (verbose)
@@ -460,7 +460,7 @@ branch_info(svn_branch_instance_t *branch,
   return SVN_NO_ERROR;
 }
 
-/* List all branch instances rooted at EID.
+/* List all branches rooted at EID.
  */
 static svn_error_t *
 list_branches(svn_branch_revision_root_t *rev_root,
@@ -468,12 +468,12 @@ list_branches(svn_branch_revision_root_t *rev_root,
               svn_boolean_t verbose,
               apr_pool_t *scratch_pool)
 {
-  SVN_ITER_T(svn_branch_instance_t) *bi;
+  SVN_ITER_T(svn_branch_state_t) *bi;
 
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_branch_instances(
+  for (SVN_ARRAY_ITER(bi, svn_branch_revision_root_get_branches(
                             rev_root, scratch_pool), scratch_pool))
     {
-      svn_branch_instance_t *branch = bi->val;
+      svn_branch_state_t *branch = bi->val;
 
       if (branch->root_eid != eid)
         continue;
@@ -483,21 +483,21 @@ list_branches(svn_branch_revision_root_t *rev_root,
   return SVN_NO_ERROR;
 }
 
-/* List all branch instances.
+/* List all branches.
  */
 static svn_error_t *
-list_all_branch_instances(svn_branch_revision_root_t *rev_root,
-                          svn_boolean_t verbose,
-                          apr_pool_t *scratch_pool)
+list_all_branches(svn_branch_revision_root_t *rev_root,
+                  svn_boolean_t verbose,
+                  apr_pool_t *scratch_pool)
 {
-  SVN_ITER_T(svn_branch_instance_t) *bi;
+  SVN_ITER_T(svn_branch_state_t) *bi;
 
   printf("branches:\n");
 
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_branch_instances(
+  for (SVN_ARRAY_ITER(bi, svn_branch_revision_root_get_branches(
                             rev_root, scratch_pool), scratch_pool))
     {
-      svn_branch_instance_t *branch = bi->val;
+      svn_branch_state_t *branch = bi->val;
 
       SVN_ERR(branch_info(branch, verbose, bi->iterpool));
     }
@@ -710,11 +710,11 @@ merge_subbranch(svn_editor3_t *editor,
                 int eid,
                 apr_pool_t *scratch_pool)
 {
-  svn_branch_instance_t *src_subbranch
+  svn_branch_state_t *src_subbranch
     = svn_branch_get_subbranch_at_eid(src->branch, eid, scratch_pool);
-  svn_branch_instance_t *tgt_subbranch
+  svn_branch_state_t *tgt_subbranch
     = svn_branch_get_subbranch_at_eid(tgt->branch, eid, scratch_pool);
-  svn_branch_instance_t *yca_subbranch
+  svn_branch_state_t *yca_subbranch
     = svn_branch_get_subbranch_at_eid(yca->branch, eid, scratch_pool);
   svn_branch_el_rev_id_t *subbr_src = NULL;
   svn_branch_el_rev_id_t *subbr_tgt = NULL;
@@ -796,16 +796,16 @@ branch_merge_subtree_r(svn_editor3_t *editor,
 
   SVN_DBG(("merge src: r%2ld b%s e%3d",
            src->rev,
-           svn_branch_instance_get_id(src->branch, scratch_pool), src->eid));
+           svn_branch_get_id(src->branch, scratch_pool), src->eid));
   SVN_DBG(("merge tgt: r%2ld b%s e%3d",
            tgt->rev,
-           svn_branch_instance_get_id(tgt->branch, scratch_pool), tgt->eid));
+           svn_branch_get_id(tgt->branch, scratch_pool), tgt->eid));
   SVN_DBG(("merge yca: r%2ld b%s e%3d",
            yca->rev,
-           svn_branch_instance_get_id(yca->branch, scratch_pool), yca->eid));
+           svn_branch_get_id(yca->branch, scratch_pool), yca->eid));
 
   notify("merging into branch %s",
-         svn_branch_instance_get_id(tgt->branch, scratch_pool));
+         svn_branch_get_id(tgt->branch, scratch_pool));
   /*
       for (eid, diff1) in element_differences(YCA, FROM):
         diff2 = element_diff(eid, YCA, TO)
@@ -908,7 +908,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
     }
 
   notify("merging into branch %s -- finished",
-         svn_branch_instance_get_id(tgt->branch, scratch_pool));
+         svn_branch_get_id(tgt->branch, scratch_pool));
 
   if (had_conflict)
     {
@@ -1131,7 +1131,7 @@ svn_branch_diff(svn_editor3_t *editor,
  * Return an empty hash if BRANCH is null.
  */
 static apr_hash_t *
-get_subbranches(svn_branch_instance_t *branch,
+get_subbranches(svn_branch_state_t *branch,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -1139,15 +1139,15 @@ get_subbranches(svn_branch_instance_t *branch,
 
   if (branch)
     {
-      SVN_ITER_T(svn_branch_instance_t) *bi;
+      SVN_ITER_T(svn_branch_state_t) *bi;
 
       for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
                                 branch, result_pool, scratch_pool),
                           scratch_pool))
         {
-          svn_branch_instance_t *b = bi->val;
+          svn_branch_state_t *b = bi->val;
 
-          svn_hash_sets(result, svn_branch_instance_get_id(b, result_pool), b);
+          svn_hash_sets(result, svn_branch_get_id(b, result_pool), b);
         }
     }
   return result;
@@ -1163,11 +1163,11 @@ svn_branch_diff_func_t(svn_editor3_t *editor,
 
 /*  */
 static char *
-branch_id_and_path(svn_branch_instance_t *branch,
+branch_id_and_path(svn_branch_state_t *branch,
                    apr_pool_t *result_pool)
 {
   return apr_psprintf(result_pool, "%s at /%s",
-                      svn_branch_instance_get_id(branch, result_pool),
+                      svn_branch_get_id(branch, result_pool),
                       svn_branch_get_root_rrpath(branch, result_pool));
 }
 
@@ -1228,8 +1228,8 @@ svn_branch_diff_r(svn_editor3_t *editor,
        hi; hi = apr_hash_next(hi))
     {
       const char *branch_id = apr_hash_this_key(hi);
-      svn_branch_instance_t *branch_l = svn_hash_gets(subbranches_l, branch_id);
-      svn_branch_instance_t *branch_r = svn_hash_gets(subbranches_r, branch_id);
+      svn_branch_state_t *branch_l = svn_hash_gets(subbranches_l, branch_id);
+      svn_branch_state_t *branch_r = svn_hash_gets(subbranches_r, branch_id);
       svn_branch_el_rev_id_t *sub_left = NULL, *sub_right = NULL;
 
       if (branch_l)
@@ -1267,7 +1267,7 @@ svn_branch_diff_r(svn_editor3_t *editor,
 static svn_error_t *
 move_by_branch_and_delete(svn_editor3_t *editor,
                           svn_branch_el_rev_id_t *el_rev,
-                          svn_branch_instance_t *to_branch,
+                          svn_branch_state_t *to_branch,
                           int to_parent_eid,
                           const char *to_name,
                           apr_pool_t *scratch_pool)
@@ -1313,7 +1313,7 @@ move_by_branch_and_delete(svn_editor3_t *editor,
 static svn_error_t *
 move_by_copy_and_delete(svn_editor3_t *editor,
                         svn_branch_el_rev_id_t *el_rev,
-                        svn_branch_instance_t *to_branch,
+                        svn_branch_state_t *to_branch,
                         int to_parent_eid,
                         const char *to_name,
                         apr_pool_t *scratch_pool)
@@ -1392,16 +1392,16 @@ svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t *old_el_rev,
   const svn_branch_repos_t *repos = old_el_rev->branch->rev_root->repos;
   const svn_branch_revision_root_t *rev_root;
   const char *branch_id;
-  svn_branch_instance_t *branch;
+  svn_branch_state_t *branch;
   svn_branch_el_rev_id_t *new_el_rev;
 
   if (old_el_rev->rev <= 0)
     return NULL;
 
-  branch_id = svn_branch_instance_get_id(old_el_rev->branch, result_pool);
+  branch_id = svn_branch_get_id(old_el_rev->branch, result_pool);
   rev_root = svn_array_get(repos->rev_roots, (int)(old_el_rev->rev - 1));
-  branch = svn_branch_get_branch_instance_by_id(rev_root, branch_id,
-                                                      result_pool);
+  branch = svn_branch_revision_root_get_branch_by_id(rev_root, branch_id,
+                                                     result_pool);
 
   new_el_rev = svn_branch_el_rev_id_create(branch, old_el_rev->eid,
                                            old_el_rev->rev - 1,
@@ -1444,9 +1444,9 @@ svn_branch_log(svn_editor3_t *editor,
  * The subbranch will consist of a single element given by CONTENT.
  */
 static svn_error_t *
-mk_branch(svn_branch_instance_t **new_branch_p,
+mk_branch(svn_branch_state_t **new_branch_p,
           svn_editor3_t *editor,
-          svn_branch_instance_t *outer_branch,
+          svn_branch_state_t *outer_branch,
           int outer_parent_eid,
           const char *outer_name,
           svn_element_content_t *content,
@@ -1454,12 +1454,12 @@ mk_branch(svn_branch_instance_t **new_branch_p,
 {
   int new_root_eid = svn_branch_allocate_new_eid(outer_branch->rev_root);
   int new_outer_eid;
-  svn_branch_instance_t *new_branch;
+  svn_branch_state_t *new_branch;
 
   SVN_ERR(svn_editor3_add(editor, &new_outer_eid, svn_node_unknown,
                           outer_branch, outer_parent_eid, outer_name,
                           NULL /*content*/));
-  new_branch = svn_branch_add_new_branch_instance(
+  new_branch = svn_branch_add_new_branch(
                  outer_branch, new_outer_eid, new_root_eid,
                  iterpool);
   svn_branch_map_update(new_branch, new_root_eid,
@@ -1675,9 +1675,8 @@ execute(const apr_array_header_t *actions,
                       &el_rev[0], editor, SVN_INVALID_REVNUM, base_relpath,
                       pool, pool));
 
-            SVN_ERR(list_all_branch_instances(
-                      el_rev[0]->branch->rev_root,
-                      TRUE, iterpool));
+            SVN_ERR(list_all_branches(el_rev[0]->branch->rev_root, TRUE,
+                                      iterpool));
           }
           break;
         case ACTION_LS:
@@ -1695,7 +1694,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_EID_NONEXISTENT("branch", 1);
           VERIFY_PARENT_EID_EXISTS("branch", 1);
           {
-            svn_branch_instance_t *new_branch;
+            svn_branch_state_t *new_branch;
 
             SVN_ERR(svn_branch_branch(&new_branch,
                                       el_rev[0]->branch, el_rev[0]->eid,
@@ -1729,7 +1728,7 @@ execute(const apr_array_header_t *actions,
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_element_content_t *content
               = svn_element_content_create_dir(props, iterpool);
-            svn_branch_instance_t *new_branch;
+            svn_branch_state_t *new_branch;
 
             SVN_ERR(mk_branch(&new_branch,
                               editor, parent_el_rev[0]->branch,

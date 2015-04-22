@@ -54,7 +54,7 @@ typedef int svn_branch_eid_t;
 
 typedef struct svn_branch_el_rev_id_t svn_branch_el_rev_id_t;
 
-typedef struct svn_branch_instance_t svn_branch_instance_t;
+typedef struct svn_branch_state_t svn_branch_state_t;
 
 /* Per-repository branching info.
  */
@@ -103,12 +103,12 @@ typedef struct svn_branch_revision_root_t
   /* The range of element ids assigned. */
   int first_eid, next_eid;
 
-  /* The root branch instance. */
-  struct svn_branch_instance_t *root_branch;
+  /* The root branch. */
+  struct svn_branch_state_t *root_branch;
 
-  /* All branch instances. */
+  /* All branches. */
   /* ### including root_branch */
-  apr_array_header_t *branch_instances;
+  apr_array_header_t *branches;
 
 } svn_branch_revision_root_t;
 
@@ -116,25 +116,25 @@ typedef struct svn_branch_revision_root_t
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
-                                struct svn_branch_instance_t *root_branch,
+                                struct svn_branch_state_t *root_branch,
                                 apr_pool_t *result_pool);
 
-/* Return all the branch instances in REV_ROOT.
+/* Return all the branches in REV_ROOT.
  *
  * Return an empty array if there are none.
  */
 const apr_array_header_t *
-svn_branch_get_all_branch_instances(svn_branch_revision_root_t *rev_root,
-                                    apr_pool_t *result_pool);
+svn_branch_revision_root_get_branches(svn_branch_revision_root_t *rev_root,
+                                      apr_pool_t *result_pool);
 
-/* Return the branch instance whose id is BRANCH_INSTANCE_ID in REV_ROOT.
+/* Return the branch whose id is BRANCH_ID in REV_ROOT.
  *
  * Return NULL if not found.
  */
-svn_branch_instance_t *
-svn_branch_get_branch_instance_by_id(const svn_branch_revision_root_t *rev_root,
-                                     const char *branch_instance_id,
-                                     apr_pool_t *scratch_pool);
+svn_branch_state_t *
+svn_branch_revision_root_get_branch_by_id(const svn_branch_revision_root_t *rev_root,
+                                          const char *branch_id,
+                                          apr_pool_t *scratch_pool);
 
 /* Assign a new element id in REV_ROOT.
  */
@@ -164,23 +164,23 @@ svn_branch_allocate_new_eid(svn_branch_revision_root_t *rev_root);
  *          ...
  */
 
-/* A branch instance.
+/* A branch state.
  *
- * A branch instance object describes one version of one branch.
+ * A branch state object describes one version of one branch.
  */
-struct svn_branch_instance_t
+struct svn_branch_state_t
 {
   /* --- Identity of this object --- */
 
   /* The EID of its pathwise root element. */
   int root_eid;
 
-  /* The revision to which this branch-revision-instance belongs */
+  /* The revision to which this branch state belongs */
   svn_branch_revision_root_t *rev_root;
 
-  /* The outer branch instance that contains the subbranch
+  /* The outer branch state that contains the subbranch
      root element of this branch. Null if this is the root branch. */
-  struct svn_branch_instance_t *outer_branch;
+  struct svn_branch_state_t *outer_branch;
 
   /* The subbranch-root element in OUTER_BRANCH of the root of this branch.
    * -1 if this is the root branch. */
@@ -193,59 +193,59 @@ struct svn_branch_instance_t
 
 };
 
-/* Create a new branch instance object, with no elements (not even a root
+/* Create a new branch state object, with no elements (not even a root
  * element).
  */
-svn_branch_instance_t *
-svn_branch_instance_create(int root_eid,
-                           svn_branch_revision_root_t *rev_root,
-                           svn_branch_instance_t *outer_branch,
-                           int outer_eid,
-                           apr_pool_t *result_pool);
+svn_branch_state_t *
+svn_branch_state_create(int root_eid,
+                        svn_branch_revision_root_t *rev_root,
+                        svn_branch_state_t *outer_branch,
+                        int outer_eid,
+                        apr_pool_t *result_pool);
 
-/* Create a new branch instance at OUTER_BRANCH:OUTER_EID, with no elements
+/* Create a new branch at OUTER_BRANCH:OUTER_EID, with no elements
  * (not even a root element).
  *
  * Do not require that a subbranch root element exists in OUTER_BRANCH,
  * nor create one.
  */
-svn_branch_instance_t *
-svn_branch_add_new_branch_instance(svn_branch_instance_t *outer_branch,
-                                   int outer_eid,
-                                   int root_eid,
-                                   apr_pool_t *scratch_pool);
+svn_branch_state_t *
+svn_branch_add_new_branch(svn_branch_state_t *outer_branch,
+                          int outer_eid,
+                          int root_eid,
+                          apr_pool_t *scratch_pool);
 
-/* Delete the branch instance BRANCH, and any subbranches recursively.
+/* Delete the branch BRANCH, and any subbranches recursively.
  *
  * Do not require that a subbranch root element exists in its outer branch,
  * nor delete it if it does exist.
  */
 void
-svn_branch_delete_branch_instance_r(svn_branch_instance_t *branch,
-                                    apr_pool_t *scratch_pool);
+svn_branch_delete_branch_r(svn_branch_state_t *branch,
+                           apr_pool_t *scratch_pool);
 
-/* Return an array of pointers to the branch instances that are immediate
+/* Return an array of pointers to the branches that are immediate
  * sub-branches of BRANCH at or below EID.
  */
 apr_array_header_t *
-svn_branch_get_subbranches(const svn_branch_instance_t *branch,
+svn_branch_get_subbranches(const svn_branch_state_t *branch,
                            int eid,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Return an array of pointers to the branch instances that are immediate
+/* Return an array of pointers to the branches that are immediate
  * sub-branches of BRANCH.
  */
 apr_array_header_t *
-svn_branch_get_all_sub_branches(const svn_branch_instance_t *branch,
+svn_branch_get_all_sub_branches(const svn_branch_state_t *branch,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Return the subbranch instance rooted at BRANCH:EID, or NULL if that is
+/* Return the subbranch rooted at BRANCH:EID, or NULL if that is
  * not a subbranch root.
  */
-svn_branch_instance_t *
-svn_branch_get_subbranch_at_eid(svn_branch_instance_t *branch,
+svn_branch_state_t *
+svn_branch_get_subbranch_at_eid(svn_branch_state_t *branch,
                                 int eid,
                                 apr_pool_t *scratch_pool);
 
@@ -261,8 +261,8 @@ typedef struct svn_branch_element_t
 /* Branch-Element-Revision */
 struct svn_branch_el_rev_id_t
 {
-  /* The branch-instance that applies to REV. */
-  svn_branch_instance_t *branch;
+  /* The branch state that applies to REV. */
+  svn_branch_state_t *branch;
   /* Element. */
   int eid;
   /* Revision. SVN_INVALID_REVNUM means 'in this transaction', not 'head'.
@@ -275,7 +275,7 @@ struct svn_branch_el_rev_id_t
  * EID and REV, allocated in RESULT_POOL.
  */
 svn_branch_el_rev_id_t *
-svn_branch_el_rev_id_create(svn_branch_instance_t *branch,
+svn_branch_el_rev_id_create(svn_branch_state_t *branch,
                             int eid,
                             svn_revnum_t rev,
                             apr_pool_t *result_pool);
@@ -361,11 +361,11 @@ svn_branch_subtree_create(apr_hash_t *e_map,
  * The result is limited by the lifetime of BRANCH. It includes a shallow
  * copy of the element maps in BRANCH and its subbranches: the hash tables
  * are duplicated but the keys and values (element content data) are not.
- * It assumes that modifications on a svn_branch_instance_t treat element
+ * It assumes that modifications on a svn_branch_state_t treat element
  * map keys and values as immutable -- which they do.
  */
 svn_branch_subtree_t *
-svn_branch_get_subtree(const svn_branch_instance_t *branch,
+svn_branch_get_subtree(const svn_branch_state_t *branch,
                        int eid,
                        apr_pool_t *result_pool);
 
@@ -382,13 +382,13 @@ svn_branch_get_subtree(const svn_branch_instance_t *branch,
  * node's content may be null meaning it is unknown.
  */
 svn_branch_el_rev_content_t *
-svn_branch_map_get(const svn_branch_instance_t *branch,
+svn_branch_map_get(const svn_branch_state_t *branch,
                    int eid);
 
 /* In BRANCH, delete element EID.
  */
 void
-svn_branch_map_delete(svn_branch_instance_t *branch,
+svn_branch_map_delete(svn_branch_state_t *branch,
                       int eid);
 
 /* Set or change the EID:element mapping for EID in BRANCH.
@@ -396,7 +396,7 @@ svn_branch_map_delete(svn_branch_instance_t *branch,
  * Duplicate NEW_NAME and NEW_CONTENT into the branch mapping's pool.
  */
 void
-svn_branch_map_update(svn_branch_instance_t *branch,
+svn_branch_map_update(svn_branch_state_t *branch,
                       int eid,
                       svn_branch_eid_t new_parent_eid,
                       const char *new_name,
@@ -409,7 +409,7 @@ svn_branch_map_update(svn_branch_instance_t *branch,
  * Duplicate NEW_NAME into the branch mapping's pool.
  */
 void
-svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
+svn_branch_map_update_as_subbranch_root(svn_branch_state_t *branch,
                                         int eid,
                                         svn_branch_eid_t new_parent_eid,
                                         const char *new_name);
@@ -424,13 +424,13 @@ svn_branch_map_update_as_subbranch_root(svn_branch_instance_t *branch,
  * in a [sequence-point/flattened/...?] state.)
  */
 void
-svn_branch_map_purge_orphans(svn_branch_instance_t *branch,
+svn_branch_map_purge_orphans(svn_branch_state_t *branch,
                              apr_pool_t *scratch_pool);
 
 /* Purge orphaned elements and subbranches.
  */
 void
-svn_branch_purge_r(svn_branch_instance_t *branch,
+svn_branch_purge_r(svn_branch_state_t *branch,
                    apr_pool_t *scratch_pool);
 
 /* Instantiate a subtree.
@@ -443,7 +443,7 @@ svn_branch_purge_r(svn_branch_instance_t *branch,
  * root element of TO_BRANCH.
  */
 svn_error_t *
-svn_branch_instantiate_subtree(svn_branch_instance_t *to_branch,
+svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
                                svn_branch_eid_t new_parent_eid,
                                const char *new_name,
                                svn_branch_subtree_t from_subtree,
@@ -456,9 +456,9 @@ svn_branch_instantiate_subtree(svn_branch_instance_t *to_branch,
  * TO_OUTER_BRANCH may be the same as or different from FROM_BRANCH.
  */
 svn_error_t *
-svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
+svn_branch_branch_subtree_r2(svn_branch_state_t **new_branch_p,
                              svn_branch_subtree_t from_subtree,
-                             svn_branch_instance_t *to_outer_branch,
+                             svn_branch_state_t *to_outer_branch,
                              svn_branch_eid_t to_outer_eid,
                              apr_pool_t *scratch_pool);
 
@@ -472,7 +472,7 @@ svn_branch_branch_subtree_r2(svn_branch_instance_t **new_branch_p,
  * NEW_NAME.
  */
 svn_error_t *
-svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
+svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
                            int to_eid,
                            svn_branch_eid_t new_parent_eid,
                            const char *new_name,
@@ -497,7 +497,7 @@ svn_branch_map_add_subtree(svn_branch_instance_t *to_branch,
  */
 svn_error_t *
 svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
-                          svn_branch_instance_t *to_branch,
+                          svn_branch_state_t *to_branch,
                           svn_branch_eid_t to_parent_eid,
                           const char *to_name,
                           apr_pool_t *scratch_pool);
@@ -507,7 +507,7 @@ svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
  * ### TODO: Clarify sequencing requirements.
  */
 const char *
-svn_branch_get_root_rrpath(const svn_branch_instance_t *branch,
+svn_branch_get_root_rrpath(const svn_branch_state_t *branch,
                            apr_pool_t *result_pool);
 
 /* Return the branch-relative path of element EID in BRANCH.
@@ -517,7 +517,7 @@ svn_branch_get_root_rrpath(const svn_branch_instance_t *branch,
  * ### TODO: Clarify sequencing requirements.
  */
 const char *
-svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
+svn_branch_get_path_by_eid(const svn_branch_state_t *branch,
                            int eid,
                            apr_pool_t *result_pool);
 
@@ -528,7 +528,7 @@ svn_branch_get_path_by_eid(const svn_branch_instance_t *branch,
  * ### TODO: Clarify sequencing requirements.
  */
 const char *
-svn_branch_get_rrpath_by_eid(const svn_branch_instance_t *branch,
+svn_branch_get_rrpath_by_eid(const svn_branch_state_t *branch,
                              int eid,
                              apr_pool_t *result_pool);
 
@@ -539,7 +539,7 @@ svn_branch_get_rrpath_by_eid(const svn_branch_instance_t *branch,
  * ### TODO: Clarify sequencing requirements.
  */
 int
-svn_branch_get_eid_by_path(const svn_branch_instance_t *branch,
+svn_branch_get_eid_by_path(const svn_branch_state_t *branch,
                            const char *path,
                            apr_pool_t *scratch_pool);
 
@@ -550,7 +550,7 @@ svn_branch_get_eid_by_path(const svn_branch_instance_t *branch,
  * ### TODO: Clarify sequencing requirements.
  */
 int
-svn_branch_get_eid_by_rrpath(svn_branch_instance_t *branch,
+svn_branch_get_eid_by_rrpath(svn_branch_state_t *branch,
                              const char *rrpath,
                              apr_pool_t *scratch_pool);
 
@@ -571,9 +571,9 @@ svn_branch_get_eid_by_rrpath(svn_branch_instance_t *branch,
  */
 void
 svn_branch_find_nested_branch_element_by_rrpath(
-                                svn_branch_instance_t **branch_p,
+                                svn_branch_state_t **branch_p,
                                 int *eid_p,
-                                svn_branch_instance_t *root_branch,
+                                svn_branch_state_t *root_branch,
                                 const char *rrpath,
                                 apr_pool_t *scratch_pool);
 
@@ -614,10 +614,10 @@ svn_branch_revision_root_serialize(svn_stream_t *stream,
  * and NEW_NAME must be nonexistent in that directory.
  */
 svn_error_t *
-svn_branch_branch(svn_branch_instance_t **new_branch_p,
-                  svn_branch_instance_t *from_branch,
+svn_branch_branch(svn_branch_state_t **new_branch_p,
+                  svn_branch_state_t *from_branch,
                   int from_eid,
-                  svn_branch_instance_t *to_outer_branch,
+                  svn_branch_state_t *to_outer_branch,
                   svn_branch_eid_t to_outer_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool);
@@ -629,9 +629,9 @@ svn_branch_branch(svn_branch_instance_t **new_branch_p,
  * (### Or, perhaps, elements that already exist should be altered?)
  */
 svn_error_t *
-svn_branch_branch_into(svn_branch_instance_t *from_branch,
+svn_branch_branch_into(svn_branch_state_t *from_branch,
                        int from_eid,
-                       svn_branch_instance_t *to_branch,
+                       svn_branch_state_t *to_branch,
                        svn_branch_eid_t to_parent_eid,
                        const char *new_name,
                        apr_pool_t *scratch_pool);
@@ -639,8 +639,8 @@ svn_branch_branch_into(svn_branch_instance_t *from_branch,
 /* Get the full id of branch BRANCH.
  */
 const char *
-svn_branch_instance_get_id(svn_branch_instance_t *branch,
-                           apr_pool_t *result_pool);
+svn_branch_get_id(svn_branch_state_t *branch,
+                  apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus
