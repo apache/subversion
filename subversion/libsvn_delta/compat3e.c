@@ -807,7 +807,7 @@ content_fetch(svn_element_content_t **content_p,
 svn_error_t *
 svn_editor3_el_rev_get(svn_branch_el_rev_content_t **node_p,
                       svn_editor3_t *editor,
-                      svn_branch_instance_t *branch,
+                      svn_branch_state_t *branch,
                       int eid,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -852,7 +852,7 @@ svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
 }
 
 void
-svn_editor3_find_branch_element_by_rrpath(svn_branch_instance_t **branch_p,
+svn_editor3_find_branch_element_by_rrpath(svn_branch_state_t **branch_p,
                                           int *eid_p,
                                           svn_editor3_t *editor,
                                           const char *rrpath,
@@ -870,7 +870,7 @@ static svn_error_t *
 editor3_add(void *baton,
             svn_branch_eid_t *eid_p,
             svn_node_kind_t new_kind,
-            svn_branch_instance_t *branch,
+            svn_branch_state_t *branch,
             svn_branch_eid_t new_parent_eid,
             const char *new_name,
             const svn_element_content_t *new_content,
@@ -904,7 +904,7 @@ editor3_add(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_instantiate(void *baton,
-                    svn_branch_instance_t *branch,
+                    svn_branch_state_t *branch,
                     svn_branch_eid_t eid,
                     svn_branch_eid_t new_parent_eid,
                     const char *new_name,
@@ -934,7 +934,7 @@ editor3_instantiate(void *baton,
 static svn_error_t *
 editor3_copy_one(void *baton,
                  const svn_branch_el_rev_id_t *src_el_rev,
-                 svn_branch_instance_t *branch,
+                 svn_branch_state_t *branch,
                  svn_branch_eid_t eid,
                  svn_branch_eid_t new_parent_eid,
                  const char *new_name,
@@ -955,7 +955,7 @@ editor3_copy_one(void *baton,
 static svn_error_t *
 editor3_copy_tree(void *baton,
                   const svn_branch_el_rev_id_t *src_el_rev,
-                  svn_branch_instance_t *to_branch,
+                  svn_branch_state_t *to_branch,
                   svn_branch_eid_t new_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
@@ -974,12 +974,12 @@ editor3_copy_tree(void *baton,
 static svn_error_t *
 editor3_delete(void *baton,
                    svn_revnum_t since_rev,
-                   svn_branch_instance_t *branch,
+                   svn_branch_state_t *branch,
                    svn_branch_eid_t eid,
                    apr_pool_t *scratch_pool)
 {
   SVN_DBG(("delete(b%s e%d)",
-           svn_branch_instance_get_id(branch, scratch_pool), eid));
+           svn_branch_get_id(branch, scratch_pool), eid));
 
   svn_branch_map_delete(branch, eid /* ### , since_rev? */);
 
@@ -990,7 +990,7 @@ editor3_delete(void *baton,
 static svn_error_t *
 editor3_alter(void *baton,
               svn_revnum_t since_rev,
-              svn_branch_instance_t *branch,
+              svn_branch_state_t *branch,
               svn_branch_eid_t eid,
               svn_branch_eid_t new_parent_eid,
               const char *new_name,
@@ -1024,7 +1024,7 @@ editor3_alter(void *baton,
  */
 static void
 convert_branch_to_paths(apr_hash_t *paths,
-                        svn_branch_instance_t *branch,
+                        svn_branch_state_t *branch,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -1055,12 +1055,12 @@ convert_branch_to_paths(apr_hash_t *paths,
                                            result_pool);
           svn_hash_sets(paths, rrpath, ba);
           /*SVN_DBG(("branch-to-path[%d]: b%s e%d -> %s",
-                   i, svn_branch_instance_get_id(branch, scratch_pool), eid, rrpath));*/
+                   i, svn_branch_get_id(branch, scratch_pool), eid, rrpath));*/
         }
       else
         {
           SVN_DBG(("branch-to-path: b%s e%d -> <already present; not overwriting> (%s)",
-                   svn_branch_instance_get_id(branch, scratch_pool), eid, rrpath));
+                   svn_branch_get_id(branch, scratch_pool), eid, rrpath));
         }
     }
 }
@@ -1074,14 +1074,14 @@ convert_branch_to_paths(apr_hash_t *paths,
  */
 static void
 convert_branch_to_paths_r(apr_hash_t *paths_union,
-                          svn_branch_instance_t *branch,
+                          svn_branch_state_t *branch,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  SVN_ITER_T(svn_branch_instance_t) *bi;
+  SVN_ITER_T(svn_branch_state_t) *bi;
 
   /*SVN_DBG(("[%d] branch={b%s e%d at '%s'}", idx,
-           svn_branch_instance_get_id(branch, scratch_pool), branch->root_eid,
+           svn_branch_get_id(branch, scratch_pool), branch->root_eid,
            svn_branch_get_root_rrpath(branch, scratch_pool)));*/
   convert_branch_to_paths(paths_union, branch,
                           result_pool, scratch_pool);
