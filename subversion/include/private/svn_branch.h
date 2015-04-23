@@ -46,9 +46,15 @@ extern "C" {
 /* ### */
 #define SVN_ERR_BRANCHING 123456
 
-/** Element Identifier.
+/** Element Identifier (EID).
  *
- * This does not contain an implied revision number or branch identifier.
+ * An element may appear in any or all branches, and its EID is the same in
+ * each branch in which the element appears.
+ * 
+ * By definition, an element keeps the same EID for its whole lifetime, even
+ * if deleted from all branches and later 'resurrected'.
+ * 
+ * ### In most places the code currently says 'int', verbatim.
  */
 typedef int svn_branch_eid_t;
 
