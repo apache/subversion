@@ -122,6 +122,7 @@ svn_editor3p__insert_shims(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
+#if 0
   svn_editor3p_t *editor3;
   svn_editor3p__shim_connector_t *shim_connector;
 
@@ -152,6 +153,10 @@ svn_editor3p__insert_shims(
   /*SVN_ERR(svn_delta__get_debug_editor(new_deditor, new_dedit_baton,
                                       *new_deditor, *new_dedit_baton,
                                       "[IN]  ", result_pool));*/
+#endif
+#else
+  *new_deditor = old_deditor;
+  *new_dedit_baton = old_dedit_baton;
 #endif
   return SVN_NO_ERROR;
 }
