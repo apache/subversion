@@ -190,6 +190,10 @@ struct svn_branch_state_t
   /* --- Contents of this object --- */
 
   /* EID -> svn_branch_el_rev_content_t mapping. */
+  /* ### TODO: This should use an svn_branch_subtree_t instead of E_MAP and
+   *     ROOT_EID. And the immediate subbranches would be directly in there,
+   *     instead of (or as well as) being in a single big list in REV_ROOT.
+   *     And a whole bunch of methods would be common to both. */
   apr_hash_t *e_map;
 
 };
@@ -332,6 +336,9 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
  * The EIDs used in here may be considered either as global EIDs (known to
  * the repo), or as local stand-alone EIDs (in their own local name-space),
  * according to the context.
+ *
+ * ### TODO: This should be used in the implementation of svn_branch_state_t.
+ *     A whole bunch of methods would be common to both.
  */
 typedef struct svn_branch_subtree_t
 {
