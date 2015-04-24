@@ -82,6 +82,13 @@ Other candidate changes:
    Votes:
      +1: brane
 
+ * r1663530
+   Use APR threadkey API instead of local-thread storage in C tests.
+   Justification:
+    Fixes random C test crashes on OpenBSD and possibly other systems.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
