@@ -67,6 +67,7 @@ Work on this branch:
       merge
 
     UI things to do:
+      add a 'parallel mode' UI as an alternative to the sequential mode
       provide a way to specify a mixed-rev base state
       provide a UI for element-based addressing ('mv e101:foo e103:foo'?)
 
