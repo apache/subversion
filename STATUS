@@ -16,6 +16,16 @@ Status of 1.9.0:
 Release blockers for 1.9.0:
 ===========================
 
+ * r1675771
+   Fix a native-memory leak in JavaHL.
+   Justification:
+     Memory leaks are bad. This fix should go into .0 because
+     it affects JavaHL APIs that are new in 1.9.
+   Notes:
+     Soak restart is not needed after this fix, IMO.
+   Votes:
+     +1: brane
+
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
