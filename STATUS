@@ -72,6 +72,16 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1675774
+   Use the /usr/libexec/java_home program to find the JDK on OSX.
+   Justification:
+     Without this change, we'll tend to find original 1.6 JDK on newer
+     versions of OSX instead of the latest and/or default.
+   Notes:
+     Soak restart is not needed after this fix, IMO.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
