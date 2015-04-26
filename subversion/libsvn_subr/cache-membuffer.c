@@ -1997,7 +1997,7 @@ select_level(svn_membuffer_t *cache,
  * be inserted.
  *
  * Note: This function requires the caller to serialization access.
- * Don't call it directly, call membuffer_cache_get_partial instead.
+ * Don't call it directly, call membuffer_cache_set instead.
  */
 static svn_error_t *
 membuffer_cache_set_internal(svn_membuffer_t *cache,
@@ -2166,7 +2166,7 @@ increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
  * be done in POOL.
  *
  * Note: This function requires the caller to serialization access.
- * Don't call it directly, call membuffer_cache_get_partial instead.
+ * Don't call it directly, call membuffer_cache_get instead.
  */
 static svn_error_t *
 membuffer_cache_get_internal(svn_membuffer_t *cache,
