@@ -210,12 +210,6 @@ typedef struct full_key_t
   svn_membuf_t full_key;
 } full_key_t;
 
-/* The prefix passed to svn_cache__create_membuffer_cache() effectively
- * defines the type of all items stored by that cache instance. We'll take
- * the last 15 bytes + \0 as plaintext for easy identification by the dev.
- */
-#define PREFIX_TAIL_LEN 16
-
 /* Debugging / corruption detection support.
  * If you define this macro, the getter functions will performed expensive
  * checks on the item data, requested keys and entry types. If there is
@@ -223,6 +217,12 @@ typedef struct full_key_t
  * remembered in the setter function, an error will be returned.
  */
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
+
+/* The prefix passed to svn_cache__create_membuffer_cache() effectively
+ * defines the type of all items stored by that cache instance. We'll take
+ * the last 15 bytes + \0 as plaintext for easy identification by the dev.
+ */
+#define PREFIX_TAIL_LEN 16
 
 /* This record will be attached to any cache entry. It tracks item data
  * (content), key and type as hash values and is the baseline against which
@@ -260,12 +260,20 @@ typedef struct entry_tag_t
  */
 static svn_error_t *store_key_part(entry_tag_t *tag,
                                    const full_key_t *prefix_key,
-                                   char *prefix_tail,
                                    const void *key,
                                    apr_size_t key_len,
                                    apr_pool_t *pool)
 {
   svn_checksum_t *checksum;
+  const char *prefix = prefix_key->full_key.data;
+  apr_size_t prefix_len = strlen(prefix);
+
+  if (prefix_len > sizeof(tag->prefix_tail))
+    {
+      prefix += prefix_len - (sizeof(tag->prefix_tail) - 1);
+      prefix_len = sizeof(tag->prefix_tail) - 1;
+    }
+
   SVN_ERR(svn_checksum(&checksum,
                        svn_checksum_md5,
                        key,
@@ -275,7 +283,9 @@ static svn_error_t *store_key_part(entry_tag_t *tag,
   memcpy(tag->prefix_hash, prefix_key->entry_key.fingerprint,
          sizeof(tag->prefix_hash));
   memcpy(tag->key_hash, checksum->digest, sizeof(tag->key_hash));
-  memcpy(tag->prefix_tail, prefix_tail, sizeof(tag->prefix_tail));
+
+  memset(tag->prefix_tail, 0, sizeof(tag->key_hash));
+  memcpy(tag->prefix_tail, prefix, prefix_len + 1);
 
   tag->key_len = key_len;
 
@@ -333,7 +343,6 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
   if (key)                                                       \
     SVN_ERR(store_key_part(tag,                                  \
                            &cache->prefix,                       \
-                           cache->info_prefix,                   \
                            key,                                  \
                            cache->key_len == APR_HASH_KEY_STRING \
                                ? strlen((const char *) key)      \
@@ -349,23 +358,6 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 #define DEBUG_CACHE_MEMBUFFER_INIT_TAG(pool)
 
 #endif /* SVN_DEBUG_CACHE_MEMBUFFER */
-
-/* Per svn_cache_t instance initialization helper.
- * Copy the last to up PREFIX_TAIL_LEN-1 chars from PREFIX to PREFIX_TAIL.
- * If the prefix has been structured by ':', only store the last element
- * (which will tell us the type).
- */
-static void get_prefix_tail(const char *prefix, char *prefix_tail)
-{
-  apr_size_t len = strlen(prefix);
-  apr_size_t to_copy = MIN(len, PREFIX_TAIL_LEN - 1);
-  const char *last_colon = strrchr(prefix, ':');
-  apr_size_t last_element_pos = last_colon ? 0 : last_colon - prefix + 1;
-
-  to_copy = MIN(to_copy, len - last_element_pos);
-  memset(prefix_tail, 0, PREFIX_TAIL_LEN);
-  memcpy(prefix_tail, prefix + len - to_copy, to_copy);
-}
 
 /* A single dictionary entry. Since all entries will be allocated once
  * during cache creation, those entries might be either used or unused.
@@ -2597,11 +2589,6 @@ typedef struct svn_membuffer_cache_t
    */
   full_key_t prefix;
 
-  /* The tail of the prefix string. It is being used as a developer-visible
-   * ID for this cache instance.
-   */
-  char info_prefix[PREFIX_TAIL_LEN];
-
   /* length of the keys that will be passed to us through the
    * svn_cache_t interface. May be APR_HASH_KEY_STRING.
    */
@@ -3032,7 +3019,7 @@ svn_membuffer_cache_get_info(void *cache_void,
 
   /* cache front-end specific data */
 
-  info->id = apr_pstrdup(result_pool, cache->info_prefix);
+  info->id = apr_pstrdup(result_pool, cache->prefix.full_key.data);
 
   /* collect info from shared cache back-end */
 
@@ -3241,7 +3228,6 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->deserializer = deserializer
                       ? deserializer
                       : deserialize_svn_stringbuf;
-  get_prefix_tail(prefix, cache->info_prefix);
   cache->priority = priority;
   cache->key_len = klen;
 
