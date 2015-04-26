@@ -2549,22 +2549,6 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
  * svn_cache__t instance.
  */
 
-/* Stores the combined key value for the given key.  It will be used by
- * combine_key() to short-circuit expensive hash calculations.
- */
-typedef struct last_access_key_t
-{
-  /* result of key combining */
-  entry_key_t combined_key;
-
-  /* length of the key (or APR_HASH_KEY_STRING if not used) */
-  apr_ssize_t key_len;
-
-  /* the original key.  Only KEY_LEN bytes are valid.  We use uint32 for
-   * better compatibility with pseudo-md5 functions. */
-  apr_uint32_t key[64];
-} last_access_key_t;
-
 /* Internal cache structure (used in svn_cache__t.cache_internal) basically
  * holding the additional parameters needed to call the respective membuffer
  * functions.
