@@ -34,10 +34,10 @@
 #include "private/svn_atomic.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
-#include "private/svn_pseudo_md5.h"
 #include "private/svn_string_private.h"
 
 #include "cache.h"
+#include "fnv1a.h"
 
 /*
  * This svn_cache__t implementation actually consists of two parts:
@@ -2605,13 +2605,6 @@ combine_long_key(svn_membuffer_cache_t *cache,
                  const void *key,
                  apr_ssize_t key_len)
 {
-  enum
-    {
-      /* Max number of NUL bytes to append to KEY to pad it before feeding
-       * it our pseudo-MD5 functions. */
-      MAX_PADDING = 32
-    };
-
   apr_uint32_t *digest_buffer;
   char *key_copy;
   apr_size_t prefix_len = cache->prefix.full_key.size;
@@ -2621,49 +2614,21 @@ combine_long_key(svn_membuffer_cache_t *cache,
   if (key_len == APR_HASH_KEY_STRING)
     key_len = strlen((const char *) key);
 
-  /* same key as the last time? -> short-circuit */
-  if (   key_len + prefix_len == cache->combined_key.entry_key.key_len
-      && memcmp((char *)cache->combined_key.full_key.data + prefix_len,
-                key, key_len) == 0)
-    return;
-
   /* Combine keys. */
   aligned_key_len = ALIGN_VALUE(key_len);
   svn_membuf__ensure(&cache->combined_key.full_key,
-                     key_len + prefix_len + MAX_PADDING);
+                     key_len + prefix_len);
+
   key_copy = (char *)cache->combined_key.full_key.data + prefix_len;
   cache->combined_key.entry_key.key_len = aligned_key_len + prefix_len;
+  memcpy(key_copy, key, key_len);
+  memset(key_copy + key_len, 0, aligned_key_len - key_len);
 
+  /* Hash key into 16 bytes. */
   digest_buffer = (apr_uint32_t *)cache->combined_key.entry_key.fingerprint;
-  if (key_len >= 64)
-    {
-      /* relatively long key.  Use the generic, slow hash code for it */
-      memcpy(key_copy, key, key_len);
-      memset(key_copy + key_len, 0, aligned_key_len - key_len);
-      apr_md5((unsigned char*)digest_buffer, key, key_len);
-    }
-  else if (key_len < 16)
-    {
-      memset(key_copy, 0, 16);
-      memcpy(key_copy, key, key_len);
+  svn__fnv1a_32x4_raw(digest_buffer, key, key_len);
 
-      svn__pseudo_md5_15(digest_buffer, (const apr_uint32_t *)key_copy);
-    }
-  else if (key_len < 32)
-    {
-      memset(key_copy, 0, 32);
-      memcpy(key_copy, key, key_len);
-
-      svn__pseudo_md5_31(digest_buffer, (const apr_uint32_t *)key_copy);
-    }
-  else
-    {
-      memset(key_copy, 0, 64);
-      memcpy(key_copy, key, key_len);
-
-      svn__pseudo_md5_63(digest_buffer, (const apr_uint32_t *)key_copy);
-    }
-
+  /* Combine with prefix. */
   cache->combined_key.entry_key.fingerprint[0]
     ^= cache->prefix.entry_key.fingerprint[0];
   cache->combined_key.entry_key.fingerprint[1]
