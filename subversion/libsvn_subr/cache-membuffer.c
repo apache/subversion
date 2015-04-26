@@ -28,13 +28,16 @@
 #include "svn_pools.h"
 #include "svn_checksum.h"
 #include "svn_private_config.h"
-#include "cache.h"
 #include "svn_string.h"
 #include "svn_sorts.h"  /* get the MIN macro */
+
 #include "private/svn_atomic.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
 #include "private/svn_pseudo_md5.h"
+#include "private/svn_string_private.h"
+
+#include "cache.h"
 
 /*
  * This svn_cache__t implementation actually consists of two parts:
@@ -200,6 +203,11 @@ typedef struct full_key_t
 {
   /* Reduced form identifying the cache entry (if such an entry exists). */
   entry_key_t entry_key;
+
+  /* This contains the full combination.  Note that the SIZE element may
+   * be larger than ENTRY_KEY.KEY_LEN, but only the latter determines the
+   * valid key size. */
+  svn_membuf_t full_key;
 } full_key_t;
 
 /* The prefix passed to svn_cache__create_membuffer_cache() effectively
@@ -1234,7 +1242,11 @@ find_entry(svn_membuffer_t *cache,
                 if (!entry->key.key_len)
                   return entry;
 
-                /* We don't know how to handle full keys, yet. */
+                /* Compare the full key. */
+                if (memcmp(to_find->full_key.data,
+                           cache->data + entry->offset,
+                           entry->key.key_len) == 0)
+                  return entry;
 
                 /* Key conflict. Drop the current entry. */
               }
@@ -2024,6 +2036,9 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
 #endif
 
+      if (entry->key.key_len)
+        memcpy(cache->data + entry->offset, to_find->full_key.data,
+               entry->key.key_len);
       if (item_size)
         memcpy(cache->data + entry->offset + entry->key.key_len, buffer,
                item_size);
@@ -2061,6 +2076,9 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
       /* Copy the serialized item data into the cache.
        */
+      if (entry->key.key_len)
+        memcpy(cache->data + entry->offset, to_find->full_key.data,
+               entry->key.key_len);
       if (item_size)
         memcpy(cache->data + entry->offset + entry->key.key_len, buffer,
                item_size);
@@ -2471,6 +2489,9 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
                   entry->size = (apr_uint32_t) (item_size + key_len);
                   entry->offset = cache->l1.current_data;
 
+                  if (key_len)
+                    memcpy(cache->data + entry->offset,
+                           to_find->full_key.data, key_len);
                   if (item_size)
                     memcpy(cache->data + entry->offset + key_len, item_data,
                            item_size);
@@ -2700,8 +2721,12 @@ combine_key(svn_membuffer_cache_t *cache,
             const void *key,
             apr_ssize_t key_len)
 {
-  /* copy of *key, padded with 0 */
-  apr_uint64_t data[2];
+  /* Copy of *key, padded with 0.
+   * We put it just behind the prefix already copied into the COMBINED_KEY.
+   * The buffer space has been allocated when the cache was created. */
+  apr_uint64_t *data = (void *)((char *)cache->combined_key.full_key.data +
+                                cache->prefix.full_key.size);
+  assert(cache->combined_key.full_key.size > cache->prefix.full_key.size+16);
 
   /* short, fixed-size keys are the most common case */
   if (key_len == 16)
@@ -2722,6 +2747,29 @@ combine_key(svn_membuffer_cache_t *cache,
     }
   else
     {
+      char *key_copy;
+      apr_size_t prefix_len = cache->prefix.full_key.size;
+      apr_size_t aligned_key_len;
+
+      /* handle variable-length keys */
+      if (key_len == APR_HASH_KEY_STRING)
+        key_len = strlen((const char *) key);
+
+      /* Combine keys to produce the full key.  The prefix key is already
+       * padded to ITEM_ALIGNMENT.  We will pad the full key the same.
+       *
+       * Also, the prefix key has already been written to the COMBINED_KEY
+       * struct and we only need to append KEY. */
+      aligned_key_len = ALIGN_VALUE(key_len);
+      svn_membuf__ensure(&cache->combined_key.full_key,
+                        prefix_len + aligned_key_len);
+
+      key_copy = (char *)cache->combined_key.full_key.data + prefix_len;
+      memcpy(key_copy, key, key_len);
+      memset(key_copy + key_len, 0, aligned_key_len - key_len);
+
+      cache->combined_key.entry_key.key_len = aligned_key_len + prefix_len;
+
       /* longer or variably sized keys */
       combine_long_key(cache, key, key_len);
       return;
@@ -3177,6 +3225,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   apr_pool_t *scratch_pool)
 {
   svn_checksum_t *checksum;
+  apr_size_t prefix_len, prefix_orig_len;
 
   /* allocate the cache header structures
    */
@@ -3198,9 +3247,17 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
 
   SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, result_pool));
 
-  /* for performance reasons, we don't actually store the full prefix but a
-   * hash value of it
-   */
+  /* Copy the prefix into the prefix full key. Align it to ITEM_ALIGMENT.
+   * Don't forget to include the terminating NUL. */
+  prefix_orig_len = strlen(prefix) + 1;
+  prefix_len = ALIGN_VALUE(prefix_orig_len);
+
+  svn_membuf__create(&cache->prefix.full_key, prefix_len, result_pool);
+  memcpy((char *)cache->prefix.full_key.data, prefix, prefix_orig_len);
+  memset((char *)cache->prefix.full_key.data + prefix_orig_len, 0,
+         prefix_len - prefix_orig_len);
+
+  /* Construct the folded prefix key. */
   SVN_ERR(svn_checksum(&checksum,
                        svn_checksum_md5,
                        prefix,
@@ -3208,6 +3265,15 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                        scratch_pool));
   memcpy(cache->prefix.entry_key.fingerprint, checksum->digest,
          sizeof(cache->prefix.entry_key.fingerprint));
+  cache->prefix.entry_key.key_len = prefix_len;
+
+  /* Initialize the combined key. Pre-allocate some extra room in the full
+   * key such that we probably don't need to re-alloc. */
+  cache->combined_key.entry_key = cache->prefix.entry_key;
+  svn_membuf__create(&cache->combined_key.full_key, prefix_len + 200,
+                     result_pool);
+  memcpy(cache->combined_key.full_key.data, cache->prefix.full_key.data,
+         prefix_len);
 
   /* fix-length keys of 16 bytes or under don't need a buffer because we
    * can use a very fast key combining algorithm. */
