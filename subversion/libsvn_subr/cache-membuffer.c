@@ -2601,11 +2601,6 @@ typedef struct svn_membuffer_cache_t
    */
   full_key_t combined_key;
 
-  /* cache for the last key used.
-   * Will be NULL for caches with short fix-sized keys.
-   */
-  last_access_key_t *last_access;
-
   /* if enabled, this will serialize the access to this instance.
    */
   svn_mutex__t *mutex;
@@ -2626,78 +2621,69 @@ combine_long_key(svn_membuffer_cache_t *cache,
                  const void *key,
                  apr_ssize_t key_len)
 {
-  assert(cache->last_access);
+  enum
+    {
+      /* Max number of NUL bytes to append to KEY to pad it before feeding
+       * it our pseudo-MD5 functions. */
+      MAX_PADDING = 32
+    };
+
+  apr_uint32_t *digest_buffer;
+  char *key_copy;
+  apr_size_t prefix_len = cache->prefix.full_key.size;
+  apr_size_t aligned_key_len;
 
   /* handle variable-length keys */
   if (key_len == APR_HASH_KEY_STRING)
     key_len = strlen((const char *) key);
 
   /* same key as the last time? -> short-circuit */
-  if (   key_len == cache->last_access->key_len
-      && memcmp(key, cache->last_access->key, key_len) == 0)
-    {
-      memcpy(&cache->combined_key.entry_key,
-             &cache->last_access->combined_key,
-             sizeof(cache->combined_key.entry_key));
-    }
-  else if (key_len >= 64)
+  if (   key_len + prefix_len == cache->combined_key.entry_key.key_len
+      && memcmp((char *)cache->combined_key.full_key.data + prefix_len,
+                key, key_len) == 0)
+    return;
+
+  /* Combine keys. */
+  aligned_key_len = ALIGN_VALUE(key_len);
+  svn_membuf__ensure(&cache->combined_key.full_key,
+                     key_len + prefix_len + MAX_PADDING);
+  key_copy = (char *)cache->combined_key.full_key.data + prefix_len;
+  cache->combined_key.entry_key.key_len = aligned_key_len + prefix_len;
+
+  digest_buffer = (apr_uint32_t *)cache->combined_key.entry_key.fingerprint;
+  if (key_len >= 64)
     {
       /* relatively long key.  Use the generic, slow hash code for it */
-      apr_md5((unsigned char*)cache->combined_key.entry_key.fingerprint,
-              key, key_len);
-      cache->combined_key.entry_key.fingerprint[0]
-        ^= cache->prefix.entry_key.fingerprint[0];
-      cache->combined_key.entry_key.fingerprint[1]
-        ^= cache->prefix.entry_key.fingerprint[1];
+      memcpy(key_copy, key, key_len);
+      memset(key_copy + key_len, 0, aligned_key_len - key_len);
+      apr_md5((unsigned char*)digest_buffer, key, key_len);
+    }
+  else if (key_len < 16)
+    {
+      memset(key_copy, 0, 16);
+      memcpy(key_copy, key, key_len);
 
-      /* is the key short enough to cache the result? */
-      if (key_len <= sizeof(cache->last_access->key))
-        {
-          memcpy(&cache->last_access->combined_key,
-                 &cache->combined_key.entry_key,
-                 sizeof(cache->combined_key.entry_key));
-          cache->last_access->key_len = key_len;
-          memcpy(cache->last_access->key, key, key_len);
-        }
+      svn__pseudo_md5_15(digest_buffer, (const apr_uint32_t *)key_copy);
+    }
+  else if (key_len < 32)
+    {
+      memset(key_copy, 0, 32);
+      memcpy(key_copy, key, key_len);
+
+      svn__pseudo_md5_31(digest_buffer, (const apr_uint32_t *)key_copy);
     }
   else
     {
-      /* shorter keys use efficient hash code and *do* cache the results */
-      apr_uint32_t *digest
-        = (apr_uint32_t *)cache->combined_key.entry_key.fingerprint;
-      cache->last_access->key_len = key_len;
+      memset(key_copy, 0, 64);
+      memcpy(key_copy, key, key_len);
 
-      if (key_len < 16)
-        {
-          memset(cache->last_access->key, 0, 16);
-          memcpy(cache->last_access->key, key, key_len);
-
-          svn__pseudo_md5_15(digest, cache->last_access->key);
-        }
-      else if (key_len < 32)
-        {
-          memset(cache->last_access->key, 0, 32);
-          memcpy(cache->last_access->key, key, key_len);
-
-          svn__pseudo_md5_31(digest, cache->last_access->key);
-        }
-      else
-        {
-          memset(cache->last_access->key, 0, 64);
-          memcpy(cache->last_access->key, key, key_len);
-
-          svn__pseudo_md5_63(digest, cache->last_access->key);
-        }
-
-      cache->combined_key.entry_key.fingerprint[0]
-        ^= cache->prefix.entry_key.fingerprint[0];
-      cache->combined_key.entry_key.fingerprint[1]
-        ^= cache->prefix.entry_key.fingerprint[1];
-
-      memcpy(&cache->last_access->combined_key,
-             &cache->combined_key.entry_key,
-             sizeof(cache->combined_key.entry_key));
+      svn__pseudo_md5_63(digest_buffer, (const apr_uint32_t *)key_copy);
     }
+
+  cache->combined_key.entry_key.fingerprint[0]
+    ^= cache->prefix.entry_key.fingerprint[0];
+  cache->combined_key.entry_key.fingerprint[1]
+    ^= cache->prefix.entry_key.fingerprint[1];
 }
 
 /* Basically calculate a hash value for KEY of length KEY_LEN, combine it
@@ -2734,29 +2720,6 @@ combine_key(svn_membuffer_cache_t *cache,
     }
   else
     {
-      char *key_copy;
-      apr_size_t prefix_len = cache->prefix.full_key.size;
-      apr_size_t aligned_key_len;
-
-      /* handle variable-length keys */
-      if (key_len == APR_HASH_KEY_STRING)
-        key_len = strlen((const char *) key);
-
-      /* Combine keys to produce the full key.  The prefix key is already
-       * padded to ITEM_ALIGNMENT.  We will pad the full key the same.
-       *
-       * Also, the prefix key has already been written to the COMBINED_KEY
-       * struct and we only need to append KEY. */
-      aligned_key_len = ALIGN_VALUE(key_len);
-      svn_membuf__ensure(&cache->combined_key.full_key,
-                        prefix_len + aligned_key_len);
-
-      key_copy = (char *)cache->combined_key.full_key.data + prefix_len;
-      memcpy(key_copy, key, key_len);
-      memset(key_copy + key_len, 0, aligned_key_len - key_len);
-
-      cache->combined_key.entry_key.key_len = aligned_key_len + prefix_len;
-
       /* longer or variably sized keys */
       combine_long_key(cache, key, key_len);
       return;
@@ -3260,11 +3223,6 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                      result_pool);
   memcpy(cache->combined_key.full_key.data, cache->prefix.full_key.data,
          prefix_len);
-
-  /* fix-length keys of 16 bytes or under don't need a buffer because we
-   * can use a very fast key combining algorithm. */
-  cache->last_access = apr_pcalloc(result_pool, sizeof(*cache->last_access));
-  cache->last_access->key_len = APR_HASH_KEY_STRING;
 
   /* initialize the generic cache wrapper
    */
