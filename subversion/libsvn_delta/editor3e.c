@@ -638,90 +638,53 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
  * ===================================================================
  */
 
-/* Is EID allocated (no matter whether an element with this id exists)? */
-#define EID_IS_ALLOCATED(branch, eid) \
-  ((eid) >= (branch)->rev_root->first_eid && (eid) < (branch)->rev_root->next_eid)
-
-/* Return the relative path to element EID within SUBTREE.
- *
- * Assumes the mapping is "complete" (has complete paths to SUBTREE and to EID).
- */
-static const char *
-element_relpath_in_subtree(const svn_branch_el_rev_id_t *subtree,
-                           int eid,
-                           apr_pool_t *scratch_pool)
-{
-  const char *subtree_path;
-  const char *element_path;
-  const char *relpath = NULL;
-
-  SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(subtree->branch, subtree->eid));
-  SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(subtree->branch, eid));
-
-  subtree_path = svn_branch_get_path_by_eid(subtree->branch, subtree->eid,
-                                            scratch_pool);
-  element_path = svn_branch_get_path_by_eid(subtree->branch, eid,
-                                            scratch_pool);
-
-  SVN_ERR_ASSERT_NO_RETURN(subtree_path);
-
-  if (element_path)
-    relpath = svn_relpath_skip_ancestor(subtree_path, element_path);
-
-  return relpath;
-}
-
 svn_error_t *
 svn_branch_subtree_differences(apr_hash_t **diff_p,
                                svn_editor3_t *editor,
-                               const svn_branch_el_rev_id_t *left,
-                               const svn_branch_el_rev_id_t *right,
+                               svn_branch_subtree_t *left,
+                               svn_branch_subtree_t *right,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff = apr_hash_make(result_pool);
-  int first_eid, next_eid;
-  int e;
+  SVN_ITER_T(int) *hi;
 
   /*SVN_DBG(("svn_branch_subtree_differences(b%s r%ld, b%s r%ld, e%d)",
            svn_branch_get_id(left->branch, scratch_pool), left->rev,
            svn_branch_get_id(right->branch, scratch_pool), right->rev,
            right->eid));*/
-  SVN_ERR_ASSERT(EID_IS_ALLOCATED(left->branch, left->eid));
-  SVN_ERR_ASSERT(EID_IS_ALLOCATED(left->branch, right->eid));
 
-  first_eid = left->branch->rev_root->first_eid;
-  next_eid = MAX(left->branch->rev_root->next_eid,
-                 right->branch->rev_root->next_eid);
-
-  for (e = first_eid; e < next_eid; e++)
+  for (SVN_HASH_ITER(hi, scratch_pool,
+                     apr_hash_overlay(scratch_pool, left->e_map, right->e_map)))
     {
-      svn_branch_el_rev_content_t *content_left = NULL;
-      svn_branch_el_rev_content_t *content_right = NULL;
+      int e = svn_int_hash_this_key(hi->apr_hi);
+      svn_branch_el_rev_content_t *node_left
+        = svn_int_hash_get(left->e_map, e);
+      svn_branch_el_rev_content_t *node_right
+        = svn_int_hash_get(right->e_map, e);
 
-      if (e < left->branch->rev_root->next_eid
-          && element_relpath_in_subtree(left, e, scratch_pool))
+      /* If node content is given by reference, resolve it to full content */
+      if (node_left)
         {
-          SVN_ERR(svn_editor3_el_rev_get(&content_left, editor,
-                                         left->branch, e,
-                                         result_pool, scratch_pool));
+          SVN_ERR(svn_editor3_content_resolve(&node_left->content,
+                                              editor, node_left,
+                                              result_pool, scratch_pool));
         }
-      if (e < right->branch->rev_root->next_eid
-          && element_relpath_in_subtree(right, e, scratch_pool))
+      if (node_right)
         {
-          SVN_ERR(svn_editor3_el_rev_get(&content_right, editor,
-                                         right->branch, e,
-                                         result_pool, scratch_pool));
+          SVN_ERR(svn_editor3_content_resolve(&node_right->content,
+                                              editor, node_right,
+                                              result_pool, scratch_pool));
         }
 
-      if (! svn_branch_el_rev_content_equal(content_left, content_right,
+      if (! svn_branch_el_rev_content_equal(node_left, node_right,
                                             scratch_pool))
         {
           svn_branch_el_rev_content_t **contents
             = apr_palloc(result_pool, 2 * sizeof(void *));
 
-          contents[0] = content_left;
-          contents[1] = content_right;
+          contents[0] = node_left;
+          contents[1] = node_right;
           svn_int_hash_set(diff, e, contents);
         }
     }

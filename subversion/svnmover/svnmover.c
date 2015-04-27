@@ -816,6 +816,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                        const svn_branch_el_rev_id_t *yca,
                        apr_pool_t *scratch_pool)
 {
+  svn_branch_subtree_t *s_src, *s_tgt, *s_yca;
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
   svn_boolean_t had_conflict = FALSE;
   int first_eid, next_eid, eid;
@@ -845,13 +846,16 @@ branch_merge_subtree_r(svn_editor3_t *editor,
           result := diff1.right
         # else no change
    */
+  s_src = svn_branch_get_subtree(src->branch, src->eid, scratch_pool);
+  s_tgt = svn_branch_get_subtree(tgt->branch, tgt->eid, scratch_pool);
+  s_yca = svn_branch_get_subtree(yca->branch, yca->eid, scratch_pool);
   SVN_ERR(svn_branch_subtree_differences(&diff_yca_src,
-                                         editor, yca, src,
+                                         editor, s_yca, s_src,
                                          scratch_pool, scratch_pool));
   /* ### We only need to query for YCA:TO differences in elements that are
          different in YCA:FROM, but right now we ask for all differences. */
   SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
-                                         editor, yca, tgt,
+                                         editor, s_yca, s_tgt,
                                          scratch_pool, scratch_pool));
 
   first_eid = yca->branch->rev_root->first_eid;
@@ -887,24 +891,10 @@ branch_merge_subtree_r(svn_editor3_t *editor,
       e_src = e_yca_src[1];
       e_tgt = e_yca_tgt ? e_yca_tgt[1] : e_yca_src[0];
 
-      /* If this is the root element of the subtree we're merging, then we
-         shall ignore its 'parent' and 'name' attributes and only merge its
-         'content'. (Conversely, for a subtree-root element, we should be
-         ignoring its content and only merging its 'parent' and 'name'.) */
-      if (eid == yca->eid)
-        {
-          result = svn_branch_el_rev_content_dup(e_tgt, scratch_pool);
-          content_merge(&result->content, &conflict,
-                        eid, e_src->content, e_tgt->content, e_yca->content,
-                        &policy, scratch_pool, scratch_pool);
-        }
-      else
-        {
-          element_merge(&result, &conflict,
-                        eid, e_src, e_tgt, e_yca,
-                        &policy,
-                        scratch_pool, scratch_pool);
-        }
+      element_merge(&result, &conflict,
+                    eid, e_src, e_tgt, e_yca,
+                    &policy,
+                    scratch_pool, scratch_pool);
 
       if (conflict)
         {
@@ -1046,6 +1036,7 @@ svn_branch_diff(svn_editor3_t *editor,
                 const char *header,
                 apr_pool_t *scratch_pool)
 {
+  svn_branch_subtree_t *s_left, *s_right;
   apr_hash_t *diff_yca_tgt;
   int first_eid, next_eid, eid;
   svn_array_t *diff_changes = svn_array_make(scratch_pool);
@@ -1054,8 +1045,10 @@ svn_branch_diff(svn_editor3_t *editor,
 
   SVN_ERR_ASSERT(left->eid >= 0 && right->eid >= 0);
 
+  s_left = svn_branch_get_subtree(left->branch, left->eid, scratch_pool);
+  s_right = svn_branch_get_subtree(right->branch, right->eid, scratch_pool);
   SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
-                                         editor, left, right,
+                                         editor, s_left, s_right,
                                          scratch_pool, scratch_pool));
 
   first_eid = left->branch->rev_root->first_eid;
