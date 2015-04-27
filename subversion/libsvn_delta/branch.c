@@ -373,12 +373,18 @@ svn_branch_map_update_as_subbranch_root(svn_branch_state_t *branch,
   branch_map_set(branch, eid, node);
 }
 
+static void
+map_purge_orphans(apr_hash_t *e_map,
+                  int root_eid,
+                  apr_pool_t *scratch_pool);
+
 svn_branch_subtree_t *
 svn_branch_get_subtree(const svn_branch_state_t *branch,
                        int eid,
                        apr_pool_t *result_pool)
 {
   svn_branch_subtree_t *new_subtree;
+  svn_branch_el_rev_content_t *subtree_root_node;
   SVN_ITER_T(svn_branch_state_t) *bi;
 
   SVN_BRANCH_SEQUENCE_POINT(branch);
@@ -386,6 +392,17 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
   new_subtree = svn_branch_subtree_create(branch->e_map, eid,
                                           result_pool);
 
+  /* Purge orphans */
+  map_purge_orphans(new_subtree->e_map, new_subtree->root_eid, result_pool);
+
+  /* Remove 'parent' and 'name' attributes from subtree root element */
+  subtree_root_node
+    = svn_int_hash_get(new_subtree->e_map, new_subtree->root_eid);
+  svn_int_hash_set(new_subtree->e_map, new_subtree->root_eid,
+                   svn_branch_el_rev_content_create(
+                     -1, "", subtree_root_node->content, result_pool));
+
+  /* Add subbranches */
   for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(branch, eid,
                                                      result_pool, result_pool),
                       result_pool))
@@ -398,6 +415,14 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
   return new_subtree;
 }
 
+/* Purge entries from E_MAP that don't connect, via parent directory hierarchy,
+ * to ROOT_EID.
+ *
+ * ROOT_EID must be present in E_MAP.
+ *
+ * ### Does not detect cycles: current implementation will not purge a cycle
+ *     that is disconnected from ROOT_EID. This could be a problem.
+ */
 static void
 map_purge_orphans(apr_hash_t *e_map,
                   int root_eid,
@@ -405,6 +430,8 @@ map_purge_orphans(apr_hash_t *e_map,
 {
   apr_hash_index_t *hi;
   svn_boolean_t changed;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_int_hash_get(e_map, root_eid));
 
   do
     {
@@ -670,9 +697,6 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
                                             new_parent_eid, new_name);
 
   /* Instantiate all the children of NEW_SUBTREE */
-  /* ### Writes to NEW_SUBTREE.e_map. No semantic change; just purges orphan
-     elements. Could easily avoid this by duplicating first. */
-  map_purge_orphans(new_subtree.e_map, new_subtree.root_eid, scratch_pool);
   for (hi = apr_hash_first(scratch_pool, new_subtree.e_map);
        hi; hi = apr_hash_next(hi))
     {

@@ -1052,6 +1052,15 @@ svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
+/* Fetch full content...
+ */
+svn_error_t *
+svn_editor3_content_resolve(svn_element_content_t **content_p,
+                            svn_editor3_t *editor,
+                            const svn_branch_el_rev_content_t *node,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /* Get the content of BRANCH:EID, as fully resolved content (not as a
  * reference). BRANCH:EID must not be a subbranch root.
  *
@@ -1074,8 +1083,8 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **node_p,
 svn_error_t *
 svn_branch_subtree_differences(apr_hash_t **diff_p,
                                svn_editor3_t *editor,
-                               const svn_branch_el_rev_id_t *left,
-                               const svn_branch_el_rev_id_t *right,
+                               svn_branch_subtree_t *left,
+                               svn_branch_subtree_t *right,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 

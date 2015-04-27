@@ -805,6 +805,31 @@ content_fetch(svn_element_content_t **content_p,
 }
 
 svn_error_t *
+svn_editor3_content_resolve(svn_element_content_t **content_p,
+                            svn_editor3_t *editor,
+                            const svn_branch_el_rev_content_t *node,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
+
+  SVN_ERR_ASSERT(node);
+
+  /* If content is by reference, fetch full content. */
+  if (node->content && node->content->ref.relpath)
+    {
+      SVN_ERR(content_fetch(content_p, NULL,
+                            eb, &node->content->ref,
+                            result_pool, scratch_pool));
+    }
+  else
+    {
+      *content_p = svn_element_content_dup(node->content, result_pool);
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_editor3_el_rev_get(svn_branch_el_rev_content_t **node_p,
                       svn_editor3_t *editor,
                       svn_branch_state_t *branch,
