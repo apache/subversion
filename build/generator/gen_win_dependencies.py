@@ -530,7 +530,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if version >= (1, 3, 0) :
       self._libraries['apr_memcache'] = SVNCommonLibrary(
                                           'apr_memcache', inc_path, lib_dir,
-                                          lib_name, aprutil_version,
+                                          None, aprutil_version,
                                           defines=['SVN_HAVE_MEMCACHE'])
 
     # And now find expat

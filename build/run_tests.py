@@ -386,6 +386,8 @@ class TestHarness:
                '--srcdir=' + os.path.join(self.srcdir, progdir)]
     if self.config_file is not None:
       cmdline.append('--config-file=' + self.config_file)
+    elif self.memcached_server is not None:
+      cmdline.append('--memcached-server=' + self.memcached_server)
 
     if self.base_url is not None:
       subdir = 'subversion/tests/cmdline/svn-test-work'

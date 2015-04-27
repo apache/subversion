@@ -189,6 +189,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       unversioned obstructions (r1659381)
     * windows: improve checkout performance on windows by using sqlite truncate
       journal mode rather than delete (r1659426)
+    * status: now accept '-r' argument (r1671164, 1672578, 1673228)
+    * ls: improve performance of '-v' on tag directories (r1673153)
+    * resolve: improve conflict prompts for binary files (r1667228 et al)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
@@ -298,6 +301,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * info: provide results in a stable order (r1662030)
     * revert: allow depth limited reverts of nodes that only have not-present
       and/or excluded child nodes (r1662091)
+    * wc: fix calculating repo path after commits of nodes that shadow a
+      switched (not-present) node (r1663991, r1666258, r1674032)
+    * update: resolve assertion on bad update report involving incomplete
+      status (r1663671, r1666832)
+    * update: allow a real file to replace a file external (r1664035)
+    * merge: raise a tree conflict on root of obstructing dir (r1666690)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
@@ -372,6 +381,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: fix pool lifetime issue in lock handling (r1659314)
     * mod_dav_svn: properly log assertions and malfuctions (r1660480)
     * svnadmin load/dump: preserve deletion of svn:date from r0 (issue #4563)
+    * svnrdump: don't provide HEAD+1 as base revision when loading deletes
+      (r1664684)
+    * mod_dav_svn: improve error message sent with a 405 status code
+      (r1665195, r1666096, r1666379)
+    * make detection of invalid base revision on commit behave the same on
+      all RA layers (r1664664, r1664672, r1664674)
+    * mod_dav_svn: emit the first few log items as soon as they are available
+      (r1666965, r1667120)
+    * mod_dav_svn: prevent a tree walk on copy sources (issue #4351)
 
   - Client-side and server-side bugfixes:
     * use less memory when retrieving extension from filename (r1548480)
@@ -424,6 +442,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * bash_completion: add '--pin-externals' (r1662250)
     * bash_completion: stop offering deprecated options (r1662291)
     * bash_completion: add '--show-item' and '--no-newline' (r1662622)
+    * svnbench: add null-blame command (r1673785, r1673803, r1674015)
 
  Developer-visible changes:
   - General:
@@ -495,6 +514,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fix bugs and performance issues using svn_wc_walk_entries3() (r1661110)
     * support using Python 3 for building (r1661247)
     * don't add -lstdc++ on FreeBSD 10 (r1662329)
+    * add build support for Visual Studio 2015 (r1663183, r1663184)
+    * fix test failures when running from a directory whose name contains
+      characters that must be escaped when used in a URL. (r1664997)
+    * fix breakage of the serf ra session with svn_ra_get_dir2() and
+      svn_ra_get_log2().  (r1665213, r1665259, r1665609)
 
   - API changes:
     * new RA callbacks for managing ra_svn tunnels:
@@ -533,8 +557,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svn_auth_first_credentials(): provides an error rather than crashing if
       auth_baton is NULL (r1544320)
     * svn_auth_set_parameter(): Do nothing if auth_baton is NULL (r1544320)
-    * new API svn_relpath_limit which returns a relpath with a maximum number
-      of path components (r1545123)
+    * new API svn_relpath_prefix which returns a relpath with a maximum number
+      of path components (r1545123, r1673282)
     * svn_fs_initialize() is now threadsafe (r1546409)
     * svn_checksum_kind_t has two new FNV-1a checksums (r1546699)
     * svn_fs_lock: control characters are not allowed in lock tokens (r1547445)
@@ -620,6 +644,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svn_string_dup() will accept a NULL pointer and return a NULL (r1657254)
     * svn_ra_get_file_revs2() now handles SVN_INVALID_REVNUM as HEAD (r1660463)
     * new API svn_error_quick_wrapf() (r1662668)
+    * new API svn_fs_node_has_props() (r1673170, r1673172, r1673692, r1673746)
 
   - Bindings:
     * javahl: add support for the RA layer (r1494650 et al)
@@ -690,6 +715,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * swig-py: add support for svn_fs_lock_many(), svn_fs_unlock_many(),
       svn_repos_fs_lock_many() and svn_repos_fs_unlock_many() (r1662867)
     * swig-py: fix support for svn_ra_lock() and svn_ra_unlock() (r1662891)
+    * javahl: allow java callbacks to throw errors back to the svn code
+      (r1664938, r1664939, r1664940, r1664978, r1664984)
+    * swig-pl: fix some statck memory problems (r1668618, 1671388)
 
 
 Version 1.8.13
