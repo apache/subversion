@@ -2231,9 +2231,11 @@ get_shared_rep(representation_t **old_rep,
                               "You should delete the rep-cache.db and "
                               "verify the repository. The cached rep will "
                               "not be shared.",
-                              apr_psprintf(scratch_pool, "%" APR_OFF_T_FMT,
+                              apr_psprintf(scratch_pool,
+                                           "%" SVN_FILESIZE_T_FMT,
                                            rep->expanded_size),
-                              apr_psprintf(scratch_pool, "%" APR_OFF_T_FMT,
+                              apr_psprintf(scratch_pool,
+                                           "%" SVN_FILESIZE_T_FMT,
                                            (*old_rep)->expanded_size),
                               svn_checksum_to_cstring_display(&checksum,
                                                               scratch_pool));

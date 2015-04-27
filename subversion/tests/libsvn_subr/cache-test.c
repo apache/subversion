@@ -34,6 +34,39 @@
 
 #include "../svn_test.h"
 
+/* Create memcached cache if configured */
+static svn_error_t *
+create_memcache(svn_memcache_t **memcache,
+                const svn_test_opts_t *opts,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  svn_config_t *config = NULL;
+  if (opts->config_file)
+    {
+      SVN_ERR(svn_config_read3(&config, opts->config_file,
+                               TRUE, FALSE, FALSE, scratch_pool));
+    }
+  else if (opts->memcached_server)
+    {
+      SVN_ERR(svn_config_create2(&config, FALSE, FALSE, scratch_pool));
+
+      svn_config_set(config, SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS,
+                     "key" /* some value; ignored*/,
+                     opts->memcached_server);
+    }
+
+  if (config)
+    {
+      SVN_ERR(svn_cache__make_memcache_from_config(memcache, config,
+                                                   result_pool, scratch_pool));
+    }
+  else
+    *memcache = NULL;
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements svn_cache__serialize_func_t */
 static svn_error_t *
 serialize_revnum(void **data,
@@ -147,20 +180,12 @@ test_memcache_basic(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_cache__t *cache;
-  svn_config_t *config;
   svn_memcache_t *memcache = NULL;
   const char *prefix = apr_psprintf(pool,
                                     "test_memcache_basic-%" APR_TIME_T_FMT,
                                     apr_time_now());
 
-  if (opts->config_file)
-    {
-      SVN_ERR(svn_config_read3(&config, opts->config_file,
-                               TRUE, FALSE, FALSE, pool));
-      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config,
-                                                   pool, pool));
-    }
-
+  SVN_ERR(create_memcache(&memcache, opts, pool, pool));
   if (! memcache)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "not configured to use memcached");
@@ -303,7 +328,6 @@ test_memcache_long_key(const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   svn_cache__t *cache;
-  svn_config_t *config;
   svn_memcache_t *memcache = NULL;
   svn_revnum_t fifty = 50, *answer;
   svn_boolean_t found = FALSE;
@@ -319,13 +343,7 @@ test_memcache_long_key(const svn_test_opts_t *opts,
     "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 300 */
     ;
 
-  if (opts->config_file)
-    {
-      SVN_ERR(svn_config_read3(&config, opts->config_file,
-                               TRUE, FALSE, FALSE, pool));
-      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config,
-                                                   pool, pool));
-    }
+  SVN_ERR(create_memcache(&memcache, opts, pool, pool));
 
   if (! memcache)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,

@@ -62,10 +62,13 @@ AC_DEFUN(SVN_FIND_JDK,
   JDK_SUITABLE=no
   AC_MSG_CHECKING([for JDK])
   if test $where = check; then
-    dnl Prefer /Library/Java/Home first to try to be nice on Darwin.
-    dnl We'll correct later if we get caught in the tangled web of JAVA_HOME.
+    dnl Prefer /usr/libexec/java_home, then /Library/Java/Home first
+    dnl to try to be nice on Darwin.  We'll correct later if we get
+    dnl caught in the tangled web of JAVA_HOME.
     if test -x "$JAVA_HOME/bin/java"; then
       JDK="$JAVA_HOME"
+    elif test -x "/usr/libexec/java_home"; then
+      JDK=`/usr/libexec/java_home`
     elif test -x "/Library/Java/Home/bin/java"; then
       JDK="/Library/Java/Home"
     elif test -x "/usr/bin/java"; then
