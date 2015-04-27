@@ -1037,7 +1037,7 @@ svn_branch_diff(svn_editor3_t *editor,
                 apr_pool_t *scratch_pool)
 {
   svn_branch_subtree_t *s_left, *s_right;
-  apr_hash_t *diff_yca_tgt;
+  apr_hash_t *diff_left_right;
   int first_eid, next_eid, eid;
   svn_array_t *diff_changes = svn_array_make(scratch_pool);
   SVN_ITER_T(diff_item_t) *ai;
@@ -1047,7 +1047,7 @@ svn_branch_diff(svn_editor3_t *editor,
 
   s_left = svn_branch_get_subtree(left->branch, left->eid, scratch_pool);
   s_right = svn_branch_get_subtree(right->branch, right->eid, scratch_pool);
-  SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
+  SVN_ERR(svn_branch_subtree_differences(&diff_left_right,
                                          editor, s_left, s_right,
                                          scratch_pool, scratch_pool));
 
@@ -1058,7 +1058,7 @@ svn_branch_diff(svn_editor3_t *editor,
   for (eid = first_eid; eid < next_eid; eid++)
     {
       svn_branch_el_rev_content_t **e_pair
-        = svn_int_hash_get(diff_yca_tgt, eid);
+        = svn_int_hash_get(diff_left_right, eid);
       svn_branch_el_rev_content_t *e0, *e1;
 
       if (! e_pair)
