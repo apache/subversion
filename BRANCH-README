@@ -154,6 +154,3 @@ Terminology:
   replacing Ev2 and so should be called 'Ev2'/'svn_editor_t' then.
   Or perhaps 'svn_branch[ing]_editor'.
 
-  'branch sibling' -> 'branch segment'?
-
-  'branch instance' -> 'branch rev'/'branch txn'/'branch version'?
