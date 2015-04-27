@@ -1202,6 +1202,32 @@ def branch_to_subbranch_of_self(sbox):
                  reported_br_nested_add('trunk/foo/lib2/x/foo', 'lib2'),
                  'branch trunk trunk/foo/lib2/x')
 
+def merge_from_subbranch_to_subtree(sbox):
+  "merge from subbranch to subtree"
+  # Merge from the root of a subbranch to an instance of that same element
+  # that appears as a non-subbranch in a bigger branch (for example its
+  # 'parent' branch).
+  sbox_build_svnmover(sbox)
+
+  # Make a subtree 'C1' and a subbranch of it 'C2'
+  test_svnmover2(sbox, '', None,
+                 'mkdir A mkdir A/B1 mkdir A/B1/C1')
+  test_svnmover2(sbox, '', None,
+                 'branch A/B1/C1 A/B1/C2')
+
+  # Make a modification in 'C2'
+  test_svnmover2(sbox, '', None,
+                 'mkdir A/B1/C2/D')
+
+  # Merge 'C2' to 'C1'. The broken merge code saw the merge root element as
+  # having changed its parent-eid and name from {A/B1,'C1'} at the YCA to
+  # nil on the merge source-right, and tried to make that same change in the
+  # target.
+  test_svnmover2(sbox, '',
+                 reported_br_diff('') +
+                 reported_add('A/B1/C1/D'),
+                 'merge A/B1/C2 A/B1/C1 A/B1/C1@2')
+
 
 ######################################################################
 
@@ -1221,6 +1247,7 @@ test_list = [ None,
               merge_deleted_subbranch,
               merge_added_subbranch,
               branch_to_subbranch_of_self,
+              merge_from_subbranch_to_subtree,
             ]
 
 if __name__ == '__main__':

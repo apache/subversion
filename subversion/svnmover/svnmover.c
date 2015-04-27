@@ -539,6 +539,59 @@ typedef struct merge_conflict_policy_t
  * This handles any case where at least one of (SIDE1, SIDE2, YCA) exists.
  */
 static void
+content_merge(svn_element_content_t **result_p,
+              svn_boolean_t *conflict_p,
+              int eid,
+              svn_element_content_t *side1,
+              svn_element_content_t *side2,
+              svn_element_content_t *yca,
+              const merge_conflict_policy_t *policy,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  svn_boolean_t conflict = FALSE;
+  svn_element_content_t *result = NULL;
+
+  if (yca && side1 && side2)
+    {
+      if (svn_element_content_equal(side1, yca, scratch_pool))
+        {
+          result = side2;
+        }
+      else if (svn_element_content_equal(side2, yca, scratch_pool))
+        {
+          result = side1;
+        }
+      else if (policy->merge_double_modify
+               && svn_element_content_equal(side1, side2, scratch_pool))
+        {
+          SVN_DBG(("e%d double modify: ... -> { ... | ... }",
+                   eid));
+          result = side1;
+        }
+      else
+        {
+          /* ### Need not conflict if can merge props and text separately. */
+
+          SVN_DBG(("e%d conflict: content: ... -> { ... | ... }",
+                   eid));
+          conflict = TRUE;
+        }
+    }
+
+  *result_p = result;
+  *conflict_p = conflict;
+}
+
+/* Merge the content for one element.
+ *
+ * If there is no conflict, set *CONFLICT_P to FALSE and *RESULT_P to the
+ * merged element; otherwise set *CONFLICT_P to TRUE and *RESULT_P to NULL.
+ * Note that *RESULT_P can be null, indicating a deletion.
+ *
+ * This handles any case where at least one of (SIDE1, SIDE2, YCA) exists.
+ */
+static void
 element_merge(svn_branch_el_rev_content_t **result_p,
               svn_boolean_t *conflict_p,
               int eid,
@@ -616,32 +669,9 @@ element_merge(svn_branch_el_rev_content_t **result_p,
         }
 
       /* merge the content */
-      if (svn_element_content_equal(side1->content, yca->content,
-                                         scratch_pool))
-        {
-          result->content = side2->content;
-        }
-      else if (svn_element_content_equal(side2->content, yca->content,
-                                              scratch_pool))
-        {
-          result->content = side1->content;
-        }
-      else if (policy->merge_double_modify
-               && svn_element_content_equal(side1->content, side2->content,
-                                                 scratch_pool))
-        {
-          SVN_DBG(("e%d double modify: ... -> { ... | ... }",
-                   eid));
-          result->content = side1->content;
-        }
-      else
-        {
-          /* ### Need not conflict if can merge props and text separately. */
-
-          SVN_DBG(("e%d conflict: content: ... -> { ... | ... }",
-                   eid));
-          conflict = TRUE;
-        }
+      content_merge(&result->content, &conflict,
+                    eid, side1->content, side2->content, yca->content,
+                    policy, result_pool, scratch_pool);
     }
   else if (! side1 && ! side2)
     {
@@ -857,10 +887,24 @@ branch_merge_subtree_r(svn_editor3_t *editor,
       e_src = e_yca_src[1];
       e_tgt = e_yca_tgt ? e_yca_tgt[1] : e_yca_src[0];
 
-      element_merge(&result, &conflict,
-                    eid, e_src, e_tgt, e_yca,
-                    &policy,
-                    scratch_pool, scratch_pool);
+      /* If this is the root element of the subtree we're merging, then we
+         shall ignore its 'parent' and 'name' attributes and only merge its
+         'content'. (Conversely, for a subtree-root element, we should be
+         ignoring its content and only merging its 'parent' and 'name'.) */
+      if (eid == yca->eid)
+        {
+          result = svn_branch_el_rev_content_dup(e_tgt, scratch_pool);
+          content_merge(&result->content, &conflict,
+                        eid, e_src->content, e_tgt->content, e_yca->content,
+                        &policy, scratch_pool, scratch_pool);
+        }
+      else
+        {
+          element_merge(&result, &conflict,
+                        eid, e_src, e_tgt, e_yca,
+                        &policy,
+                        scratch_pool, scratch_pool);
+        }
 
       if (conflict)
         {
