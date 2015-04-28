@@ -137,6 +137,12 @@ svn_branch_revision_root_get_branches(svn_branch_revision_root_t *rev_root,
 /* Return the branch whose id is BRANCH_ID in REV_ROOT.
  *
  * Return NULL if not found.
+ *
+ * Note: a branch id is, in behavioural terms, an arbitrary token. In the
+ * current implementation it is constructed from the hierarchy of subbranch
+ * root EIDs leading to the branch, but that may be changed in future.
+ *
+ * See also: svn_branch_get_id().
  */
 svn_branch_state_t *
 svn_branch_revision_root_get_branch_by_id(const svn_branch_revision_root_t *rev_root,
@@ -645,6 +651,12 @@ svn_branch_branch_into(svn_branch_state_t *from_branch,
                        apr_pool_t *scratch_pool);
 
 /* Get the full id of branch BRANCH.
+ *
+ * Note: a branch id is, in behavioural terms, an arbitrary token. In the
+ * current implementation it is constructed from the hierarchy of subbranch
+ * root EIDs leading to the branch, but that may be changed in future.
+ *
+ * See also: svn_branch_revision_root_get_branch_by_id().
  */
 const char *
 svn_branch_get_id(svn_branch_state_t *branch,
