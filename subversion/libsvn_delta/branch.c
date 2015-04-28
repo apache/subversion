@@ -344,9 +344,6 @@ svn_branch_map_update(svn_branch_state_t *branch,
   /* NEW_CONTENT must be specified, either in full or by reference */
   SVN_ERR_ASSERT_NO_RETURN(new_content);
 
-  /* We don't expect to be called more than once per eid. */
-  /*SVN_ERR_ASSERT_NO_RETURN(branch_map_get(branch, eid) == NULL); ### hmm, no! */
-
   /* Insert the new version */
   branch_map_set(branch, eid, node);
 }
@@ -365,9 +362,6 @@ svn_branch_map_update_as_subbranch_root(svn_branch_state_t *branch,
   /* EID must be a valid element id */
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
   branch_map_node_validate(branch, eid, node);
-
-  /* We don't expect to be called more than once per eid. */
-  /*SVN_ERR_ASSERT_NO_RETURN(branch_map_get(branch, eid) == NULL); ### hmm, no! */
 
   /* Insert the new version */
   branch_map_set(branch, eid, node);
