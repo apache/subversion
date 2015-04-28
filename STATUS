@@ -26,6 +26,14 @@ Release blockers for 1.9.0:
    Votes:
      +1: brane
 
+ * r1676526, r1676535
+   Fix working copy operations (checkout, update) with very long path names
+   on Windows. See http://svn.haxx.se/users/archive-2015-04/0105.shtml
+   Justification:
+     Bug in primary use case (checkout and update). Regression from 1.8.x.
+   Votes:
+     +1: ivan
+
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
