@@ -300,10 +300,12 @@ make_external_description(const char **new_external_description,
   return SVN_NO_ERROR;
 }
 
-/* Pin all externals listed in EXTERNALS_PROP_VAL to their last-changed
- * revision. Return a new property value in *PINNED_EXTERNALS allocated
- * in RESULT_POOL. LOCAL_ABSPATH_OR_URL is the path or URL defining the
- * svn:externals property. Use SCRATCH_POOL for temporary allocations.
+/* Pin all externals listed in EXTERNALS_PROP_VAL to their
+ * last-changed revision. Set *PINNED_EXTERNALS to a new property
+ * value allocated in RESULT_POOL, or to NULL if none of the externals
+ * in EXTERNALS_PROP_VAL were changed. LOCAL_ABSPATH_OR_URL is the
+ * path or URL defining the svn:externals property. Use SCRATCH_POOL
+ * for temporary allocations.
  */
 static svn_error_t *
 pin_externals_prop(svn_string_t **pinned_externals,
@@ -319,6 +321,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
   apr_array_header_t *external_items;
   apr_array_header_t *parser_infos;
   apr_array_header_t *items_to_pin;
+  int pinned_items;
   int i;
   apr_pool_t *iterpool;
 
@@ -336,7 +339,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
       if (!items_to_pin)
         {
           /* No pinning at all for this path. */
-          *pinned_externals = svn_string_dup(externals_prop_val, result_pool);
+          *pinned_externals = NULL;
           return SVN_NO_ERROR;
         }
     }
@@ -345,6 +348,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
 
   buf = svn_stringbuf_create_empty(scratch_pool);
   iterpool = svn_pool_create(scratch_pool);
+  pinned_items = 0;
   for (i = 0; i < external_items->nelts; i++)
     {
       svn_wc_external_item2_t *item;
@@ -394,11 +398,13 @@ pin_externals_prop(svn_string_t **pinned_externals,
 
       if (item->peg_revision.kind == svn_opt_revision_date)
         {
+          /* Already pinned ... copy the peg date. */
           external_pegrev.kind = svn_opt_revision_date;
           external_pegrev.value.date = item->peg_revision.value.date;
         }
       else if (item->peg_revision.kind == svn_opt_revision_number)
         {
+          /* Already pinned ... copy the peg revision number. */
           external_pegrev.kind = svn_opt_revision_number;
           external_pegrev.value.number = item->peg_revision.value.number;
         }
@@ -407,6 +413,9 @@ pin_externals_prop(svn_string_t **pinned_externals,
           SVN_ERR_ASSERT(
             item->peg_revision.kind == svn_opt_revision_head ||
             item->peg_revision.kind == svn_opt_revision_unspecified);
+
+          /* We're actually going to change the peg revision. */
+          ++pinned_items;
 
           if (svn_path_is_url(local_abspath_or_url))
             {
@@ -547,7 +556,10 @@ pin_externals_prop(svn_string_t **pinned_externals,
     }
   svn_pool_destroy(iterpool);
 
-  *pinned_externals = svn_string_create_from_buf(buf, result_pool);
+  if (pinned_items > 0)
+    *pinned_externals = svn_string_create_from_buf(buf, result_pool);
+  else
+    *pinned_externals = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -640,17 +652,19 @@ resolve_pinned_externals(apr_hash_t **pinned_externals,
                                  externals_to_pin,
                                  repos_root_url, local_abspath_or_url, ctx,
                                  result_pool, iterpool));
-      if (svn_path_is_url(pair->src_abspath_or_url))
-        relpath = svn_uri_skip_ancestor(pair->src_abspath_or_url,
-                                        local_abspath_or_url,
-                                        result_pool);
-      else
-        relpath = svn_dirent_skip_ancestor(pair->src_abspath_or_url,
-                                           local_abspath_or_url);
-      SVN_ERR_ASSERT(relpath);
+      if (new_propval)
+        {
+          if (svn_path_is_url(pair->src_abspath_or_url))
+            relpath = svn_uri_skip_ancestor(pair->src_abspath_or_url,
+                                            local_abspath_or_url,
+                                            result_pool);
+          else
+            relpath = svn_dirent_skip_ancestor(pair->src_abspath_or_url,
+                                               local_abspath_or_url);
+          SVN_ERR_ASSERT(relpath);
 
-      if (strcmp(externals_propval->data, new_propval->data) != 0)
-        svn_hash_sets(*pinned_externals, relpath, new_propval);
+          svn_hash_sets(*pinned_externals, relpath, new_propval);
+        }
     }
   svn_pool_destroy(iterpool);
 
