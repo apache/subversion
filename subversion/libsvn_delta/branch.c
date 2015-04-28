@@ -709,10 +709,10 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
         svn_branch_subtree_t *this_subtree = bi->val;
 
         /* branch this subbranch into NEW_BRANCH (recursing) */
-        SVN_ERR(svn_branch_branch_subtree_r2(NULL,
-                                             *this_subtree,
-                                             to_branch, this_outer_eid,
-                                             bi->iterpool));
+        SVN_ERR(svn_branch_branch_subtree(NULL,
+                                          *this_subtree,
+                                          to_branch, this_outer_eid,
+                                          bi->iterpool));
       }
   }
 
@@ -1289,11 +1289,11 @@ svn_branch_get_id(svn_branch_state_t *branch,
 }
 
 svn_error_t *
-svn_branch_branch_subtree_r2(svn_branch_state_t **new_branch_p,
-                             svn_branch_subtree_t from_subtree,
-                             svn_branch_state_t *to_outer_branch,
-                             svn_branch_eid_t to_outer_eid,
-                             apr_pool_t *scratch_pool)
+svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
+                          svn_branch_subtree_t from_subtree,
+                          svn_branch_state_t *to_outer_branch,
+                          svn_branch_eid_t to_outer_eid,
+                          apr_pool_t *scratch_pool)
 {
   svn_branch_state_t *new_branch;
 
@@ -1344,10 +1344,10 @@ svn_branch_branch(svn_branch_state_t **new_branch_p,
   svn_branch_update_subbranch_root_element(to_outer_branch, to_outer_eid,
                                            to_outer_parent_eid, new_name);
 
-  SVN_ERR(svn_branch_branch_subtree_r2(new_branch_p,
-                                       *from_subtree,
-                                       to_outer_branch, to_outer_eid,
-                                       scratch_pool));
+  SVN_ERR(svn_branch_branch_subtree(new_branch_p,
+                                    *from_subtree,
+                                    to_outer_branch, to_outer_eid,
+                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
