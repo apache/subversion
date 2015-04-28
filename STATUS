@@ -87,7 +87,7 @@ Other candidate changes:
    Justification:
     Fixes random C test crashes on OpenBSD and possibly other systems.
    Votes:
-     +1: stsp
+     +1: stsp, brane
 
 Veto-blocked changes:
 =====================
