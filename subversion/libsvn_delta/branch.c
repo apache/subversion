@@ -299,7 +299,7 @@ svn_branch_map_get(const svn_branch_state_t *branch,
 /* In BRANCH, set element EID to ELEMENT.
  *
  * If ELEMENT is null, delete element EID. Otherwise, ELEMENT->content may be
- * null meaning it is unknown.
+ * null meaning it is a subbranch-root.
  *
  * Assume ELEMENT is already allocated with sufficient lifetime.
  */

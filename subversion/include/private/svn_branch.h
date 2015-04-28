@@ -393,7 +393,7 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
 /* In BRANCH, get element EID (parent, name, content).
  *
  * If element EID is not present, return null. Otherwise, the returned
- * element's node-content may be null meaning it is unknown.
+ * element's node-content may be null meaning it is a subbranch-root.
  */
 svn_branch_el_rev_content_t *
 svn_branch_map_get(const svn_branch_state_t *branch,
