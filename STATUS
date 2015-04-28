@@ -82,6 +82,14 @@ Other candidate changes:
    Votes:
      +1: brane
 
+ * r1676538
+   Fix a spurious no-op property changes from 'svn copy --pin-externals'.
+   Justification:
+     Client should avoid sending no-op prop changes. Discussion:
+     http://mail-archives.apache.org/mod_mbox/subversion-dev/201504.mbox/%3C5537E14B.8030303%40syntevo.com%3E
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
