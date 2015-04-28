@@ -45,14 +45,21 @@ void NativeInputStream::set_stream(svn_stream_t* stream)
 }
 
 NativeInputStream*
-NativeInputStream::get_self(::Java::Env env, jobject jthis)
+NativeInputStream::get_self_unsafe(::Java::Env env, jobject jthis)
 {
   jfieldID fid_cppaddr = NULL;
   const jlong cppaddr =
     findCppAddrForJObject(jthis, &fid_cppaddr, m_class_name);
-  if (!cppaddr)
-    ::Java::NullPointerException(env).raise(_("this [C++]"));
   return reinterpret_cast<NativeInputStream*>(cppaddr);
+}
+
+NativeInputStream*
+NativeInputStream::get_self(::Java::Env env, jobject jthis)
+{
+  NativeInputStream* self = get_self_unsafe(env, jthis);
+  if (!self)
+    ::Java::NullPointerException(env).raise(_("this [C++]"));
+  return self;
 }
 
 void NativeInputStream::close(::Java::Env env, jobject jthis)
@@ -149,14 +156,21 @@ void NativeOutputStream::set_stream(svn_stream_t* stream)
 }
 
 NativeOutputStream*
-NativeOutputStream::get_self(::Java::Env env, jobject jthis)
+NativeOutputStream::get_self_unsafe(::Java::Env env, jobject jthis)
 {
   jfieldID fid_cppaddr = NULL;
   const jlong cppaddr =
     findCppAddrForJObject(jthis, &fid_cppaddr, m_class_name);
-  if (!cppaddr)
-    ::Java::NullPointerException(env).raise(_("this [C++]"));
   return reinterpret_cast<NativeOutputStream*>(cppaddr);
+}
+
+NativeOutputStream*
+NativeOutputStream::get_self(::Java::Env env, jobject jthis)
+{
+  NativeOutputStream* self = get_self_unsafe(env, jthis);
+  if (!self)
+    ::Java::NullPointerException(env).raise(_("this [C++]"));
+  return self;
 }
 
 void NativeOutputStream::close(::Java::Env env, jobject jthis)
@@ -294,6 +308,20 @@ Java_org_apache_subversion_javahl_types_NativeInputStream_skip(
   return 0;
 }
 
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_types_NativeInputStream_finalize(
+    JNIEnv* jenv, jobject jthis)
+{
+  SVN_JAVAHL_JNI_TRY(NativeInputStream, finalize)
+    {
+      JavaHL::NativeInputStream* native =
+        JavaHL::NativeInputStream::get_self_unsafe(Java::Env(jenv), jthis);
+      if (native != NULL)
+          native->finalize();
+    }
+  SVN_JAVAHL_JNI_CATCH;
+}
+
 
 // Class JavaHL::NativeOutputStream native method implementation
 #include "../include/org_apache_subversion_javahl_types_NativeOutputStream.h"
@@ -336,4 +364,18 @@ Java_org_apache_subversion_javahl_types_NativeOutputStream_write___3BII(
       self->write(env, Java::ByteArray::Contents(src), joffset, jlength);
     }
   SVN_JAVAHL_JNI_CATCH_TO_EXCEPTION(Java::IOException);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_types_NativeOutputStream_finalize(
+    JNIEnv* jenv, jobject jthis)
+{
+  SVN_JAVAHL_JNI_TRY(NativeOutputStream, finalize)
+    {
+      JavaHL::NativeOutputStream* native =
+        JavaHL::NativeOutputStream::get_self_unsafe(Java::Env(jenv), jthis);
+      if (native != NULL)
+          native->finalize();
+    }
+  SVN_JAVAHL_JNI_CATCH;
 }

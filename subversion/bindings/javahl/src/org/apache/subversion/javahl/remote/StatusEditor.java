@@ -79,10 +79,12 @@ class StatusEditor implements ISVNEditor
                         long replacesRevision)
     {
         //DEBUG:System.err.println("  [J] StatusEditor.addFile");
-        try {
-            contents.close();
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+        if (contents != null) {
+            try {
+                contents.close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
         }
 
         checkState();
