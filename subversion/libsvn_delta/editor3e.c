@@ -169,7 +169,7 @@ check_cancel(svn_editor3_t *editor)
 
 /*
  * ========================================================================
- * Editor for Commit (independent per-node changes; node-id addressing)
+ * Editor for Commit (independent per-element changes; element-id addressing)
  * ========================================================================
  */
 

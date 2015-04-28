@@ -390,10 +390,10 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
  */
 #define SVN_BRANCH_SEQUENCE_POINT(branch)
 
-/* In BRANCH, get element EID's node (parent, name, content).
+/* In BRANCH, get element EID (parent, name, content).
  *
  * If element EID is not present, return null. Otherwise, the returned
- * node's content may be null meaning it is unknown.
+ * element's node-content may be null meaning it is unknown.
  */
 svn_branch_el_rev_content_t *
 svn_branch_map_get(const svn_branch_state_t *branch,
@@ -417,7 +417,7 @@ svn_branch_map_update(svn_branch_state_t *branch,
                       const svn_element_content_t *new_content);
 
 /* Set or change the EID:element mapping for EID in BRANCH to reflect a
- * subbranch root node. This node has no content in this branch; the
+ * subbranch root element. This element has no content in this branch; the
  * corresponding element of the subbranch will define its content.
  *
  * Duplicate NEW_NAME into the branch mapping's pool.

@@ -773,7 +773,7 @@ apply_change(void **dir_baton,
 
 /*
  * ========================================================================
- * Editor for Commit (independent per-node changes; node-id addressing)
+ * Editor for Commit (independent per-element changes; element-id addressing)
  * ========================================================================
  */
 
@@ -843,7 +843,7 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **element_p,
   /* Node content is null iff node is a subbranch root, but we shouldn't
      be querying a subbranch root. */
   /* ### Why/how not? */
-  /*SVN_ERR_ASSERT(!node || node->content);*/
+  /*SVN_ERR_ASSERT(!element || element->content);*/
 
   element = element ? svn_branch_el_rev_content_dup(element, result_pool) : NULL;
 

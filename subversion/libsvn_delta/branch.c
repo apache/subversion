@@ -249,17 +249,17 @@ svn_branch_subtree_create(apr_hash_t *e_map,
   return subtree;
 }
 
-/* Validate that NODE is suitable for a mapping of BRANCH:EID.
- * NODE->content may be null.
+/* Validate that ELEMENT is suitable for a mapping of BRANCH:EID.
+ * ELEMENT->content may be null.
  */
 static void
-branch_map_node_validate(const svn_branch_state_t *branch,
-                         int eid,
-                         const svn_branch_el_rev_content_t *element)
+branch_validate_element(const svn_branch_state_t *branch,
+                        int eid,
+                        const svn_branch_el_rev_content_t *element)
 {
   SVN_ERR_ASSERT_NO_RETURN(element);
 
-  /* Parent EID must be valid and different from this node's EID, or -1
+  /* Parent EID must be valid and different from this element's EID, or -1
      iff this is the branch root element. */
   SVN_ERR_ASSERT_NO_RETURN(
     IS_BRANCH_ROOT_EID(branch, eid)
@@ -267,7 +267,7 @@ branch_map_node_validate(const svn_branch_state_t *branch,
     : (element->parent_eid != eid
        && EID_IS_ALLOCATED(branch, element->parent_eid)));
 
-  /* Node name must be given, and empty iff EID is the branch root. */
+  /* Element name must be given, and empty iff EID is the branch root. */
   SVN_ERR_ASSERT_NO_RETURN(
     element->name
     && IS_BRANCH_ROOT_EID(branch, eid) == (*element->name == '\0'));
@@ -292,16 +292,16 @@ svn_branch_map_get(const svn_branch_state_t *branch,
   element = svn_int_hash_get(branch->e_map, eid);
 
   if (element)
-    branch_map_node_validate(branch, eid, element);
+    branch_validate_element(branch, eid, element);
   return element;
 }
 
-/* In BRANCH, set element EID's node (parent, name, content) to NODE.
+/* In BRANCH, set element EID to ELEMENT.
  *
- * If NODE is null, delete element EID. Otherwise, NODE->content may be
+ * If ELEMENT is null, delete element EID. Otherwise, ELEMENT->content may be
  * null meaning it is unknown.
  *
- * Assume NODE is already allocated with sufficient lifetime.
+ * Assume ELEMENT is already allocated with sufficient lifetime.
  */
 static void
 branch_map_set(svn_branch_state_t *branch,
@@ -312,7 +312,7 @@ branch_map_set(svn_branch_state_t *branch,
 
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
   if (element)
-    branch_map_node_validate(branch, eid, element);
+    branch_validate_element(branch, eid, element);
 
   svn_int_hash_set(branch->e_map, eid, element);
   assert_branch_state_invariants(branch, map_pool);
@@ -356,12 +356,12 @@ svn_branch_map_update_as_subbranch_root(svn_branch_state_t *branch,
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
   svn_branch_el_rev_content_t *element
-    = svn_branch_el_rev_content_create(new_parent_eid, new_name, NULL /*content*/,
-                                       map_pool);
+    = svn_branch_el_rev_content_create(new_parent_eid, new_name,
+                                       NULL /*node_content*/, map_pool);
 
   /* EID must be a valid element id */
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
-  branch_map_node_validate(branch, eid, element);
+  branch_validate_element(branch, eid, element);
 
   /* Insert the new version */
   branch_map_set(branch, eid, element);
@@ -378,7 +378,7 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
                        apr_pool_t *result_pool)
 {
   svn_branch_subtree_t *new_subtree;
-  svn_branch_el_rev_content_t *subtree_root_node;
+  svn_branch_el_rev_content_t *subtree_root_element;
   SVN_ITER_T(svn_branch_state_t) *bi;
 
   SVN_BRANCH_SEQUENCE_POINT(branch);
@@ -390,11 +390,11 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
   map_purge_orphans(new_subtree->e_map, new_subtree->root_eid, result_pool);
 
   /* Remove 'parent' and 'name' attributes from subtree root element */
-  subtree_root_node
+  subtree_root_element
     = svn_int_hash_get(new_subtree->e_map, new_subtree->root_eid);
   svn_int_hash_set(new_subtree->e_map, new_subtree->root_eid,
                    svn_branch_el_rev_content_create(
-                     -1, "", subtree_root_node->content, result_pool));
+                     -1, "", subtree_root_element->content, result_pool));
 
   /* Add subbranches */
   for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(branch, eid,
@@ -435,22 +435,22 @@ map_purge_orphans(apr_hash_t *e_map,
            hi; hi = apr_hash_next(hi))
         {
           int this_eid = svn_int_hash_this_key(hi);
-          svn_branch_el_rev_content_t *this_node = apr_hash_this_val(hi);
+          svn_branch_el_rev_content_t *this_element = apr_hash_this_val(hi);
 
           if (this_eid != root_eid)
             {
-              svn_branch_el_rev_content_t *parent_node
-                = svn_int_hash_get(e_map, this_node->parent_eid);
+              svn_branch_el_rev_content_t *parent_element
+                = svn_int_hash_get(e_map, this_element->parent_eid);
 
               /* Purge if parent is deleted */
-              if (! parent_node)
+              if (! parent_element)
                 {
                   SVN_DBG(("purge orphan: e%d", this_eid));
                   svn_int_hash_set(e_map, this_eid, NULL);
                   changed = TRUE;
                 }
               else
-                SVN_ERR_ASSERT_NO_RETURN(parent_node->content);
+                SVN_ERR_ASSERT_NO_RETURN(parent_element->content);
             }
         }
     }
@@ -651,9 +651,9 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
        hi; hi = apr_hash_next(hi))
     {
       int this_from_eid = svn_int_hash_this_key(hi);
-      svn_branch_el_rev_content_t *from_node = apr_hash_this_val(hi);
+      svn_branch_el_rev_content_t *from_element = apr_hash_this_val(hi);
 
-      if (from_node->parent_eid == new_subtree.root_eid)
+      if (from_element->parent_eid == new_subtree.root_eid)
         {
           svn_branch_subtree_t this_subtree;
 
@@ -663,7 +663,7 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
           this_subtree.root_eid = this_from_eid;
           this_subtree.subbranches = apr_hash_make(scratch_pool);
           SVN_ERR(svn_branch_map_add_subtree(to_branch, -1 /*to_eid*/,
-                                             to_eid, from_node->name,
+                                             to_eid, from_element->name,
                                              this_subtree, scratch_pool));
         }
     }
@@ -695,11 +695,11 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
        hi; hi = apr_hash_next(hi))
     {
       int this_eid = svn_int_hash_this_key(hi);
-      svn_branch_el_rev_content_t *this_node = apr_hash_this_val(hi);
+      svn_branch_el_rev_content_t *this_element = apr_hash_this_val(hi);
 
       if (this_eid != new_subtree.root_eid)
         {
-          branch_map_set(to_branch, this_eid, this_node);
+          branch_map_set(to_branch, this_eid, this_element);
         }
     }
 
@@ -1342,7 +1342,7 @@ svn_branch_branch(svn_branch_state_t **new_branch_p,
      where it is an immediate subbranch of FROM_BRANCH. */
   from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
 
-  /* assign new eid to root node (outer branch) */
+  /* assign new eid to root element (outer branch) */
   to_outer_eid
     = svn_branch_allocate_new_eid(to_outer_branch->rev_root);
   svn_branch_map_update_as_subbranch_root(to_outer_branch, to_outer_eid,
