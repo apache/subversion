@@ -127,10 +127,12 @@ class StatusEditor implements ISVNEditor
                           Map<String, byte[]> properties)
     {
         //DEBUG:System.err.println("  [J] StatusEditor.alterFile");
-        try {
-            contents.close();
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+        if (contents != null) {
+            try {
+                contents.close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
         }
 
         checkState();
