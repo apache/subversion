@@ -989,9 +989,9 @@ editor3_copy_tree(void *baton,
   SVN_DBG(("copy_tree(e%d -> e%d/%s)",
            src_el_rev->eid, new_parent_eid, new_name));
 
-  SVN_ERR(svn_branch_copy_subtree_r(src_el_rev,
-                                    to_branch, new_parent_eid, new_name,
-                                    scratch_pool));
+  SVN_ERR(svn_branch_copy_subtree(src_el_rev,
+                                  to_branch, new_parent_eid, new_name,
+                                  scratch_pool));
 
   return SVN_NO_ERROR;
 }

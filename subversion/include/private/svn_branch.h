@@ -504,11 +504,11 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
  * non-existing path in it.
  */
 svn_error_t *
-svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
-                          svn_branch_state_t *to_branch,
-                          svn_branch_eid_t to_parent_eid,
-                          const char *to_name,
-                          apr_pool_t *scratch_pool);
+svn_branch_copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
+                        svn_branch_state_t *to_branch,
+                        svn_branch_eid_t to_parent_eid,
+                        const char *to_name,
+                        apr_pool_t *scratch_pool);
 
 /* Return the root repos-relpath of BRANCH.
  *
