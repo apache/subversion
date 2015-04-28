@@ -33,6 +33,7 @@ Release blockers for 1.9.0:
      Bug in primary use case (checkout and update). Regression from 1.8.x.
    Votes:
      +1: ivan
+     +1: brane (not tested, but fix looks obviously correct)
 
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
@@ -90,13 +91,16 @@ Other candidate changes:
    Votes:
      +1: brane
 
- * r1676538
+ * r1674415, r1676538, r1676570
    Fix a spurious no-op property changes from 'svn copy --pin-externals'.
    Justification:
      Client should avoid sending no-op prop changes. Discussion:
      http://mail-archives.apache.org/mod_mbox/subversion-dev/201504.mbox/%3C5537E14B.8030303%40syntevo.com%3E
+   Notes:
+     r1674415 is needed to make r1676570 merge without conflicts.
    Votes:
-     +1: stsp
+     +1: stsp (without r1674415 and r1676570)
+     +1: brane
 
 Veto-blocked changes:
 =====================
