@@ -53,7 +53,12 @@ extern "C" {
  * 
  * By definition, an element keeps the same EID for its whole lifetime, even
  * if deleted from all branches and later 'resurrected'.
- * 
+ *
+ * In principle, an EID is an arbitrary token and has no intrinsic
+ * relationships (except equality) to other EIDs. The current implementation
+ * uses integers and allocates them sequentially from a central counter, but
+ * the implementation may be changed.
+ *
  * ### In most places the code currently says 'int', verbatim.
  */
 typedef int svn_branch_eid_t;
