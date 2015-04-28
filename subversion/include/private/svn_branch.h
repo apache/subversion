@@ -396,13 +396,13 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
  * element's node-content may be null meaning it is a subbranch-root.
  */
 svn_branch_el_rev_content_t *
-svn_branch_map_get(const svn_branch_state_t *branch,
+svn_branch_get_element(const svn_branch_state_t *branch,
                    int eid);
 
 /* In BRANCH, delete element EID.
  */
 void
-svn_branch_map_delete(svn_branch_state_t *branch,
+svn_branch_delete_element(svn_branch_state_t *branch,
                       int eid);
 
 /* Set or change the EID:element mapping for EID in BRANCH.
@@ -410,7 +410,7 @@ svn_branch_map_delete(svn_branch_state_t *branch,
  * Duplicate NEW_NAME and NEW_CONTENT into the branch mapping's pool.
  */
 void
-svn_branch_map_update(svn_branch_state_t *branch,
+svn_branch_update_element(svn_branch_state_t *branch,
                       int eid,
                       svn_branch_eid_t new_parent_eid,
                       const char *new_name,
@@ -423,7 +423,7 @@ svn_branch_map_update(svn_branch_state_t *branch,
  * Duplicate NEW_NAME into the branch mapping's pool.
  */
 void
-svn_branch_map_update_as_subbranch_root(svn_branch_state_t *branch,
+svn_branch_update_subbranch_root_element(svn_branch_state_t *branch,
                                         int eid,
                                         svn_branch_eid_t new_parent_eid,
                                         const char *new_name);

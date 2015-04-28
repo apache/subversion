@@ -410,7 +410,7 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
 
   for (eid = branch->rev_root->first_eid; eid < branch->rev_root->next_eid; eid++)
     {
-      svn_branch_el_rev_content_t *element = svn_branch_map_get(branch, eid);
+      svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);
 
       if (element && element->parent_eid == -1)
         {
@@ -1499,8 +1499,8 @@ mk_branch(svn_branch_state_t **new_branch_p,
   new_branch = svn_branch_add_new_branch(
                  outer_branch, new_outer_eid, new_root_eid,
                  iterpool);
-  svn_branch_map_update(new_branch, new_root_eid,
-                        -1, "", content);
+  svn_branch_update_element(new_branch, new_root_eid,
+                            -1, "", content);
   *new_branch_p = new_branch;
   return SVN_NO_ERROR;
 }
