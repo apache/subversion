@@ -30,8 +30,10 @@
 
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_io.h"
 #include "private/svn_skel.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_io_private.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -737,6 +739,48 @@ ignore_enoent(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_install_stream_to_longpath(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *final_abspath;
+  const char *deep_dir;
+  svn_stream_t *stream;
+  svn_stringbuf_t *actual_content;
+  int i;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_install_stream_to_longpath",
+                                  pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  deep_dir = tmp_dir;
+
+  /* Generate very long path (> 260 symbols) */
+  for (i = 0; i < 26; i++)
+    {
+      deep_dir = svn_dirent_join(deep_dir, "1234567890", pool);
+      SVN_ERR(svn_io_make_dir_recursively(deep_dir, pool));
+    }
+
+  final_abspath = svn_dirent_join(deep_dir, "stream1", pool);
+  SVN_ERR(svn_stream__create_for_install(&stream, deep_dir, pool, pool));
+  SVN_ERR(svn_stream_puts(stream, "stream1 content"));
+  SVN_ERR(svn_stream__install_stream(stream,
+                                     final_abspath,
+                                     TRUE,
+                                     pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content,
+                                   final_abspath,
+                                   pool));
+
+  SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -759,6 +803,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test aligned seek"),
     SVN_TEST_PASS2(ignore_enoent,
                    "test ignore-enoent"),
+    SVN_TEST_PASS2(test_install_stream_to_longpath,
+                   "test svn_stream__install_stream to long path"),
     SVN_TEST_NULL
   };
 
