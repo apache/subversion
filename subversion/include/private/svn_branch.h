@@ -453,8 +453,6 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
 /* Instantiate a new branch of the subtree FROM_SUBTREE, at the
  * existing branch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
  * Also branch, recursively, the subbranches in FROM_SUBTREE.
- *
- * TO_OUTER_BRANCH may be the same as or different from FROM_BRANCH.
  */
 svn_error_t *
 svn_branch_branch_subtree_r2(svn_branch_state_t **new_branch_p,
