@@ -838,7 +838,7 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **element_p,
                       apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-  svn_branch_el_rev_content_t *element = svn_branch_map_get(branch, eid);
+  svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);
 
   /* Node content is null iff node is a subbranch root, but we shouldn't
      be querying a subbranch root. */
@@ -911,15 +911,15 @@ editor3_add(void *baton,
                eid, new_parent_eid,
                new_name, svn_node_kind_to_word(new_content->kind)));
 
-      svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
+      svn_branch_update_element(branch, eid, new_parent_eid, new_name, new_content);
     }
   else
     {
       SVN_DBG(("add subbranch-root (e%d): parent e%d, name '%s'",
                eid, new_parent_eid, new_name));
 
-      svn_branch_map_update_as_subbranch_root(branch, eid,
-                                              new_parent_eid, new_name);
+      svn_branch_update_subbranch_root_element(branch, eid,
+                                               new_parent_eid, new_name);
     }
 
   *eid_p = eid;
@@ -942,15 +942,16 @@ editor3_instantiate(void *baton,
                eid, new_parent_eid, new_name,
                svn_node_kind_to_word(new_content->kind)));
 
-      svn_branch_map_update(branch, eid, new_parent_eid, new_name, new_content);
+      svn_branch_update_element(branch, eid, new_parent_eid, new_name,
+                                new_content);
     }
   else
     {
       SVN_DBG(("instantiate subbranch-root(e%d): parent e%d, name '%s'",
                eid, new_parent_eid, new_name));
 
-      svn_branch_map_update_as_subbranch_root(branch, eid,
-                                              new_parent_eid, new_name);
+      svn_branch_update_subbranch_root_element(branch, eid,
+                                               new_parent_eid, new_name);
     }
   return SVN_NO_ERROR;
 }
@@ -1006,7 +1007,7 @@ editor3_delete(void *baton,
   SVN_DBG(("delete(b%s e%d)",
            svn_branch_get_id(branch, scratch_pool), eid));
 
-  svn_branch_map_delete(branch, eid /* ### , since_rev? */);
+  svn_branch_delete_element(branch, eid /* ### , since_rev? */);
 
   return SVN_NO_ERROR;
 }
@@ -1031,14 +1032,14 @@ editor3_alter(void *baton,
   /* New content shall be the same as the before if NEW_CONTENT is null. */
   if (! new_content)
     {
-      new_content = svn_branch_map_get(branch, eid)->content;
+      new_content = svn_branch_get_element(branch, eid)->content;
     }
 
   if (new_content)
-    svn_branch_map_update(
+    svn_branch_update_element(
       branch, eid, new_parent_eid, new_name, new_content);
   else
-    svn_branch_map_update_as_subbranch_root(
+    svn_branch_update_subbranch_root_element(
       branch, eid, new_parent_eid, new_name);
 
   return SVN_NO_ERROR;
@@ -1253,12 +1254,13 @@ drive_changes_r(const char *rrpath,
                  || (pred_loc->relpath && SVN_IS_VALID_REVNUM(pred_loc->rev)));
   /* A non-null FINAL address means an element exists there. */
   SVN_ERR_ASSERT(!final_el_rev
-                 || svn_branch_map_get(final_el_rev->branch, final_el_rev->eid));
+                 || svn_branch_get_element(final_el_rev->branch,
+                                           final_el_rev->eid));
 
   if (final_el_rev)
     {
-      final_content
-        = svn_branch_map_get(final_el_rev->branch, final_el_rev->eid)->content;
+      final_content = svn_branch_get_element(final_el_rev->branch,
+                                             final_el_rev->eid)->content;
 
       /* Decide whether the state at this path should be a copy (incl. a
          copy-child) */

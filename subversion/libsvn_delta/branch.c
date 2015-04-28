@@ -282,8 +282,8 @@ branch_validate_element(const svn_branch_state_t *branch,
 }
 
 svn_branch_el_rev_content_t *
-svn_branch_map_get(const svn_branch_state_t *branch,
-                   int eid)
+svn_branch_get_element(const svn_branch_state_t *branch,
+                       int eid)
 {
   svn_branch_el_rev_content_t *element;
 
@@ -319,8 +319,8 @@ branch_map_set(svn_branch_state_t *branch,
 }
 
 void
-svn_branch_map_delete(svn_branch_state_t *branch,
-                      int eid)
+svn_branch_delete_element(svn_branch_state_t *branch,
+                          int eid)
 {
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
 
@@ -328,11 +328,11 @@ svn_branch_map_delete(svn_branch_state_t *branch,
 }
 
 void
-svn_branch_map_update(svn_branch_state_t *branch,
-                      int eid,
-                      svn_branch_eid_t new_parent_eid,
-                      const char *new_name,
-                      const svn_element_content_t *new_content)
+svn_branch_update_element(svn_branch_state_t *branch,
+                          int eid,
+                          svn_branch_eid_t new_parent_eid,
+                          const char *new_name,
+                          const svn_element_content_t *new_content)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
   svn_branch_el_rev_content_t *element
@@ -349,10 +349,10 @@ svn_branch_map_update(svn_branch_state_t *branch,
 }
 
 void
-svn_branch_map_update_as_subbranch_root(svn_branch_state_t *branch,
-                                        int eid,
-                                        svn_branch_eid_t new_parent_eid,
-                                        const char *new_name)
+svn_branch_update_subbranch_root_element(svn_branch_state_t *branch,
+                                         int eid,
+                                         svn_branch_eid_t new_parent_eid,
+                                         const char *new_name)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
   svn_branch_el_rev_content_t *element
@@ -479,7 +479,7 @@ svn_branch_purge_r(svn_branch_state_t *branch,
     {
       svn_branch_state_t *b = bi->val;
 
-      if (svn_branch_map_get(branch, b->outer_eid))
+      if (svn_branch_get_element(branch, b->outer_eid))
         {
           svn_branch_purge_r(b, bi->iterpool);
         }
@@ -542,7 +542,7 @@ svn_branch_get_path_by_eid(const svn_branch_state_t *branch,
 
   for (; ! IS_BRANCH_ROOT_EID(branch, eid); eid = element->parent_eid)
     {
-      element = svn_branch_map_get(branch, eid);
+      element = svn_branch_get_element(branch, eid);
       if (! element)
         return NULL;
       path = svn_relpath_join(element->name, path, result_pool);
@@ -640,11 +640,12 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
   /* Create the new subtree root element */
   new_root_content = svn_int_hash_get(new_subtree.e_map, new_subtree.root_eid);
   if (new_root_content->content)
-    svn_branch_map_update(to_branch, to_eid,
-                          new_parent_eid, new_name, new_root_content->content);
+    svn_branch_update_element(to_branch, to_eid,
+                              new_parent_eid, new_name,
+                              new_root_content->content);
   else
-    svn_branch_map_update_as_subbranch_root(to_branch, to_eid,
-                                            new_parent_eid, new_name);
+    svn_branch_update_subbranch_root_element(to_branch, to_eid,
+                                             new_parent_eid, new_name);
 
   /* Process its immediate children */
   for (hi = apr_hash_first(scratch_pool, new_subtree.e_map);
@@ -684,11 +685,12 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
   /* Instantiate the root element of NEW_SUBTREE */
   new_root_content = svn_int_hash_get(new_subtree.e_map, new_subtree.root_eid);
   if (new_root_content->content)
-    svn_branch_map_update(to_branch, new_subtree.root_eid,
-                          new_parent_eid, new_name, new_root_content->content);
+    svn_branch_update_element(to_branch, new_subtree.root_eid,
+                              new_parent_eid, new_name,
+                              new_root_content->content);
   else
-    svn_branch_map_update_as_subbranch_root(to_branch, new_subtree.root_eid,
-                                            new_parent_eid, new_name);
+    svn_branch_update_subbranch_root_element(to_branch, new_subtree.root_eid,
+                                             new_parent_eid, new_name);
 
   /* Instantiate all the children of NEW_SUBTREE */
   for (hi = apr_hash_first(scratch_pool, new_subtree.e_map);
@@ -1011,12 +1013,12 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
               peg.relpath = rrpath;
               content = svn_element_content_create_ref(peg, scratch_pool);
 
-              svn_branch_map_update(
+              svn_branch_update_element(
                 branch_state, eid, element->parent_eid, element->name, content);
             }
           else
             {
-              svn_branch_map_update_as_subbranch_root(
+              svn_branch_update_subbranch_root_element(
                 branch_state, eid, element->parent_eid, element->name);
             }
         }
@@ -1126,7 +1128,7 @@ svn_branch_state_serialize(svn_stream_t *stream,
   svn_branch_map_purge_orphans(branch, scratch_pool);
   for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
     {
-      svn_branch_el_rev_content_t *element = svn_branch_map_get(branch, eid);
+      svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);
       int parent_eid;
       const char *name;
 
@@ -1345,8 +1347,8 @@ svn_branch_branch(svn_branch_state_t **new_branch_p,
   /* assign new eid to root element (outer branch) */
   to_outer_eid
     = svn_branch_allocate_new_eid(to_outer_branch->rev_root);
-  svn_branch_map_update_as_subbranch_root(to_outer_branch, to_outer_eid,
-                                          to_outer_parent_eid, new_name);
+  svn_branch_update_subbranch_root_element(to_outer_branch, to_outer_eid,
+                                           to_outer_parent_eid, new_name);
 
   SVN_ERR(svn_branch_branch_subtree_r2(new_branch_p,
                                        *from_subtree,
