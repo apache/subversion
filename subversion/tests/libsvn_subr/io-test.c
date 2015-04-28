@@ -768,6 +768,7 @@ test_install_stream_to_longpath(apr_pool_t *pool)
   final_abspath = svn_dirent_join(deep_dir, "stream1", pool);
   SVN_ERR(svn_stream__create_for_install(&stream, deep_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
+  SVN_ERR(svn_stream_close(stream));
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
