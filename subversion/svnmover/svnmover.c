@@ -788,7 +788,7 @@ merge_subbranch(svn_editor3_t *editor,
                                      src_subbranch->root_eid,
                                      scratch_pool);
 
-      SVN_ERR(svn_branch_branch_subtree_r2(NULL,
+      SVN_ERR(svn_branch_branch_subtree(NULL,
                 *from_subtree,
                 tgt->branch, eid,
                 scratch_pool));
