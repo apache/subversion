@@ -552,9 +552,11 @@ pin_externals_prop(svn_string_t **pinned_externals,
   return SVN_NO_ERROR;
 }
 
-/* Return, in *NEW_EXTERNALS, a new hash of externals definitions, some or
- * which all of which are pinned. If EXTERNALS_TO_PIN is NULL, pin all
- * externals, else pin the externals mentioned in EXTERNALS_TO_PIN.
+/* Return, in *PINNED_EXTERNALS, a new hash mapping URLs or local abspaths
+ * to svn:externals property values (as const char *), where some or all
+ * external references have been pinned.
+ * If EXTERNALS_TO_PIN is NULL, pin all externals, else pin the externals
+ * mentioned in EXTERNALS_TO_PIN.
  * The pinning operation takes place as part of the copy operation for
  * the source/destination pair PAIR. Use RA_SESSION and REPOS_ROOT_URL
  * to contact the repository containing the externals definition, if neccesary.
@@ -562,7 +564,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
  * neccessary. Allocate *NEW_EXTERNALS in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-resolve_pinned_externals(apr_hash_t **new_externals,
+resolve_pinned_externals(apr_hash_t **pinned_externals,
                          const apr_hash_t *externals_to_pin,
                          svn_client__copy_pair_t *pair,
                          svn_ra_session_t *ra_session,
@@ -576,7 +578,7 @@ resolve_pinned_externals(apr_hash_t **new_externals,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
-  *new_externals = apr_hash_make(result_pool);
+  *pinned_externals = apr_hash_make(result_pool);
 
   if (svn_path_is_url(pair->src_abspath_or_url))
     {
@@ -646,7 +648,9 @@ resolve_pinned_externals(apr_hash_t **new_externals,
         relpath = svn_dirent_skip_ancestor(pair->src_abspath_or_url,
                                            local_abspath_or_url);
       SVN_ERR_ASSERT(relpath);
-      svn_hash_sets(*new_externals, relpath, new_propval);
+
+      if (strcmp(externals_propval->data, new_propval->data) != 0)
+        svn_hash_sets(*pinned_externals, relpath, new_propval);
     }
   svn_pool_destroy(iterpool);
 
