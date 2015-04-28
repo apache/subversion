@@ -1382,11 +1382,11 @@ svn_branch_branch_into(svn_branch_state_t *from_branch,
 }
 
 svn_error_t *
-svn_branch_copy_subtree_r(const svn_branch_el_rev_id_t *from_el_rev,
-                          svn_branch_state_t *to_branch,
-                          svn_branch_eid_t to_parent_eid,
-                          const char *to_name,
-                          apr_pool_t *scratch_pool)
+svn_branch_copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
+                        svn_branch_state_t *to_branch,
+                        svn_branch_eid_t to_parent_eid,
+                        const char *to_name,
+                        apr_pool_t *scratch_pool)
 {
   SVN_DBG(("cp subtree from e%d to e%d/%s",
            from_el_rev->eid, to_parent_eid, to_name));
