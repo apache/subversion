@@ -158,29 +158,46 @@ static const apr_getopt_option_t cl_options[] =
 /* When non-zero, don't remove test directories */
 static svn_boolean_t skip_cleanup = FALSE;
 
-/* All cleanup actions are registered as cleanups on this pool. */
-#if !defined(thread_local) && APR_HAS_THREADS
+/* All cleanup actions are registered as cleanups on the cleanup_pool,
+ * which may be thread-specific. */
+#if APR_HAS_THREADS
+/* The thread-local data key for the cleanup pool. */
+static apr_threadkey_t *cleanup_pool_key = NULL;
 
-#  if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
-#    define thread_local _Thread_local
-#  elif defined(WIN32) && defined(_MSC_VER)
-#    define thread_local __declspec(thread)
-#  elif defined(__thread)
-     /* ### Might work somewhere? */
-#    define thread_local __thread
-#  else
-     /* gcc defines __thread in some versions, but not all.
-        ### Who knows how to check for this?
-        ### stackoverflow recommends __GNUC__ but that breaks on
-        ### openbsd. */
-#  endif
-#endif
+/* No-op destructor for apr_threadkey_private_create(). */
+static void null_threadkey_dtor(void *stuff) {}
 
-#ifdef thread_local
-#define HAVE_PER_THREAD_CLEANUP
-static thread_local apr_pool_t * cleanup_pool = NULL;
+/* Set the thread-specific cleanup pool. */
+static void set_cleanup_pool(apr_pool_t *pool)
+{
+  apr_status_t status = apr_threadkey_private_set(pool, cleanup_pool_key);
+  if (status)
+    {
+      printf("apr_threadkey_private_set() failed with code %ld.\n",
+             (long)status);
+      exit(1);
+    }
+}
+
+/* Get the thread-specific cleanup pool. */
+static apr_pool_t *get_cleanup_pool()
+{
+  void *data;
+  apr_status_t status = apr_threadkey_private_get(&data, cleanup_pool_key);
+  if (status)
+    {
+      printf("apr_threadkey_private_get() failed with code %ld.\n",
+             (long)status);
+      exit(1);
+    }
+  return data;
+}
+
+#  define cleanup_pool (get_cleanup_pool())
+#  define HAVE_PER_THREAD_CLEANUP
 #else
 static apr_pool_t *cleanup_pool = NULL;
+#  define set_cleanup_pool(p) (cleanup_pool = (p))
 #endif
 
 /* Used by test_thread to serialize access to stdout. */
@@ -508,7 +525,7 @@ test_thread(apr_thread_t *thread, void *data)
     = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
 #ifdef HAVE_PER_THREAD_CLEANUP
-  cleanup_pool = svn_pool_create(thread_root);
+  set_cleanup_pool(svn_pool_create(thread_root));
 #endif
 
   pool = svn_pool_create(thread_root);
@@ -780,6 +797,19 @@ svn_test_main(int argc, const char *argv[], int max_threads,
       svn_error_clear(err);
     }
 
+  /* Set up the thread-local storage key for the cleanup pool. */
+#ifdef HAVE_PER_THREAD_CLEANUP
+  apr_err = apr_threadkey_private_create(&cleanup_pool_key,
+                                         null_threadkey_dtor,
+                                         pool);
+  if (apr_err)
+    {
+      printf("apr_threadkey_private_create() failed with code %ld.\n",
+             (long)apr_err);
+      exit(1);
+    }
+#endif /* HAVE_PER_THREAD_CLEANUP */
+
   /* Remember the command line */
   test_argc = argc;
   test_argv = argv;
@@ -954,7 +984,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
     }
 
   /* Create an iteration pool for the tests */
-  cleanup_pool = svn_pool_create(pool);
+  set_cleanup_pool(svn_pool_create(pool));
   test_pool = svn_pool_create(pool);
 
   if (!allow_segfaults)
