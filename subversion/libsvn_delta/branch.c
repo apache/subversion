@@ -410,7 +410,8 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
 }
 
 /* Purge entries from E_MAP that don't connect, via parent directory hierarchy,
- * to ROOT_EID.
+ * to ROOT_EID. In other words, remove elements that have been implicitly
+ * deleted.
  *
  * ROOT_EID must be present in E_MAP.
  *
@@ -458,20 +459,13 @@ map_purge_orphans(apr_hash_t *e_map,
 }
 
 void
-svn_branch_map_purge_orphans(svn_branch_state_t *branch,
-                             apr_pool_t *scratch_pool)
-{
-  map_purge_orphans(branch->e_map, branch->root_eid, scratch_pool);
-}
-
-void
 svn_branch_purge_r(svn_branch_state_t *branch,
                    apr_pool_t *scratch_pool)
 {
   SVN_ITER_T(svn_branch_state_t) *bi;
 
   /* first, remove elements that have no parent element */
-  svn_branch_map_purge_orphans(branch, scratch_pool);
+  map_purge_orphans(branch->e_map, branch->root_eid, scratch_pool);
 
   /* second, remove subbranches that have no subbranch-root element */
   for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
@@ -1125,7 +1119,7 @@ svn_branch_state_serialize(svn_stream_t *stream,
                             branch->root_eid,
                             branch_root_rrpath[0] ? branch_root_rrpath : "."));
 
-  svn_branch_map_purge_orphans(branch, scratch_pool);
+  map_purge_orphans(branch->e_map, branch->root_eid, scratch_pool);
   for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
     {
       svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);

@@ -428,19 +428,6 @@ svn_branch_update_subbranch_root_element(svn_branch_state_t *branch,
                                          svn_branch_eid_t new_parent_eid,
                                          const char *new_name);
 
-/* Remove from BRANCH's mapping any elements that do not have a complete
- * line of parents to the branch root. In other words, remove elements
- * that have been implicitly deleted.
- *
- * This does not remove subbranches.
- *
- * ### TODO: Clarify sequencing requirements. (This leaves BRANCH's mapping
- * in a [sequence-point/flattened/...?] state.)
- */
-void
-svn_branch_map_purge_orphans(svn_branch_state_t *branch,
-                             apr_pool_t *scratch_pool);
-
 /* Purge orphaned elements and subbranches.
  */
 void
