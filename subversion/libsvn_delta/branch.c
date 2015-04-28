@@ -172,7 +172,7 @@ svn_branch_el_rev_id_create(svn_branch_state_t *branch,
 svn_branch_el_rev_content_t *
 svn_branch_el_rev_content_create(svn_branch_eid_t parent_eid,
                                  const char *name,
-                                 const svn_element_content_t *node_content,
+                                 const svn_element_payload_t *payload,
                                  apr_pool_t *result_pool)
 {
   svn_branch_el_rev_content_t *content
@@ -180,7 +180,7 @@ svn_branch_el_rev_content_create(svn_branch_eid_t parent_eid,
 
   content->parent_eid = parent_eid;
   content->name = apr_pstrdup(result_pool, name);
-  content->content = svn_element_content_dup(node_content, result_pool);
+  content->payload = svn_element_payload_dup(payload, result_pool);
   return content;
 }
 
@@ -192,7 +192,7 @@ svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
      = apr_pmemdup(result_pool, old, sizeof(*content));
 
   content->name = apr_pstrdup(result_pool, old->name);
-  content->content = svn_element_content_dup(old->content, result_pool);
+  content->payload = svn_element_payload_dup(old->payload, result_pool);
   return content;
 }
 
@@ -218,9 +218,8 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
     {
       return FALSE;
     }
-  if (! svn_element_content_equal(content_left->content,
-                                       content_right->content,
-                                       scratch_pool))
+  if (! svn_element_payload_equal(content_left->payload, content_right->payload,
+                                  scratch_pool))
     {
       return FALSE;
     }
@@ -250,7 +249,7 @@ svn_branch_subtree_create(apr_hash_t *e_map,
 }
 
 /* Validate that ELEMENT is suitable for a mapping of BRANCH:EID.
- * ELEMENT->content may be null.
+ * ELEMENT->payload may be null.
  */
 static void
 branch_validate_element(const svn_branch_state_t *branch,
@@ -272,13 +271,13 @@ branch_validate_element(const svn_branch_state_t *branch,
     element->name
     && IS_BRANCH_ROOT_EID(branch, eid) == (*element->name == '\0'));
 
-  /* Content, if specified, must be in full or by reference. */
-  if (element->content)
-    SVN_ERR_ASSERT_NO_RETURN(element->content
-                             && ((SVN_IS_VALID_REVNUM(element->content->ref.rev)
-                                  && element->content->ref.relpath)
-                                 || (element->content->kind != svn_node_unknown
-                                     && element->content->kind != svn_node_none)));
+  /* Payload, if specified, must be in full or by reference. */
+  if (element->payload)
+    SVN_ERR_ASSERT_NO_RETURN(element->payload
+                             && ((SVN_IS_VALID_REVNUM(element->payload->ref.rev)
+                                  && element->payload->ref.relpath)
+                                 || (element->payload->kind != svn_node_unknown
+                                     && element->payload->kind != svn_node_none)));
 }
 
 svn_branch_el_rev_content_t *
@@ -298,7 +297,7 @@ svn_branch_get_element(const svn_branch_state_t *branch,
 
 /* In BRANCH, set element EID to ELEMENT.
  *
- * If ELEMENT is null, delete element EID. Otherwise, ELEMENT->content may be
+ * If ELEMENT is null, delete element EID. Otherwise, ELEMENT->payload may be
  * null meaning it is a subbranch-root.
  *
  * Assume ELEMENT is already allocated with sufficient lifetime.
@@ -332,17 +331,17 @@ svn_branch_update_element(svn_branch_state_t *branch,
                           int eid,
                           svn_branch_eid_t new_parent_eid,
                           const char *new_name,
-                          const svn_element_content_t *new_content)
+                          const svn_element_payload_t *new_payload)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
   svn_branch_el_rev_content_t *element
-    = svn_branch_el_rev_content_create(new_parent_eid, new_name, new_content,
+    = svn_branch_el_rev_content_create(new_parent_eid, new_name, new_payload,
                                        map_pool);
 
   /* EID must be a valid element id */
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
-  /* NEW_CONTENT must be specified, either in full or by reference */
-  SVN_ERR_ASSERT_NO_RETURN(new_content);
+  /* NEW_PAYLOAD must be specified, either in full or by reference */
+  SVN_ERR_ASSERT_NO_RETURN(new_payload);
 
   /* Insert the new version */
   branch_map_set(branch, eid, element);
@@ -357,7 +356,7 @@ svn_branch_update_subbranch_root_element(svn_branch_state_t *branch,
   apr_pool_t *map_pool = apr_hash_pool_get(branch->e_map);
   svn_branch_el_rev_content_t *element
     = svn_branch_el_rev_content_create(new_parent_eid, new_name,
-                                       NULL /*node_content*/, map_pool);
+                                       NULL /*payload*/, map_pool);
 
   /* EID must be a valid element id */
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
@@ -394,7 +393,7 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
     = svn_int_hash_get(new_subtree->e_map, new_subtree->root_eid);
   svn_int_hash_set(new_subtree->e_map, new_subtree->root_eid,
                    svn_branch_el_rev_content_create(
-                     -1, "", subtree_root_element->content, result_pool));
+                     -1, "", subtree_root_element->payload, result_pool));
 
   /* Add subbranches */
   for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(branch, eid,
@@ -451,7 +450,7 @@ map_purge_orphans(apr_hash_t *e_map,
                   changed = TRUE;
                 }
               else
-                SVN_ERR_ASSERT_NO_RETURN(parent_element->content);
+                SVN_ERR_ASSERT_NO_RETURN(parent_element->payload);
             }
         }
     }
@@ -633,10 +632,10 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
 
   /* Create the new subtree root element */
   new_root_content = svn_int_hash_get(new_subtree.e_map, new_subtree.root_eid);
-  if (new_root_content->content)
+  if (new_root_content->payload)
     svn_branch_update_element(to_branch, to_eid,
                               new_parent_eid, new_name,
-                              new_root_content->content);
+                              new_root_content->payload);
   else
     svn_branch_update_subbranch_root_element(to_branch, to_eid,
                                              new_parent_eid, new_name);
@@ -678,10 +677,10 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
 
   /* Instantiate the root element of NEW_SUBTREE */
   new_root_content = svn_int_hash_get(new_subtree.e_map, new_subtree.root_eid);
-  if (new_root_content->content)
+  if (new_root_content->payload)
     svn_branch_update_element(to_branch, new_subtree.root_eid,
                               new_parent_eid, new_name,
-                              new_root_content->content);
+                              new_root_content->payload);
   else
     svn_branch_update_subbranch_root_element(to_branch, new_subtree.root_eid,
                                              new_parent_eid, new_name);
@@ -957,7 +956,7 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
                                          outer_branch, outer_eid,
                                          result_pool);
 
-  /* Read in the structure, leaving the content of each element as null */
+  /* Read in the structure, leaving the payload of each element as null */
   tree = svn_branch_subtree_create(NULL, root_eid, scratch_pool);
   for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
     {
@@ -973,24 +972,24 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
         {
           svn_branch_el_rev_content_t *element
             = svn_branch_el_rev_content_create(this_parent_eid, this_name,
-                                               NULL /*content*/, scratch_pool);
+                                               NULL /*payload*/, scratch_pool);
           if (! is_subbranch)
-            element->content = (void *)1;
+            element->payload = (void *)1;
 
           svn_int_hash_set(tree->e_map, this_eid, element);
         }
     }
 
-  /* Populate the content reference for each element, now that we have
+  /* Populate the payload reference for each element, now that we have
      enough info to calculate full paths */
-  /* Subbranch root elements should have content=null */
+  /* Subbranch root elements should have payload=null */
   for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
     {
       svn_branch_el_rev_content_t *element = svn_int_hash_get(tree->e_map, eid);
 
       if (element)
         {
-          if (element->content == (void *)1)
+          if (element->payload == (void *)1)
             {
               /* ### need to get path within temp hash tree */
               const char *relpath
@@ -1000,15 +999,15 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
                                                               result_pool),
                                    relpath, scratch_pool);
               svn_pathrev_t peg;
-              svn_element_content_t *content;
+              svn_element_payload_t *payload;
 
-              /* Specify the content by reference */
+              /* Specify the payload by reference */
               peg.rev = rev_root->rev;
               peg.relpath = rrpath;
-              content = svn_element_content_create_ref(peg, scratch_pool);
+              payload = svn_element_payload_create_ref(peg, scratch_pool);
 
               svn_branch_update_element(
-                branch_state, eid, element->parent_eid, element->name, content);
+                branch_state, eid, element->parent_eid, element->name, payload);
             }
           else
             {
@@ -1141,7 +1140,7 @@ svn_branch_state_serialize(svn_stream_t *stream,
       SVN_ERR(svn_stream_printf(stream, scratch_pool,
                                 "e%d: %s %d %s\n",
                                 eid,
-                                element ? (element->content ? "normal" : "subbranch")
+                                element ? (element->payload ? "normal" : "subbranch")
                                      : "none",
                                 parent_eid, name));
     }

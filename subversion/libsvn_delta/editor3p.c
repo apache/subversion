@@ -248,12 +248,12 @@ svn_editor3p_rm(svn_editor3p_t *editor,
 svn_error_t *
 svn_editor3p_put(svn_editor3p_t *editor,
                  svn_editor3_txn_path_t loc,
-                 const svn_element_content_t *new_content)
+                 const svn_element_payload_t *new_payload)
 {
   /* SVN_ERR_ASSERT(...); */
 
   DO_CALLBACK(editor, cb_put,
-              2(loc, new_content));
+              2(loc, new_payload));
 
   return SVN_NO_ERROR;
 }
@@ -436,7 +436,7 @@ wrap_rm(void *baton,
 static svn_error_t *
 wrap_put(void *baton,
          svn_editor3_txn_path_t loc,
-         const svn_element_content_t *new_content,
+         const svn_element_payload_t *new_payload,
          apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -444,7 +444,7 @@ wrap_put(void *baton,
   dbg(eb, scratch_pool, "put(%s)",
       txn_path_str(loc, scratch_pool));
   SVN_ERR(svn_editor3p_put(eb->wrapped_editor,
-                           loc, new_content));
+                           loc, new_payload));
   return SVN_NO_ERROR;
 }
 

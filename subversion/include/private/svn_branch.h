@@ -291,7 +291,7 @@ svn_branch_el_rev_id_create(svn_branch_state_t *branch,
                             svn_revnum_t rev,
                             apr_pool_t *result_pool);
 
-/* The content (parent, name and node-content) of an element-revision.
+/* The content (parent, name and payload) of an element-revision.
  * In other words, an el-rev node in a (mixed-rev) directory-tree.
  */
 typedef struct svn_branch_el_rev_content_t
@@ -301,19 +301,19 @@ typedef struct svn_branch_el_rev_content_t
   /* struct svn_branch_element_t *parent_element; */
   /* element name, or "" for root element; never null */
   const char *name;
-  /* content (kind, props, text, ...);
+  /* payload (kind, props, text, ...);
    * null if this is a subbranch root element */
-  svn_element_content_t *content;
+  svn_element_payload_t *payload;
 
 } svn_branch_el_rev_content_t;
 
 /* Return a new content object constructed with deep copies of PARENT_EID,
- * NAME and NODE_CONTENT, allocated in RESULT_POOL.
+ * NAME and PAYLOAD, allocated in RESULT_POOL.
  */
 svn_branch_el_rev_content_t *
 svn_branch_el_rev_content_create(svn_branch_eid_t parent_eid,
                                  const char *name,
-                                 const svn_element_content_t *node_content,
+                                 const svn_element_payload_t *payload,
                                  apr_pool_t *result_pool);
 
 /* Return a deep copy of OLD, allocated in RESULT_POOL.
@@ -390,10 +390,10 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
  */
 #define SVN_BRANCH_SEQUENCE_POINT(branch)
 
-/* In BRANCH, get element EID (parent, name, content).
+/* In BRANCH, get element EID (parent, name, payload).
  *
  * If element EID is not present, return null. Otherwise, the returned
- * element's node-content may be null meaning it is a subbranch-root.
+ * element's payload may be null meaning it is a subbranch-root.
  */
 svn_branch_el_rev_content_t *
 svn_branch_get_element(const svn_branch_state_t *branch,
@@ -407,18 +407,18 @@ svn_branch_delete_element(svn_branch_state_t *branch,
 
 /* Set or change the EID:element mapping for EID in BRANCH.
  *
- * Duplicate NEW_NAME and NEW_CONTENT into the branch mapping's pool.
+ * Duplicate NEW_NAME and NEW_PAYLOAD into the branch mapping's pool.
  */
 void
 svn_branch_update_element(svn_branch_state_t *branch,
                           int eid,
                           svn_branch_eid_t new_parent_eid,
                           const char *new_name,
-                          const svn_element_content_t *new_content);
+                          const svn_element_payload_t *new_payload);
 
 /* Set or change the EID:element mapping for EID in BRANCH to reflect a
- * subbranch root element. This element has no content in this branch; the
- * corresponding element of the subbranch will define its content.
+ * subbranch root element. This element has no payload in this branch; the
+ * corresponding element of the subbranch will define its payload.
  *
  * Duplicate NEW_NAME into the branch mapping's pool.
  */
@@ -437,7 +437,7 @@ svn_branch_purge_r(svn_branch_state_t *branch,
 /* Instantiate a subtree.
  *
  * In TO_BRANCH, instantiate (or alter, if existing) each element of
- * FROM_SUBTREE, with the given tree structure and content. Set the subtree
+ * FROM_SUBTREE, with the given tree structure and payload. Set the subtree
  * root element's parent to NEW_PARENT_EID and name to NEW_NAME.
  *
  * Also branch the subbranches in FROM_SUBTREE, creating corresponding new
