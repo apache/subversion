@@ -437,8 +437,11 @@ svn_branch_purge_r(svn_branch_state_t *branch,
 /* Instantiate a subtree.
  *
  * In TO_BRANCH, instantiate (or alter, if existing) each element of
- * FROM_SUBTREE, keeping their tree structure and content. Set the subtree
+ * FROM_SUBTREE, with the given tree structure and content. Set the subtree
  * root element's parent to NEW_PARENT_EID and name to NEW_NAME.
+ *
+ * Also branch the subbranches in FROM_SUBTREE, creating corresponding new
+ * subbranches in TO_BRANCH, recursively.
  *
  * NEW_PARENT_EID MUST be an existing element in TO_BRANCH. It may be the
  * root element of TO_BRANCH.
@@ -450,16 +453,22 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
                                svn_branch_subtree_t from_subtree,
                                apr_pool_t *scratch_pool);
 
-/* Instantiate a new branch of the subtree FROM_SUBTREE, at the
- * existing branch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
- * Also branch, recursively, the subbranches in FROM_SUBTREE.
+/* Create a new branch of a given subtree.
+ *
+ * Instantiate a new branch of the subtree FROM_SUBTREE, at the
+ * existing subbranch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
+ *
+ * Also branch the subbranches in FROM_SUBTREE, creating corresponding new
+ * subbranches in TO_BRANCH, recursively.
+ *
+ * Set *NEW_BRANCH_P to the new branch (the one at TO_OUTER_BRANCH:TO_OUTER_EID).
  */
 svn_error_t *
-svn_branch_branch_subtree_r2(svn_branch_state_t **new_branch_p,
-                             svn_branch_subtree_t from_subtree,
-                             svn_branch_state_t *to_outer_branch,
-                             svn_branch_eid_t to_outer_eid,
-                             apr_pool_t *scratch_pool);
+svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
+                          svn_branch_subtree_t from_subtree,
+                          svn_branch_state_t *to_outer_branch,
+                          svn_branch_eid_t to_outer_eid,
+                          apr_pool_t *scratch_pool);
 
 /* Create a copy of NEW_SUBTREE in TO_BRANCH, generating a new element
  * for each non-root element in NEW_SUBTREE.
