@@ -176,7 +176,7 @@ check_cancel(svn_editor3_t *editor)
 #define VALID_NODE_KIND(kind) ((kind) != svn_node_unknown && (kind) != svn_node_none)
 #define VALID_EID(eid) ((eid) >= 0)
 #define VALID_NAME(name) ((name) && (name)[0] && svn_relpath_is_canonical(name))
-#define VALID_CONTENT(content) ((content) && VALID_NODE_KIND((content)->kind))
+#define VALID_PAYLOAD(payload) ((payload) && VALID_NODE_KIND((payload)->kind))
 #define VALID_EL_REV_ID(el_rev) (el_rev && el_rev->branch && VALID_EID(el_rev->eid))
 
 #define VERIFY(method, expr) \
@@ -192,21 +192,21 @@ svn_editor3_add(svn_editor3_t *editor,
                 svn_branch_state_t *branch,
                 svn_branch_eid_t new_parent_eid,
                 const char *new_name,
-                const svn_element_content_t *new_content)
+                const svn_element_payload_t *new_payload)
 {
   int eid = -1;
 
-  SVN_ERR_ASSERT(new_content ? VALID_NODE_KIND(new_kind)
+  SVN_ERR_ASSERT(new_payload ? VALID_NODE_KIND(new_kind)
                              : new_kind == svn_node_unknown);
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
-  SVN_ERR_ASSERT(!new_content || VALID_CONTENT(new_content));
-  SVN_ERR_ASSERT(!new_content || new_content->kind == new_kind);
+  SVN_ERR_ASSERT(!new_payload || VALID_PAYLOAD(new_payload));
+  SVN_ERR_ASSERT(!new_payload || new_payload->kind == new_kind);
 
   DO_CALLBACK(editor, cb_add,
               6(&eid, new_kind,
                 branch, new_parent_eid, new_name,
-                new_content));
+                new_payload));
 
   SVN_ERR_ASSERT(VALID_EID(eid));
 
@@ -224,19 +224,19 @@ svn_editor3_instantiate(svn_editor3_t *editor,
                         svn_branch_eid_t local_eid,
                         svn_branch_eid_t new_parent_eid,
                         const char *new_name,
-                        const svn_element_content_t *new_content)
+                        const svn_element_payload_t *new_payload)
 {
   SVN_ERR_ASSERT(VALID_EID(local_eid));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
-  SVN_ERR_ASSERT(!new_content || VALID_CONTENT(new_content));
+  SVN_ERR_ASSERT(!new_payload || VALID_PAYLOAD(new_payload));
   VERIFY(instantiate, new_parent_eid != local_eid);
   /* TODO: verify this element does not exist (in initial state) */
 
   DO_CALLBACK(editor, cb_instantiate,
               5(branch, local_eid,
                 new_parent_eid, new_name,
-                new_content));
+                new_payload));
   return SVN_NO_ERROR;
 }
 
@@ -247,20 +247,20 @@ svn_editor3_copy_one(svn_editor3_t *editor,
                      svn_branch_eid_t local_eid,
                      svn_branch_eid_t new_parent_eid,
                      const char *new_name,
-                     const svn_element_content_t *new_content)
+                     const svn_element_payload_t *new_payload)
 {
   SVN_ERR_ASSERT(VALID_EID(local_eid));
   SVN_ERR_ASSERT(VALID_EL_REV_ID(src_el_rev));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
-  SVN_ERR_ASSERT(! new_content || VALID_CONTENT(new_content));
+  SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
   /* TODO: verify source element exists (in a committed rev) */
 
   DO_CALLBACK(editor, cb_copy_one,
               6(src_el_rev,
                 branch, local_eid,
                 new_parent_eid, new_name,
-                new_content));
+                new_payload));
 
   return SVN_NO_ERROR;
 }
@@ -307,19 +307,19 @@ svn_editor3_alter(svn_editor3_t *editor,
                   svn_branch_eid_t eid,
                   svn_branch_eid_t new_parent_eid,
                   const char *new_name,
-                  const svn_element_content_t *new_content)
+                  const svn_element_payload_t *new_payload)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
-  SVN_ERR_ASSERT(! new_content || VALID_CONTENT(new_content));
+  SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
   VERIFY(alter, new_parent_eid != eid);
   /* TODO: verify this element exists (in initial state) */
 
   DO_CALLBACK(editor, cb_alter,
               6(since_rev, branch, eid,
                 new_parent_eid, new_name,
-                new_content));
+                new_payload));
 
   return SVN_NO_ERROR;
 }
@@ -446,7 +446,7 @@ wrap_add(void *baton,
          svn_branch_state_t *branch,
          svn_branch_eid_t new_parent_eid,
          const char *new_name,
-         const svn_element_content_t *new_content,
+         const svn_element_payload_t *new_payload,
          apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -456,7 +456,7 @@ wrap_add(void *baton,
       eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_add(eb->wrapped_editor,
                           local_eid, new_kind,
-                          branch, new_parent_eid, new_name, new_content));
+                          branch, new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
@@ -466,7 +466,7 @@ wrap_instantiate(void *baton,
                  svn_branch_eid_t local_eid,
                  svn_branch_eid_t new_parent_eid,
                  const char *new_name,
-                 const svn_element_content_t *new_content,
+                 const svn_element_payload_t *new_payload,
                  apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -476,7 +476,7 @@ wrap_instantiate(void *baton,
       eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_instantiate(eb->wrapped_editor,
                                   branch, local_eid,
-                                  new_parent_eid, new_name, new_content));
+                                  new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
@@ -487,7 +487,7 @@ wrap_copy_one(void *baton,
               svn_branch_eid_t local_eid,
               svn_branch_eid_t new_parent_eid,
               const char *new_name,
-              const svn_element_content_t *new_content,
+              const svn_element_payload_t *new_payload,
               apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -498,7 +498,7 @@ wrap_copy_one(void *baton,
   SVN_ERR(svn_editor3_copy_one(eb->wrapped_editor,
                                src_el_rev,
                                branch, local_eid,
-                               new_parent_eid, new_name, new_content));
+                               new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
@@ -544,7 +544,7 @@ wrap_alter(void *baton,
            svn_branch_eid_t eid,
            svn_branch_eid_t new_parent_eid,
            const char *new_name,
-           const svn_element_content_t *new_content,
+           const svn_element_payload_t *new_payload,
            apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -554,7 +554,7 @@ wrap_alter(void *baton,
       eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
                             since_rev, branch, eid,
-                            new_parent_eid, new_name, new_content));
+                            new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
@@ -663,16 +663,16 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
       svn_branch_el_rev_content_t *element_right
         = svn_int_hash_get(right->e_map, e);
 
-      /* If node content is given by reference, resolve it to full content */
+      /* If node payload is given by reference, resolve it to full payload */
       if (element_left)
         {
-          SVN_ERR(svn_editor3_content_resolve(&element_left->content,
+          SVN_ERR(svn_editor3_payload_resolve(&element_left->payload,
                                               editor, element_left,
                                               result_pool, scratch_pool));
         }
       if (element_right)
         {
-          SVN_ERR(svn_editor3_content_resolve(&element_right->content,
+          SVN_ERR(svn_editor3_payload_resolve(&element_right->payload,
                                               editor, element_right,
                                               result_pool, scratch_pool));
         }

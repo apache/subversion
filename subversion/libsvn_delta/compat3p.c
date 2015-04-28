@@ -800,7 +800,7 @@ process_actions(struct ev3_edit_baton *eb,
 
   if (change->props || change->contents_changed)
     {
-      svn_element_content_t *new_content;
+      svn_element_payload_t *new_payload;
 
       if (change->kind == svn_node_file)
         {
@@ -823,17 +823,17 @@ process_actions(struct ev3_edit_baton *eb,
               text = svn_stringbuf_create_empty(scratch_pool);
             }
 
-          new_content = svn_element_content_create_file(
+          new_payload = svn_element_payload_create_file(
                           change->props, text, scratch_pool);
         }
       else if (change->kind == svn_node_dir)
         {
-          new_content = svn_element_content_create_dir(
+          new_payload = svn_element_payload_create_dir(
                           change->props, scratch_pool);
         }
       else
         SVN_ERR_MALFUNCTION();
-      SVN_ERR(svn_editor3p_put(eb->editor, change_loc, new_content));
+      SVN_ERR(svn_editor3p_put(eb->editor, change_loc, new_payload));
     }
 
   return SVN_NO_ERROR;
@@ -2381,7 +2381,7 @@ editor3_rm(void *baton,
 static svn_error_t *
 editor3_put(void *baton,
             svn_editor3_txn_path_t loc,
-            const svn_element_content_t *new_content,
+            const svn_element_payload_t *new_payload,
             apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
@@ -2394,7 +2394,7 @@ editor3_put(void *baton,
 
   /* look up the 'change' record; this may be a new or an existing record */
   SVN_ERR(insert_change(&change, eb->changes, txnpath, RESTRUCTURE_NONE));
-  change->kind = new_content->kind;
+  change->kind = new_payload->kind;
   /* The revision number that this change is based on is the peg rev for
      a simple change. For a plain add it is unused. For a copy ...
 
@@ -2402,14 +2402,14 @@ editor3_put(void *baton,
      we be using the copy-from rev instead? See comment in apply_change().
    */
   change->changing_rev = loc.peg.rev;
-  change->props = (new_content->props
-                   ? svn_prop_hash_dup(new_content->props, changes_pool)
+  change->props = (new_payload->props
+                   ? svn_prop_hash_dup(new_payload->props, changes_pool)
                    : NULL);
 
-  if (new_content->kind == svn_node_file)
+  if (new_payload->kind == svn_node_file)
     {
       /* Copy the provided text into the change record. */
-      change->contents_text = svn_stringbuf_dup(new_content->text,
+      change->contents_text = svn_stringbuf_dup(new_payload->text,
                                                 changes_pool);
     }
 

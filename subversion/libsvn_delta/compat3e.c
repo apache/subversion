@@ -779,33 +779,33 @@ apply_change(void **dir_baton,
 
 /*  */
 static svn_error_t *
-content_fetch(svn_element_content_t **content_p,
+payload_fetch(svn_element_payload_t **payload_p,
               apr_hash_t **children_names,
               ev3_from_delta_baton_t *eb,
               const svn_pathrev_t *path_rev,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  svn_element_content_t *content
-    = apr_pcalloc(result_pool, sizeof (*content));
+  svn_element_payload_t *payload
+    = apr_pcalloc(result_pool, sizeof (*payload));
 
-  SVN_ERR(eb->fetch_func(&content->kind,
-                         &content->props,
-                         &content->text,
+  SVN_ERR(eb->fetch_func(&payload->kind,
+                         &payload->props,
+                         &payload->text,
                          children_names,
                          eb->fetch_baton,
                          path_rev->relpath, path_rev->rev,
                          result_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(content->kind == svn_node_dir
-                 || content->kind == svn_node_file);
-  if (content_p)
-    *content_p = content;
+  SVN_ERR_ASSERT(payload->kind == svn_node_dir
+                 || payload->kind == svn_node_file);
+  if (payload_p)
+    *payload_p = payload;
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_editor3_content_resolve(svn_element_content_t **content_p,
+svn_editor3_payload_resolve(svn_element_payload_t **payload_p,
                             svn_editor3_t *editor,
                             const svn_branch_el_rev_content_t *element,
                             apr_pool_t *result_pool,
@@ -815,16 +815,16 @@ svn_editor3_content_resolve(svn_element_content_t **content_p,
 
   SVN_ERR_ASSERT(element);
 
-  /* If content is by reference, fetch full content. */
-  if (element->content && element->content->ref.relpath)
+  /* If payload is by reference, fetch full payload. */
+  if (element->payload && element->payload->ref.relpath)
     {
-      SVN_ERR(content_fetch(content_p, NULL,
-                            eb, &element->content->ref,
+      SVN_ERR(payload_fetch(payload_p, NULL,
+                            eb, &element->payload->ref,
                             result_pool, scratch_pool));
     }
   else
     {
-      *content_p = svn_element_content_dup(element->content, result_pool);
+      *payload_p = svn_element_payload_dup(element->payload, result_pool);
     }
   return SVN_NO_ERROR;
 }
@@ -840,18 +840,18 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **element_p,
   ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
   svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);
 
-  /* Node content is null iff node is a subbranch root, but we shouldn't
+  /* Node payload is null iff node is a subbranch root, but we shouldn't
      be querying a subbranch root. */
   /* ### Why/how not? */
-  /*SVN_ERR_ASSERT(!element || element->content);*/
+  /*SVN_ERR_ASSERT(!element || element->payload);*/
 
   element = element ? svn_branch_el_rev_content_dup(element, result_pool) : NULL;
 
-  /* If content is by reference, fetch full content. */
-  if (element && element->content && element->content->ref.relpath)
+  /* If payload is by reference, fetch full payload. */
+  if (element && element->payload && element->payload->ref.relpath)
     {
-      SVN_ERR(content_fetch(&element->content, NULL,
-                            eb, &element->content->ref,
+      SVN_ERR(payload_fetch(&element->payload, NULL,
+                            eb, &element->payload->ref,
                             result_pool, scratch_pool));
     }
 
@@ -898,20 +898,21 @@ editor3_add(void *baton,
             svn_branch_state_t *branch,
             svn_branch_eid_t new_parent_eid,
             const char *new_name,
-            const svn_element_content_t *new_content,
+            const svn_element_payload_t *new_payload,
             apr_pool_t *scratch_pool)
 {
   int eid;
 
   eid = svn_branch_allocate_new_eid(branch->rev_root);
 
-  if (new_content)
+  if (new_payload)
     {
       SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
                eid, new_parent_eid,
-               new_name, svn_node_kind_to_word(new_content->kind)));
+               new_name, svn_node_kind_to_word(new_payload->kind)));
 
-      svn_branch_update_element(branch, eid, new_parent_eid, new_name, new_content);
+      svn_branch_update_element(branch, eid, new_parent_eid, new_name,
+                                new_payload);
     }
   else
     {
@@ -933,17 +934,17 @@ editor3_instantiate(void *baton,
                     svn_branch_eid_t eid,
                     svn_branch_eid_t new_parent_eid,
                     const char *new_name,
-                    const svn_element_content_t *new_content,
+                    const svn_element_payload_t *new_payload,
                     apr_pool_t *scratch_pool)
 {
-  if (new_content)
+  if (new_payload)
     {
       SVN_DBG(("instantiate(e%d): parent e%d, name '%s', kind %s",
                eid, new_parent_eid, new_name,
-               svn_node_kind_to_word(new_content->kind)));
+               svn_node_kind_to_word(new_payload->kind)));
 
       svn_branch_update_element(branch, eid, new_parent_eid, new_name,
-                                new_content);
+                                new_payload);
     }
   else
     {
@@ -964,13 +965,13 @@ editor3_copy_one(void *baton,
                  svn_branch_eid_t eid,
                  svn_branch_eid_t new_parent_eid,
                  const char *new_name,
-                 const svn_element_content_t *new_content,
+                 const svn_element_payload_t *new_payload,
                  apr_pool_t *scratch_pool)
 {
-  /* New content shall be the same as the source if NEW_CONTENT is null. */
-  /* ### if (! new_content)
+  /* New payload shall be the same as the source if NEW_PAYLOAD is null. */
+  /* ### if (! new_payload)
     {
-      new_content = branch_map_get(branch, eid)->content;
+      new_payload = branch_map_get(branch, eid)->payload;
     }
    */
 
@@ -1020,24 +1021,24 @@ editor3_alter(void *baton,
               svn_branch_eid_t eid,
               svn_branch_eid_t new_parent_eid,
               const char *new_name,
-              const svn_element_content_t *new_content,
+              const svn_element_payload_t *new_payload,
               apr_pool_t *scratch_pool)
 {
   SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
            eid,
            new_parent_eid,
            new_name ? new_name : "(same)",
-           new_content ? svn_node_kind_to_word(new_content->kind) : "(same)"));
+           new_payload ? svn_node_kind_to_word(new_payload->kind) : "(same)"));
 
-  /* New content shall be the same as the before if NEW_CONTENT is null. */
-  if (! new_content)
+  /* New payload shall be the same as before if NEW_PAYLOAD is null. */
+  if (! new_payload)
     {
-      new_content = svn_branch_get_element(branch, eid)->content;
+      new_payload = svn_branch_get_element(branch, eid)->payload;
     }
 
-  if (new_content)
+  if (new_payload)
     svn_branch_update_element(
-      branch, eid, new_parent_eid, new_name, new_content);
+      branch, eid, new_parent_eid, new_name, new_payload);
   else
     svn_branch_update_subbranch_root_element(
       branch, eid, new_parent_eid, new_name);
@@ -1072,7 +1073,7 @@ convert_branch_to_paths(apr_hash_t *paths,
       /* Fill in the details. If it's already been filled in, then let a
          branch-root element override a sub-branch element of an outer
          branch, because the branch-root element is the one that should
-         be specifying the element's content.
+         be specifying the element's payload.
        */
       if (! ba
           || eid == branch->root_eid)
@@ -1120,56 +1121,56 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
     }
 }
 
-/* Return TRUE iff INITIAL_CONTENT and FINAL_CONTENT are both non-null
+/* Return TRUE iff INITIAL_PAYLOAD and FINAL_PAYLOAD are both non-null
  * and have the same properties.
  */
 static svn_boolean_t
-props_equal(svn_element_content_t *initial_content,
-            svn_element_content_t *final_content,
+props_equal(svn_element_payload_t *initial_payload,
+            svn_element_payload_t *final_payload,
             apr_pool_t *scratch_pool)
 {
   apr_array_header_t *prop_diffs;
 
-  if (!initial_content || !final_content)
+  if (!initial_payload || !final_payload)
     return FALSE;
 
   svn_error_clear(svn_prop_diffs(&prop_diffs,
-                                 initial_content->props,
-                                 final_content->props,
+                                 initial_payload->props,
+                                 final_payload->props,
                                  scratch_pool));
   return (prop_diffs->nelts == 0);
 }
 
-/* Return TRUE iff INITIAL_CONTENT and FINAL_CONTENT are both file content
+/* Return TRUE iff INITIAL_PAYLOAD and FINAL_PAYLOAD are both file payload
  * and have the same text.
  */
 static svn_boolean_t
-text_equal(svn_element_content_t *initial_content,
-           svn_element_content_t *final_content)
+text_equal(svn_element_payload_t *initial_payload,
+           svn_element_payload_t *final_payload)
 {
-  if (!initial_content || !final_content
-      || initial_content->kind != svn_node_file
-      || final_content->kind != svn_node_file)
+  if (!initial_payload || !final_payload
+      || initial_payload->kind != svn_node_file
+      || final_payload->kind != svn_node_file)
     {
       return FALSE;
     }
 
-  return svn_stringbuf_compare(initial_content->text,
-                               final_content->text);
+  return svn_stringbuf_compare(initial_payload->text,
+                               final_payload->text);
 }
 
 /* Return the copy-from location to be used if this is to be a copy;
  * otherwise return NULL.
  *
- * ### Currently this is indicated by content-by-reference, which is
+ * ### Currently this is indicated by payload-by-reference, which is
  *     an inadequate indication.
  */
 static svn_pathrev_t *
-get_copy_from(svn_element_content_t *final_content)
+get_copy_from(svn_element_payload_t *final_payload)
 {
-  if (final_content->ref.relpath)
+  if (final_payload->ref.relpath)
     {
-      return &final_content->ref;
+      return &final_payload->ref;
     }
   return NULL;
 }
@@ -1241,7 +1242,7 @@ drive_changes_r(const char *rrpath,
 {
   /* The el-rev-id of the element that will finally exist at RRPATH. */
   svn_branch_el_rev_id_t *final_el_rev = svn_hash_gets(paths_final, rrpath);
-  svn_element_content_t *final_content;
+  svn_element_payload_t *final_payload;
   svn_pathrev_t *final_copy_from;
   svn_boolean_t succession;
 
@@ -1259,18 +1260,18 @@ drive_changes_r(const char *rrpath,
 
   if (final_el_rev)
     {
-      final_content = svn_branch_get_element(final_el_rev->branch,
-                                             final_el_rev->eid)->content;
+      final_payload = svn_branch_get_element(final_el_rev->branch,
+                                             final_el_rev->eid)->payload;
 
       /* Decide whether the state at this path should be a copy (incl. a
          copy-child) */
-      final_copy_from = get_copy_from(final_content);
+      final_copy_from = get_copy_from(final_payload);
       /* It doesn't make sense to have a non-copy inside a copy */
       /*SVN_ERR_ASSERT(!(parent_is_copy && !final_copy_from));*/
    }
   else
     {
-      final_content = NULL;
+      final_payload = NULL;
       final_copy_from = NULL;
     }
 
@@ -1321,18 +1322,18 @@ drive_changes_r(const char *rrpath,
      Or it's unchanged -- we do nothing in that case. */
   if (final_el_rev)
     {
-      svn_element_content_t *current_content = NULL;
+      svn_element_payload_t *current_payload = NULL;
       apr_hash_t *current_children = NULL;
       change_node_t *change = NULL;
 
-      /* Get the full content of the final node. If we have
-         only a reference to the content, fetch it in full. */
-      SVN_ERR_ASSERT(final_content);
-      if (final_content->ref.relpath)
+      /* Get the full payload of the final node. If we have
+         only a reference to the payload, fetch it in full. */
+      SVN_ERR_ASSERT(final_payload);
+      if (final_payload->ref.relpath)
         {
-          /* Get content by reference. */
-          SVN_ERR(content_fetch(&final_content, NULL,
-                                eb, &final_content->ref,
+          /* Get payload by reference. */
+          SVN_ERR(payload_fetch(&final_payload, NULL,
+                                eb, &final_payload->ref,
                                 scratch_pool, scratch_pool));
         }
 
@@ -1340,14 +1341,14 @@ drive_changes_r(const char *rrpath,
          modified, otherwise it's being added (perhaps a replacement). */
       if (succession)
         {
-          /* Get full content of the current node */
-          SVN_ERR(content_fetch(&current_content, &current_children,
+          /* Get full payload of the current node */
+          SVN_ERR(payload_fetch(&current_payload, &current_children,
                                 eb, pred_loc,
                                 scratch_pool, scratch_pool));
 
           /* If no changes to make, then skip this path */
-          if (svn_element_content_equal(current_content,
-                                             final_content, scratch_pool))
+          if (svn_element_payload_equal(current_payload,
+                                             final_payload, scratch_pool))
             {
               SVN_DBG(("ev1:no-op(%s)", rrpath));
             }
@@ -1365,14 +1366,14 @@ drive_changes_r(const char *rrpath,
           SVN_ERR(insert_change(&change, eb->changes, rrpath,
                                 RESTRUCTURE_ADD));
 
-          /* If content is to be copied (and possibly modified) ... */
+          /* If the node is to be copied (and possibly modified) ... */
           if (final_copy_from)
             {
               change->copyfrom_rev = final_copy_from->rev;
               change->copyfrom_path = final_copy_from->relpath;
 
-              /* Get full content of the copy source node */
-              SVN_ERR(content_fetch(&current_content, &current_children,
+              /* Get full payload of the copy source node */
+              SVN_ERR(payload_fetch(&current_payload, &current_children,
                                     eb, final_copy_from,
                                     scratch_pool, scratch_pool));
             }
@@ -1383,22 +1384,22 @@ drive_changes_r(const char *rrpath,
           /* Copy the required content into the change record. Avoid no-op
              changes of props / text, not least to minimize clutter when
              debugging Ev1 operations. */
-          SVN_ERR_ASSERT(final_content->kind == svn_node_dir
-                         || final_content->kind == svn_node_file);
-          change->kind = final_content->kind;
-          if (!props_equal(current_content, final_content, scratch_pool))
+          SVN_ERR_ASSERT(final_payload->kind == svn_node_dir
+                         || final_payload->kind == svn_node_file);
+          change->kind = final_payload->kind;
+          if (!props_equal(current_payload, final_payload, scratch_pool))
             {
-              change->props = final_content->props;
+              change->props = final_payload->props;
             }
-          if (final_content->kind == svn_node_file
-              && !text_equal(current_content, final_content))
+          if (final_payload->kind == svn_node_file
+              && !text_equal(current_payload, final_payload))
             {
-              change->contents_text = final_content->text;
+              change->contents_text = final_payload->text;
             }
         }
 
       /* Recurse to process this directory's children */
-      if (final_content->kind == svn_node_dir)
+      if (final_payload->kind == svn_node_dir)
         {
           apr_hash_t *final_children;
           apr_hash_t *union_children;

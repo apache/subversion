@@ -322,10 +322,10 @@ svn_editor3p_rm(svn_editor3p_t *editor,
 
 /** Set the content of the node-branch identified by @a loc.
  *
- * Set the content to @a new_content. (The new content may be described
+ * Set the content to @a new_payload. (The new content may be described
  * in terms of a delta against another node's content.)
  *
- * The caller owns @a new_content, including any file therein, and may
+ * The caller owns @a new_payload, including any file therein, and may
  * destroy it after this call returns.
  *
  * @note "put" MAY be sent for any node that exists in the final state.
@@ -340,7 +340,7 @@ svn_editor3p_rm(svn_editor3p_t *editor,
 svn_error_t *
 svn_editor3p_put(svn_editor3p_t *editor,
                  svn_editor3_txn_path_t loc,
-                 const svn_element_content_t *new_content);
+                 const svn_element_payload_t *new_payload);
 
 
 /** Drive @a editor's #svn_editor3p_cb_complete_t callback.
@@ -441,7 +441,7 @@ typedef svn_error_t *(*svn_editor3p_cb_rm_t)(
 typedef svn_error_t *(*svn_editor3p_cb_put_t)(
   void *baton,
   svn_editor3_txn_path_t loc,
-  const svn_element_content_t *new_content,
+  const svn_element_payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3p_complete(), #svn_editor3p_t

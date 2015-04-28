@@ -53,7 +53,7 @@ extern "C" {
  *       => (cp ^/a@5 b; del b/c; cp ^/a/c@5 b/c) == (cp ^/a@5 b)
  *   - a node-rev's versioned state consists of:
  *        its tree linkage (parent element identity, name)
- *        its content (props, text, link-target)
+ *        its payload (props, text, link-target)
  *   - resurrection is supported
  *
  * ===================================================================
@@ -111,7 +111,7 @@ extern "C" {
  * (2) Transmission of a set of independent changes
  *
  * These can be mixed: e.g. one interface declared here uses style (1)
- * for tree changes with style (2) for content changes.
+ * for tree changes with style (2) for payload changes.
  *
  * ===================================================================
  * Two different ways of "addressing" a node
@@ -444,7 +444,7 @@ extern "C" {
  * Terminology:
  *      An id. "exists" even if deleted, whereas an element "exists"
  *      only when it is alive, not deleted. An element is "identical"
- *      if its content and name and parent-eid are identical.
+ *      if its payload and name and parent-eid are identical.
  *
  * Notes:
  *      [1] A target node or id that is to be created can be found to
@@ -556,11 +556,11 @@ svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
  * Edit Operations:
  *
  *   operations on elements of "this" branch
- *   - add       kind          new-(parent-eid[2],name,content)  ->  new-eid
- *   - copy-one  br:eid@rev[3] new-(parent-eid[2],name,content)  ->  new-eid
+ *   - add       kind          new-(parent-eid[2],name,payload)  ->  new-eid
+ *   - copy-one  br:eid@rev[3] new-(parent-eid[2],name,payload)  ->  new-eid
  *   - copy-tree br:eid@rev[3] new-(parent-eid[2],name)          ->  new-eid
  *   - delete    eid[1]     since-rev
- *   - alter     eid[1,2]   since-rev new-(parent-eid[2],name,content)
+ *   - alter     eid[1,2]   since-rev new-(parent-eid[2],name,payload)
  *
  *   operations on sub-branches
  *   - branch
@@ -577,7 +577,7 @@ svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
  *     each of the most important concepts such as "move", "copy",
  *     "create" and "delete" is modeled as a single change to a single
  *     element. The name and the identity of its parent directory element are
- *     considered to be attributes of that element, alongside its content.
+ *     considered to be attributes of that element, alongside its payload.
  *
  *   - Changes are independent and unordered. The change to one element is
  *     independent of the change to any other element, except for the
@@ -585,9 +585,8 @@ svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
  *     hierarchy. A valid tree hierarchy is NOT required in any
  *     intermediate state after each change or after a subset of changes.
  *
- *   - Copies can be made in two ways: a copy of a single element can have
- *     its content changed and its children may be arbitrarily arranged,
- *     or a "cheap" O(1) copy of a subtree which cannot be edited.
+ *   - Copies can be made in two ways: a copy of a single element which can
+ *     be edited, or a "cheap" O(1) copy of a subtree which cannot be edited.
  *
  *   - Deleting a subtree is O(1) cheap // or not. ### To be decided.
  *
@@ -617,7 +616,7 @@ svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
- * Set the content to @a new_content. If @a new_content is null, create a
+ * Set the payload to @a new_payload. If @a new_payload is null, create a
  * subbranch-root element instead of a normal element. (@a new_kind must
  * be svn_node_unknown in this case.)
  *
@@ -630,7 +629,7 @@ svn_editor3_add(svn_editor3_t *editor,
                 svn_branch_state_t *branch,
                 svn_branch_eid_t new_parent_eid,
                 const char *new_name,
-                const svn_element_content_t *new_content);
+                const svn_element_payload_t *new_payload);
 
 /* Make the existing element @a eid exist in branch @a branch, assuming it was
  * previously not existing in this branch.
@@ -640,7 +639,7 @@ svn_editor3_add(svn_editor3_t *editor,
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
- * Set the content to @a new_content.
+ * Set the payload to @a new_payload.
  *
  * @see #svn_editor3_t
  *
@@ -652,11 +651,11 @@ svn_editor3_instantiate(svn_editor3_t *editor,
                         svn_branch_eid_t eid,
                         svn_branch_eid_t new_parent_eid,
                         const char *new_name,
-                        const svn_element_content_t *new_content);
+                        const svn_element_payload_t *new_payload);
 
 /** Create a new element that is copied from a pre-existing
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
- * element, with the same or different content.
+ * element, with the same or different content (parent, name, payload).
  *
  * Assign the target element a locally unique element-id, @a local_eid,
  * with which it can be referenced within this edit.
@@ -669,8 +668,8 @@ svn_editor3_instantiate(svn_editor3_t *editor,
  * </SVN_EDITOR3_WITH_COPY_FROM_THIS_REV>
  *
  * Set the target element's parent and name to @a new_parent_eid and
- * @a new_name. Set the target element's content to @a new_content, or make
- * it the same as the source if @a new_content is null.
+ * @a new_name. Set the target element's payload to @a new_payload, or make
+ * it the same as the source if @a new_payload is null.
  *
  * @note This copy is not recursive. Children may be copied separately if
  * required.
@@ -688,11 +687,11 @@ svn_editor3_copy_one(svn_editor3_t *editor,
                      svn_branch_eid_t local_eid,
                      svn_branch_eid_t new_parent_eid,
                      const char *new_name,
-                     const svn_element_content_t *new_content);
+                     const svn_element_payload_t *new_payload);
 
 /** Create a copy of a pre-existing
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
- * subtree, with the same content and tree structure.
+ * subtree, with the same content (tree structure and payload).
  *
  * Each element in the source subtree will be copied (branched) to the same
  * relative path within the target subtree. The elements created by
@@ -776,7 +775,7 @@ svn_editor3_delete(svn_editor3_t *editor,
                    svn_branch_state_t *branch,
                    svn_branch_eid_t eid);
 
-/** Alter the tree position and/or contents of the element identified
+/** Alter the tree position and/or payload of the element identified
  * by @a eid.
  * <SVN_EDITOR3_WITH_RESURRECTION> ### or resurrect it? </>
  *
@@ -786,7 +785,7 @@ svn_editor3_delete(svn_editor3_t *editor,
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
- * Set the content to @a new_content, or if null then leave the content
+ * Set the payload to @a new_payload, or if null then leave the payload
  * unchanged.
  *
  * A no-op change MUST be accepted but, in the interest of efficiency,
@@ -801,7 +800,7 @@ svn_editor3_alter(svn_editor3_t *editor,
                   svn_branch_eid_t eid,
                   svn_branch_eid_t new_parent_eid,
                   const char *new_name,
-                  const svn_element_content_t *new_content);
+                  const svn_element_payload_t *new_payload);
 
 /** Register a sequence point.
  *
@@ -874,7 +873,7 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
   svn_branch_state_t *branch,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
-  const svn_element_content_t *new_content,
+  const svn_element_payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_instantiate(), #svn_editor3_t
@@ -885,7 +884,7 @@ typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
   svn_branch_eid_t eid,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
-  const svn_element_content_t *new_content,
+  const svn_element_payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_copy_one(), #svn_editor3_t
@@ -897,7 +896,7 @@ typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
   svn_branch_eid_t local_eid,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
-  const svn_element_content_t *new_content,
+  const svn_element_payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_copy_tree(), #svn_editor3_t
@@ -928,7 +927,7 @@ typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   svn_branch_eid_t eid,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
-  const svn_element_content_t *new_content,
+  const svn_element_payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_sequence_point(), #svn_editor3_t
@@ -1052,10 +1051,10 @@ svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
-/* Fetch full content...
+/* Fetch full payload...
  */
 svn_error_t *
-svn_editor3_content_resolve(svn_element_content_t **content_p,
+svn_editor3_payload_resolve(svn_element_payload_t **payload_p,
                             svn_editor3_t *editor,
                             const svn_branch_el_rev_content_t *element,
                             apr_pool_t *result_pool,

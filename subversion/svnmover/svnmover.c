@@ -516,13 +516,13 @@ typedef struct merge_conflict_policy_t
 {
   /* Whether to merge delete-vs-delete */
   svn_boolean_t merge_double_delete;
-  /* Whether to merge add-vs-add (with same parent/name/content) */
+  /* Whether to merge add-vs-add (with same parent/name/payload) */
   svn_boolean_t merge_double_add;
   /* Whether to merge reparent-vs-reparent (with same parent) */
   svn_boolean_t merge_double_reparent;
   /* Whether to merge rename-vs-rename (with same name) */
   svn_boolean_t merge_double_rename;
-  /* Whether to merge modify-vs-modify (with same content) */
+  /* Whether to merge modify-vs-modify (with same payload) */
   svn_boolean_t merge_double_modify;
   /* Possible additional controls: */
   /* merge (parent, name, props, text) independently or as a group */
@@ -530,7 +530,7 @@ typedef struct merge_conflict_policy_t
   /* merge (props, text) independently or as a group */
 } merge_conflict_policy_t;
 
-/* Merge the content for one element.
+/* Merge the payload for one element.
  *
  * If there is no conflict, set *CONFLICT_P to FALSE and *RESULT_P to the
  * merged element; otherwise set *CONFLICT_P to TRUE and *RESULT_P to NULL.
@@ -539,31 +539,31 @@ typedef struct merge_conflict_policy_t
  * This handles any case where at least one of (SIDE1, SIDE2, YCA) exists.
  */
 static void
-content_merge(svn_element_content_t **result_p,
+payload_merge(svn_element_payload_t **result_p,
               svn_boolean_t *conflict_p,
               int eid,
-              svn_element_content_t *side1,
-              svn_element_content_t *side2,
-              svn_element_content_t *yca,
+              svn_element_payload_t *side1,
+              svn_element_payload_t *side2,
+              svn_element_payload_t *yca,
               const merge_conflict_policy_t *policy,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   svn_boolean_t conflict = FALSE;
-  svn_element_content_t *result = NULL;
+  svn_element_payload_t *result = NULL;
 
   if (yca && side1 && side2)
     {
-      if (svn_element_content_equal(side1, yca, scratch_pool))
+      if (svn_element_payload_equal(side1, yca, scratch_pool))
         {
           result = side2;
         }
-      else if (svn_element_content_equal(side2, yca, scratch_pool))
+      else if (svn_element_payload_equal(side2, yca, scratch_pool))
         {
           result = side1;
         }
       else if (policy->merge_double_modify
-               && svn_element_content_equal(side1, side2, scratch_pool))
+               && svn_element_payload_equal(side1, side2, scratch_pool))
         {
           SVN_DBG(("e%d double modify: ... -> { ... | ... }",
                    eid));
@@ -573,7 +573,7 @@ content_merge(svn_element_content_t **result_p,
         {
           /* ### Need not conflict if can merge props and text separately. */
 
-          SVN_DBG(("e%d conflict: content: ... -> { ... | ... }",
+          SVN_DBG(("e%d conflict: payload: ... -> { ... | ... }",
                    eid));
           conflict = TRUE;
         }
@@ -668,9 +668,9 @@ element_merge(svn_branch_el_rev_content_t **result_p,
           conflict = TRUE;
         }
 
-      /* merge the content */
-      content_merge(&result->content, &conflict,
-                    eid, side1->content, side2->content, yca->content,
+      /* merge the payload */
+      payload_merge(&result->payload, &conflict,
+                    eid, side1->payload, side2->payload, yca->payload,
                     policy, result_pool, scratch_pool);
     }
   else if (! side1 && ! side2)
@@ -694,7 +694,7 @@ element_merge(svn_branch_el_rev_content_t **result_p,
       /* Double add (as we already handled the case where YCA also exists) */
       /* May be allowed for equal content of a normal element (not subbranch) */
       if (policy->merge_double_add
-          && side1->content && side2->content /* they are not subbranches */
+          && side1->payload && side2->payload /* they are not subbranches */
           && svn_branch_el_rev_content_equal(side1, side2, scratch_pool))
         {
           SVN_DBG(("e%d double add",
@@ -909,7 +909,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
 
           SVN_ERR(svn_editor3_alter(editor, tgt->rev, tgt->branch, eid,
                                     result->parent_eid, result->name,
-                                    result->content));
+                                    result->payload));
 
           SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
         }
@@ -935,7 +935,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
            */
           SVN_ERR(svn_editor3_instantiate(editor, tgt->branch, eid,
                                           result->parent_eid, result->name,
-                                          result->content));
+                                          result->payload));
 
           SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
         }
@@ -1478,7 +1478,7 @@ svn_branch_log(svn_editor3_t *editor,
 
 /* Make a subbranch at OUTER_BRANCH : OUTER_PARENT_EID : OUTER_NAME.
  *
- * The subbranch will consist of a single element given by CONTENT.
+ * The subbranch will consist of a single element given by PAYLOAD.
  */
 static svn_error_t *
 mk_branch(svn_branch_state_t **new_branch_p,
@@ -1486,7 +1486,7 @@ mk_branch(svn_branch_state_t **new_branch_p,
           svn_branch_state_t *outer_branch,
           int outer_parent_eid,
           const char *outer_name,
-          svn_element_content_t *content,
+          svn_element_payload_t *payload,
           apr_pool_t *iterpool)
 {
   int new_root_eid = svn_branch_allocate_new_eid(outer_branch->rev_root);
@@ -1495,12 +1495,12 @@ mk_branch(svn_branch_state_t **new_branch_p,
 
   SVN_ERR(svn_editor3_add(editor, &new_outer_eid, svn_node_unknown,
                           outer_branch, outer_parent_eid, outer_name,
-                          NULL /*content*/));
+                          NULL /*new_payload*/));
   new_branch = svn_branch_add_new_branch(
                  outer_branch, new_outer_eid, new_root_eid,
                  iterpool);
   svn_branch_update_element(new_branch, new_root_eid,
-                            -1, "", content);
+                            -1, "", payload);
   *new_branch_p = new_branch;
   return SVN_NO_ERROR;
 }
@@ -1763,14 +1763,14 @@ execute(const apr_array_header_t *actions,
           VERIFY_PARENT_EID_EXISTS("mkbranch", 0);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
-            svn_element_content_t *content
-              = svn_element_content_create_dir(props, iterpool);
+            svn_element_payload_t *payload
+              = svn_element_payload_create_dir(props, iterpool);
             svn_branch_state_t *new_branch;
 
             SVN_ERR(mk_branch(&new_branch,
                               editor, parent_el_rev[0]->branch,
                               parent_el_rev[0]->eid, path_name[0],
-                              content, iterpool));
+                              payload, iterpool));
             notify("A    %s%s", action->relpath[0],
                    branch_str(new_branch, iterpool));
           }
@@ -1845,14 +1845,14 @@ execute(const apr_array_header_t *actions,
           VERIFY_PARENT_EID_EXISTS("mkdir", 0);
           {
             apr_hash_t *props = apr_hash_make(iterpool);
-            svn_element_content_t *content
-              = svn_element_content_create_dir(props, iterpool);
+            svn_element_payload_t *payload
+              = svn_element_payload_create_dir(props, iterpool);
             int new_eid;
 
             SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
                                     parent_el_rev[0]->branch,
                                     parent_el_rev[0]->eid, path_name[0],
-                                    content));
+                                    payload));
           }
           notify("A    %s", action->relpath[0]);
           made_changes = TRUE;
@@ -1863,7 +1863,7 @@ execute(const apr_array_header_t *actions,
           {
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_stringbuf_t *text;
-            svn_element_content_t *content;
+            svn_element_payload_t *payload;
 
             if (el_rev[1]->eid >= 0)
               {
@@ -1886,14 +1886,14 @@ execute(const apr_array_header_t *actions,
 
               svn_stringbuf_from_stream(&text, src, 0, iterpool);
             }
-            content = svn_element_content_create_file(props, text, iterpool);
+            payload = svn_element_payload_create_file(props, text, iterpool);
 
             if (el_rev[1]->eid >= 0)
               {
                 SVN_ERR(svn_editor3_alter(editor, SVN_INVALID_REVNUM,
                                           el_rev[1]->branch, el_rev[1]->eid,
                                           parent_el_rev[1]->eid, path_name[1],
-                                          content));
+                                          payload));
               }
             else
               {
@@ -1902,7 +1902,7 @@ execute(const apr_array_header_t *actions,
                 SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_file,
                                         parent_el_rev[1]->branch,
                                         parent_el_rev[1]->eid, path_name[1],
-                                        content));
+                                        payload));
               }
           }
           notify("A    %s", action->relpath[1]);
