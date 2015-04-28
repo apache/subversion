@@ -658,33 +658,33 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
                      apr_hash_overlay(scratch_pool, left->e_map, right->e_map)))
     {
       int e = svn_int_hash_this_key(hi->apr_hi);
-      svn_branch_el_rev_content_t *node_left
+      svn_branch_el_rev_content_t *element_left
         = svn_int_hash_get(left->e_map, e);
-      svn_branch_el_rev_content_t *node_right
+      svn_branch_el_rev_content_t *element_right
         = svn_int_hash_get(right->e_map, e);
 
       /* If node content is given by reference, resolve it to full content */
-      if (node_left)
+      if (element_left)
         {
-          SVN_ERR(svn_editor3_content_resolve(&node_left->content,
-                                              editor, node_left,
+          SVN_ERR(svn_editor3_content_resolve(&element_left->content,
+                                              editor, element_left,
                                               result_pool, scratch_pool));
         }
-      if (node_right)
+      if (element_right)
         {
-          SVN_ERR(svn_editor3_content_resolve(&node_right->content,
-                                              editor, node_right,
+          SVN_ERR(svn_editor3_content_resolve(&element_right->content,
+                                              editor, element_right,
                                               result_pool, scratch_pool));
         }
 
-      if (! svn_branch_el_rev_content_equal(node_left, node_right,
+      if (! svn_branch_el_rev_content_equal(element_left, element_right,
                                             scratch_pool))
         {
           svn_branch_el_rev_content_t **contents
             = apr_palloc(result_pool, 2 * sizeof(void *));
 
-          contents[0] = node_left;
-          contents[1] = node_right;
+          contents[0] = element_left;
+          contents[1] = element_right;
           svn_int_hash_set(diff, e, contents);
         }
     }

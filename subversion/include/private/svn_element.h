@@ -79,6 +79,7 @@ typedef struct svn_element_content_t svn_element_content_t;
 /*
  * ========================================================================
  * Element Content Interface
+ * (Actually the props/text content of an old 'node'.)
  * ========================================================================
  *
  * @defgroup svn_element_content Element content interface
