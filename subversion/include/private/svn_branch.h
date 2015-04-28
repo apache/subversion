@@ -397,13 +397,13 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
  */
 svn_branch_el_rev_content_t *
 svn_branch_get_element(const svn_branch_state_t *branch,
-                   int eid);
+                       int eid);
 
 /* In BRANCH, delete element EID.
  */
 void
 svn_branch_delete_element(svn_branch_state_t *branch,
-                      int eid);
+                          int eid);
 
 /* Set or change the EID:element mapping for EID in BRANCH.
  *
@@ -411,10 +411,10 @@ svn_branch_delete_element(svn_branch_state_t *branch,
  */
 void
 svn_branch_update_element(svn_branch_state_t *branch,
-                      int eid,
-                      svn_branch_eid_t new_parent_eid,
-                      const char *new_name,
-                      const svn_element_content_t *new_content);
+                          int eid,
+                          svn_branch_eid_t new_parent_eid,
+                          const char *new_name,
+                          const svn_element_content_t *new_content);
 
 /* Set or change the EID:element mapping for EID in BRANCH to reflect a
  * subbranch root element. This element has no content in this branch; the
@@ -424,9 +424,9 @@ svn_branch_update_element(svn_branch_state_t *branch,
  */
 void
 svn_branch_update_subbranch_root_element(svn_branch_state_t *branch,
-                                        int eid,
-                                        svn_branch_eid_t new_parent_eid,
-                                        const char *new_name);
+                                         int eid,
+                                         svn_branch_eid_t new_parent_eid,
+                                         const char *new_name);
 
 /* Remove from BRANCH's mapping any elements that do not have a complete
  * line of parents to the branch root. In other words, remove elements
