@@ -410,21 +410,21 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
 
   for (eid = branch->rev_root->first_eid; eid < branch->rev_root->next_eid; eid++)
     {
-      svn_branch_el_rev_content_t *node = svn_branch_map_get(branch, eid);
+      svn_branch_el_rev_content_t *element = svn_branch_map_get(branch, eid);
 
-      if (node && node->parent_eid == -1)
+      if (element && element->parent_eid == -1)
         {
           /* root element of this branch */
           printf("    e%-*d  %-*s .\n",
                  eid_width, eid,
                  eid_width, "");
         }
-      else if (node)
+      else if (element)
         {
           printf("    e%-*d e%-*d/%s%s\n",
                  eid_width, eid,
-                 eid_width, node->parent_eid,
-                 node->name,
+                 eid_width, element->parent_eid,
+                 element->name,
                  subbranch_str(branch, eid, scratch_pool));
         }
     }

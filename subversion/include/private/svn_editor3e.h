@@ -1057,18 +1057,18 @@ svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
 svn_error_t *
 svn_editor3_content_resolve(svn_element_content_t **content_p,
                             svn_editor3_t *editor,
-                            const svn_branch_el_rev_content_t *node,
+                            const svn_branch_el_rev_content_t *element,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
 /* Get the content of BRANCH:EID, as fully resolved content (not as a
  * reference). BRANCH:EID must not be a subbranch root.
  *
- * Set *NODE_P to the content, or to null if there is no such element.
+ * Set *ELEMENT_P to the content, or to null if there is no such element.
  * Use the editor's "fetch" callback if the content is not already in memory.
  */
 svn_error_t *
-svn_editor3_el_rev_get(svn_branch_el_rev_content_t **node_p,
+svn_editor3_el_rev_get(svn_branch_el_rev_content_t **element_p,
                       svn_editor3_t *editor,
                       svn_branch_state_t *branch,
                       int eid,
