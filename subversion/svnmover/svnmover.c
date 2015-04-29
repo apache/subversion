@@ -999,22 +999,75 @@ typedef struct diff_item_t
 {
   int eid;
   svn_branch_el_rev_content_t *e0, *e1;
-  char status_mod, status_reparent, status_rename;
-  const char *major_path;
+  const char *relpath0, *relpath1;
+  svn_boolean_t modified, reparented, renamed;
 } diff_item_t;
+
+/* Return differences between branch subtrees S_LEFT and S_RIGHT.
+ *
+ * Set *DIFF_CHANGES to an array of (diff_item_t).
+ */
+static svn_error_t *
+subtree_diff(svn_array_t **diff_changes,
+             svn_editor3_t *editor,
+             svn_branch_subtree_t *s_left,
+             svn_branch_subtree_t *s_right,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  apr_hash_t *diff_left_right;
+  apr_hash_index_t *hi;
+
+  *diff_changes = svn_array_make(result_pool);
+
+  SVN_ERR(svn_branch_subtree_differences(&diff_left_right,
+                                         editor, s_left, s_right,
+                                         result_pool, scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, diff_left_right);
+       hi; hi = apr_hash_next(hi))
+    {
+      int eid = svn_int_hash_this_key(hi);
+      svn_branch_el_rev_content_t **e_pair = apr_hash_this_val(hi);
+      svn_branch_el_rev_content_t *e0 = e_pair[0], *e1 = e_pair[1];
+
+      if (e0 || e1)
+        {
+          diff_item_t *item = apr_palloc(result_pool, sizeof(*item));
+
+          item->eid = eid;
+          item->e0 = e0;
+          item->e1 = e1;
+          item->relpath0 = e0 ? svn_branch_subtree_get_path_by_eid(
+                                  s_left, eid, result_pool) : NULL;
+          item->relpath1 = e1 ? svn_branch_subtree_get_path_by_eid(
+                                  s_right, eid, result_pool) : NULL;
+          item->reparented = (e0 && e1 && e0->parent_eid != e1->parent_eid);
+          item->renamed = (e0 && e1 && strcmp(e0->name, e1->name) != 0);
+
+          SVN_ARRAY_PUSH(*diff_changes) = item;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /*  */
 static int
 diff_ordering(const void *a, const void *b)
 {
-  const diff_item_t *item1 = *(void *const *)a, *item2 = *(void *const *)b;
+  const diff_item_t *item_a = *(void *const *)a, *item_b = *(void *const *)b;
+  int deleted_a = (item_a->e0 && ! item_a->e1);
+  int deleted_b = (item_b->e0 && ! item_b->e1);
+  const char *major_path_a = (item_a->e1 ? item_a->relpath1 : item_a->relpath0);
+  const char *major_path_b = (item_b->e1 ? item_b->relpath1 : item_b->relpath0);
 
-  /* Sort items with status 'D' before all others */
-  if ((item1->status_mod == 'D') != (item2->status_mod == 'D'))
-    return (item2->status_mod == 'D') - (item1->status_mod == 'D');
+  /* Sort deleted items before all others */
+  if (deleted_a != deleted_b)
+    return deleted_b - deleted_a;
 
   /* Sort by path */
-  return svn_path_compare_paths(item1->major_path, item2->major_path);
+  return svn_path_compare_paths(major_path_a, major_path_b);
 }
 
 /*  */
@@ -1037,9 +1090,7 @@ svn_branch_diff(svn_editor3_t *editor,
                 apr_pool_t *scratch_pool)
 {
   svn_branch_subtree_t *s_left, *s_right;
-  apr_hash_t *diff_left_right;
-  int first_eid, next_eid, eid;
-  svn_array_t *diff_changes = svn_array_make(scratch_pool);
+  svn_array_t *diff_changes;
   SVN_ITER_T(diff_item_t) *ai;
   int eid_width;
 
@@ -1047,61 +1098,13 @@ svn_branch_diff(svn_editor3_t *editor,
 
   s_left = svn_branch_get_subtree(left->branch, left->eid, scratch_pool);
   s_right = svn_branch_get_subtree(right->branch, right->eid, scratch_pool);
-  SVN_ERR(svn_branch_subtree_differences(&diff_left_right,
-                                         editor, s_left, s_right,
-                                         scratch_pool, scratch_pool));
-
-  first_eid = left->branch->rev_root->first_eid;
-  next_eid = MAX(left->branch->rev_root->next_eid,
-                 right->branch->rev_root->next_eid);
-
-  for (eid = first_eid; eid < next_eid; eid++)
-    {
-      svn_branch_el_rev_content_t **e_pair
-        = svn_int_hash_get(diff_left_right, eid);
-      svn_branch_el_rev_content_t *e0, *e1;
-
-      if (! e_pair)
-        continue;
-
-      e0 = e_pair[0];
-      e1 = e_pair[1];
-
-      if (e0 || e1)
-        {
-          diff_item_t *item = apr_palloc(scratch_pool, sizeof(*item));
-          const char *path0 = NULL, *path1 = NULL;
-
-          item->eid = eid;
-          item->e0 = e0;
-          item->e1 = e1;
-          item->status_mod = ' ';
-          item->status_reparent = ' ';
-          item->status_rename = ' ';
-
-          if (e0 && e1)
-            {
-              item->status_mod = 'M';
-              item->status_reparent = (e0->parent_eid != e1->parent_eid) ? 'v' : ' ';
-              item->status_rename  = (strcmp(e0->name, e1->name) != 0) ? 'r' : ' ';
-            }
-          else
-            {
-              item->status_mod = e0 ? 'D' : 'A';
-            }
-          if (e0)
-            path0 = svn_branch_get_path_by_eid(left->branch, eid, scratch_pool);
-          if (e1)
-            path1 = svn_branch_get_path_by_eid(right->branch, eid, scratch_pool);
-
-          item->major_path = (e1 ? path1 : path0);
-          SVN_ARRAY_PUSH(diff_changes) = item;
-        }
-    }
+  SVN_ERR(subtree_diff(&diff_changes, editor, s_left, s_right,
+                       scratch_pool, scratch_pool));
 
   if (header && diff_changes->nelts)
     printf("%s%s", prefix, header);
-  eid_width = apr_snprintf(NULL, 0, "%d", next_eid - 1);
+  eid_width = apr_snprintf(NULL, 0, "%d", MAX(left->branch->rev_root->next_eid,
+                                              right->branch->rev_root->next_eid));
 
   for (SVN_ARRAY_ITER_SORTED(ai, diff_changes,
                              (the_ui_mode == UI_MODE_EIDS)
@@ -1110,36 +1113,34 @@ svn_branch_diff(svn_editor3_t *editor,
     {
       diff_item_t *item = ai->val;
       svn_branch_el_rev_content_t *e0 = item->e0, *e1 = item->e1;
+      char status_mod = (e0 && e1) ? 'M' : e0 ? 'D' : 'A';
 
       if (the_ui_mode == UI_MODE_PATHS)
         {
+          const char *major_path = (e1 ? item->relpath1 : item->relpath0);
           const char *from = "";
 
-          if (e0 && e1
-              && (e0->parent_eid != e1->parent_eid
-                  || strcmp(e0->name, e1->name) != 0))
+          if (item->reparented || item->renamed)
             {
-              if (e0->parent_eid == e1->parent_eid)
+              if (! item->reparented)
                 from = apr_psprintf(scratch_pool,
                                     " (renamed from .../%s)",
                                     e0->name);
-              else if (strcmp(e0->name, e1->name) == 0)
+              else if (! item->renamed)
                 from = apr_psprintf(scratch_pool,
                                     " (moved from %s/...)",
-                                    svn_branch_get_path_by_eid(left->branch,
-                                                               e0->parent_eid,
-                                                               scratch_pool));
+                                    svn_relpath_dirname(item->relpath0,
+                                                        scratch_pool));
               else
                 from = apr_psprintf(scratch_pool,
                                     " (moved+renamed from %s)",
-                                    svn_branch_get_path_by_eid(left->branch,
-                                                               item->eid,
-                                                               scratch_pool));
+                                    item->relpath0);
             }
           printf("%s%c%c%c %s%s%s\n",
                  prefix,
-                 item->status_mod, item->status_reparent, item->status_rename,
-                 item->major_path,
+                 status_mod,
+                 item->reparented ? 'v' : ' ', item->renamed ? 'r' : ' ',
+                 major_path,
                  subbranch_str(e0 ? left->branch : right->branch,
                                item->eid, scratch_pool),
                  from);
@@ -1148,7 +1149,8 @@ svn_branch_diff(svn_editor3_t *editor,
         {
           printf("%s%c%c%c e%-*d  %s%s%s%s\n",
                  prefix,
-                 item->status_mod, item->status_reparent, item->status_rename,
+                 status_mod,
+                 item->reparented ? 'v' : ' ', item->renamed ? 'r' : ' ',
                  eid_width, item->eid,
                  e1 ? apr_psprintf(scratch_pool, "e%-*d/%s",
                                    eid_width, e1->parent_eid, e1->name) : "",
