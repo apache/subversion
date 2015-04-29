@@ -1074,7 +1074,9 @@ diff_ordering(const void *a, const void *b)
 static int
 diff_ordering_eids(const void *a, const void *b)
 {
-  return (a < b) ? -1 : (a > b) ? 1 : 0;
+  const diff_item_t *item_a = *(void *const *)a, *item_b = *(void *const *)b;
+
+  return (item_a->eid < item_b->eid) ? -1 : (item_a->eid > item_b->eid) ? 1 : 0;
 }
 
 /* Display differences between branch subtrees LEFT and RIGHT.
