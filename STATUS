@@ -43,7 +43,7 @@ Release blockers for 1.9.0:
    Notes:
      Soak restart is not needed after this fix, IMO.
    Votes:
-     +1: brane
+     +1: brane, philip
 
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
