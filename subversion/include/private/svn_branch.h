@@ -529,6 +529,16 @@ const char *
 svn_branch_get_root_rrpath(const svn_branch_state_t *branch,
                            apr_pool_t *result_pool);
 
+/* Return the subtree-relative path of element EID in SUBTREE.
+ *
+ * If the element EID does not currently exist in SUBTREE, return NULL.
+ *
+ * ### TODO: Clarify sequencing requirements.
+ */
+const char *
+svn_branch_subtree_get_path_by_eid(const svn_branch_subtree_t *subtree,
+                                   int eid,
+                                   apr_pool_t *result_pool);
 /* Return the branch-relative path of element EID in BRANCH.
  *
  * If the element EID does not currently exist in BRANCH, return NULL.
