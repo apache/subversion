@@ -16,11 +16,12 @@ Status of 1.9.0:
 Release blockers for 1.9.0:
 ===========================
 
- * r1675771, r1676555, r1676564
-   Fix a native-memory leak in JavaHL.
+ * r1675771, r1676555, r1676564, r1676769
+   Fix a bunch of native-memory leaks in JavaHL.
    Justification:
      Memory leaks are bad. This fix should go into .0 because
-     it affects JavaHL APIs that are new in 1.9.
+     it affects JavaHL APIs that are new in 1.9 and also some
+     existing 1.8 APIs that previously did not leak.
    Notes:
      Soak restart is not needed after this fix, IMO.
    Votes:
@@ -34,16 +35,6 @@ Release blockers for 1.9.0:
    Votes:
      +1: ivan
      +1: brane (not tested, but fix looks obviously correct)
-
- * r1676665
-   Fix JavaHL 1.8-compatibility wrapper for ISVNClient.cleanup.
-   Justification:
-     This change should go into 1.9.0 because it fixes
-     an incorrect API semantics change compared to 1.8.
-   Notes:
-     Soak restart is not needed after this fix, IMO.
-   Votes:
-     +1: brane, philip
 
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
@@ -117,3 +108,13 @@ Approved changes:
      This nomination is partially to just mark this problem as a 'known issue'.
    Votes:
      +1: rhuijben, brane
+
+ * r1676665
+   Fix JavaHL 1.8-compatibility wrapper for ISVNClient.cleanup.
+   Justification:
+     This change should go into 1.9.0 because it fixes
+     an incorrect API semantics change compared to 1.8.
+   Notes:
+     Soak restart is not needed after this fix, IMO.
+   Votes:
+     +1: brane, philip
