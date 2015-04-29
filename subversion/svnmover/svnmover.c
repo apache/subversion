@@ -1167,12 +1167,14 @@ svn_branch_diff(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/* Return a hash of (full-branch-id -> BRANCH) of the subbranches of BRANCH.
+/* Return a hash of (full-branch-id -> BRANCH) of the immediate subbranches
+ * of BRANCH at or below EID.
  *
  * Return an empty hash if BRANCH is null.
  */
 static apr_hash_t *
 get_subbranches(svn_branch_state_t *branch,
+                int eid,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -1182,8 +1184,8 @@ get_subbranches(svn_branch_state_t *branch,
     {
       SVN_ITER_T(svn_branch_state_t) *bi;
 
-      for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
-                                branch, result_pool, scratch_pool),
+      for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(
+                                branch, eid, result_pool, scratch_pool),
                           scratch_pool))
         {
           svn_branch_state_t *b = bi->val;
@@ -1212,7 +1214,10 @@ branch_id_and_path(svn_branch_state_t *branch,
                       svn_branch_get_root_rrpath(branch, result_pool));
 }
 
-/* Display differences, referring to paths, recursing into sub-branches */
+/* Display differences between branch subtrees LEFT and RIGHT.
+ *
+ * Recurse into sub-branches.
+ */
 static svn_error_t *
 svn_branch_diff_r(svn_editor3_t *editor,
                   svn_branch_el_rev_id_t *left,
@@ -1259,8 +1264,10 @@ svn_branch_diff_r(svn_editor3_t *editor,
     }
 
   subbranches_l = get_subbranches(left ? left->branch : NULL,
+                                  left ? left->eid : -1,
                                   scratch_pool, scratch_pool);
   subbranches_r = get_subbranches(right ? right->branch : NULL,
+                                  right ? right->eid : -1,
                                   scratch_pool, scratch_pool);
   subbranches_all = apr_hash_overlay(scratch_pool,
                                      subbranches_l, subbranches_r);
