@@ -362,12 +362,11 @@ typedef struct svn_branch_subtree_t
   /* EID -> svn_branch_el_rev_content_t mapping. */
   apr_hash_t *e_map;
 
-  /* Subtree root EID. (EID must be an existing key in E_MAP.) */
+  /* Subtree root EID. (ROOT_EID must be an existing key in E_MAP.) */
   int root_eid;
 
-  /* Subbranches to be included: each subbranch-root element in that is
-     hierarchically below ROOT_EID in E_MAP should have its subbranch
-     mapped here.
+  /* Subbranches to be included: each subbranch-root element in E_MAP
+     should be mapped here.
 
      A mapping of (int)EID -> (svn_branch_subtree_t *). */
   apr_hash_t *subbranches;
