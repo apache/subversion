@@ -107,7 +107,7 @@ Approved changes:
    Notes:
      This nomination is partially to just mark this problem as a 'known issue'.
    Votes:
-     +1: rhuijben, brane
+     +1: rhuijben, brane, philip
 
  * r1676665
    Fix JavaHL 1.8-compatibility wrapper for ISVNClient.cleanup.
