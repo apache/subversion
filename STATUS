@@ -90,8 +90,7 @@ Other candidate changes:
    Notes:
      r1674415 is needed to make r1676570 merge without conflicts.
    Votes:
-     +1: stsp (without r1674415 and r1676570)
-     +1: brane
+     +1: stsp, brane
 
 Veto-blocked changes:
 =====================
