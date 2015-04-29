@@ -151,43 +151,16 @@ AC_DEFUN(SVN_FIND_JDK,
     JAVADOC="$JAVA_BIN/javadoc"
     JAR="$JAVA_BIN/jar"
 
-    dnl Prefer Jikes (for speed) if available.
-    jikes_options="/usr/local/bin/jikes /usr/bin/jikes"
+    dnl Once upon a time we preferred Jikes for speed.
+    dnl Jikes is dead, long live Jikes!
     AC_ARG_WITH(jikes,
                 AS_HELP_STRING([--with-jikes=PATH],
-                               [Specify the path to a jikes binary to use
-                                it as your Java compiler.  The default is to
-                                look for jikes (PATH optional).  This behavior
-                                can be switched off by supplying 'no'.]),
+                   [Deprecated. Provided for backward compatibility.]),
     [
-        if test "$withval" != "no" && test "$withval" != "yes"; then
-          dnl Assume a path was provided.
-          jikes_options="$withval $jikes_options"
-        fi
-        requested_jikes="$withval"  # will be 'yes' if path unspecified
-    ])
-    if test "$requested_jikes" != "no"; then
-      dnl Look for a usable jikes binary.
-      for jikes in $jikes_options; do
-        if test -z "$jikes_found" && test -x "$jikes"; then
-          jikes_found="yes"
-          JAVAC="$jikes"
-          JAVA_CLASSPATH="$JRE_LIB_DIR"
-          for jar in $JRE_LIB_DIR/*.jar; do
-            JAVA_CLASSPATH="$JAVA_CLASSPATH:$jar"
-          done
-        fi
-      done
-    fi
-    if test -n "$requested_jikes" && test "$requested_jikes" != "no"; then
-      dnl Jikes was explicitly requested.  Verify that it was provided.
-      if test -z "$jikes_found"; then
-        AC_MSG_ERROR([Could not find a usable version of Jikes])
-      elif test -n "$jikes_found" && test "$requested_jikes" != "yes" &&
-           test "$JAVAC" != "$requested_jikes"; then
-        AC_MSG_WARN([--with-jikes PATH was invalid, substitute found])
+      if test "$withval" != "no"; then
+        AC_MSG_WARN([The --with-jikes option was ignored])
       fi
-    fi
+    ])
 
     dnl Add javac flags.
     # The release for "-source" could actually be greater than that
