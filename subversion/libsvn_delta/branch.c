@@ -273,11 +273,17 @@ branch_validate_element(const svn_branch_state_t *branch,
 
   /* Payload, if specified, must be in full or by reference. */
   if (element->payload)
-    SVN_ERR_ASSERT_NO_RETURN(element->payload
-                             && ((SVN_IS_VALID_REVNUM(element->payload->ref.rev)
-                                  && element->payload->ref.relpath)
-                                 || (element->payload->kind != svn_node_unknown
-                                     && element->payload->kind != svn_node_none)));
+    {
+      SVN_ERR_ASSERT_NO_RETURN((SVN_IS_VALID_REVNUM(element->payload->ref.rev)
+                                && element->payload->ref.relpath)
+                               || (element->payload->kind != svn_node_unknown
+                                   && element->payload->kind != svn_node_none));
+    }
+  else /* it's a subbranch root */
+    {
+      /* a subbranch root element must not be the branch root element */
+      SVN_ERR_ASSERT_NO_RETURN(eid != branch->root_eid);
+    }
 }
 
 svn_branch_el_rev_content_t *
@@ -360,7 +366,6 @@ svn_branch_update_subbranch_root_element(svn_branch_state_t *branch,
 
   /* EID must be a valid element id */
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
-  branch_validate_element(branch, eid, element);
 
   /* Insert the new version */
   branch_map_set(branch, eid, element);
@@ -787,6 +792,10 @@ svn_branch_add_new_branch(svn_branch_state_t *outer_branch,
     = svn_branch_state_create(root_eid, outer_branch->rev_root,
                               outer_branch, outer_eid,
                               outer_branch->rev_root->repos->pool);
+
+  /* A branch must not already exist at this outer element */
+  SVN_ERR_ASSERT_NO_RETURN(svn_branch_get_subbranch_at_eid(
+                             outer_branch, outer_eid, scratch_pool) == NULL);
 
   SVN_ARRAY_PUSH(new_branch->rev_root->branches) = new_branch;
 
