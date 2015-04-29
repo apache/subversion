@@ -1203,18 +1203,6 @@ get_immediate_children_names(apr_hash_t *paths,
   return children;
 }
 
-/* Return true iff EL_REV1 and EL_REV2 identify the same element.
- */
-static svn_boolean_t
-same_family_and_element(const svn_branch_el_rev_id_t *el_rev1,
-                        const svn_branch_el_rev_id_t *el_rev2)
-{
-  if (el_rev1->eid != el_rev2->eid)
-    return FALSE;
-
-  return TRUE;
-}
-
 /* Generate Ev1 instructions to edit from a current state to a final state
  * at RRPATH, recursing for child paths of RRPATH.
  *
@@ -1293,7 +1281,7 @@ drive_changes_r(const char *rrpath,
                                             eb->edited_rev_root->repos,
                                             scratch_pool, scratch_pool));
 
-      succession = same_family_and_element(pred_el_rev, final_el_rev);
+      succession = (pred_el_rev->eid == final_el_rev->eid);
     }
   else
     {
