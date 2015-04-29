@@ -845,8 +845,7 @@ svn_string_t *
 svn_branch_get_default_r0_metadata(apr_pool_t *result_pool)
 {
   static const char *default_repos_info
-    = "r0:\n"
-      "family: eids 0 1 branches 1\n"
+    = "r0: eids 0 1 branches 1\n"
       "B0 root-eid 0 at .\n"
       "e0: normal -1 .\n";
 
@@ -1021,33 +1020,6 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   return SVN_NO_ERROR;
 }
 
-/* Parse a branch family from STREAM.
- */
-static svn_error_t *
-svn_branch_family_parse(int *num_branches,
-                        svn_branch_revision_root_t *rev_root,
-                        svn_stream_t *stream,
-                        apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *line;
-  svn_boolean_t eof;
-  int n;
-  int first_eid, next_eid;
-
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
-  SVN_ERR_ASSERT(!eof);
-  n = sscanf(line->data, "family: eids %d %d "
-                         "branches %d",
-             &first_eid, &next_eid,
-             num_branches);
-  SVN_ERR_ASSERT(n == 3);
-
-  rev_root->first_eid = first_eid;
-  rev_root->next_eid = next_eid;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
                                svn_branch_repos_t *repos,
@@ -1057,42 +1029,40 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
 {
   svn_branch_revision_root_t *rev_root;
   svn_revnum_t rev;
+  int first_eid, next_eid;
+  int num_branches;
   svn_stringbuf_t *line;
   svn_boolean_t eof;
   int n;
+  int j;
 
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(! eof);
-  n = sscanf(line->data, "r%ld:",
-             &rev);
-  SVN_ERR_ASSERT(n == 1);
+  n = sscanf(line->data, "r%ld: eids %d %d "
+                         "branches %d",
+             &rev,
+             &first_eid, &next_eid,
+             &num_branches);
+  SVN_ERR_ASSERT(n == 4);
 
   rev_root = svn_branch_revision_root_create(repos, rev, NULL /*root_branch*/,
                                              result_pool);
+  rev_root->first_eid = first_eid;
+  rev_root->next_eid = next_eid;
 
-  /* parse the family */
+  /* parse the branches */
+  for (j = 0; j < num_branches; j++)
     {
-      int num_branches;
-      int j;
+      svn_branch_state_t *branch;
 
-      SVN_ERR(svn_branch_family_parse(&num_branches,
-                                      rev_root, stream,
-                                      scratch_pool));
+      SVN_ERR(svn_branch_state_parse(&branch, rev_root, stream,
+                                     result_pool, scratch_pool));
+      SVN_ARRAY_PUSH(rev_root->branches) = branch;
 
-      /* parse the branches */
-      for (j = 0; j < num_branches; j++)
+      /* Note the revision-root branch */
+      if (! branch->outer_branch)
         {
-          svn_branch_state_t *branch;
-
-          SVN_ERR(svn_branch_state_parse(&branch, rev_root, stream,
-                                         result_pool, scratch_pool));
-          SVN_ARRAY_PUSH(rev_root->branches) = branch;
-
-          /* Note the revision-root branch */
-          if (! branch->outer_branch)
-            {
-              rev_root->root_branch = branch;
-            }
+          rev_root->root_branch = branch;
         }
     }
 
@@ -1147,37 +1117,22 @@ svn_branch_state_serialize(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Write to STREAM a parseable representation of FAMILY.
- */
-static svn_error_t *
-svn_branch_family_serialize(svn_stream_t *stream,
-                            svn_branch_revision_root_t *rev_root,
-                            apr_pool_t *scratch_pool)
-{
-  SVN_ITER_T(svn_branch_state_t) *bi;
-
-  SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "family: eids %d %d "
-                            "branches %d\n",
-                            rev_root->first_eid, rev_root->next_eid,
-                            rev_root->branches->nelts));
-
-  for (SVN_ARRAY_ITER(bi, rev_root->branches, scratch_pool))
-    SVN_ERR(svn_branch_state_serialize(stream, bi->val, bi->iterpool));
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_branch_revision_root_serialize(svn_stream_t *stream,
                                    svn_branch_revision_root_t *rev_root,
                                    apr_pool_t *scratch_pool)
 {
+  SVN_ITER_T(svn_branch_state_t) *bi;
+
   SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "r%ld:\n",
-                            rev_root->rev));
+                            "r%ld: eids %d %d "
+                            "branches %d\n",
+                            rev_root->rev,
+                            rev_root->first_eid, rev_root->next_eid,
+                            rev_root->branches->nelts));
 
-  SVN_ERR(svn_branch_family_serialize(stream, rev_root, scratch_pool));
-
+  for (SVN_ARRAY_ITER(bi, rev_root->branches, scratch_pool))
+    SVN_ERR(svn_branch_state_serialize(stream, bi->val, bi->iterpool));
   return SVN_NO_ERROR;
 }
 
