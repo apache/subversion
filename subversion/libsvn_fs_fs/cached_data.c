@@ -1709,9 +1709,11 @@ get_combined_window(svn_stringbuf_t **result,
       /* Maybe, we've got a PLAIN start representation.  If we do, read
          as much data from it as the needed for the txdelta window's source
          view.
-         Note that BUF / SOURCE may only be NULL in the first iteration. */
+         Note that BUF / SOURCE may only be NULL in the first iteration.
+         Also note that we may have short-cut reading the delta chain --
+         in which case SRC_OPS is 0 and it might not be a PLAIN rep. */
       source = buf;
-      if (source == NULL && rb->src_state != NULL)
+      if (source == NULL && rb->src_state != NULL && window->src_ops)
         SVN_ERR(read_plain_window(&source, rb->src_state, window->sview_len,
                                   pool, iterpool));
 
