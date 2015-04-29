@@ -717,7 +717,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * swig-py: fix support for svn_ra_lock() and svn_ra_unlock() (r1662891)
     * javahl: allow java callbacks to throw errors back to the svn code
       (r1664938, r1664939, r1664940, r1664978, r1664984)
-    * swig-pl: fix some statck memory problems (r1668618, 1671388)
+    * swig-pl: fix some stack memory problems (r1668618, 1671388)
 
 
 Version 1.8.13
