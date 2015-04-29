@@ -504,7 +504,7 @@ svn_branch_get_root_rrpath(const svn_branch_state_t *branch,
   return root_rrpath;
 }
 
-static const char *
+const char *
 svn_branch_subtree_get_path_by_eid(const svn_branch_subtree_t *subtree,
                                    int eid,
                                    apr_pool_t *result_pool)
