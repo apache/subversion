@@ -1720,7 +1720,7 @@ execute(const apr_array_header_t *actions,
         case ACTION_LIST_BRANCHES_R:
           {
             SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[0], editor, SVN_INVALID_REVNUM, base_relpath,
+                      &el_rev[0], editor, base_revision, base_relpath,
                       pool, pool));
 
             SVN_ERR(list_all_branches(el_rev[0]->branch->rev_root, TRUE,
