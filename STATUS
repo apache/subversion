@@ -90,6 +90,13 @@ Other candidate changes:
    Votes:
      +1: stefan2
 
+ * r1677003
+   Bump reqired Java version to 1.6 for JavaHL.
+   Justification:
+     Java 5 is dead. JavaHL 1.9+ uses 1.6 APIs.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
