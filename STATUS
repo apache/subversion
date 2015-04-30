@@ -98,16 +98,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1674522
-   Skip the 'upgrade_tests.py 36: automatic SQLite ANALYZE' test on old pythons
-   Justification:
-     Our testsuite shouldn't fail just because python has an old sqlite
-     version compiled in.
-   Notes:
-     This nomination is partially to just mark this problem as a 'known issue'.
-   Votes:
-     +1: rhuijben, brane, philip
-
  * r1676665
    Fix JavaHL 1.8-compatibility wrapper for ISVNClient.cleanup.
    Justification:

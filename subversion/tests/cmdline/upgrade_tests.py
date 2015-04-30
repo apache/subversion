@@ -1438,6 +1438,7 @@ def upgrade_1_7_dir_external(sbox):
   # svn: warning: W200033: sqlite[S5]: database is locked
   svntest.actions.run_and_verify_svn(None, [], 'upgrade', sbox.wc_dir)
 
+@SkipUnless(svntest.wc.python_sqlite_can_read_wc)
 def auto_analyze(sbox):
   """automatic SQLite ANALYZE"""
 
