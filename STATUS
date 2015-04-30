@@ -123,7 +123,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * ^/subversion/branches/1.8.x-r1674455
+ * r1674455
    Make 'svn cp ^/A/D/H@1 ^/A' properly create A
    Justification:
      Resurrecting a child as its own ancestor should work, instead of produce
@@ -131,15 +131,19 @@ Candidate changes:
    Notes:
      Not a regression. Same issue exists in 1.7.x
      Needs backport branch since the test framework changed on trunk
+   Branch:
+     ^/subversion/branches/1.8.x-r1674455
    Votes:
      +1: rhuijben
 
- * ^/subversion/branches/1.8.x-r1676667
+ * r1676667
    'EOF found' error when reading FSFS data (issue #4577).
    Justification:
      Without this change, users may not be able to read or modify the
      affected node(s), usually a directory.  While the data is not lost,
      it becomes inaccessible.
+   Branch:
+     ^/subversion/branches/1.8.x-r1676667
    Votes:
      +1: stefan2
 
