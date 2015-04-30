@@ -432,6 +432,16 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static char *
+branch_id_and_path(svn_branch_state_t *branch,
+                   apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool, "%s at /%s",
+                      svn_branch_get_id(branch, result_pool),
+                      svn_branch_get_root_rrpath(branch, result_pool));
+}
+
 /* Show the id and path of BRANCH. If VERBOSE is true, alse list its elements.
  */
 static svn_error_t *
@@ -441,17 +451,15 @@ branch_info(svn_branch_state_t *branch,
 {
   if (the_ui_mode == UI_MODE_PATHS)
     {
-      printf("  %s /%s\n",
-             svn_branch_get_id(branch, scratch_pool),
-             svn_branch_get_root_rrpath(branch, scratch_pool));
+      printf("  %s\n",
+             branch_id_and_path(branch, scratch_pool));
       if (verbose)
         SVN_ERR(list_branch_elements(branch, scratch_pool));
     }
   else
     {
-      printf("  %s /%s root=e%d\n",
-             svn_branch_get_id(branch, scratch_pool),
-             svn_branch_get_root_rrpath(branch, scratch_pool),
+      printf("  %s root=e%d\n",
+             branch_id_and_path(branch, scratch_pool),
              branch->root_eid);
       if (verbose)
         SVN_ERR(list_branch_elements_by_eid(branch, scratch_pool));
@@ -1203,16 +1211,6 @@ svn_branch_diff_func_t(svn_editor3_t *editor,
                        const char *prefix,
                        const char *header,
                        apr_pool_t *scratch_pool);
-
-/*  */
-static char *
-branch_id_and_path(svn_branch_state_t *branch,
-                   apr_pool_t *result_pool)
-{
-  return apr_psprintf(result_pool, "%s at /%s",
-                      svn_branch_get_id(branch, result_pool),
-                      svn_branch_get_root_rrpath(branch, result_pool));
-}
 
 /* Display differences between branch subtrees LEFT and RIGHT.
  *
