@@ -25,6 +25,13 @@ Release blockers for 1.9.0:
      +1: ivan
      +1: brane (not tested, but fix looks obviously correct)
 
+ * r1677191
+   Fix client pool SEGV with ra-local and --enable-runtime-module-search.
+   Justification:
+     Regression from 1.8.x, just about any ra-local/DSO operation can fail.
+   Votes:
+     +1: philip
+
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
