@@ -1354,6 +1354,19 @@ AS_HELP_STRING([--enable-runtime-module-search],
       fi
       AC_DEFINE(SVN_USE_DSO, 1,
                 [Defined if svn should try to load DSOs])
+
+      dnl Mac OS X uses libname.MAJOR.SOVERSION.dylib
+      dnl Most other unixes use libname.MAJOR.so.SOVERSION
+      case "$host" in
+        *-*-darwin*)
+          AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.%d.dylib"],
+                    [Shared library file name suffix format])
+          ;;
+        *)
+          AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.so.%d"],
+                    [Shared library file name suffix format])
+          ;;
+      esac
     fi
 ])
 
