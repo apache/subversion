@@ -88,12 +88,14 @@ Other candidate changes:
    Votes:
      +1: stsp, brane
 
- * r1676667
+ * r1676667, r1677267
    'EOF found' error when reading FSFS data (issue #4577).
    Justification:
      Without this change, users may not be able to read or modify the
      affected node(s), usually a directory.  While the data is not lost,
      it becomes inaccessible.
+   Notes:
+     The rather trivial fix is in r1676667, r1677267 adds a test case.
    Votes:
      +1: stefan2
 
