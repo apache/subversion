@@ -30,7 +30,7 @@ Release blockers for 1.9.0:
    Justification:
      Regression from 1.8.x, just about any ra-local/DSO operation can fail.
    Votes:
-     +1: philip
+     +1: philip, brane
 
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
@@ -97,7 +97,7 @@ Other candidate changes:
    Notes:
      The rather trivial fix is in r1676667, r1677267 adds a test case.
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
  * r1677003
    Bump reqired Java version to 1.6 for JavaHL.
