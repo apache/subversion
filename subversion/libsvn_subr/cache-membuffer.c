@@ -1174,6 +1174,17 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
     }
 }
 
+/* Return whether the keys in LHS and RHS match.
+ */
+static svn_boolean_t
+entry_keys_match(const entry_key_t *lhs,
+                 const entry_key_t *rhs)
+{
+  return (lhs->fingerprint[0] == rhs->fingerprint[0])
+      && (lhs->fingerprint[1] == rhs->fingerprint[1])
+      && (lhs->key_len == rhs->key_len);
+}
+
 /* Given the GROUP_INDEX that shall contain an entry with the hash key
  * TO_FIND, find that entry in the specified group.
  *
@@ -1221,8 +1232,7 @@ find_entry(svn_membuffer_t *cache,
   while (1)
     {
       for (i = 0; i < group->header.used; ++i)
-        if (memcmp(&group->entries[i].key, &to_find->entry_key,
-                   sizeof(to_find->entry_key)) == 0)
+        if (entry_keys_match(&group->entries[i].key, &to_find->entry_key))
           {
             /* This is the only entry that _may_ contain the correct data. */
             entry = &group->entries[i];
