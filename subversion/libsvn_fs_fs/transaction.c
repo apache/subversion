@@ -2218,8 +2218,7 @@ get_shared_rep(representation_t **old_rep,
       /* Make the problem show up in the server log.
 
          Because not sharing reps is always a save option,
-         completely terminating the server process would
-         be inappropriate.
+         terminating the request would be inappropriate.
        */
       svn_checksum_t checksum;
       checksum.digest = rep->sha1_digest;
