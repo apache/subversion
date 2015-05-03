@@ -106,6 +106,13 @@ Other candidate changes:
    Votes:
      +1: brane
 
+ * r1677440
+   Support checksum (de-)serialization for all 1.9 checksum types.
+   Justification:
+     Public API must have a complete implementation.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
