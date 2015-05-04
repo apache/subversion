@@ -28,12 +28,14 @@
 #include "svn_pools.h"
 #include "svn_checksum.h"
 #include "svn_private_config.h"
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_sorts.h"  /* get the MIN macro */
 
 #include "private/svn_atomic.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_string_private.h"
 
 #include "cache.h"
@@ -213,6 +215,154 @@ typedef struct full_key_t
    * valid key size. */
   svn_membuf_t full_key;
 } full_key_t;
+
+/* A limited capacity, thread-safe pool of unique C strings.  Operations on
+ * this data structure are defined by prefix_pool_* functions.  The only
+ * "public" member is VALUES (r/o access only).
+ */
+typedef struct prefix_pool_t
+{
+  /* Map C string to a pointer into VALUES with the same contents. */
+  apr_hash_t *map;
+
+  /* Pointer to an array of strings. These are the contents of this pool
+   * and each one of them is referenced by MAP.  Valid indexes are 0 to
+   * VALUES_USED - 1.  May be NULL if VALUES_MAX is 0. */
+  const char **values;
+
+  /* Number of used entries that VALUES may have. */
+  apr_uint32_t values_max;
+
+  /* Number of used entries in VALUES.  Never exceeds VALUES_MAX. */
+  apr_uint32_t values_used;
+
+  /* Maximum number of bytes to allocate. */
+  apr_size_t bytes_max;
+
+  /* Number of bytes currently allocated.  Should not exceed BYTES_MAX but
+   * the implementation may . */
+  apr_size_t bytes_used;
+
+  /* The serialization object. */
+  svn_mutex__t *mutex;
+} prefix_pool_t;
+
+/* Set *PREFIX_POOL to a new instance that tries to limit allocation to
+ * BYTES_MAX bytes.  If MUTEX_REQUIRED is set and multi-threading is
+ * supported, serialize all access to the new instance.  Allocate the
+ * object from *RESULT_POOL. */
+static svn_error_t *
+prefix_pool_create(prefix_pool_t **prefix_pool,
+                   apr_size_t bytes_max,
+                   svn_boolean_t mutex_required,
+                   apr_pool_t *result_pool)
+{
+  enum
+    {
+      /* With 56 byes of overhead under 64 bits, we will probably never get
+       * substantially below this.  If we accidentally do, we will simply
+       * run out of entries in the VALUES array before running out of
+       * allocated memory. */
+      ESTIMATED_BYTES_PER_ENTRY = 120,
+    };
+
+  /* Number of entries we are going to support. */
+  apr_size_t capacity = MIN(APR_UINT32_MAX,
+                            bytes_max / ESTIMATED_BYTES_PER_ENTRY);
+
+  /* Construct the result struct. */
+  prefix_pool_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  result->map = svn_hash__make(result_pool);
+
+  result->values = capacity
+                 ? apr_pcalloc(result_pool, capacity * sizeof(const char *))
+                 : NULL;
+  result->values_max = (apr_uint32_t)capacity;
+  result->values_used = 0;
+
+  result->bytes_max = bytes_max;
+  result->bytes_used = capacity * sizeof(svn_membuf_t);
+
+  SVN_ERR(svn_mutex__init(&result->mutex, mutex_required, result_pool));
+
+  /* Done. */
+  *prefix_pool = result;
+  return SVN_NO_ERROR;
+}
+
+/* Set *PREFIX_IDX to the offset in PREFIX_POOL->VALUES that contains the
+ * value PREFIX.  If none exists, auto-insert it.  If we can't due to
+ * capacity exhaustion, set *PREFIX_IDX to NO_INDEX.
+ * To be called by prefix_pool_get() only. */
+static svn_error_t *
+prefix_pool_get_internal(apr_uint32_t *prefix_idx,
+                         prefix_pool_t *prefix_pool,
+                         const char *prefix)
+{
+  enum
+    {
+      /* Size of an hash entry plus (max.) APR alignment loss.
+       *
+       * This may be slightly off if e.g. APR changes its internal data
+       * structures but that will translate in just a few percent (~10%)
+       * over-allocation.  Memory consumption will still be capped.
+       */
+      OVERHEAD = 40 + 8
+    };
+
+  const char **value;
+  apr_size_t prefix_len = strlen(prefix);
+  apr_size_t bytes_needed;
+  apr_pool_t *pool;
+
+  /* Lookup.  If we already know that prefix, return its index. */
+  value = apr_hash_get(prefix_pool->map, prefix, prefix_len);
+  if (value != NULL)
+    {
+      *prefix_idx = value - prefix_pool->values;
+      return SVN_NO_ERROR;
+    }
+
+  /* Capacity checks. */
+  if (prefix_pool->values_used == prefix_pool->values_max)
+    {
+      *prefix_idx = NO_INDEX;
+      return SVN_NO_ERROR;
+    }
+
+  bytes_needed = prefix_len + 1 + OVERHEAD;
+  if (prefix_pool->bytes_used + bytes_needed > prefix_pool->values_max)
+    {
+      *prefix_idx = NO_INDEX;
+      return SVN_NO_ERROR;
+    }
+
+  /* Add new entry. */
+  pool = apr_hash_pool_get(prefix_pool->map);
+
+  value = &prefix_pool->values[prefix_pool->values_used];
+  *value = apr_pstrndup(pool, prefix, prefix_len + 1);
+  apr_hash_set(prefix_pool->map, *value, prefix_len, value);
+
+  *prefix_idx = prefix_pool->values_used;
+  ++prefix_pool->values_used;
+  prefix_pool->bytes_used += bytes_needed;
+
+  return SVN_NO_ERROR;
+}
+
+/* Thread-safe wrapper around prefix_pool_get_internal. */
+static svn_error_t *
+prefix_pool_get(apr_uint32_t *prefix_idx,
+                prefix_pool_t *prefix_pool,
+                const char *prefix)
+{
+  SVN_MUTEX__WITH_LOCK(prefix_pool->mutex,
+                       prefix_pool_get_internal(prefix_idx, prefix_pool,
+                                                prefix));
+
+  return SVN_NO_ERROR;
+}
 
 /* Debugging / corruption detection support.
  * If you define this macro, the getter functions will performed expensive
@@ -520,6 +670,12 @@ struct svn_membuffer_t
      Please note that this structure represents only one such segment
      and that all segments must / will report the same values here. */
   apr_uint32_t segment_count;
+
+  /* Collection of prefixes shared among all instances accessing the
+   * same membuffer cache backend.  If a prefix is contained in this
+   * pool then all cache instances using an equal prefix must actually
+   * use the one stored in this pool. */
+  prefix_pool_t *prefix_pool;
 
   /* The dictionary, GROUP_SIZE * (group_count + spare_group_count)
    * entries long.  Never NULL.
@@ -1669,6 +1825,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_pool_t *pool)
 {
   svn_membuffer_t *c;
+  prefix_pool_t *prefix_pool;
 
   apr_uint32_t seg;
   apr_uint32_t group_count;
@@ -1677,6 +1834,12 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   apr_uint32_t group_init_size;
   apr_uint64_t data_size;
   apr_uint64_t max_entry_size;
+
+  /* Allocate 1% of the cache capacity to the prefix string pool.
+   */
+  SVN_ERR(prefix_pool_create(&prefix_pool, total_size / 100, thread_safe,
+                             pool));
+  total_size -= total_size / 100;
 
   /* Limit the total size (only relevant if we can address > 4GB)
    */
@@ -1788,6 +1951,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       /* allocate buffers and initialize cache members
        */
       c[seg].segment_count = (apr_uint32_t)segment_count;
+      c[seg].prefix_pool = prefix_pool;
 
       c[seg].group_count = main_group_count;
       c[seg].spare_group_count = spare_group_count;
