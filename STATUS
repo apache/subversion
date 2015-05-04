@@ -16,22 +16,6 @@ Status of 1.9.0:
 Release blockers for 1.9.0:
 ===========================
 
- * r1676526, r1676535
-   Fix working copy operations (checkout, update) with very long path names
-   on Windows. See http://svn.haxx.se/users/archive-2015-04/0105.shtml
-   Justification:
-     Bug in primary use case (checkout and update). Regression from 1.8.x.
-   Votes:
-     +1: ivan
-     +1: brane (not tested, but fix looks obviously correct)
-
- * r1677191
-   Fix client pool SEGV with ra-local and --enable-runtime-module-search.
-   Justification:
-     Regression from 1.8.x, just about any ra-local/DSO operation can fail.
-   Votes:
-     +1: philip, brane
-
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
@@ -41,9 +25,9 @@ Candidate changes that cannot go into a later 1.9.x:
    Justification:
      Silently accepting invalid input is bad.
    Votes:
-     +1: danielsh (1.9.0 only) (for reason given by Bert; not a problem if it
-                                only gets released in 1.10.0)
-     +0.8: rhuijben (for 1.9.0. Last minute change. Patch tested & Ok)
+     +1: danielsh, rhuijben (1.9.0 only)
+         (Last minute change. Patch tested & Ok
+          Not a problem if it only gets released in 1.10.0)
      -0.5: rhuijben (after 1.9.0. Changes error behaviour. Might break scripts)
 
 Other candidate changes:
@@ -118,3 +102,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1676526, r1676535
+   Fix working copy operations (checkout, update) with very long path names
+   on Windows. See http://svn.haxx.se/users/archive-2015-04/0105.shtml
+   Justification:
+     Bug in primary use case (checkout and update). Regression from 1.8.x.
+   Votes:
+     +1: ivan, rhuijben
+     +1: brane (not tested, but fix looks obviously correct)
+
+ * r1677191
+   Fix client pool SEGV with ra-local and --enable-runtime-module-search.
+   Justification:
+     Regression from 1.8.x, just about any ra-local/DSO operation can fail.
+   Votes:
+     +1: philip, brane, rhuijben
