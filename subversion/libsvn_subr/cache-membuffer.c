@@ -264,7 +264,7 @@ typedef struct entry_tag_t
  */
 static svn_error_t *store_key_part(entry_tag_t *tag,
                                    const full_key_t *prefix_key,
-                                   const char *key,
+                                   const void *key,
                                    apr_size_t key_len,
                                    apr_pool_t *pool)
 {
