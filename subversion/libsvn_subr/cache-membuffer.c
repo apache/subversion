@@ -48,8 +48,9 @@
  * A membuffer cache consists of two parts:
  *
  * 1. A linear data buffer containing cached items in a serialized
- *    representation. There may be arbitrary gaps between entries.
- *    This buffer is sub-devided into (currently two) cache levels.
+ *    representation, prefixed by their full cache keys. There may be
+ *    arbitrary gaps between entries.  This buffer is sub-devided into
+ *    (currently two) cache levels.
  *
  * 2. A directory of cache entries. This is organized similar to CPU
  *    data caches: for every possible key, there is exactly one group
@@ -81,9 +82,10 @@
  * Insertion can occur at only one, sliding position per cache level.  It is
  * marked by its offset in the data buffer and the index of the first used
  * entry at or behind that position.  If this gap is too small to accommodate
- * the new item, the insertion window is extended as described below. The new
- * entry will always be inserted at the bottom end of the window and since
- * the next used entry is known, properly sorted insertion is possible.
+ * the new item (plus its full key), the insertion window is extended as
+ * described below.  The new entry will always be inserted at the bottom end
+ * of the window and since the next used entry is known, properly sorted
+ * insertion is possible.
  *
  * To make the cache perform robustly in a wide range of usage scenarios,
  * L2 uses a randomized variant of LFU (see ensure_data_insertable_l2 for
@@ -107,11 +109,13 @@
  * an already used group to extend it.
  *
  * To limit the entry size and management overhead, not the actual item keys
- * but only their MD5-based hashes will be stored. This is reasonably safe
- * to do since users have only limited control over the full keys, even if
- * these contain folder paths. So, it is very hard to deliberately construct
- * colliding keys. Random checksum collisions can be shown to be extremely
- * unlikely.
+ * but only their hashed "fingerprint" will be stored.  These are reasonably
+ * unique to prevent collisions, so we only need to support up to one entry
+ * per entry key.  To guarantee that there are no conflicts, however, we
+ * store the actual full key immediately in front of the serialized item
+ * data.  That is, the entry offset actually points to the full key and the
+ * key length stored in the entry acts as an additional offset to find the
+ * actual item.
  *
  * All access to the cached data needs to be serialized. Because we want
  * to scale well despite that bottleneck, we simply segment the cache into
@@ -260,7 +264,7 @@ typedef struct entry_tag_t
  */
 static svn_error_t *store_key_part(entry_tag_t *tag,
                                    const full_key_t *prefix_key,
-                                   const void *key,
+                                   const char *key,
                                    apr_size_t key_len,
                                    apr_pool_t *pool)
 {
