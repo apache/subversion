@@ -119,6 +119,12 @@
  * key length stored in the entry acts as an additional offset to find the
  * actual item.
  *
+ * Most keys are 16 bytes or less.  We use the prefix indexes returned by
+ * a prefix_pool_t instance to uniquely identify the prefix in that case.
+ * Then the combination of prefix index and key stored in the fingerprint
+ * is then unique, too, and can never conflict.  No full key construction,
+ * storage and comparison is needed in that case.
+ *
  * All access to the cached data needs to be serialized. Because we want
  * to scale well despite that bottleneck, we simply segment the cache into
  * a number of independent caches (segments). Items will be multiplexed based
@@ -191,28 +197,42 @@
  * entries with the same entry key. However unlikely, though, two different
  * full keys (see full_key_t) may have the same entry key.  That is a
  * collision and at most one of them can be stored in the cache at any time.
+ *
+ * If the prefix is shared, which implies that the variable key part is no
+ * longer than 16 bytes, then there is a 1:1 mapping between full key and
+ * entry key.
  */
 typedef struct entry_key_t
 {
   /* 16 byte finger print of the full key. */
   apr_uint64_t fingerprint[2];
 
+  /* Unique index of the shared key prefix, i.e. it's index within the
+   * prefix pool (see prefix_pool_t).  NO_INDEX if the key prefix is not
+   * shared, otherwise KEY_LEN==0 is implied. */
+  apr_uint32_t prefix_idx;
+
   /* Length of the full key.  This value is aligned to ITEM_ALIGNMENT to
-   * make sure the subsequent item content is properly aligned. */
+   * make sure the subsequent item content is properly aligned.  If 0,
+   * PREFIX_KEY is implied to be != NO_INDEX. */
   apr_uint32_t key_len;
 } entry_key_t;
 
 /* A full key, i.e. the combination of the cache's key prefix with some
  * dynamic part appended to it.  It also contains its ENTRY_KEY.
+ *
+ * If the ENTRY_KEY has a 1:1 mapping to the FULL_KEY, then the latter
+ * will be empty and remains unused.
  */
 typedef struct full_key_t
 {
   /* Reduced form identifying the cache entry (if such an entry exists). */
   entry_key_t entry_key;
 
-  /* This contains the full combination.  Note that the SIZE element may
-   * be larger than ENTRY_KEY.KEY_LEN, but only the latter determines the
-   * valid key size. */
+  /* If ENTRY_KEY is not a 1:1 mapping of the prefix + dynamic key
+   * combination,  then this contains the full combination.  Note that the
+   * SIZE element may be larger than ENTRY_KEY.KEY_LEN, but only the latter
+   * determines the valid key size. */
   svn_membuf_t full_key;
 } full_key_t;
 
@@ -1342,6 +1362,7 @@ entry_keys_match(const entry_key_t *lhs,
 {
   return (lhs->fingerprint[0] == rhs->fingerprint[0])
       && (lhs->fingerprint[1] == rhs->fingerprint[1])
+      && (lhs->prefix_idx == rhs->prefix_idx)
       && (lhs->key_len == rhs->key_len);
 }
 
@@ -1400,7 +1421,8 @@ find_entry(svn_membuffer_t *cache,
             /* If we want to preserve it, check that it is actual a match. */
             if (!find_empty)
               {
-                /* If there is no full key to compare, we are done. */
+                /* If the full key is fully defined in prefix_id & mangeled
+                 * key, we are done. */
                 if (!entry->key.key_len)
                   return entry;
 
@@ -2821,12 +2843,15 @@ combine_key(svn_membuffer_cache_t *cache,
             const void *key,
             apr_ssize_t key_len)
 {
-  /* Copy of *key, padded with 0.
-   * We put it just behind the prefix already copied into the COMBINED_KEY.
-   * The buffer space has been allocated when the cache was created. */
-  apr_uint64_t *data = (void *)((char *)cache->combined_key.full_key.data +
-                                cache->prefix.full_key.size);
-  assert(cache->combined_key.full_key.size > cache->prefix.full_key.size+16);
+  /* copy of *key, padded with 0 */
+  apr_uint64_t data[2];
+
+  /* Do we have to compare full keys? */
+  if (cache->prefix.entry_key.prefix_idx == NO_INDEX)
+    {
+      combine_long_key(cache, key, key_len);
+      return;
+    }
 
   /* short, fixed-size keys are the most common case */
   if (key_len == 16)
@@ -2839,17 +2864,12 @@ combine_key(svn_membuffer_cache_t *cache,
       data[0] = ((const apr_uint64_t *)key)[0];
       data[1] = 0;
     }
-  else if (key_len != APR_HASH_KEY_STRING && key_len < 16)
+  else
     {
+      assert(key_len != APR_HASH_KEY_STRING && key_len < 16);
       data[0] = 0;
       data[1] = 0;
       memcpy(data, key, key_len);
-    }
-  else
-    {
-      /* longer or variably sized keys */
-      combine_long_key(cache, key, key_len);
-      return;
     }
 
   /* scramble key DATA.  All of this must be reversible to prevent key
@@ -3343,13 +3363,38 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
          sizeof(cache->prefix.entry_key.fingerprint));
   cache->prefix.entry_key.key_len = prefix_len;
 
-  /* Initialize the combined key. Pre-allocate some extra room in the full
-   * key such that we probably don't need to re-alloc. */
-  cache->combined_key.entry_key = cache->prefix.entry_key;
-  svn_membuf__create(&cache->combined_key.full_key, prefix_len + 200,
-                     result_pool);
-  memcpy(cache->combined_key.full_key.data, cache->prefix.full_key.data,
-         prefix_len);
+  /* Fix-length keys of up to 16 bytes may be handled without storing the
+   * full key separately for each item. */
+  if (   (klen != APR_HASH_KEY_STRING)
+      && (klen <= sizeof(cache->combined_key.entry_key.fingerprint)))
+    SVN_ERR(prefix_pool_get(&cache->prefix.entry_key.prefix_idx,
+                            membuffer->prefix_pool,
+                            prefix));
+  else
+    cache->prefix.entry_key.prefix_idx = NO_INDEX;
+
+  /* If key combining is not guaranteed to produce unique results, we have
+   * to handle full keys.  Otherwise, leave it NULL. */
+  if (cache->prefix.entry_key.prefix_idx == NO_INDEX)
+    {
+      /* Initialize the combined key. Pre-allocate some extra room in the
+       * full key such that we probably don't need to re-alloc. */
+      cache->combined_key.entry_key = cache->prefix.entry_key;
+      svn_membuf__create(&cache->combined_key.full_key, prefix_len + 200,
+                         result_pool);
+      memcpy(cache->combined_key.full_key.data, cache->prefix.full_key.data,
+             prefix_len);
+    }
+  else
+    {
+      /* Initialize the combined key.  We will never have the full combined
+       * key, so leave it NULL and set its length to 0 to prevent access to
+       * it.  Keep the fingerprint 0 as well b/c it will always be set anew
+       * by combine_key(). */
+      cache->combined_key.entry_key.prefix_idx
+        = cache->prefix.entry_key.prefix_idx;
+      cache->combined_key.entry_key.key_len = 0;
+    }
 
   /* initialize the generic cache wrapper
    */
