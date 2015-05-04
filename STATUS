@@ -30,6 +30,14 @@ Candidate changes that cannot go into a later 1.9.x:
           Not a problem if it only gets released in 1.10.0)
      -0.5: rhuijben (after 1.9.0. Changes error behaviour. Might break scripts)
 
+ * r1677440
+   Support checksum (de-)serialization for all 1.9 checksum types.
+   Justification:
+     Public API must have a complete implementation.
+   Votes:
+     +1: stefan2
+     +1: rhuijben (1.9.0 only. Should be private api for >=1.9.1)
+
 Other candidate changes:
 ========================
 
@@ -61,41 +69,14 @@ Other candidate changes:
      Soak restart is not needed after this fix, IMO.
    Votes:
      +1: brane
-
- * r1674415, r1676538, r1676570
-   Fix a spurious no-op property changes from 'svn copy --pin-externals'.
-   Justification:
-     Client should avoid sending no-op prop changes. Discussion:
-     http://mail-archives.apache.org/mod_mbox/subversion-dev/201504.mbox/%3C5537E14B.8030303%40syntevo.com%3E
-   Notes:
-     r1674415 is needed to make r1676570 merge without conflicts.
-   Votes:
-     +1: stsp, brane
-
- * r1676667, r1677267
-   'EOF found' error when reading FSFS data (issue #4577).
-   Justification:
-     Without this change, users may not be able to read or modify the
-     affected node(s), usually a directory.  While the data is not lost,
-     it becomes inaccessible.
-   Notes:
-     The rather trivial fix is in r1676667, r1677267 adds a test case.
-   Votes:
-     +1: stefan2, brane
+     +0: rhuijben (Unable to test)
 
  * r1677003
    Bump reqired Java version to 1.6 for JavaHL.
    Justification:
      Java 5 is dead. JavaHL 1.9+ uses 1.6 APIs.
    Votes:
-     +1: brane
-
- * r1677440
-   Support checksum (de-)serialization for all 1.9 checksum types.
-   Justification:
-     Public API must have a complete implementation.
-   Votes:
-     +1: stefan2
+     +1: brane, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -118,3 +99,24 @@ Approved changes:
      Regression from 1.8.x, just about any ra-local/DSO operation can fail.
    Votes:
      +1: philip, brane, rhuijben
+
+ * r1674415, r1676538, r1676570
+   Fix a spurious no-op property changes from 'svn copy --pin-externals'.
+   Justification:
+     Client should avoid sending no-op prop changes. Discussion:
+     http://mail-archives.apache.org/mod_mbox/subversion-dev/201504.mbox/%3C5537E14B.8030303%40syntevo.com%3E
+   Notes:
+     r1674415 is needed to make r1676570 merge without conflicts.
+   Votes:
+     +1: stsp, brane, rhuijben
+
+ * r1676667, r1677267
+   'EOF found' error when reading FSFS data (issue #4577).
+   Justification:
+     Without this change, users may not be able to read or modify the
+     affected node(s), usually a directory.  While the data is not lost,
+     it becomes inaccessible.
+   Notes:
+     The rather trivial fix is in r1676667, r1677267 adds a test case.
+   Votes:
+     +1: stefan2, brane, rhuijben
