@@ -287,6 +287,26 @@ zlib_expansion_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_serialization(apr_pool_t *pool)
+{
+  svn_checksum_kind_t kind;
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      const svn_checksum_t *parsed_checksum;
+      svn_checksum_t *checksum = svn_checksum_empty_checksum(kind, pool);
+      const char *serialized = svn_checksum_serialize(checksum, pool, pool);
+
+      SVN_ERR(svn_checksum_deserialize(&parsed_checksum, serialized, pool,
+                                       pool));
+
+      SVN_TEST_ASSERT(parsed_checksum->kind == kind);
+      SVN_TEST_ASSERT(svn_checksum_match(checksum, parsed_checksum));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 
 static int max_threads = 1;
@@ -306,6 +326,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "zlib expansion test (zlib regression)"),
     SVN_TEST_PASS2(zero_cross_match,
                    "zero checksum cross-type matching"),
+    SVN_TEST_PASS2(test_serialization,
+                   "checksum (de-)serialization"),
     SVN_TEST_NULL
   };
 

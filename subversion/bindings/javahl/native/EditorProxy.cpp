@@ -151,29 +151,32 @@ EditorProxy::cb_add_directory(void *baton,
                               apr_pool_t *scratch_pool)
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_add_directory('%s')\n", relpath);
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "addDirectory",
-                            "(Ljava/lang/String;"
-                            "Ljava/lang/Iterable;"
-                            "Ljava/util/Map;J)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "addDirectory",
+                                "(Ljava/lang/String;"
+                                "Ljava/lang/Iterable;"
+                                "Ljava/util/Map;J)V"));
 
-  jstring jrelpath = JNIUtil::makeJString(relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jchildren = (!children ? NULL : CreateJ::StringSet(children));
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jrelpath = JNIUtil::makeJString(relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jchildren = (!children ? NULL : CreateJ::StringSet(children));
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jrelpath, jchildren, jprops,
-                                        jlong(replaces_rev)),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jrelpath, jchildren, jprops,
+                         jlong(replaces_rev));
+    });
   return SVN_NO_ERROR;
 }
 
@@ -187,36 +190,37 @@ EditorProxy::cb_add_file(void *baton,
                          apr_pool_t *scratch_pool)
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_add_file('%s')\n", relpath);
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "addFile",
-                            "(Ljava/lang/String;"
-                            "L"JAVA_PACKAGE"/types/Checksum;"
-                            "Ljava/io/InputStream;"
-                            "Ljava/util/Map;J)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "addFile",
+                                "(Ljava/lang/String;"
+                                "L"JAVA_PACKAGE"/types/Checksum;"
+                                "Ljava/io/InputStream;"
+                                "Ljava/util/Map;J)V"));
 
-  jstring jrelpath = JNIUtil::makeJString(relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jchecksum = CreateJ::Checksum(checksum);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jcontents = NULL;
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jrelpath = JNIUtil::makeJString(relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jchecksum = CreateJ::Checksum(checksum);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  if (contents != NULL)
-    SVN_JAVAHL_CATCH(Java::Env(), SVN_ERR_RA_SVN_EDIT_ABORTED,
-                     jcontents = wrap_input_stream(contents));
+      jobject jcontents = NULL;
+      if (contents != NULL)
+        jcontents = wrap_input_stream(contents);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jrelpath, jchecksum, jcontents,
-                                        jprops, jlong(replaces_rev)),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jrelpath, jchecksum, jcontents,
+                         jprops, jlong(replaces_rev));
+    });
   return SVN_NO_ERROR;
 }
 
@@ -229,29 +233,32 @@ EditorProxy::cb_add_symlink(void *baton,
                             apr_pool_t *scratch_pool)
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_add_symlink('%s')\n", relpath);
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "addSymlink",
-                            "(Ljava/lang/String;"
-                            "Ljava/lang/String;"
-                            "Ljava/util/Map;J)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "addSymlink",
+                                "(Ljava/lang/String;"
+                                "Ljava/lang/String;"
+                                "Ljava/util/Map;J)V"));
 
-  jstring jrelpath = JNIUtil::makeJString(relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jstring jtarget = JNIUtil::makeJString(target);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jrelpath = JNIUtil::makeJString(relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jstring jtarget = JNIUtil::makeJString(target);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jrelpath, jtarget, jprops,
-                                        jlong(replaces_rev)),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jrelpath, jtarget, jprops,
+                         jlong(replaces_rev));
+    });
   return SVN_NO_ERROR;
 }
 
@@ -263,27 +270,30 @@ EditorProxy::cb_add_absent(void *baton,
                            apr_pool_t *scratch_pool)
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_add_absent('%s')\n", relpath);
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "addAbsent",
-                            "(Ljava/lang/String;"
-                            "L"JAVA_PACKAGE"/types/NodeKind;"
-                            "J)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "addAbsent",
+                                "(Ljava/lang/String;"
+                                "L"JAVA_PACKAGE"/types/NodeKind;"
+                                "J)V"));
 
-  jstring jrelpath = JNIUtil::makeJString(relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jkind = EnumMapper::mapNodeKind(kind);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jrelpath = JNIUtil::makeJString(relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jkind = EnumMapper::mapNodeKind(kind);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jrelpath, jkind,
-                                        jlong(replaces_rev)),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jrelpath, jkind,
+                         jlong(replaces_rev));
+    });
   return SVN_NO_ERROR;
 }
 
@@ -297,29 +307,32 @@ EditorProxy::cb_alter_directory(void *baton,
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_alter_directory('%s', r%lld)\n",
   //DEBUG:        relpath, static_cast<long long>(revision));
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "alterDirectory",
-                            "(Ljava/lang/String;J"
-                            "Ljava/lang/Iterable;"
-                            "Ljava/util/Map;)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "alterDirectory",
+                                "(Ljava/lang/String;J"
+                                "Ljava/lang/Iterable;"
+                                "Ljava/util/Map;)V"));
 
-  jstring jrelpath = JNIUtil::makeJString(relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jchildren = (!children ? NULL : CreateJ::StringSet(children));
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jrelpath = JNIUtil::makeJString(relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jchildren = (!children ? NULL : CreateJ::StringSet(children));
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jrelpath, jlong(revision),
-                                        jchildren, jprops),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jrelpath, jlong(revision),
+                         jchildren, jprops);
+    });
   return SVN_NO_ERROR;
 }
 
@@ -334,36 +347,37 @@ EditorProxy::cb_alter_file(void *baton,
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_alter_file('%s', r%lld)\n",
   //DEBUG:        relpath, static_cast<long long>(revision));
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "alterFile",
-                            "(Ljava/lang/String;J"
-                            "L"JAVA_PACKAGE"/types/Checksum;"
-                            "Ljava/io/InputStream;"
-                            "Ljava/util/Map;)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "alterFile",
+                                "(Ljava/lang/String;J"
+                                "L"JAVA_PACKAGE"/types/Checksum;"
+                                "Ljava/io/InputStream;"
+                                "Ljava/util/Map;)V"));
 
-  jstring jrelpath = JNIUtil::makeJString(relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jchecksum = CreateJ::Checksum(checksum);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jcontents = NULL;
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jrelpath = JNIUtil::makeJString(relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jchecksum = CreateJ::Checksum(checksum);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  if (contents != NULL)
-    SVN_JAVAHL_CATCH(Java::Env(), SVN_ERR_RA_SVN_EDIT_ABORTED,
-                     jcontents = wrap_input_stream(contents));
+      jobject jcontents = NULL;
+      if (contents != NULL)
+        jcontents = wrap_input_stream(contents);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jrelpath, jlong(revision),
-                                        jchecksum, jcontents, jprops),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jrelpath, jlong(revision),
+                         jchecksum, jcontents, jprops);
+    });
   return SVN_NO_ERROR;
 }
 
@@ -377,29 +391,32 @@ EditorProxy::cb_alter_symlink(void *baton,
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_alter_symlink('%s', r%lld)\n",
   //DEBUG:        relpath, static_cast<long long>(revision));
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "alterSymlink",
-                            "(Ljava/lang/String;J"
-                            "Ljava/lang/String;"
-                            "Ljava/util/Map;)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "alterSymlink",
+                                "(Ljava/lang/String;J"
+                                "Ljava/lang/String;"
+                                "Ljava/util/Map;)V"));
 
-  jstring jrelpath = JNIUtil::makeJString(relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jstring jtarget = JNIUtil::makeJString(target);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jrelpath = JNIUtil::makeJString(relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jstring jtarget = JNIUtil::makeJString(target);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jrelpath, jlong(revision),
-                                        jtarget, jprops),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jrelpath, jlong(revision),
+                         jtarget, jprops);
+    });
   return SVN_NO_ERROR;
 }
 
@@ -411,21 +428,24 @@ EditorProxy::cb_delete(void *baton,
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_delete('%s', r%lld)\n",
   //DEBUG:        relpath, static_cast<long long>(revision));
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "delete",
-                            "(Ljava/lang/String;J)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "delete",
+                                "(Ljava/lang/String;J)V"));
 
-  jstring jrelpath = JNIUtil::makeJString(relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jrelpath = JNIUtil::makeJString(relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid, jrelpath),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid, jrelpath);
+    });
   return SVN_NO_ERROR;
 }
 
@@ -439,26 +459,29 @@ EditorProxy::cb_copy(void *baton,
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_copy('%s', r%lld, '%s')\n",
   //DEBUG:        src_relpath, static_cast<long long>(src_revision), dst_relpath);
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "copy",
-                            "(Ljava/lang/String;J"
-                            "Ljava/lang/String;J)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "copy",
+                                "(Ljava/lang/String;J"
+                                "Ljava/lang/String;J)V"));
 
-  jstring jsrc_relpath = JNIUtil::makeJString(src_relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jstring jdst_relpath = JNIUtil::makeJString(dst_relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jsrc_relpath = JNIUtil::makeJString(src_relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jstring jdst_relpath = JNIUtil::makeJString(dst_relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jsrc_relpath, jlong(src_revision),
-                                        jdst_relpath, jlong(replaces_rev)),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jsrc_relpath, jlong(src_revision),
+                         jdst_relpath, jlong(replaces_rev));
+    });
   return SVN_NO_ERROR;
 }
 
@@ -472,26 +495,29 @@ EditorProxy::cb_move(void *baton,
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_move('%s', r%lld, '%s')\n",
   //DEBUG:        src_relpath, static_cast<long long>(src_revision), dst_relpath);
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "move",
-                            "(Ljava/lang/String;J"
-                            "Ljava/lang/String;J)V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "move",
+                                "(Ljava/lang/String;J"
+                                "Ljava/lang/String;J)V"));
 
-  jstring jsrc_relpath = JNIUtil::makeJString(src_relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jstring jdst_relpath = JNIUtil::makeJString(dst_relpath);
-  SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+      jstring jsrc_relpath = JNIUtil::makeJString(src_relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+      jstring jdst_relpath = JNIUtil::makeJString(dst_relpath);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
-                                        jsrc_relpath, jlong(src_revision),
-                                        jdst_relpath, jlong(replaces_rev)),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid,
+                         jsrc_relpath, jlong(src_revision),
+                         jdst_relpath, jlong(replaces_rev));
+    });
   return SVN_NO_ERROR;
 }
 
@@ -499,18 +525,21 @@ svn_error_t*
 EditorProxy::cb_complete(void *baton, apr_pool_t *scratch_pool)
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_complete()\n");
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
-  ep->m_valid = false;
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
+      ep->m_valid = false;
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "complete", "()V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "complete", "()V"));
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid);
+    });
   return SVN_NO_ERROR;
 }
 
@@ -518,17 +547,20 @@ svn_error_t*
 EditorProxy::cb_abort(void *baton, apr_pool_t *scratch_pool)
 {
   //DEBUG:fprintf(stderr, "  (n) EditorProxy::cb_abort()\n");
+  const ::Java::Env env;
+  SVN_JAVAHL_CATCH(env, SVN_ERR_RA_SVN_EDIT_ABORTED,
+    {
+      ::Java::LocalFrame frame(env);
 
-  EditorProxy* const ep = static_cast<EditorProxy*>(baton);
-  if (!ep || !ep->m_valid)
-    return invalid_editor();
-  ep->m_valid = false;
+      EditorProxy* const ep = static_cast<EditorProxy*>(baton);
+      if (!ep || !ep->m_valid)
+        return invalid_editor();
+      ep->m_valid = false;
 
-  static jmethodID mid = 0;
-  SVN_ERR(get_editor_method(mid, "abort", "()V"));
+      static jmethodID mid = 0;
+      SVN_ERR(get_editor_method(mid, "abort", "()V"));
 
-  SVN_JNI_CATCH(
-      JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid),
-      SVN_ERR_RA_SVN_EDIT_ABORTED);
+      env.CallVoidMethod(ep->m_jeditor, mid);
+    });
   return SVN_NO_ERROR;
 }
