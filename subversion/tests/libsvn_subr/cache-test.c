@@ -196,6 +196,7 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             "cache:",
                                             SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                                             FALSE,
+                                            FALSE,
                                             pool, pool));
 
   return basic_cache_test(cache, FALSE, pool);
@@ -253,6 +254,7 @@ test_membuffer_serializer_error_handling(apr_pool_t *pool)
                                             "cache:",
                                             SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                                             FALSE,
+                                            FALSE,
                                             pool, pool));
 
   SVN_ERR(svn_cache__set(cache, "twenty", &twenty, pool));
@@ -281,6 +283,7 @@ test_membuffer_serializer_error_handling(apr_pool_t *pool)
                                             APR_HASH_KEY_STRING,
                                             "cache:",
                                             SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE,
                                             FALSE,
                                             pool, pool));
 
@@ -374,6 +377,7 @@ test_membuffer_cache_clearing(apr_pool_t *pool)
                                             APR_HASH_KEY_STRING,
                                             "cache:",
                                             SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE,
                                             FALSE,
                                             pool, pool));
 

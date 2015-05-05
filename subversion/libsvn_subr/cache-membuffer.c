@@ -3318,6 +3318,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   const char *prefix,
                                   apr_uint32_t priority,
                                   svn_boolean_t thread_safe,
+                                  svn_boolean_t short_lived,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
@@ -3366,7 +3367,8 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   /* Fix-length keys of up to 16 bytes may be handled without storing the
    * full key separately for each item. */
   if (   (klen != APR_HASH_KEY_STRING)
-      && (klen <= sizeof(cache->combined_key.entry_key.fingerprint)))
+      && (klen <= sizeof(cache->combined_key.entry_key.fingerprint))
+      && !short_lived)
     SVN_ERR(prefix_pool_get(&cache->prefix.entry_key.prefix_idx,
                             membuffer->prefix_pool,
                             prefix));

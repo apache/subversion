@@ -294,7 +294,8 @@ init_callbacks(svn_cache__t *cache,
  * and PAGES is not 0.  Create a null cache otherwise.
  *
  * Use the given PRIORITY class for the new cache.  If PRIORITY is 0, then
- * use the default priority class.
+ * use the default priority class. HAS_NAMESPACE indicates whether we
+ * prefixed this cache instance with a namespace.
  *
  * Unless NO_HANDLER is true, register an error handler that reports errors
  * as warnings to the FS warning callback.
@@ -312,6 +313,7 @@ create_cache(svn_cache__t **cache_p,
              apr_ssize_t klen,
              const char *prefix,
              apr_uint32_t priority,
+             svn_boolean_t has_namespace,
              svn_fs_t *fs,
              svn_boolean_t no_handler,
              svn_boolean_t dummy_cache,
@@ -339,9 +341,12 @@ create_cache(svn_cache__t **cache_p,
     }
   else if (membuffer)
     {
+      /* We assume caches with namespaces to be relatively short-lived,
+       * i.e. their data will not be needed after a while. */
       SVN_ERR(svn_cache__create_membuffer_cache(
                 cache_p, membuffer, serializer, deserializer,
-                klen, prefix, priority, FALSE, result_pool, scratch_pool));
+                klen, prefix, priority, FALSE, has_namespace,
+                result_pool, scratch_pool));
     }
   else if (pages)
     {
@@ -376,6 +381,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
   svn_boolean_t cache_fulltexts;
   svn_boolean_t cache_revprops;
   const char *cache_namespace;
+  svn_boolean_t has_namespace;
 
   /* Evaluating the cache configuration. */
   SVN_ERR(read_config(&cache_namespace,
@@ -387,6 +393,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
 
   prefix = apr_pstrcat(scratch_pool, "ns:", cache_namespace, ":", prefix,
                        SVN_VA_NULL);
+  has_namespace = strlen(cache_namespace) > 0;
 
   membuffer = svn_cache__get_global_membuffer_cache();
 
@@ -422,6 +429,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        APR_HASH_KEY_STRING,
                        apr_pstrcat(scratch_pool, prefix, "DAG", SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -439,6 +447,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        sizeof(svn_fs_x__id_t),
                        apr_pstrcat(scratch_pool, prefix, "DIR", SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -455,6 +464,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "PACK-MANIFEST",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -470,6 +480,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "NODEREVS",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -485,6 +496,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "REPHEADER",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -500,6 +512,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "CHANGES",
                                    SVN_VA_NULL),
                        0,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -515,6 +528,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "TEXT",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, !cache_fulltexts,
                        fs->pool, scratch_pool));
@@ -529,6 +543,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "PROP",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, !cache_fulltexts,
                        fs->pool, scratch_pool));
@@ -543,6 +558,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "MERGEINFO",
                                    SVN_VA_NULL),
                        0,
+                       has_namespace,
                        fs,
                        no_handler, !cache_fulltexts,
                        fs->pool, scratch_pool));
@@ -557,6 +573,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "HAS_MERGEINFO",
                                    SVN_VA_NULL),
                        0,
+                       has_namespace,
                        fs,
                        no_handler, !cache_fulltexts,
                        fs->pool, scratch_pool));
@@ -572,6 +589,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "REVPROP",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, !cache_revprops,
                        fs->pool, scratch_pool));
@@ -587,6 +605,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "TXDELTA_WINDOW",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, !cache_txdeltas,
                        fs->pool, scratch_pool));
@@ -601,6 +620,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "COMBINED_WINDOW",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, !cache_txdeltas,
                        fs->pool, scratch_pool));
@@ -616,6 +636,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "NODEREVSCNT",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -629,6 +650,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "CHANGESCNT",
                                    SVN_VA_NULL),
                        0,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -642,6 +664,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "REPSCNT",
                                    SVN_VA_NULL),
                        0,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -658,6 +681,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "L2P_HEADER",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -672,6 +696,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "L2P_PAGE",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -685,6 +710,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "P2L_HEADER",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
@@ -698,6 +724,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "P2L_PAGE",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       has_namespace,
                        fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
