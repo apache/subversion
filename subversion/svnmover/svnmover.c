@@ -508,20 +508,22 @@ flat_branch_id_and_path(flat_branch_t *fb,
                       fb->bid, fb->rrpath);
 }
 
-/* List all elements in branch BRANCH, in path notation.
+/* List all elements in flat-branch FB, in path notation.
  */
 static svn_error_t *
-list_branch_elements(svn_branch_state_t *branch,
+list_branch_elements(flat_branch_t *fb,
                      apr_pool_t *scratch_pool)
 {
   apr_hash_t *paths_to_eid = apr_hash_make(scratch_pool);
-  int eid;
+  apr_hash_index_t *hi;
   SVN_ITER_T(int) *pi;
 
-  for (eid = branch->rev_root->first_eid; eid < branch->rev_root->next_eid; eid++)
+  for (hi = apr_hash_first(scratch_pool, fb->s->e_map);
+       hi; hi = apr_hash_next(hi))
     {
-      const char *relpath = svn_branch_get_path_by_eid(branch, eid,
-                                                       scratch_pool);
+      int eid = svn_int_hash_this_key(hi);
+      const char *relpath = svn_branch_subtree_get_path_by_eid(fb->s, eid,
+                                                               scratch_pool);
 
       if (relpath)
         {
@@ -532,11 +534,11 @@ list_branch_elements(svn_branch_state_t *branch,
   for (SVN_HASH_ITER_SORTED(pi, paths_to_eid, svn_sort_compare_items_as_paths, scratch_pool))
     {
       const char *relpath = pi->key;
+      int eid = *pi->val;
 
-      eid = *(int *)pi->val;
       printf("    %s%s\n",
              relpath[0] ? relpath : ".",
-             subbranch_str(branch, eid, scratch_pool));
+             flat_branch_subbranch_str(fb, eid, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -575,38 +577,35 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
   return SVN_NO_ERROR;
 }
 
-/*  */
-static char *
-branch_id_and_path(svn_branch_state_t *branch,
-                   apr_pool_t *result_pool)
-{
-  return apr_psprintf(result_pool, "%s at /%s",
-                      svn_branch_get_id(branch, result_pool),
-                      svn_branch_get_root_rrpath(branch, result_pool));
-}
-
 /* Show the id and path of BRANCH. If VERBOSE is true, also list its elements.
  */
 static svn_error_t *
-branch_info(svn_branch_state_t *branch,
-            svn_boolean_t verbose,
-            apr_pool_t *scratch_pool)
+branch_info_by_paths(flat_branch_t *fb,
+                     svn_boolean_t verbose,
+                     apr_pool_t *scratch_pool)
 {
-  if (the_ui_mode == UI_MODE_PATHS)
-    {
-      printf("  %s\n",
-             branch_id_and_path(branch, scratch_pool));
-      if (verbose)
-        SVN_ERR(list_branch_elements(branch, scratch_pool));
-    }
-  else
-    {
-      printf("  %s root=e%d\n",
-             branch_id_and_path(branch, scratch_pool),
-             branch->root_eid);
-      if (verbose)
-        SVN_ERR(list_branch_elements_by_eid(branch, scratch_pool));
-    }
+  const char *id_and_path = flat_branch_id_and_path(fb, scratch_pool);
+
+  printf("  %s\n",
+         id_and_path);
+  if (verbose)
+    SVN_ERR(list_branch_elements(fb, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Show the id of BRANCH. If VERBOSE is true, also list its elements.
+ */
+static svn_error_t *
+branch_info_by_eids(svn_branch_state_t *branch,
+                    svn_boolean_t verbose,
+                    apr_pool_t *scratch_pool)
+{
+  printf("  %s root=e%d\n",
+         svn_branch_get_id(branch, scratch_pool),
+         branch->root_eid);
+  if (verbose)
+    SVN_ERR(list_branch_elements_by_eid(branch, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -628,7 +627,18 @@ list_branches(svn_branch_revision_root_t *rev_root,
 
       if (branch->root_eid != eid)
         continue;
-      SVN_ERR(branch_info(branch, verbose, bi->iterpool));
+
+      if (the_ui_mode == UI_MODE_PATHS)
+        {
+          flat_branch_t *fb
+            = branch_get_flat_branch(branch, branch->root_eid, scratch_pool);
+
+          SVN_ERR(branch_info_by_paths(fb, verbose, scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(branch_info_by_eids(branch, verbose, scratch_pool));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -650,7 +660,17 @@ list_all_branches(svn_branch_revision_root_t *rev_root,
     {
       svn_branch_state_t *branch = bi->val;
 
-      SVN_ERR(branch_info(branch, verbose, bi->iterpool));
+      if (the_ui_mode == UI_MODE_PATHS)
+        {
+          flat_branch_t *fb
+            = branch_get_flat_branch(branch, branch->root_eid, scratch_pool);
+
+          SVN_ERR(branch_info_by_paths(fb, verbose, bi->iterpool));
+        }
+      else
+        {
+          SVN_ERR(branch_info_by_eids(branch, verbose, bi->iterpool));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1865,7 +1885,12 @@ execute(const apr_array_header_t *actions,
           {
             VERIFY_EID_EXISTS("ls", 0);
             if (the_ui_mode == UI_MODE_PATHS)
-              SVN_ERR(list_branch_elements(el_rev[0]->branch, iterpool));
+              {
+                flat_branch_t *fb
+                  = branch_get_flat_branch(
+                      el_rev[0]->branch, el_rev[0]->branch->root_eid, iterpool);
+                SVN_ERR(list_branch_elements(fb, iterpool));
+              }
             else
               SVN_ERR(list_branch_elements_by_eid(el_rev[0]->branch, iterpool));
           }
