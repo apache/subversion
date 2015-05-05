@@ -259,7 +259,7 @@ svn_branch_get_subbranches(const svn_branch_state_t *branch,
  * sub-branches of BRANCH.
  */
 apr_array_header_t *
-svn_branch_get_all_sub_branches(const svn_branch_state_t *branch,
+svn_branch_get_all_subbranches(const svn_branch_state_t *branch,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 

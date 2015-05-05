@@ -482,7 +482,7 @@ svn_branch_purge_r(svn_branch_state_t *branch,
   map_purge_orphans(branch->e_map, branch->root_eid, scratch_pool);
 
   /* second, remove subbranches that have no subbranch-root element */
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_subbranches(
                             branch, scratch_pool, scratch_pool), scratch_pool))
     {
       svn_branch_state_t *b = bi->val;
@@ -747,19 +747,19 @@ svn_branch_get_subbranches(const svn_branch_state_t *branch,
   for (SVN_ARRAY_ITER(bi, branch->rev_root->branches, scratch_pool))
     {
       svn_branch_state_t *subbranch = bi->val;
-      const char *sub_branch_root_rrpath
+      const char *subbranch_root_rrpath
         = svn_branch_get_root_rrpath(subbranch, bi->iterpool);
 
       /* Is it an immediate child at or below EID? */
       if (subbranch->outer_branch == branch
-          && svn_relpath_skip_ancestor(top_rrpath, sub_branch_root_rrpath))
+          && svn_relpath_skip_ancestor(top_rrpath, subbranch_root_rrpath))
         SVN_ARRAY_PUSH(subbranches) = bi->val;
     }
   return subbranches;
 }
 
 apr_array_header_t *
-svn_branch_get_all_sub_branches(const svn_branch_state_t *branch,
+svn_branch_get_all_subbranches(const svn_branch_state_t *branch,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
@@ -783,7 +783,7 @@ svn_branch_get_subbranch_at_eid(svn_branch_state_t *branch,
   SVN_ITER_T(svn_branch_state_t) *bi;
 
   /* TODO: more efficient to search in branch->rev_root->branches */
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_subbranches(
                             branch, scratch_pool, scratch_pool), scratch_pool))
     {
       if (bi->val->outer_eid == eid)
@@ -843,7 +843,7 @@ svn_branch_delete_branch_r(svn_branch_state_t *branch,
 {
   SVN_ITER_T(svn_branch_state_t) *bi;
 
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_subbranches(
                             branch, scratch_pool, scratch_pool), scratch_pool))
     {
       svn_branch_delete_branch_r(bi->val, bi->iterpool);
@@ -1183,22 +1183,22 @@ svn_branch_find_nested_branch_element_by_rrpath(
 
   /* The path we're looking for is (path-wise) in this branch. See if it
      is also in a sub-branch (recursively). */
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_subbranches(
                             root_branch, scratch_pool, scratch_pool),
                       scratch_pool))
     {
-      svn_branch_state_t *sub_branch;
-      int sub_branch_eid;
+      svn_branch_state_t *subbranch;
+      int subbranch_eid;
 
-      svn_branch_find_nested_branch_element_by_rrpath(&sub_branch,
-                                                      &sub_branch_eid,
+      svn_branch_find_nested_branch_element_by_rrpath(&subbranch,
+                                                      &subbranch_eid,
                                                       bi->val, rrpath,
                                                       bi->iterpool);
-      if (sub_branch)
+      if (subbranch)
         {
-           *branch_p = sub_branch;
+           *branch_p = subbranch;
            if (eid_p)
-             *eid_p = sub_branch_eid;
+             *eid_p = subbranch_eid;
            return;
          }
     }
