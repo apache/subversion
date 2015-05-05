@@ -411,14 +411,23 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
                      -1, "", subtree_root_element->payload, result_pool));
 
   /* Add subbranches */
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(branch, eid,
-                                                     result_pool, result_pool),
-                      result_pool))
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_subbranches(
+                            branch, result_pool, result_pool), result_pool))
     {
-      svn_branch_subtree_t *this_subtree
-        = svn_branch_get_subtree(bi->val, bi->val->root_eid, result_pool);
+      svn_branch_state_t *subbranch = bi->val;
+      const char *subbranch_relpath_in_subtree
+        = svn_branch_subtree_get_path_by_eid(new_subtree, subbranch->outer_eid,
+                                             bi->iterpool);
 
-      svn_int_hash_set(new_subtree->subbranches, bi->val->outer_eid, this_subtree);
+      /* Is it pathwise at or below EID? If so, add it into the subtree. */
+      if (subbranch_relpath_in_subtree)
+        {
+          svn_branch_subtree_t *this_subtree
+            = svn_branch_get_subtree(subbranch, subbranch->root_eid, result_pool);
+
+          svn_int_hash_set(new_subtree->subbranches, subbranch->outer_eid,
+                           this_subtree);
+        }
     }
   return new_subtree;
 }
@@ -731,31 +740,6 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
   }
 
   return SVN_NO_ERROR;
-}
-
-apr_array_header_t *
-svn_branch_get_subbranches(const svn_branch_state_t *branch,
-                           int eid,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  const char *top_rrpath = svn_branch_get_rrpath_by_eid(branch, eid,
-                                                        scratch_pool);
-  svn_array_t *subbranches = svn_array_make(result_pool);
-  SVN_ITER_T(svn_branch_state_t) *bi;
-
-  for (SVN_ARRAY_ITER(bi, branch->rev_root->branches, scratch_pool))
-    {
-      svn_branch_state_t *subbranch = bi->val;
-      const char *subbranch_root_rrpath
-        = svn_branch_get_root_rrpath(subbranch, bi->iterpool);
-
-      /* Is it an immediate child at or below EID? */
-      if (subbranch->outer_branch == branch
-          && svn_relpath_skip_ancestor(top_rrpath, subbranch_root_rrpath))
-        SVN_ARRAY_PUSH(subbranches) = bi->val;
-    }
-  return subbranches;
 }
 
 apr_array_header_t *

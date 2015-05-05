@@ -247,15 +247,6 @@ svn_branch_delete_branch_r(svn_branch_state_t *branch,
                            apr_pool_t *scratch_pool);
 
 /* Return an array of pointers to the branches that are immediate
- * sub-branches of BRANCH at or below EID.
- */
-apr_array_header_t *
-svn_branch_get_subbranches(const svn_branch_state_t *branch,
-                           int eid,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-/* Return an array of pointers to the branches that are immediate
  * sub-branches of BRANCH.
  */
 apr_array_header_t *
