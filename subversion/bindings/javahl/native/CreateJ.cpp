@@ -1158,17 +1158,18 @@ void fill_property_map(jobject map,
         if (JNIUtil::isJavaExceptionThrown())
           return;
 
-        jbyteArray jpropVal = (!val ? NULL
-                               : JNIUtil::makeJByteArray(val));
+        jbyteArray jpropVal = (val ? JNIUtil::makeJByteArray(val) : NULL);
         if (JNIUtil::isJavaExceptionThrown())
           return;
 
-        m_env->CallObjectMethod(m_map, m_put_mid, jpropName, jpropVal);
+        jobject ret = m_env->CallObjectMethod(m_map, m_put_mid,
+                                              jpropName, jpropVal);
         if (JNIUtil::isJavaExceptionThrown())
           return;
 
-        m_env->DeleteLocalRef(jpropName);
+        m_env->DeleteLocalRef(ret);
         m_env->DeleteLocalRef(jpropVal);
+        m_env->DeleteLocalRef(jpropName);
       }
 
     JNIEnv*& m_env;
@@ -1214,6 +1215,7 @@ void fill_property_map(jobject map,
             POP_AND_RETURN_NOTHING();
         }
     }
+  POP_AND_RETURN_NOTHING();
 }
 
 jobject property_map(apr_hash_t *prop_hash, apr_array_header_t* prop_diffs,

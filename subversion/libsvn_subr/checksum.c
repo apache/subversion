@@ -80,6 +80,14 @@ static const apr_size_t digest_sizes[] = {
   sizeof(apr_uint32_t)
 };
 
+/* Checksum type prefixes used in serialized checksums. */
+static const char *ckind_str[] = {
+  "$md5 $",
+  "$sha1$",
+  "$fnv1$",
+  "$fnvm$",
+};
+
 /* Returns the digest size of it's argument. */
 #define DIGESTSIZE(k) \
   (((k) < svn_checksum_md5 || (k) > svn_checksum_fnv1a_32x4) ? 0 : digest_sizes[k])
@@ -317,13 +325,10 @@ svn_checksum_serialize(const svn_checksum_t *checksum,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  const char *ckind_str;
-
   SVN_ERR_ASSERT_NO_RETURN(checksum->kind >= svn_checksum_md5
                            || checksum->kind <= svn_checksum_fnv1a_32x4);
-  ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
   return apr_pstrcat(result_pool,
-                     ckind_str,
+                     ckind_str[checksum->kind],
                      svn_checksum_to_cstring(checksum, scratch_pool),
                      SVN_VA_NULL);
 }
@@ -335,18 +340,26 @@ svn_checksum_deserialize(const svn_checksum_t **checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  svn_checksum_kind_t ckind;
+  svn_checksum_kind_t kind;
   svn_checksum_t *parsed_checksum;
 
-  /* "$md5 $..." or "$sha1$..." */
-  SVN_ERR_ASSERT(strlen(data) > 6);
+  /* All prefixes have the same length. */
+  apr_size_t prefix_len = strlen(ckind_str[0]);
 
-  ckind = (data[1] == 'm' ? svn_checksum_md5 : svn_checksum_sha1);
-  SVN_ERR(svn_checksum_parse_hex(&parsed_checksum, ckind,
-                                 data + 6, result_pool));
-  *checksum = parsed_checksum;
+  /* "$md5 $...", "$sha1$..." or ... */
+  SVN_ERR_ASSERT(strlen(data) > prefix_len);
 
-  return SVN_NO_ERROR;
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    if (strncmp(ckind_str[kind], data, prefix_len) == 0)
+      {
+        SVN_ERR(svn_checksum_parse_hex(&parsed_checksum, kind,
+                                       data + prefix_len, result_pool));
+        *checksum = parsed_checksum;
+        return SVN_NO_ERROR;
+      }
+
+  return svn_error_createf(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
+                           "Unknown checksum kind in '%s'", data);
 }
 
 

@@ -1310,11 +1310,15 @@ test_copy_pin_externals_select_subtree(const svn_test_opts_t *opts, apr_pool_t *
     const char *src_external_desc;
     const char *expected_dst_external_desc;
   } test_data[] = {
+    /* Note: these externals definitions contain extra whitespace on
+       purpose, to test that the pinning logic doesn't make
+       whitespace-only changes to values that aren't pinned. */
+
     /* External on A/B will be pinned. */
-    { "B", "^/A/D/gamma gamma-ext", "^/A/D/gamma@3 gamma-ext" },
+    { "B", "^/A/D/gamma  gamma-ext", "^/A/D/gamma@3 gamma-ext" },
 
     /* External on A/D won't be pinned. */
-    { "D", "^/A/B/F F-ext", "^/A/B/F F-ext" } ,
+    { "D", "^/A/B/F  F-ext", "^/A/B/F  F-ext" } ,
 
     { NULL },
   };

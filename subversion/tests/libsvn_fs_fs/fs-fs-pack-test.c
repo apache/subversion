@@ -1538,6 +1538,115 @@ rep_sharing_effectiveness(const svn_test_opts_t *opts,
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-delta_chain_with_plain"
+
+static svn_error_t *
+delta_chain_with_plain(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  svn_stringbuf_t *prop_value, *contents, *contents2, *hash_rep;
+  int i;
+  apr_hash_t *fs_config, *props;
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Reproducing issue #4577 without the r1676667 fix is much harder in 1.9+
+   * than it was in 1.8.  The reason is that 1.9+ won't deltify small reps
+   * nor against small reps.  So, we must construct relatively large PLAIN
+   * and DELTA reps.
+   *
+   * The idea is to construct a PLAIN prop rep, make a file share that as
+   * its text rep, grow the file considerably (to make the PLAIN rep later
+   * read beyond EOF) and then replace it entirely with another longish
+   * contents.
+   */
+
+  /* Create a repo that and explicitly enable rep sharing. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+
+  ffd = fs->fsap_data;
+  if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  ffd->rep_sharing_allowed = TRUE;
+
+  /* Make sure all props are stored as PLAIN reps. */
+  ffd->deltify_properties = FALSE;
+
+  /* Construct various content strings.
+   * Note that props need to be shorter than the file contents. */
+  prop_value = svn_stringbuf_create("prop", pool);
+  for (i = 0; i < 10; ++i)
+    svn_stringbuf_appendstr(prop_value, prop_value);
+
+  contents = svn_stringbuf_create("Some text.", pool);
+  for (i = 0; i < 10; ++i)
+    svn_stringbuf_appendstr(contents, contents);
+
+  contents2 = svn_stringbuf_create("Totally new!", pool);
+  for (i = 0; i < 10; ++i)
+    svn_stringbuf_appendstr(contents2, contents2);
+
+  /* Revision 1: create a property rep. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "/", "p",
+                                  svn_string_create(prop_value->data, pool),
+                                  pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Revision 2: create a file that shares the text rep with the PLAIN
+   * property rep from r1. */
+  props = apr_hash_make(pool);
+  svn_hash_sets(props, "p", svn_string_create(prop_value->data, pool));
+
+  hash_rep = svn_stringbuf_create_empty(pool);
+  svn_hash_write2(props, svn_stream_from_stringbuf(hash_rep, pool), "END",
+                  pool);
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", hash_rep->data, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Revision 3: modify the file contents to a long-ish full text
+   * (~10kByte, longer than the r1 revision file). */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", contents->data, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Revision 4: replace file contents to something disjoint from r3. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", contents2->data, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Getting foo@4 must work.  To make sure we actually read from disk,
+   * use a new FS instance with disjoint caches. */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, fs_config, pool, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_test__get_file_contents(root, "foo", &contents, pool));
+  SVN_TEST_STRING_ASSERT(contents->data, contents2->data);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -1584,6 +1693,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "file with 0 expanded-length, issue #4554"),
     SVN_TEST_OPTS_PASS(rep_sharing_effectiveness,
                        "rep-sharing effectiveness"),
+    SVN_TEST_OPTS_PASS(delta_chain_with_plain,
+                       "delta chains starting with PLAIN, issue #4577"),
     SVN_TEST_NULL
   };
 
