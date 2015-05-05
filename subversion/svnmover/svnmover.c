@@ -365,6 +365,151 @@ subbranch_str(svn_branch_state_t *branch,
   return branch_str(subbranch, result_pool);
 }
 
+/* A flat snapshot of a branch hierarchy.
+ *
+ * A 'flat' branch hierarchy means one in which all elements are in a
+ * single hierarchy of paths. Every element has a relative path within
+ * the branch, determined by its directory hierarchy. Every element in a
+ * hierarchy of branches has a complete path relative to the repo root.
+ *
+ * A flat branch may but does not necessarily represent a single-revision
+ * slice of a branch hierarchy.
+ */
+typedef struct flat_branch_t
+{
+  /* The subtree hierarchy corresponding to this flat-branch */
+  svn_branch_subtree_t *s;
+  /* The repository-root-relative path to the root of this flat-branch */
+  const char *rrpath;
+  /* The branch id of the branch of which this flat-branch is a snapshot */
+  const char *bid;
+} flat_branch_t;
+
+/* Create and return a new flat-branch.
+ */
+static flat_branch_t *
+flat_branch_create(svn_branch_subtree_t *s,
+                   const char *rrpath,
+                   const char *bid,
+                   apr_pool_t *result_pool)
+{
+  flat_branch_t *fb = apr_pcalloc(result_pool, sizeof(*fb));
+
+  fb->s = s;
+  fb->rrpath = rrpath;
+  fb->bid = bid;
+  return fb;
+}
+
+/* Return the root EID of FB.
+ */
+static int
+flat_branch_get_root_eid(flat_branch_t *fb)
+{
+  return fb->s->root_eid;
+}
+
+/* Create and return a new flat-branch that is the sub-branch of FB at EID,
+ * or NULL if there is no subbranch of FB at EID.
+ */
+static flat_branch_t *
+flat_branch_get_subbranch_at_eid(flat_branch_t *fb,
+                                 int eid,
+                                 apr_pool_t *result_pool)
+{
+  svn_branch_subtree_t *s
+    = svn_branch_subtree_get_subbranch_at_eid(fb->s, eid, result_pool);
+  const char *rrpath;
+  const char *bid;
+  flat_branch_t *sub_fb;
+  
+  if (! s)
+    return NULL;
+
+  sub_fb = apr_pcalloc(result_pool, sizeof(*sub_fb));
+  sub_fb->s = s;
+  rrpath = svn_relpath_join(fb->rrpath,
+                            svn_branch_subtree_get_path_by_eid(fb->s, eid,
+                                                               result_pool),
+                            result_pool);
+  bid = apr_psprintf(result_pool, "%s.%d", fb->bid, eid);
+  sub_fb = flat_branch_create(s, rrpath, bid, result_pool);
+  return sub_fb;
+}
+
+/* Return the immediate subbranches of FB, as a mapping from EID to
+ * (flat_branch_t *).
+ */
+static apr_hash_t *
+flat_branch_get_subbranches(flat_branch_t *fb,
+                            apr_pool_t *result_pool)
+{
+  apr_pool_t *scratch_pool = result_pool;
+  apr_hash_t *subbranches = apr_hash_make(result_pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, fb->s->subbranches);
+       hi; hi = apr_hash_next(hi))
+    {
+      int e = svn_int_hash_this_key(hi);
+
+      svn_int_hash_set(subbranches, e,
+                       flat_branch_get_subbranch_at_eid(fb, e, result_pool));
+    }
+  return subbranches;
+}
+
+/* Create and return a new flat-branch corresponding to the sub-branch of
+ * BRANCH at EID, or NULL if there is no subbranch of BRANCH at EID.
+ */
+static flat_branch_t *
+branch_get_flat_branch(svn_branch_state_t *branch,
+                       int eid,
+                       apr_pool_t *result_pool)
+{
+  svn_branch_subtree_t *s = svn_branch_get_subtree(branch, eid, result_pool);
+  flat_branch_t *fb;
+
+  if (! s)
+    return NULL;
+
+  fb = flat_branch_create(s,
+                          svn_branch_get_rrpath_by_eid(branch, eid, result_pool),
+                          svn_branch_get_id(branch, result_pool),
+                          result_pool);
+  return fb;
+}
+
+/* Return a string suitable for appending to a displayed element name or
+ * element id to indicate that FB:EID is a subbranch root element.
+ * Return "" if the element is not a subbranch root element.
+ */
+static const char *
+flat_branch_subbranch_str(flat_branch_t *fb,
+                          int eid,
+                          apr_pool_t *result_pool)
+{
+  flat_branch_t *subbranch
+    = flat_branch_get_subbranch_at_eid(fb, eid, result_pool);
+
+  if (subbranch)
+    return apr_psprintf(result_pool,
+                        " (branch %s)", fb->bid);
+  return "";
+}
+
+/* Return a string describing flat-branch FB, or NULL if FB is null.
+ */
+static const char *
+flat_branch_id_and_path(flat_branch_t *fb,
+                        apr_pool_t *result_pool)
+{
+  if (! fb)
+    return NULL;
+  return apr_psprintf(result_pool, "%s at /%s",
+                      fb->bid, fb->rrpath);
+}
+
 /* List all elements in branch BRANCH, in path notation.
  */
 static svn_error_t *
@@ -1091,34 +1236,30 @@ diff_ordering_eids(const void *a, const void *b)
   return (item_a->eid < item_b->eid) ? -1 : (item_a->eid > item_b->eid) ? 1 : 0;
 }
 
-/* Display differences between branch subtrees LEFT and RIGHT.
+/* Display differences between flat branches LEFT and RIGHT.
  *
  * The output refers to paths or to elements according to THE_UI_MODE.
  */
 static svn_error_t *
-svn_branch_diff(svn_editor3_t *editor,
-                svn_branch_el_rev_id_t *left,
-                svn_branch_el_rev_id_t *right,
-                const char *prefix,
-                const char *header,
-                apr_pool_t *scratch_pool)
+flat_branch_diff(svn_editor3_t *editor,
+                 flat_branch_t *left,
+                 flat_branch_t *right,
+                 const char *prefix,
+                 const char *header,
+                 int eid_width,
+                 apr_pool_t *scratch_pool)
 {
-  svn_branch_subtree_t *s_left, *s_right;
   svn_array_t *diff_changes;
   SVN_ITER_T(diff_item_t) *ai;
-  int eid_width;
 
-  SVN_ERR_ASSERT(left->eid >= 0 && right->eid >= 0);
+  SVN_ERR_ASSERT(left && flat_branch_get_root_eid(left) >= 0
+                 && right && flat_branch_get_root_eid(right) >= 0);
 
-  s_left = svn_branch_get_subtree(left->branch, left->eid, scratch_pool);
-  s_right = svn_branch_get_subtree(right->branch, right->eid, scratch_pool);
-  SVN_ERR(subtree_diff(&diff_changes, editor, s_left, s_right,
+  SVN_ERR(subtree_diff(&diff_changes, editor, left->s, right->s,
                        scratch_pool, scratch_pool));
 
   if (header && diff_changes->nelts)
     printf("%s%s", prefix, header);
-  eid_width = apr_snprintf(NULL, 0, "%d", MAX(left->branch->rev_root->next_eid,
-                                              right->branch->rev_root->next_eid));
 
   for (SVN_ARRAY_ITER_SORTED(ai, diff_changes,
                              (the_ui_mode == UI_MODE_EIDS)
@@ -1155,8 +1296,8 @@ svn_branch_diff(svn_editor3_t *editor,
                  status_mod,
                  item->reparented ? 'v' : ' ', item->renamed ? 'r' : ' ',
                  major_path,
-                 subbranch_str(e0 ? left->branch : right->branch,
-                               item->eid, scratch_pool),
+                 flat_branch_subbranch_str(e0 ? left : right,
+                                       item->eid, scratch_pool),
                  from);
         }
       else
@@ -1168,8 +1309,8 @@ svn_branch_diff(svn_editor3_t *editor,
                  eid_width, item->eid,
                  e1 ? apr_psprintf(scratch_pool, "e%-*d/%s",
                                    eid_width, e1->parent_eid, e1->name) : "",
-                 subbranch_str(e0 ? left->branch : right->branch,
-                               item->eid, scratch_pool),
+                 flat_branch_subbranch_str(e0 ? left : right,
+                                       item->eid, scratch_pool),
                  e0 && e1 ? " from " : "",
                  e0 ? apr_psprintf(scratch_pool, "e%-*d/%s",
                                    eid_width, e0->parent_eid, e0->name) : "");
@@ -1179,42 +1320,97 @@ svn_branch_diff(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/* Return a hash of (full-branch-id -> BRANCH) of the immediate subbranches
- * of BRANCH at or below EID.
- *
- * Return an empty hash if BRANCH is null.
- */
-static apr_hash_t *
-get_subbranches(svn_branch_state_t *branch,
-                int eid,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  apr_hash_t *result = apr_hash_make(result_pool);
-
-  if (branch)
-    {
-      SVN_ITER_T(svn_branch_state_t) *bi;
-
-      for (SVN_ARRAY_ITER(bi, svn_branch_get_subbranches(
-                                branch, eid, result_pool, scratch_pool),
-                          scratch_pool))
-        {
-          svn_branch_state_t *b = bi->val;
-
-          svn_hash_sets(result, svn_branch_get_id(b, result_pool), b);
-        }
-    }
-  return result;
-}
-
 typedef svn_error_t *
 svn_branch_diff_func_t(svn_editor3_t *editor,
-                       svn_branch_el_rev_id_t *left,
-                       svn_branch_el_rev_id_t *right,
+                       flat_branch_t *left,
+                       flat_branch_t *right,
                        const char *prefix,
                        const char *header,
+                       int eid_width,
                        apr_pool_t *scratch_pool);
+
+/* Display differences between flat branches LEFT and RIGHT.
+ *
+ * Recurse into sub-branches.
+ */
+static svn_error_t *
+flat_branch_diff_r(svn_editor3_t *editor,
+                   flat_branch_t *fb_left,
+                   flat_branch_t *fb_right,
+                   svn_branch_diff_func_t diff_func,
+                   const char *prefix,
+                   int eid_width,
+                   apr_pool_t *scratch_pool)
+{
+  const char *left_str = flat_branch_id_and_path(fb_left, scratch_pool);
+  const char *right_str = flat_branch_id_and_path(fb_right, scratch_pool);
+  const char *header;
+  apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
+  apr_hash_index_t *hi;
+
+  printf("DBG: subtree_diff_r: l='%s' r='%s'\n",
+         fb_left ? fb_left->rrpath : "<nil>",
+         fb_right ? fb_right->rrpath : "<nil>");
+
+  if (!fb_left)
+    {
+      header = apr_psprintf(scratch_pool,
+                 "--- added branch %s\n",
+                 right_str);
+      printf("%s%s", prefix, header);
+    }
+  else if (!fb_right)
+    {
+      header = apr_psprintf(scratch_pool,
+                 "--- deleted branch %s\n",
+                 left_str);
+      printf("%s%s", prefix, header);
+    }
+  else
+    {
+      if (strcmp(left_str, right_str) == 0)
+        {
+          header = apr_psprintf(
+                     scratch_pool, "--- diff branch %s\n",
+                     left_str);
+        }
+      else
+        {
+          header = apr_psprintf(
+                     scratch_pool, "--- diff branch %s : %s\n",
+                     left_str, right_str);
+        }
+      SVN_ERR(diff_func(editor, fb_left, fb_right, prefix, header, eid_width,
+                        scratch_pool));
+    }
+
+  /* recurse into each subbranch that exists in LEFT and/or in RIGHT */
+  subbranches_l = fb_left ? flat_branch_get_subbranches(fb_left, scratch_pool)
+                          : apr_hash_make(scratch_pool);
+  subbranches_r = fb_right ? flat_branch_get_subbranches(fb_right, scratch_pool)
+                           : apr_hash_make(scratch_pool);
+  subbranches_all = apr_hash_overlay(scratch_pool,
+                                     subbranches_l, subbranches_r);
+
+  for (hi = apr_hash_first(scratch_pool, subbranches_all);
+       hi; hi = apr_hash_next(hi))
+    {
+      int e = svn_int_hash_this_key(hi);
+      flat_branch_t *sub_fb_left = NULL, *sub_fb_right = NULL;
+
+      /* recurse */
+      if (fb_left)
+        sub_fb_left = flat_branch_get_subbranch_at_eid(fb_left, e,
+                                                       scratch_pool);
+      if (fb_right)
+        sub_fb_right = flat_branch_get_subbranch_at_eid(fb_right, e,
+                                                        scratch_pool);
+      SVN_ERR(flat_branch_diff_r(editor,
+                                 sub_fb_left, sub_fb_right,
+                                 diff_func, prefix, eid_width, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
 
 /* Display differences between branch subtrees LEFT and RIGHT.
  *
@@ -1228,80 +1424,17 @@ svn_branch_diff_r(svn_editor3_t *editor,
                   const char *prefix,
                   apr_pool_t *scratch_pool)
 {
-  const char *header;
-  apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
-  apr_hash_index_t *hi;
+  flat_branch_t *fb_left
+    = branch_get_flat_branch(left->branch, left->eid, scratch_pool);
+  flat_branch_t *fb_right
+    = branch_get_flat_branch(right->branch, right->eid, scratch_pool);
+  int eid_width = apr_snprintf(NULL, 0, "%d",
+                               MAX(left->branch->rev_root->next_eid,
+                                   right->branch->rev_root->next_eid));
 
-  if (!left)
-    {
-      header = apr_psprintf(scratch_pool,
-                 "--- added branch %s\n",
-                 branch_id_and_path(right->branch, scratch_pool));
-      printf("%s%s", prefix, header);
-    }
-  else if (!right)
-    {
-      header = apr_psprintf(scratch_pool,
-                 "--- deleted branch %s\n",
-                 branch_id_and_path(left->branch, scratch_pool));
-      printf("%s%s", prefix, header);
-    }
-  else
-    {
-      if (strcmp(branch_id_and_path(left->branch, scratch_pool),
-                 branch_id_and_path(right->branch, scratch_pool)) == 0)
-        {
-          header = apr_psprintf(
-                     scratch_pool, "--- diff branch %s\n",
-                     branch_id_and_path(left->branch, scratch_pool));
-        }
-      else
-        {
-          header = apr_psprintf(
-                     scratch_pool, "--- diff branch %s : %s\n",
-                     branch_id_and_path(left->branch, scratch_pool),
-                     branch_id_and_path(right->branch, scratch_pool));
-        }
-      SVN_ERR(diff_func(editor, left, right, prefix, header, scratch_pool));
-    }
-
-  /* recurse into each subbranch that exists in LEFT and/or in RIGHT */
-  subbranches_l = get_subbranches(left ? left->branch : NULL,
-                                  left ? left->eid : -1,
-                                  scratch_pool, scratch_pool);
-  subbranches_r = get_subbranches(right ? right->branch : NULL,
-                                  right ? right->eid : -1,
-                                  scratch_pool, scratch_pool);
-  subbranches_all = apr_hash_overlay(scratch_pool,
-                                     subbranches_l, subbranches_r);
-
-  for (hi = apr_hash_first(scratch_pool, subbranches_all);
-       hi; hi = apr_hash_next(hi))
-    {
-      const char *branch_id = apr_hash_this_key(hi);
-      svn_branch_state_t *branch_l = svn_hash_gets(subbranches_l, branch_id);
-      svn_branch_state_t *branch_r = svn_hash_gets(subbranches_r, branch_id);
-      svn_branch_el_rev_id_t *sub_left = NULL, *sub_right = NULL;
-
-      if (branch_l)
-        {
-          sub_left = svn_branch_el_rev_id_create(branch_l,
-                                                 branch_l->root_eid,
-                                                 left->rev,
-                                                 scratch_pool);
-        }
-      if (branch_r)
-        {
-          sub_right = svn_branch_el_rev_id_create(branch_r,
-                                                  branch_r->root_eid,
-                                                  right->rev,
-                                                  scratch_pool);
-        }
-
-      /* recurse */
-      svn_branch_diff_r(editor, sub_left, sub_right, diff_func, prefix,
-                        scratch_pool);
-    }
+  SVN_ERR(flat_branch_diff_r(editor,
+                             fb_left, fb_right,
+                             diff_func, prefix, eid_width, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1482,7 +1615,7 @@ svn_branch_log(svn_editor3_t *editor,
       printf("Changed elements:\n");
       SVN_ERR(svn_branch_diff_r(editor,
                                 el_rev_left, right,
-                                svn_branch_diff, "   ",
+                                flat_branch_diff, "   ",
                                 scratch_pool));
       right = el_rev_left;
     }
@@ -1542,7 +1675,7 @@ commit_callback(const svn_commit_info_t *commit_info,
                                     pool, pool));
   SVN_ERR(svn_branch_diff_r(mtcc->editor,
                             el_rev_left, el_rev_right,
-                            svn_branch_diff, "   ",
+                            flat_branch_diff, "   ",
                             pool));
   return SVN_NO_ERROR;
 }
@@ -1688,7 +1821,7 @@ execute(const apr_array_header_t *actions,
             SVN_ERR(svn_branch_diff_r(editor,
                                       el_rev[0] /*from*/,
                                       el_rev[1] /*to*/,
-                                      svn_branch_diff, "",
+                                      flat_branch_diff, "",
                                       iterpool));
           }
           break;
