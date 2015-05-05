@@ -379,6 +379,13 @@ svn_branch_subtree_create(apr_hash_t *e_map,
                           int root_eid,
                           apr_pool_t *result_pool);
 
+/* Return the subbranch rooted at SUBTREE:EID, or NULL if that is
+ * not a subbranch root. */
+svn_branch_subtree_t *
+svn_branch_subtree_get_subbranch_at_eid(svn_branch_subtree_t *subtree,
+                                        int eid,
+                                        apr_pool_t *result_pool);
+
 /* Return the subtree of BRANCH rooted at EID.
  * Recursive: includes subbranches.
  *
