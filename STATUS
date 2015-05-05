@@ -136,6 +136,12 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1676667, r1677267
    'EOF found' error when reading FSFS data (issue #4577).
    Justification:
@@ -147,10 +153,5 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1676667
    Votes:
-     +1: stefan2, brane, rschupp
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: stefan2, brane, rhuijben
+     +1: rschupp (non binding)
