@@ -248,6 +248,16 @@ svn_branch_subtree_create(apr_hash_t *e_map,
   return subtree;
 }
 
+svn_branch_subtree_t *
+svn_branch_subtree_get_subbranch_at_eid(svn_branch_subtree_t *subtree,
+                                        int eid,
+                                        apr_pool_t *result_pool)
+{
+  subtree = svn_int_hash_get(subtree->subbranches, eid);
+
+  return subtree;
+}
+
 /* Validate that ELEMENT is suitable for a mapping of BRANCH:EID.
  * ELEMENT->payload may be null.
  */
