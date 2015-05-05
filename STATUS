@@ -84,13 +84,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1677191
-   Fix client pool SEGV with ra-local and --enable-runtime-module-search.
-   Justification:
-     Regression from 1.8.x, just about any ra-local/DSO operation can fail.
-   Votes:
-     +1: philip, brane, rhuijben
-
  * r1674415, r1676538, r1676570
    Fix a spurious no-op property changes from 'svn copy --pin-externals'.
    Justification:
