@@ -84,16 +84,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1674415, r1676538, r1676570
-   Fix a spurious no-op property changes from 'svn copy --pin-externals'.
-   Justification:
-     Client should avoid sending no-op prop changes. Discussion:
-     http://mail-archives.apache.org/mod_mbox/subversion-dev/201504.mbox/%3C5537E14B.8030303%40syntevo.com%3E
-   Notes:
-     r1674415 is needed to make r1676570 merge without conflicts.
-   Votes:
-     +1: stsp, brane, rhuijben
-
  * r1676667, r1677267
    'EOF found' error when reading FSFS data (issue #4577).
    Justification:
