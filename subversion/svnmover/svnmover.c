@@ -442,7 +442,7 @@ branch_id_and_path(svn_branch_state_t *branch,
                       svn_branch_get_root_rrpath(branch, result_pool));
 }
 
-/* Show the id and path of BRANCH. If VERBOSE is true, alse list its elements.
+/* Show the id and path of BRANCH. If VERBOSE is true, also list its elements.
  */
 static svn_error_t *
 branch_info(svn_branch_state_t *branch,
@@ -1014,6 +1014,10 @@ typedef struct diff_item_t
 /* Return differences between branch subtrees S_LEFT and S_RIGHT.
  *
  * Set *DIFF_CHANGES to an array of (diff_item_t).
+ *
+ * ### This requires 'subtrees' only in order to produce the 'relpath'
+ *     fields in the output. Other than that, it would work with arbitrary
+ *     sets of elements.
  */
 static svn_error_t *
 subtree_diff(svn_array_t **diff_changes,
@@ -1261,6 +1265,7 @@ svn_branch_diff_r(svn_editor3_t *editor,
       SVN_ERR(diff_func(editor, left, right, prefix, header, scratch_pool));
     }
 
+  /* recurse into each subbranch that exists in LEFT and/or in RIGHT */
   subbranches_l = get_subbranches(left ? left->branch : NULL,
                                   left ? left->eid : -1,
                                   scratch_pool, scratch_pool);
