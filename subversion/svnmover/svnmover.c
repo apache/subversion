@@ -426,8 +426,6 @@ flat_branch_get_subbranch_at_eid(flat_branch_t *fb,
   if (! s)
     return NULL;
 
-  sub_fb = apr_pcalloc(result_pool, sizeof(*sub_fb));
-  sub_fb->s = s;
   rrpath = svn_relpath_join(fb->rrpath,
                             svn_branch_subtree_get_path_by_eid(fb->s, eid,
                                                                result_pool),
@@ -494,7 +492,7 @@ flat_branch_subbranch_str(flat_branch_t *fb,
 
   if (subbranch)
     return apr_psprintf(result_pool,
-                        " (branch %s)", fb->bid);
+                        " (branch %s)", subbranch->bid);
   return "";
 }
 
