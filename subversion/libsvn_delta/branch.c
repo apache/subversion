@@ -942,12 +942,24 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   SVN_ERR(parse_branch_line(bid, &root_eid, &branch_root_rrpath,
                             stream, scratch_pool));
 
-  if (branch_root_rrpath[0])
+  /* Find the outer branch and outer EID */
+  if (strcmp(bid, "B0") != 0)
     {
-      svn_branch_find_nested_branch_element_by_rrpath(&outer_branch, &outer_eid,
-                                                      rev_root->root_branch,
-                                                      branch_root_rrpath,
-                                                      scratch_pool);
+      char *outer_bid = apr_pstrdup(scratch_pool, bid);
+      char *last_dot = strrchr(outer_bid, '.');
+
+      if (last_dot) /* BID looks like "B3.11" or "B3.11.22" etc. */
+        {
+          *last_dot = '\0';
+          outer_eid = atoi(last_dot + 1);
+        }
+      else /* looks like "B22" (non-zero and with no dot) */
+        {
+          outer_bid = "B0";
+          outer_eid = atoi(bid + 1);
+        }
+      outer_branch = svn_branch_revision_root_get_branch_by_id(
+                       rev_root, outer_bid, scratch_pool);
     }
   else
     {
