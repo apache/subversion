@@ -71,17 +71,6 @@ Candidate changes:
                  bit controversial for me, so it's better to release it as
                  part of Subversion 1.9.0)
 
- * r1597884
-   Fix Ruby tests so they don't use users real configuration.
-   Justification:
-     Makes check-swig-rb behave consistently regardless of the default
-     configuration settings.
-     .
-     Fixes two Ruby test failures on my build box, where my default
-     client config uses an external colorizing diff tool.
-   Votes:
-     +1: brane, julianfoad
-
  * r1669955
    Reduce FSFS memory allocation in Apache with unbounded MaxFreeMem.
    Justification:
@@ -155,3 +144,15 @@ Approved changes:
    Votes:
      +1: stefan2, brane, rhuijben
      +1: rschupp (non binding)
+
+ * r1597884
+   Fix Ruby tests so they don't use users real configuration.
+   Justification:
+     Makes check-swig-rb behave consistently regardless of the default
+     configuration settings.
+     .
+     Fixes two Ruby test failures on my build box, where my default
+     client config uses an external colorizing diff tool.
+   Votes:
+     +1: brane, julianfoad
+     +0: rhuijben
