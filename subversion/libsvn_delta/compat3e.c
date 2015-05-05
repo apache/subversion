@@ -1114,7 +1114,7 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
                           result_pool, scratch_pool);
 
   /* Rercurse into sub-branches */
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_sub_branches(
+  for (SVN_ARRAY_ITER(bi, svn_branch_get_all_subbranches(
                             branch, scratch_pool, scratch_pool), scratch_pool))
     {
       convert_branch_to_paths_r(paths_union, bi->val, result_pool, bi->iterpool);
