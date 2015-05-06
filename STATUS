@@ -40,9 +40,10 @@ Candidate changes:
      r1561419 has been removed from this change set and proposed for a
      separate backport because it is not a necessary part of the #4554 fix.
    Branch:
-     ^/subversion/branches/1.8.x-issue4554
+     ^/subversion/branches/1.8.x-issue4554-v2
    Votes:
-     +1: stefan2, rhuijben
+     +1: rhuijben
+     +1: stefan2 (before -v2 branch)
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
                    7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
