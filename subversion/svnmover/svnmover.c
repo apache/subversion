@@ -613,15 +613,19 @@ branch_info_by_eids(svn_branch_state_t *branch,
 /* List all branches rooted at EID.
  */
 static svn_error_t *
-list_branches(svn_branch_revision_root_t *rev_root,
+list_branches(svn_editor3_t *editor,
+              svn_revnum_t revnum,
               int eid,
               svn_boolean_t verbose,
               apr_pool_t *scratch_pool)
 {
+  const apr_array_header_t *branches;
   SVN_ITER_T(svn_branch_state_t) *bi;
 
-  for (SVN_ARRAY_ITER(bi, svn_branch_revision_root_get_branches(
-                            rev_root, scratch_pool), scratch_pool))
+  SVN_ERR(svn_editor3_get_all_branches_in_rev(&branches, editor, revnum,
+                                              scratch_pool, scratch_pool));
+
+  for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
     {
       svn_branch_state_t *branch = bi->val;
 
@@ -647,16 +651,20 @@ list_branches(svn_branch_revision_root_t *rev_root,
 /* List all branches.
  */
 static svn_error_t *
-list_all_branches(svn_branch_revision_root_t *rev_root,
+list_all_branches(svn_editor3_t *editor,
+                  svn_revnum_t revnum,
                   svn_boolean_t verbose,
                   apr_pool_t *scratch_pool)
 {
+  const apr_array_header_t *branches;
   SVN_ITER_T(svn_branch_state_t) *bi;
+
+  SVN_ERR(svn_editor3_get_all_branches_in_rev(&branches, editor, revnum,
+                                              scratch_pool, scratch_pool));
 
   printf("branches:\n");
 
-  for (SVN_ARRAY_ITER(bi, svn_branch_revision_root_get_branches(
-                            rev_root, scratch_pool), scratch_pool))
+  for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
     {
       svn_branch_state_t *branch = bi->val;
 
@@ -1866,19 +1874,15 @@ execute(const apr_array_header_t *actions,
                 printf("branches rooted at e%d:\n", el_rev[0]->eid);
               }
             SVN_ERR(list_branches(
-                      el_rev[0]->branch->rev_root,
+                      editor, base_revision,
                       el_rev[0]->eid,
                       FALSE, iterpool));
           }
           break;
         case ACTION_LIST_BRANCHES_R:
           {
-            SVN_ERR(find_el_rev_by_rrpath_rev(
-                      &el_rev[0], editor, base_revision, base_relpath,
-                      pool, pool));
-
-            SVN_ERR(list_all_branches(el_rev[0]->branch->rev_root, TRUE,
-                                      iterpool));
+            /* (Note: BASE_REVISION is always a real revision number, here) */
+            SVN_ERR(list_all_branches(editor, base_revision, TRUE, iterpool));
           }
           break;
         case ACTION_LS:

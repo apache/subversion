@@ -1014,6 +1014,17 @@ svn_editor3__get_baton(const svn_editor3_t *editor);
 
 /* ====================================================================== */
 
+/* Set *BRANCHES_P to an array of (svn_branch_state_t *) pointers to all
+ * branches in revision REVNUM, or in the editing transaction if REVNUM is
+ * SVN_INVALID_REVNUM.
+ */
+svn_error_t *
+svn_editor3_get_all_branches_in_rev(const apr_array_header_t **branches_p,
+                                    svn_editor3_t *editor,
+                                    svn_revnum_t revnum,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
 /* Find the (deepest) branch in the state being edited by EDITOR, of which
  * the path RRPATH is either the root path or a normal, non-sub-branch
  * path. An element need not exist at RRPATH.
