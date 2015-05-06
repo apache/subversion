@@ -130,15 +130,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1597884
-   Fix Ruby tests so they don't use users real configuration.
-   Justification:
-     Makes check-swig-rb behave consistently regardless of the default
-     configuration settings.
-     .
-     Fixes two Ruby test failures on my build box, where my default
-     client config uses an external colorizing diff tool.
-   Votes:
-     +1: brane, julianfoad
-     +0: rhuijben

@@ -233,6 +233,7 @@ realm = #{@realm}
       cred.username = @author
       cred.may_save = false
     end
+    ctx.config = Svn::Core::Config.config(@config_path)
     setup_auth_baton(ctx.auth_baton)
     return ctx unless block_given?
     begin
