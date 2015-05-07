@@ -880,7 +880,7 @@ svn_editor3_get_all_branches_in_rev(const apr_array_header_t **branches_p,
       rev_root = eb->edited_rev_root;
     }
 
-  *branches_p = rev_root->branches;
+  *branches_p = svn_branch_revision_root_get_branches(rev_root, result_pool);
   return SVN_NO_ERROR;
 }
 

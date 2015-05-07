@@ -82,6 +82,25 @@ typedef struct svn_branch_repos_t
 svn_branch_repos_t *
 svn_branch_repos_create(apr_pool_t *result_pool);
 
+/* Set *EL_REV_P to the el-rev-id of the element at branch id BRANCH_ID,
+ * element id EID, in revision REVNUM in REPOS.
+ *
+ * If there is no element there, set *EL_REV_P to point to an id in which
+ * the BRANCH field is the nearest enclosing branch of RRPATH and the EID
+ * field is -1.
+ *
+ * Allocate *EL_REV_P (but not the branch object that it refers to) in
+ * RESULT_POOL.
+ */
+svn_error_t *
+svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
+                                   const svn_branch_repos_t *repos,
+                                   svn_revnum_t revnum,
+                                   const char *branch_id,
+                                   int eid,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 /* Set *EL_REV_P to the el-rev-id of the element at repos-relpath RRPATH
  * in revision REVNUM in REPOS.
  *
