@@ -757,7 +757,7 @@ svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
   return SVN_NO_ERROR;
 }
 
-/* Return a mutable state for the youngest revision in REPOS.
+/* Return a mutable state based on revision BASE_REVISION in REPOS.
  */
 static svn_error_t *
 svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
@@ -774,6 +774,8 @@ svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
                                          repos, ra_session, branch_info_dir,
                                          base_revision,
                                          result_pool, scratch_pool));
+  (*rev_root_p)->base_rev = (*rev_root_p)->rev;
+  (*rev_root_p)->rev = SVN_INVALID_REVNUM;
   return SVN_NO_ERROR;
 }
 

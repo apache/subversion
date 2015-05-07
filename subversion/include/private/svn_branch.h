@@ -132,6 +132,10 @@ typedef struct svn_branch_revision_root_t
   /* If committed, the revision number; else SVN_INVALID_REVNUM. */
   svn_revnum_t rev;
 
+  /* If committed, the previous revision number, else the revision number
+     on which this transaction is based. */
+  svn_revnum_t base_rev;
+
   /* The range of element ids assigned. */
   int first_eid, next_eid;
 
@@ -147,6 +151,7 @@ typedef struct svn_branch_revision_root_t
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
+                                svn_revnum_t base_rev,
                                 struct svn_branch_state_t *root_branch,
                                 apr_pool_t *result_pool);
 

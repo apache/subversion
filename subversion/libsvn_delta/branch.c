@@ -69,6 +69,7 @@ svn_branch_repos_create(apr_pool_t *result_pool)
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
+                                svn_revnum_t base_rev,
                                 struct svn_branch_state_t *root_branch,
                                 apr_pool_t *result_pool)
 {
@@ -77,6 +78,7 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
 
   rev_root->repos = repos;
   rev_root->rev = rev;
+  rev_root->base_rev = base_rev;
   rev_root->root_branch = root_branch;
   rev_root->branches = svn_array_make(result_pool);
   return rev_root;
@@ -1066,7 +1068,8 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
              &num_branches);
   SVN_ERR_ASSERT(n == 4);
 
-  rev_root = svn_branch_revision_root_create(repos, rev, NULL /*root_branch*/,
+  rev_root = svn_branch_revision_root_create(repos, rev, rev - 1,
+                                             NULL /*root_branch*/,
                                              result_pool);
   rev_root->first_eid = first_eid;
   rev_root->next_eid = next_eid;
