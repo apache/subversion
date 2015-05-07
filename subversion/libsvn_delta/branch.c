@@ -790,10 +790,14 @@ svn_branch_add_new_branch(svn_branch_state_t *outer_branch,
                           int root_eid,
                           apr_pool_t *scratch_pool)
 {
-  svn_branch_state_t *new_branch
-    = svn_branch_state_create(root_eid, outer_branch->rev_root,
-                              outer_branch, outer_eid,
-                              outer_branch->rev_root->repos->pool);
+  svn_branch_state_t *new_branch;
+
+  if (root_eid == -1)
+    root_eid = svn_branch_allocate_new_eid(outer_branch->rev_root);
+
+  new_branch = svn_branch_state_create(root_eid, outer_branch->rev_root,
+                                       outer_branch, outer_eid,
+                                       outer_branch->rev_root->repos->pool);
 
   /* A branch must not already exist at this outer element */
   SVN_ERR_ASSERT_NO_RETURN(svn_branch_get_subbranch_at_eid(

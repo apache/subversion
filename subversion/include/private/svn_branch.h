@@ -254,6 +254,9 @@ svn_branch_state_create(int root_eid,
  *
  * Do not require that a subbranch root element exists in OUTER_BRANCH,
  * nor create one.
+ *
+ * Set the root element to ROOT_EID, or, if ROOT_EID is -1, allocate a new
+ * EID for the root element.
  */
 svn_branch_state_t *
 svn_branch_add_new_branch(svn_branch_state_t *outer_branch,
