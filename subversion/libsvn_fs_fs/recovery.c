@@ -210,7 +210,7 @@ recover_find_max_ids(svn_fs_t *fs,
       svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
 
       svn_error_clear(svn_stream_close(stream));
-      return svn_error_quick_wrapf(err,
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                 _("malformed representation for node-revision '%s'"),
                 id_str->data);
     }
