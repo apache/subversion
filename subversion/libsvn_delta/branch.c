@@ -296,6 +296,12 @@ branch_validate_element(const svn_branch_state_t *branch,
     }
 }
 
+apr_hash_t *
+svn_branch_get_elements(svn_branch_state_t *branch)
+{
+  return branch->e_map;
+}
+
 svn_branch_el_rev_content_t *
 svn_branch_get_element(const svn_branch_state_t *branch,
                        int eid)
