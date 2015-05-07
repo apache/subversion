@@ -2724,16 +2724,27 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
 
   if (noderev->prop_rep && svn_fs_fs__id_txn_used(&noderev->prop_rep->txn_id))
     {
+      svn_error_t *err;
       const char *filename
         = svn_fs_fs__path_txn_node_props(fs, noderev->id, pool);
       proplist = apr_hash_make(pool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+      err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool);
+      if (err)
+        {
+          svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
+
+          svn_error_clear(svn_stream_close(stream));
+          return svn_error_quick_wrapf(err,
+                   _("malformed property list for node-revision '%s' in '%s'"),
+                   id_str->data, filename);
+        }
       SVN_ERR(svn_stream_close(stream));
     }
   else if (noderev->prop_rep)
     {
+      svn_error_t *err;
       fs_fs_data_t *ffd = fs->fsap_data;
       representation_t *rep = noderev->prop_rep;
       pair_cache_key_t key = { 0 };
@@ -2752,7 +2763,16 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
       proplist = apr_hash_make(pool);
       SVN_ERR(svn_fs_fs__get_contents(&stream, fs, noderev->prop_rep, FALSE,
                                       pool));
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+      err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool);
+      if (err)
+        {
+          svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
+          
+          svn_error_clear(svn_stream_close(stream));
+          return svn_error_quick_wrapf(err,
+                   _("malformed property list for node-revision '%s'"),
+                   id_str->data);
+        }
       SVN_ERR(svn_stream_close(stream));
 
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
