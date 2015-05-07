@@ -1128,6 +1128,7 @@ get_txn_proplist(apr_hash_t *proplist,
                  apr_pool_t *pool)
 {
   svn_stream_t *stream;
+  svn_error_t *err;
 
   /* Check for issue #3696. (When we find and fix the cause, we can change
    * this to an assertion.) */
@@ -1141,7 +1142,14 @@ get_txn_proplist(apr_hash_t *proplist,
                                    pool, pool));
 
   /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+  err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool);
+  if (err)
+    {
+      svn_error_clear(svn_stream_close(stream));  
+      return svn_error_quick_wrapf(err,
+               _("malformed property list in transaction '%s'"),
+               path_txn_props(fs, txn_id, pool));
+    }
 
   return svn_stream_close(stream);
 }
