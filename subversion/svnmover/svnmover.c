@@ -1668,7 +1668,6 @@ mk_branch(svn_branch_state_t **new_branch_p,
           svn_element_payload_t *payload,
           apr_pool_t *iterpool)
 {
-  int new_root_eid = svn_branch_allocate_new_eid(outer_branch->rev_root);
   int new_outer_eid;
   svn_branch_state_t *new_branch;
 
@@ -1676,9 +1675,9 @@ mk_branch(svn_branch_state_t **new_branch_p,
                           outer_branch, outer_parent_eid, outer_name,
                           NULL /*new_payload*/));
   new_branch = svn_branch_add_new_branch(
-                 outer_branch, new_outer_eid, new_root_eid,
+                 outer_branch, new_outer_eid, -1/*new_root_eid*/,
                  iterpool);
-  svn_branch_update_element(new_branch, new_root_eid,
+  svn_branch_update_element(new_branch, new_branch->root_eid,
                             -1, "", payload);
   *new_branch_p = new_branch;
   return SVN_NO_ERROR;
