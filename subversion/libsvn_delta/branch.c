@@ -1211,6 +1211,39 @@ svn_branch_find_nested_branch_element_by_rrpath(
 }
 
 svn_error_t *
+svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
+                                   const svn_branch_repos_t *repos,
+                                   svn_revnum_t revnum,
+                                   const char *branch_id,
+                                   int eid,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
+  const svn_branch_revision_root_t *rev_root;
+
+  if (revnum < 0 || revnum >= repos->rev_roots->nelts)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), revnum);
+
+  rev_root = svn_array_get(repos->rev_roots, (int)(revnum));
+  el_rev->rev = revnum;
+  el_rev->branch
+    = svn_branch_revision_root_get_branch_by_id(rev_root, branch_id,
+                                                scratch_pool);
+  if (svn_branch_get_element(el_rev->branch, eid))
+    {
+      el_rev->eid = eid;
+    }
+  else
+    {
+      el_rev->eid = -1;
+    }
+  *el_rev_p = el_rev;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                 const char *rrpath,
                                 svn_revnum_t revnum,

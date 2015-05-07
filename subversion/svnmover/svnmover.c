@@ -1605,28 +1605,23 @@ do_move(svn_editor3_t *editor,
 }
 
 /*  */
-static svn_branch_el_rev_id_t *
-svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t *old_el_rev,
+static svn_error_t *
+svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t **new_el_rev_p,
+                                   svn_branch_el_rev_id_t *old_el_rev,
                                    apr_pool_t *result_pool)
 {
   const svn_branch_repos_t *repos = old_el_rev->branch->rev_root->repos;
-  const svn_branch_revision_root_t *rev_root;
   const char *branch_id;
-  svn_branch_state_t *branch;
-  svn_branch_el_rev_id_t *new_el_rev;
 
   if (old_el_rev->rev <= 0)
     return NULL;
 
   branch_id = svn_branch_get_id(old_el_rev->branch, result_pool);
-  rev_root = svn_array_get(repos->rev_roots, (int)(old_el_rev->rev - 1));
-  branch = svn_branch_revision_root_get_branch_by_id(rev_root, branch_id,
-                                                     result_pool);
-
-  new_el_rev = svn_branch_el_rev_id_create(branch, old_el_rev->eid,
-                                           old_el_rev->rev - 1,
-                                           result_pool);
-  return new_el_rev;
+  SVN_ERR(svn_branch_repos_find_el_rev_by_id(new_el_rev_p,
+                                             repos, old_el_rev->rev - 1,
+                                             branch_id, old_el_rev->eid,
+                                             result_pool, result_pool));
+  return SVN_NO_ERROR;
 }
 
 /* Similar to 'svn log -v', this iterates over the revisions between
@@ -1643,8 +1638,9 @@ svn_branch_log(svn_editor3_t *editor,
 
   for (rev = right->rev; rev > first_rev; rev--)
     {
-      svn_branch_el_rev_id_t *el_rev_left
-        = svn_branch_find_predecessor_el_rev(right, scratch_pool);
+      svn_branch_el_rev_id_t *el_rev_left;
+
+      SVN_ERR(svn_branch_find_predecessor_el_rev(&el_rev_left, right, scratch_pool));
 
       printf(SVN_CL__LOG_SEP_STRING "r%ld | ...\n",
              rev);
