@@ -398,6 +398,14 @@ svn_branch_get_subtree(const svn_branch_state_t *branch,
  */
 #define SVN_BRANCH_SEQUENCE_POINT(branch)
 
+/* Return the mapping of elements in branch BRANCH.
+ *
+ * The mapping is from pointer-to-eid to
+ * pointer-to-svn_branch_el_rev_content_t.
+ */
+apr_hash_t *
+svn_branch_get_elements(svn_branch_state_t *branch);
+
 /* In BRANCH, get element EID (parent, name, payload).
  *
  * If element EID is not present, return null. Otherwise, the returned

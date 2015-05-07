@@ -544,31 +544,41 @@ list_branch_elements(flat_branch_t *fb,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static int
+sort_compare_items_by_eid(const svn_sort__item_t *a,
+                          const svn_sort__item_t *b)
+{
+  int eid_a = *(const int *)a->key;
+  int eid_b = *(const int *)b->key;
+
+  return eid_a - eid_b;
+}
+
 /* List all elements in branch BRANCH, in element notation.
  */
 static svn_error_t *
 list_branch_elements_by_eid(svn_branch_state_t *branch,
                             apr_pool_t *scratch_pool)
 {
-  int eid;
-  int eid_width = apr_snprintf(NULL, 0, "%d", branch->rev_root->next_eid - 1);
+  SVN_ITER_T(svn_branch_el_rev_content_t) *pi;
 
-  for (eid = branch->rev_root->first_eid; eid < branch->rev_root->next_eid; eid++)
+  for (SVN_HASH_ITER_SORTED(pi, svn_branch_get_elements(branch),
+                            sort_compare_items_by_eid, scratch_pool))
     {
-      svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);
+      int eid = *(const int *)(pi->key);
+      svn_branch_el_rev_content_t *element = pi->val;
 
       if (element && element->parent_eid == -1)
         {
           /* root element of this branch */
-          printf("    e%-*d  %-*s .\n",
-                 eid_width, eid,
-                 eid_width, "");
+          printf("    e%-3d  %-3s .\n",
+                 eid, "");
         }
       else if (element)
         {
-          printf("    e%-*d e%-*d/%s%s\n",
-                 eid_width, eid,
-                 eid_width, element->parent_eid,
+          printf("    e%-3d e%-3d/%s%s\n",
+                 eid, element->parent_eid,
                  element->name,
                  subbranch_str(branch, eid, scratch_pool));
         }
@@ -998,7 +1008,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   svn_branch_subtree_t *s_src, *s_tgt, *s_yca;
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
   svn_boolean_t had_conflict = FALSE;
-  int first_eid, next_eid, eid;
+  SVN_ITER_T(svn_branch_el_rev_content_t *) *pi;
+  apr_hash_t *all_elements;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
 
   SVN_ERR_ASSERT(src->eid == tgt->eid);
@@ -1037,13 +1048,16 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                                          editor, s_yca, s_tgt,
                                          scratch_pool, scratch_pool));
 
-  first_eid = yca->branch->rev_root->first_eid;
-  next_eid = yca->branch->rev_root->next_eid;
-  next_eid = MAX(next_eid, src->branch->rev_root->next_eid);
-  next_eid = MAX(next_eid, tgt->branch->rev_root->next_eid);
-
-  for (eid = first_eid; eid < next_eid; eid++)
+  all_elements = apr_hash_overlay(scratch_pool,
+                                  svn_branch_get_elements(src->branch),
+                                  svn_branch_get_elements(tgt->branch));
+  all_elements = apr_hash_overlay(scratch_pool,
+                                  svn_branch_get_elements(yca->branch),
+                                  all_elements);
+  for (SVN_HASH_ITER_SORTED(pi, all_elements,
+                            sort_compare_items_by_eid, scratch_pool))
     {
+      int eid = *(const int *)(pi->key);
       svn_branch_el_rev_content_t **e_yca_src
         = svn_int_hash_get(diff_yca_src, eid);
       svn_branch_el_rev_content_t **e_yca_tgt
@@ -1365,7 +1379,6 @@ flat_branch_diff_r(svn_editor3_t *editor,
                    flat_branch_t *fb_right,
                    svn_branch_diff_func_t diff_func,
                    const char *prefix,
-                   int eid_width,
                    apr_pool_t *scratch_pool)
 {
   const char *left_str = flat_branch_id_and_path(fb_left, scratch_pool);
@@ -1406,7 +1419,7 @@ flat_branch_diff_r(svn_editor3_t *editor,
                      scratch_pool, "--- diff branch %s : %s\n",
                      left_str, right_str);
         }
-      SVN_ERR(diff_func(editor, fb_left, fb_right, prefix, header, eid_width,
+      SVN_ERR(diff_func(editor, fb_left, fb_right, prefix, header, 3 /*eid_width*/,
                         scratch_pool));
     }
 
@@ -1433,7 +1446,7 @@ flat_branch_diff_r(svn_editor3_t *editor,
                                                         scratch_pool);
       SVN_ERR(flat_branch_diff_r(editor,
                                  sub_fb_left, sub_fb_right,
-                                 diff_func, prefix, eid_width, scratch_pool));
+                                 diff_func, prefix, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1454,13 +1467,10 @@ svn_branch_diff_r(svn_editor3_t *editor,
     = branch_get_flat_branch(left->branch, left->eid, scratch_pool);
   flat_branch_t *fb_right
     = branch_get_flat_branch(right->branch, right->eid, scratch_pool);
-  int eid_width = apr_snprintf(NULL, 0, "%d",
-                               MAX(left->branch->rev_root->next_eid,
-                                   right->branch->rev_root->next_eid));
 
   SVN_ERR(flat_branch_diff_r(editor,
                              fb_left, fb_right,
-                             diff_func, prefix, eid_width, scratch_pool));
+                             diff_func, prefix, scratch_pool));
   return SVN_NO_ERROR;
 }
 
