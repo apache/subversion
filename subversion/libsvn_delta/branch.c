@@ -968,12 +968,12 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   /* Find the outer branch and outer EID */
   if (strcmp(bid, "B0") != 0)
     {
-      char *outer_bid = apr_pstrdup(scratch_pool, bid);
-      char *last_dot = strrchr(outer_bid, '.');
+      char *last_dot = strrchr(bid, '.');
+      const char *outer_bid;
 
       if (last_dot) /* BID looks like "B3.11" or "B3.11.22" etc. */
         {
-          *last_dot = '\0';
+          outer_bid = apr_pstrndup(scratch_pool, bid, last_dot - bid);
           outer_eid = atoi(last_dot + 1);
         }
       else /* looks like "B22" (non-zero and with no dot) */
