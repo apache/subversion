@@ -707,6 +707,17 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
   apr_hash_index_t *hi;
   svn_branch_el_rev_content_t *new_root_content;
 
+  /* Source element must not be the same as the target parent element */
+  if (new_subtree.root_eid == new_parent_eid)
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Cannot branch from e%d to %s e%d/%s: "
+                                 "target element cannot be its own parent"),
+                               new_subtree.root_eid,
+                               svn_branch_get_id(to_branch, scratch_pool),
+                               new_parent_eid, new_name);
+    }
+
   /* Instantiate the root element of NEW_SUBTREE */
   new_root_content = svn_int_hash_get(new_subtree.e_map, new_subtree.root_eid);
   if (new_root_content->payload)
@@ -1381,7 +1392,7 @@ svn_branch_branch_into(svn_branch_state_t *from_branch,
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("cannot branch from b%s e%d: "
+                               _("Cannot branch from %s e%d: "
                                  "does not exist"),
                                svn_branch_get_id(
                                  from_branch, scratch_pool), from_eid);
