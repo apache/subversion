@@ -85,6 +85,13 @@ Other candidate changes:
    Votes:
      +1: stsp
 
+ * r1678494
+   Document svn:auto-props.
+   Justification:
+     Documentation should be complete.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
