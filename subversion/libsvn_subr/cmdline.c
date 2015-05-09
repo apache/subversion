@@ -882,7 +882,7 @@ string_in_array(const char *needle,
 #include "config_keys.inc"
 
 /* Validate the FILE, SECTION, and OPTION components of CONFIG_OPTION are
- * known.  Warn to stderr if not.  (An unknown value may be either a typo
+ * known.  Return an error if not.  (An unknown value may be either a typo
  * or added in a newer minor version of Subversion.) */
 static svn_error_t *
 validate_config_option(svn_cmdline__config_argument_t *config_option,
