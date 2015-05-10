@@ -538,19 +538,20 @@ trust_server_cert_non_interactive(svn_auth_cred_ssl_server_trust_t **cred_p,
                                   apr_pool_t *pool)
 {
   struct trust_server_cert_non_interactive_baton *b = baton;
+  apr_uint32_t non_ignored_failures;
   *cred_p = NULL;
 
-  if (failures == 0 ||
-      (b->trust_server_cert_unknown_ca &&
-       (failures & SVN_AUTH_SSL_UNKNOWNCA)) ||
-      (b->trust_server_cert_cn_mismatch &&
-       (failures & SVN_AUTH_SSL_CNMISMATCH)) ||
-      (b->trust_server_cert_expired &&
-       (failures & SVN_AUTH_SSL_EXPIRED)) ||
-      (b->trust_server_cert_not_yet_valid &&
-        (failures & SVN_AUTH_SSL_NOTYETVALID)) ||
-      (b->trust_server_cert_other_failure &&
-        (failures & SVN_AUTH_SSL_OTHER)))
+  /* Mask away bits we are instructed to ignore. */
+  non_ignored_failures = failures & ~(
+        (b->trust_server_cert_unknown_ca ? SVN_AUTH_SSL_UNKNOWNCA : 0)
+      | (b->trust_server_cert_cn_mismatch ? SVN_AUTH_SSL_CNMISMATCH : 0)
+      | (b->trust_server_cert_expired ? SVN_AUTH_SSL_EXPIRED : 0)
+      | (b->trust_server_cert_not_yet_valid ? SVN_AUTH_SSL_NOTYETVALID : 0)
+      | (b->trust_server_cert_other_failure ? SVN_AUTH_SSL_OTHER : 0)
+  );
+
+  /* If no failures remain, accept the certificate. */
+  if (non_ignored_failures == 0)
     {
       *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
       (*cred_p)->may_save = FALSE;
