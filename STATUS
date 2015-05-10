@@ -16,6 +16,16 @@ Status of 1.9.0:
 Release blockers for 1.9.0:
 ===========================
 
+ * r1678571
+   Fix false-positive acceptance of certificates with multiple failures of
+   which some but not all were designated acceptable.
+   Justification:
+     Security issue.
+   Notes:
+     The issue does not exist in 1.8.x or earlier.
+   Votes:
+     +0: danielsh (not tested)
+
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
