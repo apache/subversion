@@ -89,7 +89,7 @@ Other candidate changes:
    Votes:
      +1: brane, rhuijben
 
- * r1678147, r1678149, r1678151
+ * r1678147, r1678149
    Provide more informative error messages for FSFS parsing errors.
    Justification:
      "Serialized hash missing terminator" is a mostly useless error message.
