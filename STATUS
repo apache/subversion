@@ -95,29 +95,30 @@ Other candidate changes:
      +1: brane
      +0: rhuijben (Unable to test)
 
- * r1677003
-   Bump reqired Java version to 1.6 for JavaHL.
-   Justification:
-     Java 5 is dead. JavaHL 1.9+ uses 1.6 APIs.
-   Votes:
-     +1: brane, rhuijben
+Veto-blocked changes:
+=====================
 
- * r1678147, r1678149
-   Provide more informative error messages for FSFS parsing errors.
-   Justification:
-     "Serialized hash missing terminator" is a mostly useless error message.
-   Votes:
-     +1: stsp, rhuijben
+Approved changes:
+=================
 
  * r1678494
    Document svn:auto-props.
    Justification:
      Documentation should be complete.
    Votes:
-     +1: danielsh, rhuijben
+     +1: danielsh, rhuijben, stefan2
 
-Veto-blocked changes:
-=====================
+ * r1678147, r1678149
+   Provide more informative error messages for FSFS parsing errors.
+   Justification:
+     "Serialized hash missing terminator" is a mostly useless error message.
+   Votes:
+     +1: stsp, rhuijben, stefan2
 
-Approved changes:
-=================
+ * r1677003
+   Bump reqired Java version to 1.6 for JavaHL.
+   Justification:
+     Java 5 is dead. JavaHL 1.9+ uses 1.6 APIs.
+   Votes:
+     +1: brane, rhuijben, stefan2
+
