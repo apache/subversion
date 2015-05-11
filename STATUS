@@ -49,12 +49,16 @@ Candidate changes that cannot go into a later 1.9.x:
      +1: stefan2
      +1: rhuijben (1.9.0 only. Should be private api for >=1.9.1)
 
- * r1678734
+ * r1678734, r1678742, r1678745, r1678746
    Use --trust-server-cert-failures instead of separate options on cmdline
    Justification:
      Reduces the number of global options that have to be documented
      and handled everywhere. Gives the options more context on where they
      are used.
+   Notes:
+     r1678742 fixes test failures caused by mixed eols.
+     r1678745 updates the bash completion script
+     r1678746 extends the documentation to include information lost in r1678734
    Votes:
      +1: rhuijben (1.9.0 only)
 
