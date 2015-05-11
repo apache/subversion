@@ -781,8 +781,7 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive \
-	       --trust-unknown-ca --trust-cn-mismatch \
-	       --trust-expired --trust-not-yet-valid --trust-other-failure \
+	       --trust-server-cert-failures \
 	       --force-interactive"
 	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
 	rOpts="-r --revision"
