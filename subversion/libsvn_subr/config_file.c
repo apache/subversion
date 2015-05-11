@@ -1099,7 +1099,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-password = defaultpassword"                            NL
         "# http-compression = no"                                            NL
         "# No http-timeout, so just use the builtin default."                NL
-        "# No neon-debug-mask, so neon debugging is disabled."               NL
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
         "#"                                                                  NL
         "# Password / passphrase caching parameters:"                        NL
