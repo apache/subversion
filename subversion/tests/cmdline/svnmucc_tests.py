@@ -453,6 +453,49 @@ rm A/B/C/Y
                                      'log', '-qvr3', repo_url)
 
 
+@XFail()
+@Issue(4579)
+def modify_and_delete_file(sbox):
+  "modify and delete file"
+
+  # This used to fail with:
+  #  svnmucc: E200009: Can't delete node at 'iota'
+  sbox.build()
+  svntest.main.file_write(sbox.ospath('file'), "New iota")
+  test_svnmucc(sbox.repo_url, ['D /iota'],
+               '-m', 'r2: modify and delete /iota',
+               'put', sbox.ospath('file'), '/iota',
+               'rm', '/iota')
+
+
+@XFail()
+@Issue(4579)
+def propset_and_delete_file(sbox):
+  "propset and delete file"
+
+  # This used to fail with:
+  #  svnmucc: E200009: Can't delete node at 'iota'
+  sbox.build(create_wc=False)
+  test_svnmucc(sbox.repo_url, ['D /iota'],
+               '-m', 'r2: propset and delete /iota',
+               'propset', 'prop', 'val', '/iota',
+               'rm', '/iota')
+
+
+@XFail()
+@Issue(4579)
+def delete_and_delete_file(sbox):
+  "delete and delete file"
+
+  # This used to fail with:
+  #  svnmucc: E160013: Can't delete node at 'iota' as it does not exist
+  sbox.build(create_wc=False)
+  test_svnmucc(sbox.repo_url, ['D /iota'],
+               '-m', 'r2: delete and delete /iota',
+               'rm', '/iota',
+               'rm', '/iota')
+
+
 ######################################################################
 
 test_list = [ None,
@@ -462,6 +505,9 @@ test_list = [ None,
               too_many_log_messages,
               no_log_msg_non_interactive,
               nested_replaces,
+              modify_and_delete_file,
+              propset_and_delete_file,
+              delete_and_delete_file,
             ]
 
 if __name__ == '__main__':
