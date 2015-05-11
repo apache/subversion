@@ -940,7 +940,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              HTTP operation."                   NL
         "###   http-chunked-requests      Whether to use chunked transfer"   NL
         "###                              encoding for HTTP requests body."  NL
-        "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
         "###   ssl-trust-default-ca       Trust the system 'default' CAs"    NL
@@ -1033,7 +1032,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Most users will not need to explicitly set the http-library"    NL
         "### option, but valid values for the option include:"               NL
         "###    'serf': Serf-based module (Subversion 1.5 - present)"        NL
-        "###    'neon': Neon-based module (Subversion 1.0 - 1.7)"            NL
         "### Availability of these modules may depend on your specific"      NL
         "### Subversion distribution."                                       NL
         "###"                                                                NL
@@ -1058,7 +1056,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-username = blah"                                       NL
         "# http-proxy-password = doubleblah"                                 NL
         "# http-timeout = 60"                                                NL
-        "# neon-debug-mask = 130"                                            NL
 #ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "# store-plaintext-passwords = no"                                   NL
 #endif
