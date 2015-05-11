@@ -245,11 +245,17 @@ const apr_getopt_option_t svn_cl__options[] =
   {"trust-server-cert-failures", opt_trust_server_cert_failures, 1,
                     N_("with --non-interactive, accept SSL server\n"
                        "                             "
-                       "certificates with failures; ARG is comma-\n"
+                       "certificates with failures; ARG is comma-separated\n"
                        "                             "
-                       "separated list of 'unknown-ca', 'cn-mismatch',\n"
+                       "list of 'unknown-ca' (Unknown Authority),\n"
                        "                             "
-                       "'expired', 'not-yet-valid', and 'other'.")},
+                       "'cn-mismatch' (Hostname mismatch), 'expired'\n"
+                       "                             "
+                       "(Expired certificate), 'not-yet-valid' (Not yet\n"
+                       "                             "
+                       "valid certificate) and 'other' (all other not\n"
+                       "                             "
+                       "separately classified certificate errors).")},
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting (default is to prompt\n"
                        "                             "
