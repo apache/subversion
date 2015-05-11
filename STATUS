@@ -94,14 +94,14 @@ Other candidate changes:
    Justification:
      "Serialized hash missing terminator" is a mostly useless error message.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1678494
    Document svn:auto-props.
    Justification:
      Documentation should be complete.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
 Veto-blocked changes:
 =====================
