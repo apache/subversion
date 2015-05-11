@@ -2735,7 +2735,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
         {
           svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
 
-          svn_error_clear(svn_stream_close(stream));
+          err = svn_error_compose_create(err, svn_stream_close(stream));
           return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                    _("malformed property list for node-revision '%s' in '%s'"),
                    id_str->data, filename);
@@ -2767,8 +2767,8 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
       if (err)
         {
           svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
-          
-          svn_error_clear(svn_stream_close(stream));
+
+          err = svn_error_compose_create(err, svn_stream_close(stream));
           return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                    _("malformed property list for node-revision '%s'"),
                    id_str->data);

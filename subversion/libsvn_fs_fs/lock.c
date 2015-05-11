@@ -222,7 +222,7 @@ write_digest_file(apr_hash_t *children,
                                  svn_io_file_del_none, pool, pool));
   if ((err = svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool)))
     {
-      svn_error_clear(svn_stream_close(stream));
+      err = svn_error_compose_create(err, svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Cannot write lock/entries hashfile '%s'"),
@@ -273,7 +273,7 @@ read_digest_file(apr_hash_t **children_p,
   hash = apr_hash_make(pool);
   if ((err = svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool)))
     {
-      svn_error_clear(svn_stream_close(stream));
+      err = svn_error_compose_create(err, svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Can't parse lock/entries hashfile '%s'"),
