@@ -202,11 +202,17 @@ static const apr_getopt_option_t svnsync_options[] =
     {"trust-server-cert-failures", svnsync_opt_trust_server_cert_failures, 1,
                       N_("with --non-interactive, accept SSL server\n"
                          "                             "
-                         "certificates with failures; ARG is comma-\n"
+                         "certificates with failures; ARG is comma-separated\n"
                          "                             "
-                         "separated list of 'unknown-ca', 'cn-mismatch',\n"
+                         "list of 'unknown-ca' (Unknown Authority),\n"
                          "                             "
-                         "'expired', 'not-yet-valid', and 'other'.")},
+                         "'cn-mismatch' (Hostname mismatch), 'expired'\n"
+                         "                             "
+                         "(Expired certificate), 'not-yet-valid' (Not yet\n"
+                         "                             "
+                         "valid certificate) and 'other' (all other not\n"
+                         "                             "
+                         "separately classified certificate errors).")},
     {"source-username", svnsync_opt_source_username, 1,
                        N_("connect to source repository with username ARG") },
     {"source-password", svnsync_opt_source_password, 1,

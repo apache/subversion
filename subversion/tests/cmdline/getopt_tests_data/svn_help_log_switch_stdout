@@ -125,9 +125,12 @@ Global options:
   --trust-server-cert      : deprecated; same as
                              --trust-server-cert-failures=unknown-ca
   --trust-server-cert-failures ARG : with --non-interactive, accept SSL server
-                             certificates with failures; ARG is comma-
-                             separated list of 'unknown-ca', 'cn-mismatch',
-                             'expired', 'not-yet-valid', and 'other'.
+                             certificates with failures; ARG is comma-separated
+                             list of 'unknown-ca' (Unknown Authority),
+                             'cn-mismatch' (Hostname mismatch), 'expired'
+                             (Expired certificate), 'not-yet-valid' (Not yet
+                             valid certificate) and 'other' (all other not
+                             separately classified certificate errors).
   --config-dir ARG         : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
@@ -212,9 +215,12 @@ Global options:
   --trust-server-cert      : deprecated; same as
                              --trust-server-cert-failures=unknown-ca
   --trust-server-cert-failures ARG : with --non-interactive, accept SSL server
-                             certificates with failures; ARG is comma-
-                             separated list of 'unknown-ca', 'cn-mismatch',
-                             'expired', 'not-yet-valid', and 'other'.
+                             certificates with failures; ARG is comma-separated
+                             list of 'unknown-ca' (Unknown Authority),
+                             'cn-mismatch' (Hostname mismatch), 'expired'
+                             (Expired certificate), 'not-yet-valid' (Not yet
+                             valid certificate) and 'other' (all other not
+                             separately classified certificate errors).
   --config-dir ARG         : read user configuration files from directory ARG
   --config-option ARG      : set user configuration option in the format:
                                  FILE:SECTION:OPTION=[VALUE]
