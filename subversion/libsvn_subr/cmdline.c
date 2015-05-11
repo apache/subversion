@@ -1529,3 +1529,52 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
 
   return svn_error_trace(err);
 }
+
+svn_error_t *
+svn_cmdline__parse_trust_options(
+                        svn_boolean_t *trust_server_cert_unknown_ca,
+                        svn_boolean_t *trust_server_cert_cn_mismatch,
+                        svn_boolean_t *trust_server_cert_expired,
+                        svn_boolean_t *trust_server_cert_not_yet_valid,
+                        svn_boolean_t *trust_server_cert_other_failure,
+                        const char *opt_arg,
+                        const char *error_prefix,
+                        apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *failures;
+  int i;
+
+  *trust_server_cert_unknown_ca = FALSE;
+  *trust_server_cert_cn_mismatch = FALSE;
+  *trust_server_cert_expired = FALSE;
+  *trust_server_cert_not_yet_valid = FALSE;
+  *trust_server_cert_other_failure = FALSE;
+
+  failures = svn_cstring_split(opt_arg, ", \n\r\t\v", TRUE, scratch_pool);
+
+  for (i = 0; i < failures->nelts; i++)
+    {
+      const char *value = APR_ARRAY_IDX(failures, i, const char *);
+      if (!strcmp(value, "unknown-ca"))
+        *trust_server_cert_unknown_ca = TRUE;
+      else if (!strcmp(value, "cn-mismatch"))
+        *trust_server_cert_cn_mismatch = TRUE;
+      else if (!strcmp(value, "expired"))
+        *trust_server_cert_expired = TRUE;
+      else if (!strcmp(value, "not-yet-valid"))
+        *trust_server_cert_not_yet_valid = TRUE;
+      else if (!strcmp(value, "other"))
+        *trust_server_cert_other_failure = TRUE;
+      else
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  _("%sUnknown value '%s' for %s.\n"
+                                    "Supported values: %s"),
+                                  error_prefix ? error_prefix : "",
+                                  value,
+                                  "--trust-server-cert-failures",
+                                  "unknown-ca, cn-mismatch, expired, "
+                                  "not-yet-valid, other");
+    }
+
+  return SVN_NO_ERROR;
+}

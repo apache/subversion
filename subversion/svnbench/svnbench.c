@@ -67,11 +67,7 @@ typedef enum svn_cl__longopt_t {
   opt_with_all_revprops,
   opt_with_no_revprops,
   opt_trust_server_cert,
-  opt_trust_server_cert_unknown_ca,
-  opt_trust_server_cert_cn_mismatch,
-  opt_trust_server_cert_expired,
-  opt_trust_server_cert_not_yet_valid,
-  opt_trust_server_cert_other_failure,
+  opt_trust_server_cert_failures,
   opt_changelist
 } svn_cl__longopt_t;
 
@@ -127,29 +123,17 @@ const apr_getopt_option_t svn_cl__options[] =
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
-                    N_("deprecated; same as --trust-unknown-ca")},
-  {"trust-unknown-ca", opt_trust_server_cert_unknown_ca, 0,
+                    N_("deprecated; same as\n"
+                       "                             "
+                       "--trust-server-cert-failures=unknown-ca")},
+  {"trust-server-cert-failures", opt_trust_server_cert_failures, 1,
                     N_("with --non-interactive, accept SSL server\n"
                        "                             "
-                       "certificates from unknown certificate authorities")},
-  {"trust-cn-mismatch", opt_trust_server_cert_cn_mismatch, 0,
-                    N_("with --non-interactive, accept SSL server\n"
+                       "certificates with failures; ARG is comma-\n"
                        "                             "
-                       "certificates even if the server hostname does not\n"
+                       "separated list of 'unknown-ca', 'cn-mismatch',\n"
                        "                             "
-                       "match the certificate's common name attribute")},
-  {"trust-expired", opt_trust_server_cert_expired, 0,
-                    N_("with --non-interactive, accept expired SSL server\n"
-                       "                             "
-                       "certificates")},
-  {"trust-not-yet-valid", opt_trust_server_cert_not_yet_valid, 0,
-                    N_("with --non-interactive, accept SSL server\n"
-                       "                             "
-                       "certificates from the future")},
-  {"trust-other-failure", opt_trust_server_cert_other_failure, 0,
-                    N_("with --non-interactive, accept SSL server\n"
-                       "                             "
-                       "certificates with failures other than the above")},
+                       "'expired', 'not-yet-valid', and 'other'.\n")},
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
   {"config-dir",    opt_config_dir, 1,
@@ -205,9 +189,7 @@ const apr_getopt_option_t svn_cl__options[] =
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
 { opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
-  opt_trust_server_cert, opt_trust_server_cert_unknown_ca,
-  opt_trust_server_cert_cn_mismatch, opt_trust_server_cert_expired,
-  opt_trust_server_cert_not_yet_valid, opt_trust_server_cert_other_failure,
+  opt_trust_server_cert, opt_trust_server_cert_failures,
   opt_config_dir, opt_config_options, 0
 };
 
@@ -624,20 +606,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.non_interactive = TRUE;
         break;
       case opt_trust_server_cert: /* backwards compat to 1.8 */
-      case opt_trust_server_cert_unknown_ca:
         opt_state.trust_server_cert_unknown_ca = TRUE;
         break;
-      case opt_trust_server_cert_cn_mismatch:
-        opt_state.trust_server_cert_cn_mismatch = TRUE;
-        break;
-      case opt_trust_server_cert_expired:
-        opt_state.trust_server_cert_expired = TRUE;
-        break;
-      case opt_trust_server_cert_not_yet_valid:
-        opt_state.trust_server_cert_not_yet_valid = TRUE;
-        break;
-      case opt_trust_server_cert_other_failure:
-        opt_state.trust_server_cert_other_failure = TRUE;
+      case opt_trust_server_cert_failures:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_cmdline__parse_trust_options(
+                      &opt_state.trust_server_cert_unknown_ca,
+                      &opt_state.trust_server_cert_cn_mismatch,
+                      &opt_state.trust_server_cert_expired,
+                      &opt_state.trust_server_cert_not_yet_valid,
+                      &opt_state.trust_server_cert_other_failure,
+                      utf8_opt_arg, "svnbench: ", pool));
         break;
       case opt_config_dir:
         {
@@ -813,25 +792,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* --trust-* options can only be used with --non-interactive */
   if (!opt_state.non_interactive)
     {
-      if (opt_state.trust_server_cert_unknown_ca)
+      if (opt_state.trust_server_cert_unknown_ca
+          || opt_state.trust_server_cert_cn_mismatch
+          || opt_state.trust_server_cert_expired
+          || opt_state.trust_server_cert_not_yet_valid
+          || opt_state.trust_server_cert_other_failure)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-unknown-ca requires "
-                                  "--non-interactive"));
-      if (opt_state.trust_server_cert_cn_mismatch)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-cn-mismatch requires "
-                                  "--non-interactive"));
-      if (opt_state.trust_server_cert_expired)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-expired requires "
-                                  "--non-interactive"));
-      if (opt_state.trust_server_cert_not_yet_valid)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-not-yet-valid requires "
-                                  "--non-interactive"));
-      if (opt_state.trust_server_cert_other_failure)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-other-failure requires "
+                                _("--trust-server-cert-failures requires "
                                   "--non-interactive"));
     }
 
