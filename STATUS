@@ -49,6 +49,15 @@ Candidate changes that cannot go into a later 1.9.x:
      +1: stefan2
      +1: rhuijben (1.9.0 only. Should be private api for >=1.9.1)
 
+ * r1678734
+   Use --trust-server-cert-failures instead of separate options on cmdline
+   Justification:
+     Reduces the number of global options that have to be documented
+     and handled everywhere. Gives the options more context on where they
+     are used.
+   Votes:
+     +1: rhuijben (1.9.0 only)
+
 Other candidate changes:
 ========================
 
