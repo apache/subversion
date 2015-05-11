@@ -24,7 +24,7 @@ Release blockers for 1.9.0:
    Notes:
      The issue does not exist in 1.8.x or earlier.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
      +0: danielsh (not tested)
 
 Candidate changes that cannot go into a later 1.9.x:
