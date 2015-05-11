@@ -165,7 +165,8 @@ svn_error_wrap_apr(apr_status_t status,
                    ...)
        __attribute__((format(printf, 2, 3)));
 
-/** Prepend a new error to the error chain of @a child. The new error
+/** If @child is SVN_NO_ERROR, return SVN_NO_ERROR.
+ * Else, prepend a new error to the error chain of @a child. The new error
  * uses @a new_msg as error message but all other error attributes (such
  * as the error code) are copied from @a child.
  */
