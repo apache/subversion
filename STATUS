@@ -87,6 +87,14 @@ Other candidate changes:
      +1: brane
      +0: rhuijben (Unable to test)
 
+ * r1678846
+   Change an assertion to an error.
+   Justification:
+     Invalid input shouldn't cause assertions.
+   Depends: r1677440 (already approved)
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
