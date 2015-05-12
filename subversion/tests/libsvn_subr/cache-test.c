@@ -451,6 +451,7 @@ test_membuffer_unaligned_string_keys(apr_pool_t *pool)
 
   /* Allocate explicitly to have aligned string and this add one
    * to have unaligned string.*/
+  const char *aligned_key = apr_pstrdup(pool, "fifty");
   const char *unaligned_key = apr_pstrdup(pool, "_fifty") + 1;
   const char *unaligned_prefix = apr_pstrdup(pool, "_cache:") + 1;
 
@@ -466,6 +467,17 @@ test_membuffer_unaligned_string_keys(apr_pool_t *pool)
 
   SVN_ERR(svn_cache__set(cache, unaligned_key, &fifty, pool));
   SVN_ERR(svn_cache__get((void **) &answer, &found, cache, unaligned_key,
+                         pool));
+
+  if (! found)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "cache failed to find entry for 'fifty'");
+  if (*answer != 50)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "expected 50 but found '%ld'", *answer);
+
+  /* Make sure that we get proper result when providing aligned key*/
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, aligned_key,
                          pool));
 
   if (! found)
