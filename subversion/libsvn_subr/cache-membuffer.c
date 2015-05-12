@@ -2666,6 +2666,8 @@ combine_key(svn_membuffer_cache_t *cache,
       data[1] = 0;
       memcpy(data, key, key_len);
 
+      cache->combined_key.entry_key.key_len = prefix_len + 16;
+
       /* scramble key DATA.  All of this must be reversible to prevent key
        * collisions.  So, we limit ourselves to xor and permutations. */
       data[1] = (data[1] << 27) | (data[1] >> 37);
