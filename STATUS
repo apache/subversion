@@ -41,15 +41,7 @@ Candidate changes that cannot go into a later 1.9.x:
           Not a problem if it only gets released in 1.10.0)
      -0.5: rhuijben (after 1.9.0. Changes error behaviour. Might break scripts)
 
- * r1677440
-   Support checksum (de-)serialization for all 1.9 checksum types.
-   Justification:
-     Public API must have a complete implementation.
-   Votes:
-     +1: stefan2
-     +1: rhuijben (1.9.0 only. Should be private api for >=1.9.1)
-
- * r1678734, r1678742, r1678745, r1678746
+ * r1678734, r1678742, r1678745, r1678746, r1678839
    Use --trust-server-cert-failures instead of separate options on cmdline
    Justification:
      Reduces the number of global options that have to be documented
@@ -60,7 +52,7 @@ Candidate changes that cannot go into a later 1.9.x:
      r1678745 updates the bash completion script
      r1678746 extends the documentation to include information lost in r1678734
    Votes:
-     +1: rhuijben (1.9.0 only)
+     +1: rhuijben, danielsh (1.9.0 only)
 
 Other candidate changes:
 ========================
@@ -121,4 +113,12 @@ Approved changes:
      Java 5 is dead. JavaHL 1.9+ uses 1.6 APIs.
    Votes:
      +1: brane, rhuijben, stefan2
+
+ * r1677440
+   Support checksum (de-)serialization for all 1.9 checksum types.
+   Justification:
+     Public API must have a complete implementation.
+   Votes:
+     +1: stefan2, danielsh
+     +1: rhuijben (1.9.0 only. Should be private api for >=1.9.1)
 
