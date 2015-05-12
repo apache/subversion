@@ -100,11 +100,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1677440
-   Support checksum (de-)serialization for all 1.9 checksum types.
-   Justification:
-     Public API must have a complete implementation.
-   Votes:
-     +1: stefan2, danielsh
-     +1: rhuijben (1.9.0 only. Should be private api for >=1.9.1)
