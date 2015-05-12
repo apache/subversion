@@ -2671,7 +2671,7 @@ combine_key(svn_membuffer_cache_t *cache,
       data[1] = (data[1] << 27) | (data[1] >> 37);
       data[1] ^= data[0] & 0xffff;
       data[0] ^= data[1] & APR_UINT64_C(0xffffffffffff0000);
-    
+
       /* combine with this cache's namespace */
       cache->combined_key.entry_key.fingerprint[0]
         = data[0] ^ cache->prefix.entry_key.fingerprint[0];
