@@ -2565,11 +2565,6 @@ typedef struct svn_membuffer_cache_t
   svn_mutex__t *mutex;
 } svn_membuffer_cache_t;
 
-/* After an estimated ALLOCATIONS_PER_POOL_CLEAR allocations, we should
- * clear the svn_membuffer_cache_t.pool to keep memory consumption in check.
- */
-#define ALLOCATIONS_PER_POOL_CLEAR 10
-
 /* Basically calculate a hash value for KEY of length KEY_LEN, combine it
  * with the CACHE->PREFIX and write the result in CACHE->COMBINED_KEY.
  * This could replace combine_key() entirely but we actually use it only
