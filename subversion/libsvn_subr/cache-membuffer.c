@@ -299,7 +299,7 @@ static svn_error_t *store_key_part(entry_tag_t *tag,
 /* Initialize the content hash member of TAG.
  */
 static svn_error_t* store_content_part(entry_tag_t *tag,
-                                       const char *data,
+                                       const void *data,
                                        apr_size_t size,
                                        apr_pool_t *pool)
 {
@@ -2351,8 +2351,7 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     }
   else
     {
-      const char *item_data = (const char*)cache->data + entry->offset
-                                                       + entry->key.key_len;
+      const void *item_data = cache->data + entry->offset + entry->key.key_len;
       apr_size_t item_size = entry->size - entry->key.key_len;
       *found = TRUE;
       increment_hit_counters(cache, entry);
@@ -2435,8 +2434,8 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
 
       /* access the serialized cache item */
       apr_size_t key_len = entry->key.key_len;
-      char *item_data = (char*)cache->data + entry->offset + key_len;
-      char *orig_data = item_data;
+      void *item_data = cache->data + entry->offset + key_len;
+      void *orig_data = item_data;
       apr_size_t item_size = entry->size - key_len;
 
       increment_hit_counters(cache, entry);
@@ -2459,7 +2458,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
 
       /* modify it, preferably in-situ.
        */
-      err = func((void **)&item_data, &item_size, baton, scratch_pool);
+      err = func(&item_data, &item_size, baton, scratch_pool);
 
       if (err)
         {
