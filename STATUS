@@ -101,13 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1678494
-   Document svn:auto-props.
-   Justification:
-     Documentation should be complete.
-   Votes:
-     +1: danielsh, rhuijben, stefan2
-
  * r1678147, r1678149
    Provide more informative error messages for FSFS parsing errors.
    Justification:
@@ -129,4 +122,3 @@ Approved changes:
    Votes:
      +1: stefan2, danielsh
      +1: rhuijben (1.9.0 only. Should be private api for >=1.9.1)
-

@@ -1457,6 +1457,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  directory:\n"
      "    svn:ignore         - A list of file glob patterns to ignore, one per line.\n"
      "    svn:global-ignores - Like svn:ignore, but inheritable.\n"
+     "    svn:auto-props     - A list of file glob patterns and properties to set\n"
+     "       when adding such files; like [auto-props] in the client configuration.\n"
      "    svn:externals      - A list of module specifiers, one per line, in the\n"
      "      following format similar to the syntax of 'svn checkout':\n"
      "        [-r REV] URL[@PEG] LOCALPATH\n"
