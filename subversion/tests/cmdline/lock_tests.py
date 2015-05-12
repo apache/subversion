@@ -2076,22 +2076,36 @@ def dav_lock_timeout(sbox):
   expected_status.tweak('iota', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def http_connection(repo_url):
+
+  import httplib
+  from urlparse import urlparse
+
+  loc = urlparse(repo_url)
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    try:
+      import ssl # new in python 2.6
+      c = ssl.create_default_context()
+      c.check_hostname = False
+      c.verify_mode = ssl.CERT_NONE
+      h = httplib.HTTPSConnection(loc.hostname, loc.port, context=c)
+    except:
+      h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  return h
+
 @SkipUnless(svntest.main.is_ra_type_dav)
 def create_dav_lock_timeout(sbox):
   "create generic DAV lock with timeout"
 
   import httplib
-  from urlparse import urlparse
   import base64
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  loc = urlparse(sbox.repo_url)
 
-  if loc.scheme == 'http':
-    h = httplib.HTTPConnection(loc.hostname, loc.port)
-  else:
-    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  h = http_connection(sbox.repo_url)
 
   lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
               '<D:lockinfo xmlns:D="DAV:">' \
@@ -2227,7 +2241,6 @@ def dav_lock_refresh(sbox):
   "refresh timeout of DAV lock"
 
   import httplib
-  from urlparse import urlparse
   import base64
 
   sbox.build(create_wc = False)
@@ -2237,12 +2250,7 @@ def dav_lock_refresh(sbox):
                                      sbox.repo_url + '/iota')
 
   # Try to refresh lock using 'If' header
-  loc = urlparse(sbox.repo_url)
-
-  if loc.scheme == 'http':
-    h = httplib.HTTPConnection(loc.hostname, loc.port)
-  else:
-    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  h = http_connection(sbox.repo_url)
 
   lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
 
