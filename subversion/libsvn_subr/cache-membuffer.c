@@ -2625,7 +2625,7 @@ combine_long_key(svn_membuffer_cache_t *cache,
   /* Combine keys. */
   aligned_key_len = ALIGN_VALUE(key_len);
   svn_membuf__ensure(&cache->combined_key.full_key,
-                     key_len + prefix_len);
+                     aligned_key_len + prefix_len);
 
   key_copy = (char *)cache->combined_key.full_key.data + prefix_len;
   cache->combined_key.entry_key.key_len = aligned_key_len + prefix_len;
