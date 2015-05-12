@@ -41,7 +41,7 @@ Candidate changes that cannot go into a later 1.9.x:
           Not a problem if it only gets released in 1.10.0)
      -0.5: rhuijben (after 1.9.0. Changes error behaviour. Might break scripts)
 
- * r1678734, r1678742, r1678745, r1678746, r1678839
+ * r1678734, r1678742, r1678745, r1678746, r1678839, r1678894
    Use --trust-server-cert-failures instead of separate options on cmdline
    Justification:
      Reduces the number of global options that have to be documented
@@ -52,7 +52,8 @@ Candidate changes that cannot go into a later 1.9.x:
      r1678745 updates the bash completion script
      r1678746 extends the documentation to include information lost in r1678734
    Votes:
-     +1: rhuijben, danielsh (1.9.0 only)
+     +1: danielsh (1.9.0 only) (without r1678894)
+     +1: rhuijben (1.9.0 only)
 
 Other candidate changes:
 ========================
