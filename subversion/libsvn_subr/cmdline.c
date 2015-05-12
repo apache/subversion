@@ -1538,7 +1538,6 @@ svn_cmdline__parse_trust_options(
                         svn_boolean_t *trust_server_cert_not_yet_valid,
                         svn_boolean_t *trust_server_cert_other_failure,
                         const char *opt_arg,
-                        const char *error_prefix,
                         apr_pool_t *scratch_pool)
 {
   apr_array_header_t *failures;
@@ -1567,9 +1566,8 @@ svn_cmdline__parse_trust_options(
         *trust_server_cert_other_failure = TRUE;
       else
         return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                  _("%sUnknown value '%s' for %s.\n"
+                                  _("Unknown value '%s' for %s.\n"
                                     "Supported values: %s"),
-                                  error_prefix ? error_prefix : "",
                                   value,
                                   "--trust-server-cert-failures",
                                   "unknown-ca, cn-mismatch, expired, "
