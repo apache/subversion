@@ -2005,7 +2005,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                       &opt_baton.trust_server_cert_expired,
                       &opt_baton.trust_server_cert_not_yet_valid,
                       &opt_baton.trust_server_cert_other_failure,
-                      opt_arg, "svnsync: ", pool));
+                      opt_arg, pool));
             break;
 
           case svnsync_opt_no_auth_cache:

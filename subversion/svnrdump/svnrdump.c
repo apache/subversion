@@ -923,7 +923,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                       &trust_expired,
                       &trust_not_yet_valid,
                       &trust_other_failure,
-                      opt_arg, "svnrdump: ", pool));
+                      opt_arg, pool));
           break;
         case opt_config_option:
           if (!config_options)

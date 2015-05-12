@@ -622,7 +622,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                       &opt_state.trust_server_cert_expired,
                       &opt_state.trust_server_cert_not_yet_valid,
                       &opt_state.trust_server_cert_other_failure,
-                      utf8_opt_arg, "svnbench: ", pool));
+                      utf8_opt_arg, pool));
         break;
       case opt_config_dir:
         {

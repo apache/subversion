@@ -224,8 +224,8 @@ svn_boolean_t
 svn_cmdline__be_interactive(svn_boolean_t non_interactive,
                             svn_boolean_t force_interactive);
 
-/* Parses the argument value of '--trust-server-cert-failures' into the
- * expected booleans for passing to svn_cmdline_create_auth_baton2()
+/* Parses the argument value of '--trust-server-cert-failures' OPT_ARG into
+ * the expected booleans for passing to svn_cmdline_create_auth_baton2()
  *
  * @since New in 1.9.
  */
@@ -237,7 +237,6 @@ svn_cmdline__parse_trust_options(
                         svn_boolean_t *trust_server_cert_not_yet_valid,
                         svn_boolean_t *trust_server_cert_other_failure,
                         const char *opt_arg,
-                        const char *error_prefix,
                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus

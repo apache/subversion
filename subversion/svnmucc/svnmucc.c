@@ -604,7 +604,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                       &trust_expired,
                       &trust_not_yet_valid,
                       &trust_other_failure,
-                      opt_arg, "svnmucc: ", pool));
+                      opt_arg, pool));
           break;
         case config_dir_opt:
           SVN_ERR(svn_utf_cstring_to_utf8(&config_dir, arg, pool));
