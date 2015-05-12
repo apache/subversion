@@ -2615,7 +2615,7 @@ combine_long_key(svn_membuffer_cache_t *cache,
 {
   apr_uint32_t *digest_buffer;
   char *key_copy;
-  apr_size_t prefix_len = cache->prefix.full_key.size;
+  apr_size_t prefix_len = cache->prefix.entry_key.key_len;
   apr_size_t aligned_key_len;
 
   /* handle variable-length keys */
@@ -2654,13 +2654,13 @@ combine_key(svn_membuffer_cache_t *cache,
   /* short, fixed-size keys are the most common case */
   if (key_len != APR_HASH_KEY_STRING && key_len <= 16)
     {
+      const apr_size_t prefix_len = cache->prefix.entry_key.key_len;
       /* Copy of *key, padded with 0.
        * We put it just behind the prefix already copied into the COMBINED_KEY.
        * The buffer space has been allocated when the cache was created. */
-      apr_uint64_t *data = (void *)((char *)cache->combined_key.full_key.data +
-                                    cache->prefix.full_key.size);
-      assert(cache->combined_key.full_key.size >
-             cache->prefix.full_key.size + 16);
+      apr_uint64_t *data = (void *)((char *)cache->combined_key.full_key.data + 
+                                    prefix_len);
+      assert(prefix_len + 16 <= cache->combined_key.full_key.size);
 
       data[0] = 0;
       data[1] = 0;
