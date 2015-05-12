@@ -2658,7 +2658,7 @@ combine_key(svn_membuffer_cache_t *cache,
   apr_uint64_t data[2];
 
   /* short, fixed-size keys are the most common case */
-  if (key_len != APR_HASH_KEY_STRING && key_len < 16)
+  if (key_len != APR_HASH_KEY_STRING && key_len <= 16)
     {
       data[0] = 0;
       data[1] = 0;
