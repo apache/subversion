@@ -298,6 +298,7 @@ help(FILE *stream, apr_pool_t *pool)
       "  --trust-server-cert    : deprecated;\n"
       "                           same as --trust-server-cert-failures=unknown-ca\n"
       "  --trust-server-cert-failures ARG\n"
+      "                           with --non-interactive, accept SSL server\n"
       "                           certificates with failures; ARG is comma-separated\n"
       "                           list of 'unknown-ca' (Unknown Authority),\n"
       "                           'cn-mismatch' (Hostname mismatch), 'expired'\n"
