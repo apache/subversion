@@ -2651,38 +2651,38 @@ combine_key(svn_membuffer_cache_t *cache,
             const void *key,
             apr_ssize_t key_len)
 {
-  /* Copy of *key, padded with 0.
-   * We put it just behind the prefix already copied into the COMBINED_KEY.
-   * The buffer space has been allocated when the cache was created. */
-  apr_uint64_t *data = (void *)((char *)cache->combined_key.full_key.data +
-                                cache->prefix.full_key.size);
-  assert(cache->combined_key.full_key.size > cache->prefix.full_key.size+16);
-
   /* short, fixed-size keys are the most common case */
   if (key_len != APR_HASH_KEY_STRING && key_len <= 16)
     {
+      /* Copy of *key, padded with 0.
+       * We put it just behind the prefix already copied into the COMBINED_KEY.
+       * The buffer space has been allocated when the cache was created. */
+      apr_uint64_t *data = (void *)((char *)cache->combined_key.full_key.data +
+                                    cache->prefix.full_key.size);
+      assert(cache->combined_key.full_key.size >
+             cache->prefix.full_key.size + 16);
+
       data[0] = 0;
       data[1] = 0;
       memcpy(data, key, key_len);
+
+      /* scramble key DATA.  All of this must be reversible to prevent key
+       * collisions.  So, we limit ourselves to xor and permutations. */
+      data[1] = (data[1] << 27) | (data[1] >> 37);
+      data[1] ^= data[0] & 0xffff;
+      data[0] ^= data[1] & APR_UINT64_C(0xffffffffffff0000);
+    
+      /* combine with this cache's namespace */
+      cache->combined_key.entry_key.fingerprint[0]
+        = data[0] ^ cache->prefix.entry_key.fingerprint[0];
+      cache->combined_key.entry_key.fingerprint[1]
+        = data[1] ^ cache->prefix.entry_key.fingerprint[1];
     }
   else
     {
       /* longer or variably sized keys */
       combine_long_key(cache, key, key_len);
-      return;
     }
-
-  /* scramble key DATA.  All of this must be reversible to prevent key
-   * collisions.  So, we limit ourselves to xor and permutations. */
-  data[1] = (data[1] << 27) | (data[1] >> 37);
-  data[1] ^= data[0] & 0xffff;
-  data[0] ^= data[1] & APR_UINT64_C(0xffffffffffff0000);
-
-  /* combine with this cache's namespace */
-  cache->combined_key.entry_key.fingerprint[0]
-    = data[0] ^ cache->prefix.entry_key.fingerprint[0];
-  cache->combined_key.entry_key.fingerprint[1]
-    = data[1] ^ cache->prefix.entry_key.fingerprint[1];
 }
 
 /* Implement svn_cache__vtable_t.get (not thread-safe)
