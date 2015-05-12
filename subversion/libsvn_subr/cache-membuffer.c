@@ -2199,9 +2199,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
   size = ALIGN_VALUE(entry->size) - entry->key.key_len;
   *buffer = ALIGN_POINTER(apr_palloc(result_pool, size + ITEM_ALIGNMENT-1));
-  memcpy(*buffer,
-         (const char*)cache->data + entry->offset + entry->key.key_len,
-         size);
+  memcpy(*buffer, cache->data + entry->offset + entry->key.key_len, size);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
