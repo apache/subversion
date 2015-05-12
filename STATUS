@@ -42,7 +42,7 @@ Candidate changes that cannot go into a later 1.9.x:
      r1678746 extends the documentation to include information lost in r1678734
    Votes:
      +1: danielsh (1.9.0 only) (without r1678894)
-     +1: rhuijben (1.9.0 only)
+     +1: rhuijben, philip (1.9.0 only)
 
 Other candidate changes:
 ========================
@@ -76,14 +76,6 @@ Other candidate changes:
    Votes:
      +1: brane, rhuijben
 
- * r1678846
-   Change an assertion to an error.
-   Justification:
-     Invalid input shouldn't cause assertions.
-   Depends: r1677440 (already approved)
-   Votes:
-     +1: danielsh, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -100,3 +92,11 @@ Approved changes:
    Votes:
      +1: rhuijben, philip, stsp
      +0: danielsh (not tested)
+
+ * r1678846
+   Change an assertion to an error.
+   Justification:
+     Invalid input shouldn't cause assertions.
+   Depends: r1677440 (already approved)
+   Votes:
+     +1: danielsh, rhuijben, philip
