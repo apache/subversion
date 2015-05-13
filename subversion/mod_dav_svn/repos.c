@@ -1948,7 +1948,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
                                       r->pool);
         }
 
-      if (node_relation != svn_fs_node_same)
+      if (node_relation != svn_fs_node_unchanged)
         {
           serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
                                    "Directory '%s' is out of date",
@@ -2125,6 +2125,16 @@ get_resource(request_rec *r,
   repo_name = dav_svn__get_repo_name(r);
   xslt_uri = dav_svn__get_xslt_uri(r);
   fs_parent_path = dav_svn__get_fs_parent_path(r);
+
+  if (r->method_number == M_COPY)
+    {
+      /* Workaround for issue #4531: Avoid a depth-infinity walk on
+         the copy source by overriding the Depth header here.
+         mod_dav defaults to infinite depth if this header is not set
+         which makes copies O(size of source) rather than the desired O(1).
+         ### Should be fixed by an explicit provider API feature in mod_dav. */
+      apr_table_setn(r->headers_in, "Depth", "0");
+    }
 
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */

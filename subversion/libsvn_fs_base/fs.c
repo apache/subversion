@@ -780,7 +780,7 @@ base_create(svn_fs_t *fs,
   ((base_fs_data_t *) fs->fsap_data)->format = format;
 
   SVN_ERR(populate_opened_fs(fs, pool));
-  return SVN_NO_ERROR;;
+  return SVN_NO_ERROR;
 
 error:
   return svn_error_compose_create(svn_err,

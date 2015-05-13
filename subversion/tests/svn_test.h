@@ -149,6 +149,8 @@ typedef struct svn_test_opts_t
   const char *repos_dir;
   /* Repository url: The url to access REPOS_DIR as */
   const char *repos_url;
+  /* Memcached server. */
+  const char *memcached_server;
   /* Repository template: pre-created repository to copy for tests */
   const char *repos_template;
   /* Minor version to use for servers and FS backends, or zero to use

@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <apr_sha1.h>
 
+#include "svn_error_codes.h"
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
@@ -1127,6 +1128,7 @@ get_txn_proplist(apr_hash_t *proplist,
                  apr_pool_t *pool)
 {
   svn_stream_t *stream;
+  svn_error_t *err;
 
   /* Check for issue #3696. (When we find and fix the cause, we can change
    * this to an assertion.) */
@@ -1140,7 +1142,14 @@ get_txn_proplist(apr_hash_t *proplist,
                                    pool, pool));
 
   /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+  err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool);
+  if (err)
+    {
+      err = svn_error_compose_create(err, svn_stream_close(stream));
+      return svn_error_quick_wrapf(err,
+               _("malformed property list in transaction '%s'"),
+               path_txn_props(fs, txn_id, pool));
+    }
 
   return svn_stream_close(stream);
 }
@@ -1963,9 +1972,7 @@ choose_delta_base(representation_t **rep,
 
       /* Very short rep bases are simply not worth it as we are unlikely
        * to re-coup the deltification space overhead of 20+ bytes. */
-      svn_filesize_t rep_size = (*rep)->expanded_size
-                              ? (*rep)->expanded_size
-                              : (*rep)->size;
+      svn_filesize_t rep_size = (*rep)->expanded_size;
       if (rep_size < 64)
         {
           *rep = NULL;
@@ -2118,7 +2125,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 }
 
 /* For REP->SHA1_CHECKSUM, try to find an already existing representation
-   in FS and return it in *OUT_REP.  If no such representation exists or
+   in FS and return it in *OLD_REP.  If no such representation exists or
    if rep sharing has been disabled for FS, NULL will be returned.  Since
    there may be new duplicate representations within the same uncommitted
    revision, those can be passed in REPS_HASH (maps a sha1 digest onto
@@ -2144,7 +2151,7 @@ get_shared_rep(representation_t **old_rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out.  Start with the hash lookup
-     because it is cheepest. */
+     because it is cheapest. */
   if (reps_hash)
     *old_rep = apr_hash_get(reps_hash,
                             rep->sha1_digest,
@@ -2213,12 +2220,37 @@ get_shared_rep(representation_t **old_rep,
   if (!*old_rep)
     return SVN_NO_ERROR;
 
-  /* We don't want 0-length PLAIN representations to replace non-0-length
-     ones (see issue #4554).  Also, this doubles as a simple guard against
-     general rep-cache induced corruption. */
-  if (   ((*old_rep)->expanded_size != rep->expanded_size)
-      || ((*old_rep)->size != rep->size))
+  /* A simple guard against general rep-cache induced corruption. */
+  if ((*old_rep)->expanded_size != rep->expanded_size)
     {
+      /* Make the problem show up in the server log.
+
+         Because not sharing reps is always a save option,
+         terminating the request would be inappropriate.
+       */
+      svn_checksum_t checksum;
+      checksum.digest = rep->sha1_digest;
+      checksum.kind = svn_checksum_sha1;
+
+      err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                              "Rep size %s mismatches rep-cache.db value %s "
+                              "for SHA1 %s.\n"
+                              "You should delete the rep-cache.db and "
+                              "verify the repository. The cached rep will "
+                              "not be shared.",
+                              apr_psprintf(scratch_pool,
+                                           "%" SVN_FILESIZE_T_FMT,
+                                           rep->expanded_size),
+                              apr_psprintf(scratch_pool,
+                                           "%" SVN_FILESIZE_T_FMT,
+                                           (*old_rep)->expanded_size),
+                              svn_checksum_to_cstring_display(&checksum,
+                                                              scratch_pool));
+
+      (fs->warning)(fs->warning_baton, err);
+      svn_error_clear(err);
+
+      /* Ignore the shared rep. */
       *old_rep = NULL;
     }
   else
@@ -2553,6 +2585,7 @@ write_container_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
+  rep->expanded_size = whb->size;
   SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
                          scratch_pool));
 
@@ -2588,7 +2621,6 @@ write_container_rep(representation_t *rep,
 
       /* update the representation */
       rep->size = whb->size;
-      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -2692,6 +2724,7 @@ write_container_delta_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
+  rep->expanded_size = whb->size;
   SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
                          scratch_pool));
 
@@ -2727,7 +2760,6 @@ write_container_delta_rep(representation_t *rep,
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
 
       /* update the representation */
-      rep->expanded_size = whb->size;
       rep->size = rep_end - delta_start;
     }
 

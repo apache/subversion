@@ -980,6 +980,20 @@ def svn_uri_quote(url):
 
 # ------------
 
+def python_sqlite_can_read_wc():
+  """Check if the Python builtin is capable enough to peek into wc.db"""
+
+  try:
+    db = svntest.sqlite3.connect('')
+
+    c = db.cursor()
+    c.execute('select sqlite_version()')
+    ver = tuple(map(int, c.fetchall()[0][0].split('.')))
+
+    return ver >= (3, 6, 18) # Currently enough (1.7-1.9)
+  except:
+    return False
+
 def open_wc_db(local_path):
   """Open the SQLite DB for the WC path LOCAL_PATH.
      Return (DB object, WC root path, WC relpath of LOCAL_PATH)."""

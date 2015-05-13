@@ -431,7 +431,7 @@ fi
 $SVNq up
 $SVNq merge @mergeargs
 if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
-  if [ -n "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
+  if [ -z "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
     # This check detects STATUS entries that name non-^/subversion/ revnums.
     # ### Q: What if we actually commit a mergeinfo fix to trunk and then want
     # ###    to backport it?
@@ -578,7 +578,7 @@ sub parse_entry {
   # summary
   do {
     push @logsummary, shift
-  } until $_[0] =~ /^\s*[][\w]+:/ or not defined $_[0];
+  } until $_[0] =~ /^\s*[A-Z][][\w]*:/ or not defined $_[0];
 
   # votes
   unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
@@ -765,7 +765,7 @@ sub vote {
         "Approve $_->{entry}->{header}."
       } @votesarray;
     (@sentences == 1)
-    ? $sentences[0]
+    ? "* STATUS: $sentences[0]"
     : "* STATUS:\n" . join "", map "  $_\n", @sentences;
   };
 
@@ -1287,7 +1287,7 @@ sub nominate_main {
   # Done!
   system "$SVN diff -- $STATUS";
   if (prompt "Commit this nomination? ") {
-    system "$SVN commit -m 'Nominate r$revnums[0].' -- $STATUS";
+    system "$SVN commit -m '* STATUS: Nominate r$revnums[0].' -- $STATUS";
     exit $?;
   }
   elsif (!$had_local_mods or prompt "Revert STATUS (destroying local mods)? ") {

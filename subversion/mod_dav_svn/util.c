@@ -217,7 +217,7 @@ dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
       return revision;
     }
 
-  if (node_relation == svn_fs_node_same)
+  if (node_relation == svn_fs_node_unchanged)
     return history_rev;  /* the history rev is safe!  the same node
                             exists at the same path in both revisions. */
 

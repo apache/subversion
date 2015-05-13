@@ -436,8 +436,7 @@ parse_representation(rep_stats_t **representation,
        */
       result = apr_pcalloc(result_pool, sizeof(*result));
       result->revision = rep->revision;
-      result->expanded_size = (rep->expanded_size ? rep->expanded_size
-                                                  : rep->size);
+      result->expanded_size = rep->expanded_size;
       result->offset = (apr_off_t)rep->item_index;
       result->size = rep->size;
 

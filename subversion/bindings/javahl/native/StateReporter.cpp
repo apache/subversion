@@ -43,9 +43,7 @@ StateReporter::StateReporter()
 {}
 
 StateReporter::~StateReporter()
-{
-  delete m_editor;
-}
+{}
 
 StateReporter*
 StateReporter::getCppObject(jobject jthis)
@@ -179,8 +177,8 @@ StateReporter::abortReport()
 
 void
 StateReporter::set_reporter_data(const svn_ra_reporter3_t* raw_reporter,
-                                   void* report_baton,
-                                   EditorProxy* editor)
+                                 void* report_baton,
+                                 EditorProxy::UniquePtr editor)
 {
   //DEBUG:fprintf(stderr, "  (n) StateReporter::set_reporter_data()\n");
 

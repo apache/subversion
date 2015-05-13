@@ -527,7 +527,14 @@ typedef struct representation_t
   svn_filesize_t size;
 
   /* The size of the fulltext of the representation. If this is 0,
-   * the fulltext size is equal to representation size in the rev file, */
+   * for a plain rep, the real fulltext size is equal to the SIZE field.
+   * For a delta rep, this field is always the real fulltext size.
+   *
+   * Note that svn_fs_fs__fixup_expanded_size() checks for these special
+   * cases and ensures that this field contains the actual value.  We call
+   * it early after reading a representation struct, so most code does not
+   * have to worry about it.
+   */
   svn_filesize_t expanded_size;
 
   /* Is this a representation (still) within a transaction? */
