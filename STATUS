@@ -30,7 +30,7 @@ Other candidate changes:
    Notes:
      Not a regression. Same issue exists in 1.7.x and 1.8.x
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1674626, r1674785
    On Windows: Enable memcached support in libsvn_subr on apr-util 1.3+
@@ -40,6 +40,7 @@ Other candidate changes:
      behaviour similar to that on other platforms.
    Votes:
      +1: rhuijben
+     +0.9: brane (The change looks trivially correct, but I can't test it)
 
  * r1675774
    Use the /usr/libexec/java_home program to find the JDK on OSX.
