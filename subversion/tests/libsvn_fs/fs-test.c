@@ -6908,6 +6908,10 @@ freeze_and_commit(const svn_test_opts_t *opts,
   svn_revnum_t new_rev = 0;
   apr_pool_t *subpool = svn_pool_create(pool);
 
+  if (!strcmp(opts->fs_type, "bdb"))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will not test BDB repositories");
+
   SVN_ERR(svn_test__create_fs(&fs, "test-freeze-and-commit", opts, subpool));
 
   /* This test used to FAIL with an SQLite error since svn_fs_freeze()

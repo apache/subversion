@@ -164,9 +164,11 @@ x_freeze_body(void *baton,
 
   SVN_ERR(svn_fs_x__exists_rep_cache(&exists, b->fs, scratch_pool));
   if (exists)
-    SVN_ERR(svn_fs_x__lock_rep_cache(b->fs, scratch_pool));
-
-  SVN_ERR(b->freeze_func(b->freeze_baton, scratch_pool));
+    SVN_ERR(svn_fs_x__with_rep_cache_lock(b->fs,
+                                          b->freeze_func, b->freeze_baton,
+                                          scratch_pool));
+  else
+    SVN_ERR(b->freeze_func(b->freeze_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
