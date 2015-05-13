@@ -61,7 +61,7 @@ Veto-blocked changes:
      Breaks commits for API users.
    Votes:
      +1: danielsh, ivan, rhuijben
-     -1: New test is FAIL for bdb and fsx.
+     -1: philip (New test is FAIL for bdb and fsx.)
 
 Approved changes:
 =================
