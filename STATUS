@@ -48,7 +48,7 @@ Other candidate changes:
      support this on Windows with a trivial buildsystem change. This makes the
      behaviour similar to that on other platforms.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
  * r1675774
