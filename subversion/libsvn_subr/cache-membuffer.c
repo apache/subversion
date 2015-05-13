@@ -2851,12 +2851,11 @@ combine_key(svn_membuffer_cache_t *cache,
   /* short, fixed-size keys are the most common case */
   if (key_len == 16)
     {
-      data[0] = ((const apr_uint64_t *)key)[0];
-      data[1] = ((const apr_uint64_t *)key)[1];
+      memcpy(data, key, 16);
     }
   else if (key_len == 8)
     {
-      data[0] = ((const apr_uint64_t *)key)[0];
+      memcpy(data, key, 8);
       data[1] = 0;
     }
   else
