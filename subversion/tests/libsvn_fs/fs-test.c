@@ -6891,6 +6891,53 @@ test_internal_txn_props(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* This function implements svn_fs_freeze_func_t. */
+static svn_error_t *
+noop_freeze_func(void *baton, apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+freeze_and_commit(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t new_rev = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-freeze-and-commit", opts, subpool));
+
+  /* This test used to FAIL with an SQLite error since svn_fs_freeze()
+   * wouldn't unlock rep-cache.db.  Therefore, part of the role of creating
+   * the Greek tree is to create a rep-cache.db, in order to test that
+   * svn_fs_freeze() unlocks it. */
+
+  /* r1: Commit the Greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, subpool));
+
+  /* Freeze and unfreeze. */
+  SVN_ERR(svn_fs_freeze(fs, noop_freeze_func, NULL, pool));
+
+  /* And the same once again, for good measure. */
+  SVN_ERR(svn_fs_freeze(fs, noop_freeze_func, NULL, pool));
+
+  /* Make some commit. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "", "temperature",
+                                  svn_string_create("310.05", pool),
+                                  pool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7023,6 +7070,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test setting and getting internal txn props"),
     SVN_TEST_OPTS_PASS(check_txn_related,
                        "test svn_fs_check_related for transactions"),
+    SVN_TEST_OPTS_PASS(freeze_and_commit,
+                       "freeze and commit"),
     SVN_TEST_NULL
   };
 
