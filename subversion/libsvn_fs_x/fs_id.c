@@ -217,7 +217,7 @@ id_compare(const svn_fs_id_t *a,
 
   /* Quick check: same IDs? */
   if (svn_fs_x__id_eq(&id_a->noderev_id, &id_b->noderev_id))
-    return svn_fs_node_same;
+    return svn_fs_node_unchanged;
 
   /* Fetch the nodesrevs, compare the IDs of the nodes they belong to and
      clean up any temporaries.  If we can't find one of the noderevs, don't

@@ -3100,6 +3100,7 @@ def plaintext_password_storage_disabled(sbox):
     "-m", "committing with plaintext password storage disabled",
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd,
+    "--trust-server-cert-failures", "unknown-ca",
     "--non-interactive", wc_dir)
 
   # Verify that the password was not stored in plaintext

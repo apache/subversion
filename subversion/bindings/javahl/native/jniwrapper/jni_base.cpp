@@ -179,30 +179,6 @@ void Env::throw_java_out_of_memory(const char* message) const
 const jint LocalFrame::DEFAULT_CAPACITY = 16;
 
 
-// class Java::GlobalObject
-
-GlobalObject& GlobalObject::operator=(jobject that)
-{
-  this->~GlobalObject();
-  return *new(this) GlobalObject(Env(), that);
-}
-
-GlobalObject::~GlobalObject()
-{
-  if (m_obj)
-    Env().DeleteGlobalRef(m_obj);
-}
-
-
-// class Java::GlobalClass
-
-GlobalClass& GlobalClass::operator=(jclass that)
-{
-  this->~GlobalClass();
-  return *new(this) GlobalClass(Env(), that);
-}
-
-
 // Class Java::Object
 
 const char* const Object::m_class_name = "java/lang/Object";

@@ -1354,7 +1354,7 @@ x_node_relation(svn_fs_node_relation_t *relation,
       *relation = (   (root_a->rev == root_b->rev)
                    && (root_a->is_txn_root == root_b->is_txn_root)
                    && !different_txn)
-                ? svn_fs_node_same
+                ? svn_fs_node_unchanged
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
@@ -1372,7 +1372,7 @@ x_node_relation(svn_fs_node_relation_t *relation,
   /* In FSX, even in-txn IDs are globally unique.
    * So, we can simply compare them. */
   if (svn_fs_x__id_eq(&noderev_id_a, &noderev_id_b))
-    *relation = svn_fs_node_same;
+    *relation = svn_fs_node_unchanged;
   else if (svn_fs_x__id_eq(&node_id_a, &node_id_b))
     *relation = svn_fs_node_common_ancestor;
   else
@@ -1500,6 +1500,20 @@ x_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+x_node_has_props(svn_boolean_t *has_props,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+
+  SVN_ERR(x_node_proplist(&props, root, path, scratch_pool));
+
+  *has_props = (0 < apr_hash_count(props));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 increment_mergeinfo_up_tree(parent_path_t *pp,
@@ -2411,9 +2425,11 @@ static svn_error_t *
 x_dir_optimal_order(apr_array_header_t **ordered_p,
                     svn_fs_root_t *root,
                     apr_hash_t *entries,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
-  *ordered_p = svn_fs_x__order_dir_entries(root->fs, entries, pool);
+  *ordered_p = svn_fs_x__order_dir_entries(root->fs, entries, result_pool,
+                                           scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -4206,6 +4222,7 @@ static root_vtable_t root_vtable = {
   x_closest_copy,
   x_node_prop,
   x_node_proplist,
+  x_node_has_props,
   x_change_node_prop,
   x_props_changed,
   x_dir_entries,

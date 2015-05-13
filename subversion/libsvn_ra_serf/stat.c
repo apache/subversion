@@ -193,6 +193,9 @@ fill_dirent_propfunc(void *baton,
         {
           if (*val->data)
             {
+              /* Note: 1.8.x and earlier servers send the count proper; 1.9.0
+               * and newer send "1" if there are properties and "0" otherwise.
+               */
               apr_int64_t deadprop_count;
               SVN_ERR(svn_cstring_atoi64(&deadprop_count, val->data));
               fdb->entry->has_props = deadprop_count > 0;

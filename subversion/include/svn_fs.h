@@ -113,7 +113,7 @@ typedef struct svn_fs_t svn_fs_t;
  *
  * "2" is allowed, too and means "enable if efficient",
  * i.e. this will not create warning at runtime if there
- * if no efficient support for revprop caching.
+ * is no efficient support for revprop caching.
  *
  * @since New in 1.8.
  */
@@ -888,27 +888,39 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  * @{
  */
 
-/** Defines the possible ways two arbitrary node-revisions may be related.
+/** Defines the possible ways two arbitrary (root, path)-pairs may be
+ * related.
  *
  * @since New in 1.9.
  */
 typedef enum svn_fs_node_relation_t
 {
-  /** The node-revisions are not related.
-   * Node-revisions from different repositories are always unrelated.
-   * #svn_fs_compare_ids would return the value -1 in this case.
+  /** The (root, path)-pairs are not related, i.e. none of the other cases
+   * apply.  If the roots refer to different @c svn_fs_t instances, then
+   * they are always considered unrelated - even if the underlying
+   * repository is the same.
    */
   svn_fs_node_unrelated = 0,
 
-  /** They are the same node-revision, i.e. there is no intervening change.
-   * However, due to lazy copying, there may be part of different parent
-   * copies.  #svn_fs_compare_ids would return the value 0 in this case.
+  /** No changes have been made between the (root, path)-pairs, i.e. they
+   * have the same (relative) nodes in their sub-trees, corresponding sub-
+   * tree nodes have the same contents as well as properties and report the
+   * same "created-path" and "created-rev" data.  This implies having a
+   * common ancestor.
+   *
+   * However, due to efficiency considerations, the FS implementation may
+   * report some combinations as merely having a common ancestor
+   * (@a svn_fs_node_common_ancestor) instead of actually being unchanged.
    */
-  svn_fs_node_same,
+  svn_fs_node_unchanged,
 
-  /** The node-revisions have a common ancestor (which may be one of them)
-   * but are not the same.
-   * #svn_fs_compare_ids would return the value 1 in this case.
+  /** The (root, path)-pairs have a common ancestor (which may be one of
+   * them) but there are changes between them, i.e. they don't fall into
+   * the @c svn_fs_node_unchanged category.
+   *
+   * Due to efficiency considerations, the FS implementation may falsely
+   * classify some combinations as merely having a common ancestor that
+   * are, in fact, unchanged (@a svn_fs_node_unchanged).
    */
   svn_fs_node_common_ancestor
 
@@ -1811,6 +1823,18 @@ svn_fs_node_proplist(apr_hash_t **table_p,
                      const char *path,
                      apr_pool_t *pool);
 
+/** Set @a *has_props to TRUE if the node @a path in @a root has properties
+ * and to FALSE if it doesn't have properties. Perform temporary allocations
+ * in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_node_has_props(svn_boolean_t *has_props,
+                      svn_fs_root_t *root,
+                      const char *path,
+                      apr_pool_t *scratch_pool);
+
 
 /** Change a node's property's value, or add/delete a property.
  *
@@ -2086,7 +2110,8 @@ svn_fs_dir_entries(apr_hash_t **entries_p,
  * #svn_fs_dir_entries for @a root and determine an optimized ordering
  * in which data access would most likely be efficient.  Set @a *ordered_p
  * to a newly allocated APR array of pointers to these #svn_fs_dirent_t
- * structures.  Allocate the array (but not its contents) in @a pool.
+ * structures.  Allocate the array (but not its contents) in @a result_pool
+ * and use @a scratch_pool for temporaries.
  *
  * @since New in 1.9.
  */
@@ -2094,7 +2119,8 @@ svn_error_t *
 svn_fs_dir_optimal_order(apr_array_header_t **ordered_p,
                          svn_fs_root_t *root,
                          apr_hash_t *entries,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /** Create a new directory named @a path in @a root.  The new directory has
  * no entries, and no properties.  @a root must be the root of a transaction,
@@ -2638,8 +2664,8 @@ svn_fs_set_uuid(svn_fs_t *fs,
  */
 typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
 
-/** Create an <tt>svn_fs_lock_target_t</tt> allocated in @a pool. @a
- * token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
+/** Create an <tt>svn_fs_lock_target_t</tt> allocated in @a result_pool.
+ * @a token can be NULL and @a current_rev can be SVN_INVALID_REVNUM.
  *
  * The @a token is not duplicated and so must have a lifetime at least as
  * long as the returned target object.
@@ -2648,7 +2674,7 @@ typedef struct svn_fs_lock_target_t svn_fs_lock_target_t;
  */
 svn_fs_lock_target_t *svn_fs_lock_target_create(const char *token,
                                                 svn_revnum_t current_rev,
-                                                apr_pool_t *pool);
+                                                apr_pool_t *result_pool);
 
 /** Update @a target changing the token to @a token, @a token can be NULL.
  *
@@ -2668,7 +2694,12 @@ void svn_fs_lock_target_set_token(svn_fs_lock_target_t *target,
  * returns, use svn_error_dup() to preserve the error.
  *
  * If the callback returns an error no further callbacks will be made
- * and svn_fs_lock_many/svn_fs_unlock_many will return an error.
+ * and svn_fs_lock_many/svn_fs_unlock_many will return an error.  The
+ * caller cannot rely on any particular order for these callbacks and
+ * cannot rely on interrupting the underlying operation by returning
+ * an error.  Returning an error stops the callbacks but any locks
+ * that would have been reported in further callbacks may, or may not,
+ * still be created/released.
  *
  * @since New in 1.9.
  */
@@ -2676,7 +2707,7 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
                                                const char *path,
                                                const svn_lock_t *lock,
                                                svn_error_t *fs_err,
-                                               apr_pool_t *pool);
+                                               apr_pool_t *scratch_pool);
 
 /** Lock the paths in @a lock_targets in @a fs.
  *
@@ -2716,12 +2747,16 @@ typedef svn_error_t *(*svn_fs_lock_callback_t)(void *baton,
  *
  * For each path in @a lock_targets @a lock_callback will be invoked
  * passing @a lock_baton and the lock and error that apply to path.
- * @a lock_callback can be NULL in which case it is not called.
+ * @a lock_callback can be NULL in which case it is not called and any
+ * errors that would have been passed to the callback are not reported.
  *
  * The lock and path passed to @a lock_callback will be allocated in
  * @a result_pool.  Use @a scratch_pool for temporary allocations.
  *
  * @note At this time, only files can be locked.
+ *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain unlocked while others may have been locked.
  *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_fs_lock_many() instead.
@@ -2790,10 +2825,14 @@ svn_fs_generate_lock_token(const char **token,
  * For each path in @a unlock_targets @a lock_callback will be invoked
  * passing @a lock_baton and error that apply to path.  The @a lock
  * passed to the callback will be NULL.  @a lock_callback can be NULL
- * in which case it is not called.
+ * in which case it is not called and any errors that would have been
+ * passed to the callback are not reported.
  *
  * The path passed to lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
+ *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain locked while others may have been unlocked.
  *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_fs_unlock_many() instead.

@@ -135,7 +135,7 @@ svn_hash__read_entry(svn_hash__entry_t *entry,
                                   0, APR_SIZE_MAX, 10);
       if (err)
         return svn_error_create(SVN_ERR_MALFORMED_FILE, err,
-                                _("Serialized hash malformed"));
+                                _("Serialized hash malformed key length"));
       entry->keylen = (apr_size_t)ui64;
 
       /* Now read that much into a buffer. */
@@ -148,19 +148,19 @@ svn_hash__read_entry(svn_hash__entry_t *entry,
       SVN_ERR(svn_stream_read_full(stream, &c, &len));
       if (c != '\n')
         return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                _("Serialized hash malformed"));
+                                _("Serialized hash malformed key data"));
 
       /* Read a val length line */
       SVN_ERR(svn_stream_readline(stream, &buf, "\n", &eof, pool));
 
       if ((buf->data[0] == 'V') && (buf->data[1] == ' '))
         {
-          /* Get the length of the key */
+          /* Get the length of the val */
           err = svn_cstring_strtoui64(&ui64, buf->data + 2,
                                       0, APR_SIZE_MAX, 10);
           if (err)
             return svn_error_create(SVN_ERR_MALFORMED_FILE, err,
-                                    _("Serialized hash malformed"));
+                                    _("Serialized hash malformed value length"));
           entry->vallen = (apr_size_t)ui64;
 
           entry->val = apr_palloc(pool, entry->vallen + 1);
@@ -172,7 +172,7 @@ svn_hash__read_entry(svn_hash__entry_t *entry,
           SVN_ERR(svn_stream_read_full(stream, &c, &len));
           if (c != '\n')
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                    _("Serialized hash malformed"));
+                                    _("Serialized hash malformed value data"));
         }
       else
         return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
@@ -186,7 +186,7 @@ svn_hash__read_entry(svn_hash__entry_t *entry,
                                   0, APR_SIZE_MAX, 10);
       if (err)
         return svn_error_create(SVN_ERR_MALFORMED_FILE, err,
-                                _("Serialized hash malformed"));
+                                _("Serialized hash malformed key length"));
       entry->keylen = (apr_size_t)ui64;
 
       /* Now read that much into a buffer. */
@@ -199,7 +199,7 @@ svn_hash__read_entry(svn_hash__entry_t *entry,
       SVN_ERR(svn_stream_read_full(stream, &c, &len));
       if (c != '\n')
         return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                _("Serialized hash malformed"));
+                                _("Serialized hash malformed key data"));
 
       /* Remove this hash entry. */
       entry->vallen = 0;

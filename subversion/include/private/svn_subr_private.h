@@ -681,6 +681,11 @@ svn_boolean_t
 svn_bit_array__get(svn_bit_array__t *array,
                    apr_size_t idx);
 
+/* Return the global pool used by the DSO loader, this may be NULL if
+   no DSOs have been loaded. */
+apr_pool_t *
+svn_dso__pool(void);
+
 /** @} */
 
 #ifdef __cplusplus

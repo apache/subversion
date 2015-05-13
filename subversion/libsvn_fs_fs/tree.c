@@ -1357,7 +1357,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
       *relation = (   (root_a->rev == root_b->rev)
                    && (root_a->is_txn_root == root_b->is_txn_root)
                    && !different_txn)
-                ? svn_fs_node_same
+                ? svn_fs_node_unchanged
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
@@ -1391,7 +1391,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
 
   /* The noderevs are actually related.  Are they the same? */
   if (svn_fs_fs__id_eq(id_a, id_b))
-    *relation = svn_fs_node_same;
+    *relation = svn_fs_node_unchanged;
   else
     *relation = svn_fs_node_common_ancestor;
 
@@ -1515,6 +1515,19 @@ fs_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fs_node_has_props(svn_boolean_t *has_props,
+                  svn_fs_root_t *root,
+                  const char *path,
+                  apr_pool_t *scratch_pool)
+{
+  dag_node_t *node;
+
+  SVN_ERR(get_dag(&node, root, path, scratch_pool));
+
+  return svn_error_trace(svn_fs_fs__dag_has_props(has_props, node,
+                                                  scratch_pool));
+}
 
 static svn_error_t *
 increment_mergeinfo_up_tree(parent_path_t *pp,
@@ -2392,9 +2405,11 @@ static svn_error_t *
 fs_dir_optimal_order(apr_array_header_t **ordered_p,
                      svn_fs_root_t *root,
                      apr_hash_t *entries,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  *ordered_p = svn_fs_fs__order_dir_entries(root->fs, entries, pool);
+  *ordered_p = svn_fs_fs__order_dir_entries(root->fs, entries, result_pool,
+                                            scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -4236,6 +4251,7 @@ static root_vtable_t root_vtable = {
   fs_closest_copy,
   fs_node_prop,
   fs_node_proplist,
+  fs_node_has_props,
   fs_change_node_prop,
   fs_props_changed,
   fs_dir_entries,

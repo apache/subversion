@@ -835,7 +835,7 @@ RemoteSession::status(jobject jthis, jstring jstatus_target,
   proxy_callbacks.m_extra_baton.baton = &rp->m_target_revision;
 
   apr_pool_t* report_pool = rp->get_report_pool();
-  std::auto_ptr<EditorProxy> editor(
+  EditorProxy::UniquePtr editor(
       new EditorProxy(jstatus_editor, report_pool,
                       repos_root_url, base_relpath,
                       m_context->checkCancel, m_context,
@@ -853,7 +853,7 @@ RemoteSession::status(jobject jthis, jstring jstatus_target,
                                 editor->delta_editor(),
                                 editor->delta_baton(),
                                 report_pool),);
-  rp->set_reporter_data(raw_reporter, report_baton, editor.release());
+  rp->set_reporter_data(raw_reporter, report_baton, editor);
 }
 
 // TODO: diff
