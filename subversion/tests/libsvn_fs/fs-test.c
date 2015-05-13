@@ -6927,11 +6927,20 @@ freeze_and_commit(const svn_test_opts_t *opts,
   /* And the same once again, for good measure. */
   SVN_ERR(svn_fs_freeze(fs, noop_freeze_func, NULL, pool));
 
-  /* Make some commit. */
+  /* Make some commit using same FS instance. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "temperature",
                                   svn_string_create("310.05", pool),
+                                  pool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  /* Re-open FS and make another commit. */
+  SVN_ERR(svn_fs_open(&fs, "test-freeze-and-commit", NULL, subpool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "temperature",
+                                  svn_string_create("451", pool),
                                   pool));
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
 
