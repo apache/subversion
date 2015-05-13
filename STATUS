@@ -82,17 +82,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1678571
-   Fix false-positive acceptance via cmdline api of certificates with
-   multiple failures of which some but not all were designated acceptable.
-   Justification:
-     Security issue.
-   Notes:
-     The issue does not exist in 1.8.x or earlier.
-   Votes:
-     +1: rhuijben, philip, stsp
-     +0: danielsh (not tested)
-
  * r1678846
    Change an assertion to an error.
    Justification:
