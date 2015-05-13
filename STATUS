@@ -61,6 +61,13 @@ Other candidate changes:
    Votes:
      +1: brane, rhuijben
 
+ * r1679169
+   fsfs freeze: Unlock rep-cache.db as part of unfreezing.
+   Justification:
+     Breaks commits for API users.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
