@@ -19,15 +19,6 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
- * r1679166
-   svnsync: Split --trust-server-cert-failures into separate options for the
-   source and destination repositories.
-   Justification:
-     Allow controlling certificate acceptance separately for each server.
-   Depends: r1678734 (already approved)
-   Votes:
-     +1: danielsh, philip (1.9.0 only)
-
 Other candidate changes:
 ========================
 
@@ -97,3 +88,12 @@ Approved changes:
      r1678746 extends the documentation to include information lost in r1678734
    Votes:
      +1: rhuijben, philip, brane, danielsh (1.9.0 only)
+
+ * r1679166
+   svnsync: Split --trust-server-cert-failures into separate options for the
+   source and destination repositories.
+   Justification:
+     Allow controlling certificate acceptance separately for each server.
+   Depends: r1678734 (already approved)
+   Votes:
+     +1: danielsh, philip, rhuijben (1.9.0 only)
