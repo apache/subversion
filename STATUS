@@ -66,17 +66,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1674301, r1674305, r1674308, r1674339, r1674340, r1674475
-   --config-option: Warn when the FILE:SECTION:OPTION combination may be
-   invalid.
-   Justification:
-     Silently accepting invalid input is bad.
-   Votes:
-     +1: danielsh, rhuijben, brane (1.9.0 only)
-         (Last minute change. Patch tested & Ok
-          Not a problem if it only gets released in 1.10.0)
-     -0.5: rhuijben (after 1.9.0. Changes error behaviour. Might break scripts)
-
  * r1678734, r1678742, r1678745, r1678746, r1678839, r1678894
    Use --trust-server-cert-failures instead of separate options on cmdline
    Justification:
