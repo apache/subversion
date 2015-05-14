@@ -57,8 +57,16 @@ Other candidate changes:
    Justification:
      Breaks commits for API users.
    Votes:
-     +1: danielsh, ivan, rhuijben (r1679169 only)
-     +1: philip
+     +1: ivan, rhuijben (r1679169 only)
+     +1: philip, danielsh
+
+ * r1679228, r1679230
+   Extend test.
+   Justification:
+     May catch local-to-branch bugs.
+   Depends: r1679169
+   Votes:
+     +1: ivan, danielsh
 
 Veto-blocked changes:
 =====================
