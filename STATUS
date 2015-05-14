@@ -65,12 +65,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1679166
-   svnsync: Split --trust-server-cert-failures into separate options for the
-   source and destination repositories.
-   Justification:
-     Allow controlling certificate acceptance separately for each server.
-   Depends: r1678734 (already approved)
-   Votes:
-     +1: danielsh, philip, rhuijben (1.9.0 only)
