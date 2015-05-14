@@ -66,19 +66,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1678734, r1678742, r1678745, r1678746, r1678839, r1678894
-   Use --trust-server-cert-failures instead of separate options on cmdline
-   Justification:
-     Reduces the number of global options that have to be documented
-     and handled everywhere. Gives the options more context on where they
-     are used.
-   Notes:
-     r1678742 fixes test failures caused by mixed eols.
-     r1678745 updates the bash completion script
-     r1678746 extends the documentation to include information lost in r1678734
-   Votes:
-     +1: rhuijben, philip, brane, danielsh (1.9.0 only)
-
  * r1679166
    svnsync: Split --trust-server-cert-failures into separate options for the
    source and destination repositories.
