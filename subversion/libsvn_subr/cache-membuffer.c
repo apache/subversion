@@ -1432,7 +1432,9 @@ find_entry(svn_membuffer_t *cache,
                            entry->key.key_len) == 0)
                   return entry;
 
-                /* Key conflict. Drop the current entry. */
+                /* Key conflict. The entry to find cannot be anywhere else.
+                 * Therefore, it is not cached. */
+                return NULL;
               }
 
             /* need to empty that entry */
