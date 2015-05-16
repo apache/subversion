@@ -2670,19 +2670,33 @@ combine_key(svn_membuffer_cache_t *cache,
   /* short, fixed-size keys are the most common case */
   if (key_len != APR_HASH_KEY_STRING && key_len <= 16)
     {
-      const apr_size_t prefix_len = cache->prefix.entry_key.key_len;
+      const apr_uint32_t prefix_len = cache->prefix.entry_key.key_len;
+
       /* Copy of *key, padded with 0.
        * We put it just behind the prefix already copied into the COMBINED_KEY.
        * The buffer space has been allocated when the cache was created. */
       apr_uint64_t *data = (void *)((char *)cache->combined_key.full_key.data + 
                                     prefix_len);
-      assert(prefix_len + 16 <= cache->combined_key.full_key.size);
+      assert(prefix_len <= cache->combined_key.full_key.size - 16);
+
+      /* Paranoia: Ridiculously long keys.
+       *
+       * We can't cache combined keys of 4GB and longer anyways.  So, putting
+       * a cap on them just above the maximum cachable value keeps them still
+       * non-cachable but allows us to cast to u32.
+       */
+      assert(MAX_ITEM_SIZE < APR_UINT32_MAX);
+      if (APR_UINT32_MAX - 16 < prefix_len)
+        {
+          /* Non-cachable. Cap values. No data alignment needed.
+           * Even the combined key will not be used. */
+          cache->combined_key.entry_key.key_len = APR_UINT32_MAX;
+          return;
+        }
 
       data[0] = 0;
       data[1] = 0;
       memcpy(data, key, key_len);
-
-      cache->combined_key.entry_key.key_len = prefix_len + 16;
 
       /* scramble key DATA.  All of this must be reversible to prevent key
        * collisions.  So, we limit ourselves to xor and permutations. */
