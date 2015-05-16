@@ -2819,7 +2819,7 @@ combine_long_key(svn_membuffer_cache_t *cache,
     {
       /* Non-cachable. Cap values. No data alignment needed. */
       key_len = APR_UINT32_MAX - prefix_len;
-      aligned_key_len = key_len;
+      aligned_key_len = APR_UINT32_MAX - prefix_len;
     }
   else
     {
