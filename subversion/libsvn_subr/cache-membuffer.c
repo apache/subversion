@@ -1254,7 +1254,9 @@ find_entry(svn_membuffer_t *cache,
                            entry->key.key_len) == 0)
                   return entry;
 
-                /* Key conflict. Drop the current entry. */
+                /* Key conflict. The entry to find cannot be anywhere else.
+                 * Therefore, it is not cached. */
+                return NULL;
               }
 
             /* need to empty that entry */
@@ -2610,15 +2612,34 @@ combine_long_key(svn_membuffer_cache_t *cache,
 {
   apr_uint32_t *digest_buffer;
   char *key_copy;
-  apr_size_t prefix_len = cache->prefix.entry_key.key_len;
-  apr_size_t aligned_key_len;
+  apr_uint32_t prefix_len = cache->prefix.entry_key.key_len;
+  apr_uint32_t aligned_key_len;
 
   /* handle variable-length keys */
   if (key_len == APR_HASH_KEY_STRING)
     key_len = strlen((const char *) key);
 
+  /* Paranoia: Ridiculously long keys.
+   *
+   * We can't cache combined keys of 4GB and longer anyways.  So, putting
+   * a cap on them just above the maximum cachable value keeps them still
+   * non-cachable but allows us to cast to u32.
+   */
+  assert(MAX_ITEM_SIZE < APR_UINT32_MAX);
+  if (APR_UINT32_MAX - prefix_len <= key_len)
+    {
+      /* Non-cachable. Cap values. No data alignment needed. */
+      key_len = APR_UINT32_MAX - prefix_len;
+      aligned_key_len = key_len;
+    }
+  else
+    {
+      /* Cast is safe.
+       * Key and item may be cachable, so item alignment is necessary. */
+      aligned_key_len = ALIGN_VALUE((apr_uint32_t)key_len);
+    }
+
   /* Combine keys. */
-  aligned_key_len = ALIGN_VALUE(key_len);
   svn_membuf__ensure(&cache->combined_key.full_key,
                      aligned_key_len + prefix_len);
 
@@ -3145,6 +3166,19 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   prefix_orig_len = strlen(prefix) + 1;
   prefix_len = ALIGN_VALUE(prefix_orig_len);
 
+  assert(MAX_ITEM_SIZE < APR_UINT32_MAX);
+  if (prefix_len > MAX_ITEM_SIZE)
+    {
+      /* We should never ever get here but the above check makes the cast
+       * to u32 further down safe.  We may also catch missing parameter
+       * initializations here. */
+      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                              "Cache prefix length of %" APR_UINT64_T_FMT 
+                              " exceeds maximum of %" APR_UINT64_T_FMT 
+                              " bytes\n", (apr_uint64_t)prefix_len,
+                              (apr_uint64_t)MAX_ITEM_SIZE);
+    }
+
   svn_membuf__create(&cache->prefix.full_key, prefix_len, result_pool);
   memcpy((char *)cache->prefix.full_key.data, prefix, prefix_orig_len);
   memset((char *)cache->prefix.full_key.data + prefix_orig_len, 0,
@@ -3158,7 +3192,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                        scratch_pool));
   memcpy(cache->prefix.entry_key.fingerprint, checksum->digest,
          sizeof(cache->prefix.entry_key.fingerprint));
-  cache->prefix.entry_key.key_len = prefix_len;
+  cache->prefix.entry_key.key_len = (apr_uint32_t)prefix_len;
 
   /* Initialize the combined key. Pre-allocate some extra room in the full
    * key such that we probably don't need to re-alloc. */
