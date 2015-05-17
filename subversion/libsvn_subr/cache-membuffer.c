@@ -197,7 +197,7 @@ typedef struct entry_key_t
 
   /* Length of the full key.  This value is aligned to ITEM_ALIGNMENT to
    * make sure the subsequent item content is properly aligned. */
-  apr_uint32_t key_len;
+  apr_size_t key_len;
 } entry_key_t;
 
 /* A full key, i.e. the combination of the cache's key prefix with some
@@ -383,7 +383,7 @@ typedef struct entry_t
    * above ensures that there will be no overflows.
    * Only valid for used entries.
    */
-  apr_uint32_t size;
+  apr_size_t size;
 
   /* Number of (read) hits for this entry. Will be reset upon write.
    * Only valid for used entries.
@@ -2029,7 +2029,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        * negative value.
        */
       cache->data_used += (apr_uint64_t)size - entry->size;
-      entry->size = (apr_uint32_t) size;
+      entry->size = size;
       entry->priority = priority;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
@@ -2062,7 +2062,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        * the serialized item's (future) position within data buffer.
        */
       entry = find_entry(cache, group_index, to_find, TRUE);
-      entry->size = (apr_uint32_t) size;
+      entry->size = size;
       entry->offset = level->current_data;
       entry->priority = priority;
 
@@ -2488,7 +2488,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
                   /* Write the new entry.
                    */
                   entry = find_entry(cache, group_index, to_find, TRUE);
-                  entry->size = (apr_uint32_t) (item_size + key_len);
+                  entry->size = item_size + key_len;
                   entry->offset = cache->l1.current_data;
 
                   if (key_len)
@@ -2612,32 +2612,14 @@ combine_long_key(svn_membuffer_cache_t *cache,
 {
   apr_uint32_t *digest_buffer;
   char *key_copy;
-  apr_uint32_t prefix_len = cache->prefix.entry_key.key_len;
-  apr_uint32_t aligned_key_len;
+  apr_size_t prefix_len = cache->prefix.entry_key.key_len;
+  apr_size_t aligned_key_len;
 
   /* handle variable-length keys */
   if (key_len == APR_HASH_KEY_STRING)
     key_len = strlen((const char *) key);
 
-  /* Paranoia: Ridiculously long keys.
-   *
-   * We can't cache combined keys of 4GB and longer anyways.  So, putting
-   * a cap on them just above the maximum cachable value keeps them still
-   * non-cachable but allows us to cast to u32.
-   */
-  assert(MAX_ITEM_SIZE < APR_UINT32_MAX);
-  if (APR_UINT32_MAX - prefix_len <= key_len)
-    {
-      /* Non-cachable. Cap values. No data alignment needed. */
-      key_len = APR_UINT32_MAX - prefix_len;
-      aligned_key_len = key_len;
-    }
-  else
-    {
-      /* Cast is safe.
-       * Key and item may be cachable, so item alignment is necessary. */
-      aligned_key_len = ALIGN_VALUE((apr_uint32_t)key_len);
-    }
+  aligned_key_len = ALIGN_VALUE(key_len);
 
   /* Combine keys. */
   svn_membuf__ensure(&cache->combined_key.full_key,
@@ -2670,7 +2652,7 @@ combine_key(svn_membuffer_cache_t *cache,
   /* short, fixed-size keys are the most common case */
   if (key_len != APR_HASH_KEY_STRING && key_len <= 16)
     {
-      const apr_uint32_t prefix_len = cache->prefix.entry_key.key_len;
+      const apr_size_t prefix_len = cache->prefix.entry_key.key_len;
 
       /* Copy of *key, padded with 0.
        * We put it just behind the prefix already copied into the COMBINED_KEY.
@@ -2678,21 +2660,7 @@ combine_key(svn_membuffer_cache_t *cache,
       apr_uint64_t *data = (void *)((char *)cache->combined_key.full_key.data + 
                                     prefix_len);
       assert(prefix_len <= cache->combined_key.full_key.size - 16);
-
-      /* Paranoia: Ridiculously long keys.
-       *
-       * We can't cache combined keys of 4GB and longer anyways.  So, putting
-       * a cap on them just above the maximum cachable value keeps them still
-       * non-cachable but allows us to cast to u32.
-       */
-      assert(MAX_ITEM_SIZE < APR_UINT32_MAX);
-      if (APR_UINT32_MAX - 16 < prefix_len)
-        {
-          /* Non-cachable. Cap values. No data alignment needed.
-           * Even the combined key will not be used. */
-          cache->combined_key.entry_key.key_len = APR_UINT32_MAX;
-          return;
-        }
+      cache->combined_key.entry_key.key_len = prefix_len + 16;
 
       data[0] = 0;
       data[1] = 0;
@@ -3180,19 +3148,6 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   prefix_orig_len = strlen(prefix) + 1;
   prefix_len = ALIGN_VALUE(prefix_orig_len);
 
-  assert(MAX_ITEM_SIZE < APR_UINT32_MAX);
-  if (prefix_len > MAX_ITEM_SIZE)
-    {
-      /* We should never ever get here but the above check makes the cast
-       * to u32 further down safe.  We may also catch missing parameter
-       * initializations here. */
-      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                              "Cache prefix length of %" APR_UINT64_T_FMT 
-                              " exceeds maximum of %" APR_UINT64_T_FMT 
-                              " bytes\n", (apr_uint64_t)prefix_len,
-                              (apr_uint64_t)MAX_ITEM_SIZE);
-    }
-
   svn_membuf__create(&cache->prefix.full_key, prefix_len, result_pool);
   memcpy((char *)cache->prefix.full_key.data, prefix, prefix_orig_len);
   memset((char *)cache->prefix.full_key.data + prefix_orig_len, 0,
@@ -3206,7 +3161,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                        scratch_pool));
   memcpy(cache->prefix.entry_key.fingerprint, checksum->digest,
          sizeof(cache->prefix.entry_key.fingerprint));
-  cache->prefix.entry_key.key_len = (apr_uint32_t)prefix_len;
+  cache->prefix.entry_key.key_len = prefix_len;
 
   /* Initialize the combined key. Pre-allocate some extra room in the full
    * key such that we probably don't need to re-alloc. */
