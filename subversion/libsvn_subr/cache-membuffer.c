@@ -1981,7 +1981,7 @@ select_level(svn_membuffer_t *cache,
       /* Large but important items go into L2. */
       entry_t dummy_entry = { { { 0 } } };
       dummy_entry.priority = priority;
-      dummy_entry.size = (apr_uint32_t) size;
+      dummy_entry.size = size;
 
       return ensure_data_insertable_l2(cache, &dummy_entry)
            ? &cache->l2
