@@ -76,6 +76,14 @@ svn_fnv1a_32x4__update(svn_fnv1a_32x4__context_t *context,
 apr_uint32_t
 svn_fnv1a_32x4__finalize(svn_fnv1a_32x4__context_t *context);
 
+/* Set HASHES to the 4 partial hash sums produced by the modified FVN-1a
+ * over INPUT of LEN bytes.
+ */
+void
+svn__fnv1a_32x4_raw(apr_uint32_t hashes[4],
+                    const void *input,
+                    apr_size_t len);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
