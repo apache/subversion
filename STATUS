@@ -60,13 +60,14 @@ Other candidate changes:
      +1: ivan, rhuijben (r1679169 only)
      +1: philip, danielsh
 
- * r1679228, r1679230
+ * r1679228, r1679230, r1679909
    Extend test.
    Justification:
      May catch local-to-branch bugs.
    Depends: r1679169
    Votes:
-     +1: ivan, danielsh
+     +1: ivan (without r1679909)
+     +1: danielsh
 
 Veto-blocked changes:
 =====================
