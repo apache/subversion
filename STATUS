@@ -124,7 +124,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1674455
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1678494
    Document svn:auto-props.
