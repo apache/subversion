@@ -525,6 +525,7 @@ A revision file contains a concatenation of various kinds of data:
   * Text and property representations
   * Node-revisions
   * The changed-path data
+  * Two offsets at the very end (physical addressing only)
   * Index data (logical addressing only)
   * Revision / pack file footer (logical addressing only)
 
@@ -756,6 +757,9 @@ Index Data
 Format 7 introduces logical addressing that requires item indexes
 to be translated / mapped to physical rev / pack file offsets.
 These indexes are appended to the respective rev / pack file.
+
+The indexes map (revision number, item-index) pairs to absolute file offsets
+and absolute file offsets to (revision number, item-index, item metadata).
 
 Details of the binary format used by these index files can be
 found in structure-indexes.

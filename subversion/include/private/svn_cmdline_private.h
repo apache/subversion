@@ -88,7 +88,7 @@ typedef struct svn_cmdline__config_argument_t
  * containing svn_cmdline__config_argument_t* elements, allocating the option
  * data in @a pool
  *
- * [Since 1.9/1.10:] If the file, section, or option value is not recognized,
+ * [Since 1.9:] If the file, section, or option value is not recognized,
  * warn to @c stderr, using @a prefix as in svn_handle_warning2().
  *
  * @since New in 1.7.
