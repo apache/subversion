@@ -69,7 +69,7 @@ Other candidate changes:
      +1: ivan (without r1679909)
      +1: danielsh
 
- * r1679864, r1679866
+ * r1678950, r1678963, r1679864, r1679866
    Ensure full key matching in membuffer cache.
    Justification:
      While the chances of producing an actual key conflict are very slim
