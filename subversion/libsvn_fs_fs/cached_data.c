@@ -2524,6 +2524,38 @@ read_dir_entries(apr_array_header_t *entries,
   return SVN_NO_ERROR;
 }
 
+/* For directory NODEREV in FS, return the *FILENAME and *FILESIZE of its
+ * in-txn representation.  If the directory representation is comitted data,
+ * set *FILENAME to NULL and *FILESIZE to SVN_INVALID_FILESIZE.  Allocate
+ * *FILENAME in RESULT_POOL and use SCRATCH_POOL for temporaries. */
+static svn_error_t *
+get_txn_dir_info(const char **filename,
+                 svn_filesize_t *filesize,
+                 svn_fs_t *fs,
+                 node_revision_t *noderev,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_io_dirent2_t *dirent;
+
+  if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
+    {
+      *filename = svn_fs_fs__path_txn_node_children(fs, noderev->id,
+                                                    result_pool);
+
+      SVN_ERR(svn_io_stat_dirent2(&dirent, *filename, FALSE, FALSE,
+                                  scratch_pool, scratch_pool));
+      *filesize = dirent->filesize;
+    }
+  else
+    {
+      *filename = NULL;
+      *filesize = SVN_INVALID_FILESIZE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Fetch the contents of a directory into DIR.  Values are stored
    as filename to string mappings; further conversion is necessary to
    convert them into svn_fs_dirent_t values. */
@@ -2543,8 +2575,10 @@ get_dir_contents(svn_fs_fs__dir_data_t *dir,
   /* Read dir contents - unless there is none in which case we are done. */
   if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
-      const char *filename
-        = svn_fs_fs__path_txn_node_children(fs, noderev->id, scratch_pool);
+      /* Get location & current size of the directory representation. */
+      const char *filename;
+      SVN_ERR(get_txn_dir_info(&filename, &dir->txn_filesize, fs, noderev,
+                               scratch_pool, scratch_pool));
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
@@ -2640,9 +2674,19 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
                              result_pool));
       if (found)
         {
-          /* Still valid. Done. */
-          *entries_p = dir->entries;
-          return SVN_NO_ERROR;
+          /* Verify that the cached dir info is not stale
+           * (no-op for committed data). */
+          const char *filename;
+          svn_filesize_t filesize;
+          SVN_ERR(get_txn_dir_info(&filename, &filesize, fs, noderev,
+                                   scratch_pool, scratch_pool));
+
+          if (filesize == dir->txn_filesize)
+            {
+              /* Still valid. Done. */
+              *entries_p = dir->entries;
+              return SVN_NO_ERROR;
+            }
         }
     }
 
