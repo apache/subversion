@@ -233,9 +233,26 @@ svn_fs_fs__extract_dir_filesize(void **out,
                                 apr_pool_t *pool);
 
 /**
+ * Describes the entry to be found in a directory: Identifies the entry
+ * by @a name and requires the directory file size to be @a filesize.
+ */
+typedef struct extract_dir_entry_baton_t
+{
+  /** name of the directory entry to return */
+  const char *name;
+
+  /** Current length of the in-txn in-disk representation of the directory.
+   * SVN_INVALID_FILESIZE if unknown. */
+  svn_filesize_t txn_filesize;
+} extract_dir_entry_baton_t;
+
+
+/**
  * Implements #svn_cache__partial_getter_func_t for a single
  * #svn_fs_dirent_t within a serialized directory contents hash,
- * identified by its name (const char @a *baton).
+ * identified by its name (in (extract_dir_entry_baton_t *) @a *baton).
+ * If the filesize specified in the baton does not match the cached
+ * value for this directory, @a *out will be NULL as well.
  */
 svn_error_t *
 svn_fs_fs__extract_dir_entry(void **out,
