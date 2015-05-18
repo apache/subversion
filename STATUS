@@ -82,5 +82,4 @@ Approved changes:
    Justification:
      Breaks commits for API users.
    Votes:
-     +1: ivan (r1679169 only)
-     +1: philip, danielsh, rhuijben
+     +1: philip, danielsh, rhuijben, ivan
