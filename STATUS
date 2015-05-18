@@ -32,16 +32,6 @@ Other candidate changes:
      +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
- * r1675774
-   Use the /usr/libexec/java_home program to find the JDK on OSX.
-   Justification:
-     Without this change, we'll tend to find original 1.6 JDK on newer
-     versions of OSX instead of the latest and/or default.
-   Notes:
-     Soak restart is not needed after this fix, IMO.
-   Votes:
-     +1: brane, rhuijben
-
  * r1678950, r1678963, r1679864, r1679866
    Ensure full key matching in membuffer cache.
    Justification:
@@ -83,3 +73,13 @@ Approved changes:
    Votes:
      +1: ivan (without r1679909)
      +1: danielsh, rhuijben, stsp
+
+ * r1675774
+   Use the /usr/libexec/java_home program to find the JDK on OSX.
+   Justification:
+     Without this change, we'll tend to find original 1.6 JDK on newer
+     versions of OSX instead of the latest and/or default.
+   Notes:
+     Soak restart is not needed after this fix, IMO.
+   Votes:
+     +1: brane, rhuijben, stsp
