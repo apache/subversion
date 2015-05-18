@@ -1526,9 +1526,29 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     {
       /* The directory rep is already mutable, so just open it for append. */
       SVN_ERR(svn_io_file_open(&file, filename, APR_WRITE | APR_APPEND,
-                               APR_OS_DEFAULT, pool));
-      out = svn_stream_from_aprfile2(file, TRUE, pool);
+                               APR_OS_DEFAULT, subpool));
+      out = svn_stream_from_aprfile2(file, TRUE, subpool);
     }
+
+  /* Append an incremental hash entry for the entry change. */
+  if (id)
+    {
+      svn_fs_dirent_t entry;
+      entry.name = name;
+      entry.id = id;
+      entry.kind = kind;
+
+      SVN_ERR(unparse_dir_entry(&entry, out, subpool));
+    }
+  else
+    {
+      SVN_ERR(svn_stream_printf(out, subpool, "D %" APR_SIZE_T_FMT "\n%s\n",
+                                strlen(name), name));
+    }
+
+  /* Flush APR buffers. */
+  SVN_ERR(svn_io_file_close(file, subpool));
+  svn_pool_clear(subpool);
 
   /* if we have a directory cache for this transaction, update it */
   if (ffd->txn_dir_cache)
@@ -1554,25 +1574,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
                                      svn_fs_fs__replace_dir_entry, &baton,
                                      subpool));
     }
-  svn_pool_clear(subpool);
 
-  /* Append an incremental hash entry for the entry change. */
-  if (id)
-    {
-      svn_fs_dirent_t entry;
-      entry.name = name;
-      entry.id = id;
-      entry.kind = kind;
-
-      SVN_ERR(unparse_dir_entry(&entry, out, subpool));
-    }
-  else
-    {
-      SVN_ERR(svn_stream_printf(out, subpool, "D %" APR_SIZE_T_FMT "\n%s\n",
-                                strlen(name), name));
-    }
-
-  SVN_ERR(svn_io_file_close(file, subpool));
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
