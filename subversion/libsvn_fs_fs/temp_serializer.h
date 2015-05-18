@@ -221,6 +221,18 @@ svn_fs_fs__get_sharded_offset(void **out,
                               apr_pool_t *pool);
 
 /**
+ * Implements #svn_cache__partial_getter_func_t.
+ * Set (svn_filesize_t) @a *out to the filesize info stored with the
+ * serialized directory in @a data of @a data_len.  @a baton is unused.
+ */
+svn_error_t *
+svn_fs_fs__extract_dir_filesize(void **out,
+                                const void *data,
+                                apr_size_t data_len,
+                                void *baton,
+                                apr_pool_t *pool);
+
+/**
  * Implements #svn_cache__partial_getter_func_t for a single
  * #svn_fs_dirent_t within a serialized directory contents hash,
  * identified by its name (const char @a *baton).

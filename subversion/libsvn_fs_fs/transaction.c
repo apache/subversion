@@ -1524,10 +1524,43 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
   else
     {
+      const svn_io_dirent2_t *dirent;
+
       /* The directory rep is already mutable, so just open it for append. */
       SVN_ERR(svn_io_file_open(&file, filename, APR_WRITE | APR_APPEND,
                                APR_OS_DEFAULT, subpool));
       out = svn_stream_from_aprfile2(file, TRUE, subpool);
+
+      /* If the cache contents is stale, drop it.
+       *
+       * Note that the directory file is append-only, i.e. if the size
+       * did not change, the contents didn't either. */
+      if (ffd->txn_dir_cache)
+        {
+          const char *key
+            = svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
+          svn_boolean_t found;
+          svn_filesize_t filesize;
+
+          /* Get the file size that corresponds to the cached contents
+           * (if any). */
+          SVN_ERR(svn_cache__get_partial((void **)&filesize, &found,
+                                         ffd->txn_dir_cache, key,
+                                         svn_fs_fs__extract_dir_filesize,
+                                         NULL, subpool));
+
+          /* File size info still matches?
+           * If not, we need to drop the cache entry. */
+          if (found)
+            {
+              SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
+                                          subpool, subpool));
+
+              if (filesize != dirent->filesize)
+                SVN_ERR(svn_cache__set(ffd->txn_dir_cache, key, NULL,
+                                       subpool));
+            }
+        }
     }
 
   /* Append an incremental hash entry for the entry change. */
