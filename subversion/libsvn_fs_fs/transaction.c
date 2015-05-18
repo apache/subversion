@@ -1586,13 +1586,18 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   /* if we have a directory cache for this transaction, update it */
   if (ffd->txn_dir_cache)
     {
-      /* build parameters: (name, new entry) pair */
+      /* build parameters: name, new entry, new file size  */
       const char *key =
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
       replace_baton_t baton;
 
+      const svn_io_dirent2_t *dirent;
+      SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
+                                  subpool, subpool));
+
       baton.name = name;
       baton.new_entry = NULL;
+      baton.txn_filesize = dirent->filesize;
 
       if (id)
         {

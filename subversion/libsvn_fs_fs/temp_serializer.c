@@ -985,6 +985,12 @@ svn_fs_fs__replace_dir_entry(void **data,
 
   svn_temp_serializer__context_t *context;
 
+  /* update the cached file length info.
+   * Because we are writing to the cache, it is fair to assume that the
+   * caller made sure that the current contents is consistent with the
+   * previous state of the directory file. */
+  dir_data->txn_filesize = replace_baton->txn_filesize;
+
   /* after quite a number of operations, let's re-pack everything.
    * This is to limit the number of wasted space as we cannot overwrite
    * existing data but must always append. */
