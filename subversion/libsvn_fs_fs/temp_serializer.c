@@ -814,6 +814,20 @@ svn_fs_fs__get_sharded_offset(void **out,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__extract_dir_filesize(void **out,
+                                const void *data,
+                                apr_size_t data_len,
+                                void *baton,
+                                apr_pool_t *pool)
+{
+  const dir_data_t *dir_data = data;
+
+  *(svn_filesize_t *)out = dir_data->txn_filesize;
+
+  return SVN_NO_ERROR;
+}
+
 /* Utility function that returns the lowest index of the first entry in
  * *ENTRIES that points to a dir entry with a name equal or larger than NAME.
  * If an exact match has been found, *FOUND will be set to TRUE. COUNT is
