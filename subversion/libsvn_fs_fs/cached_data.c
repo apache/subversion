@@ -2729,13 +2729,22 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                          scratch_pool);
   if (cache)
     {
+      extract_dir_entry_baton_t baton;
+
+      const char *filename;
+      svn_filesize_t filesize;
+      SVN_ERR(get_txn_dir_info(&filename, &filesize, fs, noderev,
+                               scratch_pool, scratch_pool));
+
       /* Cache lookup. */
+      baton.txn_filesize = filesize;
+      baton.name = name;
       SVN_ERR(svn_cache__get_partial((void **)dirent,
                                      &found,
                                      cache,
                                      key,
                                      svn_fs_fs__extract_dir_entry,
-                                     (void*)name,
+                                     &baton,
                                      result_pool));
     }
 

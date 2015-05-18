@@ -882,7 +882,7 @@ svn_fs_fs__extract_dir_entry(void **out,
                              apr_pool_t *pool)
 {
   const dir_data_t *dir_data = data;
-  const char* name = baton;
+  const extract_dir_entry_baton_t *entry_baton = baton;
   svn_boolean_t found;
 
   /* resolve the reference to the entries array */
@@ -895,13 +895,14 @@ svn_fs_fs__extract_dir_entry(void **out,
 
   /* binary search for the desired entry by name */
   apr_size_t pos = find_entry((svn_fs_dirent_t **)entries,
-                              name,
+                              entry_baton->name,
                               dir_data->count,
                               &found);
 
-  /* de-serialize that entry or return NULL, if no match has been found */
+  /* de-serialize that entry or return NULL, if no match has been found.
+   * Be sure to check that the directory contents is still up-to-date. */
   *out = NULL;
-  if (found)
+  if (found && dir_data->txn_filesize == entry_baton->txn_filesize)
     {
       const svn_fs_dirent_t *source =
           svn_temp_deserializer__ptr(entries, (const void *const *)&entries[pos]);
