@@ -192,7 +192,7 @@ svn_fs_fs__deserialize_node_revision(void **item,
                                      apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for a directory contents array
+ * Implements #svn_cache__serialize_func_t for a #svn_fs_fs__dir_data_t
  */
 svn_error_t *
 svn_fs_fs__serialize_dir_entries(void **data,
@@ -201,7 +201,7 @@ svn_fs_fs__serialize_dir_entries(void **data,
                                  apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__deserialize_func_t for a directory contents array
+ * Implements #svn_cache__deserialize_func_t for a #svn_fs_fs__dir_data_t
  */
 svn_error_t *
 svn_fs_fs__deserialize_dir_entries(void **out,

@@ -153,6 +153,10 @@ typedef struct dir_data_t
    * (it's int because the directory is an APR array) */
   int count;
 
+  /** Current length of the in-txn in-disk representation of the directory.
+   * SVN_INVALID_FILESIZE if unknown (i.e. committed data). */
+  svn_filesize_t txn_filesize;
+
   /* number of unused dir entry buckets in the index */
   apr_size_t over_provision;
 
@@ -198,15 +202,16 @@ serialize_dir_entry(svn_temp_serializer__context_t *context,
   svn_temp_serializer__pop(context);
 }
 
-/* Utility function to serialize the ENTRIES into a new serialization
+/* Utility function to serialize the DIR into a new serialization
  * context to be returned. Allocation will be made form POOL.
  */
 static svn_temp_serializer__context_t *
-serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
+serialize_dir(svn_fs_fs__dir_data_t *dir, apr_pool_t *pool)
 {
   dir_data_t dir_data;
   int i = 0;
   svn_temp_serializer__context_t *context;
+  apr_array_header_t *entries = dir->entries;
 
   /* calculate sizes */
   int count = entries->nelts;
@@ -216,6 +221,7 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
 
   /* copy the hash entries to an auxiliary struct of known layout */
   dir_data.count = count;
+  dir_data.txn_filesize = dir->txn_filesize;
   dir_data.over_provision = over_provision;
   dir_data.operations = 0;
   dir_data.entries = apr_palloc(pool, entries_len);
@@ -252,24 +258,29 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   return context;
 }
 
-/* Utility function to reconstruct a dir entries array from serialized data
+/* Utility function to reconstruct a dir entries struct from serialized data
  * in BUFFER and DIR_DATA. Allocation will be made form POOL.
  */
-static apr_array_header_t *
+static svn_fs_fs__dir_data_t *
 deserialize_dir(void *buffer, dir_data_t *dir_data, apr_pool_t *pool)
 {
-  apr_array_header_t *result
-    = apr_array_make(pool, dir_data->count, sizeof(svn_fs_dirent_t *));
+  svn_fs_fs__dir_data_t *result;
   apr_size_t i;
   apr_size_t count;
   svn_fs_dirent_t *entry;
   svn_fs_dirent_t **entries;
 
+  /* Construct empty directory object. */
+  result = apr_pcalloc(pool, sizeof(*result));
+  result->entries
+    = apr_array_make(pool, dir_data->count, sizeof(svn_fs_dirent_t *));
+  result->txn_filesize = dir_data->txn_filesize;
+
   /* resolve the reference to the entries array */
   svn_temp_deserializer__resolve(buffer, (void **)&dir_data->entries);
   entries = dir_data->entries;
 
-  /* fixup the references within each entry and add it to the hash */
+  /* fixup the references within each entry and add it to the RESULT */
   for (i = 0, count = dir_data->count; i < count; ++i)
     {
       svn_temp_deserializer__resolve(entries, (void **)&entries[i]);
@@ -280,7 +291,7 @@ deserialize_dir(void *buffer, dir_data_t *dir_data, apr_pool_t *pool)
       svn_fs_fs__id_deserialize(entry, (svn_fs_id_t **)&entry->id);
 
       /* add the entry to the hash */
-      APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = entry;
+      APR_ARRAY_PUSH(result->entries, svn_fs_dirent_t *) = entry;
     }
 
   /* return the now complete hash */
@@ -764,7 +775,7 @@ svn_fs_fs__serialize_dir_entries(void **data,
                                  void *in,
                                  apr_pool_t *pool)
 {
-  apr_array_header_t *dir = in;
+  svn_fs_fs__dir_data_t *dir = in;
 
   /* serialize the dir content into a new serialization context
    * and return the serialized data */
@@ -911,31 +922,34 @@ slowly_replace_dir_entry(void **data,
 {
   replace_baton_t *replace_baton = (replace_baton_t *)baton;
   dir_data_t *dir_data = (dir_data_t *)*data;
-  apr_array_header_t *dir;
+  svn_fs_fs__dir_data_t *dir;
   int idx = -1;
   svn_fs_dirent_t *entry;
+  apr_array_header_t *entries;
 
   SVN_ERR(svn_fs_fs__deserialize_dir_entries((void **)&dir,
                                              *data,
                                              dir_data->len,
                                              pool));
 
-  entry = svn_fs_fs__find_dir_entry(dir, replace_baton->name, &idx);
+  entries = dir->entries;
+  entry = svn_fs_fs__find_dir_entry(entries, replace_baton->name, &idx);
 
   /* Replacement or removal? */
   if (replace_baton->new_entry)
     {
       /* Replace ENTRY with / insert the NEW_ENTRY */
       if (entry)
-        APR_ARRAY_IDX(dir, idx, svn_fs_dirent_t *) = replace_baton->new_entry;
+        APR_ARRAY_IDX(entries, idx, svn_fs_dirent_t *)
+          = replace_baton->new_entry;
       else
-        svn_sort__array_insert(dir, &replace_baton->new_entry, idx);
+        svn_sort__array_insert(entries, &replace_baton->new_entry, idx);
     }
   else
     {
       /* Remove the old ENTRY. */
       if (entry)
-        svn_sort__array_delete(dir, idx, 1);
+        svn_sort__array_delete(entries, idx, 1);
     }
 
   return svn_fs_fs__serialize_dir_entries(data, data_len, dir, pool);

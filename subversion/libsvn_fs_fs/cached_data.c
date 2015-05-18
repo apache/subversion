@@ -2524,11 +2524,11 @@ read_dir_entries(apr_array_header_t *entries,
   return SVN_NO_ERROR;
 }
 
-/* Fetch the contents of a directory into ENTRIES.  Values are stored
+/* Fetch the contents of a directory into DIR.  Values are stored
    as filename to string mappings; further conversion is necessary to
    convert them into svn_fs_dirent_t values. */
 static svn_error_t *
-get_dir_contents(apr_array_header_t **entries,
+get_dir_contents(svn_fs_fs__dir_data_t *dir,
                  svn_fs_t *fs,
                  node_revision_t *noderev,
                  apr_pool_t *result_pool,
@@ -2536,7 +2536,11 @@ get_dir_contents(apr_array_header_t **entries,
 {
   svn_stream_t *contents;
 
-  *entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
+  /* Initialize the result. */
+  dir->entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
+  dir->txn_filesize = SVN_INVALID_FILESIZE;
+
+  /* Read dir contents - unless there is none in which case we are done. */
   if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
       const char *filename
@@ -2547,7 +2551,7 @@ get_dir_contents(apr_array_header_t **entries,
          changes we've made in this transaction. */
       SVN_ERR(svn_stream_open_readonly(&contents, filename, scratch_pool,
                                        scratch_pool));
-      SVN_ERR(read_dir_entries(*entries, contents, TRUE, noderev->id,
+      SVN_ERR(read_dir_entries(dir->entries, contents, TRUE, noderev->id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
@@ -2567,7 +2571,7 @@ get_dir_contents(apr_array_header_t **entries,
 
       /* de-serialize hash */
       contents = svn_stream_from_stringbuf(text, scratch_pool);
-      SVN_ERR(read_dir_entries(*entries, contents, FALSE,  noderev->id,
+      SVN_ERR(read_dir_entries(dir->entries, contents, FALSE, noderev->id,
                                result_pool, scratch_pool));
     }
 
@@ -2623,6 +2627,7 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
 {
   pair_cache_key_t pair_key = { 0 };
   const void *key;
+  svn_fs_fs__dir_data_t *dir;
 
   /* find the cache we may use */
   svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev,
@@ -2631,19 +2636,24 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
     {
       svn_boolean_t found;
 
-      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, key,
+      SVN_ERR(svn_cache__get((void **)&dir, &found, cache, key,
                              result_pool));
       if (found)
-        return SVN_NO_ERROR;
+        {
+          /* Still valid. Done. */
+          *entries_p = dir->entries;
+          return SVN_NO_ERROR;
+        }
     }
 
   /* Read in the directory contents. */
-  SVN_ERR(get_dir_contents(entries_p, fs, noderev, result_pool,
-                           scratch_pool));
+  dir = apr_pcalloc(scratch_pool, sizeof(*dir));
+  SVN_ERR(get_dir_contents(dir, fs, noderev, result_pool, scratch_pool));
+  *entries_p = dir->entries;
 
   /* Update the cache, if we are to use one. */
   if (cache)
-    SVN_ERR(svn_cache__set(cache, key, *entries_p, scratch_pool));
+    SVN_ERR(svn_cache__set(cache, key, dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
