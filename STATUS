@@ -69,6 +69,16 @@ Other candidate changes:
      +1: ivan (without r1679909)
      +1: danielsh
 
+ * r1679864, r1679866
+   Ensure full key matching in membuffer cache.
+   Justification:
+     While the chances of producing an actual key conflict are very slim
+     today, they are non-zero.  Due to the central role of the caching
+     code, we should not leave that ever so small risk in production for
+     the years to come.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
