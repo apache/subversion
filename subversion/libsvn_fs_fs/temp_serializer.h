@@ -248,7 +248,10 @@ svn_fs_fs__extract_dir_entry(void **out,
  * Describes the change to be done to a directory: Set the entry
  * identify by @a name to the value @a new_entry. If the latter is
  * @c NULL, the entry shall be removed if it exists. Otherwise it
- * will be replaced or automatically added, respectively.
+ * will be replaced or automatically added, respectively.  The
+ * @a filesize allows readers to identify stale cache data (e.g.
+ * due to concurrent access to txns); writers use it to update the
+ * cached file size info.
  */
 typedef struct replace_baton_t
 {
@@ -257,6 +260,10 @@ typedef struct replace_baton_t
 
   /** directory entry to insert instead */
   svn_fs_dirent_t *new_entry;
+
+  /** Current length of the in-txn in-disk representation of the directory.
+   * SVN_INVALID_FILESIZE if unknown. */
+  svn_filesize_t txn_filesize;
 } replace_baton_t;
 
 /**
