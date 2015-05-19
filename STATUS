@@ -129,12 +129,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1673153
-   Significantly improve 'svn ls -v' on tag directories
-   Justification:
-     Simple patch that avoids retrieving 'has_props' for every node, which
-     is then ignored saves 95% of the server side processing time on
-     end-user reported case.
-   Votes:
-     +1: rhuijben, ivan, stsp
