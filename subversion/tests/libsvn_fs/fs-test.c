@@ -6939,7 +6939,7 @@ freeze_and_commit(const svn_test_opts_t *opts,
   /* Make some commit using same FS instance. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "temperature",
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "", "temperature",
                                   svn_string_create("310.05", pool),
                                   pool));
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
