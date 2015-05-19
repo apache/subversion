@@ -42,6 +42,12 @@ Other candidate changes:
    Votes:
      +1: stefan2
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1680242, r1680264
    Stop removing last-change-* on non-updates of file externals (issue 4580)
    Justification:
@@ -50,10 +56,4 @@ Other candidate changes:
      an incorrectly recorded url in text conflicts caused by updating a
      file external.
    Votes:
-     +1: rhuijben, stsp
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: rhuijben, stsp, philip
