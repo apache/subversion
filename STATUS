@@ -145,8 +145,11 @@ Candidate changes:
    Notes:
      A test for this issue was added in r1680264, but that will require
      a more than trivial backport effort.
+   Branch:
+     ^/subversion/branches/1.8.x-r1680242
    Votes:
-     +1: rhuijben
+     +1: stsp
+     +1: rhuijben (before branch)
 
 Veto-blocked changes:
 =====================
