@@ -135,6 +135,12 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1680242
    Stop removing last-change-* on non-updates of file externals (issue 4580)
    Justification:
@@ -148,10 +154,4 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1680242
    Votes:
-     +1: stsp, rhuijben
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: stsp, rhuijben, philip
