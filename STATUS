@@ -148,8 +148,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1680242
    Votes:
-     +1: stsp
-     +1: rhuijben (before branch)
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
