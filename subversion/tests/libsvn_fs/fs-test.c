@@ -6971,11 +6971,12 @@ test_internal_txn_props(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* A freeze function that expects an 'svn_error_t *' baton, and returns it. */
 /* This function implements svn_fs_freeze_func_t. */
 static svn_error_t *
-noop_freeze_func(void *baton, apr_pool_t *pool)
+freeze_func(void *baton, apr_pool_t *pool)
 {
-  return SVN_NO_ERROR;
+  return baton;
 }
 
 static svn_error_t *
@@ -7006,16 +7007,29 @@ freeze_and_commit(const svn_test_opts_t *opts,
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, subpool));
 
   /* Freeze and unfreeze. */
-  SVN_ERR(svn_fs_freeze(fs, noop_freeze_func, NULL, pool));
+  SVN_ERR(svn_fs_freeze(fs, freeze_func, SVN_NO_ERROR, pool));
 
-  /* And the same once again, for good measure. */
-  SVN_ERR(svn_fs_freeze(fs, noop_freeze_func, NULL, pool));
+  /* Freeze again, but have freeze_func fail. */
+    {
+      svn_error_t *err = svn_error_create(APR_EGENERAL, NULL, NULL);
+      SVN_TEST_ASSERT_ERROR(svn_fs_freeze(fs, freeze_func, err, pool),
+                            err->apr_err);
+    }
 
-  /* Make some commit. */
+  /* Make some commit using same FS instance. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_change_node_prop(txn_root, "", "temperature",
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "temperature",
                                   svn_string_create("310.05", pool),
+                                  pool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  /* Re-open FS and make another commit. */
+  SVN_ERR(svn_fs_open(&fs, "test-freeze-and-commit", NULL, subpool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "temperature",
+                                  svn_string_create("451", pool),
                                   pool));
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
 
