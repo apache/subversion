@@ -4155,6 +4155,153 @@ def file_external_to_normal_file(sbox):
   svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
                                         expected_status)
 
+@Issue(4580)
+def file_external_recorded_info(sbox):
+  "check file external recorded info"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2 - Create file external
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', '',
+                                         'propset', 'svn:externals',
+                                         '^/iota i', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(status=' U'),
+    'i'                 : Item(status='A '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'i'                 : Item(status='  ', wc_rev='2', switched='X')
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 2, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iota'),
+    'Revision': '2',
+    'Last Changed Rev': '1',
+    'Last Changed Author': 'jrandom'
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+  # r3 - No-op change
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', '',
+                                         'cp', '1', 'iota', 'iotb')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iotb'              : Item(status='A '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'i'                 : Item(status='  ', wc_rev='3', switched='X'),
+    'iotb'              : Item(status='  ', wc_rev='3')
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 3, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iota'),
+    'Revision': '3',
+    'Last Changed Rev': '1',
+    'Last Changed Author': 'jrandom'
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+  # r4 - Update url
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', '',
+                                         'propset', 'svn:externals',
+                                         '^/iotb i', '')
+
+
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(status=' U'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
+  expected_status.add({
+    'i'                 : Item(status='  ', wc_rev='4', switched='X'),
+    'iotb'              : Item(status='  ', wc_rev='4')
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 4, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iotb'),
+    'Revision': '4',
+    'Last Changed Rev': '3',
+    'Last Changed Author': 'jrandom'
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+  # r5 - Replace file
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', '',
+                                         'rm', 'iotb',
+                                         'cp', '3', 'A/mu', 'iotb')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'i'                 : Item(status='U '),
+    'iotb'              : Item(status='A ', prev_status='D '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
+  expected_status.add({
+    'i'                 : Item(status='  ', wc_rev='5', switched='X'),
+    'iotb'              : Item(status='  ', wc_rev='5')
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 5, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iotb'),
+    'Revision': '5',
+    'Last Changed Rev': '5',
+    'Last Changed Author': 'jrandom'
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+  # Back to r2. But with a conflict
+  sbox.simple_append('i', 'i')
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(status=' U'),
+    'iotb'              : Item(status='D '),
+    'i'                 : Item(status='C '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'i'                 : Item(status='C ', wc_rev='5', switched='X'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 2, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iota'),
+    'Revision': '5',
+    'Last Changed Rev': '1',
+    'Last Changed Author': 'jrandom',
+    'Conflict Details': re.escape('incoming file edit upon switch'
+                                  ' Source  left: (file) ^/iotb@5'
+                                  ' Source right: (file) ^/iota@5')
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
 
 ########################################################################
 # Run the tests
@@ -4229,6 +4376,7 @@ test_list = [ None,
               copy_pin_externals_whitespace_dir,
               nested_notification,
               file_external_to_normal_file,
+              file_external_recorded_info,
              ]
 
 if __name__ == '__main__':
