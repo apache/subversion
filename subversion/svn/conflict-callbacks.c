@@ -1145,14 +1145,16 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
                readable_desc));
 
   src_left_version =
-              svn_cl__node_description(desc->src_left_version, "^/",
+              svn_cl__node_description(desc->src_left_version,
+                                       desc->src_left_version->repos_url,
                                        scratch_pool);
   if (src_left_version)
     SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s: %s\n",
                                 _("Source  left"), src_left_version));
   src_right_version =
               svn_cl__node_description(desc->src_right_version,
-                                       "^/", scratch_pool);
+                                       desc->src_right_version->repos_url,
+                                       scratch_pool);
   if (src_right_version)
     SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s: %s\n",
                                 _("Source right"), src_right_version));
