@@ -1344,23 +1344,27 @@ set_txn_proplist(svn_fs_t *fs,
                  svn_boolean_t final,
                  apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *buf;
   svn_stream_t *stream;
+  const char *temp_path;
 
-  /* Write out the new file contents to BUF. */
-  buf = svn_stringbuf_create_ensure(1024, scratch_pool);
-  stream = svn_stream_from_stringbuf(buf, scratch_pool);
+  /* Write the new contents into a temporary file. */
+  SVN_ERR(svn_stream_open_unique(&stream, &temp_path,
+                                 svn_fs_x__path_txn_dir(fs, txn_id,
+                                                        scratch_pool),
+                                 svn_io_file_del_none,
+                                 scratch_pool, scratch_pool));
   SVN_ERR(svn_hash_write2(props, stream, SVN_HASH_TERMINATOR, scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
-  /* Open the transaction properties file and write new contents to it. */
-  SVN_ERR(svn_io_write_atomic((final 
+  /* Replace the old file with the new one. */
+  SVN_ERR(svn_io_file_rename(temp_path,
+                             (final
                                ? svn_fs_x__path_txn_props_final(fs, txn_id,
                                                                 scratch_pool)
                                : svn_fs_x__path_txn_props(fs, txn_id,
                                                           scratch_pool)),
-                              buf->data, buf->len,
-                              NULL /* copy_perms_path */, scratch_pool));
+                              scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -3316,7 +3320,7 @@ commit_body(void *baton,
   const char *revprop_filename, *final_revprop;
   svn_fs_x__id_t root_id, new_root_id;
   svn_revnum_t old_rev, new_rev;
-  apr_file_t *proto_file;
+  apr_file_t *proto_file, *revprop_file;
   void *proto_file_lockcookie;
   apr_off_t initial_offset, changed_path_offset;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
@@ -3437,6 +3441,12 @@ commit_body(void *baton,
   /* Move the revprops file into place. */
   SVN_ERR_ASSERT(! svn_fs_x__is_packed_revprop(cb->fs, new_rev));
   SVN_ERR(write_final_revprop(&revprop_filename, cb->txn, txn_id, subpool));
+
+  SVN_ERR(svn_io_file_open(&revprop_file, revprop_filename, APR_READ,
+                           APR_OS_DEFAULT, subpool));
+  SVN_ERR(svn_io_file_flush_to_disk(revprop_file, subpool));
+  SVN_ERR(svn_io_file_close(revprop_file, subpool));
+
   final_revprop = svn_fs_x__path_revprops(cb->fs, new_rev, subpool);
   SVN_ERR(svn_fs_x__move_into_place(revprop_filename, final_revprop,
                                     old_rev_filename, subpool));
