@@ -32,16 +32,6 @@ Other candidate changes:
      +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
- * r1678950, r1678963, r1679864, r1679866
-   Ensure full key matching in membuffer cache.
-   Justification:
-     While the chances of producing an actual key conflict are very slim
-     today, they are non-zero.  Due to the central role of the caching
-     code, we should not leave that ever so small risk in production for
-     the years to come.
-   Votes:
-     +1: stefan2, philip
-
  * r1680495
    Extend svn:auto-props documentation further.
    Justification:
@@ -55,3 +45,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1678950, r1678963, r1679864, r1679866
+   Ensure full key matching in membuffer cache.
+   Justification:
+     While the chances of producing an actual key conflict are very slim
+     today, they are non-zero.  Due to the central role of the caching
+     code, we should not leave that ever so small risk in production for
+     the years to come.
+   Votes:
+     +1: stefan2, philip, rhuijben
