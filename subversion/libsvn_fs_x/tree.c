@@ -2335,6 +2335,15 @@ typedef struct fs_history_data_t
 
   /* FALSE until the first call to svn_fs_history_prev(). */
   svn_boolean_t is_interesting;
+
+  /* If not SVN_INVALID_REVISION, we know that the next copy operation
+     is at this revision. */
+  svn_revnum_t next_copy;
+
+  /* If used, see svn_fs_x__id_used, this is the noderev ID of
+     PATH@REVISION. */
+  svn_fs_x__id_t current_id;
+
 } fs_history_data_t;
 
 static svn_fs_history_t *
@@ -2344,6 +2353,8 @@ assemble_history(svn_fs_t *fs,
                  svn_boolean_t is_interesting,
                  const char *path_hint,
                  svn_revnum_t rev_hint,
+                 svn_revnum_t next_copy,
+                 const svn_fs_x__id_t *current_id,
                  apr_pool_t *result_pool);
 
 
@@ -2370,7 +2381,8 @@ x_node_history(svn_fs_history_t **history_p,
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs, path, root->rev, FALSE, NULL,
-                                SVN_INVALID_REVNUM, result_pool);
+                                SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                                NULL, result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -2533,9 +2545,49 @@ history_prev(svn_fs_history_t **prev_history,
   svn_boolean_t reported = fhd->is_interesting;
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
+  svn_fs_x__id_t pred_id;
 
   /* Initialize our return value. */
   *prev_history = NULL;
+
+  /* When following history, there tend to be long sections of linear
+     history where there are no copies at PATH or its parents.  Within
+     these sections, we only need to follow the node history. */
+  if (   SVN_IS_VALID_REVNUM(fhd->next_copy)
+      && revision > fhd->next_copy
+      && svn_fs_x__id_used(&fhd->current_id))
+    {
+      /* We know the last reported node (CURRENT_ID) and the NEXT_COPY
+         revision is somewhat further in the past. */
+      svn_fs_x__noderev_t *noderev;
+      assert(reported);
+
+      /* Get the previous node change.  If there is none, then we already
+         reported the initial addition and this history traversal is done. */
+      SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, &fhd->current_id,
+                                          scratch_pool, scratch_pool));
+      if (! svn_fs_x__id_used(&noderev->predecessor_id))
+        return SVN_NO_ERROR;
+
+      /* If the previous node change is younger than the next copy, it is
+         part of the linear history section. */
+      commit_rev = svn_fs_x__get_revnum(noderev->predecessor_id.change_set);
+      if (commit_rev > fhd->next_copy)
+        {
+          /* Within the linear history, simply report all node changes and
+             continue with the respective predecessor. */
+          *prev_history = assemble_history(fs, noderev->created_path,
+                                           commit_rev, TRUE, NULL,
+                                           SVN_INVALID_REVNUM,
+                                           fhd->next_copy,
+                                           &noderev->predecessor_id,
+                                           result_pool);
+
+          return SVN_NO_ERROR;
+        }
+
+     /* We hit a copy. Fall back to the standard code path. */
+    }
 
   /* If our last history report left us hints about where to pickup
      the chase, then our last report was on the destination of a
@@ -2560,6 +2612,7 @@ history_prev(svn_fs_history_t **prev_history,
   node = dag_path->node;
   commit_path = svn_fs_x__dag_get_created_path(node);
   commit_rev = svn_fs_x__dag_get_revision(node);
+  svn_fs_x__id_reset(&pred_id);
 
   /* The Subversion filesystem is written in such a way that a given
      line of history may have at most one interesting history point
@@ -2576,7 +2629,9 @@ history_prev(svn_fs_history_t **prev_history,
              need now to do so) ... */
           *prev_history = assemble_history(fs, commit_path,
                                            commit_rev, TRUE, NULL,
-                                           SVN_INVALID_REVNUM, result_pool);
+                                           SVN_INVALID_REVNUM,
+                                           SVN_INVALID_REVNUM, NULL,
+                                           result_pool);
           return SVN_NO_ERROR;
         }
       else
@@ -2584,8 +2639,6 @@ history_prev(svn_fs_history_t **prev_history,
           /* ... or we *have* reported on this revision, and must now
              progress toward this node's predecessor (unless there is
              no predecessor, in which case we're all done!). */
-          svn_fs_x__id_t pred_id;
-
           pred_id = *svn_fs_x__dag_get_predecessor_id(node);
           if (!svn_fs_x__id_used(&pred_id))
             return SVN_NO_ERROR;
@@ -2658,12 +2711,18 @@ history_prev(svn_fs_history_t **prev_history,
         retry = TRUE;
 
       *prev_history = assemble_history(fs, path, dst_rev, ! retry,
-                                       src_path, src_rev, result_pool);
+                                       src_path, src_rev,
+                                       SVN_INVALID_REVNUM, NULL,
+                                       result_pool);
     }
   else
     {
+      /* We know the next copy revision.  If we are not at the copy rev
+         itself, we will also know the predecessor node ID and the next
+         invocation will use the optimized "linear history" code path. */
       *prev_history = assemble_history(fs, commit_path, commit_rev, TRUE,
-                                       NULL, SVN_INVALID_REVNUM, result_pool);
+                                       NULL, SVN_INVALID_REVNUM,
+                                       copyroot_rev, &pred_id, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -2694,10 +2753,12 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
       if (! fhd->is_interesting)
         prev_history = assemble_history(fs, "/", fhd->revision,
                                         1, NULL, SVN_INVALID_REVNUM,
+                                        SVN_INVALID_REVNUM, NULL,
                                         result_pool);
       else if (fhd->revision > 0)
         prev_history = assemble_history(fs, "/", fhd->revision - 1,
                                         1, NULL, SVN_INVALID_REVNUM,
+                                        SVN_INVALID_REVNUM, NULL,
                                         result_pool);
     }
   else
@@ -2757,6 +2818,8 @@ assemble_history(svn_fs_t *fs,
                  svn_boolean_t is_interesting,
                  const char *path_hint,
                  svn_revnum_t rev_hint,
+                 svn_revnum_t next_copy,
+                 const svn_fs_x__id_t *current_id,
                  apr_pool_t *result_pool)
 {
   svn_fs_history_t *history = apr_pcalloc(result_pool, sizeof(*history));
@@ -2768,7 +2831,13 @@ assemble_history(svn_fs_t *fs,
                  ? svn_fs__canonicalize_abspath(path_hint, result_pool)
                  : NULL;
   fhd->rev_hint = rev_hint;
+  fhd->next_copy = next_copy;
   fhd->fs = fs;
+
+  if (current_id)
+    fhd->current_id = *current_id;
+  else
+    svn_fs_x__id_reset(&fhd->current_id);
 
   history->vtable = &history_vtable;
   history->fsap_data = fhd;
