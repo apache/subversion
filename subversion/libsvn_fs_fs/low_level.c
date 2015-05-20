@@ -196,7 +196,7 @@ svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
                         svn_checksum_t **p2l_checksum,
                         svn_stringbuf_t *footer,
                         svn_revnum_t rev,
-                        svn_filesize_t filesize,
+                        apr_off_t footer_offset,
                         apr_pool_t *result_pool)
 {
   apr_int64_t val;
@@ -208,7 +208,7 @@ svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid revision footer"));
 
-  SVN_ERR_W(svn_cstring_strtoi64(&val, str, 0, filesize - 1, 10),
+  SVN_ERR_W(svn_cstring_strtoi64(&val, str, 0, footer_offset - 1, 10),
             "Invalid L2P offset in revision footer");
   *l2p_offset = (apr_off_t)val;
 
@@ -227,9 +227,21 @@ svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Invalid revision footer"));
 
-  SVN_ERR_W(svn_cstring_strtoi64(&val, str, 0, filesize - 1, 10),
+  SVN_ERR_W(svn_cstring_strtoi64(&val, str, 0, footer_offset - 1, 10),
             "Invalid P2L offset in revision footer");
   *p2l_offset = (apr_off_t)val;
+
+  /* The P2L indes follows the L2P index */
+  if (*p2l_offset <= *l2p_offset)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "P2L offset %s must be larger than L2P offset %s"
+                             " in revision footer",
+                             apr_psprintf(result_pool,
+                                          "%" APR_UINT64_T_HEX_FMT,
+                                          (apr_uint64_t)*p2l_offset),
+                             apr_psprintf(result_pool,
+                                          "%" APR_UINT64_T_HEX_FMT,
+                                          (apr_uint64_t)*l2p_offset));
 
   /* Get the P2L checksum. */
   str = svn_cstring_tokenize(" ", &last_str);
