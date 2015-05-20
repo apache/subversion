@@ -433,13 +433,12 @@ typedef struct entry_tag_t
 /* Initialize all members of TAG except for the content hash.
  */
 static svn_error_t *store_key_part(entry_tag_t *tag,
-                                   const full_key_t *prefix_key,
+                                   const char *prefix,
                                    const void *key,
                                    apr_size_t key_len,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *scratch_pool)
 {
   svn_checksum_t *checksum;
-  const char *prefix = prefix_key->full_key.data;
   apr_size_t prefix_len = strlen(prefix);
 
   if (prefix_len > sizeof(tag->prefix_tail))
@@ -450,12 +449,16 @@ static svn_error_t *store_key_part(entry_tag_t *tag,
 
   SVN_ERR(svn_checksum(&checksum,
                        svn_checksum_md5,
+                       prefix,
+                       strlen(prefix),
+                       scratch_pool));
+  memcpy(tag->prefix_hash, checksum->digest, sizeof(tag->prefix_hash));
+
+  SVN_ERR(svn_checksum(&checksum,
+                       svn_checksum_md5,
                        key,
                        key_len,
-                       pool));
-
-  memcpy(tag->prefix_hash, prefix_key->entry_key.fingerprint,
-         sizeof(tag->prefix_hash));
+                       scratch_pool));
   memcpy(tag->key_hash, checksum->digest, sizeof(tag->key_hash));
 
   memset(tag->prefix_tail, 0, sizeof(tag->key_hash));
@@ -516,7 +519,7 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
   entry_tag_t *tag = &_tag;                                      \
   if (key)                                                       \
     SVN_ERR(store_key_part(tag,                                  \
-                           &cache->prefix,                       \
+                           get_prefix_key(cache),                \
                            key,                                  \
                            cache->key_len == APR_HASH_KEY_STRING \
                                ? strlen((const char *) key)      \
@@ -2770,11 +2773,11 @@ typedef struct svn_membuffer_cache_t
    */
   svn_cache__deserialize_func_t deserializer;
 
-  /* Prepend this byte sequence to any key passed to us.
+  /* Prepend this to any key passed to us.
    * This makes our keys different from all keys used by svn_membuffer_cache_t
    * instances that we don't want to share cached data with.
    */
-  full_key_t prefix;
+  entry_key_t prefix;
 
   /* length of the keys that will be passed to us through the
    * svn_cache_t interface. May be APR_HASH_KEY_STRING.
@@ -2793,6 +2796,15 @@ typedef struct svn_membuffer_cache_t
   svn_mutex__t *mutex;
 } svn_membuffer_cache_t;
 
+/* Return the prefix key used by CACHE. */
+static const char *
+get_prefix_key(const svn_membuffer_cache_t *cache)
+{
+  return (cache->prefix.prefix_idx == NO_INDEX
+       ? cache->combined_key.full_key.data
+       : cache->membuffer->prefix_pool->values[cache->prefix.prefix_idx]);
+}
+
 /* Basically calculate a hash value for KEY of length KEY_LEN, combine it
  * with the CACHE->PREFIX and write the result in CACHE->COMBINED_KEY.
  * This could replace combine_key() entirely but we actually use it only
@@ -2805,7 +2817,7 @@ combine_long_key(svn_membuffer_cache_t *cache,
 {
   apr_uint32_t *digest_buffer;
   char *key_copy;
-  apr_size_t prefix_len = cache->prefix.entry_key.key_len;
+  apr_size_t prefix_len = cache->prefix.key_len;
   apr_size_t aligned_key_len;
 
   /* handle variable-length keys */
@@ -2829,9 +2841,9 @@ combine_long_key(svn_membuffer_cache_t *cache,
 
   /* Combine with prefix. */
   cache->combined_key.entry_key.fingerprint[0]
-    ^= cache->prefix.entry_key.fingerprint[0];
+    ^= cache->prefix.fingerprint[0];
   cache->combined_key.entry_key.fingerprint[1]
-    ^= cache->prefix.entry_key.fingerprint[1];
+    ^= cache->prefix.fingerprint[1];
 }
 
 /* Basically calculate a hash value for KEY of length KEY_LEN, combine it
@@ -2846,7 +2858,7 @@ combine_key(svn_membuffer_cache_t *cache,
   apr_uint64_t data[2];
 
   /* Do we have to compare full keys? */
-  if (cache->prefix.entry_key.prefix_idx == NO_INDEX)
+  if (cache->prefix.prefix_idx == NO_INDEX)
     {
       combine_long_key(cache, key, key_len);
       return;
@@ -2878,9 +2890,9 @@ combine_key(svn_membuffer_cache_t *cache,
 
   /* combine with this cache's namespace */
   cache->combined_key.entry_key.fingerprint[0]
-    = data[0] ^ cache->prefix.entry_key.fingerprint[0];
+    = data[0] ^ cache->prefix.fingerprint[0];
   cache->combined_key.entry_key.fingerprint[1]
-    = data[1] ^ cache->prefix.entry_key.fingerprint[1];
+    = data[1] ^ cache->prefix.fingerprint[1];
 }
 
 /* Implement svn_cache__vtable_t.get (not thread-safe)
@@ -3127,7 +3139,7 @@ svn_membuffer_cache_get_info(void *cache_void,
 
   /* cache front-end specific data */
 
-  info->id = apr_pstrdup(result_pool, cache->prefix.full_key.data);
+  info->id = apr_pstrdup(result_pool, get_prefix_key(cache));
 
   /* collect info from shared cache back-end */
 
@@ -3347,43 +3359,40 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   prefix_orig_len = strlen(prefix) + 1;
   prefix_len = ALIGN_VALUE(prefix_orig_len);
 
-  svn_membuf__create(&cache->prefix.full_key, prefix_len, result_pool);
-  memcpy((char *)cache->prefix.full_key.data, prefix, prefix_orig_len);
-  memset((char *)cache->prefix.full_key.data + prefix_orig_len, 0,
-         prefix_len - prefix_orig_len);
-
   /* Construct the folded prefix key. */
   SVN_ERR(svn_checksum(&checksum,
                        svn_checksum_md5,
                        prefix,
                        strlen(prefix),
                        scratch_pool));
-  memcpy(cache->prefix.entry_key.fingerprint, checksum->digest,
-         sizeof(cache->prefix.entry_key.fingerprint));
-  cache->prefix.entry_key.key_len = prefix_len;
+  memcpy(cache->prefix.fingerprint, checksum->digest,
+         sizeof(cache->prefix.fingerprint));
+  cache->prefix.key_len = prefix_len;
 
   /* Fix-length keys of up to 16 bytes may be handled without storing the
    * full key separately for each item. */
   if (   (klen != APR_HASH_KEY_STRING)
       && (klen <= sizeof(cache->combined_key.entry_key.fingerprint))
       && !short_lived)
-    SVN_ERR(prefix_pool_get(&cache->prefix.entry_key.prefix_idx,
+    SVN_ERR(prefix_pool_get(&cache->prefix.prefix_idx,
                             membuffer->prefix_pool,
                             prefix));
   else
-    cache->prefix.entry_key.prefix_idx = NO_INDEX;
+    cache->prefix.prefix_idx = NO_INDEX;
 
   /* If key combining is not guaranteed to produce unique results, we have
    * to handle full keys.  Otherwise, leave it NULL. */
-  if (cache->prefix.entry_key.prefix_idx == NO_INDEX)
+  if (cache->prefix.prefix_idx == NO_INDEX)
     {
       /* Initialize the combined key. Pre-allocate some extra room in the
        * full key such that we probably don't need to re-alloc. */
-      cache->combined_key.entry_key = cache->prefix.entry_key;
+      cache->combined_key.entry_key = cache->prefix;
       svn_membuf__create(&cache->combined_key.full_key, prefix_len + 200,
                          result_pool);
-      memcpy(cache->combined_key.full_key.data, cache->prefix.full_key.data,
-             prefix_len);
+      memcpy((char *)cache->combined_key.full_key.data, prefix,
+             prefix_orig_len);
+      memset((char *)cache->combined_key.full_key.data + prefix_orig_len, 0,
+             prefix_len - prefix_orig_len);
     }
   else
     {
@@ -3391,8 +3400,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
        * key, so leave it NULL and set its length to 0 to prevent access to
        * it.  Keep the fingerprint 0 as well b/c it will always be set anew
        * by combine_key(). */
-      cache->combined_key.entry_key.prefix_idx
-        = cache->prefix.entry_key.prefix_idx;
+      cache->combined_key.entry_key.prefix_idx = cache->prefix.prefix_idx;
       cache->combined_key.entry_key.key_len = 0;
     }
 
