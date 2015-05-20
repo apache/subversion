@@ -47,13 +47,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1680242, r1680264
-   Stop removing last-change-* on non-updates of file externals (issue 4580)
-   Justification:
-     Resolves regression with 1.7.x/1.8.x pre 1.8.13, caused by issue 4411
-     patch. This patch implements this fix in a better way and also fixes
-     an incorrectly recorded url in text conflicts caused by updating a
-     file external.
-   Votes:
-     +1: rhuijben, stsp, philip
