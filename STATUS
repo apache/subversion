@@ -32,13 +32,14 @@ Other candidate changes:
      +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
- * r1680495
+ * r1680495, r1680705
    Extend svn:auto-props documentation further.
    Justification:
      Allows users to use svn:auto-props after reading 'svn help' without
      referring to additional documentation.
    Votes:
-     +1: stsp, rhuijben
+     +1: stsp, rhuijben (without r1680705)
+     +1: danielsh
 
 Veto-blocked changes:
 =====================
