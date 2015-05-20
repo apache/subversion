@@ -1130,6 +1130,8 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
                      apr_pool_t *scratch_pool)
 {
   const char *readable_desc;
+  const char *src_left_version;
+  const char *src_right_version;
   apr_pool_t *iterpool;
 
   SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
@@ -1141,6 +1143,19 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
                                                  desc->local_abspath,
                                                  scratch_pool),
                readable_desc));
+
+  src_left_version =
+              svn_cl__node_description(desc->src_left_version, "^/",
+                                       scratch_pool);
+  if (src_left_version)
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s: %s\n",
+                                _("Source  left"), src_left_version));
+  src_right_version =
+              svn_cl__node_description(desc->src_right_version,
+                                       "^/", scratch_pool);
+  if (src_right_version)
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s: %s\n",
+                                _("Source right"), src_right_version));
 
   iterpool = svn_pool_create(scratch_pool);
   while (1)
