@@ -229,8 +229,14 @@ read_revprop_generation_file(apr_int64_t *current,
                               iterpool));
 
       len = sizeof(buf);
-      SVN_ERR(svn_io_read_length_line(ffd->revprop_generation_file, buf, &len,
-                                      iterpool));
+      SVN_ERR(svn_io_file_read(ffd->revprop_generation_file, buf, &len,
+                               iterpool));
+      /* Properly terminate the string we just read.  Valid contents ends
+         with a '\n'.  Empty the buffer in all other cases. */
+      if (len > 0 && buf[len-1] == '\n')
+        buf[--len] = '\0';
+      else
+        buf[0] = '\0';
 
       /* Some data has been read.  It will most likely be complete and
        * consistent.  Extract and verify anyway. */
