@@ -652,16 +652,22 @@ write_non_packed_revprop(const char **final_path,
                          apr_hash_t *proplist,
                          apr_pool_t *pool)
 {
+  apr_file_t *file;
   svn_stream_t *stream;
   *final_path = svn_fs_fs__path_revprops(fs, rev, pool);
 
   /* ### do we have a directory sitting around already? we really shouldn't
      ### have to get the dirname here. */
-  SVN_ERR(svn_stream_open_unique(&stream, tmp_path,
-                                 svn_dirent_dirname(*final_path, pool),
-                                 svn_io_file_del_none, pool, pool));
+  SVN_ERR(svn_io_open_unique_file3(&file, tmp_path,
+                                   svn_dirent_dirname(*final_path, pool),
+                                   svn_io_file_del_none, pool, pool));
+  stream = svn_stream_from_aprfile2(file, TRUE, pool);
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
+
+  /* Flush temporary file to disk and close it. */
+  SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -745,7 +751,7 @@ serialize_revprops_header(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Writes the a pack file to FILE_STREAM.  It copies the serialized data
+/* Writes the a pack file to FILE.  It copies the serialized data
  * from REVPROPS for the indexes [START,END) except for index CHANGED_INDEX.
  *
  * The data for the latter is taken from NEW_SERIALIZED.  Note, that
@@ -763,7 +769,7 @@ repack_revprops(svn_fs_t *fs,
                 int changed_index,
                 svn_stringbuf_t *new_serialized,
                 apr_off_t new_total_size,
-                svn_stream_t *file_stream,
+                apr_file_t *file,
                 apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -811,9 +817,11 @@ repack_revprops(svn_fs_t *fs,
                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
                           : SVN_DELTA_COMPRESSION_LEVEL_NONE));
 
-  /* finally, write the content to the target stream and close it */
-  SVN_ERR(svn_stream_write(file_stream, compressed->data, &compressed->len));
-  SVN_ERR(svn_stream_close(file_stream));
+  /* finally, write the content to the target file, flush and close it */
+  SVN_ERR(svn_io_file_write_full(file, compressed->data, compressed->len,
+                                 NULL, pool));
+  SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -821,23 +829,22 @@ repack_revprops(svn_fs_t *fs,
 /* Allocate a new pack file name for revisions
  *     [REVPROPS->START_REVISION + START, REVPROPS->START_REVISION + END - 1]
  * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
- * auto-create that array if necessary.  Return an open file stream to
- * the new file in *STREAM allocated in POOL.
+ * auto-create that array if necessary.  Return an open file *FILE that is
+ * allocated in POOL.
  */
 static svn_error_t *
-repack_stream_open(svn_stream_t **stream,
-                   svn_fs_t *fs,
-                   packed_revprops_t *revprops,
-                   int start,
-                   int end,
-                   apr_array_header_t **files_to_delete,
-                   apr_pool_t *pool)
+repack_file_open(apr_file_t **file,
+                 svn_fs_t *fs,
+                 packed_revprops_t *revprops,
+                 int start,
+                 int end,
+                 apr_array_header_t **files_to_delete,
+                 apr_pool_t *pool)
 {
   apr_int64_t tag;
   const char *tag_string;
   svn_string_t *new_filename;
   int i;
-  apr_file_t *file;
   int manifest_offset
     = (int)(revprops->start_revision - revprops->manifest_start);
 
@@ -869,12 +876,11 @@ repack_stream_open(svn_stream_t **stream,
     APR_ARRAY_IDX(revprops->manifest, i + manifest_offset, const char*)
       = new_filename->data;
 
-  /* create a file stream for the new file */
-  SVN_ERR(svn_io_file_open(&file, svn_dirent_join(revprops->folder,
-                                                  new_filename->data,
-                                                  pool),
+  /* open the file */
+  SVN_ERR(svn_io_file_open(file, svn_dirent_join(revprops->folder,
+                                                 new_filename->data,
+                                                 pool),
                            APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
-  *stream = svn_stream_from_aprfile2(file, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -898,6 +904,7 @@ write_packed_revprop(const char **final_path,
   packed_revprops_t *revprops;
   apr_int64_t generation = 0;
   svn_stream_t *stream;
+  apr_file_t *file;
   svn_stringbuf_t *serialized;
   apr_off_t new_total_size;
   int changed_index;
@@ -928,11 +935,11 @@ write_packed_revprop(const char **final_path,
 
       *final_path = svn_dirent_join(revprops->folder, revprops->filename,
                                     pool);
-      SVN_ERR(svn_stream_open_unique(&stream, tmp_path, revprops->folder,
-                                     svn_io_file_del_none, pool, pool));
+      SVN_ERR(svn_io_open_unique_file3(&file, tmp_path, revprops->folder,
+                                       svn_io_file_del_none, pool, pool));
       SVN_ERR(repack_revprops(fs, revprops, 0, revprops->sizes->nelts,
                               changed_index, serialized, new_total_size,
-                              stream, pool));
+                              file, pool));
     }
   else
     {
@@ -978,50 +985,53 @@ write_packed_revprop(const char **final_path,
       /* write the new, split files */
       if (left_count)
         {
-          SVN_ERR(repack_stream_open(&stream, fs, revprops, 0,
-                                     left_count, files_to_delete, pool));
+          SVN_ERR(repack_file_open(&file, fs, revprops, 0,
+                                   left_count, files_to_delete, pool));
           SVN_ERR(repack_revprops(fs, revprops, 0, left_count,
                                   changed_index, serialized, new_total_size,
-                                  stream, pool));
+                                  file, pool));
         }
 
       if (left_count + right_count < revprops->sizes->nelts)
         {
-          SVN_ERR(repack_stream_open(&stream, fs, revprops, changed_index,
-                                     changed_index + 1, files_to_delete,
-                                     pool));
+          SVN_ERR(repack_file_open(&file, fs, revprops, changed_index,
+                                   changed_index + 1, files_to_delete,
+                                   pool));
           SVN_ERR(repack_revprops(fs, revprops, changed_index,
                                   changed_index + 1,
                                   changed_index, serialized, new_total_size,
-                                  stream, pool));
+                                  file, pool));
         }
 
       if (right_count)
         {
-          SVN_ERR(repack_stream_open(&stream, fs, revprops,
-                                     revprops->sizes->nelts - right_count,
-                                     revprops->sizes->nelts,
-                                     files_to_delete, pool));
+          SVN_ERR(repack_file_open(&file, fs, revprops,
+                                   revprops->sizes->nelts - right_count,
+                                   revprops->sizes->nelts,
+                                   files_to_delete, pool));
           SVN_ERR(repack_revprops(fs, revprops,
                                   revprops->sizes->nelts - right_count,
                                   revprops->sizes->nelts, changed_index,
-                                  serialized, new_total_size, stream,
+                                  serialized, new_total_size, file,
                                   pool));
         }
 
       /* write the new manifest */
       *final_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
-      SVN_ERR(svn_stream_open_unique(&stream, tmp_path, revprops->folder,
-                                     svn_io_file_del_none, pool, pool));
+      SVN_ERR(svn_io_open_unique_file3(&file, tmp_path, revprops->folder,
+                                       svn_io_file_del_none, pool, pool));
 
       for (i = 0; i < revprops->manifest->nelts; ++i)
         {
           const char *filename = APR_ARRAY_IDX(revprops->manifest, i,
                                                const char*);
-          SVN_ERR(svn_stream_printf(stream, pool, "%s\n", filename));
+          SVN_ERR(svn_io_file_write_full(file, filename, strlen(filename),
+                                         NULL, pool));
+          SVN_ERR(svn_io_file_putc('\n', file, pool));
         }
 
-      SVN_ERR(svn_stream_close(stream));
+      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+      SVN_ERR(svn_io_file_close(file, pool));
     }
 
   return SVN_NO_ERROR;
