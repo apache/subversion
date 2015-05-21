@@ -38,8 +38,8 @@ Other candidate changes:
      Allows users to use svn:auto-props after reading 'svn help' without
      referring to additional documentation.
    Votes:
-     +1: stsp, rhuijben (without r1680705)
-     +1: danielsh
+     +1: stsp (without r1680705)
+     +1: danielsh, rhuijben
 
 Veto-blocked changes:
 =====================
