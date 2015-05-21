@@ -136,6 +136,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1680819
+   Prevent a possible FSFS repository corruption with power or network disk
+   failures when changing revision properties.
+   Notes:
+     Not a regression. Same issue exists in 1.7.x.
+   Branch:
+     ^/subversion/branches/1.8.x-r1680819
+   Justification:
+     Repository corruptions are bad (user reported this issue privately)
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
