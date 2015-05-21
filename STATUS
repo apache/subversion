@@ -122,9 +122,8 @@ Candidate changes:
    Justification:
      Documentation should be complete.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
      +1: stsp (without r1680705)
-     +1: rhuijben (without r1680495, r1680705)
 
  * r1674522
    Skip the 'upgrade_tests.py 36: automatic SQLite ANALYZE' test on old python
