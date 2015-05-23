@@ -398,7 +398,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "svn:externals properties")},
   {"show-inherited-props", opt_show_inherited_props, 0,
-                       N_("retrieve target's inherited properties")},
+                       N_("retrieve properties set on parents of the target")},
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax)")},
   {"search-and", opt_search_and, 1,
