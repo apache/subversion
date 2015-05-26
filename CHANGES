@@ -192,6 +192,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * status: now accept '-r' argument (r1671164, 1672578, 1673228)
     * ls: improve performance of '-v' on tag directories (r1673153)
     * resolve: improve conflict prompts for binary files (r1667228 et al)
+    * fsfs: improve error messages for parsing errors (r1678147, r1678149)
+    * warn when the '--config-option' FILE:SECTION:OPTION combination may
+      be invalid. (r1674301 et al)
+    * ensure full key matching in membuffer cache (r1678950 et al)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
@@ -307,6 +311,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       status (r1663671, r1666832)
     * update: allow a real file to replace a file external (r1664035)
     * merge: raise a tree conflict on root of obstructing dir (r1666690)
+    * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
+    * status: fix incorrect output with file externals (issue #4580)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
@@ -390,6 +396,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * mod_dav_svn: emit the first few log items as soon as they are available
       (r1666965, r1667120)
     * mod_dav_svn: prevent a tree walk on copy sources (issue #4351)
+    * fsfs: fix 'EOF found" error when reading repo (issue #4577)
+    * svnadmin freeze: unlock rep-cache.db as part of unfreezing
+      (r1679169, r1679287)
 
   - Client-side and server-side bugfixes:
     * use less memory when retrieving extension from filename (r1548480)
@@ -709,7 +718,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: expose whitespace diff parameters to blame method (issue #4475)
     * javahl: update ConflictDescriptor (r1655842)
     * javahl: update FileRevision to provide textDelta (r1656911)
-    * swig: partial fix for complication problems wigh SWIG 3.0.x (r1658347)
     * swig-pl: install into prefix (r1658459)
     * javahl: expose the metadataOnly option to copy support (r1661451)
     * swig-py: add support for svn_fs_lock_many(), svn_fs_unlock_many(),
@@ -718,6 +726,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: allow java callbacks to throw errors back to the svn code
       (r1664938, r1664939, r1664940, r1664978, r1664984)
     * swig-pl: fix some stack memory problems (r1668618, 1671388)
+    * swig: warn on using SWIG 3.x as we have compatibility problems
+      with newer versions of SWIG (1675149)
+    * javahl: requires Java 1.6 (r1677003)
+    * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
 
 
 Version 1.8.13
