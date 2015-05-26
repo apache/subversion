@@ -249,8 +249,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * windows: avoid delay when user profile isn't writable (r1617926)
     * merge: display the correct node kinds for tree conflicts (r1618024,
       r1619418, r1619717)
-    * diff: show properties of a copied dir as diffs against copy, rather than
-      as adds (r1619380)
     * diff: show the correct revisions in the header (r1619452)
     * diff: fix missing header for files with only property changes (r1619476)
     * update: raise a tree conflict rather than an obstruction when an
@@ -284,12 +282,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * update: fix a case where we reported an error rather than a tree conflict
       (r1655017)
     * info: Use local platform style paths in all cases (r1659283)
-    * ra_serf: don't abort commits that have already succeeded in some corner
-      cases (r1659867)
-    * delete conflict markers of a moved file in the right location (r1660220)
     * handle lack of a configuration file properly (r1660369)
-    * wc: don't treat foreign repos copy as an intra-repos copy (r1660593)
-    * upgrade: fix corner cases found in wc upgrades (r1660646 et al)
     * update: resolve issues with tree conflicts caused by an incoming
       delete removing a mixed revision tree (r1660742)
     * don't hold onto locks of deleted paths in the client on commit (r1661363)
@@ -336,8 +329,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * mod_dav_svn: fix some pool lifetime issues with error messages (r1553868)
     * mod_dav_svn: avoid setting option headers multiple times (r1557103)
     * fsfs: prevent some commits that could cause future corruption (r1560673)
-    * fsfs: fix a problem verifying pre-1.4 repos used with 1.8 (r1561419)
-    * fsfs: fix hotcopy for pre-1.4 repositories (r1561427)
     * cache: fix premature eviction due to 64-bit underflows (r1567996 et al)
     * svnserve: fix potential integer overflow in Cyrus SASL support (r1570434)
     * bdb: fix potential integer overflow and underflow (r1570701)
@@ -464,7 +455,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * improve windows build to use pre-built dependencies
     * optimize ramdrive usage in the windows test runner (r1504511)
     * SVN_CMDLINE_DISABLE_CRASH_HANDLER env var added for Windows (r1506507)
-    * stop including some headers in win32 resource compile (r1532287)
     * gen-make.py: support Visual Studio 2013 by --vsnet-version=2013 (r1533907)
     * windows: don't require APR source when building (r1534037, et al)
     * don't compile SQLite amalgamation twice (r1536364)
