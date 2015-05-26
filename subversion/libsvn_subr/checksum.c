@@ -347,7 +347,10 @@ svn_checksum_deserialize(const svn_checksum_t **checksum,
   apr_size_t prefix_len = strlen(ckind_str[0]);
 
   /* "$md5 $...", "$sha1$..." or ... */
-  SVN_ERR_ASSERT(strlen(data) > prefix_len);
+  if (strlen(data) <= prefix_len)
+    return svn_error_createf(SVN_ERR_BAD_CHECKSUM_PARSE, NULL,
+                             _("Invalid prefix in checksum '%s'"),
+                             data);
 
   for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
     if (strncmp(ckind_str[kind], data, prefix_len) == 0)
