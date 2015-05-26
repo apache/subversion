@@ -777,7 +777,6 @@ datasources_open(void *baton,
 {
   svn_diff__file_baton_t *file_baton = baton;
   struct file_info files[4];
-  apr_finfo_t finfo[4];
   apr_off_t length[4];
 #ifndef SVN_DISABLE_PREFIX_SUFFIX_SCANNING
   svn_boolean_t reached_one_eof;
@@ -792,14 +791,15 @@ datasources_open(void *baton,
   /* Open datasources and read first chunk */
   for (i = 0; i < datasources_len; i++)
     {
+      apr_finfo_t finfo;
       struct file_info *file
           = &file_baton->files[datasource_to_index(datasources[i])];
       SVN_ERR(svn_io_file_open(&file->file, file->path,
                                APR_READ, APR_OS_DEFAULT, file_baton->pool));
-      SVN_ERR(svn_io_file_info_get(&finfo[i], APR_FINFO_SIZE,
-                                   file->file, file_baton->pool));
-      file->size = finfo[i].size;
-      length[i] = finfo[i].size > CHUNK_SIZE ? CHUNK_SIZE : finfo[i].size;
+      SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, file->file,
+                                   file_baton->pool));
+      file->size = finfo.size;
+      length[i] = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
       file->buffer = apr_palloc(file_baton->pool, (apr_size_t) length[i]);
       SVN_ERR(read_chunk(file->file, file->buffer,
                          length[i], 0, file_baton->pool));
