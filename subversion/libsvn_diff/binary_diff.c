@@ -56,7 +56,7 @@ create_compressed(apr_file_t **result,
   if (original_stream)
     do
     {
-      char buffer[SVN_STREAM_CHUNK_SIZE];
+      char buffer[SVN__STREAM_CHUNK_SIZE];
       rd = sizeof(buffer);
 
       if (cancel_func)
@@ -67,7 +67,7 @@ create_compressed(apr_file_t **result,
       bytes_read += rd;
       SVN_ERR(svn_stream_write(compressed, buffer, &rd));
     }
-    while(rd == SVN_STREAM_CHUNK_SIZE);
+    while(rd == SVN__STREAM_CHUNK_SIZE);
   else
     {
       apr_size_t zero = 0;
