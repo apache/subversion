@@ -513,8 +513,10 @@ svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
                           svn_branch_eid_t to_outer_eid,
                           apr_pool_t *scratch_pool);
 
-/* Create a copy of NEW_SUBTREE in TO_BRANCH, generating a new element
- * for each non-root element in NEW_SUBTREE.
+/* Create a copy of NEW_SUBTREE in TO_BRANCH.
+ *
+ * For each non-root element in NEW_SUBTREE, create a new element with
+ * a new EID, no matter what EID is used to represent it in NEW_SUBTREE.
  *
  * For the new subtree root element, if TO_EID is -1, generate a new EID,
  * otherwise alter (if it exists) or instantiate the element TO_EID.
