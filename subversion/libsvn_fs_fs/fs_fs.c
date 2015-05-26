@@ -1917,9 +1917,8 @@ get_node_origins_from_file(svn_fs_t *fs,
   *node_origins = apr_hash_make(pool);
   err = svn_hash_read2(*node_origins, stream, SVN_HASH_TERMINATOR, pool);
   if (err)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
-                             _("malformed node origin data in '%s'"),
-                             node_origins_file);
+    return svn_error_quick_wrapf(err, _("malformed node origin data in '%s'"),
+                                 node_origins_file);
   return svn_stream_close(stream);
 }
 

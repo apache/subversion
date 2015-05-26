@@ -754,7 +754,7 @@ svn_test__init_auth_baton(svn_auth_baton_t **ab,
                                          "jrandom", "rayjandom",
                                          NULL,
                                          TRUE  /* no_auth_cache */,
-                                         FALSE /* trust_server_cert */,
+                                         TRUE /* trust_server_cert_unkown_ca */,
                                          FALSE, FALSE, FALSE, FALSE,
                                          cfg_config, NULL, NULL, result_pool));
 
