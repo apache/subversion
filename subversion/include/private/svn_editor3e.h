@@ -33,7 +33,6 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
-#include "svn_io.h"    /* for svn_stream_t  */
 #include "svn_delta.h"
 #include "private/svn_branch.h"
 

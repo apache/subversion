@@ -33,8 +33,6 @@
 
 #include "svn_types.h"
 
-#include "private/svn_element.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
