@@ -35,11 +35,30 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 
-#include "private/svn_editor3e.h"
+#include "private/svn_element.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+
+/** A reference to a node in a txn.
+ *
+ * @a peg gives a pegged location and @a peg.rev shall not be
+ * #SVN_INVALID_REVNUM. @a relpath shall not be null. If @a relpath is
+ * empty then @a peg identifies the node, otherwise @a relpath specifies
+ * the one or more components that are newly created (includes children
+ * of a copy). */
+typedef struct svn_editor3_txn_path_t
+{
+  svn_pathrev_t peg;
+  const char *relpath;
+} svn_editor3_txn_path_t;
+
+/* Return a duplicate of OLD, allocated in RESULT_POOL. */
+svn_editor3_txn_path_t
+svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
+                         apr_pool_t *result_pool);
 
 
 /*
@@ -536,6 +555,43 @@ svn_editor3p__get_debug_editor(svn_editor3p_t **editor_p,
 #endif
 
 
+/** Callback to retrieve a node's kind and content.  This is
+ * needed by the various editor shims in order to effect backwards
+ * compatibility.
+ *
+ * Implementations should set @a *kind to the node kind of @a repos_relpath
+ * in @a revision.
+ *
+ * Implementations should set @a *props to the hash of properties
+ * associated with @a repos_relpath in @a revision, allocating that hash
+ * and its contents in @a result_pool. Only the 'regular' props should be
+ * included, not special props such as 'entry props'.
+ *
+ * Implementations should set @a *filename to the name of a file
+ * suitable for use as a delta base for @a repos_relpath in @a revision
+ * (allocating @a *filename from @a result_pool), or to @c NULL if the
+ * base stream is empty.
+ *
+ * Any output argument may be NULL if the output is not wanted.
+ *
+ * @a baton is an implementation-specific closure.
+ * @a repos_relpath is relative to the repository root.
+ * The implementation should ensure that @a new_content, including any
+ * file therein, lives at least for the life time of @a result_pool.
+ * @a scratch_pool is provided for temporary allocations.
+ */
+typedef svn_error_t *(*svn_editor3p__shim_fetch_func_t)(
+  svn_node_kind_t *kind,
+  apr_hash_t **props,
+  svn_stringbuf_t **file_text,
+  apr_hash_t **children_names,
+  void *baton,
+  const char *repos_relpath,
+  svn_revnum_t revision,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool
+  );
+
 /* An object for communicating out-of-band details between an Ev1-to-Ev3
  * shim and an Ev3-to-Ev1 shim. */
 typedef struct svn_editor3p__shim_connector_t svn_editor3p__shim_connector_t;
@@ -553,7 +609,7 @@ svn_delta__ev3_from_delta_for_commit(
                         void *dedit_baton,
                         const char *repos_root_url,
                         const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
@@ -584,7 +640,7 @@ svn_delta__delta_from_ev3_for_commit(
                         svn_editor3p_t *editor,
                         const char *repos_root_url,
                         const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         const svn_editor3p__shim_connector_t *shim_connector,
                         apr_pool_t *result_pool,
@@ -608,7 +664,7 @@ svn_editor3p__insert_shims(
                         void *old_dedit_baton,
                         const char *repos_root,
                         const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
@@ -646,7 +702,7 @@ svn_delta__ev3_from_delta_for_update(
                         void *dedit_baton,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
@@ -662,7 +718,7 @@ svn_delta__delta_from_ev3_for_update(
                         svn_update_editor3_t *update_editor,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);

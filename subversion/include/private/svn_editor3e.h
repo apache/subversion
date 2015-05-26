@@ -512,24 +512,6 @@ extern "C" {
  */
 typedef struct svn_editor3_t svn_editor3_t;
 
-/** A reference to a node in a txn.
- *
- * @a peg gives a pegged location and @a peg.rev shall not be
- * #SVN_INVALID_REVNUM. @a relpath shall not be null. If @a relpath is
- * empty then @a peg identifies the node, otherwise @a relpath specifies
- * the one or more components that are newly created (includes children
- * of a copy). */
-typedef struct svn_editor3_txn_path_t
-{
-  svn_pathrev_t peg;
-  const char *relpath;
-} svn_editor3_txn_path_t;
-
-/* Return a duplicate of OLD, allocated in RESULT_POOL. */
-svn_editor3_txn_path_t
-svn_editor3_txn_path_dup(svn_editor3_txn_path_t old,
-                         apr_pool_t *result_pool);
-
 /** The kind of the checksum to be used throughout the #svn_editor3_t APIs.
  */
 #define SVN_EDITOR3_CHECKSUM_KIND svn_checksum_sha1

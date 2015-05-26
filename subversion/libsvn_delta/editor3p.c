@@ -39,6 +39,27 @@
 #endif
 
 
+/*
+ * ===================================================================
+ * Minor data types
+ * ===================================================================
+ */
+
+svn_editor3_txn_path_t
+svn_editor3_txn_path_dup(svn_editor3_txn_path_t p,
+                         apr_pool_t *result_pool)
+{
+  /* The object P is passed by value so we can modify it in place */
+  p.peg = svn_pathrev_dup(p.peg, result_pool);
+  p.relpath = apr_pstrdup(result_pool, p.relpath);
+  return p;
+}
+
+
+/*
+ * ===================================================================
+ */
+
 struct svn_editor3p_t
 {
   void *baton;

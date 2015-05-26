@@ -117,7 +117,7 @@ svn_editor3p__insert_shims(
                         void *old_dedit_baton,
                         const char *repos_root,
                         const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
@@ -630,7 +630,7 @@ struct ev3_edit_baton
 
   const svn_editor3p__shim_connector_t *shim_connector;
 
-  svn_editor3__shim_fetch_func_t fetch_func;
+  svn_editor3p__shim_fetch_func_t fetch_func;
   void *fetch_baton;
 
   svn_boolean_t closed;
@@ -1518,7 +1518,7 @@ svn_delta__delta_from_ev3_for_commit(
                         svn_editor3p_t *editor,
                         const char *repos_root_url,
                         const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         const svn_editor3p__shim_connector_t *shim_connector,
                         apr_pool_t *result_pool,
@@ -1579,7 +1579,7 @@ svn_delta__delta_from_ev3_for_update(
                         svn_update_editor3_t *update_editor,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
@@ -1712,7 +1712,7 @@ typedef struct ev3_from_delta_baton_t
   void *dedit_baton;
 
   /* Callbacks */
-  svn_editor3__shim_fetch_func_t fetch_func;
+  svn_editor3p__shim_fetch_func_t fetch_func;
   void *fetch_baton;
 
   /* The Ev1 root directory baton if we have opened the root, else null. */
@@ -1832,7 +1832,7 @@ static svn_error_t *
 fetch_base_props(apr_hash_t **base_props,
                  apr_hash_t *changes,
                  const char *repos_relpath,
-                 svn_editor3__shim_fetch_func_t fetch_func,
+                 svn_editor3p__shim_fetch_func_t fetch_func,
                  void *fetch_baton,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
@@ -2475,7 +2475,7 @@ svn_delta__ev3_from_delta_for_commit(
                         void *dedit_baton,
                         const char *repos_root_url,
                         const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
@@ -2537,7 +2537,7 @@ svn_delta__ev3_from_delta_for_update(
                         void *dedit_baton,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_editor3p__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
