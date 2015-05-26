@@ -512,10 +512,6 @@ extern "C" {
  */
 typedef struct svn_editor3_t svn_editor3_t;
 
-/** The kind of the checksum to be used throughout the #svn_editor3_t APIs.
- */
-#define SVN_EDITOR3_CHECKSUM_KIND svn_checksum_sha1
-
 
 /** These functions are called by the tree delta driver to edit the target.
  *
