@@ -21,14 +21,12 @@
  * ====================================================================
  */
 
-#include <stddef.h>
 #include <assert.h>
 
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
-#include "svn_props.h"
 #include "svn_iter.h"
 
 #include "private/svn_element.h"

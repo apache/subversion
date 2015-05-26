@@ -27,8 +27,6 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
-#include "svn_props.h"
-#include "svn_sorts.h"
 #include "svn_iter.h"
 
 #include "private/svn_editor3e.h"
