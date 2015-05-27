@@ -470,6 +470,12 @@ unlock_single(svn_fs_t *fs,
               svn_lock_t *lock,
               apr_pool_t *pool);
 
+/* Check if LOCK has been already expired. */
+static svn_boolean_t lock_expired(const svn_lock_t *lock)
+{
+  return lock->expiration_date && (apr_time_now() > lock->expiration_date);
+}
+
 /* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
    TRUE if the caller (or one of its callers) has taken out the
    repository-wide write lock, FALSE otherwise.  If MUST_EXIST is
@@ -499,7 +505,7 @@ get_lock(svn_lock_t **lock_p,
     return must_exist ? SVN_FS__ERR_NO_SUCH_LOCK(fs, path) : SVN_NO_ERROR;
 
   /* Don't return an expired lock. */
-  if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
+  if (lock_expired(lock))
     {
       /* Only remove the lock if we have the write lock.
          Read operations shouldn't change the filesystem. */
@@ -546,100 +552,6 @@ get_lock_helper(svn_fs_t *fs,
 }
 
 
-/* Baton for locks_walker(). */
-typedef struct walk_locks_baton_t
-{
-  svn_fs_get_locks_callback_t get_locks_func;
-  void *get_locks_baton;
-  svn_fs_t *fs;
-} walk_locks_baton_t;
-
-/* Implements walk_digests_callback_t. */
-static svn_error_t *
-locks_walker(void *baton,
-             const char *fs_path,
-             const char *digest_path,
-             svn_lock_t *lock,
-             svn_boolean_t have_write_lock,
-             apr_pool_t *pool)
-{
-  walk_locks_baton_t *wlb = baton;
-
-  if (lock)
-    {
-      /* Don't report an expired lock. */
-      if (lock->expiration_date == 0
-          || (apr_time_now() <= lock->expiration_date))
-        {
-          if (wlb->get_locks_func)
-            SVN_ERR(wlb->get_locks_func(wlb->get_locks_baton, lock, pool));
-        }
-      else
-        {
-          /* Only remove the lock if we have the write lock.
-             Read operations shouldn't change the filesystem. */
-          if (have_write_lock)
-            SVN_ERR(unlock_single(wlb->fs, lock, pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Callback type for walk_digest_files().
- *
- * LOCK come from a read_digest_file(digest_path) call.
- */
-typedef svn_error_t *(*walk_digests_callback_t)(void *baton,
-                                                const char *fs_path,
-                                                const char *digest_path,
-                                                svn_lock_t *lock,
-                                                svn_boolean_t have_write_lock,
-                                                apr_pool_t *pool);
-
-/* A function that calls WALK_DIGESTS_FUNC/WALK_DIGESTS_BATON for
-   all lock digest files in and under PATH in FS.
-   HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
-   has the FS write lock. */
-static svn_error_t *
-walk_digest_files(const char *fs_path,
-                  const char *digest_path,
-                  walk_digests_callback_t walk_digests_func,
-                  void *walk_digests_baton,
-                  svn_boolean_t have_write_lock,
-                  apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_hash_t *children;
-  apr_pool_t *subpool;
-  svn_lock_t *lock;
-
-  /* First, send up any locks in the current digest file. */
-  SVN_ERR(read_digest_file(&children, &lock, fs_path, digest_path, pool));
-
-  SVN_ERR(walk_digests_func(walk_digests_baton, fs_path, digest_path, lock,
-                            have_write_lock, pool));
-
-  /* Now, report all the child entries (if any; bail otherwise). */
-  if (! apr_hash_count(children))
-    return SVN_NO_ERROR;
-  subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
-    {
-      const char *digest = apr_hash_this_key(hi);
-      svn_pool_clear(subpool);
-
-      SVN_ERR(read_digest_file
-              (NULL, &lock, fs_path,
-               digest_path_from_digest(fs_path, digest, subpool), subpool));
-
-      SVN_ERR(walk_digests_func(walk_digests_baton, fs_path, digest_path, lock,
-                                have_write_lock, subpool));
-    }
-  svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
-}
-
 /* A function that calls GET_LOCKS_FUNC/GET_LOCKS_BATON for
    all locks in and under PATH in FS.
    HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
@@ -652,16 +564,54 @@ walk_locks(svn_fs_t *fs,
            svn_boolean_t have_write_lock,
            apr_pool_t *pool)
 {
-  walk_locks_baton_t wlb;
+  apr_hash_index_t *hi;
+  apr_hash_t *children;
+  apr_pool_t *subpool;
+  svn_lock_t *lock;
 
-  wlb.get_locks_func = get_locks_func;
-  wlb.get_locks_baton = get_locks_baton;
-  wlb.fs = fs;
-  SVN_ERR(walk_digest_files(fs->path, digest_path, locks_walker, &wlb,
-                            have_write_lock, pool));
+  /* First, send up any locks in the current digest file. */
+  SVN_ERR(read_digest_file(&children, &lock, fs->path, digest_path, pool));
+
+  if (lock && lock_expired(lock))
+    {
+      /* Only remove the lock if we have the write lock.
+         Read operations shouldn't change the filesystem. */
+      if (have_write_lock)
+        SVN_ERR(unlock_single(fs, lock, pool));
+    }
+  else if (lock)
+    {
+      SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+    }
+
+  /* Now, report all the child entries (if any; bail otherwise). */
+  if (! apr_hash_count(children))
+    return SVN_NO_ERROR;
+  subpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi))
+    {
+      const char *digest = apr_hash_this_key(hi);
+      svn_pool_clear(subpool);
+
+      SVN_ERR(read_digest_file
+              (NULL, &lock, fs->path,
+               digest_path_from_digest(fs->path, digest, subpool), subpool));
+
+      if (lock && lock_expired(lock))
+        {
+          /* Only remove the lock if we have the write lock.
+             Read operations shouldn't change the filesystem. */
+          if (have_write_lock)
+            SVN_ERR(unlock_single(fs, lock, pool));
+        }
+      else if (lock)
+        {
+          SVN_ERR(get_locks_func(get_locks_baton, lock, pool));
+        }
+    }
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
-
 
 /* Utility function:  verify that a lock can be used.  Interesting
    errors returned from this function:
