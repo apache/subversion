@@ -1932,7 +1932,7 @@ svn_fs_x__delete_revprops_shard(const char *shard_path,
                                  apr_psprintf(iterpool, "%d", i),
                                  iterpool);
           if (cancel_func)
-            SVN_ERR((*cancel_func)(cancel_baton));
+            SVN_ERR(cancel_func(cancel_baton));
 
           SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
         }
