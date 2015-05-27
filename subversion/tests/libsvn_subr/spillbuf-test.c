@@ -514,7 +514,7 @@ static svn_error_t *
 test_spillbuf__file_attrs(apr_pool_t *pool, svn_boolean_t spill_all,
                           svn_spillbuf_t *buf)
 {
-  apr_finfo_t finfo;
+  svn_filesize_t filesize;
 
   SVN_ERR(svn_spillbuf__write(buf, "abcdef", 6, pool));
   SVN_ERR(svn_spillbuf__write(buf, "ghijkl", 6, pool));
@@ -528,13 +528,12 @@ test_spillbuf__file_attrs(apr_pool_t *pool, svn_boolean_t spill_all,
   SVN_TEST_ASSERT(svn_spillbuf__get_file(buf) != NULL);
 
   /* The size of the file must match expectations */
-  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE,
-                               svn_spillbuf__get_file(buf), pool));
+  SVN_ERR(svn_io_file_size_get(&filesize, svn_spillbuf__get_file(buf), pool));
   if (spill_all)
-    SVN_TEST_ASSERT(finfo.size == svn_spillbuf__get_size(buf));
+    SVN_TEST_ASSERT(filesize == svn_spillbuf__get_size(buf));
   else
-    SVN_TEST_ASSERT(finfo.size == (svn_spillbuf__get_size(buf)
-                                   - svn_spillbuf__get_memory_size(buf)));
+    SVN_TEST_ASSERT(filesize == (svn_spillbuf__get_size(buf)
+                                 - svn_spillbuf__get_memory_size(buf)));
   return SVN_NO_ERROR;
 }
 

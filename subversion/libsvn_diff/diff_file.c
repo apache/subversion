@@ -791,15 +791,14 @@ datasources_open(void *baton,
   /* Open datasources and read first chunk */
   for (i = 0; i < datasources_len; i++)
     {
-      apr_finfo_t finfo;
+      svn_filesize_t filesize;
       struct file_info *file
           = &file_baton->files[datasource_to_index(datasources[i])];
       SVN_ERR(svn_io_file_open(&file->file, file->path,
                                APR_READ, APR_OS_DEFAULT, file_baton->pool));
-      SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, file->file,
-                                   file_baton->pool));
-      file->size = finfo.size;
-      length[i] = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
+      SVN_ERR(svn_io_file_size_get(&filesize, file->file, file_baton->pool));
+      file->size = filesize;
+      length[i] = filesize > CHUNK_SIZE ? CHUNK_SIZE : filesize;
       file->buffer = apr_palloc(file_baton->pool, (apr_size_t) length[i]);
       SVN_ERR(read_chunk(file->file, file->buffer,
                          length[i], 0, file_baton->pool));

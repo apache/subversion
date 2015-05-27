@@ -42,7 +42,6 @@ create_compressed(apr_file_t **result,
 {
   svn_stream_t *compressed;
   svn_filesize_t bytes_read = 0;
-  apr_finfo_t finfo;
   apr_size_t rd;
 
   SVN_ERR(svn_io_open_uniquely_named(result, NULL, NULL, "diffgz",
@@ -77,8 +76,7 @@ create_compressed(apr_file_t **result,
   SVN_ERR(svn_stream_close(compressed)); /* Flush compression */
 
   *full_size = bytes_read;
-  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, *result, scratch_pool));
-  *compressed_size = finfo.size;
+  SVN_ERR(svn_io_file_size_get(compressed_size, *result, scratch_pool));
 
   return SVN_NO_ERROR;
 }
