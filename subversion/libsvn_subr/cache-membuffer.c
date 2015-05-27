@@ -2670,8 +2670,15 @@ combine_key(svn_membuffer_cache_t *cache,
       data[1] = 0;
       memcpy(data, key, key_len);
 
-      /* scramble key DATA.  All of this must be reversible to prevent key
-       * collisions.  So, we limit ourselves to xor and permutations. */
+      /* Scramble key DATA to spread the key space more evenly across the
+       * cache segments and entry buckets.  All of this shall be reversible
+       * to prevent key collisions.  So, we limit ourselves to xor and
+       * permutations.
+       *
+       * As long as we compare the full combined key, the additional
+       * fingerprint collisions introduced by a non-reversible scramble
+       * would simply reduce the cache effectiveness.
+       */
       data[1] = (data[1] << 27) | (data[1] >> 37);
       data[1] ^= data[0] & 0xffff;
       data[0] ^= data[1] & APR_UINT64_C(0xffffffffffff0000);
