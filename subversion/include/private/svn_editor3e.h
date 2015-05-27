@@ -713,10 +713,6 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
  * If the element @a eid is a subbranch root, then delete that subbranch
  * (recursively). The element @a eid is not the root element of @a branch.
  *
- * @a since_rev specifies the base revision on which this deletion was
- * performed: the server can consider the change "out of date" if a commit
- * since then has changed or deleted this element.
- *
  * ### Options for Out-Of-Date Checking on Rebase
  *
  *   We may want to specify what kind of OOD check takes place. The
@@ -748,17 +744,12 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
-                   svn_revnum_t since_rev,
                    svn_branch_state_t *branch,
                    svn_branch_eid_t eid);
 
 /** Alter the tree position and/or payload of the element identified
  * by @a eid.
  * <SVN_EDITOR3_WITH_RESURRECTION> ### or resurrect it? </>
- *
- * @a since_rev specifies the base revision on which this edit was
- * performed: the server can consider the change "out of date" if a commit
- * since then has changed or deleted this element.
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
@@ -772,7 +763,6 @@ svn_editor3_delete(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
-                  svn_revnum_t since_rev,
                   svn_branch_state_t *branch,
                   svn_branch_eid_t eid,
                   svn_branch_eid_t new_parent_eid,
@@ -890,7 +880,6 @@ typedef svn_error_t *(*svn_editor3_cb_copy_tree_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_delete_t)(
   void *baton,
-  svn_revnum_t since_rev,
   svn_branch_state_t *branch,
   svn_branch_eid_t eid,
   apr_pool_t *scratch_pool);
@@ -899,7 +888,6 @@ typedef svn_error_t *(*svn_editor3_cb_delete_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   void *baton,
-  svn_revnum_t since_rev,
   svn_branch_state_t *branch,
   svn_branch_eid_t eid,
   svn_branch_eid_t new_parent_eid,

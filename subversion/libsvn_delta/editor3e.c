@@ -284,7 +284,6 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
-                   svn_revnum_t since_rev,
                    svn_branch_state_t *branch,
                    svn_branch_eid_t eid)
 {
@@ -293,14 +292,13 @@ svn_editor3_delete(svn_editor3_t *editor,
   /* TODO: verify this element exists (in initial state) */
 
   DO_CALLBACK(editor, cb_delete,
-              3(since_rev, branch, eid));
+              2(branch, eid));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
-                  svn_revnum_t since_rev,
                   svn_branch_state_t *branch,
                   svn_branch_eid_t eid,
                   svn_branch_eid_t new_parent_eid,
@@ -315,7 +313,7 @@ svn_editor3_alter(svn_editor3_t *editor,
   /* TODO: verify this element exists (in initial state) */
 
   DO_CALLBACK(editor, cb_alter,
-              6(since_rev, branch, eid,
+              5(branch, eid,
                 new_parent_eid, new_name,
                 new_payload));
 
@@ -504,7 +502,6 @@ wrap_copy_tree(void *baton,
 
 static svn_error_t *
 wrap_delete(void *baton,
-            svn_revnum_t since_rev,
             svn_branch_state_t *branch,
             svn_branch_eid_t eid,
             apr_pool_t *scratch_pool)
@@ -514,13 +511,12 @@ wrap_delete(void *baton,
   dbg(eb, scratch_pool, "%s : delete()",
       eid_str(eid, scratch_pool));
   SVN_ERR(svn_editor3_delete(eb->wrapped_editor,
-                             since_rev, branch, eid));
+                             branch, eid));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_alter(void *baton,
-           svn_revnum_t since_rev,
            svn_branch_state_t *branch,
            svn_branch_eid_t eid,
            svn_branch_eid_t new_parent_eid,
@@ -534,7 +530,7 @@ wrap_alter(void *baton,
       eid_str(eid, scratch_pool), eid_str(eid, scratch_pool),
       eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
-                            since_rev, branch, eid,
+                            branch, eid,
                             new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }

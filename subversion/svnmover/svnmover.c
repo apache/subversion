@@ -1100,7 +1100,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                  eid, result->name,
                  subbranch_str(tgt->branch, eid, scratch_pool));
 
-          SVN_ERR(svn_editor3_alter(editor, tgt->rev, tgt->branch, eid,
+          SVN_ERR(svn_editor3_alter(editor, tgt->branch, eid,
                                     result->parent_eid, result->name,
                                     result->payload));
 
@@ -1111,7 +1111,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
           notify("D    e%d %s%s",
                  eid, e_yca->name,
                  subbranch_str(yca->branch, eid, scratch_pool));
-          SVN_ERR(svn_editor3_delete(editor, tgt->rev, tgt->branch, eid));
+          SVN_ERR(svn_editor3_delete(editor, tgt->branch, eid));
         }
       else if (result)
         {
@@ -1505,12 +1505,12 @@ move_by_branch_and_delete(svn_editor3_t *editor,
      its root from the outer branch instead. */
   if (el_rev->eid != el_rev->branch->root_eid)
     {
-      SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+      SVN_ERR(svn_editor3_delete(editor,
                                  el_rev->branch, el_rev->eid));
     }
   else
     {
-      SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+      SVN_ERR(svn_editor3_delete(editor,
                                  el_rev->branch->outer_branch, el_rev->branch->outer_eid));
     }
   SVN_ERR(svn_branch_instantiate_subtree(to_branch,
@@ -1541,7 +1541,7 @@ move_by_copy_and_delete(svn_editor3_t *editor,
   SVN_ERR(svn_editor3_copy_tree(editor, el_rev,
                                 to_branch,
                                 to_parent_eid, to_name));
-  SVN_ERR(svn_editor3_delete(editor, el_rev->rev,
+  SVN_ERR(svn_editor3_delete(editor,
                              el_rev->branch, el_rev->eid));
   return SVN_NO_ERROR;
 }
@@ -1569,7 +1569,7 @@ do_move(svn_editor3_t *editor,
                             scratch_pool))
     {
       /* Move within same branch */
-      SVN_ERR(svn_editor3_alter(editor, el_rev->rev,
+      SVN_ERR(svn_editor3_alter(editor,
                                 el_rev->branch, el_rev->eid,
                                 to_parent_el_rev->eid, to_name,
                                 NULL /* "no change" */));
@@ -2019,7 +2019,7 @@ execute(const apr_array_header_t *actions,
 
           VERIFY_REV_UNSPECIFIED("rm", 0);
           VERIFY_EID_EXISTS("rm", 0);
-          SVN_ERR(svn_editor3_delete(editor, arg[0]->el_rev->rev,
+          SVN_ERR(svn_editor3_delete(editor,
                                      arg[0]->el_rev->branch, arg[0]->el_rev->eid));
           notify("D    %s", action->relpath[0]);
           made_changes = TRUE;
@@ -2075,7 +2075,7 @@ execute(const apr_array_header_t *actions,
 
             if (arg[1]->el_rev->eid >= 0)
               {
-                SVN_ERR(svn_editor3_alter(editor, SVN_INVALID_REVNUM,
+                SVN_ERR(svn_editor3_alter(editor,
                                           arg[1]->el_rev->branch, arg[1]->el_rev->eid,
                                           arg[1]->parent_el_rev->eid, arg[1]->path_name,
                                           payload));
