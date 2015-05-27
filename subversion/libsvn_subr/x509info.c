@@ -41,8 +41,7 @@ svn_x509_name_attr_dup(const svn_x509_name_attr_t *attr,
 {
   svn_x509_name_attr_t *result = apr_palloc(result_pool, sizeof(*result));
   result->oid_len = attr->oid_len;
-  result->oid = apr_palloc(result_pool, result->oid_len);
-  memcpy(result->oid, attr->oid, result->oid_len);
+  result->oid = apr_pmemdup(result_pool, attr->oid, attr->oid_len);
   result->utf8_value = apr_pstrdup(result_pool, attr->utf8_value);
 
   return result;
