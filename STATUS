@@ -41,17 +41,6 @@ Other candidate changes:
      +1: stsp (without r1680705)
      +1: danielsh, rhuijben
 
- * r1680819
-   Prevent a possible FSFS repository corruption with power or network disk
-   failures when changing revision properties.
-   Notes:
-     Not a regression. Same issue exists in 1.7.x and 1.8.x. But it would
-     be nice to have in 1.9.0.
-   Justification:
-     Repository corruptions are bad (user reported this issue privately)
-   Votes:
-     +1: ivan, kotkov
-
  * r1681317
    Clarify 'svn help' output for --show-inherited-properties.
    Justification:
@@ -64,3 +53,15 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1680819
+   Prevent a possible FSFS repository corruption with power or network disk
+   failures when changing revision properties.
+   Notes:
+     Not a regression. Same issue exists in 1.7.x and 1.8.x. But it would
+     be nice to have in 1.9.0.
+   Justification:
+     Repository corruptions are bad (user reported this issue privately)
+   Votes:
+     +1: ivan, kotkov, stefan2
+
