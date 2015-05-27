@@ -1729,7 +1729,7 @@ editor3_complete(void *baton,
   ev3_from_delta_baton_t *eb = baton;
   svn_error_t *err;
 
-  editor3_sequence_point(baton, scratch_pool);
+  SVN_ERR(editor3_sequence_point(baton, scratch_pool));
 
   /* Drive the tree we've created. */
   err = drive_changes_branch(eb, scratch_pool);
