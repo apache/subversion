@@ -623,6 +623,18 @@ typedef struct change_t
   svn_fs_path_change2_t info;
 } change_t;
 
+
+/*** Directory (only used at the cache interface) ***/
+typedef struct svn_fs_fs__dir_data_t
+{
+  /* Contents, i.e. all directory entries, sorted by name. */
+  apr_array_header_t *entries;
+
+  /* SVN_INVALID_FILESIZE for committed data, otherwise the length of the
+   * in-txn on-disk representation of that directory. */
+  svn_filesize_t txn_filesize;
+} svn_fs_fs__dir_data_t;
+
 
 #ifdef __cplusplus
 }

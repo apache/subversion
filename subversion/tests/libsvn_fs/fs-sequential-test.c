@@ -251,9 +251,8 @@ static int max_threads = 1;  /* Run tests sequentially. */
 static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_OPTS_XFAIL_OTOH(reopen_modify,
-                             "test reopen and modify txn",
-                             SVN_TEST_PASS_IF_FS_TYPE_IS_NOT("fsfs")),
+    SVN_TEST_OPTS_PASS(reopen_modify,
+                       "test reopen and modify txn"),
     SVN_TEST_NULL
   };
 
