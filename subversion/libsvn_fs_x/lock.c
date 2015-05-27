@@ -885,9 +885,6 @@ lock_body(void *baton, apr_pool_t *pool)
   int i, outstanding = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  lb->infos = apr_array_make(lb->result_pool, lb->targets->nelts,
-                             sizeof(lock_info_t));
-
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
   /* Use fs->vtable->foo instead of svn_fs_foo to avoid circular
@@ -1088,9 +1085,6 @@ unlock_body(void *baton, apr_pool_t *pool)
   int i, max_components = 0, outstanding = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  ub->infos = apr_array_make(ub->result_pool, ub->targets->nelts,
-                             sizeof( unlock_info_t));
-
   SVN_ERR(ub->fs->vtable->youngest_rev(&youngest, ub->fs, pool));
   SVN_ERR(ub->fs->vtable->revision_root(&root, ub->fs, youngest, pool));
 
@@ -1211,6 +1205,8 @@ unlock_single(svn_fs_t *fs,
 
   ub.fs = fs;
   ub.targets = targets;
+  ub.infos = apr_array_make(scratch_pool, targets->nelts,
+                            sizeof(struct unlock_info_t));
   ub.skip_check = TRUE;
   ub.result_pool = scratch_pool;
 
@@ -1272,6 +1268,8 @@ svn_fs_x__lock(svn_fs_t *fs,
 
   lb.fs = fs;
   lb.targets = sorted_targets;
+  lb.infos = apr_array_make(scratch_pool, sorted_targets->nelts,
+                            sizeof(struct lock_info_t));
   lb.comment = comment;
   lb.is_dav_comment = is_dav_comment;
   lb.expiration_date = expiration_date;
@@ -1366,6 +1364,8 @@ svn_fs_x__unlock(svn_fs_t *fs,
 
   ub.fs = fs;
   ub.targets = sorted_targets;
+  ub.infos = apr_array_make(scratch_pool, sorted_targets->nelts,
+                            sizeof(struct unlock_info_t));
   ub.skip_check = FALSE;
   ub.break_lock = break_lock;
   ub.result_pool = result_pool;
