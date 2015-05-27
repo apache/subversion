@@ -136,6 +136,12 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1680819
    Prevent a possible FSFS repository corruption with power or network disk
    failures when changing revision properties.
@@ -146,10 +152,5 @@ Candidate changes:
    Justification:
      Repository corruptions are bad (user reported this issue privately)
    Votes:
-     +1: ivan, kotkov
+     +1: ivan, kotkov, stefan2
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
