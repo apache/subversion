@@ -715,7 +715,7 @@ copy_node_to_temp(pack_context_t *context,
   /* read & parse noderev */
   stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool, pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
