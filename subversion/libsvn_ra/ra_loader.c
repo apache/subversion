@@ -1031,7 +1031,7 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
     /*if (! svn_dbg__quiet_mode())
       SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
                                           deditor, dedit_baton, "", pool));*/
-    SVN_ERR(svn_delta__ev3_from_delta_for_commit2(
+    SVN_ERR(svn_editor3__ev3_from_delta_for_commit(
                         editor,
                         &shim_connector,
                         deditor, dedit_baton, branching_txn,
@@ -1070,9 +1070,9 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
     SVN_ERR(svn_ra__dup_session(&fbb->session, session, repos_root_url, pool, pool));
     fbb->session_path = base_relpath;
     fbb->repos_root_url = repos_root_url;
-    SVN_ERR(svn_editor3p__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                       repos_root_url, base_relpath,
-                                       svn_ra_fetch, fbb, pool, pool));
+    SVN_ERR(svn_editor3__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                      repos_root_url, base_relpath,
+                                      svn_ra_fetch, fbb, pool, pool));
   }
 
   return SVN_NO_ERROR;

@@ -1175,7 +1175,7 @@ typedef struct svn_editor3__shim_connector_t svn_editor3__shim_connector_t;
  * allocations.
  */
 svn_error_t *
-svn_delta__ev3_from_delta_for_commit2(
+svn_editor3__ev3_from_delta_for_commit(
                         svn_editor3_t **editor_p,
                         svn_editor3__shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
@@ -1187,6 +1187,114 @@ svn_delta__ev3_from_delta_for_commit2(
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Return a delta editor in DEDITOR/DEDITOR_BATON which will drive EDITOR.
+ *
+ * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
+ * relative path within the repository of the root directory of the edit.
+ * (An Ev1 edit must be rooted at a directory, not at a file.)
+ *
+ * FETCH_FUNC/FETCH_BATON is a callback by which the shim may retrieve the
+ * original or copy-from kind/properties/text for a path being committed.
+ *
+ * SHIM_CONNECTOR can be used to enable a more exact round-trip conversion
+ * from an Ev1 drive to Ev3 and back to Ev1. It must live for the lifetime
+ * of the edit. It may be null if not wanted.
+ *
+ * Allocate the new editor in RESULT_POOL, which may become large and must
+ * live for the lifetime of the edit. Use SCRATCH_POOL for temporary
+ * allocations.
+ */
+svn_error_t *
+svn_editor3__delta_from_ev3_for_commit(
+                        const svn_delta_editor_t **deditor,
+                        void **dedit_baton,
+                        svn_editor3_t *editor,
+                        const char *repos_root_url,
+                        const char *base_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        const svn_editor3__shim_connector_t *shim_connector,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Return in NEW_DEDITOR/NEW_DETIT_BATON a delta editor that wraps
+ * OLD_DEDITOR/OLD_DEDIT_BATON, inserting a pair of shims that convert
+ * Ev1 to Ev3 and back to Ev1.
+ *
+ * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
+ * relative path within the repository of the root directory of the edit.
+ *
+ * FETCH_FUNC/FETCH_BATON is a callback by which the shim may retrieve the
+ * original or copy-from kind/properties/text for a path being committed.
+ */
+svn_error_t *
+svn_editor3__insert_shims(
+                        const svn_delta_editor_t **new_deditor,
+                        void **new_dedit_baton,
+                        const svn_delta_editor_t *old_deditor,
+                        void *old_dedit_baton,
+                        const char *repos_root,
+                        const char *base_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* A callback for declaring the target revision of an update or switch.
+ */
+typedef svn_error_t *(*svn_editor3__set_target_revision_func_t)(
+  void *baton,
+  svn_revnum_t target_revision,
+  apr_pool_t *scratch_pool);
+
+/* An update (or switch) editor.
+ *
+ * This consists of a plain Ev3 editor and the additional methods or
+ * resources needed for use as an update or switch editor.
+ */
+typedef struct svn_update_editor3_t {
+  /* The basic editor. */
+  svn_editor3_t *editor;
+
+  /* A method to communicate the target revision of the update (or switch),
+   * to be called before driving the editor. It has its own baton, rather
+   * than using the editor's baton, so that the editor can be replaced (by
+   * a wrapper editor, typically) without having to wrap this callback. */
+  svn_editor3__set_target_revision_func_t set_target_revision_func;
+  void *set_target_revision_baton;
+} svn_update_editor3_t;
+
+/* Like svn_delta__ev3_from_delta_for_commit() but for an update editor.
+ */
+svn_error_t *
+svn_editor3__ev3_from_delta_for_update(
+                        svn_update_editor3_t **editor_p,
+                        const svn_delta_editor_t *deditor,
+                        void *dedit_baton,
+                        svn_branch_revision_root_t *branching_txn,
+                        const char *repos_root_url,
+                        const char *base_repos_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Like svn_delta__delta_from_ev3_for_commit() but for an update editor.
+ */
+svn_error_t *
+svn_editor3__delta_from_ev3_for_update(
+                        const svn_delta_editor_t **deditor,
+                        void **dedit_baton,
+                        svn_update_editor3_t *update_editor,
+                        const char *repos_root_url,
+                        const char *base_repos_relpath,
+                        svn_editor3__shim_fetch_func_t fetch_func,
+                        void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
