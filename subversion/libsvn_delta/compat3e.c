@@ -1207,7 +1207,6 @@ editor3_copy_tree(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_delete(void *baton,
-                   svn_revnum_t since_rev,
                    svn_branch_state_t *branch,
                    svn_branch_eid_t eid,
                    apr_pool_t *scratch_pool)
@@ -1223,7 +1222,6 @@ editor3_delete(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_alter(void *baton,
-              svn_revnum_t since_rev,
               svn_branch_state_t *branch,
               svn_branch_eid_t eid,
               svn_branch_eid_t new_parent_eid,
