@@ -398,7 +398,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "svn:externals properties")},
   {"show-inherited-props", opt_show_inherited_props, 0,
-                       N_("retrieve target's inherited properties")},
+                       N_("retrieve properties set on parents of the target")},
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax)")},
   {"search-and", opt_search_and, 1,
@@ -1445,8 +1445,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  directory:\n"
      "    svn:ignore         - A list of file glob patterns to ignore, one per line.\n"
      "    svn:global-ignores - Like svn:ignore, but inheritable.\n"
-     "    svn:auto-props     - A list of file glob patterns and properties to set\n"
-     "       when adding such files; like [auto-props] in the client configuration.\n"
+     "    svn:auto-props     - Automatically set properties on files when they are\n"
+     "      added or imported. Contains key-value pairs, one per line, in the format:\n"
+     "        PATTERN = PROPNAME=VALUE[;PROPNAME=VALUE ...]\n"
+     "      Example (where a literal ';' is escaped by adding another ';'):\n"
+     "        *.html = svn:eol-style=native;svn:mime-type=text/html;; charset=UTF8\n"
+     "      Applies recursively to all files added or imported under the directory\n"
+     "      it is set on.  See also [auto-props] in the client configuration file.\n"
      "    svn:externals      - A list of module specifiers, one per line, in the\n"
      "      following format similar to the syntax of 'svn checkout':\n"
      "        [-r REV] URL[@PEG] LOCALPATH\n"

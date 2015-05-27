@@ -782,7 +782,47 @@ test_install_stream_to_longpath(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-
+
+static svn_error_t *
+test_file_size_get(apr_pool_t *pool)
+{
+  const char *tmp_dir, *path;
+  apr_file_t *file;
+  svn_filesize_t filesize;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_file_size_get", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* Path does not exist. */
+  path = svn_dirent_join(tmp_dir, "file", pool);
+
+  /* Create a file.*/
+  SVN_ERR(svn_io_file_open(&file, path,
+                           APR_WRITE | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_size_get(&filesize, file, pool));
+  SVN_TEST_ASSERT(filesize == 0);
+
+  /* Write 8 bytes and check new size. */
+  SVN_ERR(svn_io_file_write_full(file, "12345678", 8, NULL, pool));
+
+  SVN_ERR(svn_io_file_size_get(&filesize, file, pool));
+  SVN_TEST_ASSERT(filesize == 8);
+
+  /* Truncate to 2 bytes. */
+  SVN_ERR(svn_io_file_trunc(file, 2, pool));
+
+  SVN_ERR(svn_io_file_size_get(&filesize, file, pool));
+  SVN_TEST_ASSERT(filesize == 2);
+
+  /* Close the file. */
+  SVN_ERR(svn_io_file_close(file, pool));
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 3;
@@ -806,6 +846,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test ignore-enoent"),
     SVN_TEST_PASS2(test_install_stream_to_longpath,
                    "test svn_stream__install_stream to long path"),
+    SVN_TEST_PASS2(test_file_size_get,
+                   "test svn_io_file_size_get"),
     SVN_TEST_NULL
   };
 

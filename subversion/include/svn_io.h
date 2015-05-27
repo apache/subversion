@@ -2175,6 +2175,18 @@ svn_io_file_info_get(apr_finfo_t *finfo,
                      apr_pool_t *pool);
 
 
+/** Set @a *filesize_p to the size of @a file. Use @a pool for temporary
+  * allocations.
+  *
+  * @note Use svn_io_file_info_get() to get more information about
+  * apr_file_t.
+  *
+  * @since New in 1.10
+  */
+svn_error_t *
+svn_io_file_size_get(svn_filesize_t *filesize_p, apr_file_t *file,
+                     apr_pool_t *pool);
+
 /** Wrapper for apr_file_read(). */
 svn_error_t *
 svn_io_file_read(apr_file_t *file,
