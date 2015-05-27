@@ -3582,6 +3582,16 @@ svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted,
              pool);
 }
 
+svn_error_t *
+svn_io_file_size_get(svn_filesize_t *filesize_p, apr_file_t *file,
+                     apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, file, pool));
+
+  *filesize_p = finfo.size;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_file_read(apr_file_t *file, void *buf,
