@@ -72,11 +72,62 @@ Work on this branch:
       provide a UI for element-based addressing ('mv e101:foo e103:foo'?)
 
     Bigger things to do:
-      "replay": convert committed changes to an edit drive
+
+      Build a mock WC:
+
+        1. "Check out" a given rev by starting an in-memory txn based
+          on that rev.
+
+        2. Make edits in this txn.
+
+        3. Start a commit, get a new txn based on repository head.
+
+        4. Replay the WC txn's changes into the commit txn, and commit it.
+
+      "Replay" API: convert committed changes to an edit drive
+
+        * A txn must keep track of which EIDs in it were previously
+          known and which are new in that txn.
+
+        * The 'replay' function must tell the driven editor which EIDs
+          are previously known and which are to be considered as new.
+
+        * The editor API must accept "new" EIDs in all EID contexts:
+          including as a parent-eid, or as a subtree-root eid, not only
+          as the primary EID of the element the method is operating on.
+          That will allow the operations on elements to come in truly
+          independent order: it will not be necessary to 'create' a
+          directory before any other operation can refer to that
+          directory's new EID as a parent-eid, for example.
+
+        * The editor must translate incoming 'new' EIDs if they are not
+          already unique between the edit driver and edit receiver. For
+          example, if the driver knows EIDs [0..60] are pre-existing, and
+          chooses to use EIDs [61...] for 'new' elements, and the
+          receiver's txn already uses EIDs [0..70] then it must translate
+          incoming EIDs [61..70] to some other range.
+
       heuristic conversion of old repositories:
         synthesize element tracking info (instead of aborting) when reading
         a revision that was committed by a non-move-tracking client
 
+    Tidying things to do:
+
+      Combine editor3 methods 'instantiate' and 'alter' into a single
+      method.
+
+        They have basically the same meaning apart from the precondition
+        (does or does not already exist) and the pre-existence should
+        *not* be considered, I think, because ... idempotency?
+        Likewise, 'delete' should not care if it was already deleted.
+
+      Create editor vtable methods for all editor interface functions.
+
+        Currently, some functions bypass the vtable. They are broken if
+        they use the editor private data structure and if they are invoked
+        on a wrapper editor (such as the 'debug editor') because in that
+        case they dereference the wrapper editor's private data struct
+        instead of the intended editor's.
 
   * The model.
 
