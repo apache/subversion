@@ -2887,15 +2887,18 @@ combine_key(svn_membuffer_cache_t *cache,
    * to prevent key collisions.  So, we limit ourselves to xor and
    * permutations.
    *
-   * As long as we compare the full combined key, the additional
-   * fingerprint collisions introduced by a non-reversible scramble
-   * would simply reduce the cache effectiveness.
+   * Since the entry key must preserve the full key (prefix and KEY),
+   * the scramble must not introduce KEY collisions.
    */
   data[1] = (data[1] << 27) | (data[1] >> 37);
   data[1] ^= data[0] & 0xffff;
   data[0] ^= data[1] & APR_UINT64_C(0xffffffffffff0000);
 
-  /* combine with this cache's namespace */
+  /* Combine with this cache's prefix.  This is reversible because the
+   * prefix is known through to the respective entry_key element.  So,
+   * knowing entry_key.prefix_id, we can still reconstruct KEY (and the
+   * prefix key).
+   */
   cache->combined_key.entry_key.fingerprint[0]
     = data[0] ^ cache->prefix.fingerprint[0];
   cache->combined_key.entry_key.fingerprint[1]
