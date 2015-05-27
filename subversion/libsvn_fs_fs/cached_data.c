@@ -2524,32 +2524,30 @@ read_dir_entries(apr_array_header_t *entries,
   return SVN_NO_ERROR;
 }
 
-/* For directory NODEREV in FS, return the *FILENAME and *FILESIZE of its
- * in-txn representation.  If the directory representation is comitted data,
- * set *FILENAME to NULL and *FILESIZE to SVN_INVALID_FILESIZE.  Allocate
- * *FILENAME in RESULT_POOL and use SCRATCH_POOL for temporaries. */
+/* For directory NODEREV in FS, return the *FILESIZE of its in-txn
+ * representation.  If the directory representation is comitted data,
+ * set *FILESIZE to SVN_INVALID_FILESIZE. Use SCRATCH_POOL for temporaries.
+ */
 static svn_error_t *
-get_txn_dir_info(const char **filename,
-                 svn_filesize_t *filesize,
+get_txn_dir_info(svn_filesize_t *filesize,
                  svn_fs_t *fs,
                  node_revision_t *noderev,
-                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  const svn_io_dirent2_t *dirent;
-
   if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
-      *filename = svn_fs_fs__path_txn_node_children(fs, noderev->id,
-                                                    result_pool);
+      const svn_io_dirent2_t *dirent;
+      const char *filename;
 
-      SVN_ERR(svn_io_stat_dirent2(&dirent, *filename, FALSE, FALSE,
+      filename = svn_fs_fs__path_txn_node_children(fs, noderev->id,
+                                                   scratch_pool);
+
+      SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
                                   scratch_pool, scratch_pool));
       *filesize = dirent->filesize;
     }
   else
     {
-      *filename = NULL;
       *filesize = SVN_INVALID_FILESIZE;
     }
 
@@ -2577,14 +2575,21 @@ get_dir_contents(svn_fs_fs__dir_data_t *dir,
     {
       /* Get location & current size of the directory representation. */
       const char *filename;
-      SVN_ERR(get_txn_dir_info(&filename, &dir->txn_filesize, fs, noderev,
-                               scratch_pool, scratch_pool));
+      apr_file_t *file;
+
+      filename = svn_fs_fs__path_txn_node_children(fs, noderev->id,
+                                                   scratch_pool);
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
          changes we've made in this transaction. */
-      SVN_ERR(svn_stream_open_readonly(&contents, filename, scratch_pool,
-                                       scratch_pool));
+      SVN_ERR(svn_io_file_open(&file, filename, APR_READ | APR_BUFFERED,
+                               APR_OS_DEFAULT, scratch_pool));
+
+      /* Obtain txn children file size. */
+      SVN_ERR(svn_io_file_size_get(&dir->txn_filesize, file, scratch_pool));
+
+      contents = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
       SVN_ERR(read_dir_entries(dir->entries, contents, TRUE, noderev->id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
@@ -2676,10 +2681,8 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
         {
           /* Verify that the cached dir info is not stale
            * (no-op for committed data). */
-          const char *filename;
           svn_filesize_t filesize;
-          SVN_ERR(get_txn_dir_info(&filename, &filesize, fs, noderev,
-                                   scratch_pool, scratch_pool));
+          SVN_ERR(get_txn_dir_info(&filesize, fs, noderev, scratch_pool));
 
           if (filesize == dir->txn_filesize)
             {
@@ -2731,10 +2734,8 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
     {
       extract_dir_entry_baton_t baton;
 
-      const char *filename;
       svn_filesize_t filesize;
-      SVN_ERR(get_txn_dir_info(&filename, &filesize, fs, noderev,
-                               scratch_pool, scratch_pool));
+      SVN_ERR(get_txn_dir_info(&filesize, fs, noderev, scratch_pool));
 
       /* Cache lookup. */
       baton.txn_filesize = filesize;
