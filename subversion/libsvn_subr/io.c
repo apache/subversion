@@ -2567,7 +2567,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
      If we need to bail out, do so early. */
 
   if (cancel_func)
-    SVN_ERR((*cancel_func)(cancel_baton));
+    SVN_ERR(cancel_func(cancel_baton));
 
   subpool = svn_pool_create(pool);
 
@@ -2600,7 +2600,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
       else
         {
           if (cancel_func)
-            SVN_ERR((*cancel_func)(cancel_baton));
+            SVN_ERR(cancel_func(cancel_baton));
 
           err = svn_io_remove_file2(fullpath, FALSE, subpool);
           if (err)
