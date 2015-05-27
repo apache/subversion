@@ -2743,7 +2743,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                          " --force-interactive option"));
           if (interactive_actions)
             {
-              svn_handle_warning2(stderr, err, "svnmover: ");
+              /* Display the error, but don't quit */
+              svn_handle_error2(err, stderr, FALSE, "svnmover: ");
               svn_error_clear(err);
             }
           else
