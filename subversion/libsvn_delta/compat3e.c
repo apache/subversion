@@ -1136,36 +1136,6 @@ editor3_add(void *baton,
 
 /* An #svn_editor3_t method. */
 static svn_error_t *
-editor3_instantiate(void *baton,
-                    svn_branch_state_t *branch,
-                    svn_branch_eid_t eid,
-                    svn_branch_eid_t new_parent_eid,
-                    const char *new_name,
-                    const svn_element_payload_t *new_payload,
-                    apr_pool_t *scratch_pool)
-{
-  if (new_payload)
-    {
-      SVN_DBG(("instantiate(e%d): parent e%d, name '%s', kind %s",
-               eid, new_parent_eid, new_name,
-               svn_node_kind_to_word(new_payload->kind)));
-
-      svn_branch_update_element(branch, eid, new_parent_eid, new_name,
-                                new_payload);
-    }
-  else
-    {
-      SVN_DBG(("instantiate subbranch-root(e%d): parent e%d, name '%s'",
-               eid, new_parent_eid, new_name));
-
-      svn_branch_update_subbranch_root_element(branch, eid,
-                                               new_parent_eid, new_name);
-    }
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
 editor3_copy_one(void *baton,
                  const svn_branch_el_rev_id_t *src_el_rev,
                  svn_branch_state_t *branch,
@@ -1238,7 +1208,11 @@ editor3_alter(void *baton,
   /* New payload shall be the same as before if NEW_PAYLOAD is null. */
   if (! new_payload)
     {
-      new_payload = svn_branch_get_element(branch, eid)->payload;
+      svn_branch_el_rev_content_t *existing_element
+        = svn_branch_get_element(branch, eid);
+
+      if (existing_element)
+        new_payload = existing_element->payload;
     }
 
   if (new_payload)
@@ -1801,7 +1775,6 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
     editor3_add,
-    editor3_instantiate,
     editor3_copy_one,
     editor3_copy_tree,
     editor3_delete,
@@ -1840,7 +1813,6 @@ svn_editor3__ev3_from_delta_for_commit(
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
     editor3_add,
-    editor3_instantiate,
     editor3_copy_one,
     editor3_copy_tree,
     editor3_delete,

@@ -113,8 +113,8 @@ Work on this branch:
 
     Tidying things to do:
 
-      Combine editor3 methods 'instantiate' and 'alter' into a single
-      method.
+      Combine editor3 methods 'instantiate' and 'alter' and probably 'add'
+      as well into a single method.
 
         They have basically the same meaning apart from the precondition
         (does or does not already exist) and the pre-existence should

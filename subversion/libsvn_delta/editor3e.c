@@ -217,37 +217,6 @@ svn_editor3_add(svn_editor3_t *editor,
 }
 
 svn_error_t *
-svn_editor3_instantiate(svn_editor3_t *editor,
-                        svn_branch_state_t *branch,
-                        svn_branch_eid_t local_eid,
-                        svn_branch_eid_t new_parent_eid,
-                        const char *new_name,
-                        const svn_element_payload_t *new_payload)
-{
-  SVN_ERR_ASSERT(VALID_EID(local_eid));
-  SVN_ERR_ASSERT(local_eid == branch->root_eid ? new_parent_eid == -1
-                                               : VALID_EID(new_parent_eid));
-  SVN_ERR_ASSERT(local_eid == branch->root_eid ? *new_name == '\0'
-                                               : VALID_NAME(new_name));
-  SVN_ERR_ASSERT(!new_payload || VALID_PAYLOAD(new_payload));
-  VERIFY(instantiate, new_parent_eid != local_eid);
-  /* TODO: verify this element does not exist (in initial state) */
-
-  /* ### Ensure the requested EIDs are allocated... This is not the
-         right way to do it. Should instead map 'to be created' EIDs
-         to new EIDs? See BRANCH-README. */
-  while (local_eid >= branch->rev_root->next_eid
-         || new_parent_eid >= branch->rev_root->next_eid)
-    svn_branch_allocate_new_eid(branch->rev_root);
-
-  DO_CALLBACK(editor, cb_instantiate,
-              5(branch, local_eid,
-                new_parent_eid, new_name,
-                new_payload));
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
                      const svn_branch_el_rev_id_t *src_el_rev,
                      svn_branch_state_t *branch,
@@ -321,7 +290,6 @@ svn_editor3_alter(svn_editor3_t *editor,
                                          : VALID_NAME(new_name));
   SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
   VERIFY(alter, new_parent_eid != eid);
-  /* TODO: verify this element exists (in initial state) */
 
   /* ### Ensure the requested EIDs are allocated... This is not the
          right way to do it. Should instead map 'to be created' EIDs
@@ -458,26 +426,6 @@ wrap_add(void *baton,
 }
 
 static svn_error_t *
-wrap_instantiate(void *baton,
-                 svn_branch_state_t *branch,
-                 svn_branch_eid_t local_eid,
-                 svn_branch_eid_t new_parent_eid,
-                 const char *new_name,
-                 const svn_element_payload_t *new_payload,
-                 apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  dbg(eb, scratch_pool, "%s : instantiate(p=%s, n=%s, c=...)",
-      eid_str(local_eid, scratch_pool),
-      eid_str(new_parent_eid, scratch_pool), new_name);
-  SVN_ERR(svn_editor3_instantiate(eb->wrapped_editor,
-                                  branch, local_eid,
-                                  new_parent_eid, new_name, new_payload));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 wrap_copy_one(void *baton,
               const svn_branch_el_rev_id_t *src_el_rev,
               svn_branch_state_t *branch,
@@ -593,7 +541,6 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
 {
   static const svn_editor3_cb_funcs_t wrapper_funcs = {
     wrap_add,
-    wrap_instantiate,
     wrap_copy_one,
     wrap_copy_tree,
     wrap_delete,

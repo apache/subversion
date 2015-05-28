@@ -245,10 +245,10 @@ subtree_replay(svn_editor3_t *editor,
           else
             {
               printf("replay: instan. e%d\n", eid);
-              SVN_ERR(svn_editor3_instantiate(editor,
-                                              edit_branch, eid,
-                                              e1->parent_eid, e1->name,
-                                              e1->payload));
+              SVN_ERR(svn_editor3_alter(editor,
+                                        edit_branch, eid,
+                                        e1->parent_eid, e1->name,
+                                        e1->payload));
             }
         }
     }
@@ -1343,9 +1343,9 @@ branch_merge_subtree_r(svn_editor3_t *editor,
            * (which is not specified here, but will need to be),
            * which may be in this branch or in another branch.
            */
-          SVN_ERR(svn_editor3_instantiate(editor, tgt->branch, eid,
-                                          result->parent_eid, result->name,
-                                          result->payload));
+          SVN_ERR(svn_editor3_alter(editor, tgt->branch, eid,
+                                    result->parent_eid, result->name,
+                                    result->payload));
 
           SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
         }
