@@ -3442,8 +3442,8 @@ commit_body(void *baton,
   SVN_ERR_ASSERT(! svn_fs_x__is_packed_revprop(cb->fs, new_rev));
   SVN_ERR(write_final_revprop(&revprop_filename, cb->txn, txn_id, subpool));
 
-  SVN_ERR(svn_io_file_open(&revprop_file, revprop_filename, APR_READ,
-                           APR_OS_DEFAULT, subpool));
+  SVN_ERR(svn_io_file_open(&revprop_file, revprop_filename,
+                           APR_READ | APR_WRITE, APR_OS_DEFAULT, subpool));
   SVN_ERR(svn_io_file_flush_to_disk(revprop_file, subpool));
   SVN_ERR(svn_io_file_close(revprop_file, subpool));
 
