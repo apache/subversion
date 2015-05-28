@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include <assert.h>
 #include <apr_pools.h>
 
 #include "svn_types.h"
@@ -66,11 +67,27 @@ svn_pathrev_equal(svn_pathrev_t *peg_path1,
  * ===================================================================
  */
 
+/* Return true iff PAYLOAD satisfies all its invariants.
+ */
+static svn_boolean_t
+payload_invariants(const svn_element_payload_t *payload)
+{
+  /* If kind is unknown, it's a reference; otherwise it has content
+     specified and may also have a reference. */
+  if (payload->kind == svn_node_unknown)
+    return (payload->ref.relpath && SVN_IS_VALID_REVNUM(payload->ref.rev));
+  return ((payload->props)
+          && (payload->text || payload->kind != svn_node_file)
+          && (payload->target || payload->kind != svn_node_symlink));
+}
+
 svn_element_payload_t *
 svn_element_payload_dup(const svn_element_payload_t *old,
                         apr_pool_t *result_pool)
 {
   svn_element_payload_t *new_payload;
+
+  assert(! old || payload_invariants(old));
 
   if (old == NULL)
     return NULL;
@@ -93,6 +110,9 @@ svn_element_payload_equal(const svn_element_payload_t *left,
                           apr_pool_t *scratch_pool)
 {
   apr_array_header_t *prop_diffs;
+
+  assert(! left || payload_invariants(left));
+  assert(! right || payload_invariants(right));
 
   if (!left && !right)
     {
@@ -153,6 +173,7 @@ svn_element_payload_create_ref(svn_pathrev_t ref,
 
   new_payload->kind = svn_node_unknown;
   new_payload->ref = svn_pathrev_dup(ref, result_pool);
+  assert(payload_invariants(new_payload));
   return new_payload;
 }
 
@@ -165,6 +186,7 @@ svn_element_payload_create_dir(apr_hash_t *props,
 
   new_payload->kind = svn_node_dir;
   new_payload->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
+  assert(payload_invariants(new_payload));
   return new_payload;
 }
 
@@ -181,6 +203,7 @@ svn_element_payload_create_file(apr_hash_t *props,
   new_payload->kind = svn_node_file;
   new_payload->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
   new_payload->text = svn_stringbuf_dup(text, result_pool);
+  assert(payload_invariants(new_payload));
   return new_payload;
 }
 
@@ -197,6 +220,7 @@ svn_element_payload_create_symlink(apr_hash_t *props,
   new_payload->kind = svn_node_symlink;
   new_payload->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
   new_payload->target = apr_pstrdup(result_pool, target);
+  assert(payload_invariants(new_payload));
   return new_payload;
 }
 
