@@ -44,12 +44,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1680495, r1680705
-   Extend svn:auto-props documentation further.
-   Justification:
-     Allows users to use svn:auto-props after reading 'svn help' without
-     referring to additional documentation.
-   Votes:
-     +1: stsp (without r1680705)
-     +1: danielsh, rhuijben, breser
