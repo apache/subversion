@@ -1228,6 +1228,18 @@ def merge_from_subbranch_to_subtree(sbox):
                  reported_add('A/B1/C1/D'),
                  'merge A/B1/C2 A/B1/C1 A/B1/C1@2')
 
+def modify_payload_of_branch_root_element(sbox):
+  "modify payload of branch root element"
+  sbox_build_svnmover(sbox)
+
+  # Make a file, and branch it
+  test_svnmover2(sbox, '', None,
+                 'put ' + mk_file(sbox, 'f1') + ' f1 ' +
+                 'branch f1 f2')
+
+  # Modify the file-branch
+  test_svnmover2(sbox, '', None,
+                 'put ' + mk_file(sbox, 'f2') + ' f2')
 
 ######################################################################
 
@@ -1248,6 +1260,7 @@ test_list = [ None,
               merge_added_subbranch,
               branch_to_subbranch_of_self,
               merge_from_subbranch_to_subtree,
+              modify_payload_of_branch_root_element,
             ]
 
 if __name__ == '__main__':

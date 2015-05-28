@@ -225,8 +225,10 @@ svn_editor3_instantiate(svn_editor3_t *editor,
                         const svn_element_payload_t *new_payload)
 {
   SVN_ERR_ASSERT(VALID_EID(local_eid));
-  SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
-  SVN_ERR_ASSERT(VALID_NAME(new_name));
+  SVN_ERR_ASSERT(local_eid == branch->root_eid ? new_parent_eid == -1
+                                               : VALID_EID(new_parent_eid));
+  SVN_ERR_ASSERT(local_eid == branch->root_eid ? *new_name == '\0'
+                                               : VALID_NAME(new_name));
   SVN_ERR_ASSERT(!new_payload || VALID_PAYLOAD(new_payload));
   VERIFY(instantiate, new_parent_eid != local_eid);
   /* TODO: verify this element does not exist (in initial state) */
@@ -306,8 +308,10 @@ svn_editor3_alter(svn_editor3_t *editor,
                   const svn_element_payload_t *new_payload)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
-  SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
-  SVN_ERR_ASSERT(VALID_NAME(new_name));
+  SVN_ERR_ASSERT(eid == branch->root_eid ? new_parent_eid == -1
+                                         : VALID_EID(new_parent_eid));
+  SVN_ERR_ASSERT(eid == branch->root_eid ? *new_name == '\0'
+                                         : VALID_NAME(new_name));
   SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
   VERIFY(alter, new_parent_eid != eid);
   /* TODO: verify this element exists (in initial state) */
