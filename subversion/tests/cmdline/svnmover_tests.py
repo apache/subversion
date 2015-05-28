@@ -226,6 +226,7 @@ def verify_paths_in_branch(sbox, branch_path, paths, subbranch_paths=[]):
 
 ######################################################################
 
+@XFail()  # 'copy-from' information is lost
 def basic_svnmover(sbox):
   "basic svnmover tests"
   # a copy of svnmucc_tests 1
@@ -410,6 +411,7 @@ def basic_svnmover(sbox):
                  'cp 16 a b')
 
 
+@XFail()  # 'copy-from' information is lost
 def nested_replaces(sbox):
   "nested replaces"
   # a copy of svnmucc_tests 2
@@ -629,6 +631,7 @@ def reported_br_move(path1, path2):
 
 ######################################################################
 
+@XFail()  # 'copy-from' information is lost
 #@XFail()  # There is a bug in the conversion to old-style commits:
 #  in r6 'bar' is plain-added instead of copied.
 def merge_edits_with_move(sbox):
@@ -723,6 +726,7 @@ def simple_moves_within_a_branch(sbox):
 # Exercise moves from one branch to another. 'svnmover'
 # executes these by branch-and-delete. In this test, the elements being moved
 # do not already exist in the target branch.
+@XFail()  # 'copy-from' information is lost
 def move_to_related_branch(sbox):
   "move to related branch"
   sbox_build_svnmover(sbox, content=initial_content_in_trunk)
@@ -760,6 +764,7 @@ def move_to_related_branch(sbox):
 # executes these by branch-and-delete. In this test, there are existing
 # instances of the same elements in the target branch, which should be
 # overwritten.
+@XFail()  # 'copy-from' information is lost
 def move_to_related_branch_element_already_exists(sbox):
   "move to related branch; element already exists"
   sbox_build_svnmover(sbox, content=initial_content_in_trunk)
@@ -788,6 +793,7 @@ def move_to_related_branch_element_already_exists(sbox):
 
 # Exercise moves from one branch to an unrelated branch (different family).
 # 'svnmover' executes these by copy-and-delete.
+@XFail()  # 'copy-from' information is lost
 def move_to_unrelated_branch(sbox):
   "move to unrelated branch"
   sbox_build_svnmover(sbox, content=initial_content_in_trunk)
