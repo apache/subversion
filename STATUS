@@ -32,15 +32,15 @@ Other candidate changes:
      +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
- * r1681317
-   Clarify 'svn help' output for --show-inherited-properties.
-   Justification:
-     Avoid circular language in help output.
-   Votes:
-     +1: danielsh, breser
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1681317
+   Clarify 'svn help' output for --show-inherited-properties.
+   Justification:
+     Avoid circular language in help output.
+   Votes:
+     +1: danielsh, breser, rhuijben
