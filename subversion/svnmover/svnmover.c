@@ -2048,6 +2048,8 @@ execute(const apr_array_header_t *actions,
           {
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_stringbuf_t *text;
+            int parent_eid;
+            const char *name;
             svn_element_payload_t *payload;
 
             if (arg[1]->el_rev->eid >= 0)
@@ -2073,11 +2075,23 @@ execute(const apr_array_header_t *actions,
             }
             payload = svn_element_payload_create_file(props, text, iterpool);
 
+            if (is_branch_root_element(arg[1]->el_rev->branch,
+                                       arg[1]->el_rev->eid))
+              {
+                parent_eid = -1;
+                name = "";
+              }
+            else
+              {
+                parent_eid = arg[1]->parent_el_rev->eid;
+                name = arg[1]->path_name;
+              }
+
             if (arg[1]->el_rev->eid >= 0)
               {
                 SVN_ERR(svn_editor3_alter(editor,
                                           arg[1]->el_rev->branch, arg[1]->el_rev->eid,
-                                          arg[1]->parent_el_rev->eid, arg[1]->path_name,
+                                          parent_eid, name,
                                           payload));
               }
             else
@@ -2086,7 +2100,7 @@ execute(const apr_array_header_t *actions,
 
                 SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_file,
                                         arg[1]->parent_el_rev->branch,
-                                        arg[1]->parent_el_rev->eid, arg[1]->path_name,
+                                        parent_eid, name,
                                         payload));
               }
           }
