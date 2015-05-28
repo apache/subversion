@@ -608,28 +608,6 @@ svn_editor3_add(svn_editor3_t *editor,
                 const char *new_name,
                 const svn_element_payload_t *new_payload);
 
-/* Make the existing element @a eid exist in branch @a branch, assuming it was
- * previously not existing in this branch.
- *
- * This can be used to "branch" the element from another branch during a
- * merge, or to resurrect it.
- *
- * Set the element's parent and name to @a new_parent_eid and @a new_name.
- *
- * Set the payload to @a new_payload.
- *
- * @see #svn_editor3_t
- *
- * ### Need to specify where the underlying FS node is to be "copied" from?
- */
-svn_error_t *
-svn_editor3_instantiate(svn_editor3_t *editor,
-                        svn_branch_state_t *branch,
-                        svn_branch_eid_t eid,
-                        svn_branch_eid_t new_parent_eid,
-                        const char *new_name,
-                        const svn_element_payload_t *new_payload);
-
 /** Create a new element that is copied from a pre-existing
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
  * element, with the same or different content (parent, name, payload).
@@ -747,9 +725,8 @@ svn_editor3_delete(svn_editor3_t *editor,
                    svn_branch_state_t *branch,
                    svn_branch_eid_t eid);
 
-/** Alter the tree position and/or payload of the element identified
- * by @a eid.
- * <SVN_EDITOR3_WITH_RESURRECTION> ### or resurrect it? </>
+/** Specify the tree position and payload of the element of @a branch
+ * identified by @a eid.
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
@@ -760,6 +737,21 @@ svn_editor3_delete(svn_editor3_t *editor,
  * SHOULD NOT be sent.
  *
  * @see #svn_editor3_t
+ *
+ * If the element ...                   we can describe the effect as ...
+ *
+ *   exists in the branch               =>  altering it;
+ *   previously existed in the branch   =>  resurrecting it;
+ *   only existed in other branches     =>  branching it;
+ *   never existed anywhere             =>  creating it.
+ *
+ * However, these are imprecise descriptions and not mutually exclusive.
+ * For example, if it existed previously in this branch and another, then
+ * we may describe the result as 'resurrecting' and/or as 'branching'.
+ *
+ * ### When converting this edit to an Ev1 edit, do we need a way to specify
+ *     where the Ev1 node is to be "copied" from, when this is branching the
+ *     element?
  */
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
@@ -931,7 +923,6 @@ typedef svn_error_t *(*svn_editor3_cb_abort_t)(
 typedef struct svn_editor3_cb_funcs_t
 {
   svn_editor3_cb_add_t cb_add;
-  svn_editor3_cb_instantiate_t cb_instantiate;
   svn_editor3_cb_copy_one_t cb_copy_one;
   svn_editor3_cb_copy_tree_t cb_copy_tree;
   svn_editor3_cb_delete_t cb_delete;
