@@ -637,6 +637,22 @@ svn_fs_fs__move_into_place(const char *old_filename,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
+  apr_file_t *file;
+
+#if defined(WIN32) || defined(__OS2__)
+
+  /* APR will *not* error out on Win32 if this requires a copy instead of
+     of a move. */
+  SVN_ERR(svn_io_file_rename(old_filename, new_filename, pool));
+
+  /* Flush the target of the copy to disk. */
+  SVN_ERR(svn_io_file_open(&file, new_filename, APR_WRITE,
+                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* Copying permissions is a no-op on WIN32. */
+#else
 
   SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, pool));
 
@@ -644,8 +660,6 @@ svn_fs_fs__move_into_place(const char *old_filename,
   err = svn_io_file_rename(old_filename, new_filename, pool);
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
-      apr_file_t *file;
-
       /* Can't rename across devices; fall back to copying. */
       svn_error_clear(err);
       err = SVN_NO_ERROR;
@@ -654,11 +668,6 @@ svn_fs_fs__move_into_place(const char *old_filename,
       /* Flush the target of the copy to disk. */
       SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
                                APR_OS_DEFAULT, pool));
-      /* ### BH: Does this really guarantee a flush of the data written
-         ### via a completely different handle on all operating systems?
-         ###
-         ### Maybe we should perform the copy ourselves instead of making
-         ### apr do that and flush the real handle? */
       SVN_ERR(svn_io_file_flush_to_disk(file, pool));
       SVN_ERR(svn_io_file_close(file, pool));
     }
@@ -672,7 +681,6 @@ svn_fs_fs__move_into_place(const char *old_filename,
        On other operating systems, we'd only be asking for trouble
        by trying to open and fsync a directory. */
     const char *dirname;
-    apr_file_t *file;
 
     dirname = svn_dirent_dirname(new_filename, pool);
     SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
@@ -681,6 +689,8 @@ svn_fs_fs__move_into_place(const char *old_filename,
     SVN_ERR(svn_io_file_close(file, pool));
   }
 #endif
+
+#endif /*  defined(WIN32) || defined(__OS2__) */
 
   return SVN_NO_ERROR;
 }
