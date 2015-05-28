@@ -3878,11 +3878,10 @@ svn_io_write_atomic(const char *final_path,
                                                       scratch_pool));
     }
 
-#ifdef __linux__
+#if SVN_ON_POSIX
   {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
+    /* On POSIX, the file name is stored in the file's directory entry.
+       Hence, we need to fsync() that directory as well.
        On other operating systems, we'd only be asking for trouble
        by trying to open and fsync a directory. */
     apr_file_t *file;

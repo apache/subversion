@@ -75,6 +75,31 @@ extern "C" {
 #endif
 
 /**
+ * Indicate whether we are running on a POSIX platform.  This has
+ * implications on the way e.g. fsync() works.
+ *
+ * For details on this check, see
+ * http://nadeausoftware.com/articles/2012/01/c_c_tip_how_use_compiler_predefined_macros_detect_operating_system#POSIX
+ *
+ * @since New in 1.10.
+ */
+#ifndef SVN_ON_POSIX
+#if    !defined(_WIN32) \
+    && (   defined(__unix__) \
+        || defined(__unix) \
+        || (defined(__APPLE__) && defined(__MACH__)))  /* UNIX-style OS? */
+#  include <unistd.h>
+#  if defined(_POSIX_VERSION)
+#    define SVN_ON_POSIX 1
+#  else
+#    define SVN_ON_POSIX 0
+#  endif
+#else
+#  define SVN_ON_POSIX 0
+#endif
+#endif
+
+/**
  * APR keeps a few interesting defines hidden away in its private
  * headers apr_arch_file_io.h, so we redefined them here.
  *
