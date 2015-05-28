@@ -118,12 +118,19 @@ svn_branch_revision_root_get_branch_by_id(const svn_branch_revision_root_t *rev_
   return branch;
 }
 
+static void
+branch_validate_element(const svn_branch_state_t *branch,
+                        int eid,
+                        const svn_branch_el_rev_content_t *element);
+
 /* Assert BRANCH satisfies all its invariants.
  */
 static void
 assert_branch_state_invariants(const svn_branch_state_t *branch,
                                apr_pool_t *scratch_pool)
 {
+  apr_hash_index_t *hi;
+
   assert(branch->rev_root);
   if (branch->outer_branch)
     {
@@ -135,6 +142,14 @@ assert_branch_state_invariants(const svn_branch_state_t *branch,
       assert(branch->outer_eid == -1);
     }
   assert(branch->e_map);
+
+  /* Validate elements in the map */
+  for (hi = apr_hash_first(scratch_pool, branch->e_map);
+       hi; hi = apr_hash_next(hi))
+    {
+      branch_validate_element(branch, svn_int_hash_this_key(hi),
+                              apr_hash_this_val(hi));
+    }
 }
 
 svn_branch_state_t *
