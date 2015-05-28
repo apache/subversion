@@ -116,6 +116,8 @@ typedef struct mtcc_t
 
   svn_ra_session_t *ra_session;
   svn_editor3_t *editor;
+  svn_branch_revision_root_t *edit_txn;
+  apr_hash_t *revprops;
   svn_client_ctx_t *ctx;
 } mtcc_t;
 
@@ -124,6 +126,9 @@ commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
                 apr_pool_t *pool);
 
+/* ...
+ * BASE_REVISION is the revision to work on, or SVN_INVALID_REVNUM for HEAD.
+ */
 static svn_error_t *
 mtcc_create(mtcc_t **mtcc_p,
             const char *anchor_url,
@@ -136,9 +141,12 @@ mtcc_create(mtcc_t **mtcc_p,
   apr_pool_t *mtcc_pool = svn_pool_create(result_pool);
   mtcc_t *mtcc = apr_pcalloc(mtcc_pool, sizeof(*mtcc));
   const char *branch_info_dir = NULL;
+  svn_editor3__shim_fetch_func_t fetch_func;
+  void *fetch_baton;
 
   mtcc->pool = mtcc_pool;
   mtcc->ctx = ctx;
+  mtcc->revprops = revprops;
 
   SVN_ERR(svn_client_open_ra_session2(&mtcc->ra_session, anchor_url,
                                       NULL /* wri_abspath */, ctx,
@@ -170,13 +178,185 @@ mtcc_create(mtcc_t **mtcc_p,
       branch_info_dir = svn_dirent_join(repos_dir, "branch-info", scratch_pool);
     }
 
-  SVN_ERR(svn_ra_get_commit_editor_ev3(mtcc->ra_session, &mtcc->editor,
-                                       revprops,
-                                       commit_callback, mtcc,
-                                       NULL /*lock_tokens*/, FALSE /*keep_locks*/,
-                                       branch_info_dir,
-                                       result_pool));
+  /* load branching info */
+  SVN_ERR(svn_ra_load_branching_state(&mtcc->edit_txn,
+                                      &fetch_func, &fetch_baton,
+                                      mtcc->ra_session, branch_info_dir,
+                                      mtcc->base_revision,
+                                      result_pool, scratch_pool));
+
+  SVN_ERR(svn_editor3_in_memory(&mtcc->editor,
+                                mtcc->edit_txn,
+                                fetch_func, fetch_baton,
+                                result_pool));
   *mtcc_p = mtcc;
+  return SVN_NO_ERROR;
+}
+
+/* Replay differences between S_LEFT and S_RIGHT into EDITOR:EDIT_BRANCH.
+ *
+ * S_LEFT and/or S_RIGHT may be null meaning an empty set.
+ *
+ * Non-recursive: single branch only.
+ */
+static svn_error_t *
+subtree_replay(svn_editor3_t *editor,
+               svn_branch_state_t *edit_branch,
+               svn_branch_subtree_t *s_left,
+               svn_branch_subtree_t *s_right,
+               apr_pool_t *scratch_pool)
+{
+  apr_hash_t *diff_left_right;
+  apr_hash_index_t *hi;
+
+  if (! s_left)
+    s_left = svn_branch_subtree_create(NULL, 0 /*root_eid*/, scratch_pool);
+  if (! s_right)
+    s_right = svn_branch_subtree_create(NULL, 0 /*root_eid*/, scratch_pool);
+
+  SVN_ERR(svn_branch_subtree_differences(&diff_left_right,
+                                         editor, s_left, s_right,
+                                         scratch_pool, scratch_pool));
+
+  /* Go through the per-element differences. */
+  for (hi = apr_hash_first(scratch_pool, diff_left_right);
+       hi; hi = apr_hash_next(hi))
+    {
+      int eid = svn_int_hash_this_key(hi);
+      svn_branch_el_rev_content_t **e_pair = apr_hash_this_val(hi);
+      svn_branch_el_rev_content_t *e0 = e_pair[0], *e1 = e_pair[1];
+
+      if (e0 || e1)
+        {
+          if (e0 && e1)
+            {
+              printf("replay: alter e%d\n", eid);
+              SVN_ERR(svn_editor3_alter(editor,
+                                        edit_branch, eid,
+                                        e1->parent_eid, e1->name,
+                                        e1->payload));
+            }
+          else if (e0)
+            {
+              printf("replay: delete e%d\n", eid);
+              SVN_ERR(svn_editor3_delete(editor,
+                                         edit_branch, eid));
+            }
+          else
+            {
+              printf("replay: instan. e%d\n", eid);
+              SVN_ERR(svn_editor3_instantiate(editor,
+                                              edit_branch, eid,
+                                              e1->parent_eid, e1->name,
+                                              e1->payload));
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Replay differences between S_LEFT and S_RIGHT into EDITOR:EDIT_BRANCH.
+ *
+ * S_LEFT or S_RIGHT (but not both) may be null meaning an empty set.
+ *
+ * Recurse into subbranches.
+ */
+static svn_error_t *
+svn_branch_replay(svn_editor3_t *editor,
+                  svn_branch_state_t *edit_branch,
+                  svn_branch_subtree_t *s_left,
+                  svn_branch_subtree_t *s_right,
+                  apr_pool_t *scratch_pool)
+{
+  assert((s_left && s_right) ? (s_left->root_eid == s_right->root_eid)
+                             : (s_left || s_right));
+
+  if (s_right)
+    {
+      /* Replay this branch */
+      SVN_ERR(subtree_replay(editor, edit_branch, s_left, s_right,
+                             scratch_pool));
+    }
+  else
+    {
+      /* deleted branch LEFT */
+      /* nothing to do -- it will go away because we deleted the outer-branch
+         element where it was attached */
+    }
+
+  /* Replay its subbranches, recursively.
+     (If we're deleting the current branch, we don't also need to
+     explicitly delete its subbranches... do we?) */
+  if (s_right)
+    {
+      apr_hash_t *subtrees_all;
+      apr_hash_index_t *hi;
+
+      subtrees_all = s_left ? apr_hash_overlay(scratch_pool,
+                                               s_left->subbranches,
+                                               s_right->subbranches)
+                            : s_right->subbranches;
+
+      for (hi = apr_hash_first(scratch_pool, subtrees_all);
+           hi; hi = apr_hash_next(hi))
+        {
+          int this_eid = svn_int_hash_this_key(hi);
+          svn_branch_subtree_t *this_s_left
+            = s_left ? svn_int_hash_get(s_left->subbranches, this_eid) : NULL;
+          svn_branch_subtree_t *this_s_right
+            = s_right ? svn_int_hash_get(s_right->subbranches, this_eid) : NULL;
+          svn_branch_state_t *edit_subbranch;
+
+          /* If the subbranch is to be added, first create a new edit branch;
+             if it is to be edited or deleted, then look up the edit branch */
+          if (this_s_left)
+            {
+              edit_subbranch = svn_branch_get_subbranch_at_eid(
+                                 edit_branch, this_eid, scratch_pool);
+              /*SVN_DBG(("replaying subbranch: found br %s (left=%s right=%s)",
+                       svn_branch_get_id(edit_subbranch, scratch_pool),
+                       svn_branch_get_id(branch_l, scratch_pool),
+                       branch_r ? svn_branch_get_id(branch_r, scratch_pool) : "<nil>"));*/
+            }
+          else
+            {
+              edit_subbranch = svn_branch_add_new_branch(
+                                 edit_branch, this_eid,
+                                 this_s_right->root_eid, scratch_pool);
+              /*SVN_DBG(("replaying subbranch: added br %s (right=%s)",
+                       svn_branch_get_id(edit_subbranch, scratch_pool),
+                       branch_r ? svn_branch_get_id(branch_r, scratch_pool) : "<nil>"));*/
+            }
+
+          /* recurse */
+          SVN_ERR(svn_branch_replay(editor, edit_subbranch,
+                                    this_s_left, this_s_right, scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Replay differences between LEFT_TXN and RIGHT_TXN into EDIT_ROOT_BRANCH.
+ * (Recurse into subbranches.)
+ */
+static svn_error_t *
+replay(svn_editor3_t *editor,
+       svn_branch_state_t *edit_root_branch,
+       svn_branch_revision_root_t *left_txn,
+       svn_branch_revision_root_t *right_txn,
+       apr_pool_t *scratch_pool)
+{
+  svn_branch_subtree_t *s_left
+    = svn_branch_get_subtree(left_txn->root_branch,
+                             left_txn->root_branch->root_eid, scratch_pool);
+  svn_branch_subtree_t *s_right
+    = svn_branch_get_subtree(right_txn->root_branch,
+                             right_txn->root_branch->root_eid, scratch_pool);
+
+  SVN_ERR(svn_branch_replay(editor, edit_root_branch,
+                            s_left, s_right, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -184,7 +364,14 @@ static svn_error_t *
 mtcc_commit(mtcc_t *mtcc,
             apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
+  const char *branch_info_dir = NULL;
+  svn_branch_state_t *edit_root_branch;
+  svn_branch_revision_root_t *left_txn
+    = svn_array_get(mtcc->edit_txn->repos->rev_roots, (int)mtcc->base_revision);
+  svn_branch_revision_root_t *right_txn = mtcc->edit_txn;
+
+  /* Complete the old edit drive (into the 'WC') */
+  SVN_ERR(svn_editor3_complete(mtcc->editor));
 
 #if 0
   /* No changes -> no revision. Easy out */
@@ -216,9 +403,39 @@ mtcc_commit(mtcc_t *mtcc,
     }
 #endif
 
-  err = svn_editor3_complete(mtcc->editor);
+  /* Choose whether to store branching info in a local dir or in revprops.
+     (For now, just to exercise the options, we choose local files for
+     RA-local and revprops for a remote repo.) */
+  if (strncmp(mtcc->repos_root_url, "file://", 7) == 0)
+    {
+      const char *repos_dir;
 
-  return svn_error_trace(err);
+      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, mtcc->repos_root_url,
+                                               scratch_pool));
+      branch_info_dir = svn_dirent_join(repos_dir, "branch-info", scratch_pool);
+    }
+
+  /* Start a new editor for the commit. (Again store the editor in
+     MTCC->editor, this time for use by the commit callback. We can't
+     pass the pointer-to-editor directly as the commit callback baton here
+     because we won't receive it until after starting this call.) */
+  SVN_ERR(svn_ra_get_commit_editor_ev3(mtcc->ra_session, &mtcc->editor,
+                                       mtcc->revprops,
+                                       commit_callback, mtcc,
+                                       NULL /*lock_tokens*/, FALSE /*keep_locks*/,
+                                       branch_info_dir,
+                                       scratch_pool));
+  /*SVN_ERR(svn_editor3__get_debug_editor(&mtcc->editor, mtcc->editor, scratch_pool));*/
+
+  svn_editor3_find_branch_element_by_rrpath(&edit_root_branch, NULL,
+                                            mtcc->editor, "", scratch_pool);
+  SVN_ERR(replay(mtcc->editor, edit_root_branch,
+                 left_txn,
+                 right_txn,
+                 scratch_pool));
+  SVN_ERR(svn_editor3_complete(mtcc->editor));
+
+  return SVN_NO_ERROR;
 }
 
 typedef enum action_code_t {

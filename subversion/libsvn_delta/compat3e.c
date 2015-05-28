@@ -1774,6 +1774,54 @@ editor3_abort(void *baton,
   return err;
 }
 
+/* An #svn_editor3_t method. */
+static svn_error_t *
+editor3_mem_complete(void *baton,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(editor3_sequence_point(baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_editor3_t method. */
+static svn_error_t *
+editor3_mem_abort(void *baton,
+                  apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_editor3_in_memory(svn_editor3_t **editor_p,
+                      svn_branch_revision_root_t *branching_txn,
+                      svn_editor3__shim_fetch_func_t fetch_func,
+                      void *fetch_baton,
+                      apr_pool_t *result_pool)
+{
+  static const svn_editor3_cb_funcs_t editor_funcs = {
+    editor3_add,
+    editor3_instantiate,
+    editor3_copy_one,
+    editor3_copy_tree,
+    editor3_delete,
+    editor3_alter,
+    editor3_sequence_point,
+    editor3_mem_complete,
+    editor3_mem_abort
+  };
+  ev3_from_delta_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
+
+  *editor_p = svn_editor3_create(&editor_funcs, eb,
+                                 NULL, NULL /*cancel*/, result_pool);
+
+  eb->edited_rev_root = branching_txn;
+  eb->fetch_func = fetch_func;
+  eb->fetch_baton = fetch_baton;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_editor3__ev3_from_delta_for_commit(
                         svn_editor3_t **editor_p,
