@@ -4356,6 +4356,78 @@ svn_client_revert(const apr_array_header_t *paths,
 /** @} */
 
 /**
+ * @defgroup Conflicts Dealing with conflicted paths.
+ *
+ * @{
+ */
+
+/**
+ * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
+ * API for eventually replacing svn_wc_conflict_description2_t with an opaque
+ * type and providing improved APIs for conflict resolution.
+ * 
+ * @since New in 1.10. 
+ */
+#define svn_client_conflict_get_local_abspath(conflict) \
+  (conflict->local_abspath)
+
+#define svn_client_conflict_get_node_kind(conflict) \
+  (conflict->node_kind)
+
+#define svn_client_conflict_get_kind(conflict) \
+  (conflict->kind)
+
+#define svn_client_conflict_get_property_name(conflict) \
+  (conflict->property_name)
+
+#define svn_client_conflict_get_is_binary(conflict) \
+  (conflict->is_binary)
+
+#define svn_client_conflict_get_mime_type(conflict) \
+  (conflict->mime_type)
+
+#define svn_client_conflict_get_action(conflict) \
+  (conflict->action)
+
+#define svn_client_conflict_get_reason(conflict) \
+  (conflict->reason)
+
+#define svn_client_conflict_get_base_abspath(conflict) \
+  (conflict->base_abspath)
+
+#define svn_client_conflict_get_their_abspath(conflict) \
+  (conflict->their_abspath)
+
+#define svn_client_conflict_get_my_abspath(conflict) \
+  (conflict->my_abspath)
+
+#define svn_client_conflict_get_merged_file(conflict) \
+  (conflict->merged_file)
+
+#define svn_client_conflict_get_operation(conflict) \
+  (conflict->operation)
+
+#define svn_client_conflict_get_src_left_version(conflict) \
+  (conflict->src_left_version)
+
+#define svn_client_conflict_get_src_right_version(conflict) \
+  (conflict->src_right_version)
+
+#define svn_client_conflict_get_prop_reject_abspath(conflict) \
+  (conflict->prop_reject_abspath)
+
+#define svn_client_conflict_get_prop_value_working(conflict) \
+  (conflict->prop_value_working)
+
+#define svn_client_conflict_get_prop_value_incoming_old(conflict) \
+  (conflict->prop_value_incoming_old)
+
+#define svn_client_conflict_get_prop_value_incoming_new(conflict) \
+  (conflict->prop_value_incoming_new)
+
+/** @} */
+
+/**
  * @defgroup Resolved Mark conflicted paths as resolved.
  *
  * @{
