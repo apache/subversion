@@ -37,10 +37,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1681317
-   Clarify 'svn help' output for --show-inherited-properties.
-   Justification:
-     Avoid circular language in help output.
-   Votes:
-     +1: danielsh, breser, rhuijben
