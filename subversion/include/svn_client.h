@@ -4369,61 +4369,61 @@ svn_client_revert(const apr_array_header_t *paths,
  * @since New in 1.10. 
  */
 #define svn_client_conflict_get_local_abspath(conflict) \
-  (conflict->local_abspath)
+  ((conflict)->local_abspath)
 
 #define svn_client_conflict_get_node_kind(conflict) \
-  (conflict->node_kind)
+  ((conflict)->node_kind)
 
 #define svn_client_conflict_get_kind(conflict) \
-  (conflict->kind)
+  ((conflict)->kind)
 
 #define svn_client_conflict_get_property_name(conflict) \
-  (conflict->property_name)
+  ((conflict)->property_name)
 
 #define svn_client_conflict_get_is_binary(conflict) \
-  (conflict->is_binary)
+  ((conflict)->is_binary)
 
 #define svn_client_conflict_get_mime_type(conflict) \
-  (conflict->mime_type)
+  ((conflict)->mime_type)
 
 #define svn_client_conflict_get_action(conflict) \
-  (conflict->action)
+  ((conflict)->action)
 
 #define svn_client_conflict_get_reason(conflict) \
-  (conflict->reason)
+  ((conflict)->reason)
 
 #define svn_client_conflict_get_base_abspath(conflict) \
-  (conflict->base_abspath)
+  ((conflict)->base_abspath)
 
 #define svn_client_conflict_get_their_abspath(conflict) \
-  (conflict->their_abspath)
+  ((conflict)->their_abspath)
 
 #define svn_client_conflict_get_my_abspath(conflict) \
-  (conflict->my_abspath)
+  ((conflict)->my_abspath)
 
 #define svn_client_conflict_get_merged_file(conflict) \
-  (conflict->merged_file)
+  ((conflict)->merged_file)
 
 #define svn_client_conflict_get_operation(conflict) \
-  (conflict->operation)
+  ((conflict)->operation)
 
 #define svn_client_conflict_get_src_left_version(conflict) \
-  (conflict->src_left_version)
+  ((conflict)->src_left_version)
 
 #define svn_client_conflict_get_src_right_version(conflict) \
-  (conflict->src_right_version)
+  ((conflict)->src_right_version)
 
 #define svn_client_conflict_get_prop_reject_abspath(conflict) \
-  (conflict->prop_reject_abspath)
+  ((conflict)->prop_reject_abspath)
 
 #define svn_client_conflict_get_prop_value_working(conflict) \
-  (conflict->prop_value_working)
+  ((conflict)->prop_value_working)
 
 #define svn_client_conflict_get_prop_value_incoming_old(conflict) \
-  (conflict->prop_value_incoming_old)
+  ((conflict)->prop_value_incoming_old)
 
 #define svn_client_conflict_get_prop_value_incoming_new(conflict) \
-  (conflict->prop_value_incoming_new)
+  ((conflict)->prop_value_incoming_new)
 
 /** @} */
 
