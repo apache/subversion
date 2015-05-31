@@ -192,6 +192,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * status: now accept '-r' argument (r1671164, 1672578, 1673228)
     * ls: improve performance of '-v' on tag directories (r1673153)
     * resolve: improve conflict prompts for binary files (r1667228 et al)
+    * fsfs: improve error messages for parsing errors (r1678147, r1678149)
+    * warn when the '--config-option' FILE:SECTION:OPTION combination may
+      be invalid. (r1674301 et al)
+    * ensure full key matching in membuffer cache (r1678950 et al)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
@@ -245,8 +249,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * windows: avoid delay when user profile isn't writable (r1617926)
     * merge: display the correct node kinds for tree conflicts (r1618024,
       r1619418, r1619717)
-    * diff: show properties of a copied dir as diffs against copy, rather than
-      as adds (r1619380)
     * diff: show the correct revisions in the header (r1619452)
     * diff: fix missing header for files with only property changes (r1619476)
     * update: raise a tree conflict rather than an obstruction when an
@@ -280,12 +282,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * update: fix a case where we reported an error rather than a tree conflict
       (r1655017)
     * info: Use local platform style paths in all cases (r1659283)
-    * ra_serf: don't abort commits that have already succeeded in some corner
-      cases (r1659867)
-    * delete conflict markers of a moved file in the right location (r1660220)
     * handle lack of a configuration file properly (r1660369)
-    * wc: don't treat foreign repos copy as an intra-repos copy (r1660593)
-    * upgrade: fix corner cases found in wc upgrades (r1660646 et al)
     * update: resolve issues with tree conflicts caused by an incoming
       delete removing a mixed revision tree (r1660742)
     * don't hold onto locks of deleted paths in the client on commit (r1661363)
@@ -307,6 +304,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       status (r1663671, r1666832)
     * update: allow a real file to replace a file external (r1664035)
     * merge: raise a tree conflict on root of obstructing dir (r1666690)
+    * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
+    * status: fix incorrect output with file externals (issue #4580)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
@@ -330,8 +329,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * mod_dav_svn: fix some pool lifetime issues with error messages (r1553868)
     * mod_dav_svn: avoid setting option headers multiple times (r1557103)
     * fsfs: prevent some commits that could cause future corruption (r1560673)
-    * fsfs: fix a problem verifying pre-1.4 repos used with 1.8 (r1561419)
-    * fsfs: fix hotcopy for pre-1.4 repositories (r1561427)
     * cache: fix premature eviction due to 64-bit underflows (r1567996 et al)
     * svnserve: fix potential integer overflow in Cyrus SASL support (r1570434)
     * bdb: fix potential integer overflow and underflow (r1570701)
@@ -390,6 +387,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * mod_dav_svn: emit the first few log items as soon as they are available
       (r1666965, r1667120)
     * mod_dav_svn: prevent a tree walk on copy sources (issue #4351)
+    * fsfs: fix 'EOF found' error when reading repo (issue #4577)
+    * svnadmin freeze: unlock rep-cache.db as part of unfreezing
+      (r1679169, r1679287)
 
   - Client-side and server-side bugfixes:
     * use less memory when retrieving extension from filename (r1548480)
@@ -455,7 +455,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * improve windows build to use pre-built dependencies
     * optimize ramdrive usage in the windows test runner (r1504511)
     * SVN_CMDLINE_DISABLE_CRASH_HANDLER env var added for Windows (r1506507)
-    * stop including some headers in win32 resource compile (r1532287)
     * gen-make.py: support Visual Studio 2013 by --vsnet-version=2013 (r1533907)
     * windows: don't require APR source when building (r1534037, et al)
     * don't compile SQLite amalgamation twice (r1536364)
@@ -709,7 +708,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: expose whitespace diff parameters to blame method (issue #4475)
     * javahl: update ConflictDescriptor (r1655842)
     * javahl: update FileRevision to provide textDelta (r1656911)
-    * swig: partial fix for complication problems wigh SWIG 3.0.x (r1658347)
     * swig-pl: install into prefix (r1658459)
     * javahl: expose the metadataOnly option to copy support (r1661451)
     * swig-py: add support for svn_fs_lock_many(), svn_fs_unlock_many(),
@@ -717,7 +715,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * swig-py: fix support for svn_ra_lock() and svn_ra_unlock() (r1662891)
     * javahl: allow java callbacks to throw errors back to the svn code
       (r1664938, r1664939, r1664940, r1664978, r1664984)
-    * swig-pl: fix some statck memory problems (r1668618, 1671388)
+    * swig-pl: fix some stack memory problems (r1668618, 1671388)
+    * swig: warn on using SWIG 3.x as we have compatibility problems
+      with newer versions of SWIG (1675149)
+    * javahl: requires Java 1.6 (r1677003)
+    * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
 
 
 Version 1.8.13
