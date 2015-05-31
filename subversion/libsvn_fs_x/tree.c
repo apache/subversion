@@ -1694,6 +1694,15 @@ compare_dir_structure(svn_boolean_t *changed,
   SVN_ERR(svn_fs_x__dag_dir_entries(&rhs_entries, rhs, scratch_pool,
                                     iterpool));
 
+  /* different number of entries -> some addition / removal */
+  if (lhs_entries->nelts != rhs_entries->nelts)
+    {
+      svn_pool_destroy(iterpool);
+      *changed = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+
   /* Since directories are sorted by name, we can simply compare their
      entries one-by-one without binary lookup etc. */
   for (i = 0; i < lhs_entries->nelts; ++i)
