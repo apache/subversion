@@ -113,13 +113,14 @@ Work on this branch:
 
     Tidying things to do:
 
-      Combine editor3 methods 'instantiate' and 'alter' and probably 'add'
-      as well into a single method.
+      Combine editor3 methods 'alter' and 'add' into a single method.
 
         They have basically the same meaning apart from the precondition
-        (does or does not already exist) and the pre-existence should
+        (element does or does not already exist). The pre-existence should
         *not* be considered, I think, because ... idempotency?
         Likewise, 'delete' should not care if it was already deleted.
+        The unifying principle is it's communicating a partial description
+        of the new state, without reference to the old state.
 
       Create editor vtable methods for all editor interface functions.
 
