@@ -123,8 +123,7 @@ svn_element_payload_equal(const svn_element_payload_t *left,
       return FALSE;
     }
 
-  /* references are not supported */
-  SVN_ERR_ASSERT_NO_RETURN(! left->ref.relpath && ! right->ref.relpath);
+  /* content defined only by reference is not supported */
   SVN_ERR_ASSERT_NO_RETURN(left->kind != svn_node_unknown
                            && right->kind != svn_node_unknown);
 
