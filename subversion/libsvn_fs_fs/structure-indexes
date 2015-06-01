@@ -192,11 +192,11 @@ at the beginning of the file is optional and will be ignored.
 
   <bof>         /* begin of proto index file for revision r and following */
   (0, 0)        /* mark start of revision r, optional for first rev */
-  (off, item)*  /* zero to many mappings in random order */
+  (off, item)*  /* zero or more mappings in random order */
   (0, 0)        /* mark start of revision r + 1 */
-  (off, item)*  /* zero to many mappings in random order */
+  (off, item)*  /* zero or more mappings in random order */
   (0, 0)        /* mark start of revision r + 2 */
-  (off, item)*  /* zero to many mappings in random order */
+  (off, item)*  /* zero or more mappings in random order */
   ...
   <eof>         /* end of file. */
 
