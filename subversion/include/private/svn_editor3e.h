@@ -586,7 +586,14 @@ typedef struct svn_editor3_t svn_editor3_t;
  *     but in that case the caller would need to specify the new eids.]
  */
 
-/** Create a new element of kind @a new_kind in branch @a branch.
+/** Allocate a new EID.
+ */
+svn_error_t *
+svn_editor3_new_eid(svn_editor3_t *editor,
+                    svn_branch_eid_t *eid_p,
+                    svn_branch_state_t *branch);
+
+/** Create a new element in branch @a branch.
  * 
  * Assign the new element a new element id; store this in @a *eid_p if
  * @a eid_p is not null.
@@ -594,16 +601,14 @@ typedef struct svn_editor3_t svn_editor3_t;
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
  * Set the payload to @a new_payload. If @a new_payload is null, create a
- * subbranch-root element instead of a normal element. (@a new_kind must
- * be svn_node_unknown in this case.)
+ * subbranch-root element instead of a normal element.
  *
  * @see #svn_editor3_t
  */
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
-                svn_branch_eid_t *eid,
-                svn_node_kind_t new_kind,
                 svn_branch_state_t *branch,
+                svn_branch_eid_t eid,
                 svn_branch_eid_t new_parent_eid,
                 const char *new_name,
                 const svn_element_payload_t *new_payload);
@@ -823,13 +828,20 @@ svn_editor3_abort(svn_editor3_t *editor);
  * @{
  */
 
+/** @see svn_editor3_new_eid(), #svn_editor3_t
+ */
+typedef svn_error_t *(*svn_editor3_cb_new_eid_t)(
+  void *baton,
+  svn_branch_eid_t *eid_p,
+  svn_branch_state_t *branch,
+  apr_pool_t *scratch_pool);
+
 /** @see svn_editor3_add(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_add_t)(
   void *baton,
-  svn_branch_eid_t *eid,
-  svn_node_kind_t new_kind,
   svn_branch_state_t *branch,
+  svn_branch_eid_t eid,
   svn_branch_eid_t new_parent_eid,
   const char *new_name,
   const svn_element_payload_t *new_payload,
@@ -922,6 +934,7 @@ typedef svn_error_t *(*svn_editor3_cb_abort_t)(
  */
 typedef struct svn_editor3_cb_funcs_t
 {
+  svn_editor3_cb_new_eid_t cb_new_eid;
   svn_editor3_cb_add_t cb_add;
   svn_editor3_cb_copy_one_t cb_copy_one;
   svn_editor3_cb_copy_tree_t cb_copy_tree;
