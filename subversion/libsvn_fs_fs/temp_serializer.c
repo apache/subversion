@@ -507,8 +507,7 @@ svn_fs_fs__serialize_manifest(void **data,
   apr_array_header_t *manifest = in;
 
   *data_len = sizeof(apr_off_t) *manifest->nelts;
-  *data = apr_palloc(pool, *data_len);
-  memcpy(*data, manifest->elts, *data_len);
+  *data = apr_pmemdup(pool, manifest->elts, *data_len);
 
   return SVN_NO_ERROR;
 }
@@ -915,8 +914,7 @@ svn_fs_fs__extract_dir_entry(void **out,
       apr_size_t size = lengths[pos];
 
       /* copy & deserialize the entry */
-      svn_fs_dirent_t *new_entry = apr_palloc(pool, size);
-      memcpy(new_entry, source, size);
+      svn_fs_dirent_t *new_entry = apr_pmemdup(pool, source, size);
 
       svn_temp_deserializer__resolve(new_entry, (void **)&new_entry->name);
       svn_fs_fs__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->id);
