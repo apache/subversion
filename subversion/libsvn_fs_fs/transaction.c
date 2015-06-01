@@ -2265,7 +2265,7 @@ get_shared_rep(representation_t **old_rep,
     {
       /* Make the problem show up in the server log.
 
-         Because not sharing reps is always a save option,
+         Because not sharing reps is always a safe option,
          terminating the request would be inappropriate.
        */
       svn_checksum_t checksum;

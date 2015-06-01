@@ -2567,7 +2567,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
      If we need to bail out, do so early. */
 
   if (cancel_func)
-    SVN_ERR((*cancel_func)(cancel_baton));
+    SVN_ERR(cancel_func(cancel_baton));
 
   subpool = svn_pool_create(pool);
 
@@ -2600,7 +2600,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
       else
         {
           if (cancel_func)
-            SVN_ERR((*cancel_func)(cancel_baton));
+            SVN_ERR(cancel_func(cancel_baton));
 
           err = svn_io_remove_file2(fullpath, FALSE, subpool);
           if (err)
@@ -3582,6 +3582,16 @@ svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted,
              pool);
 }
 
+svn_error_t *
+svn_io_file_size_get(svn_filesize_t *filesize_p, apr_file_t *file,
+                     apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, file, pool));
+
+  *filesize_p = finfo.size;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_file_read(apr_file_t *file, void *buf,
@@ -3868,11 +3878,10 @@ svn_io_write_atomic(const char *final_path,
                                                       scratch_pool));
     }
 
-#ifdef __linux__
+#if SVN_ON_POSIX
   {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
+    /* On POSIX, the file name is stored in the file's directory entry.
+       Hence, we need to fsync() that directory as well.
        On other operating systems, we'd only be asking for trouble
        by trying to open and fsync a directory. */
     apr_file_t *file;
