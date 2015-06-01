@@ -960,6 +960,10 @@ apply_change(void **dir_baton,
  */
 
 /*  */
+#define PAYLOAD_IS_ONLY_BY_REFERENCE(payload) \
+    ((payload)->kind == svn_node_unknown)
+
+/*  */
 static svn_error_t *
 payload_fetch(svn_element_payload_t **payload_p,
               apr_hash_t **children_names,
@@ -971,6 +975,7 @@ payload_fetch(svn_element_payload_t **payload_p,
   svn_element_payload_t *payload
     = apr_pcalloc(result_pool, sizeof (*payload));
 
+  payload->ref = *path_rev;
   SVN_ERR(eb->fetch_func(&payload->kind,
                          &payload->props,
                          &payload->text,
@@ -997,8 +1002,8 @@ svn_editor3_payload_resolve(svn_element_payload_t **payload_p,
 
   SVN_ERR_ASSERT(element);
 
-  /* If payload is by reference, fetch full payload. */
-  if (element->payload && element->payload->ref.relpath)
+  /* If payload is only by reference, fetch full payload. */
+  if (element->payload && PAYLOAD_IS_ONLY_BY_REFERENCE(element->payload))
     {
       SVN_ERR(payload_fetch(payload_p, NULL,
                             eb, &element->payload->ref,
@@ -1029,8 +1034,9 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **element_p,
 
   element = element ? svn_branch_el_rev_content_dup(element, result_pool) : NULL;
 
-  /* If payload is by reference, fetch full payload. */
-  if (element && element->payload && element->payload->ref.relpath)
+  /* If payload is only by reference, fetch full payload. */
+  if (element && element->payload
+      && PAYLOAD_IS_ONLY_BY_REFERENCE(element->payload))
     {
       SVN_ERR(payload_fetch(&element->payload, NULL,
                             eb, &element->payload->ref,
@@ -1493,7 +1499,7 @@ drive_changes_r(const char *rrpath,
       /* Get the full payload of the final node. If we have
          only a reference to the payload, fetch it in full. */
       SVN_ERR_ASSERT(final_payload);
-      if (final_payload->ref.relpath)
+      if (PAYLOAD_IS_ONLY_BY_REFERENCE(final_payload))
         {
           /* Get payload by reference. */
           SVN_ERR(payload_fetch(&final_payload, NULL,
