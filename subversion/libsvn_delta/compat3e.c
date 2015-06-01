@@ -1655,7 +1655,6 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
   {
     svn_pathrev_t current = { -1, "" };
 
-    /* ### For now, assume based on youngest known rev. */
     current.rev = eb->edited_rev_root->base_rev;
     SVN_ERR(drive_changes_r("", &current,
                             paths_final, eb, scratch_pool));
