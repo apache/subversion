@@ -1099,19 +1099,27 @@ svn_editor3_find_branch_element_by_rrpath(svn_branch_state_t **branch_p,
 
 /* An #svn_editor3_t method. */
 static svn_error_t *
+editor3_new_eid(void *baton,
+                svn_branch_eid_t *eid_p,
+                svn_branch_state_t *branch,
+                apr_pool_t *scratch_pool)
+{
+  int eid = svn_branch_allocate_new_eid(branch->rev_root);
+
+  *eid_p = eid;
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_editor3_t method. */
+static svn_error_t *
 editor3_add(void *baton,
-            svn_branch_eid_t *eid_p,
-            svn_node_kind_t new_kind,
             svn_branch_state_t *branch,
+            svn_branch_eid_t eid,
             svn_branch_eid_t new_parent_eid,
             const char *new_name,
             const svn_element_payload_t *new_payload,
             apr_pool_t *scratch_pool)
 {
-  int eid;
-
-  eid = svn_branch_allocate_new_eid(branch->rev_root);
-
   if (new_payload)
     {
       SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
@@ -1130,7 +1138,6 @@ editor3_add(void *baton,
                                                new_parent_eid, new_name);
     }
 
-  *eid_p = eid;
   return SVN_NO_ERROR;
 }
 
@@ -1764,6 +1771,7 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
                       apr_pool_t *result_pool)
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
+    editor3_new_eid,
     editor3_add,
     editor3_copy_one,
     editor3_copy_tree,
@@ -1802,6 +1810,7 @@ svn_editor3__ev3_from_delta_for_commit(
                         apr_pool_t *scratch_pool)
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
+    editor3_new_eid,
     editor3_add,
     editor3_copy_one,
     editor3_copy_tree,

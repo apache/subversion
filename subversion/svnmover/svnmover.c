@@ -1891,8 +1891,10 @@ mk_branch(svn_branch_state_t **new_branch_p,
   int new_outer_eid;
   svn_branch_state_t *new_branch;
 
-  SVN_ERR(svn_editor3_add(editor, &new_outer_eid, svn_node_unknown,
-                          outer_branch, outer_parent_eid, outer_name,
+  SVN_ERR(svn_editor3_new_eid(editor, &new_outer_eid, outer_branch));
+  SVN_ERR(svn_editor3_add(editor,
+                          outer_branch, new_outer_eid,
+                          outer_parent_eid, outer_name,
                           NULL /*new_payload*/));
   new_branch = svn_branch_add_new_branch(
                  outer_branch, new_outer_eid, -1/*new_root_eid*/,
@@ -2254,8 +2256,10 @@ execute(const apr_array_header_t *actions,
               = svn_element_payload_create_dir(props, iterpool);
             int new_eid;
 
-            SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_dir,
-                                    arg[0]->parent_el_rev->branch,
+            SVN_ERR(svn_editor3_new_eid(editor, &new_eid,
+                                        arg[0]->parent_el_rev->branch));
+            SVN_ERR(svn_editor3_add(editor,
+                                    arg[0]->parent_el_rev->branch, new_eid,
                                     arg[0]->parent_el_rev->eid, arg[0]->path_name,
                                     payload));
           }
@@ -2318,8 +2322,10 @@ execute(const apr_array_header_t *actions,
               {
                 int new_eid;
 
-                SVN_ERR(svn_editor3_add(editor, &new_eid, svn_node_file,
-                                        arg[1]->parent_el_rev->branch,
+                SVN_ERR(svn_editor3_new_eid(editor, &new_eid,
+                                            arg[1]->parent_el_rev->branch));
+                SVN_ERR(svn_editor3_add(editor,
+                                        arg[1]->parent_el_rev->branch, new_eid,
                                         parent_eid, name,
                                         payload));
               }
