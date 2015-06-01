@@ -1785,11 +1785,14 @@ do_move(svn_editor3_t *editor,
   if (BRANCH_IS_SAME_BRANCH(to_parent_el_rev->branch, el_rev->branch,
                             scratch_pool))
     {
-      /* Move within same branch */
+      /* New payload shall be the same as before */
+      svn_branch_el_rev_content_t *existing_element
+        = svn_branch_get_element(el_rev->branch, el_rev->eid);
+
       SVN_ERR(svn_editor3_alter(editor,
                                 el_rev->branch, el_rev->eid,
                                 to_parent_el_rev->eid, to_name,
-                                NULL /* "no change" */));
+                                existing_element->payload));
       return SVN_NO_ERROR;
     }
 

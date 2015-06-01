@@ -730,8 +730,8 @@ svn_editor3_delete(svn_editor3_t *editor,
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
- * Set the payload to @a new_payload, or if null then leave the payload
- * unchanged.
+ * Set the payload to @a new_payload. If @a new_payload is null, create a
+ * subbranch-root element instead of a normal element.
  *
  * A no-op change MUST be accepted but, in the interest of efficiency,
  * SHOULD NOT be sent.

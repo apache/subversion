@@ -1203,17 +1203,7 @@ editor3_alter(void *baton,
            eid,
            new_parent_eid,
            new_name ? new_name : "(same)",
-           new_payload ? svn_node_kind_to_word(new_payload->kind) : "(same)"));
-
-  /* New payload shall be the same as before if NEW_PAYLOAD is null. */
-  if (! new_payload)
-    {
-      svn_branch_el_rev_content_t *existing_element
-        = svn_branch_get_element(branch, eid);
-
-      if (existing_element)
-        new_payload = existing_element->payload;
-    }
+           new_payload ? svn_node_kind_to_word(new_payload->kind) : "(subbranch)"));
 
   if (new_payload)
     svn_branch_update_element(
