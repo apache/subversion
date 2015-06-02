@@ -190,6 +190,9 @@ wc_create(svnmover_wc_t **wc_p,
 }
 
 /* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
+ *
+ * Assumes there are no changes in the WC: throws away the existing txn
+ * and starts a new one.
  */
 static svn_error_t *
 wc_update(svnmover_wc_t *wc,
@@ -233,6 +236,25 @@ wc_update(svnmover_wc_t *wc,
                                 wc->edit_txn,
                                 fetch_func, fetch_baton,
                                 wc->pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
+ *
+ * ### TODO: Merges any changes in the existing txn into the new txn.
+ */
+static svn_error_t *
+do_update(svnmover_wc_t *wc,
+          svn_revnum_t revision,
+          apr_pool_t *scratch_pool)
+{
+  /* Complete the old edit drive (into the 'WC') */
+  SVN_ERR(svn_editor3_complete(wc->editor));
+
+  /* Check out a new WC */
+  SVN_ERR(wc_update(wc, revision,
+                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -487,7 +509,8 @@ typedef enum action_code_t {
   ACTION_PUT_FILE,
   ACTION_CP,
   ACTION_RM,
-  ACTION_COMMIT
+  ACTION_COMMIT,
+  ACTION_UPDATE
 } action_code_t;
 
 typedef struct action_defn_t {
@@ -535,6 +558,8 @@ static const action_defn_t action_defn[] =
     "LOCAL_FILE (use \"-\" to read from standard input)"},
   {ACTION_COMMIT,           "commit", 0, "",
     "commit the changes"},
+  {ACTION_UPDATE,           "update", 1, ".@REV",
+    "update to revision REV (### discards local changes)"},
 };
 
 typedef struct action_t {
@@ -2409,6 +2434,12 @@ execute(svnmover_wc_t *wc,
               {
                 printf("There are no changes to commit.\n");
               }
+          }
+          break;
+        case ACTION_UPDATE:
+          {
+              SVN_ERR(do_update(wc, arg[0]->revnum, iterpool));
+              editor = wc->editor;
           }
           break;
         default:
