@@ -106,7 +106,7 @@ notify(const char *fmt,
 
 /* ====================================================================== */
 
-typedef struct mtcc_t
+typedef struct svnmover_wc_t
 {
   apr_pool_t *pool;
   const char *repos_root_url;
@@ -117,79 +117,72 @@ typedef struct mtcc_t
   svn_ra_session_t *ra_session;
   svn_editor3_t *editor;
   svn_branch_revision_root_t *edit_txn;
-  apr_hash_t *revprops;
   svn_client_ctx_t *ctx;
-} mtcc_t;
+} svnmover_wc_t;
 
-static svn_error_t *
-commit_callback(const svn_commit_info_t *commit_info,
-                void *baton,
-                apr_pool_t *pool);
-
-/* ...
+/* Create a simulated WC, in memory.
+ *
  * BASE_REVISION is the revision to work on, or SVN_INVALID_REVNUM for HEAD.
  */
 static svn_error_t *
-mtcc_create(mtcc_t **mtcc_p,
-            const char *anchor_url,
-            svn_revnum_t base_revision,
-            apr_hash_t *revprops,
-            svn_client_ctx_t *ctx,
-            apr_pool_t *result_pool,
-            apr_pool_t *scratch_pool)
+wc_create(svnmover_wc_t **wc_p,
+          const char *anchor_url,
+          svn_revnum_t base_revision,
+          svn_client_ctx_t *ctx,
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *mtcc_pool = svn_pool_create(result_pool);
-  mtcc_t *mtcc = apr_pcalloc(mtcc_pool, sizeof(*mtcc));
+  apr_pool_t *wc_pool = svn_pool_create(result_pool);
+  svnmover_wc_t *wc = apr_pcalloc(wc_pool, sizeof(*wc));
   const char *branch_info_dir = NULL;
   svn_editor3__shim_fetch_func_t fetch_func;
   void *fetch_baton;
 
-  mtcc->pool = mtcc_pool;
-  mtcc->ctx = ctx;
-  mtcc->revprops = revprops;
+  wc->pool = wc_pool;
+  wc->ctx = ctx;
 
-  SVN_ERR(svn_client_open_ra_session2(&mtcc->ra_session, anchor_url,
+  SVN_ERR(svn_client_open_ra_session2(&wc->ra_session, anchor_url,
                                       NULL /* wri_abspath */, ctx,
-                                      mtcc_pool, scratch_pool));
+                                      wc_pool, scratch_pool));
 
-  SVN_ERR(svn_ra_get_repos_root2(mtcc->ra_session, &mtcc->repos_root_url,
+  SVN_ERR(svn_ra_get_repos_root2(wc->ra_session, &wc->repos_root_url,
                                  result_pool));
-  SVN_ERR(svn_ra_get_latest_revnum(mtcc->ra_session, &mtcc->head_revision,
+  SVN_ERR(svn_ra_get_latest_revnum(wc->ra_session, &wc->head_revision,
                                    scratch_pool));
 
   if (! SVN_IS_VALID_REVNUM(base_revision))
-    mtcc->base_revision = mtcc->head_revision;
-  else if (base_revision > mtcc->head_revision)
+    wc->base_revision = wc->head_revision;
+  else if (base_revision > wc->head_revision)
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld (HEAD is %ld)"),
-                             base_revision, mtcc->head_revision);
+                             base_revision, wc->head_revision);
   else
-    mtcc->base_revision = base_revision;
+    wc->base_revision = base_revision;
 
   /* Choose whether to store branching info in a local dir or in revprops.
      (For now, just to exercise the options, we choose local files for
      RA-local and revprops for a remote repo.) */
-  if (strncmp(mtcc->repos_root_url, "file://", 7) == 0)
+  if (strncmp(wc->repos_root_url, "file://", 7) == 0)
     {
       const char *repos_dir;
 
-      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, mtcc->repos_root_url,
+      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, wc->repos_root_url,
                                                scratch_pool));
       branch_info_dir = svn_dirent_join(repos_dir, "branch-info", scratch_pool);
     }
 
   /* load branching info */
-  SVN_ERR(svn_ra_load_branching_state(&mtcc->edit_txn,
+  SVN_ERR(svn_ra_load_branching_state(&wc->edit_txn,
                                       &fetch_func, &fetch_baton,
-                                      mtcc->ra_session, branch_info_dir,
-                                      mtcc->base_revision,
+                                      wc->ra_session, branch_info_dir,
+                                      wc->base_revision,
                                       result_pool, scratch_pool));
 
-  SVN_ERR(svn_editor3_in_memory(&mtcc->editor,
-                                mtcc->edit_txn,
+  SVN_ERR(svn_editor3_in_memory(&wc->editor,
+                                wc->edit_txn,
                                 fetch_func, fetch_baton,
                                 result_pool));
-  *mtcc_p = mtcc;
+  *wc_p = wc;
   return SVN_NO_ERROR;
 }
 
@@ -361,79 +354,62 @@ replay(svn_editor3_t *editor,
 }
 
 static svn_error_t *
-mtcc_commit(mtcc_t *mtcc,
-            apr_pool_t *scratch_pool)
+commit_callback(const svn_commit_info_t *commit_info,
+                void *baton,
+                apr_pool_t *pool);
+
+/* Baton for commit_callback(). */
+typedef struct commit_callback_baton_t
+{
+  svn_editor3_t *editor;
+} commit_callback_baton_t;
+
+/* Commit the changes from WC into the repository.
+ *
+ * Open a new commit txn to the repo. Replay the changes from WC into it.
+ */
+static svn_error_t *
+wc_commit(svnmover_wc_t *wc,
+          apr_hash_t *revprops,
+          apr_pool_t *scratch_pool)
 {
   const char *branch_info_dir = NULL;
   svn_branch_state_t *edit_root_branch;
   svn_branch_revision_root_t *left_txn
-    = svn_array_get(mtcc->edit_txn->repos->rev_roots, (int)mtcc->base_revision);
-  svn_branch_revision_root_t *right_txn = mtcc->edit_txn;
-
-  /* Complete the old edit drive (into the 'WC') */
-  SVN_ERR(svn_editor3_complete(mtcc->editor));
-
-#if 0
-  /* No changes -> no revision. Easy out */
-  if (MTCC_UNMODIFIED(mtcc))
-    {
-      svn_editor3_abort(mtcc->editor);
-      svn_pool_destroy(mtcc->pool);
-      return SVN_NO_ERROR;
-    }
-#endif
-
-#if 0
-  const char *session_url;
-
-  SVN_ERR(svn_ra_get_session_url(mtcc->ra_session, &session_url, scratch_pool));
-
-  if (mtcc->root_op->kind != OP_OPEN_DIR)
-    {
-      const char *name;
-
-      svn_uri_split(&session_url, &name, session_url, scratch_pool);
-
-      if (*name)
-        {
-          SVN_ERR(mtcc_reparent(session_url, mtcc, scratch_pool));
-
-          SVN_ERR(svn_ra_reparent(mtcc->ra_session, session_url, scratch_pool));
-        }
-    }
-#endif
+    = svn_array_get(wc->edit_txn->repos->rev_roots, (int)wc->base_revision);
+  svn_branch_revision_root_t *right_txn = wc->edit_txn;
+  svn_editor3_t *commit_editor;
+  commit_callback_baton_t ccbb;
 
   /* Choose whether to store branching info in a local dir or in revprops.
      (For now, just to exercise the options, we choose local files for
      RA-local and revprops for a remote repo.) */
-  if (strncmp(mtcc->repos_root_url, "file://", 7) == 0)
+  if (strncmp(wc->repos_root_url, "file://", 7) == 0)
     {
       const char *repos_dir;
 
-      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, mtcc->repos_root_url,
+      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, wc->repos_root_url,
                                                scratch_pool));
       branch_info_dir = svn_dirent_join(repos_dir, "branch-info", scratch_pool);
     }
 
-  /* Start a new editor for the commit. (Again store the editor in
-     MTCC->editor, this time for use by the commit callback. We can't
-     pass the pointer-to-editor directly as the commit callback baton here
-     because we won't receive it until after starting this call.) */
-  SVN_ERR(svn_ra_get_commit_editor_ev3(mtcc->ra_session, &mtcc->editor,
-                                       mtcc->revprops,
-                                       commit_callback, mtcc,
+  /* Start a new editor for the commit. */
+  SVN_ERR(svn_ra_get_commit_editor_ev3(wc->ra_session, &commit_editor,
+                                       revprops,
+                                       commit_callback, &ccbb,
                                        NULL /*lock_tokens*/, FALSE /*keep_locks*/,
                                        branch_info_dir,
                                        scratch_pool));
-  /*SVN_ERR(svn_editor3__get_debug_editor(&mtcc->editor, mtcc->editor, scratch_pool));*/
+  ccbb.editor = commit_editor;
+  /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
 
   svn_editor3_find_branch_element_by_rrpath(&edit_root_branch, NULL,
-                                            mtcc->editor, "", scratch_pool);
-  SVN_ERR(replay(mtcc->editor, edit_root_branch,
+                                            commit_editor, "", scratch_pool);
+  SVN_ERR(replay(commit_editor, edit_root_branch,
                  left_txn,
                  right_txn,
                  scratch_pool));
-  SVN_ERR(svn_editor3_complete(mtcc->editor));
+  SVN_ERR(svn_editor3_complete(commit_editor));
 
   return SVN_NO_ERROR;
 }
@@ -1913,20 +1889,20 @@ commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
                 apr_pool_t *pool)
 {
-  mtcc_t *mtcc = baton;
+  commit_callback_baton_t *b = baton;
   svn_branch_el_rev_id_t *el_rev_left, *el_rev_right;
   const char *rrpath = "";
 
   SVN_ERR(svn_cmdline_printf(pool, "Committed r%ld:\n",
                              commit_info->revision));
 
-  SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_left, mtcc->editor,
+  SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_left, b->editor,
                                     commit_info->revision - 1, rrpath,
                                     pool, pool));
-  SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_right, mtcc->editor,
+  SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_right, b->editor,
                                     commit_info->revision, rrpath,
                                     pool, pool));
-  SVN_ERR(svn_branch_diff_r(mtcc->editor,
+  SVN_ERR(svn_branch_diff_r(b->editor,
                             el_rev_left, el_rev_right,
                             flat_branch_diff, "   ",
                             pool));
@@ -2008,7 +1984,7 @@ execute(const apr_array_header_t *actions,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
-  mtcc_t *mtcc;
+  svnmover_wc_t *wc;
   svn_editor3_t *editor;
   const char *base_relpath;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -2016,12 +1992,12 @@ execute(const apr_array_header_t *actions,
   int i;
   svn_error_t *err;
 
-  SVN_ERR(mtcc_create(&mtcc,
-                      anchor_url, base_revision, revprops,
+  SVN_ERR(wc_create(&wc,
+                      anchor_url, base_revision,
                       ctx, pool, iterpool));
-  editor = mtcc->editor;
-  base_relpath = svn_uri_skip_ancestor(mtcc->repos_root_url, anchor_url, pool);
-  base_revision = mtcc->base_revision;
+  editor = wc->editor;
+  base_relpath = svn_uri_skip_ancestor(wc->repos_root_url, anchor_url, pool);
+  base_revision = wc->base_revision;
 
   for (i = 0; i < actions->nelts; ++i)
     {
@@ -2051,7 +2027,7 @@ execute(const apr_array_header_t *actions,
                 arg[j]->revnum = action->rev_spec[j].value.number;
               else if (action->rev_spec[j].kind == svn_opt_revision_head)
                 {
-                  arg[j]->revnum = mtcc->head_revision;
+                  arg[j]->revnum = wc->head_revision;
                 }
               else
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -2340,14 +2316,18 @@ execute(const apr_array_header_t *actions,
 
   if (made_changes)
     {
-      err = mtcc_commit(mtcc, pool);
+      /* Complete the old edit drive (into the 'WC') */
+      SVN_ERR(svn_editor3_complete(wc->editor));
+
+      /* Commit */
+      err = wc_commit(wc, revprops, pool);
     }
   else
     {
-      err = svn_editor3_abort(mtcc->editor);
+      err = svn_editor3_abort(wc->editor);
     }
 
-  svn_pool_destroy(mtcc->pool);
+  svn_pool_destroy(wc->pool);
 
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);
