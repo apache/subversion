@@ -37,3 +37,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1683071
+   Document the meaning of "XFAIL" for users building from source.
+   Justification:
+     Answers a FAQ.
+   Votes:
+     +1: danielsh
