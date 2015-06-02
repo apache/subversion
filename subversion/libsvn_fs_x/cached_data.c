@@ -2494,9 +2494,7 @@ read_dir_entries(apr_array_header_t *entries,
         {
           /* We must be in incremental mode */
           assert(hash);
-          apr_hash_set(hash,
-                       apr_pstrmemdup(scratch_pool, entry.key, entry.keylen),
-                       entry.keylen, NULL);
+          apr_hash_set(hash, entry.key, entry.keylen, NULL);
           continue;
         }
 
