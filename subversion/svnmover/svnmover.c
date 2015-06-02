@@ -2113,6 +2113,11 @@ execute(svnmover_wc_t *wc,
                 {
                   arg[j]->revnum = wc->head_revision;
                 }
+              else if (action->rev_spec[j].kind == svn_opt_revision_base
+                       || action->rev_spec[j].kind == svn_opt_revision_committed)
+                {
+                  arg[j]->revnum = wc->base_revision;
+                }
               else
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                          "'%s@...': revision specifier "
