@@ -122,82 +122,15 @@ typedef struct svnmover_wc_t
   svn_boolean_t made_changes;
 } svnmover_wc_t;
 
-/* Create a simulated WC, in memory.
- *
- * BASE_REVISION is the revision to work on, or SVN_INVALID_REVNUM for HEAD.
- */
-static svn_error_t *
-wc_create(svnmover_wc_t **wc_p,
-          const char *anchor_url,
-          svn_revnum_t base_revision,
-          svn_client_ctx_t *ctx,
-          apr_pool_t *result_pool,
-          apr_pool_t *scratch_pool)
-{
-  apr_pool_t *wc_pool = svn_pool_create(result_pool);
-  svnmover_wc_t *wc = apr_pcalloc(wc_pool, sizeof(*wc));
-  const char *branch_info_dir = NULL;
-  svn_editor3__shim_fetch_func_t fetch_func;
-  void *fetch_baton;
-
-  wc->pool = wc_pool;
-  wc->ctx = ctx;
-  wc->made_changes = FALSE;
-
-  SVN_ERR(svn_client_open_ra_session2(&wc->ra_session, anchor_url,
-                                      NULL /* wri_abspath */, ctx,
-                                      wc_pool, scratch_pool));
-
-  SVN_ERR(svn_ra_get_repos_root2(wc->ra_session, &wc->repos_root_url,
-                                 result_pool));
-  SVN_ERR(svn_ra_get_latest_revnum(wc->ra_session, &wc->head_revision,
-                                   scratch_pool));
-
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    wc->base_revision = wc->head_revision;
-  else if (base_revision > wc->head_revision)
-    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                             _("No such revision %ld (HEAD is %ld)"),
-                             base_revision, wc->head_revision);
-  else
-    wc->base_revision = base_revision;
-
-  /* Choose whether to store branching info in a local dir or in revprops.
-     (For now, just to exercise the options, we choose local files for
-     RA-local and revprops for a remote repo.) */
-  if (strncmp(wc->repos_root_url, "file://", 7) == 0)
-    {
-      const char *repos_dir;
-
-      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, wc->repos_root_url,
-                                               scratch_pool));
-      branch_info_dir = svn_dirent_join(repos_dir, "branch-info", scratch_pool);
-    }
-
-  /* load branching info */
-  SVN_ERR(svn_ra_load_branching_state(&wc->edit_txn,
-                                      &fetch_func, &fetch_baton,
-                                      wc->ra_session, branch_info_dir,
-                                      wc->base_revision,
-                                      result_pool, scratch_pool));
-
-  SVN_ERR(svn_editor3_in_memory(&wc->editor,
-                                wc->edit_txn,
-                                fetch_func, fetch_baton,
-                                result_pool));
-  *wc_p = wc;
-  return SVN_NO_ERROR;
-}
-
 /* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
  *
  * Assumes there are no changes in the WC: throws away the existing txn
  * and starts a new one.
  */
 static svn_error_t *
-wc_update(svnmover_wc_t *wc,
-          svn_revnum_t base_revision,
-          apr_pool_t *scratch_pool)
+wc_checkout(svnmover_wc_t *wc,
+            svn_revnum_t base_revision,
+            apr_pool_t *scratch_pool)
 {
   const char *branch_info_dir = NULL;
   svn_editor3__shim_fetch_func_t fetch_func;
@@ -240,6 +173,39 @@ wc_update(svnmover_wc_t *wc,
   return SVN_NO_ERROR;
 }
 
+/* Create a simulated WC, in memory.
+ *
+ * BASE_REVISION is the revision to work on, or SVN_INVALID_REVNUM for HEAD.
+ */
+static svn_error_t *
+wc_create(svnmover_wc_t **wc_p,
+          const char *anchor_url,
+          svn_revnum_t base_revision,
+          svn_client_ctx_t *ctx,
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
+{
+  apr_pool_t *wc_pool = svn_pool_create(result_pool);
+  svnmover_wc_t *wc = apr_pcalloc(wc_pool, sizeof(*wc));
+
+  wc->pool = wc_pool;
+  wc->ctx = ctx;
+  wc->made_changes = FALSE;
+
+  SVN_ERR(svn_client_open_ra_session2(&wc->ra_session, anchor_url,
+                                      NULL /* wri_abspath */, ctx,
+                                      wc_pool, scratch_pool));
+
+  SVN_ERR(svn_ra_get_repos_root2(wc->ra_session, &wc->repos_root_url,
+                                 result_pool));
+  SVN_ERR(svn_ra_get_latest_revnum(wc->ra_session, &wc->head_revision,
+                                   scratch_pool));
+
+  SVN_ERR(wc_checkout(wc, base_revision, scratch_pool));
+  *wc_p = wc;
+  return SVN_NO_ERROR;
+}
+
 /* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
  *
  * ### TODO: Merges any changes in the existing txn into the new txn.
@@ -253,8 +219,8 @@ do_update(svnmover_wc_t *wc,
   SVN_ERR(svn_editor3_complete(wc->editor));
 
   /* Check out a new WC */
-  SVN_ERR(wc_update(wc, revision,
-                    scratch_pool));
+  SVN_ERR(wc_checkout(wc, revision,
+                      scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2019,8 +1985,8 @@ do_commit(svnmover_wc_t *wc,
   SVN_ERR(wc_commit(wc, revprops, scratch_pool));
 
   /* Check out a new WC */
-  SVN_ERR(wc_update(wc, SVN_INVALID_REVNUM /*=head*/,
-                    scratch_pool));
+  SVN_ERR(wc_checkout(wc, SVN_INVALID_REVNUM /*=head*/,
+                      scratch_pool));
 
   return SVN_NO_ERROR;
 }
