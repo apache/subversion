@@ -118,6 +118,8 @@ typedef struct svnmover_wc_t
   svn_editor3_t *editor;
   svn_branch_revision_root_t *edit_txn;
   svn_client_ctx_t *ctx;
+
+  svn_boolean_t made_changes;
 } svnmover_wc_t;
 
 /* Create a simulated WC, in memory.
@@ -140,6 +142,7 @@ wc_create(svnmover_wc_t **wc_p,
 
   wc->pool = wc_pool;
   wc->ctx = ctx;
+  wc->made_changes = FALSE;
 
   SVN_ERR(svn_client_open_ra_session2(&wc->ra_session, anchor_url,
                                       NULL /* wri_abspath */, ctx,
@@ -183,6 +186,54 @@ wc_create(svnmover_wc_t **wc_p,
                                 fetch_func, fetch_baton,
                                 result_pool));
   *wc_p = wc;
+  return SVN_NO_ERROR;
+}
+
+/* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
+ */
+static svn_error_t *
+wc_update(svnmover_wc_t *wc,
+          svn_revnum_t base_revision,
+          apr_pool_t *scratch_pool)
+{
+  const char *branch_info_dir = NULL;
+  svn_editor3__shim_fetch_func_t fetch_func;
+  void *fetch_baton;
+
+  /* Validate and store the new base revision number */
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    wc->base_revision = wc->head_revision;
+  else if (base_revision > wc->head_revision)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld (HEAD is %ld)"),
+                             base_revision, wc->head_revision);
+  else
+    wc->base_revision = base_revision;
+
+  /* Choose whether to store branching info in a local dir or in revprops.
+     (For now, just to exercise the options, we choose local files for
+     RA-local and revprops for a remote repo.) */
+  if (strncmp(wc->repos_root_url, "file://", 7) == 0)
+    {
+      const char *repos_dir;
+
+      SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, wc->repos_root_url,
+                                               scratch_pool));
+      branch_info_dir = svn_dirent_join(repos_dir, "branch-info", scratch_pool);
+    }
+
+  /* Get a mutable transaction based on that rev. (This implementation
+     re-reads all the move-tracking data from the repository.) */
+  SVN_ERR(svn_ra_load_branching_state(&wc->edit_txn,
+                                      &fetch_func, &fetch_baton,
+                                      wc->ra_session, branch_info_dir,
+                                      wc->base_revision,
+                                      wc->pool, scratch_pool));
+  SVN_ERR(svn_editor3_in_memory(&wc->editor,
+                                wc->edit_txn,
+                                fetch_func, fetch_baton,
+                                wc->pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -362,11 +413,16 @@ commit_callback(const svn_commit_info_t *commit_info,
 typedef struct commit_callback_baton_t
 {
   svn_editor3_t *editor;
+
+  /* just-committed revision */
+  svn_revnum_t revision;
 } commit_callback_baton_t;
 
 /* Commit the changes from WC into the repository.
  *
  * Open a new commit txn to the repo. Replay the changes from WC into it.
+ *
+ * Set WC->head_revision to the committed revision number.
  */
 static svn_error_t *
 wc_commit(svnmover_wc_t *wc,
@@ -411,6 +467,8 @@ wc_commit(svnmover_wc_t *wc,
                  scratch_pool));
   SVN_ERR(svn_editor3_complete(commit_editor));
 
+  wc->made_changes = FALSE;
+  wc->head_revision = ccbb.revision;
   return SVN_NO_ERROR;
 }
 
@@ -428,7 +486,8 @@ typedef enum action_code_t {
   ACTION_MKDIR,
   ACTION_PUT_FILE,
   ACTION_CP,
-  ACTION_RM
+  ACTION_RM,
+  ACTION_COMMIT
 } action_code_t;
 
 typedef struct action_defn_t {
@@ -474,6 +533,8 @@ static const action_defn_t action_defn[] =
   {ACTION_PUT_FILE,         "put", 2, "LOCAL_FILE PATH",
     "add or modify file PATH with text copied from" NL
     "LOCAL_FILE (use \"-\" to read from standard input)"},
+  {ACTION_COMMIT,           "commit", 0, "",
+    "commit the changes"},
 };
 
 typedef struct action_t {
@@ -1914,6 +1975,28 @@ commit_callback(const svn_commit_info_t *commit_info,
                             el_rev_left, el_rev_right,
                             flat_branch_diff, "   ",
                             pool));
+
+  b->revision = commit_info->revision;
+  return SVN_NO_ERROR;
+}
+
+/* Commit and update WC.
+ */
+static svn_error_t *
+do_commit(svnmover_wc_t *wc,
+          apr_hash_t *revprops,
+          apr_pool_t *scratch_pool)
+{
+  /* Complete the old edit drive (into the 'WC') */
+  SVN_ERR(svn_editor3_complete(wc->editor));
+
+  /* Commit */
+  SVN_ERR(wc_commit(wc, revprops, scratch_pool));
+
+  /* Check out a new WC */
+  SVN_ERR(wc_update(wc, SVN_INVALID_REVNUM /*=head*/,
+                    scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1985,27 +2068,20 @@ point_to_outer_element_instead(svn_branch_el_rev_id_t *el_rev,
 }
 
 static svn_error_t *
-execute(const apr_array_header_t *actions,
+execute(svnmover_wc_t *wc,
+        const apr_array_header_t *actions,
         const char *anchor_url,
         apr_hash_t *revprops,
-        svn_revnum_t base_revision,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
-  svnmover_wc_t *wc;
   svn_editor3_t *editor;
   const char *base_relpath;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_boolean_t made_changes = FALSE;
   int i;
-  svn_error_t *err;
 
-  SVN_ERR(wc_create(&wc,
-                      anchor_url, base_revision,
-                      ctx, pool, iterpool));
   editor = wc->editor;
   base_relpath = svn_uri_skip_ancestor(wc->repos_root_url, anchor_url, pool);
-  base_revision = wc->base_revision;
 
   for (i = 0; i < actions->nelts; ++i)
     {
@@ -2091,7 +2167,7 @@ execute(const apr_array_header_t *actions,
                 printf("branches rooted at e%d:\n", arg[0]->el_rev->eid);
               }
             SVN_ERR(list_branches(
-                      editor, base_revision,
+                      editor, wc->base_revision,
                       arg[0]->el_rev->eid,
                       FALSE, iterpool));
           }
@@ -2099,7 +2175,7 @@ execute(const apr_array_header_t *actions,
         case ACTION_LIST_BRANCHES_R:
           {
             /* (Note: BASE_REVISION is always a real revision number, here) */
-            SVN_ERR(list_all_branches(editor, base_revision, TRUE, iterpool));
+            SVN_ERR(list_all_branches(editor, wc->base_revision, TRUE, iterpool));
           }
           break;
         case ACTION_LS:
@@ -2132,7 +2208,7 @@ execute(const apr_array_header_t *actions,
             notify("A+   %s%s", action->relpath[1],
                    branch_str(new_branch, iterpool));
           }
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
           break;
         case ACTION_BRANCH_INTO:
           VERIFY_EID_EXISTS("branch-into", 0);
@@ -2146,7 +2222,7 @@ execute(const apr_array_header_t *actions,
                                            iterpool));
             notify("A+   %s (subtree)", action->relpath[1]);
           }
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
           break;
         case ACTION_MKBRANCH:
           VERIFY_REV_UNSPECIFIED("mkbranch", 0);
@@ -2165,7 +2241,7 @@ execute(const apr_array_header_t *actions,
             notify("A    %s%s", action->relpath[0],
                    branch_str(new_branch, iterpool));
           }
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
           break;
         case ACTION_MERGE:
           {
@@ -2178,7 +2254,7 @@ execute(const apr_array_header_t *actions,
                                      arg[2]->el_rev /*yca*/,
                                      iterpool));
           }
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
           break;
         case ACTION_MV:
           /* If given a branch root element, look instead at the
@@ -2199,7 +2275,7 @@ execute(const apr_array_header_t *actions,
           SVN_ERR(do_move(editor, arg[0]->el_rev, arg[1]->parent_el_rev, arg[1]->path_name,
                           iterpool));
           notify("V    %s (from %s)", action->relpath[1], action->relpath[0]);
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
           break;
         case ACTION_CP:
           VERIFY_REV_SPECIFIED("cp", 0);
@@ -2213,7 +2289,7 @@ execute(const apr_array_header_t *actions,
                                         arg[1]->parent_el_rev->branch,
                                         arg[1]->parent_el_rev->eid, arg[1]->path_name));
           notify("A+   %s (from %s)", action->relpath[1], action->relpath[0]);
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
           break;
         case ACTION_RM:
           /* If given a branch root element, look instead at the
@@ -2228,7 +2304,7 @@ execute(const apr_array_header_t *actions,
           SVN_ERR(svn_editor3_delete(editor,
                                      arg[0]->el_rev->branch, arg[0]->el_rev->eid));
           notify("D    %s", action->relpath[0]);
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
           break;
         case ACTION_MKDIR:
           VERIFY_REV_UNSPECIFIED("mkdir", 0);
@@ -2248,7 +2324,7 @@ execute(const apr_array_header_t *actions,
                                     payload));
           }
           notify("A    %s", action->relpath[0]);
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
           break;
         case ACTION_PUT_FILE:
           VERIFY_REV_UNSPECIFIED("put", 1);
@@ -2315,21 +2391,44 @@ execute(const apr_array_header_t *actions,
               }
           }
           notify("A    %s", action->relpath[1]);
-          made_changes = TRUE;
+          wc->made_changes = TRUE;
+          break;
+        case ACTION_COMMIT:
+          {
+            if (wc->made_changes)
+              {
+                SVN_ERR(do_commit(wc, revprops, iterpool));
+                editor = wc->editor;
+              }
+            else
+              {
+                printf("There are no changes to commit.\n");
+              }
+          }
           break;
         default:
           SVN_ERR_MALFUNCTION();
         }
     }
   svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
 
-  if (made_changes)
+/*  */
+static svn_error_t *
+final_commit(svnmover_wc_t *wc,
+             apr_hash_t *revprops,
+             apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  if (wc->made_changes)
     {
       /* Complete the old edit drive (into the 'WC') */
       SVN_ERR(svn_editor3_complete(wc->editor));
 
       /* Commit */
-      err = wc_commit(wc, revprops, pool);
+      err = wc_commit(wc, revprops, scratch_pool);
     }
   else
     {
@@ -2727,6 +2826,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   svn_client_ctx_t *ctx;
   const char *log_msg;
+  svnmover_wc_t *wc;
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
@@ -2952,6 +3052,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                           || extra_args_file
                           || non_interactive);
 
+  SVN_ERR(wc_create(&wc,
+                    anchor_url, base_revision,
+                    ctx, pool, pool));
   do
     {
       /* Parse arguments -- converting local style to internal style,
@@ -2961,7 +3064,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (! err)
         err = parse_actions(&actions, action_args, pool);
       if (! err)
-        err = execute(actions, anchor_url, revprops, base_revision, ctx, pool);
+        err = execute(wc, actions, anchor_url, revprops, ctx, pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
@@ -2986,6 +3089,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
     }
   while (interactive_actions && action_args);
+
+  SVN_ERR(final_commit(wc, revprops, pool));
 
   return SVN_NO_ERROR;
 }
