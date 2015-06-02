@@ -2494,7 +2494,9 @@ read_dir_entries(apr_array_header_t *entries,
         {
           /* We must be in incremental mode */
           assert(hash);
-          apr_hash_set(hash, entry.key, entry.keylen, NULL);
+          apr_hash_set(hash,
+                       apr_pstrmemdup(scratch_pool, entry.key, entry.keylen),
+                       entry.keylen, NULL);
           continue;
         }
 
@@ -2534,7 +2536,9 @@ read_dir_entries(apr_array_header_t *entries,
       /* In incremental mode, update the hash; otherwise, write to the
        * final array. */
       if (incremental)
-        apr_hash_set(hash, entry.key, entry.keylen, dirent);
+        apr_hash_set(hash,
+                     apr_pstrmemdup(scratch_pool, entry.key, entry.keylen),
+                     entry.keylen, dirent);
       else
         APR_ARRAY_PUSH(entries, svn_fs_x__dirent_t *) = dirent;
     }
