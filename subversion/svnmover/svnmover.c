@@ -919,6 +919,8 @@ typedef struct merge_conflict_policy_t
  * Note that *RESULT_P can be null, indicating a deletion.
  *
  * This handles any case where at least one of (SIDE1, SIDE2, YCA) exists.
+ *
+ * Allocate the result in RESULT_POOL and/or as pointers to the inputs.
  */
 static void
 payload_merge(svn_element_payload_t **result_p,
@@ -972,6 +974,8 @@ payload_merge(svn_element_payload_t **result_p,
  * Note that *RESULT_P can be null, indicating a deletion.
  *
  * This handles any case where at least one of (SIDE1, SIDE2, YCA) exists.
+ *
+ * Allocate the result in RESULT_POOL and/or as pointers to the inputs.
  */
 static void
 element_merge(svn_branch_el_rev_content_t **result_p,
@@ -1204,6 +1208,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   SVN_ITER_T(svn_branch_el_rev_content_t *) *pi;
   apr_hash_t *all_elements;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(src->eid == tgt->eid);
   SVN_ERR_ASSERT(src->eid == yca->eid);
@@ -1261,6 +1266,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
       svn_branch_el_rev_content_t *result;
       svn_boolean_t conflict;
 
+      svn_pool_clear(iterpool);
+
       /* If an element hasn't changed in the source branch, there is
          no need to do anything with it in the target branch. We could
          use element_merge() for any case where at least one of (SRC,
@@ -1268,7 +1275,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
       if (! e_yca_src)
         {
           /* Still need to merge subbranch */
-          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
+          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, iterpool));
 
           continue;
         }
@@ -1291,26 +1298,26 @@ branch_merge_subtree_r(svn_editor3_t *editor,
         {
           notify("M/V  e%d %s%s",
                  eid, result->name,
-                 subbranch_str(tgt->branch, eid, scratch_pool));
+                 subbranch_str(tgt->branch, eid, iterpool));
 
           SVN_ERR(svn_editor3_alter(editor, tgt->branch, eid,
                                     result->parent_eid, result->name,
                                     result->payload));
 
-          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
+          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, iterpool));
         }
       else if (e_tgt)
         {
           notify("D    e%d %s%s",
                  eid, e_yca->name,
-                 subbranch_str(yca->branch, eid, scratch_pool));
+                 subbranch_str(yca->branch, eid, iterpool));
           SVN_ERR(svn_editor3_delete(editor, tgt->branch, eid));
         }
       else if (result)
         {
           notify("A    e%d %s%s",
                  eid, result->name,
-                 subbranch_str(src->branch, eid, scratch_pool));
+                 subbranch_str(src->branch, eid, iterpool));
 
           /* In BRANCH, create an instance of the element EID with new content.
            *
@@ -1323,9 +1330,10 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                                     result->parent_eid, result->name,
                                     result->payload));
 
-          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, scratch_pool));
+          SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, iterpool));
         }
     }
+  svn_pool_destroy(iterpool);
 
   notify("merging into branch %s -- finished",
          svn_branch_get_id(tgt->branch, scratch_pool));
@@ -2035,16 +2043,16 @@ execute(const apr_array_header_t *actions,
                                          "must be a number or 'head'",
                                          action->relpath[j]);
 
-              rrpath = svn_relpath_join(base_relpath, action->relpath[j], pool);
-              parent_rrpath = svn_relpath_dirname(rrpath, pool);
+              rrpath = svn_relpath_join(base_relpath, action->relpath[j], iterpool);
+              parent_rrpath = svn_relpath_dirname(rrpath, iterpool);
 
               arg[j]->path_name = svn_relpath_basename(rrpath, NULL);
               SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->el_rev, editor,
                                                 arg[j]->revnum, rrpath,
-                                                pool, pool));
+                                                iterpool, iterpool));
               SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->parent_el_rev, editor,
                                                 arg[j]->revnum, parent_rrpath,
-                                                pool, pool));
+                                                iterpool, iterpool));
             }
         }
       switch (action->action)
@@ -2175,7 +2183,7 @@ execute(const apr_array_header_t *actions,
         case ACTION_MV:
           /* If given a branch root element, look instead at the
              subbranch-root element within the outer branch. */
-          arg[0]->el_rev = point_to_outer_element_instead(arg[0]->el_rev, pool);
+          arg[0]->el_rev = point_to_outer_element_instead(arg[0]->el_rev, iterpool);
           if (! arg[0]->el_rev)
             return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                      _("mv: cannot move the repository root"));
@@ -2189,7 +2197,7 @@ execute(const apr_array_header_t *actions,
           VERIFY_EID_NONEXISTENT("mv", 1);
           VERIFY_PARENT_EID_EXISTS("mv", 1);
           SVN_ERR(do_move(editor, arg[0]->el_rev, arg[1]->parent_el_rev, arg[1]->path_name,
-                          pool));
+                          iterpool));
           notify("V    %s (from %s)", action->relpath[1], action->relpath[0]);
           made_changes = TRUE;
           break;
@@ -2210,7 +2218,7 @@ execute(const apr_array_header_t *actions,
         case ACTION_RM:
           /* If given a branch root element, look instead at the
              subbranch-root element within the outer branch. */
-          arg[0]->el_rev = point_to_outer_element_instead(arg[0]->el_rev, pool);
+          arg[0]->el_rev = point_to_outer_element_instead(arg[0]->el_rev, iterpool);
           if (! arg[0]->el_rev)
             return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                      _("rm: cannot remove the repository root"));
@@ -2313,6 +2321,7 @@ execute(const apr_array_header_t *actions,
           SVN_ERR_MALFUNCTION();
         }
     }
+  svn_pool_destroy(iterpool);
 
   if (made_changes)
     {
@@ -2329,7 +2338,6 @@ execute(const apr_array_header_t *actions,
 
   svn_pool_destroy(wc->pool);
 
-  svn_pool_destroy(iterpool);
   return svn_error_trace(err);
 }
 
