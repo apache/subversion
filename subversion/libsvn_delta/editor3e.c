@@ -634,15 +634,27 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
       /* If node payload is given by reference, resolve it to full payload */
       if (element_left)
         {
-          SVN_ERR(svn_editor3_payload_resolve(&element_left->payload,
+          svn_element_payload_t *payload;
+
+          SVN_ERR(svn_editor3_payload_resolve(&payload,
                                               editor, element_left,
                                               result_pool, scratch_pool));
+          element_left
+            = svn_branch_el_rev_content_create(element_left->parent_eid,
+                                               element_left->name,
+                                               payload, result_pool);
         }
       if (element_right)
         {
-          SVN_ERR(svn_editor3_payload_resolve(&element_right->payload,
+          svn_element_payload_t *payload;
+
+          SVN_ERR(svn_editor3_payload_resolve(&payload,
                                               editor, element_right,
                                               result_pool, scratch_pool));
+          element_right
+            = svn_branch_el_rev_content_create(element_right->parent_eid,
+                                               element_right->name,
+                                               payload, result_pool);
         }
 
       if (! svn_branch_el_rev_content_equal(element_left, element_right,
