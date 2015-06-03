@@ -124,7 +124,6 @@ typedef struct svnmover_wc_t
   svn_branch_revision_root_t *edit_txn;
   svn_client_ctx_t *ctx;
 
-  svn_boolean_t made_changes;
 } svnmover_wc_t;
 
 /* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
@@ -214,7 +213,6 @@ wc_create(svnmover_wc_t **wc_p,
 
   wc->pool = wc_pool;
   wc->ctx = ctx;
-  wc->made_changes = FALSE;
 
   SVN_ERR(svn_client_open_ra_session2(&wc->ra_session, anchor_url,
                                       NULL /* wri_abspath */, ctx,
@@ -420,10 +418,16 @@ display_diff_of_commit(const commit_callback_baton_t *ccbb,
  *
  * Open a new commit txn to the repo. Replay the changes from WC into it.
  *
- * Set WC->head_revision to the committed revision number.
+ * Set WC->head_revision and *NEW_REV_P to the committed revision number.
+ *
+ * If there are no changes to commit, set *NEW_REV_P to SVN_INVALID_REVNUM
+ * and do not make a commit and do not change WC->head_revision.
+ *
+ * NEW_REV_P may be null if not wanted.
  */
 static svn_error_t *
-wc_commit(svnmover_wc_t *wc,
+wc_commit(svn_revnum_t *new_rev_p,
+          svnmover_wc_t *wc,
           apr_hash_t *revprops,
           apr_pool_t *scratch_pool)
 {
@@ -434,6 +438,7 @@ wc_commit(svnmover_wc_t *wc,
   svn_branch_revision_root_t *commit_txn;
   svn_editor3_t *commit_editor;
   commit_callback_baton_t ccbb;
+  svn_boolean_t change_detected;
 
   /* Choose whether to store branching info in a local dir or in revprops.
      (For now, just to exercise the options, we choose local files for
@@ -455,6 +460,10 @@ wc_commit(svnmover_wc_t *wc,
                                        NULL /*lock_tokens*/, FALSE /*keep_locks*/,
                                        branch_info_dir,
                                        scratch_pool));
+  SVN_ERR(svn_editor3__change_detection_editor(&commit_editor,
+                                               &change_detected,
+                                               commit_editor,
+                                               scratch_pool));
   ccbb.edit_txn = commit_txn;
   ccbb.editor = commit_editor;
   /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
@@ -463,12 +472,22 @@ wc_commit(svnmover_wc_t *wc,
                  left_txn,
                  right_txn,
                  scratch_pool));
-  SVN_ERR(svn_editor3_complete(commit_editor));
+  if (change_detected)
+    {
+      SVN_ERR(svn_editor3_complete(commit_editor));
+      SVN_ERR(display_diff_of_commit(&ccbb, scratch_pool));
 
-  SVN_ERR(display_diff_of_commit(&ccbb, scratch_pool));
+      wc->head_revision = ccbb.revision;
+      if (new_rev_p)
+        *new_rev_p = ccbb.revision;
+    }
+  else
+    {
+      SVN_ERR(svn_editor3_abort(commit_editor));
+      if (new_rev_p)
+        *new_rev_p = SVN_INVALID_REVNUM;
+    }
 
-  wc->made_changes = FALSE;
-  wc->head_revision = ccbb.revision;
   return SVN_NO_ERROR;
 }
 
@@ -2044,22 +2063,37 @@ display_diff_of_commit(const commit_callback_baton_t *ccbb,
 }
 
 /* Commit and update WC.
+ *
+ * Set *NEW_REV_P to the committed revision number, and update the WC to
+ * that revision.
+ *
+ * If there are no changes to commit, set *NEW_REV_P to SVN_INVALID_REVNUM
+ * and do not make a commit and do not update the WC.
+ *
+ * NEW_REV_P may be null if not wanted.
  */
 static svn_error_t *
-do_commit(svnmover_wc_t *wc,
+do_commit(svn_revnum_t *new_rev_p,
+          svnmover_wc_t *wc,
           apr_hash_t *revprops,
           apr_pool_t *scratch_pool)
 {
+  svn_revnum_t new_rev;
+
   /* Complete the old edit drive (into the 'WC') */
   SVN_ERR(svn_editor3_complete(wc->editor));
 
   /* Commit */
-  SVN_ERR(wc_commit(wc, revprops, scratch_pool));
+  SVN_ERR(wc_commit(&new_rev, wc, revprops, scratch_pool));
 
-  /* Check out a new WC */
-  SVN_ERR(wc_checkout(wc, SVN_INVALID_REVNUM /*=head*/,
-                      scratch_pool));
+  /* Check out a new WC if a commit was performed */
+  if (SVN_IS_VALID_REVNUM(new_rev))
+    {
+      SVN_ERR(wc_checkout(wc, new_rev, scratch_pool));
+    }
 
+  if (new_rev_p)
+    *new_rev_p = new_rev;
   return SVN_NO_ERROR;
 }
 
@@ -2069,8 +2103,14 @@ static svn_error_t *
 do_revert(svnmover_wc_t *wc,
           apr_pool_t *scratch_pool)
 {
-  SVN_ERR(wc_checkout(wc, wc->base_revision, scratch_pool));
-  wc->made_changes = FALSE;
+  svn_branch_revision_root_t *base_txn
+    = svn_array_get(wc->edit_txn->repos->rev_roots, (int)wc->base_revision);
+
+  /* Replay the inverse of the current edit txn, into the current edit txn */
+  SVN_ERR(replay(wc->editor, wc->edit_txn->root_branch,
+                 wc->edit_txn,
+                 base_txn,
+                 scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2314,7 +2354,6 @@ execute(svnmover_wc_t *wc,
             notify("A+   %s%s", action->relpath[1],
                    branch_str(new_branch, iterpool));
           }
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_BRANCH_INTO:
@@ -2329,7 +2368,6 @@ execute(svnmover_wc_t *wc,
                                            iterpool));
             notify("A+   %s (subtree)", action->relpath[1]);
           }
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_MKBRANCH:
@@ -2349,7 +2387,6 @@ execute(svnmover_wc_t *wc,
             notify("A    %s%s", action->relpath[0],
                    branch_str(new_branch, iterpool));
           }
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_MERGE:
@@ -2363,7 +2400,6 @@ execute(svnmover_wc_t *wc,
                                      arg[2]->el_rev /*yca*/,
                                      iterpool));
           }
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_MV:
@@ -2385,7 +2421,6 @@ execute(svnmover_wc_t *wc,
           SVN_ERR(do_move(editor, arg[0]->el_rev, arg[1]->parent_el_rev, arg[1]->path_name,
                           iterpool));
           notify("V    %s (from %s)", action->relpath[1], action->relpath[0]);
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_CP:
@@ -2400,7 +2435,6 @@ execute(svnmover_wc_t *wc,
                                         arg[1]->parent_el_rev->branch,
                                         arg[1]->parent_el_rev->eid, arg[1]->path_name));
           notify("A+   %s (from %s)", action->relpath[1], action->relpath[0]);
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_RM:
@@ -2416,7 +2450,6 @@ execute(svnmover_wc_t *wc,
           SVN_ERR(svn_editor3_delete(editor,
                                      arg[0]->el_rev->branch, arg[0]->el_rev->eid));
           notify("D    %s", action->relpath[0]);
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_MKDIR:
@@ -2437,7 +2470,6 @@ execute(svnmover_wc_t *wc,
                                     payload));
           }
           notify("A    %s", action->relpath[0]);
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_PUT_FILE:
@@ -2505,14 +2537,15 @@ execute(svnmover_wc_t *wc,
               }
           }
           notify("A    %s", action->relpath[1]);
-          wc->made_changes = TRUE;
           break;
 
         case ACTION_COMMIT:
           {
-            if (wc->made_changes)
+            svn_revnum_t new_rev;
+
+            SVN_ERR(do_commit(&new_rev, wc, revprops, iterpool));
+            if (SVN_IS_VALID_REVNUM(new_rev))
               {
-                SVN_ERR(do_commit(wc, revprops, iterpool));
                 editor = wc->editor;
               }
             else
@@ -2534,15 +2567,7 @@ execute(svnmover_wc_t *wc,
 
         case ACTION_REVERT:
           {
-            if (wc->made_changes)
-              {
-                SVN_ERR(do_revert(wc, iterpool));
-                editor = wc->editor;
-              }
-            else
-              {
-                printf("There are no changes to revert.\n");
-              }
+            SVN_ERR(do_revert(wc, iterpool));
           }
           break;
 
@@ -2562,18 +2587,11 @@ final_commit(svnmover_wc_t *wc,
 {
   svn_error_t *err;
 
-  if (wc->made_changes)
-    {
-      /* Complete the old edit drive (into the 'WC') */
-      SVN_ERR(svn_editor3_complete(wc->editor));
+  /* Complete the old edit drive (into the 'WC') */
+  SVN_ERR(svn_editor3_complete(wc->editor));
 
-      /* Commit */
-      err = wc_commit(wc, revprops, scratch_pool);
-    }
-  else
-    {
-      err = svn_editor3_abort(wc->editor);
-    }
+  /* Commit, if there are any changes */
+  err = wc_commit(NULL, wc, revprops, scratch_pool);
 
   svn_pool_destroy(wc->pool);
 

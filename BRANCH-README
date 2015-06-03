@@ -46,9 +46,6 @@ BUGS:
     branch-and-delete, never by copy-and-delete. Is that right? If so,
     delete the 'if' and the 'else' code block.
 
-  * svnmover's 'made_changes' flag is fallible: undoing all changes doesn't
-    reset the flag. Instead, query whether the txn has any changes.
-
 
 Work on this branch:
 
@@ -89,6 +86,7 @@ Work on this branch:
       merge
       commit
       update
+      revert
 
     UI things to do:
       add a 'parallel mode' UI as an alternative to the sequential mode

@@ -633,6 +633,195 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
 
 /*
  * ===================================================================
+ */
+
+typedef struct change_detection_baton_t
+{
+  svn_editor3_t *wrapped_editor;
+
+  svn_boolean_t *change_detected;
+
+} change_detection_baton_t;
+
+static svn_error_t *
+change_detection_new_eid(void *baton,
+             svn_branch_eid_t *eid_p,
+             svn_branch_state_t *branch,
+             apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_new_eid(eb->wrapped_editor,
+                              eid_p, branch));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_add(void *baton,
+         svn_branch_state_t *branch,
+         svn_branch_eid_t eid,
+         svn_branch_eid_t new_parent_eid,
+         const char *new_name,
+         const svn_element_payload_t *new_payload,
+         apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  *eb->change_detected = TRUE;
+  SVN_ERR(svn_editor3_add(eb->wrapped_editor,
+                          branch, eid,
+                          new_parent_eid, new_name, new_payload));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_copy_one(void *baton,
+              const svn_branch_el_rev_id_t *src_el_rev,
+              svn_branch_state_t *branch,
+              svn_branch_eid_t local_eid,
+              svn_branch_eid_t new_parent_eid,
+              const char *new_name,
+              const svn_element_payload_t *new_payload,
+              apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  *eb->change_detected = TRUE;
+  SVN_ERR(svn_editor3_copy_one(eb->wrapped_editor,
+                               src_el_rev,
+                               branch, local_eid,
+                               new_parent_eid, new_name, new_payload));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_copy_tree(void *baton,
+               const svn_branch_el_rev_id_t *src_el_rev,
+               svn_branch_state_t *branch,
+               svn_branch_eid_t new_parent_eid,
+               const char *new_name,
+               apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  *eb->change_detected = TRUE;
+  SVN_ERR(svn_editor3_copy_tree(eb->wrapped_editor,
+                                src_el_rev,
+                                branch, new_parent_eid, new_name));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_delete(void *baton,
+            svn_branch_state_t *branch,
+            svn_branch_eid_t eid,
+            apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  *eb->change_detected = TRUE;
+  SVN_ERR(svn_editor3_delete(eb->wrapped_editor,
+                             branch, eid));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_alter(void *baton,
+           svn_branch_state_t *branch,
+           svn_branch_eid_t eid,
+           svn_branch_eid_t new_parent_eid,
+           const char *new_name,
+           const svn_element_payload_t *new_payload,
+           apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  *eb->change_detected = TRUE;
+  SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
+                            branch, eid,
+                            new_parent_eid, new_name, new_payload));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_payload_resolve(void *baton,
+                     svn_element_payload_t **payload_p,
+                     const svn_branch_el_rev_content_t *element,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_payload_resolve(eb->wrapped_editor,
+                                      payload_p,
+                                      element,
+                                      result_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_sequence_point(void *baton,
+                    apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_sequence_point(eb->wrapped_editor));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_complete(void *baton,
+              apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_complete(eb->wrapped_editor));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_abort(void *baton,
+           apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_abort(eb->wrapped_editor));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_editor3__change_detection_editor(svn_editor3_t **editor_p,
+                                     svn_boolean_t *change_detected,
+                                     svn_editor3_t *wrapped_editor,
+                                     apr_pool_t *result_pool)
+{
+  static const svn_editor3_cb_funcs_t wrapper_funcs = {
+    change_detection_new_eid,
+    change_detection_add,
+    change_detection_copy_one,
+    change_detection_copy_tree,
+    change_detection_delete,
+    change_detection_alter,
+    change_detection_payload_resolve,
+    change_detection_sequence_point,
+    change_detection_complete,
+    change_detection_abort
+  };
+  change_detection_baton_t *eb = apr_palloc(result_pool, sizeof(*eb));
+
+  eb->wrapped_editor = wrapped_editor;
+  eb->change_detected = change_detected;
+  *change_detected = FALSE;
+
+  *editor_p = svn_editor3_create(&wrapper_funcs, eb,
+                                 NULL, NULL, /* cancellation */
+                                 result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * ===================================================================
  * Branch functionality
  * ===================================================================
  */
