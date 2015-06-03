@@ -1020,16 +1020,14 @@ write_packed_revprop(const char **final_path,
       *final_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
       SVN_ERR(svn_io_open_unique_file3(&file, tmp_path, revprops->folder,
                                        svn_io_file_del_none, pool, pool));
-
+      stream = svn_stream_from_aprfile2(file, TRUE, pool);
       for (i = 0; i < revprops->manifest->nelts; ++i)
         {
           const char *filename = APR_ARRAY_IDX(revprops->manifest, i,
                                                const char*);
-          SVN_ERR(svn_io_file_write_full(file, filename, strlen(filename),
-                                         NULL, pool));
-          SVN_ERR(svn_io_file_putc('\n', file, pool));
+          SVN_ERR(svn_stream_printf(stream, pool, "%s\n", filename));
         }
-
+      SVN_ERR(svn_stream_close(stream));
       SVN_ERR(svn_io_file_flush_to_disk(file, pool));
       SVN_ERR(svn_io_file_close(file, pool));
     }
