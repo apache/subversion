@@ -991,14 +991,14 @@ payload_fetch(svn_element_payload_t **payload_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_editor3_payload_resolve(svn_element_payload_t **payload_p,
-                            svn_editor3_t *editor,
-                            const svn_branch_el_rev_content_t *element,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+static svn_error_t *
+editor3_payload_resolve(void *baton,
+                        svn_element_payload_t **payload_p,
+                        const svn_branch_el_rev_content_t *element,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
+  ev3_from_delta_baton_t *eb = baton;
 
   SVN_ERR_ASSERT(element);
 
@@ -1695,6 +1695,7 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
     editor3_copy_tree,
     editor3_delete,
     editor3_alter,
+    editor3_payload_resolve,
     editor3_sequence_point,
     editor3_mem_complete,
     editor3_mem_abort
@@ -1734,6 +1735,7 @@ svn_editor3__ev3_from_delta_for_commit(
     editor3_copy_tree,
     editor3_delete,
     editor3_alter,
+    editor3_payload_resolve,
     editor3_sequence_point,
     editor3_complete,
     editor3_abort
