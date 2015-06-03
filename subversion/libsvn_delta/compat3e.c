@@ -1048,31 +1048,6 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **element_p,
 }
 
 svn_error_t *
-svn_editor3_get_all_branches_in_rev(const apr_array_header_t **branches_p,
-                                    svn_editor3_t *editor,
-                                    svn_revnum_t revnum,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-  svn_branch_revision_root_t *rev_root;
-
-  if (SVN_IS_VALID_REVNUM(revnum))
-    {
-      const svn_branch_repos_t *repos = eb->edited_rev_root->repos;
-
-      rev_root = svn_array_get(repos->rev_roots, (int)(revnum));
-    }
-  else
-    {
-      rev_root = eb->edited_rev_root;
-    }
-
-  *branches_p = svn_branch_revision_root_get_branches(rev_root, result_pool);
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                     svn_editor3_t *editor,
                                     const char *rrpath,
