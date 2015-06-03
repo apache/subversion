@@ -321,6 +321,20 @@ svn_editor3_alter(svn_editor3_t *editor,
 }
 
 svn_error_t *
+svn_editor3_payload_resolve(svn_editor3_t *editor,
+                            svn_element_payload_t **payload_p,
+                            const svn_branch_el_rev_content_t *element,
+                            apr_pool_t *result_pool)
+{
+  DO_CALLBACK(editor, cb_payload_resolve,
+              3(payload_p,
+                element,
+                result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_editor3_sequence_point(svn_editor3_t *editor)
 {
   SHOULD_NOT_BE_FINISHED(editor);
@@ -527,6 +541,22 @@ wrap_alter(void *baton,
 }
 
 static svn_error_t *
+wrap_payload_resolve(void *baton,
+                     svn_element_payload_t **payload_p,
+                     const svn_branch_el_rev_content_t *element,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_payload_resolve(eb->wrapped_editor,
+                                  payload_p,
+                                  element,
+                                  result_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 wrap_sequence_point(void *baton,
                     apr_pool_t *scratch_pool)
 {
@@ -571,6 +601,7 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
     wrap_copy_tree,
     wrap_delete,
     wrap_alter,
+    wrap_payload_resolve,
     wrap_sequence_point,
     wrap_complete,
     wrap_abort
@@ -636,9 +667,8 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
         {
           svn_element_payload_t *payload;
 
-          SVN_ERR(svn_editor3_payload_resolve(&payload,
-                                              editor, element_left,
-                                              result_pool, scratch_pool));
+          SVN_ERR(svn_editor3_payload_resolve(editor, &payload, element_left,
+                                          result_pool));
           element_left
             = svn_branch_el_rev_content_create(element_left->parent_eid,
                                                element_left->name,
@@ -648,9 +678,8 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
         {
           svn_element_payload_t *payload;
 
-          SVN_ERR(svn_editor3_payload_resolve(&payload,
-                                              editor, element_right,
-                                              result_pool, scratch_pool));
+          SVN_ERR(svn_editor3_payload_resolve(editor, &payload, element_right,
+                                          result_pool));
           element_right
             = svn_branch_el_rev_content_create(element_right->parent_eid,
                                                element_right->name,

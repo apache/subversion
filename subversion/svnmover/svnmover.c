@@ -412,6 +412,10 @@ typedef struct commit_callback_baton_t
   svn_revnum_t revision;
 } commit_callback_baton_t;
 
+static svn_error_t *
+display_diff_of_commit(const commit_callback_baton_t *ccbb,
+                       apr_pool_t *scratch_pool);
+
 /* Commit the changes from WC into the repository.
  *
  * Open a new commit txn to the repo. Replay the changes from WC into it.
@@ -460,6 +464,8 @@ wc_commit(svnmover_wc_t *wc,
                  right_txn,
                  scratch_pool));
   SVN_ERR(svn_editor3_complete(commit_editor));
+
+  SVN_ERR(display_diff_of_commit(&ccbb, scratch_pool));
 
   wc->made_changes = FALSE;
   wc->head_revision = ccbb.revision;
@@ -2003,27 +2009,37 @@ commit_callback(const svn_commit_info_t *commit_info,
                 apr_pool_t *pool)
 {
   commit_callback_baton_t *b = baton;
-  svn_branch_el_rev_id_t *el_rev_left, *el_rev_right;
-  const char *rrpath = "";
-  const svn_branch_repos_t *repos = b->edit_txn->repos;
 
   SVN_ERR(svn_cmdline_printf(pool, "Committed r%ld:\n",
                              commit_info->revision));
 
+  b->revision = commit_info->revision;
+  return SVN_NO_ERROR;
+}
+
+/* Display a diff of the commit */
+static svn_error_t *
+display_diff_of_commit(const commit_callback_baton_t *ccbb,
+                       apr_pool_t *scratch_pool)
+{
+  svn_branch_el_rev_id_t *el_rev_left, *el_rev_right;
+  const char *rrpath = "";
+  const svn_branch_repos_t *repos = ccbb->edit_txn->repos;
+
   SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(&el_rev_left,
                                                    rrpath,
-                                                   commit_info->revision - 1,
-                                                   repos, pool, pool));
+                                                   ccbb->revision - 1,
+                                                   repos, scratch_pool,
+                                                   scratch_pool));
   SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(&el_rev_right,
                                                    rrpath,
-                                                   commit_info->revision,
-                                                   repos, pool, pool));
-  SVN_ERR(svn_branch_diff_r(b->editor,
+                                                   ccbb->revision,
+                                                   repos, scratch_pool,
+                                                   scratch_pool));
+  SVN_ERR(svn_branch_diff_r(ccbb->editor,
                             el_rev_left, el_rev_right,
                             flat_branch_diff, "   ",
-                            pool));
-
-  b->revision = commit_info->revision;
+                            scratch_pool));
   return SVN_NO_ERROR;
 }
 

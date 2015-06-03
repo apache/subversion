@@ -899,6 +899,15 @@ typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   const svn_element_payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
+/** @see svn_editor3_payload_resolve(), #svn_editor3_t
+ */
+typedef svn_error_t *(*svn_editor3_cb_payload_resolve_t)(
+  void *baton,
+  svn_element_payload_t **payload_p,
+  const svn_branch_el_rev_content_t *element,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
 /** @see svn_editor3_sequence_point(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_sequence_point_t)(
@@ -940,6 +949,7 @@ typedef struct svn_editor3_cb_funcs_t
   svn_editor3_cb_copy_tree_t cb_copy_tree;
   svn_editor3_cb_delete_t cb_delete;
   svn_editor3_cb_alter_t cb_alter;
+  svn_editor3_cb_payload_resolve_t cb_payload_resolve;
 
   svn_editor3_cb_sequence_point_t cb_sequence_point;
   svn_editor3_cb_complete_t cb_complete;
@@ -986,11 +996,10 @@ svn_editor3__get_baton(const svn_editor3_t *editor);
 /* Fetch full payload...
  */
 svn_error_t *
-svn_editor3_payload_resolve(svn_element_payload_t **payload_p,
-                            svn_editor3_t *editor,
+svn_editor3_payload_resolve(svn_editor3_t *editor,
+                            svn_element_payload_t **payload_p,
                             const svn_branch_el_rev_content_t *element,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
+                            apr_pool_t *result_pool);
 
 /* Return (left, right) pairs of element content that differ between
  * subtrees LEFT and RIGHT.
