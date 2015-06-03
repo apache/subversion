@@ -52,7 +52,7 @@ Other candidate changes:
      This specific test -unlike other tests- cleans up its own environment a
      few times to retry some scenarios on the same paths.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
 Veto-blocked changes:
 =====================
