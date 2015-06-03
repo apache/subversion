@@ -42,6 +42,18 @@ Other candidate changes:
      +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
+ * r1683303
+   Resolve a race condition in some test suite cleanup code.
+   Justification:
+     Without this patch running the testsuite on bdb x svnserve consistently
+     fails on at least some Windows test systems. bdb x serf sometimes
+     triggers the same problem, but in far less cases.
+     .
+     This specific test -unlike other tests- cleans up its own environment a
+     few times to retry some scenarios on the same paths.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
