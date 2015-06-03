@@ -4362,14 +4362,54 @@ svn_client_revert(const apr_array_header_t *paths,
  */
 
 /**
+ * Return the absolute path to the conflicted working copy node described
+ * by @a conflict.
+ *
+ * @since New in 1.10. 
+ */
+const char *
+svn_client_conflict_get_local_abspath(svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return the operation during which the conflict described by @a
+ * conflict was recorded.
+ *
+ * @since New in 1.10. 
+ */
+svn_wc_operation_t
+svn_client_conflict_get_operation(svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return the action an update, switch, or merge operation attempted to
+ * perform on the working copy node described by @a conflict.
+ * 
+ * @since New in 1.10. 
+ */
+svn_wc_conflict_action_t
+svn_client_conflict_get_incoming_change(
+  svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return the reason why the attempted action performed by an update, switch,
+ * or merge operation conflicted with the state of the node in the working copy.
+ *
+ * During update and switch operations this local change is part of uncommitted
+ * modifications in the working copy. During merge operations it may
+ * additionally be part of the history of the merge target branch, anywhere
+ * between the common ancestor revision and the working copy revision.
+ * 
+ * @since New in 1.10. 
+ */
+svn_wc_conflict_reason_t
+svn_client_conflict_get_local_change(svn_wc_conflict_description2_t *conflict);
+
+/**
  * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
  * API for eventually replacing svn_wc_conflict_description2_t with an opaque
  * type and providing improved APIs for conflict resolution.
  * 
  * @since New in 1.10. 
  */
-#define svn_client_conflict_get_local_abspath(conflict) \
-  ((conflict)->local_abspath)
 
 #define svn_client_conflict_get_node_kind(conflict) \
   ((conflict)->node_kind)
@@ -4386,12 +4426,6 @@ svn_client_revert(const apr_array_header_t *paths,
 #define svn_client_conflict_get_mime_type(conflict) \
   ((conflict)->mime_type)
 
-#define svn_client_conflict_get_action(conflict) \
-  ((conflict)->action)
-
-#define svn_client_conflict_get_reason(conflict) \
-  ((conflict)->reason)
-
 #define svn_client_conflict_get_base_abspath(conflict) \
   ((conflict)->base_abspath)
 
@@ -4403,9 +4437,6 @@ svn_client_revert(const apr_array_header_t *paths,
 
 #define svn_client_conflict_get_merged_file(conflict) \
   ((conflict)->merged_file)
-
-#define svn_client_conflict_get_operation(conflict) \
-  ((conflict)->operation)
 
 #define svn_client_conflict_get_src_left_version(conflict) \
   ((conflict)->src_left_version)
