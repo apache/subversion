@@ -4368,7 +4368,8 @@ svn_client_revert(const apr_array_header_t *paths,
  * @since New in 1.10. 
  */
 const char *
-svn_client_conflict_get_local_abspath(svn_wc_conflict_description2_t *conflict);
+svn_client_conflict_get_local_abspath(
+  const svn_wc_conflict_description2_t *conflict);
 
 /**
  * Return the operation during which the conflict described by @a
@@ -4377,7 +4378,8 @@ svn_client_conflict_get_local_abspath(svn_wc_conflict_description2_t *conflict);
  * @since New in 1.10. 
  */
 svn_wc_operation_t
-svn_client_conflict_get_operation(svn_wc_conflict_description2_t *conflict);
+svn_client_conflict_get_operation(
+  const svn_wc_conflict_description2_t *conflict);
 
 /**
  * Return the action an update, switch, or merge operation attempted to
@@ -4387,7 +4389,7 @@ svn_client_conflict_get_operation(svn_wc_conflict_description2_t *conflict);
  */
 svn_wc_conflict_action_t
 svn_client_conflict_get_incoming_change(
-  svn_wc_conflict_description2_t *conflict);
+  const svn_wc_conflict_description2_t *conflict);
 
 /**
  * Return the reason why the attempted action performed by an update, switch,
@@ -4401,7 +4403,8 @@ svn_client_conflict_get_incoming_change(
  * @since New in 1.10. 
  */
 svn_wc_conflict_reason_t
-svn_client_conflict_get_local_change(svn_wc_conflict_description2_t *conflict);
+svn_client_conflict_get_local_change(
+  const svn_wc_conflict_description2_t *conflict);
 
 /**
  * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
