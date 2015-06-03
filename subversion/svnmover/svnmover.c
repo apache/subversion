@@ -1144,9 +1144,15 @@ element_merge(svn_branch_el_rev_content_t **result_p,
         }
 
       /* merge the payload */
-      payload_merge(&result->payload, &conflict,
-                    eid, side1->payload, side2->payload, yca->payload,
-                    policy, result_pool, scratch_pool);
+      {
+        svn_boolean_t payload_conflict;
+
+        payload_merge(&result->payload, &payload_conflict,
+                      eid, side1->payload, side2->payload, yca->payload,
+                      policy, result_pool, scratch_pool);
+        if (payload_conflict)
+          conflict = TRUE;
+      }
     }
   else if (! side1 && ! side2)
     {
