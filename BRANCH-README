@@ -42,6 +42,13 @@ BUGS:
     - update .@head     # now two paths 'a' exist
     - commit            # should fail
 
+  * In 'do_move()' svnmover always performs a cross-branch move by
+    branch-and-delete, never by copy-and-delete. Is that right? If so,
+    delete the 'if' and the 'else' code block.
+
+  * svnmover's 'made_changes' flag is fallible: undoing all changes doesn't
+    reset the flag. Instead, query whether the txn has any changes.
+
 
 Work on this branch:
 
