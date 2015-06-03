@@ -476,7 +476,8 @@ typedef enum action_code_t {
   ACTION_CP,
   ACTION_RM,
   ACTION_COMMIT,
-  ACTION_UPDATE
+  ACTION_UPDATE,
+  ACTION_STATUS
 } action_code_t;
 
 typedef struct action_defn_t {
@@ -526,6 +527,8 @@ static const action_defn_t action_defn[] =
     "commit the changes"},
   {ACTION_UPDATE,           "update", 1, ".@REV",
     "update to revision REV, keeping local changes"},
+  {ACTION_STATUS,           "status", 0, "",
+    "same as 'diff .@base .'"},
 };
 
 typedef struct action_t {
@@ -2179,6 +2182,22 @@ execute(svnmover_wc_t *wc,
             SVN_ERR(svn_branch_diff_r(editor,
                                       arg[0]->el_rev /*from*/,
                                       arg[1]->el_rev /*to*/,
+                                      flat_branch_diff, "",
+                                      iterpool));
+          }
+          break;
+        case ACTION_STATUS:
+          {
+            svn_branch_el_rev_id_t *from, *to;
+
+            SVN_ERR(find_el_rev_by_rrpath_rev(&from, editor,
+                                              wc->base_revision, base_relpath,
+                                              iterpool, iterpool));
+            SVN_ERR(find_el_rev_by_rrpath_rev(&to, editor,
+                                              SVN_INVALID_REVNUM, base_relpath,
+                                              iterpool, iterpool));
+            SVN_ERR(svn_branch_diff_r(editor,
+                                      from, to,
                                       flat_branch_diff, "",
                                       iterpool));
           }
