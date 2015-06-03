@@ -424,7 +424,6 @@ wc_commit(svnmover_wc_t *wc,
           apr_pool_t *scratch_pool)
 {
   const char *branch_info_dir = NULL;
-  svn_branch_state_t *edit_root_branch;
   svn_branch_revision_root_t *left_txn
     = svn_array_get(wc->edit_txn->repos->rev_roots, (int)wc->base_revision);
   svn_branch_revision_root_t *right_txn = wc->edit_txn;
