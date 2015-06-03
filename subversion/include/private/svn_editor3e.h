@@ -1001,25 +1001,6 @@ svn_editor3_find_branch_element_by_rrpath(svn_branch_state_t **branch_p,
                                           const char *rrpath,
                                           apr_pool_t *scratch_pool);
 
-/* Find the deepest branch in the repository of which RRPATH @ REVNUM is
- * either the root element or a normal, non-sub-branch element.
- *
- * Return the location of the element at RRPATH in that branch, or with
- * EID=-1 if no element exists there.
- *
- * REVNUM must be the revision number of a committed revision.
- *
- * The result will never be NULL, as every path is within at least the root
- * branch.
- */
-svn_error_t *
-svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
-                                   svn_editor3_t *editor,
-                                   const char *rrpath,
-                                   svn_revnum_t revnum,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
-
 /* Fetch full payload...
  */
 svn_error_t *
