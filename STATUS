@@ -54,6 +54,17 @@ Other candidate changes:
    Votes:
      +1: rhuijben, brane
 
+ * r1683378
+   Prevent a possible FSFS repository corruption with power or network disk
+   failures during 'svnadmin pack'.
+   Justification:
+     Repository corruption/data loss.
+   Note:
+     This is not regression since 1.8.x and change can be released in patch
+     release.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
