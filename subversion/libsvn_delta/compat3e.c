@@ -1047,23 +1047,6 @@ svn_editor3_el_rev_get(svn_branch_el_rev_content_t **element_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_editor3_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
-                                    svn_editor3_t *editor,
-                                    const char *rrpath,
-                                    svn_revnum_t revnum,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-  const svn_branch_repos_t *repos = eb->edited_rev_root->repos;
-
-  SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(el_rev_p,
-                                                   rrpath, revnum, repos,
-                                                   result_pool, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 void
 svn_editor3_find_branch_element_by_rrpath(svn_branch_state_t **branch_p,
                                           int *eid_p,

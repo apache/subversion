@@ -405,6 +405,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 /* Baton for commit_callback(). */
 typedef struct commit_callback_baton_t
 {
+  svn_branch_revision_root_t *edit_txn;
   svn_editor3_t *editor;
 
   /* just-committed revision */
@@ -454,6 +455,7 @@ wc_commit(svnmover_wc_t *wc,
 
   svn_editor3_find_branch_element_by_rrpath(&edit_root_branch, NULL,
                                             commit_editor, "", scratch_pool);
+  ccbb.edit_txn = edit_root_branch->rev_root;
   SVN_ERR(replay(commit_editor, edit_root_branch,
                  left_txn,
                  right_txn,
@@ -562,7 +564,7 @@ typedef struct action_t {
  */
 static svn_error_t *
 find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
-                          svn_editor3_t *editor,
+                          svnmover_wc_t *wc,
                           svn_revnum_t revnum,
                           const char *rrpath,
                           apr_pool_t *result_pool,
@@ -570,9 +572,12 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
 {
   if (SVN_IS_VALID_REVNUM(revnum))
     {
-      SVN_ERR(svn_editor3_find_el_rev_by_path_rev(el_rev_p,
-                                                  editor, rrpath, revnum,
-                                                  result_pool, scratch_pool));
+      const svn_branch_repos_t *repos = wc->edit_txn->repos;
+
+      SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(el_rev_p,
+                                                       rrpath, revnum, repos,
+                                                       result_pool,
+                                                       scratch_pool));
     }
   else
     {
@@ -580,7 +585,7 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
 
       svn_editor3_find_branch_element_by_rrpath(
         &el_rev->branch, &el_rev->eid,
-        editor, rrpath, scratch_pool);
+        wc->editor, rrpath, scratch_pool);
       el_rev->rev = SVN_INVALID_REVNUM;
       *el_rev_p = el_rev;
     }
@@ -1997,16 +2002,19 @@ commit_callback(const svn_commit_info_t *commit_info,
   commit_callback_baton_t *b = baton;
   svn_branch_el_rev_id_t *el_rev_left, *el_rev_right;
   const char *rrpath = "";
+  const svn_branch_repos_t *repos = b->edit_txn->repos;
 
   SVN_ERR(svn_cmdline_printf(pool, "Committed r%ld:\n",
                              commit_info->revision));
 
-  SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_left, b->editor,
-                                    commit_info->revision - 1, rrpath,
-                                    pool, pool));
-  SVN_ERR(find_el_rev_by_rrpath_rev(&el_rev_right, b->editor,
-                                    commit_info->revision, rrpath,
-                                    pool, pool));
+  SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(&el_rev_left,
+                                                   rrpath,
+                                                   commit_info->revision - 1,
+                                                   repos, pool, pool));
+  SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(&el_rev_right,
+                                                   rrpath,
+                                                   commit_info->revision,
+                                                   repos, pool, pool));
   SVN_ERR(svn_branch_diff_r(b->editor,
                             el_rev_left, el_rev_right,
                             flat_branch_diff, "   ",
@@ -2167,10 +2175,10 @@ execute(svnmover_wc_t *wc,
               parent_rrpath = svn_relpath_dirname(rrpath, iterpool);
 
               arg[j]->path_name = svn_relpath_basename(rrpath, NULL);
-              SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->el_rev, editor,
+              SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->el_rev, wc,
                                                 arg[j]->revnum, rrpath,
                                                 iterpool, iterpool));
-              SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->parent_el_rev, editor,
+              SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->parent_el_rev, wc,
                                                 arg[j]->revnum, parent_rrpath,
                                                 iterpool, iterpool));
             }
@@ -2194,10 +2202,10 @@ execute(svnmover_wc_t *wc,
           {
             svn_branch_el_rev_id_t *from, *to;
 
-            SVN_ERR(find_el_rev_by_rrpath_rev(&from, editor,
+            SVN_ERR(find_el_rev_by_rrpath_rev(&from, wc,
                                               wc->base_revision, base_relpath,
                                               iterpool, iterpool));
-            SVN_ERR(find_el_rev_by_rrpath_rev(&to, editor,
+            SVN_ERR(find_el_rev_by_rrpath_rev(&to, wc,
                                               SVN_INVALID_REVNUM, base_relpath,
                                               iterpool, iterpool));
             SVN_ERR(svn_branch_diff_r(editor,
