@@ -52,17 +52,21 @@ Work on this branch:
     which branching and moving are significant, to see what we expect
     and see if we can write code that delivers it.
 
-    'svnmover' operates directly on a repo, like 'svnmucc'. Working copy
-    considerations -- mixed-rev states, sparse checkouts, conflicts, and
-    so on -- are completely avoided. A working copy is, in essence, a tool
-    for viewing and making changes to the versioned data, and so needs to
-    be designed to support the versioned data model. That comes *after*
-    designing the data model. Working copy considerations may be introduced
-    to 'svnmover' in due course in order to explore how they would work.
+    'svnmover' operates directly on a repo, like 'svnmucc', without using
+    a working copy on disk. However, it simulates a short-lived working
+    copy, in memory. It processes a series of commands given on the command
+    line or interactively. These commands change the state of the simulated
+    WC. The changes are committed on exit or whenever the 'commit' command
+    is given.
 
-    'svnmover' processes a series of commands given on the command line, and
-    then commits the result. In interactive mode (when run with no command
-    arguments) it makes one commit per line of input.
+    Advanced working copy facilities -- mixed-rev states, sparse checkouts,
+    conflicts, and so on -- are initially not supported. Such facilities
+    may be introduced to 'svnmover' in due course in order to explore how
+    they would work.
+
+    (A working copy is, in essence, a tool for viewing and making changes
+    to the versioned data, and so its facilities need to be redesigned to
+    support the new versioned data model.)
 
     The implementation stores metadata either in revprops or in flat files
     in the repository directory; the metadata is the same in either case.
@@ -76,6 +80,8 @@ Work on this branch:
       branching: branch, create new branch, list branches
       diff
       merge
+      commit
+      update
 
     UI things to do:
       add a 'parallel mode' UI as an alternative to the sequential mode
@@ -83,17 +89,6 @@ Work on this branch:
       provide a UI for element-based addressing ('mv e101:foo e103:foo'?)
 
     Bigger things to do:
-
-      Build a mock WC:
-
-        1. "Check out" a given rev by starting an in-memory txn based
-          on that rev.
-
-        2. Make edits in this txn.
-
-        3. Start a commit, get a new txn based on repository head.
-
-        4. Replay the WC txn's changes into the commit txn, and commit it.
 
       "Replay" API: convert committed changes to an edit drive
 
