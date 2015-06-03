@@ -282,6 +282,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
                           PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   $1 = ($1_ltype) PerlThunk;
+  SPAGAIN;
   $2 = $input;
 }
 %enddef
@@ -290,6 +291,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   if (SvOK($input)) {
     $1 = ($1_ltype) PerlThunk;
+    SPAGAIN;
     $2 = $input;
   } else {
     $1 = ($1_ltype) NULL;
