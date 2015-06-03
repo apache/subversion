@@ -136,6 +136,16 @@ Work on this branch:
         case they dereference the wrapper editor's private data struct
         instead of the intended editor's.
 
+        - svn_editor3_find_branch_element_by_rrpath()
+          => Instead of this, we should ask the editor to give us a 'flat
+             view' of the current state of the txn (as svn_branch_subtree_t?)
+             and we should then query in that.
+
+        - svn_editor3_payload_resolve()
+          => Only used by svn_branch_subtree_differences(), which itself
+             is not a standard svn_branch_* function as it uses an editor.
+             Not sure what we should do.
+
   * The model.
 
     To do:
