@@ -135,19 +135,6 @@ Work on this branch:
         The unifying principle is it's communicating a partial description
         of the new state, without reference to the old state.
 
-      Create editor vtable methods for all editor interface functions.
-
-        Currently, some functions bypass the vtable. They are broken if
-        they use the editor private data structure and if they are invoked
-        on a wrapper editor (such as the 'debug editor') because in that
-        case they dereference the wrapper editor's private data struct
-        instead of the intended editor's.
-
-        - svn_editor3_payload_resolve()
-          => Only used by svn_branch_subtree_differences(), which itself
-             is not a standard svn_branch_* function as it uses an editor.
-             Not sure what we should do.
-
   * The model.
 
     To do:
