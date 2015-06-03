@@ -32,6 +32,17 @@ The model:
     The design aims to satisfy such a user.
 
 
+BUGS:
+
+  * merge doesn't detect 'clashes' (same path exists more than once):
+    - mkdir a
+    - commit
+    - update .@(head - 1)   # should report a conflict, but doesn't
+    - mkdir a           # has a different element number
+    - update .@head     # now two paths 'a' exist
+    - commit            # should fail
+
+
 Work on this branch:
 
   * 'svnmover'
