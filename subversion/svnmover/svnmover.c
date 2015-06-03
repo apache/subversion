@@ -428,6 +428,7 @@ wc_commit(svnmover_wc_t *wc,
   svn_branch_revision_root_t *left_txn
     = svn_array_get(wc->edit_txn->repos->rev_roots, (int)wc->base_revision);
   svn_branch_revision_root_t *right_txn = wc->edit_txn;
+  svn_branch_revision_root_t *commit_txn;
   svn_editor3_t *commit_editor;
   commit_callback_baton_t ccbb;
 
@@ -444,19 +445,18 @@ wc_commit(svnmover_wc_t *wc,
     }
 
   /* Start a new editor for the commit. */
-  SVN_ERR(svn_ra_get_commit_editor_ev3(wc->ra_session, &commit_editor,
+  SVN_ERR(svn_ra_get_commit_editor_ev3(wc->ra_session,
+                                       &commit_txn, &commit_editor,
                                        revprops,
                                        commit_callback, &ccbb,
                                        NULL /*lock_tokens*/, FALSE /*keep_locks*/,
                                        branch_info_dir,
                                        scratch_pool));
+  ccbb.edit_txn = commit_txn;
   ccbb.editor = commit_editor;
   /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
 
-  svn_editor3_find_branch_element_by_rrpath(&edit_root_branch, NULL,
-                                            commit_editor, "", scratch_pool);
-  ccbb.edit_txn = edit_root_branch->rev_root;
-  SVN_ERR(replay(commit_editor, edit_root_branch,
+  SVN_ERR(replay(commit_editor, commit_txn->root_branch,
                  left_txn,
                  right_txn,
                  scratch_pool));
@@ -586,9 +586,9 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
     {
       svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
 
-      svn_editor3_find_branch_element_by_rrpath(
+      svn_branch_find_nested_branch_element_by_rrpath(
         &el_rev->branch, &el_rev->eid,
-        wc->editor, rrpath, scratch_pool);
+        wc->edit_txn->root_branch, rrpath, scratch_pool);
       el_rev->rev = SVN_INVALID_REVNUM;
       *el_rev_p = el_rev;
     }
