@@ -1016,37 +1016,6 @@ svn_editor3_payload_resolve(svn_element_payload_t **payload_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_editor3_el_rev_get(svn_branch_el_rev_content_t **element_p,
-                      svn_editor3_t *editor,
-                      svn_branch_state_t *branch,
-                      int eid,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-  svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);
-
-  /* Node payload is null iff node is a subbranch root, but we shouldn't
-     be querying a subbranch root. */
-  /* ### Why/how not? */
-  /*SVN_ERR_ASSERT(!element || element->payload);*/
-
-  element = element ? svn_branch_el_rev_content_dup(element, result_pool) : NULL;
-
-  /* If payload is only by reference, fetch full payload. */
-  if (element && element->payload
-      && PAYLOAD_IS_ONLY_BY_REFERENCE(element->payload))
-    {
-      SVN_ERR(payload_fetch(&element->payload, NULL,
-                            eb, &element->payload->ref,
-                            result_pool, scratch_pool));
-    }
-
-  *element_p = element;
-  return SVN_NO_ERROR;
-}
-
 void
 svn_editor3_find_branch_element_by_rrpath(svn_branch_state_t **branch_p,
                                           int *eid_p,
