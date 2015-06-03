@@ -392,20 +392,20 @@ def basic_svnmover(sbox):
 
   # Expected already exists error
   xtest_svnmover(sbox.repo_url,
-                 "'foo' already exists",
+                 "already exists .*'foo'",
                  #---------
                  'cp 16 A foo')
 
   # Expected copy-child already exists error
   xtest_svnmover(sbox.repo_url,
-                 "'a/bar' already exists",
+                 "already exists .*'a/bar'",
                  #---------
                  'cp 16 foo a',
                  'cp 16 foo/foo a/bar')
 
   # Expected not found error
   xtest_svnmover(sbox.repo_url,
-                 "'a' not found",
+                 "not found .*'a@.*'",
                  #---------
                  'cp 16 a b')
 
