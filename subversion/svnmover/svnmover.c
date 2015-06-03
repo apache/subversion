@@ -1640,9 +1640,9 @@ flat_branch_diff_r(svn_editor3_t *editor,
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
   apr_hash_index_t *hi;
 
-  printf("DBG: subtree_diff_r: l='%s' r='%s'\n",
-         fb_left ? fb_left->rrpath : "<nil>",
-         fb_right ? fb_right->rrpath : "<nil>");
+  SVN_DBG(("flat_branch_diff_r: l='%s' r='%s'",
+           fb_left ? fb_left->rrpath : "<nil>",
+           fb_right ? fb_right->rrpath : "<nil>"));
 
   if (!fb_left)
     {
