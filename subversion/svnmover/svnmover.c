@@ -50,6 +50,11 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_token.h"
 
+#define HAVE_LINENOISE
+#ifdef HAVE_LINENOISE
+#include "../libsvn_subr/linenoise/linenoise.h"
+#endif
+
 /* Version compatibility check */
 static svn_error_t *
 check_lib_versions(void)
@@ -2803,6 +2808,36 @@ parse_actions(apr_array_header_t **actions,
   return SVN_NO_ERROR;
 }
 
+/* A command-line completion callback for the 'Line Noise' interactive
+ * prompting.
+ *
+ * This is called when the user presses the Tab key. It calculates the
+ * possible completions for the partial line BUF.
+ *
+ * ### So far, this only works on a single command keyword at the start
+ *     of the line.
+ */
+static void
+linenoise_completion(const char *buf, linenoiseCompletions *lc)
+{
+  int i;
+
+  for (i = 0; i < sizeof(action_defn) / sizeof(action_defn[0]); i++)
+    {
+      /* Suggest each command that matches (and is longer than) what the
+         user has already typed. Add a space. */
+      if (strncmp(buf, action_defn[i].name, strlen(buf)) == 0
+          && strlen(action_defn[i].name) > strlen(buf))
+        {
+          static char completion[100];
+
+          apr_cpystrn(completion, action_defn[i].name, 99);
+          strcat(completion, " ");
+          linenoiseAddCompletion(lc, completion);
+        }
+    }
+}
+
 /* Display a prompt, read a line of input and split it into words.
  *
  * Set *WORDS to null if input is cancelled (by ctrl-C for example).
@@ -3118,6 +3153,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   interactive_actions = !(opts->ind < opts->argc
                           || extra_args_file
                           || non_interactive);
+
+  if (interactive_actions)
+    {
+      linenoiseSetCompletionCallback(linenoise_completion);
+    }
 
   SVN_ERR(wc_create(&wc,
                     anchor_url, base_revision,
