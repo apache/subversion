@@ -688,7 +688,8 @@ flat_branch_get_subbranch_at_eid(flat_branch_t *fb,
                             svn_branch_subtree_get_path_by_eid(fb->s, eid,
                                                                result_pool),
                             result_pool);
-  bid = apr_psprintf(result_pool, "%s.%d", fb->bid, eid);
+  bid = fb->bid ? apr_psprintf(result_pool, "B%d", eid)
+                : apr_psprintf(result_pool, "%s.%d", fb->bid, eid);
   sub_fb = flat_branch_create(s, rrpath, bid, result_pool);
   return sub_fb;
 }
