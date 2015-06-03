@@ -2078,12 +2078,12 @@ def verify_keep_going(sbox):
                                             ".*r2: E160004:.*",
                                             ".*r3: E160004:.*",
                                             ".*r3: E160004:.*"])
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                            "svnadmin: E165011:.*"], False)
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
 
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                            "svnadmin: E165011:.*"], False)
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
     raise svntest.Failure
@@ -2100,6 +2100,7 @@ def verify_keep_going(sbox):
     if (svntest.main.fs_has_rep_sharing()):
       exp_out.insert(0, ".*Verifying repository metadata.*")
 
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*"], False)
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
     raise svntest.Failure
@@ -2110,7 +2111,7 @@ def verify_keep_going(sbox):
                                                         sbox.repo_dir)
 
   if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
-                                   None, errput, None, "svnadmin: E165011:.*"):
+                                   None, errput, None, "svnadmin: E160004:.*"):
     raise svntest.Failure
 
   # Don't leave a corrupt repository
@@ -2235,8 +2236,7 @@ def verify_invalid_path_changes(sbox):
   exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
                                             ".*Verified revision 1.",
                                             ".*Error verifying revision 2."])
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
-                                            "svnadmin: E165011:.*"], False)
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*"], False)
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
@@ -2252,7 +2252,7 @@ def verify_invalid_path_changes(sbox):
                                                         sbox.repo_dir)
 
   if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
-                                   None, errput, None, "svnadmin: E165011:.*"):
+                                   None, errput, None, "svnadmin: E160020:.*"):
     raise svntest.Failure
 
   # Don't leave a corrupt repository
@@ -2621,8 +2621,7 @@ def verify_quickly(sbox):
   # resulting in different progress output
   if svntest.main.is_fs_log_addressing():
     exp_out = svntest.verify.RegexListOutput([])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                              "svnadmin: E165011:.*"], False)
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*"], False)
   else:
     exp_out = svntest.verify.RegexListOutput([])
     exp_err = svntest.verify.RegexListOutput([])

@@ -838,7 +838,7 @@ svn_fs_x__check_rep(svn_fs_x__representation_t *rep,
           && entry->type != SVN_FS_X__ITEM_TYPE_FILE_PROPS
           && entry->type != SVN_FS_X__ITEM_TYPE_DIR_PROPS
           && entry->type != SVN_FS_X__ITEM_TYPE_REPS_CONT))
-    return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("No representation found at offset %s "
                                "for item %s in revision %ld"),
                              apr_off_t_toa(scratch_pool, offset),
