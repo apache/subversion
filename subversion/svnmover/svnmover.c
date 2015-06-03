@@ -484,7 +484,8 @@ typedef enum action_code_t {
   ACTION_RM,
   ACTION_COMMIT,
   ACTION_UPDATE,
-  ACTION_STATUS
+  ACTION_STATUS,
+  ACTION_REVERT
 } action_code_t;
 
 typedef struct action_defn_t {
@@ -536,6 +537,8 @@ static const action_defn_t action_defn[] =
     "update to revision REV, keeping local changes"},
   {ACTION_STATUS,           "status", 0, "",
     "same as 'diff .@base .'"},
+  {ACTION_REVERT,           "revert", 0, "",
+    "revert all uncommitted changes"},
 };
 
 typedef struct action_t {
@@ -2045,6 +2048,18 @@ do_commit(svnmover_wc_t *wc,
   return SVN_NO_ERROR;
 }
 
+/* Revert all uncommitted changes in WC.
+ */
+static svn_error_t *
+do_revert(svnmover_wc_t *wc,
+          apr_pool_t *scratch_pool)
+{
+  SVN_ERR(wc_checkout(wc, wc->base_revision, scratch_pool));
+  wc->made_changes = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
 typedef struct arg_t
 {
   const char *path_name;
@@ -2499,6 +2514,20 @@ execute(svnmover_wc_t *wc,
           {
               SVN_ERR(do_update(wc, arg[0]->revnum, iterpool));
               editor = wc->editor;
+          }
+          break;
+
+        case ACTION_REVERT:
+          {
+            if (wc->made_changes)
+              {
+                SVN_ERR(do_revert(wc, iterpool));
+                editor = wc->editor;
+              }
+            else
+              {
+                printf("There are no changes to revert.\n");
+              }
           }
           break;
 
