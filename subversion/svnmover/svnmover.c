@@ -2163,7 +2163,8 @@ execute(svnmover_wc_t *wc,
               else
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                          "'%s@...': revision specifier "
-                                         "must be a number or 'head'",
+                                         "must be a number or 'head', 'base' "
+                                         "or 'committed'",
                                          action->relpath[j]);
 
               rrpath = svn_relpath_join(base_relpath, action->relpath[j], iterpool);
