@@ -725,6 +725,7 @@ core_set_current_pool (apr_pool_t *pool)
 %typemap(in) (svn_auth_ ## AuthType ## _prompt_func_t prompt_func,
               void *prompt_baton) {
   $1 = svn_swig_pl_thunk_ ## AuthType ## _prompt;
+  SPAGAIN;
   $2 = $input;
   _global_callback = $input;
 }
