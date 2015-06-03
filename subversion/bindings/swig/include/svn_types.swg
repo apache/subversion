@@ -935,15 +935,24 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPERL
 %typemap(in) svn_stream_t * {
     svn_swig_pl_make_stream (&$1, $input);
+    SPAGAIN;
 }
 
 %typemap(out) svn_stream_t * {
-    $result = svn_swig_pl_from_stream ($1);
+    SV* tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_stream ($1);
+    SPAGAIN;
+    $result = tmp;
     argvi++;
 }
 
 %typemap(argout) svn_stream_t ** {
-  %append_output(svn_swig_pl_from_stream(*$1));
+    SV *tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_stream(*$1);
+    SPAGAIN;
+    %append_output(tmp);
 }
 #endif
 
@@ -1116,7 +1125,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 
 %typemap(argout) unsigned char *result_digest {
-    %append_output(svn_swig_pl_from_md5($1));
+    SV *tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_md5($1);
+    SPAGAIN;
+    %append_output(tmp);
 }
 #endif
 
