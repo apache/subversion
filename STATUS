@@ -27,7 +27,7 @@ Candidate changes that cannot go into a later 1.9.x:
      mode without --keep-going. See: http://s.apache.org/j9Z
    Note: Can't go into 1.9.1+ because of a new/changed error code.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
 
 Other candidate changes:
 ========================
