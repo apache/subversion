@@ -2054,19 +2054,21 @@ typedef struct arg_t
 #define VERIFY_EID_NONEXISTENT(op, i)                                   \
   if (arg[i]->el_rev->eid != -1)                                        \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
-                             _("%s: Path '%s' already exists"),         \
+                             _("%s: Element already exists at path '%s'"), \
                              op, action->relpath[i]);
 
 #define VERIFY_EID_EXISTS(op, i)                                        \
   if (arg[i]->el_rev->eid == -1)                                        \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
-                             _("%s: Path '%s' not found"),              \
-                             op, action->relpath[i]);
+                             _("%s: Element not found at path '%s%s'"), \
+                             op, action->relpath[i],                    \
+                             action->rev_spec[i].kind == svn_opt_revision_unspecified \
+                               ? "" : "@...");
 
 #define VERIFY_PARENT_EID_EXISTS(op, i)                                 \
   if (arg[i]->parent_el_rev->eid == -1)                                 \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
-                             _("%s: Path '%s' not found"),              \
+                             _("%s: Element not found at path '%s'"),   \
                              op, svn_relpath_dirname(action->relpath[i], pool));
 
 #define is_branch_root_element(branch, eid) \
