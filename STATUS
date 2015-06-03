@@ -16,6 +16,15 @@ Status of 1.9.0:
 Release blockers for 1.9.0:
 ===========================
 
+ * r1683387
+   Fix abort() in svn-status handler on platforms that doesn't support C99
+   format specifiers for strftime(): %F and %z are new in C99 and C89
+   compiler/runtime doesn't support them.
+   Justification:
+     Server-side crash in new small feature. Simple fix.
+   Votes:
+     +1: rhuijben
+
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
