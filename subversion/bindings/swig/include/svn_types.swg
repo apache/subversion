@@ -548,6 +548,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in) apr_pool_t *pool "";
 %typemap(default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
+    SPAGAIN;
 }
 #endif
 #ifdef SWIGRUBY
@@ -1183,8 +1184,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in) svn_opt_revision_t * 
   (svn_opt_revision_t rev, apr_pool_t *_global_pool = NULL)
 {
-  if (_global_pool == NULL)
+  if (_global_pool == NULL) {
     _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+    SPAGAIN;
+  }
   $1 = svn_swig_pl_set_revision(&rev, $input, TRUE, _global_pool);
 }
 #endif
