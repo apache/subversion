@@ -423,9 +423,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
         if (SvOK(exception_handler)) {
             SV *callback_result;
 
+            PUTBACK;
             svn_swig_pl_callback_thunk (CALL_SV, exception_handler,
                                         &callback_result, "S", $1,
                                         $1_descriptor);
+            SPAGAIN;
         } else {
             $result = SWIG_NewPointerObj($1, $1_descriptor, 0);
             argvi++;
