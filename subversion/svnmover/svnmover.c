@@ -262,7 +262,7 @@ subtree_replay(svn_editor3_t *editor,
         {
           if (e0 && e1)
             {
-              printf("replay: alter e%d\n", eid);
+              SVN_DBG(("replay: alter e%d", eid));
               SVN_ERR(svn_editor3_alter(editor,
                                         edit_branch, eid,
                                         e1->parent_eid, e1->name,
@@ -270,13 +270,13 @@ subtree_replay(svn_editor3_t *editor,
             }
           else if (e0)
             {
-              printf("replay: delete e%d\n", eid);
+              SVN_DBG(("replay: delete e%d", eid));
               SVN_ERR(svn_editor3_delete(editor,
                                          edit_branch, eid));
             }
           else
             {
-              printf("replay: instan. e%d\n", eid);
+              SVN_DBG(("replay: instan. e%d", eid));
               SVN_ERR(svn_editor3_alter(editor,
                                         edit_branch, eid,
                                         e1->parent_eid, e1->name,
