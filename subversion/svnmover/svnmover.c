@@ -124,6 +124,17 @@ typedef struct svnmover_wc_t
 
 /* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
  *
+ * Requires these fields in WC:
+ *   head_revision
+ *   repos_root_url
+ *   ra_session
+ *   pool
+ *
+ * Initializes these fields in WC:
+ *   base_revision
+ *   edit_txn
+ *   editor
+ *
  * Assumes there are no changes in the WC: throws away the existing txn
  * and starts a new one.
  */
@@ -175,6 +186,14 @@ wc_checkout(svnmover_wc_t *wc,
 
 /* Create a simulated WC, in memory.
  *
+ * Initializes these fields in WC:
+ *   head_revision
+ *   repos_root_url
+ *   ra_session
+ *   made_changes
+ *   ctx
+ *   pool
+ *
  * BASE_REVISION is the revision to work on, or SVN_INVALID_REVNUM for HEAD.
  */
 static svn_error_t *
@@ -203,25 +222,6 @@ wc_create(svnmover_wc_t **wc_p,
 
   SVN_ERR(wc_checkout(wc, base_revision, scratch_pool));
   *wc_p = wc;
-  return SVN_NO_ERROR;
-}
-
-/* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
- *
- * ### TODO: Merges any changes in the existing txn into the new txn.
- */
-static svn_error_t *
-do_update(svnmover_wc_t *wc,
-          svn_revnum_t revision,
-          apr_pool_t *scratch_pool)
-{
-  /* Complete the old edit drive (into the 'WC') */
-  SVN_ERR(svn_editor3_complete(wc->editor));
-
-  /* Check out a new WC */
-  SVN_ERR(wc_checkout(wc, revision,
-                      scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -525,7 +525,7 @@ static const action_defn_t action_defn[] =
   {ACTION_COMMIT,           "commit", 0, "",
     "commit the changes"},
   {ACTION_UPDATE,           "update", 1, ".@REV",
-    "update to revision REV (### discards local changes)"},
+    "update to revision REV, keeping local changes"},
 };
 
 typedef struct action_t {
@@ -1436,6 +1436,47 @@ svn_branch_merge(svn_editor3_t *editor,
   /*SVN_ERR(verify_not_subbranch_root(yca, scratch_pool));*/
 
   SVN_ERR(branch_merge_subtree_r(editor, src, tgt, yca, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
+ *
+ * Merge any changes in the existing txn into the new txn.
+ */
+static svn_error_t *
+do_update(svnmover_wc_t *wc,
+          svn_revnum_t revision,
+          apr_pool_t *scratch_pool)
+{
+  /* Keep hold of the previous WC txn */
+  svn_branch_revision_root_t *previous_base_state
+    = svn_array_get(wc->edit_txn->repos->rev_roots, (int)wc->base_revision);
+  svn_branch_revision_root_t *previous_working_txn = wc->edit_txn;
+  svn_branch_el_rev_id_t *yca, *src, *tgt;
+
+  /* Complete the old edit drive into the 'WC' txn */
+  SVN_ERR(svn_editor3_complete(wc->editor));
+
+  /* Check out a new WC, re-using the same data object */
+  SVN_ERR(wc_checkout(wc, revision,
+                      scratch_pool));
+
+  /* Merge changes from the old into the new WC */
+  yca = svn_branch_el_rev_id_create(previous_base_state->root_branch,
+                                    previous_base_state->root_branch->root_eid,
+                                    previous_base_state->rev, scratch_pool);
+  src = svn_branch_el_rev_id_create(previous_working_txn->root_branch,
+                                    previous_working_txn->root_branch->root_eid,
+                                    previous_working_txn->rev, scratch_pool);
+  tgt = svn_branch_el_rev_id_create(wc->edit_txn->root_branch,
+                                    wc->edit_txn->root_branch->root_eid,
+                                    wc->edit_txn->rev, scratch_pool);
+  SVN_ERR(svn_branch_merge(wc->editor, src, tgt, yca,
+                           scratch_pool));
+  /* ### TODO: If the merge raises conflicts, either revert to the
+         pre-update state or store and handle the conflicts. Currently
+         this just leaves the merge partially done and raises an error. */
 
   return SVN_NO_ERROR;
 }
@@ -2403,6 +2444,9 @@ execute(svnmover_wc_t *wc,
           }
           break;
         case ACTION_UPDATE:
+          /* path (or eid) is currently required for syntax, but ignored */
+          VERIFY_EID_EXISTS("update", 0);
+          VERIFY_REV_SPECIFIED("update", 0);
           {
               SVN_ERR(do_update(wc, arg[0]->revnum, iterpool));
               editor = wc->editor;
