@@ -983,24 +983,6 @@ svn_editor3__get_baton(const svn_editor3_t *editor);
 
 /* ====================================================================== */
 
-/* Find the (deepest) branch in the state being edited by EDITOR, of which
- * the path RRPATH is either the root path or a normal, non-sub-branch
- * path. An element need not exist at RRPATH.
- *
- * Set *BRANCH_P to the deepest branch that contains the path RRPATH.
- *
- * If EID_P is not null then set *EID_P to the element id of RRPATH in
- * *BRANCH_P, or to -1 if no element exists at RRPATH in that branch.
- *
- * ### TODO: Clarify sequencing requirements.
- */
-void
-svn_editor3_find_branch_element_by_rrpath(svn_branch_state_t **branch_p,
-                                          int *eid_p,
-                                          svn_editor3_t *editor,
-                                          const char *rrpath,
-                                          apr_pool_t *scratch_pool);
-
 /* Fetch full payload...
  */
 svn_error_t *

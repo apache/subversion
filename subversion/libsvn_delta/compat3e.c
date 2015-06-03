@@ -1016,20 +1016,6 @@ svn_editor3_payload_resolve(svn_element_payload_t **payload_p,
   return SVN_NO_ERROR;
 }
 
-void
-svn_editor3_find_branch_element_by_rrpath(svn_branch_state_t **branch_p,
-                                          int *eid_p,
-                                          svn_editor3_t *editor,
-                                          const char *rrpath,
-                                          apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = svn_editor3__get_baton(editor);
-
-  svn_branch_find_nested_branch_element_by_rrpath(branch_p, eid_p,
-                                                  eb->edited_rev_root->root_branch,
-                                                  rrpath, scratch_pool);
-}
-
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_new_eid(void *baton,
