@@ -1186,11 +1186,11 @@ static svn_error_t * thunk_open_tmp_file(apr_file_t **fp,
 }
 
 /* NOTE: calls back into Perl (by calling svn_swig_pl_callback_thunk) */
-svn_error_t *thunk_get_wc_prop(void *baton,
-                               const char *relpath,
-                               const char *name,
-                               const svn_string_t **value,
-                               apr_pool_t *pool)
+static svn_error_t *thunk_get_wc_prop(void *baton,
+                                      const char *relpath,
+                                      const char *name,
+                                      const svn_string_t **value,
+                                      apr_pool_t *pool)
 {
     SV *result;
     char *data;

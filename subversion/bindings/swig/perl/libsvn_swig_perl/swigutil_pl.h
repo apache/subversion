@@ -209,13 +209,6 @@ svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt
    svn_boolean_t may_save,
    apr_pool_t *pool);
 
-/* thunked callback for svn_ra_get_wc_prop_func_t */
-svn_error_t *thunk_get_wc_prop(void *baton,
-                               const char *relpath,
-                               const char *name,
-                               const svn_string_t **value,
-                               apr_pool_t *pool);
-
 /* Thunked version of svn_wc_notify_func_t callback type */
 void svn_swig_pl_notify_func(void * baton,
                              const char *path,
