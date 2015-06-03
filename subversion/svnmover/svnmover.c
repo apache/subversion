@@ -2178,6 +2178,7 @@ execute(svnmover_wc_t *wc,
                                                 iterpool, iterpool));
             }
         }
+
       switch (action->action)
         {
         case ACTION_DIFF:
@@ -2191,6 +2192,7 @@ execute(svnmover_wc_t *wc,
                                       iterpool));
           }
           break;
+
         case ACTION_STATUS:
           {
             svn_branch_el_rev_id_t *from, *to;
@@ -2207,6 +2209,7 @@ execute(svnmover_wc_t *wc,
                                       iterpool));
           }
           break;
+
         case ACTION_LOG:
           VERIFY_EID_EXISTS("log", 0);
           VERIFY_EID_EXISTS("log", 1);
@@ -2217,6 +2220,7 @@ execute(svnmover_wc_t *wc,
                                    iterpool));
           }
           break;
+
         case ACTION_LIST_BRANCHES:
           {
             VERIFY_EID_EXISTS("branches", 0);
@@ -2235,12 +2239,14 @@ execute(svnmover_wc_t *wc,
                       FALSE, iterpool));
           }
           break;
+
         case ACTION_LIST_BRANCHES_R:
           {
             /* (Note: BASE_REVISION is always a real revision number, here) */
             SVN_ERR(list_all_branches(editor, wc->base_revision, TRUE, iterpool));
           }
           break;
+
         case ACTION_LS:
           {
             VERIFY_EID_EXISTS("ls", 0);
@@ -2255,6 +2261,7 @@ execute(svnmover_wc_t *wc,
               SVN_ERR(list_branch_elements_by_eid(arg[0]->el_rev->branch, iterpool));
           }
           break;
+
         case ACTION_BRANCH:
           VERIFY_EID_EXISTS("branch", 0);
           VERIFY_REV_UNSPECIFIED("branch", 1);
@@ -2273,6 +2280,7 @@ execute(svnmover_wc_t *wc,
           }
           wc->made_changes = TRUE;
           break;
+
         case ACTION_BRANCH_INTO:
           VERIFY_EID_EXISTS("branch-into", 0);
           VERIFY_REV_UNSPECIFIED("branch-into", 1);
@@ -2287,6 +2295,7 @@ execute(svnmover_wc_t *wc,
           }
           wc->made_changes = TRUE;
           break;
+
         case ACTION_MKBRANCH:
           VERIFY_REV_UNSPECIFIED("mkbranch", 0);
           VERIFY_EID_NONEXISTENT("mkbranch", 0);
@@ -2306,6 +2315,7 @@ execute(svnmover_wc_t *wc,
           }
           wc->made_changes = TRUE;
           break;
+
         case ACTION_MERGE:
           {
             VERIFY_EID_EXISTS("merge", 0);
@@ -2319,6 +2329,7 @@ execute(svnmover_wc_t *wc,
           }
           wc->made_changes = TRUE;
           break;
+
         case ACTION_MV:
           /* If given a branch root element, look instead at the
              subbranch-root element within the outer branch. */
@@ -2340,6 +2351,7 @@ execute(svnmover_wc_t *wc,
           notify("V    %s (from %s)", action->relpath[1], action->relpath[0]);
           wc->made_changes = TRUE;
           break;
+
         case ACTION_CP:
           VERIFY_REV_SPECIFIED("cp", 0);
             /* (Or do we want to support copying from "this txn" too?) */
@@ -2354,6 +2366,7 @@ execute(svnmover_wc_t *wc,
           notify("A+   %s (from %s)", action->relpath[1], action->relpath[0]);
           wc->made_changes = TRUE;
           break;
+
         case ACTION_RM:
           /* If given a branch root element, look instead at the
              subbranch-root element within the outer branch. */
@@ -2369,6 +2382,7 @@ execute(svnmover_wc_t *wc,
           notify("D    %s", action->relpath[0]);
           wc->made_changes = TRUE;
           break;
+
         case ACTION_MKDIR:
           VERIFY_REV_UNSPECIFIED("mkdir", 0);
           VERIFY_EID_NONEXISTENT("mkdir", 0);
@@ -2389,6 +2403,7 @@ execute(svnmover_wc_t *wc,
           notify("A    %s", action->relpath[0]);
           wc->made_changes = TRUE;
           break;
+
         case ACTION_PUT_FILE:
           VERIFY_REV_UNSPECIFIED("put", 1);
           VERIFY_PARENT_EID_EXISTS("put", 1);
@@ -2456,6 +2471,7 @@ execute(svnmover_wc_t *wc,
           notify("A    %s", action->relpath[1]);
           wc->made_changes = TRUE;
           break;
+
         case ACTION_COMMIT:
           {
             if (wc->made_changes)
@@ -2469,6 +2485,7 @@ execute(svnmover_wc_t *wc,
               }
           }
           break;
+
         case ACTION_UPDATE:
           /* path (or eid) is currently required for syntax, but ignored */
           VERIFY_EID_EXISTS("update", 0);
@@ -2478,6 +2495,7 @@ execute(svnmover_wc_t *wc,
               editor = wc->editor;
           }
           break;
+
         default:
           SVN_ERR_MALFUNCTION();
         }
