@@ -148,7 +148,6 @@ Work on this branch:
       editor should be an editor of a txn based on a base state
         * Should not know about 'the repository' and other revisions,
           so these functions should not be 'editor' methods:
-            svn_editor3_get_all_branches_in_rev()
             svn_editor3_find_el_rev_by_path_rev()
 
 
