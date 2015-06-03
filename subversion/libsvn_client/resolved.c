@@ -146,7 +146,7 @@ svn_client_resolve(const char *path,
 }
 
 
-/*** Dealing with conflitcs. ***/
+/*** Dealing with conflicts. ***/
 
 const char *
 svn_client_conflict_get_local_abspath(svn_wc_conflict_description2_t *conflict)
