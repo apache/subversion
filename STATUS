@@ -70,12 +70,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1683387
-   Fix abort() in svn-status handler on platforms that doesn't support C99
-   format specifiers for strftime(): %F and %z are new in C99 and C89
-   compiler/runtime doesn't support them.
-   Justification:
-     Server-side crash in new small feature. Simple fix.
-   Votes:
-     +1: ivan, brane, rhuijben
