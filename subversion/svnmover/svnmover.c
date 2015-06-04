@@ -433,7 +433,7 @@ wc_commit(svn_revnum_t *new_rev_p,
 {
   const char *branch_info_dir = NULL;
   svn_branch_revision_root_t *left_txn
-    = svn_array_get(wc->edit_txn->repos->rev_roots, (int)wc->base_revision);
+    = svn_branch_revision_root_get_base(wc->edit_txn);
   svn_branch_revision_root_t *right_txn = wc->edit_txn;
   svn_branch_revision_root_t *commit_txn;
   svn_editor3_t *commit_editor;
@@ -1494,7 +1494,7 @@ do_update(svnmover_wc_t *wc,
 {
   /* Keep hold of the previous WC txn */
   svn_branch_revision_root_t *previous_base_state
-    = svn_array_get(wc->edit_txn->repos->rev_roots, (int)wc->base_revision);
+    = svn_branch_revision_root_get_base(wc->edit_txn);
   svn_branch_revision_root_t *previous_working_txn = wc->edit_txn;
   svn_branch_el_rev_id_t *yca, *src, *tgt;
 
@@ -2110,7 +2110,7 @@ do_revert(svnmover_wc_t *wc,
           apr_pool_t *scratch_pool)
 {
   svn_branch_revision_root_t *base_txn
-    = svn_array_get(wc->edit_txn->repos->rev_roots, (int)wc->base_revision);
+    = svn_branch_revision_root_get_base(wc->edit_txn);
 
   /* Replay the inverse of the current edit txn, into the current edit txn */
   SVN_ERR(replay(wc->editor, wc->edit_txn->root_branch,
