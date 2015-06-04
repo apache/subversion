@@ -71,7 +71,7 @@ typedef struct svn_branch_state_t svn_branch_state_t;
  */
 typedef struct svn_branch_repos_t
 {
-  /* Array of (svn_branch_revision_info_t *), indexed by revision number. */
+  /* Array of (svn_branch_revision_root_t *), indexed by revision number. */
   apr_array_header_t *rev_roots;
 
   /* The pool in which this object lives. */
@@ -81,6 +81,19 @@ typedef struct svn_branch_repos_t
 /* Create a new branching metadata object */
 svn_branch_repos_t *
 svn_branch_repos_create(apr_pool_t *result_pool);
+
+/* Return a pointer to revision REVNUM of the repository REPOS.
+ */
+struct svn_branch_revision_root_t *
+svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
+                              svn_revnum_t revnum);
+
+/* Return a pointer to the root branch of revision REVNUM of the
+ * repository REPOS.
+ */
+struct svn_branch_state_t *
+svn_branch_repos_get_root_branch(const svn_branch_repos_t *repos,
+                                 svn_revnum_t revnum);
 
 /* Set *EL_REV_P to the el-rev-id of the element at branch id BRANCH_ID,
  * element id EID, in revision REVNUM in REPOS.
@@ -154,6 +167,12 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t base_rev,
                                 struct svn_branch_state_t *root_branch,
                                 apr_pool_t *result_pool);
+
+/* Return the revision root that represents the base revision (or,
+ * potentially, txn) of the revision or txn REV_ROOT.
+ */
+svn_branch_revision_root_t *
+svn_branch_revision_root_get_base(svn_branch_revision_root_t *rev_root);
 
 /* Return all the branches in REV_ROOT.
  *

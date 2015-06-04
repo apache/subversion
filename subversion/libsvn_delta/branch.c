@@ -64,6 +64,24 @@ svn_branch_repos_create(apr_pool_t *result_pool)
   return repos;
 }
 
+struct svn_branch_revision_root_t *
+svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
+                              svn_revnum_t revnum)
+{
+  assert(revnum < repos->rev_roots->nelts);
+  return svn_array_get(repos->rev_roots, (int)revnum);
+}
+
+struct svn_branch_state_t *
+svn_branch_repos_get_root_branch(const svn_branch_repos_t *repos,
+                                 svn_revnum_t revnum)
+{
+  svn_branch_revision_root_t *rev_root
+    = svn_branch_repos_get_revision(repos, revnum);
+
+  return rev_root->root_branch;
+}
+
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
@@ -80,6 +98,13 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
   rev_root->root_branch = root_branch;
   rev_root->branches = svn_array_make(result_pool);
   return rev_root;
+}
+
+svn_branch_revision_root_t *
+svn_branch_revision_root_get_base(svn_branch_revision_root_t *rev_root)
+{
+  return svn_branch_repos_get_revision(rev_root->repos,
+                                       (int)rev_root->base_rev);
 }
 
 int
@@ -1257,7 +1282,7 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld"), revnum);
 
-  rev_root = svn_array_get(repos->rev_roots, (int)(revnum));
+  rev_root = svn_branch_repos_get_revision(repos, revnum);
   el_rev->rev = revnum;
   el_rev->branch
     = svn_branch_revision_root_get_branch_by_id(rev_root, branch_id,
@@ -1283,16 +1308,16 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                 apr_pool_t *scratch_pool)
 {
   svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
-  const svn_branch_revision_root_t *rev_root;
+  const svn_branch_state_t *root_branch;
 
   if (revnum < 0 || revnum >= repos->rev_roots->nelts)
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld"), revnum);
 
-  rev_root = svn_array_get(repos->rev_roots, (int)(revnum));
+  root_branch = svn_branch_repos_get_root_branch(repos, revnum);
   el_rev->rev = revnum;
   svn_branch_find_nested_branch_element_by_rrpath(&el_rev->branch, &el_rev->eid,
-                                                  rev_root->root_branch, rrpath,
+                                                  root_branch, rrpath,
                                                   scratch_pool);
 
   /* Any path must at least be within the repository root branch */
