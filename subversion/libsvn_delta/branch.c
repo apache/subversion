@@ -1308,7 +1308,7 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                 apr_pool_t *scratch_pool)
 {
   svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
-  const svn_branch_state_t *root_branch;
+  svn_branch_state_t *root_branch;
 
   if (revnum < 0 || revnum >= repos->rev_roots->nelts)
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
