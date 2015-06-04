@@ -277,9 +277,9 @@ svn_branch_delete_branch_r(svn_branch_state_t *branch,
  * sub-branches of BRANCH.
  */
 apr_array_header_t *
-svn_branch_get_all_subbranches(const svn_branch_state_t *branch,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
+svn_branch_get_immediate_subbranches(const svn_branch_state_t *branch,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 /* Return the subbranch rooted at BRANCH:EID, or NULL if that is
  * not a subbranch root.
