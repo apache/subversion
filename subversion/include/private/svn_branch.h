@@ -26,6 +26,54 @@
  * @since New in 1.10.
  */
 
+/* Transactions
+ *
+ * A 'txn' contains a set of changes to the branches/elements.
+ *
+ * To make changes you say, for example, "for element 5: I want the parent
+ * element to be 3 now, and its name to be 'bar', and its content to be
+ * {props=... text=...}". That sets up a move and/or rename and/or
+ * content-change (or possibly a no-op for all three aspects) for element 5.
+ *
+ * Before or after (or at the same time, if we make a parallelizable
+ * implementation) we can make edits to the other elements, including
+ * element 3.
+ *
+ * So at the time of the edit method 'change e5: let its parent be e3'
+ * we might or might not have even created e3, if that happens to be an
+ * element that we wish to create rather than one that already existed.
+ *
+ * We allow this non-ordering because we want the changes to different
+ * elements to be totally independent.
+ *
+ * So at any given 'moment' in time during specifying the changes to a
+ * txn, the txn state is not necessarily one that maps directly to a
+ * flat tree (single-rooted, no cycles, no clashes of paths, etc.).
+ *
+ * Once we've finished specifying the edits, then the txn state will be
+ * converted to a flat tree, and that's the final result. But we can't
+ * query an arbitrary txn (potentially in the middle of making changes
+ * to it) by path, because the paths are not fully defined yet.
+ *
+ * So there are three kinds of operations:
+ *
+ * - query involving paths
+ *   => requires a flat tree state to query, not an in-progress txn
+ *
+ * - query, not involving paths
+ *   => accepts a txn-in-progress or a flat tree
+ *
+ * - modify (not involving paths)
+ *   => requires a txn
+ *
+ * Currently, a txn is represented by 'svn_branch_revision_root_t', with
+ * 'svn_branch_state_t' for the individual branches in it. A flat tree is
+ * represented by 'svn_branch_subtree_t'. But there is currently not a
+ * clean separation; there is some overlap and some warts such as the
+ * 'svn_editor3_sequence_point' method.
+ */
+
+
 #ifndef SVN_BRANCH_H
 #define SVN_BRANCH_H
 
