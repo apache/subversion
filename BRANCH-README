@@ -136,9 +136,34 @@ Work on this branch:
   * The model.
 
     To do:
-      clarify the sequencing requirements of editing: for example,
+
+    - clarify the sequencing requirements of editing: for example,
         requesting the full path to an element implies finalization of
         at least it and all its parent elements
+
+        The editor currently includes a 'sequence_point' method.
+        This is a broken bit of design. It was an attempt to allow
+        'flattening' the txn state into a tree on demand, so the client
+        (especially a client like svnmover) can query the txn by path.
+
+        The client should never make a query that involves paths on a
+        txn that is in an arbitrary state (some elements edited, some
+        yet to be edited).
+
+        The 'sequence_point' method should go away.
+        Instead, the client should request a (read-only) snapshot of
+        the state (e.g. svn_branch_subtree_t) at an appropriate time,
+        and query that.
+
+        Any 'svn_branch' APIs that look up by path or yield a path
+        should not be used on a txn in an arbitrary state, but only on
+        a 'flat' snapshot state (e.g. svn_branch_subtree_t).
+
+        Need to decide whether to use a single data type for both
+        txn and flat-tree, or separate types as currently done
+        ('svn_branch_state_t' and 'svn_branch_subtree_t'), and go
+        fully with whichever way we decide.
+
       copying: model copying as a (tree) relationship between elements
         that is the same across all branches in a family?
 
