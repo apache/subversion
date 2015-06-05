@@ -50,6 +50,7 @@
 #include "private/svn_string_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_token.h"
+#include "private/svn_client_private.h"
 #include "../libsvn_delta/debug_editor.h"
 
 #define HAVE_LINENOISE
@@ -2115,6 +2116,8 @@ do_revert(svnmover_wc_t *wc,
 typedef struct migrate_replay_baton_t {
   svn_editor3_t *new_editor;
   svn_ra_session_t *from_session;
+  /* Hash (by revnum) of array of svn_repos_move_info_t. */
+  apr_hash_t *moves;
 } migrate_replay_baton_t;
 
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
@@ -2160,10 +2163,30 @@ migrate_replay_rev_finished(svn_revnum_t revision,
                             apr_pool_t *pool)
 {
   migrate_replay_baton_t *rb = replay_baton;
-
-  printf("DBG: migrate: end r%ld\n", revision);
+  apr_array_header_t *moves_in_revision
+    = apr_hash_get(rb->moves, &revision, sizeof(revision));
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  printf("DBG: migrate: moves in revision r%ld:\n", revision);
+
+  if (moves_in_revision)
+    {
+      int i;
+
+      for (i = 0; i < moves_in_revision->nelts; i++)
+        {
+          svn_repos_move_info_t *this_move
+            = APR_ARRAY_IDX(moves_in_revision, i, void *);
+
+          if (this_move)
+            {
+              printf("%s",
+                     svn_client__format_move_chain_for_display(this_move,
+                                                               "", pool));
+            }
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2188,6 +2211,13 @@ do_migrate(svnmover_wc_t *wc,
                                start_revision, end_revision,
                                wc->head_revision);
     }
+
+  /* Scan the repository log for move info */
+  SVN_ERR(svn_client__get_repos_moves(&rb->moves,
+                                      "" /*(unused)*/,
+                                      wc->ra_session,
+                                      start_revision, end_revision,
+                                      wc->ctx, scratch_pool, scratch_pool));
 
   rb->new_editor = wc->editor;
   rb->from_session = wc->ra_session;
