@@ -495,7 +495,8 @@ typedef enum action_code_t {
   ACTION_COMMIT,
   ACTION_UPDATE,
   ACTION_STATUS,
-  ACTION_REVERT
+  ACTION_REVERT,
+  ACTION_MIGRATE
 } action_code_t;
 
 typedef struct action_defn_t {
@@ -549,6 +550,8 @@ static const action_defn_t action_defn[] =
     "same as 'diff .@base .'"},
   {ACTION_REVERT,           "revert", 0, "",
     "revert all uncommitted changes"},
+  {ACTION_MIGRATE,          "migrate", 1, ".@REV",
+    "migrate changes from non-move-tracking revision"},
 };
 
 typedef struct action_t {
@@ -2107,6 +2110,96 @@ do_revert(svnmover_wc_t *wc,
   return SVN_NO_ERROR;
 }
 
+/* Migration replay baton */
+typedef struct migrate_replay_baton_t {
+  svn_editor3_t *new_editor;
+  svn_ra_session_t *from_session;
+} migrate_replay_baton_t;
+
+/* Callback function for svn_ra_replay_range, invoked when starting to parse
+ * a replay report.
+ */
+static svn_error_t *
+migrate_replay_rev_started(svn_revnum_t revision,
+                           void *replay_baton,
+                           const svn_delta_editor_t **editor,
+                           void **edit_baton,
+                           apr_hash_t *rev_props,
+                           apr_pool_t *pool)
+{
+  migrate_replay_baton_t *rb = replay_baton;
+  const svn_delta_editor_t *old_editor;
+  void *old_edit_baton;
+
+  printf("DBG: migrate: start r%ld\n", revision);
+
+  SVN_ERR(svn_branch_get_migration_editor(&old_editor, &old_edit_baton,
+                                          rb->new_editor,
+                                          rb->from_session, revision,
+                                          pool));
+  SVN_ERR(svn_delta__get_debug_editor(&old_editor, &old_edit_baton,
+                                      old_editor, old_edit_baton,
+                                      "migrate: ", pool));
+
+  *editor = old_editor;
+  *edit_baton = old_edit_baton;
+
+  return SVN_NO_ERROR;
+}
+
+/* Callback function for svn_ra_replay_range, invoked when finishing parsing
+ * a replay report.
+ */
+static svn_error_t *
+migrate_replay_rev_finished(svn_revnum_t revision,
+                            void *replay_baton,
+                            const svn_delta_editor_t *editor,
+                            void *edit_baton,
+                            apr_hash_t *rev_props,
+                            apr_pool_t *pool)
+{
+  migrate_replay_baton_t *rb = replay_baton;
+
+  printf("DBG: migrate: end r%ld\n", revision);
+
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Migrate changes from non-move-tracking revisions.
+ */
+static svn_error_t *
+do_migrate(svnmover_wc_t *wc,
+           svn_revnum_t start_revision,
+           svn_revnum_t end_revision,
+           apr_pool_t *scratch_pool)
+{
+  migrate_replay_baton_t *rb = apr_pcalloc(scratch_pool, sizeof(*rb));
+
+  if (start_revision < 1 || end_revision < 1
+      || start_revision > end_revision
+      || end_revision > wc->head_revision)
+    {
+      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                               _("migrate: Bad revision range (%ld to %ld); "
+                                 "minimum is 1 and maximum (head) is %ld"),
+                               start_revision, end_revision,
+                               wc->head_revision);
+    }
+
+  rb->new_editor = wc->editor;
+  rb->from_session = wc->ra_session;
+  SVN_ERR(svn_ra_replay_range(rb->from_session,
+                              start_revision, end_revision,
+                              0, TRUE,
+                              migrate_replay_rev_started,
+                              migrate_replay_rev_finished,
+                              rb, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+
 typedef struct arg_t
 {
   const char *path_name;
@@ -2560,6 +2653,17 @@ execute(svnmover_wc_t *wc,
         case ACTION_REVERT:
           {
             SVN_ERR(do_revert(wc, iterpool));
+          }
+          break;
+
+        case ACTION_MIGRATE:
+          /* path (or eid) is currently required for syntax, but ignored */
+          VERIFY_EID_EXISTS("migrate", 0);
+          VERIFY_REV_SPECIFIED("migrate", 0);
+          {
+            SVN_ERR(do_migrate(wc,
+                               arg[0]->revnum, arg[0]->revnum,
+                               iterpool));
           }
           break;
 
