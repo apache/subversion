@@ -343,7 +343,7 @@ svn_client__mergeinfo_log(svn_boolean_t finding_merged,
 
 /** Describes a server-side move (really a copy+delete within the same
  * revision) which has been identified by scanning the revision log.
- * @since New in 1.8. */
+ */
 typedef struct svn_repos_move_info_t {
   /* The repository relpath the node was moved from. */
   const char *moved_from_repos_relpath;
@@ -370,7 +370,7 @@ typedef struct svn_repos_move_info_t {
 
 /** Create a svn_wc_repos_move_info_t structure.
  * @see svn_wc_repos_move_info_t
- * @since New in 1.8. */
+ */
 svn_repos_move_info_t *
 svn_repos_move_info_create(const char *moved_from_repos_relpath,
                               const char *moved_to_repos_relpath,
