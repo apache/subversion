@@ -50,6 +50,7 @@
 #include "private/svn_string_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_token.h"
+#include "../libsvn_delta/debug_editor.h"
 
 #define HAVE_LINENOISE
 #ifdef HAVE_LINENOISE

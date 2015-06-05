@@ -23,9 +23,8 @@
 
 #include "svn_private_config.h"
 #include "svn_client.h"
-#include "svnmover.h"
 
-#include "../libsvn_delta/debug_editor.h"
+#include "private/svn_editor3e.h"
 
 
 struct edit_baton
