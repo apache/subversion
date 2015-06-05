@@ -425,7 +425,7 @@ scan_moves_log_receiver(void *baton,
       const char *path = apr_hash_this_key(hi);
       svn_log_changed_path2_t *data = apr_hash_this_val(hi);
 
-      if (data->action == 'A' && data->copyfrom_path)
+      if ((data->action == 'A' || data->action == 'R') && data->copyfrom_path)
         {
           struct copy_info *copy;
           apr_array_header_t *copies_with_same_source_path;
@@ -453,7 +453,8 @@ scan_moves_log_receiver(void *baton,
           APR_ARRAY_PUSH(copies_with_same_source_path,
                          struct copy_info *) = copy;
         }
-      else if (data->action == 'D')
+
+      if (data->action == 'D' || data->action == 'R')
         {
           const char *parent_path;
 
