@@ -41,6 +41,7 @@
 #include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_version.h"
+#include "svnmover.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_subr_private.h"
@@ -110,21 +111,6 @@ notify(const char *fmt,
   "------------------------------------------------------------------------\n"
 
 /* ====================================================================== */
-
-typedef struct svnmover_wc_t
-{
-  apr_pool_t *pool;
-  const char *repos_root_url;
-  /*const char *anchor_repos_relpath;*/
-  svn_revnum_t head_revision;
-  svn_revnum_t base_revision;
-
-  svn_ra_session_t *ra_session;
-  svn_editor3_t *editor;
-  svn_branch_revision_root_t *edit_txn;
-  svn_client_ctx_t *ctx;
-
-} svnmover_wc_t;
 
 /* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
  *
