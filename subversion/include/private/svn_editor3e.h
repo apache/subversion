@@ -1263,6 +1263,16 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
                       void *fetch_baton,
                       apr_pool_t *result_pool);
 
+/* An Ev1 editor that drives (heuristically) a move-tracking editor.
+ */
+svn_error_t *
+svn_branch_get_migration_editor(const svn_delta_editor_t **old_editor,
+                                void **old_edit_baton,
+                                svn_editor3_t *new_editor,
+                                svn_ra_session_t *from_session,
+                                svn_revnum_t revision,
+                                apr_pool_t *result_pool);
+
 
 #ifdef __cplusplus
 }
