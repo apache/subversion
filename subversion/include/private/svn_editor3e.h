@@ -34,6 +34,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_ra.h"
 #include "private/svn_branch.h"
 
 #ifdef __cplusplus
