@@ -60,13 +60,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1683311
-   Make error reporting from svn_repos_verify_fs3 consistent
-   with behaviour of svn_repos_verify_fs2 in 1.8.x.
-   Justification:
-     Errors from the FS implementation are squashed even in normal
-     mode without --keep-going. See: http://s.apache.org/j9Z
-   Note: Can't go into 1.9.1+ because of a new/changed error code.
-   Votes:
-     +1: brane, rhuijben, stefan2
