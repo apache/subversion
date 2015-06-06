@@ -590,7 +590,7 @@ write_handler(void *baton,
   struct decode_baton *db = (struct decode_baton *) baton;
   const unsigned char *p, *end;
   svn_filesize_t sview_offset;
-  apr_size_t sview_len, tview_len, inslen, newlen, remaining;
+  apr_size_t sview_len, tview_len, inslen, newlen;
   apr_size_t buflen = *len;
 
   /* Chew up four bytes at the beginning for the header.  */
@@ -628,7 +628,6 @@ write_handler(void *baton,
 
   while (1)
     {
-      apr_pool_t *newpool;
       svn_txdelta_window_t window;
 
       /* Read the header, if we have enough bytes for that.  */
@@ -690,25 +689,17 @@ write_handler(void *baton,
                             db->version));
       SVN_ERR(db->consumer_func(&window, db->consumer_baton));
 
-      /* Make a new subpool and buffer, saving aside the remaining
-         data in the old buffer.  */
-      newpool = svn_pool_create(db->pool);
       p += inslen + newlen;
-      remaining = db->buffer->data + db->buffer->len - (const char *) p;
-      db->buffer =
-        svn_stringbuf_ncreate((const char *) p, remaining, newpool);
+
+      /* Remove processed data from the buffer.  */
+      svn_stringbuf_remove(db->buffer, 0, db->buffer->len - (end - p));
 
       /* Remember the offset and length of the source view for next time.  */
       db->last_sview_offset = sview_offset;
       db->last_sview_len = sview_len;
 
-      /* We've copied stuff out of the old pool. Toss that pool and use
-         our new pool.
-         ### might be nice to avoid the copy and just use svn_pool_clear
-         ### to get rid of whatever the "other stuff" is. future project...
-      */
-      svn_pool_destroy(db->subpool);
-      db->subpool = newpool;
+      /* Clear subpool. */
+      svn_pool_clear(db->subpool);
     }
 
   /* NOTREACHED */
@@ -757,7 +748,7 @@ svn_txdelta_parse_svndiff(svn_txdelta_window_handler_t handler,
   db->consumer_baton = handler_baton;
   db->pool = subpool;
   db->subpool = svn_pool_create(subpool);
-  db->buffer = svn_stringbuf_create_empty(db->subpool);
+  db->buffer = svn_stringbuf_create_empty(db->pool);
   db->last_sview_offset = 0;
   db->last_sview_len = 0;
   db->header_bytes = 0;
