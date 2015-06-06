@@ -282,7 +282,6 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
                           PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   $1 = ($1_ltype) PerlThunk;
-  SPAGAIN;
   $2 = $input;
 }
 %enddef
@@ -291,7 +290,6 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   if (SvOK($input)) {
     $1 = ($1_ltype) PerlThunk;
-    SPAGAIN;
     $2 = $input;
   } else {
     $1 = ($1_ltype) NULL;
@@ -740,7 +738,6 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPERL
 %typemap(in) (svn_commit_callback_t callback, void *callback_baton) {
     $1 = svn_swig_pl_thunk_commit_callback;
-    SPAGAIN;
     $2 = (void *)$input;
     svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
 };
@@ -783,7 +780,6 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPERL
 %typemap(in) (svn_commit_callback2_t commit_callback, void *commit_baton) {
     $1 = svn_swig_pl_thunk_commit_callback2;
-    SPAGAIN;
     $2 = (void *)$input;
     svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
 };
