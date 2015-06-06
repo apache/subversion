@@ -209,7 +209,6 @@ Callback: svn_client_diff_summarize_func_t
     %typemap(in) (svn_client_diff_summarize_func_t summarize_func,
                   void *summarize_baton) {
         $1 = svn_swig_pl_thunk_client_diff_summarize_func;
-        SPAGAIN;
         $2 = (void *)$input;
     }
 #endif
