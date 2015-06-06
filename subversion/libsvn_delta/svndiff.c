@@ -740,23 +740,24 @@ svn_txdelta_parse_svndiff(svn_txdelta_window_handler_t handler,
                           svn_boolean_t error_on_early_close,
                           apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
-  struct decode_baton *db = apr_palloc(pool, sizeof(*db));
   svn_stream_t *stream;
-
-  db->consumer_func = handler;
-  db->consumer_baton = handler_baton;
-  db->pool = subpool;
-  db->subpool = svn_pool_create(subpool);
-  db->buffer = svn_stringbuf_create_empty(db->pool);
-  db->last_sview_offset = 0;
-  db->last_sview_len = 0;
-  db->header_bytes = 0;
-  db->error_on_early_close = error_on_early_close;
-  stream = svn_stream_create(db, pool);
 
   if (handler != svn_delta_noop_window_handler)
     {
+      apr_pool_t *subpool = svn_pool_create(pool);
+      struct decode_baton *db = apr_palloc(pool, sizeof(*db));
+
+      db->consumer_func = handler;
+      db->consumer_baton = handler_baton;
+      db->pool = subpool;
+      db->subpool = svn_pool_create(subpool);
+      db->buffer = svn_stringbuf_create_empty(db->pool);
+      db->last_sview_offset = 0;
+      db->last_sview_len = 0;
+      db->header_bytes = 0;
+      db->error_on_early_close = error_on_early_close;
+      stream = svn_stream_create(db, pool);
+
       svn_stream_set_write(stream, write_handler);
       svn_stream_set_close(stream, close_handler);
     }
@@ -764,6 +765,7 @@ svn_txdelta_parse_svndiff(svn_txdelta_window_handler_t handler,
     {
       /* And else we just ignore everything as efficiently as we can.
          by only hooking a no-op handler */
+      stream = svn_stream_create(NULL, pool);
       svn_stream_set_write(stream, noop_write_handler);
     }
   return stream;
