@@ -619,23 +619,23 @@ write_handler(void *baton,
 
       p = decode_file_offset(&sview_offset, p, end);
       if (p == NULL)
-        return SVN_NO_ERROR;
+        break;
 
       p = decode_size(&sview_len, p, end);
       if (p == NULL)
-        return SVN_NO_ERROR;
+        break;
 
       p = decode_size(&tview_len, p, end);
       if (p == NULL)
-        return SVN_NO_ERROR;
+        break;
 
       p = decode_size(&inslen, p, end);
       if (p == NULL)
-        return SVN_NO_ERROR;
+        break;
 
       p = decode_size(&newlen, p, end);
       if (p == NULL)
-        return SVN_NO_ERROR;
+        break;
 
       if (tview_len > SVN_DELTA_WINDOW_SIZE ||
           sview_len > SVN_DELTA_WINDOW_SIZE ||
@@ -685,7 +685,15 @@ write_handler(void *baton,
       svn_pool_clear(db->subpool);
     }
 
-  /* NOTREACHED */
+  /* At this point we processed all integral windows and DB->BUFFER is empty
+     or contains partially read window header.
+     Check that unprocessed data is not larger that theoretical maximum
+     window header size. */
+  if (db->buffer->len > 5 * SVN__MAX_ENCODED_UINT_LEN)
+    return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
+                            _("Svndiff contains a too-large window header"));
+
+  return SVN_NO_ERROR;
 }
 
 /* Minimal svn_stream_t write handler, doing nothing */
