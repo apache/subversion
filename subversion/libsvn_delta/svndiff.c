@@ -36,6 +36,20 @@
 #include "private/svn_string_private.h"
 #include "private/svn_dep_compat.h"
 
+static const char SVNDIFF_V0[] = { 'S', 'V', 'N', 0 };
+static const char SVNDIFF_V1[] = { 'S', 'V', 'N', 1 };
+
+#define SVNDIFF_HEADER_SIZE (sizeof(SVNDIFF_V0))
+
+static const char *
+get_svndiff_header(int version)
+{
+  if (version == 1)
+    return SVNDIFF_V1;
+  else
+    return SVNDIFF_V0;
+}
+
 /* ----- Text delta to svndiff ----- */
 
 /* We make one of these and get it passed back to us in calls to the
@@ -72,7 +86,7 @@ static svn_error_t *
 send_simple_insertion_window(svn_txdelta_window_t *window,
                              struct encoder_baton *eb)
 {
-  unsigned char headers[4 + 5 * SVN__MAX_ENCODED_UINT_LEN
+  unsigned char headers[SVNDIFF_HEADER_SIZE + 5 * SVN__MAX_ENCODED_UINT_LEN
                           + MAX_INSTRUCTION_LEN];
   unsigned char ibuf[MAX_INSTRUCTION_LEN];
   unsigned char *header_current;
@@ -89,11 +103,8 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
   if (!eb->header_done)
     {
       eb->header_done = TRUE;
-      headers[0] = 'S';
-      headers[1] = 'V';
-      headers[2] = 'N';
-      headers[3] = (unsigned char)eb->version;
-      header_current = headers + 4;
+      memcpy(headers, get_svndiff_header(eb->version), SVNDIFF_HEADER_SIZE);
+      header_current = headers + SVNDIFF_HEADER_SIZE;
     }
   else
     {
@@ -155,10 +166,9 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   /* Make sure we write the header.  */
   if (!eb->header_done)
     {
-      char svnver[4] = {'S','V','N','\0'};
-      len = 4;
-      svnver[3] = (char)eb->version;
-      SVN_ERR(svn_stream_write(eb->output, svnver, &len));
+      len = SVNDIFF_HEADER_SIZE;
+      SVN_ERR(svn_stream_write(eb->output, get_svndiff_header(eb->version),
+                               &len));
       eb->header_done = TRUE;
     }
 
@@ -554,10 +564,6 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
 
   return SVN_NO_ERROR;
 }
-
-static const char SVNDIFF_V0[] = { 'S', 'V', 'N', 0 };
-static const char SVNDIFF_V1[] = { 'S', 'V', 'N', 1 };
-#define SVNDIFF_HEADER_SIZE (sizeof(SVNDIFF_V0))
 
 static svn_error_t *
 write_handler(void *baton,
