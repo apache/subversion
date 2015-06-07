@@ -513,7 +513,7 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
   int ninst;
   apr_size_t npos;
   svn_txdelta_op_t *ops, *op;
-  svn_string_t *new_data = apr_palloc(pool, sizeof(*new_data));
+  svn_string_t *new_data;
 
   window->sview_offset = sview_offset;
   window->sview_len = sview_len;
@@ -535,19 +535,13 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
       data = (unsigned char *)instout->data;
       insend = (unsigned char *)instout->data + instout->len;
 
-      new_data->data = (const char *) ndout->data;
-      new_data->len = newlen;
+      new_data = svn_stringbuf__morph_into_string(ndout);
     }
   else
     {
       /* Copy the data because an svn_string_t must have the invariant
          data[len]=='\0'. */
-      char *buf = apr_palloc(pool, newlen + 1);
-
-      memcpy(buf, insend, newlen);
-      buf[newlen] = '\0';
-      new_data->data = buf;
-      new_data->len = newlen;
+      new_data = svn_string_ncreate((const char*)insend, newlen, pool);
     }
 
   /* Count the instructions and make sure they are all valid.  */
