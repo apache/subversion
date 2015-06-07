@@ -215,19 +215,17 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   append_encoded_int(header, window->tview_len);
   if (eb->version == 1)
     {
-      SVN_ERR(svn__compress(instructions, i1, eb->compression_level));
+      SVN_ERR(svn__compress(instructions->data, instructions->len,
+                            i1, eb->compression_level));
       instructions = i1;
     }
   append_encoded_int(header, instructions->len);
   if (eb->version == 1)
     {
       svn_stringbuf_t *compressed = svn_stringbuf_create_empty(pool);
-      svn_stringbuf_t *original = svn_stringbuf_create_empty(pool);
-      original->data = (char *)window->new_data->data; /* won't be modified */
-      original->len = window->new_data->len;
-      original->blocksize = window->new_data->len + 1;
 
-      SVN_ERR(svn__compress(original, compressed, eb->compression_level));
+      SVN_ERR(svn__compress(window->new_data->data, window->new_data->len,
+                            compressed, eb->compression_level));
       newdata = svn_stringbuf__morph_into_string(compressed);
     }
   else
@@ -483,21 +481,6 @@ count_and_verify_instructions(int *ninst,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
-            apr_size_t limit)
-{
-  /* construct a fake string buffer as parameter to svn__decompress.
-     This is fine as that function never writes to it. */
-  svn_stringbuf_t compressed;
-  compressed.pool = NULL;
-  compressed.data = (char *)in;
-  compressed.len = inLen;
-  compressed.blocksize = inLen + 1;
-
-  return svn__decompress(&compressed, out, limit);
-}
-
 /* Given the five integer fields of a window header and a pointer to
    the remainder of the window contents, fill in a delta window
    structure *WINDOW.  New allocations will be performed in POOL;
@@ -526,10 +509,10 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
       svn_stringbuf_t *instout = svn_stringbuf_create_empty(pool);
       svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
 
-      SVN_ERR(zlib_decode(insend, newlen, ndout,
-                          SVN_DELTA_WINDOW_SIZE));
-      SVN_ERR(zlib_decode(data, insend - data, instout,
-                          MAX_INSTRUCTION_SECTION_LEN));
+      SVN_ERR(svn__decompress(insend, newlen, ndout,
+                              SVN_DELTA_WINDOW_SIZE));
+      SVN_ERR(svn__decompress(data, insend - data, instout,
+                              MAX_INSTRUCTION_SECTION_LEN));
 
       newlen = ndout->len;
       data = (unsigned char *)instout->data;

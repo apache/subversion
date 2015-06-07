@@ -537,20 +537,21 @@ svn__decode_uint(apr_uint64_t *val,
                  const unsigned char *p,
                  const unsigned char *end);
 
-/* Get the data from IN, compress it according to the specified
- * COMPRESSION_METHOD and write the result to OUT.
+/* Compress the data from DATA with length LEN, it according to the
+ * specified COMPRESSION_METHOD and write the result to OUT.
  * SVN__COMPRESSION_NONE is valid for COMPRESSION_METHOD.
  */
 svn_error_t *
-svn__compress(svn_stringbuf_t *in,
+svn__compress(const void *data, apr_size_t len,
               svn_stringbuf_t *out,
               int compression_method);
 
-/* Get the compressed data from IN, decompress it and write the result to
- * OUT.  Return an error if the decompressed size is larger than LIMIT.
+/* Decompress the compressed data from DATA with length LEN and write the
+ * result to OUT.  Return an error if the decompressed size is larger than
+ * LIMIT.
  */
 svn_error_t *
-svn__decompress(svn_stringbuf_t *in,
+svn__decompress(const void *data, apr_size_t len,
                 svn_stringbuf_t *out,
                 apr_size_t limit);
 
