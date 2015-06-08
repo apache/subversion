@@ -55,6 +55,13 @@ Other candidate changes:
    Votes:
      +1: ivan
 
+ * r1684077
+   Detect invalid svndiff data earlier.
+   Justification:
+     Do not waste memory on invalid user or server input.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
