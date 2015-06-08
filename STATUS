@@ -136,6 +136,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1684077
+   Detect invalid svndiff data earlier.
+   Justification:
+     Do not waste memory on invalid user or server input.
+   Branch:
+     ^/subversion/branches/1.8.x-r1684077
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
