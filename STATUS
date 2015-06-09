@@ -69,8 +69,7 @@ Other candidate changes:
      Fixes a bug that was introduced in r1683311, which was
      already merged to 1.9.x.
    Votes:
-     +1: brane
-     +1: rhuijben (without r1684344)
+     +1: brane, rhuijben
 
 Veto-blocked changes:
 =====================
