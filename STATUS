@@ -19,6 +19,20 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
+ * r1684322
+   Fix a minor omission in JavaHL's VersionExtended class:
+   the dispose() and finalize() methods were missing.
+   Justification:
+     Without the dispose() method, the user of the VersionExtended
+     class cannot avoid a memory leak in native memory.
+   Note:
+     VersionExtended is new in 1.9. If we release it without
+     the dispose() and finalize() methods, the bug will have to
+     persist to 1.10, because adding the methods would be
+     a public API change.
+   Votes:
+     +1: brane
+
 Other candidate changes:
 ========================
 
