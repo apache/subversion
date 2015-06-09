@@ -29,21 +29,22 @@
 namespace JavaHL {
 
 const char* const ExternalItem::m_class_name =
-  JAVA_PACKAGE"/types/ExternalItem";
+  JAVAHL_CLASS("/types/ExternalItem");
 
 ExternalItem::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),
     m_mid_ctor(
         env.GetMethodID(cls, "<init>",
                         "(ZLjava/lang/String;Ljava/lang/String;"
-                        "L"JAVA_PACKAGE"/types/Revision;"
-                        "L"JAVA_PACKAGE"/types/Revision;)V")),
+                        JAVAHL_ARG("/types/Revision;")
+                        JAVAHL_ARG("/types/Revision;")
+                        ")V")),
     m_fid_target_dir(env.GetFieldID(cls, "targetDir", "Ljava/lang/String;")),
     m_fid_url(env.GetFieldID(cls, "url", "Ljava/lang/String;")),
     m_fid_revision(env.GetFieldID(cls, "revision",
-                                  "L"JAVA_PACKAGE"/types/Revision;")),
+                                  JAVAHL_ARG("/types/Revision;"))),
     m_fid_peg_revision(env.GetFieldID(cls, "pegRevision",
-                                      "L"JAVA_PACKAGE"/types/Revision;"))
+                                      JAVAHL_ARG("/types/Revision;")))
 {}
 
 ExternalItem::ClassImpl::~ClassImpl() {}
@@ -131,7 +132,7 @@ inline jobject get_static_revision(::Java::Env env, jclass cls,
 {
   return env.GetStaticObjectField(
       cls, env.GetStaticFieldID(cls, field_name,
-                                "L"JAVA_PACKAGE"/types/Revision;"));
+                                JAVAHL_ARG("/types/Revision;")));
 }
 } // anonymous namespace
 
@@ -145,12 +146,12 @@ jobject Revision::makeJRevision(const svn_opt_revision_t& rev)
   if (rev.kind == svn_opt_revision_date)
     {
       const jclass cls = env.FindClass(
-          JAVA_PACKAGE"/types/Revision$DateSpec");
+          JAVAHL_CLASS("/types/Revision$DateSpec"));
       return env.NewObject(cls, env.GetMethodID(cls, "<init>", "(J)V"),
                            jlong(rev.value.date / 1000));
     }
 
-  const jclass cls = env.FindClass(JAVA_PACKAGE"/types/Revision");
+  const jclass cls = env.FindClass(JAVAHL_CLASS("/types/Revision"));
   switch (rev.kind)
     {
     case svn_opt_revision_committed:

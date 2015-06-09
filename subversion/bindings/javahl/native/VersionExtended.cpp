@@ -35,7 +35,7 @@ VersionExtended::getCppObject(jobject jthis)
 
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(
-      jthis, &fid, JAVA_PACKAGE"/types/VersionExtended");
+      jthis, &fid, JAVAHL_CLASS("/types/VersionExtended"));
   return (cppAddr == 0 ? NULL : reinterpret_cast<VersionExtended *>(cppAddr));
 }
 
@@ -46,7 +46,7 @@ static jobject getWrapperAddress(jobject jthat, volatile jfieldID *fid)
   if (!*fid)
     {
       *fid = env->GetFieldID(env->GetObjectClass(jthat), "wrapper",
-                             "L"JAVA_PACKAGE"/types/VersionExtended;");
+                             JAVAHL_ARG("/types/VersionExtended;"));
       if (JNIUtil::isJavaExceptionThrown())
         {
           *fid = 0;
@@ -94,5 +94,5 @@ VersionExtended::~VersionExtended() {}
 void VersionExtended::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/types/VersionExtended");
+  SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/types/VersionExtended"));
 }

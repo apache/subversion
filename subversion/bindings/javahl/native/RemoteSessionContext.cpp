@@ -90,7 +90,7 @@ void RemoteSessionContext::activate(jobject jremoteSession, jobject jprogress)
    */
   static jfieldID ctxFieldID = 0;
   attachJavaObject(jremoteSession,
-      "L"JAVA_PACKAGE"/remote/RemoteSession$RemoteSessionContext;",
+      JAVAHL_ARG("/remote/RemoteSession$RemoteSessionContext;"),
       "sessionContext", &ctxFieldID);
 
   /*
@@ -104,7 +104,7 @@ void RemoteSessionContext::activate(jobject jremoteSession, jobject jprogress)
 
   jmethodID mid = env->GetMethodID(
       clazz, "setProgressCallback",
-      "(L"JAVA_PACKAGE"/callback/ProgressCallback;)V");
+      "(" JAVAHL_ARG("/callback/ProgressCallback;") ")V");
   if (JNIUtil::isJavaExceptionThrown() || mid == 0)
     return;
 

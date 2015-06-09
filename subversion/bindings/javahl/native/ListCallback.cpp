@@ -87,13 +87,13 @@ ListCallback::doList(const char *path,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ListCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/ListCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doEntry",
-                             "(L"JAVA_PACKAGE"/types/DirEntry;"
-                             "L"JAVA_PACKAGE"/types/Lock;)V");
+                             "(" JAVAHL_ARG("/types/DirEntry;")
+                             JAVAHL_ARG("/types/Lock;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
