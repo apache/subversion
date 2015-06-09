@@ -62,14 +62,15 @@ Other candidate changes:
    Votes:
      +1: ivan, brane
 
- * r1684325
+ * r1684325, r1684344
    Fix an unintended doubling of error messages in 'svnadmin verify'
    without the --keep-going flag.
    Justification:
      Fixes a bug that was introduced in r1683311, which was
      already merged to 1.9.x.
    Votes:
-     +1: brane, rhuijben
+     +1: brane
+     +1: rhuijben (without r1684344)
 
 Veto-blocked changes:
 =====================
