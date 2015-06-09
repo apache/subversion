@@ -868,6 +868,11 @@ struct repos_notify_handler_baton {
   /* Stream to write progress and other non-error output to. */
   svn_stream_t *feedback_stream;
 
+  /* Whether errors contained in notifications should be printed along
+     with the notification. If FALSE, any errors will only be
+     summarized. */
+  svn_boolean_t silent_errors;
+
   /* List of errors encountered during 'svnadmin verify --keep-going'. */
   apr_array_header_t *error_summary;
 
@@ -901,8 +906,10 @@ repos_notify_handler(void *baton,
                                     notify->revision));
       if (notify->err)
         {
-          svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
-                            "svnadmin: ");
+          if (!b->silent_errors)
+            svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
+                              "svnadmin: ");
+
           if (b->error_summary && notify->revision != SVN_INVALID_REVNUM)
             {
               struct verification_error *verr;
@@ -1837,6 +1844,8 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (opt_state->keep_going)
     notify_baton.error_summary =
       apr_array_make(pool, 0, sizeof(struct verification_error *));
+  else
+    notify_baton.silent_errors = TRUE;
 
   notify_baton.result_pool = pool;
 
