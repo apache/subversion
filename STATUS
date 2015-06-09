@@ -55,13 +55,6 @@ Other candidate changes:
    Votes:
      +1: ivan
 
- * r1684077
-   Detect invalid svndiff data earlier.
-   Justification:
-     Do not waste memory on invalid user or server input.
-   Votes:
-     +1: ivan, brane
-
  * r1684325, r1684344
    Fix an unintended doubling of error messages in 'svnadmin verify'
    without the --keep-going flag.
@@ -105,3 +98,10 @@ Approved changes:
    Votes:
      +1: brane
      +0.5: rhuijben (Change looks good; untested. Will test later today)
+
+ * r1684077
+   Detect invalid svndiff data earlier.
+   Justification:
+     Do not waste memory on invalid user or server input.
+   Votes:
+     +1: ivan, brane, rhuijben
