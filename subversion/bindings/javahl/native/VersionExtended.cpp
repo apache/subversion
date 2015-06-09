@@ -27,7 +27,7 @@
 #include "JNIUtil.h"
 #include "VersionExtended.h"
 
-const VersionExtended *
+VersionExtended *
 VersionExtended::getCppObject(jobject jthis)
 {
   if (!jthis)
