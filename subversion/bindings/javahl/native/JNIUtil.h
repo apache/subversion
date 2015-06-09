@@ -38,13 +38,28 @@ class SVNBase;
 #include <apr_time.h>
 #include <string>
 #include <vector>
+
 struct svn_error_t;
+struct svn_string_t;
 
 #include "svn_error.h"
 
-#define JAVA_PACKAGE "org/apache/subversion/javahl"
 
-struct svn_string_t;
+/**
+ * The name of the package in which the JavaHL classes are defined.
+ */
+#define JAVAHL_PACKAGE "org/apache/subversion/javahl"
+
+/**
+ * Construct a JavaHL class name for JNIEnv::FindClass.
+ */
+#define JAVAHL_CLASS(name) JAVAHL_PACKAGE name
+
+/**
+ * Construct a JavaHL class parameter name for JNIEnv::GetMethodID & co.
+ */
+#define JAVAHL_ARG(name) "L" JAVAHL_PACKAGE name
+
 
 /**
  * Class to hold a number of JNI related utility methods.  No Objects
@@ -146,7 +161,7 @@ class JNIUtil
    */
   static void throwError(const char *message)
     {
-      raiseThrowable(JAVA_PACKAGE"/JNIError", message);
+      raiseThrowable(JAVAHL_CLASS("/JNIError"), message);
     }
 
   static apr_pool_t *getPool();

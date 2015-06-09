@@ -33,7 +33,7 @@ namespace JavaHL {
 // Class JavaHL::NativeInputStream
 
 const char* const NativeInputStream::m_class_name =
-    JAVA_PACKAGE "/types/NativeInputStream";
+    JAVAHL_CLASS("/types/NativeInputStream");
 
 NativeInputStream::~NativeInputStream() {}
 
@@ -144,7 +144,7 @@ void NativeInputStream::dispose(jobject jthis)
 // Class JavaHL::NativeOutputStream
 
 const char* const NativeOutputStream::m_class_name =
-  JAVA_PACKAGE "/types/NativeOutputStream";
+  JAVAHL_CLASS("/types/NativeOutputStream");
 
 NativeOutputStream::~NativeOutputStream() {}
 
