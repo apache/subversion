@@ -74,7 +74,7 @@ Other candidate changes:
    Justification:
      Do not waste memory on invalid user or server input.
    Votes:
-     +1: ivan
+     +1: ivan, brane
 
 Veto-blocked changes:
 =====================
