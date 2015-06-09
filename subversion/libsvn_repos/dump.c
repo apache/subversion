@@ -2430,6 +2430,9 @@ svn_repos_verify_fs3(svn_repos_t *repos,
     }
   else if (err)
     {
+      notify_verification_error(SVN_INVALID_REVNUM, err, notify_func,
+                                notify_baton, iterpool);
+
       if (!keep_going)
         {
           /* Return the error, the caller doesn't want us to continue. */
@@ -2437,9 +2440,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
         }
       else
         {
-          /* Notify about the error, clear it and keep going. */
-          notify_verification_error(SVN_INVALID_REVNUM, err, notify_func,
-                                    notify_baton, iterpool);
+          /* Clear the error and keep going. */
           failed_metadata = TRUE;
           svn_error_clear(err);
         }
@@ -2462,6 +2463,9 @@ svn_repos_verify_fs3(svn_repos_t *repos,
           }
         else if (err)
           {
+            notify_verification_error(rev, err, notify_func, notify_baton,
+                                      iterpool);
+
             if (!keep_going)
               {
                 /* Return the error, the caller doesn't want us to continue. */
@@ -2469,9 +2473,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
               }
             else
               {
-                /* Notify about the error, clear it and keep going. */
-                notify_verification_error(rev, err, notify_func, notify_baton,
-                                          iterpool);
+                /* Clear the error and keep going. */
                 ++failed_revisions;
                 svn_error_clear(err);
               }
