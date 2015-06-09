@@ -64,20 +64,6 @@ Other candidate changes:
    Votes:
      +1: brane, rhuijben
 
- * r1684412
-   Make JavaHL native code compile with a C++11 compiler.
-   Justification:
-     The upcoming MSVC14, part of Visual Studio 2015,
-     supports user-defined literals, which means that
-     trying to build JavaHL with VS2015 will fail.
-   Note:
-     To test this change with gcc/clang on *ix, edit the file
-     build/ac-macros/compiler.m4 to replace '-std=c++98' with
-     '-std=c++11', then autogen, configure, build and run
-     the JavaHL tests.
-   Votes:
-     +1: brane
-
 Veto-blocked changes:
 =====================
 
@@ -96,8 +82,7 @@ Approved changes:
      persist to 1.10, because adding the methods would be
      a public API change.
    Votes:
-     +1: brane
-     +0.5: rhuijben (Change looks good; untested. Will test later today)
+     +1: brane, rhuijben
 
  * r1684077
    Detect invalid svndiff data earlier.
@@ -105,3 +90,17 @@ Approved changes:
      Do not waste memory on invalid user or server input.
    Votes:
      +1: ivan, brane, rhuijben
+
+ * r1684412
+   Make JavaHL native code compile with a C++11 compiler.
+   Justification:
+     The upcoming MSVC14, part of Visual Studio 2015,
+     supports user-defined literals, which means that
+     trying to build JavaHL with VS2015 will fail.
+   Note:
+     To test this change with gcc/clang on *ix, edit the file
+     build/ac-macros/compiler.m4 to replace '-std=c++98' with
+     '-std=c++11', then autogen, configure, build and run
+     the JavaHL tests.
+   Votes:
+     +1: brane, rhuijben
