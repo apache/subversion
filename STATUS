@@ -67,11 +67,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1684034
-   Fix prop_tests.py#42 test failures with non-US default locale on
-   Windows [1].
-   Justification:
-     Tests should not fail.
-   Votes:
-     +1: ivan, rhuijben
