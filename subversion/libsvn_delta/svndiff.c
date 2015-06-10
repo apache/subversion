@@ -687,7 +687,7 @@ write_handler(void *baton,
 
   /* At this point we processed all integral windows and DB->BUFFER is empty
      or contains partially read window header.
-     Check that unprocessed data is not larger that theoretical maximum
+     Check that unprocessed data is not larger than theoretical maximum
      window header size. */
   if (db->buffer->len > 5 * SVN__MAX_ENCODED_UINT_LEN)
     return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
