@@ -95,9 +95,16 @@ random_port() {
 if type time > /dev/null ; then TIME_CMD() { time "$@"; } ; else TIME_CMD() { "$@"; } ; fi
 
 MAKE=${MAKE:-make}
+PATH="$PATH:/usr/sbin/:/usr/local/sbin/"
+
+ss > /dev/null 2>&1 || netstat > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
 
 SVNSERVE_PORT=$(random_port)
-while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
+while \
+  (ss -ltn sport = :$SVNSERVE_PORT 2>&1 | grep :$SVNSERVE_PORT > /dev/null ) \
+  || \
+  (netstat -an 2>&1 | grep $SVNSERVE_PORT | grep 'LISTEN' > /dev/null ) \
+  do
   SVNSERVE_PORT=$(random_port)
 done
 
