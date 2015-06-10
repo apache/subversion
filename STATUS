@@ -136,6 +136,12 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1684077
    Detect invalid svndiff data earlier.
    Justification:
@@ -143,10 +149,4 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1684077
    Votes:
-     +1: ivan, kotkov
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: ivan, kotkov, rhuijben
