@@ -70,13 +70,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1684077
-   Detect invalid svndiff data earlier.
-   Justification:
-     Do not waste memory on invalid user or server input.
-   Votes:
-     +1: ivan, brane, rhuijben
-
  * r1684412
    Make JavaHL native code compile with a C++11 compiler.
    Justification:
