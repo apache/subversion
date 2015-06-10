@@ -275,7 +275,7 @@ Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_enumerate(
         static jmethodID mid = 0;
         if (0 == mid)
           {
-            jclass cls = e->FindClass(JAVA_PACKAGE"/ISVNConfig$Enumerator");
+            jclass cls = e->FindClass(JAVAHL_CLASS("/ISVNConfig$Enumerator"));
             if (JNIUtil::isJavaExceptionThrown())
               return false;
             mid = e->GetMethodID(cls, "option",

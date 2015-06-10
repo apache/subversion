@@ -52,7 +52,7 @@
 #include <apr_strings.h>
 #include "svn_private_config.h"
 
-#define JAVA_CLASS_REMOTE_SESSION JAVA_PACKAGE "/remote/RemoteSession"
+#define JAVA_CLASS_REMOTE_SESSION JAVAHL_CLASS("/remote/RemoteSession")
 
 RemoteSession *
 RemoteSession::getCppObject(jobject jthis)
@@ -226,7 +226,7 @@ RemoteSession::RemoteSession(int retryAttempts,
                        corrected_url));
 
       jclass excls = env->FindClass(
-          JAVA_PACKAGE "/SubversionException");
+          JAVAHL_CLASS("/SubversionException"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
@@ -256,7 +256,7 @@ RemoteSession::RemoteSession(int retryAttempts,
         return;
 
       jclass excls = env->FindClass(
-          JAVA_PACKAGE "/remote/RetryOpenSession");
+          JAVAHL_CLASS("/remote/RetryOpenSession"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
@@ -542,7 +542,7 @@ void fill_dirents(const char* base_url, const char* base_relpath,
   static jfieldID path_fid = 0;
   if (path_fid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE "/types/DirEntry");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/types/DirEntry"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NOTHING();
 
@@ -1089,7 +1089,7 @@ public:
         return;
 
       m_call_mid = env->GetMethodID(
-          cls, "doSegment", "(L"JAVA_PACKAGE"/ISVNRemote$LocationSegment;)V");
+          cls, "doSegment", "(" JAVAHL_ARG("/ISVNRemote$LocationSegment;") ")V");
       if (JNIUtil::isJavaExceptionThrown())
         return;
     }
@@ -1098,7 +1098,7 @@ private:
   void call(svn_location_segment_t* segment)
     {
       JNIEnv* env = JNIUtil::getEnv();
-      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$LocationSegment");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/ISVNRemote$LocationSegment"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
@@ -1193,7 +1193,7 @@ public:
         return;
 
       m_call_mid = env->GetMethodID(
-          cls, "doRevision", "(L"JAVA_PACKAGE"/ISVNRemote$FileRevision;)V");
+          cls, "doRevision", "(" JAVAHL_ARG("/ISVNRemote$FileRevision;") ")V");
       if (JNIUtil::isJavaExceptionThrown())
         return;
     }
@@ -1207,7 +1207,7 @@ private:
            apr_pool_t* scratch_pool)
     {
       JNIEnv* env = JNIUtil::getEnv();
-      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$FileRevision");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/ISVNRemote$FileRevision"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 

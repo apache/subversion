@@ -80,7 +80,7 @@ PatchCallback::singlePatch(svn_boolean_t *filtered,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/PatchCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/PatchCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 

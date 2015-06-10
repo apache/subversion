@@ -69,17 +69,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1684412
-   Make JavaHL native code compile with a C++11 compiler.
-   Justification:
-     The upcoming MSVC14, part of Visual Studio 2015,
-     supports user-defined literals, which means that
-     trying to build JavaHL with VS2015 will fail.
-   Note:
-     To test this change with gcc/clang on *ix, edit the file
-     build/ac-macros/compiler.m4 to replace '-std=c++98' with
-     '-std=c++11', then autogen, configure, build and run
-     the JavaHL tests.
-   Votes:
-     +1: brane, rhuijben
