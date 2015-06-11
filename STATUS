@@ -94,16 +94,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1672295, r1673691
-   Fix Sqlite 3.8.9 query performance regression on externals
-   Justification:
-     The regression tests shouldn't fail.
-     (And the query performance on working copies with an extreme
-      number of externals defined on different paths shouldn't
-      regress)
-   Votes:
-     +1: rhuijben, ivan
-
  * r1674455
    Make 'svn cp ^/A/D/H@1 ^/A' properly create A
    Justification:
@@ -136,6 +126,22 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1672295, r1673691
+   Fix Sqlite 3.8.9 query performance regression on externals
+   Justification:
+     The regression tests shouldn't fail.
+     (And the query performance on working copies with an extreme
+      number of externals defined on different paths shouldn't
+      regress)
+   Votes:
+     +1: rhuijben, ivan, philip
+
  * r1658168
    Properly handle errors when parsing skel encoded HTTP requests in
    mod_dav_svn.
@@ -144,10 +150,4 @@ Candidate changes:
      instead of expected 413 (Request Entity Too Large) for large
      skel encoded requests.
    Votes:
-     +1: ivan, rhuijben
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: ivan, rhuijben, philip
