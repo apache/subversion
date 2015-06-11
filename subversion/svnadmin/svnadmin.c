@@ -868,6 +868,9 @@ struct repos_notify_handler_baton {
   /* Stream to write progress and other non-error output to. */
   svn_stream_t *feedback_stream;
 
+  /* Suppress notifications that are neither errors nor warnings. */
+  svn_boolean_t silent_running;
+
   /* Whether errors contained in notifications should be printed along
      with the notification. If FALSE, any errors will only be
      summarized. */
@@ -890,6 +893,14 @@ repos_notify_handler(void *baton,
 {
   struct repos_notify_handler_baton *b = baton;
   svn_stream_t *feedback_stream = b->feedback_stream;
+
+  /* Don't print anything if the feedback stream isn't provided.
+     Only print errors and warnings in silent mode. */
+  if (!feedback_stream
+      || (b->silent_running
+          && notify->action != svn_repos_notify_warning
+          && notify->action != svn_repos_notify_failure))
+    return;
 
   switch (notify->action)
   {
@@ -1794,6 +1805,8 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_t *fs;
   svn_revnum_t youngest, lower, upper;
   struct repos_notify_handler_baton notify_baton = { 0 };
+  struct repos_notify_handler_baton *notify_baton_p = &notify_baton;
+  svn_repos_notify_func_t notify_func = repos_notify_handler;
   svn_error_t *verify_err;
 
   /* Expect no more arguments. */
@@ -1838,28 +1851,42 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       upper = lower;
     }
 
-  if (! opt_state->quiet)
-    notify_baton.feedback_stream = recode_stream_create(stdout, pool);
+  /* Set up the notification handler. */
+  if (!opt_state->quiet || opt_state->keep_going)
+    {
+      if (opt_state->quiet)
+        {
+          notify_baton.silent_running = TRUE;
+          notify_baton.feedback_stream = recode_stream_create(stderr, pool);
+        }
+      else
+        notify_baton.feedback_stream = recode_stream_create(stdout, pool);
 
-  if (opt_state->keep_going)
-    notify_baton.error_summary =
-      apr_array_make(pool, 0, sizeof(struct verification_error *));
+      if (opt_state->keep_going)
+        notify_baton.error_summary =
+          apr_array_make(pool, 0, sizeof(struct verification_error *));
+      else
+        notify_baton.silent_errors = TRUE;
+
+      notify_baton.result_pool = pool;
+    }
   else
-    notify_baton.silent_errors = TRUE;
-
-  notify_baton.result_pool = pool;
+    {
+      notify_func = NULL;
+      notify_baton_p = NULL;
+    }
 
   verify_err = svn_repos_verify_fs3(repos, lower, upper,
                                     opt_state->keep_going,
                                     opt_state->check_normalization,
                                     opt_state->metadata_only,
-                                    !opt_state->quiet
-                                    ? repos_notify_handler : NULL,
-                                    &notify_baton, check_cancel,
-                                    NULL, pool);
+                                    notify_func, notify_baton_p,
+                                    check_cancel, NULL, pool);
 
   /* Show the --keep-going error summary. */
-  if (opt_state->keep_going && notify_baton.error_summary->nelts > 0)
+  if (!opt_state->quiet
+      && opt_state->keep_going
+      && notify_baton.error_summary->nelts > 0)
     {
       int rev_maxlength;
       svn_revnum_t end_revnum;

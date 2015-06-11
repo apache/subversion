@@ -2117,6 +2117,52 @@ def verify_keep_going(sbox):
   # Don't leave a corrupt repository
   svntest.main.safe_rmtree(sbox.repo_dir, True)
 
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def verify_keep_going_quiet(sbox):
+  "svnadmin verify --keep-going --quiet test"
+
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+  B_url = sbox.repo_url + '/B'
+  C_url = sbox.repo_url + '/C'
+
+  # Create A/B/E/bravo in r2.
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     B_url)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     C_url)
+
+  r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
+  fp = open(r2, 'r+b')
+  fp.write("""inserting junk to corrupt the rev""")
+  fp.close()
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--keep-going",
+                                                        "--quiet",
+                                                        sbox.repo_dir)
+
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                            ".*Error verifying revision 2.",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E160004:.*",
+                                            ".*Error verifying revision 3.",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E165011:.*"], False)
+  if svntest.verify.verify_outputs(
+          "Unexpected error while running 'svnadmin verify'.",
+          output, errput, None, exp_err):
+    raise svntest.Failure
+
+  # Don't leave a corrupt repository
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+
+
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_invalid_path_changes(sbox):
   "detect invalid changed path list entries"
@@ -2991,6 +3037,7 @@ test_list = [ None,
               mergeinfo_race,
               recover_old_empty,
               verify_keep_going,
+              verify_keep_going_quiet,
               verify_invalid_path_changes,
               verify_denormalized_names,
               fsfs_recover_old_non_empty,
