@@ -144,7 +144,7 @@ Candidate changes:
      instead of expected 413 (Request Entity Too Large) for large
      skel encoded requests.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
