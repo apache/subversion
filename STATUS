@@ -55,6 +55,14 @@ Other candidate changes:
    Votes:
      +1: ivan
 
+ * r1685085
+   Install svnbench as part of 'make install'.
+   Justification:
+     svnbench moved from  tools/ to subversion/ so it should be installed
+     by default.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
