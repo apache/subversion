@@ -342,6 +342,17 @@ struct decode_baton
 
   /* svndiff version in use by delta.  */
   unsigned char version;
+
+  /* Length of parsed delta window header. 0 if window is not parsed yet. */
+  apr_size_t window_header_len;
+
+  /* Five integer fields of parsed delta window header. Valid only if
+     WINDOW_HEADER_LEN > 0 */
+  svn_filesize_t  sview_offset;
+  apr_size_t sview_len;
+  apr_size_t tview_len;
+  apr_size_t inslen;
+  apr_size_t newlen;
 };
 
 
@@ -572,8 +583,6 @@ write_handler(void *baton,
 {
   struct decode_baton *db = (struct decode_baton *) baton;
   const unsigned char *p, *end;
-  svn_filesize_t sview_offset;
-  apr_size_t sview_len, tview_len, inslen, newlen;
   apr_size_t buflen = *len;
 
   /* Chew up four bytes at the beginning for the header.  */
@@ -617,69 +626,94 @@ write_handler(void *baton,
       p = (const unsigned char *) db->buffer->data;
       end = (const unsigned char *) db->buffer->data + db->buffer->len;
 
-      p = decode_file_offset(&sview_offset, p, end);
-      if (p == NULL)
-        break;
+      if (db->window_header_len == 0)
+        {
+          svn_filesize_t sview_offset;
+          apr_size_t sview_len, tview_len, inslen, newlen;
+          const unsigned char *hdr_start = p;
 
-      p = decode_size(&sview_len, p, end);
-      if (p == NULL)
-        break;
+          p = decode_file_offset(&sview_offset, p, end);
+          if (p == NULL)
+              break;
 
-      p = decode_size(&tview_len, p, end);
-      if (p == NULL)
-        break;
+          p = decode_size(&sview_len, p, end);
+          if (p == NULL)
+              break;
 
-      p = decode_size(&inslen, p, end);
-      if (p == NULL)
-        break;
+          p = decode_size(&tview_len, p, end);
+          if (p == NULL)
+              break;
 
-      p = decode_size(&newlen, p, end);
-      if (p == NULL)
-        break;
+          p = decode_size(&inslen, p, end);
+          if (p == NULL)
+              break;
 
-      if (tview_len > SVN_DELTA_WINDOW_SIZE ||
-          sview_len > SVN_DELTA_WINDOW_SIZE ||
-          /* for svndiff1, newlen includes the original length */
-          newlen > SVN_DELTA_WINDOW_SIZE + SVN__MAX_ENCODED_UINT_LEN ||
-          inslen > MAX_INSTRUCTION_SECTION_LEN)
-        return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
-                                _("Svndiff contains a too-large window"));
+          p = decode_size(&newlen, p, end);
+          if (p == NULL)
+              break;
 
-      /* Check for integer overflow.  */
-      if (sview_offset < 0 || inslen + newlen < inslen
-          || sview_len + tview_len < sview_len
-          || (apr_size_t)sview_offset + sview_len < (apr_size_t)sview_offset)
-        return svn_error_create(SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
-                                _("Svndiff contains corrupt window header"));
+          if (tview_len > SVN_DELTA_WINDOW_SIZE ||
+              sview_len > SVN_DELTA_WINDOW_SIZE ||
+              /* for svndiff1, newlen includes the original length */
+              newlen > SVN_DELTA_WINDOW_SIZE + SVN__MAX_ENCODED_UINT_LEN ||
+              inslen > MAX_INSTRUCTION_SECTION_LEN)
+            return svn_error_create(
+                     SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
+                     _("Svndiff contains a too-large window"));
 
-      /* Check for source windows which slide backwards.  */
-      if (sview_len > 0
-          && (sview_offset < db->last_sview_offset
+          /* Check for integer overflow.  */
+          if (sview_offset < 0 || inslen + newlen < inslen
+              || sview_len + tview_len < sview_len
+              || (apr_size_t)sview_offset + sview_len < (apr_size_t)sview_offset)
+            return svn_error_create(
+                      SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL,
+                      _("Svndiff contains corrupt window header"));
+
+          /* Check for source windows which slide backwards.  */
+          if (sview_len > 0
+              && (sview_offset < db->last_sview_offset
               || (sview_offset + sview_len
                   < db->last_sview_offset + db->last_sview_len)))
-        return svn_error_create
-          (SVN_ERR_SVNDIFF_BACKWARD_VIEW, NULL,
-           _("Svndiff has backwards-sliding source views"));
+            return svn_error_create(
+                     SVN_ERR_SVNDIFF_BACKWARD_VIEW, NULL,
+                     _("Svndiff has backwards-sliding source views"));
+
+          /* Remember parsed window header. */
+          db->window_header_len = p - hdr_start;
+          db->sview_offset = sview_offset;
+          db->sview_len = sview_len;
+          db->tview_len = tview_len;
+          db->inslen = inslen;
+          db->newlen = newlen;
+        }
+      else
+        {
+          /* Skip already parsed window header. */
+          p += db->window_header_len;
+        }
 
       /* Wait for more data if we don't have enough bytes for the
          whole window.  */
-      if ((apr_size_t) (end - p) < inslen + newlen)
+      if ((apr_size_t) (end - p) < db->inslen + db->newlen)
         return SVN_NO_ERROR;
 
       /* Decode the window and send it off. */
-      SVN_ERR(decode_window(&window, sview_offset, sview_len, tview_len,
-                            inslen, newlen, p, db->subpool,
-                            db->version));
+      SVN_ERR(decode_window(&window, db->sview_offset, db->sview_len,
+                            db->tview_len, db->inslen, db->newlen, p,
+                            db->subpool, db->version));
       SVN_ERR(db->consumer_func(&window, db->consumer_baton));
 
-      p += inslen + newlen;
+      p += db->inslen + db->newlen;
 
       /* Remove processed data from the buffer.  */
       svn_stringbuf_remove(db->buffer, 0, db->buffer->len - (end - p));
 
+      /* Reset window header length. */
+      db->window_header_len = 0;
+
       /* Remember the offset and length of the source view for next time.  */
-      db->last_sview_offset = sview_offset;
-      db->last_sview_len = sview_len;
+      db->last_sview_offset = db->sview_offset;
+      db->last_sview_len = db->sview_len;
 
       /* Clear subpool. */
       svn_pool_clear(db->subpool);
@@ -747,6 +781,7 @@ svn_txdelta_parse_svndiff(svn_txdelta_window_handler_t handler,
       db->last_sview_len = 0;
       db->header_bytes = 0;
       db->error_on_early_close = error_on_early_close;
+      db->window_header_len = 0;
       stream = svn_stream_create(db, pool);
 
       svn_stream_set_write(stream, write_handler);
