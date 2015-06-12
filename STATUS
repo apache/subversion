@@ -131,13 +131,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1658168
-   Properly handle errors when parsing skel encoded HTTP requests in
-   mod_dav_svn.
-   Justification:
-     Without this fix server reports 400 (Bad Request) HTTP status code
-     instead of expected 413 (Request Entity Too Large) for large
-     skel encoded requests.
-   Votes:
-     +1: ivan, rhuijben, philip
