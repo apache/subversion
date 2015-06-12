@@ -2146,14 +2146,18 @@ def verify_keep_going_quiet(sbox):
                                                         "--quiet",
                                                         sbox.repo_dir)
 
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                            ".*Error verifying revision 2.",
+  exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
                                             "svnadmin: E160004:.*",
                                             "svnadmin: E160004:.*",
                                             ".*Error verifying revision 3.",
                                             "svnadmin: E160004:.*",
                                             "svnadmin: E160004:.*",
                                             "svnadmin: E165011:.*"], False)
+
+  # Insert another expected error from checksum verification
+  if (svntest.main.is_fs_log_addressing()):
+    exp_err.insert(0, "svnadmin: E160004:.*")
+
   if svntest.verify.verify_outputs(
           "Unexpected error while running 'svnadmin verify'.",
           output, errput, None, exp_err):
