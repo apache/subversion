@@ -161,7 +161,6 @@ encode_window(svn_stringbuf_t **instructions_p,
               apr_pool_t *pool)
 {
   svn_stringbuf_t *instructions;
-  svn_stringbuf_t *i1;
   svn_stringbuf_t *header;
   const svn_string_t *newdata;
   unsigned char ibuf[MAX_INSTRUCTION_LEN], *ip;
@@ -169,7 +168,6 @@ encode_window(svn_stringbuf_t **instructions_p,
 
   /* create the necessary data buffers */
   instructions = svn_stringbuf_create_empty(pool);
-  i1 = svn_stringbuf_create_empty(pool);
   header = svn_stringbuf_create_empty(pool);
 
   /* Encode the instructions.  */
@@ -198,9 +196,11 @@ encode_window(svn_stringbuf_t **instructions_p,
   append_encoded_int(header, window->tview_len);
   if (version == 1)
     {
+      svn_stringbuf_t *compressed_instructions;
+      compressed_instructions = svn_stringbuf_create_empty(pool);
       SVN_ERR(svn__compress(instructions->data, instructions->len,
-                            i1, compression_level));
-      instructions = i1;
+                            compressed_instructions, compression_level));
+      instructions = compressed_instructions;
     }
   append_encoded_int(header, instructions->len);
   if (version == 1)
