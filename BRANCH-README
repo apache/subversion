@@ -89,8 +89,14 @@ Work on this branch:
       revert
 
     UI things to do:
+
       add a 'parallel mode' UI as an alternative to the sequential mode
+        - started, by removing the automatic commit after each line
+        - look up given paths in the base state rather than in the current txn
+        - this would make more sense in conjunction with element-addressing UI
+
       provide a way to specify a mixed-rev base state
+
       provide a UI for element-based addressing ('mv e101:foo e103:foo'?)
 
     Bigger things to do:
@@ -121,6 +127,18 @@ Work on this branch:
       heuristic conversion of old repositories:
         synthesize element tracking info (instead of aborting) when reading
         a revision that was committed by a non-move-tracking client
+          - Started, by using log scanning code from the 'moves-scan-log'
+            branch and starting to write an Ev1-to-Ev3 converter that uses
+            that info.
+          - Currently triggered by a 'migrate' subcommand.
+
+      Make machine parsable serial input and output for diffs etc.
+        - This may help with prototyping by allowing easier connection to
+          external scripts etc.
+
+      Provide a way to create and access branches of the repo root branch
+      that are outside the default repository paths name-space.
+        - This style of whole-repo branching closely matches most DVCSs.
 
     Tidying things to do:
 
@@ -130,6 +148,15 @@ Work on this branch:
         (element does or does not already exist). The pre-existence should
         *not* be considered, I think, because ... idempotency?
         Likewise, 'delete' should not care if it was already deleted.
+        The special thing about 'add' is we need a way to specify a new
+        EID; this was recently made possible by adding a 'new_eid' method.
+        Specifying a new EID is not unique to the 'add' method; it is also
+        needed sometimes when specifying a new parent-eid (in 'add' or in
+        'alter') that refers to an element that is being added. Acquiring
+        the new eid separately and combining the two methods into one will
+        remove the ordering dependency between the 'add' and the use of a
+        parent-eid that refers to it.
+
         The unifying principle is it's communicating a partial description
         of the new state, without reference to the old state.
 
