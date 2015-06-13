@@ -146,18 +146,92 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
+/* Encodes delta window WINDOW to svndiff-format.
+   The svndiff version is VERSION. COMPRESSION_LEVEL is the zlib
+   compression level to use.
+   Returned values will be allocated in POOL or refer to *WINDOW
+   fields. */
 static svn_error_t *
-window_handler(svn_txdelta_window_t *window, void *baton)
+encode_window(svn_stringbuf_t **instructions_p,
+              svn_stringbuf_t **header_p,
+              const svn_string_t **newdata_p,
+              svn_txdelta_window_t *window,
+              int version,
+              int compression_level,
+              apr_pool_t *pool)
 {
-  struct encoder_baton *eb = baton;
-  apr_pool_t *pool;
   svn_stringbuf_t *instructions;
   svn_stringbuf_t *i1;
   svn_stringbuf_t *header;
   const svn_string_t *newdata;
   unsigned char ibuf[MAX_INSTRUCTION_LEN], *ip;
   const svn_txdelta_op_t *op;
+
+  /* create the necessary data buffers */
+  instructions = svn_stringbuf_create_empty(pool);
+  i1 = svn_stringbuf_create_empty(pool);
+  header = svn_stringbuf_create_empty(pool);
+
+  /* Encode the instructions.  */
+  for (op = window->ops; op < window->ops + window->num_ops; op++)
+    {
+      /* Encode the action code and length.  */
+      ip = ibuf;
+      switch (op->action_code)
+        {
+        case svn_txdelta_source: *ip = 0; break;
+        case svn_txdelta_target: *ip = (0x1 << 6); break;
+        case svn_txdelta_new:    *ip = (0x2 << 6); break;
+        }
+      if (op->length >> 6 == 0)
+        *ip++ |= (unsigned char)op->length;
+      else
+        ip = svn__encode_uint(ip + 1, op->length);
+      if (op->action_code != svn_txdelta_new)
+        ip = svn__encode_uint(ip, op->offset);
+      svn_stringbuf_appendbytes(instructions, (const char *)ibuf, ip - ibuf);
+    }
+
+  /* Encode the header.  */
+  append_encoded_int(header, window->sview_offset);
+  append_encoded_int(header, window->sview_len);
+  append_encoded_int(header, window->tview_len);
+  if (version == 1)
+    {
+      SVN_ERR(svn__compress(instructions->data, instructions->len,
+                            i1, compression_level));
+      instructions = i1;
+    }
+  append_encoded_int(header, instructions->len);
+  if (version == 1)
+    {
+      svn_stringbuf_t *compressed = svn_stringbuf_create_empty(pool);
+
+      SVN_ERR(svn__compress(window->new_data->data, window->new_data->len,
+                            compressed, compression_level));
+      newdata = svn_stringbuf__morph_into_string(compressed);
+    }
+  else
+    newdata = window->new_data;
+
+  append_encoded_int(header, newdata->len);
+
+  *instructions_p = instructions;
+  *header_p = header;
+  *newdata_p = newdata;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+window_handler(svn_txdelta_window_t *window, void *baton)
+{
+  struct encoder_baton *eb = baton;
+  apr_pool_t *pool;
   apr_size_t len;
+  svn_stringbuf_t *instructions;
+  svn_stringbuf_t *header;
+  const svn_string_t *newdata;
 
   /* use specialized code if there is no source */
   if (window && !window->src_ops && window->num_ops == 1 && !eb->version)
@@ -193,55 +267,10 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       return svn_stream_close(output);
     }
 
-  /* create the necessary data buffers */
   pool = svn_pool_create(eb->pool);
-  instructions = svn_stringbuf_create_empty(pool);
-  i1 = svn_stringbuf_create_empty(pool);
-  header = svn_stringbuf_create_empty(pool);
 
-  /* Encode the instructions.  */
-  for (op = window->ops; op < window->ops + window->num_ops; op++)
-    {
-      /* Encode the action code and length.  */
-      ip = ibuf;
-      switch (op->action_code)
-        {
-        case svn_txdelta_source: *ip = 0; break;
-        case svn_txdelta_target: *ip = (0x1 << 6); break;
-        case svn_txdelta_new:    *ip = (0x2 << 6); break;
-        }
-      if (op->length >> 6 == 0)
-        *ip++ |= (unsigned char)op->length;
-      else
-        ip = svn__encode_uint(ip + 1, op->length);
-      if (op->action_code != svn_txdelta_new)
-        ip = svn__encode_uint(ip, op->offset);
-      svn_stringbuf_appendbytes(instructions, (const char *)ibuf, ip - ibuf);
-    }
-
-  /* Encode the header.  */
-  append_encoded_int(header, window->sview_offset);
-  append_encoded_int(header, window->sview_len);
-  append_encoded_int(header, window->tview_len);
-  if (eb->version == 1)
-    {
-      SVN_ERR(svn__compress(instructions->data, instructions->len,
-                            i1, eb->compression_level));
-      instructions = i1;
-    }
-  append_encoded_int(header, instructions->len);
-  if (eb->version == 1)
-    {
-      svn_stringbuf_t *compressed = svn_stringbuf_create_empty(pool);
-
-      SVN_ERR(svn__compress(window->new_data->data, window->new_data->len,
-                            compressed, eb->compression_level));
-      newdata = svn_stringbuf__morph_into_string(compressed);
-    }
-  else
-    newdata = window->new_data;
-
-  append_encoded_int(header, newdata->len);
+  SVN_ERR(encode_window(&instructions, &header, &newdata, window,
+                        eb->version, eb->compression_level, pool));
 
   /* Write out the window.  */
   len = header->len;
