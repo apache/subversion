@@ -60,7 +60,8 @@ struct encoder_baton {
   svn_boolean_t header_done;
   int version;
   int compression_level;
-  apr_pool_t *pool;
+  /* Pool for temporary allocations, will be cleared periodically. */
+  apr_pool_t *scratch_pool;
 };
 
 /* This is at least as big as the largest size for a single instruction. */
@@ -227,7 +228,6 @@ static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct encoder_baton *eb = baton;
-  apr_pool_t *pool;
   apr_size_t len;
   svn_stringbuf_t *instructions;
   svn_stringbuf_t *header;
@@ -248,29 +248,19 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
   if (window == NULL)
     {
-      svn_stream_t *output = eb->output;
+      /* We're done; clean up. */
+      SVN_ERR(svn_stream_close(eb->output));
 
-      /* We're done; clean up.
+      svn_pool_destroy(eb->scratch_pool);
 
-         We clean our pool first. Given that the output stream was passed
-         TO us, we'll assume it has a longer lifetime, and that it will not
-         be affected by our pool destruction.
-
-         The contrary point of view (close the stream first): that could
-         tell our user that everything related to the output stream is done,
-         and a cleanup of the user pool should occur. However, that user
-         pool could include the subpool we created for our work (eb->pool),
-         which would then make our call to svn_pool_destroy() puke.
-       */
-      svn_pool_destroy(eb->pool);
-
-      return svn_stream_close(output);
+      return SVN_NO_ERROR;
     }
 
-  pool = svn_pool_create(eb->pool);
+  svn_pool_clear(eb->scratch_pool);
 
   SVN_ERR(encode_window(&instructions, &header, &newdata, window,
-                        eb->version, eb->compression_level, pool));
+                        eb->version, eb->compression_level,
+                        eb->scratch_pool));
 
   /* Write out the window.  */
   len = header->len;
@@ -286,7 +276,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       SVN_ERR(svn_stream_write(eb->output, newdata->data, &len));
     }
 
-  svn_pool_destroy(pool);
   return SVN_NO_ERROR;
 }
 
@@ -298,13 +287,12 @@ svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
                         int compression_level,
                         apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
   struct encoder_baton *eb;
 
-  eb = apr_palloc(subpool, sizeof(*eb));
+  eb = apr_palloc(pool, sizeof(*eb));
   eb->output = output;
   eb->header_done = FALSE;
-  eb->pool = subpool;
+  eb->scratch_pool = svn_pool_create(pool);
   eb->version = svndiff_version;
   eb->compression_level = compression_level;
 
