@@ -410,7 +410,8 @@ parse_packed_revprops(svn_fs_t *fs,
    * length header to remove) */
   svn_stringbuf_t *compressed = revprops->packed_revprops;
   svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(pool);
-  SVN_ERR(svn__decompress(compressed, uncompressed, APR_SIZE_MAX));
+  SVN_ERR(svn__decompress(compressed->data, compressed->len,
+                          uncompressed, APR_SIZE_MAX));
 
   /* read first revision number and number of revisions in the pack */
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
@@ -811,7 +812,7 @@ repack_revprops(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* compress / store the data */
-  SVN_ERR(svn__compress(uncompressed,
+  SVN_ERR(svn__compress(uncompressed->data, uncompressed->len,
                         compressed,
                         ffd->compress_packed_revprops
                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
@@ -1020,16 +1021,14 @@ write_packed_revprop(const char **final_path,
       *final_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
       SVN_ERR(svn_io_open_unique_file3(&file, tmp_path, revprops->folder,
                                        svn_io_file_del_none, pool, pool));
-
+      stream = svn_stream_from_aprfile2(file, TRUE, pool);
       for (i = 0; i < revprops->manifest->nelts; ++i)
         {
           const char *filename = APR_ARRAY_IDX(revprops->manifest, i,
                                                const char*);
-          SVN_ERR(svn_io_file_write_full(file, filename, strlen(filename),
-                                         NULL, pool));
-          SVN_ERR(svn_io_file_putc('\n', file, pool));
+          SVN_ERR(svn_stream_printf(stream, pool, "%s\n", filename));
         }
-
+      SVN_ERR(svn_stream_close(stream));
       SVN_ERR(svn_io_file_flush_to_disk(file, pool));
       SVN_ERR(svn_io_file_close(file, pool));
     }
@@ -1170,7 +1169,6 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
   apr_file_t *pack_file;
   svn_revnum_t rev;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_stream_t *stream;
 
   /* create empty data buffer and a write stream on top of it */
   svn_stringbuf_t *uncompressed
@@ -1194,6 +1192,7 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
   for (rev = start_rev; rev <= end_rev; rev++)
     {
       const char *path;
+      svn_stream_t *stream;
 
       svn_pool_clear(iterpool);
 
@@ -1212,12 +1211,14 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
   SVN_ERR(svn_stream_close(pack_stream));
 
   /* compress the content (or just store it for COMPRESSION_LEVEL 0) */
-  SVN_ERR(svn__compress(uncompressed, compressed, compression_level));
+  SVN_ERR(svn__compress(uncompressed->data, uncompressed->len,
+                        compressed, compression_level));
 
   /* write the pack file content to disk */
-  stream = svn_stream_from_aprfile2(pack_file, FALSE, scratch_pool);
-  SVN_ERR(svn_stream_write(stream, compressed->data, &compressed->len));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_io_file_write_full(pack_file, compressed->data, compressed->len,
+                                 NULL, scratch_pool));
+  SVN_ERR(svn_io_file_flush_to_disk(pack_file, scratch_pool));
+  SVN_ERR(svn_io_file_close(pack_file, scratch_pool));
 
   svn_pool_destroy(iterpool);
 
@@ -1236,6 +1237,7 @@ svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
                                apr_pool_t *scratch_pool)
 {
   const char *manifest_file_path, *pack_filename = NULL;
+  apr_file_t *manifest_file;
   svn_stream_t *manifest_stream;
   svn_revnum_t start_rev, end_rev, rev;
   apr_off_t total_size;
@@ -1252,8 +1254,12 @@ svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
 
   /* Create the new directory and manifest file stream. */
   SVN_ERR(svn_io_dir_make(pack_file_dir, APR_OS_DEFAULT, scratch_pool));
-  SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
-                                   scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_io_file_open(&manifest_file, manifest_file_path,
+                           APR_WRITE | APR_BUFFERED | APR_CREATE | APR_EXCL,
+                           APR_OS_DEFAULT, scratch_pool));
+  manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE,
+                                             scratch_pool);
 
   /* revisions to handle. Special case: revision 0 */
   start_rev = (svn_revnum_t) (shard * max_files_per_dir);
@@ -1320,8 +1326,10 @@ svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
                                      compression_level, cancel_func,
                                      cancel_baton, iterpool));
 
-  /* flush the manifest file and update permissions */
+  /* flush the manifest file to disk and update permissions */
   SVN_ERR(svn_stream_close(manifest_stream));
+  SVN_ERR(svn_io_file_flush_to_disk(manifest_file, iterpool));
+  SVN_ERR(svn_io_file_close(manifest_file, iterpool));
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
 
   svn_pool_destroy(iterpool);

@@ -60,7 +60,7 @@ RevisionRangeList RevisionRangeList::create(jobject jthis, SVN::Pool &pool)
       jmethodID mid = 0;
       if (mid == 0)
         {
-          jclass cls = env->FindClass(JAVA_PACKAGE"/types/RevisionRangeList");
+          jclass cls = env->FindClass(JAVAHL_CLASS("/types/RevisionRangeList"));
           if (JNIUtil::isJavaExceptionThrown())
             return RevisionRangeList(NULL, pool);
 

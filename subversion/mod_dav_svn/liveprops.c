@@ -239,7 +239,7 @@ get_last_modified_time(const char **datestring,
     }
 
   if (timeval)
-    memcpy(timeval, &timeval_tmp, sizeof(*timeval));
+    *timeval = timeval_tmp;
 
   if (! datestring)
     return 0;

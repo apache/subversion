@@ -318,12 +318,18 @@ fi
 # Stop any previous instances, os we can re-use the port.
 if [ -x $STOPSCRIPT ]; then $STOPSCRIPT ; sleep 1; fi
 
+ss > /dev/null 2>&1 || netstat > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
+
 HTTPD_PORT=3691
-while netstat -an | grep $HTTPD_PORT | grep 'LISTEN' >/dev/null; do
+while \
+  (ss -ltn sport = :$HTTPD_PORT 2>&1 | grep :$HTTPD_PORT > /dev/null ) \
+  || \
+  (netstat -an 2>&1 | grep $HTTPD_PORT | grep 'LISTEN' > /dev/null ) \
+  do
   HTTPD_PORT=$(( HTTPD_PORT + 1 ))
   if [ $HTTPD_PORT -eq 65536 ]; then
     # Most likely the loop condition is true regardless of $HTTPD_PORT
-    fail "netstat claims you have no free ports for httpd to listen on."
+    fail "ss/netstat claim you have no free ports for httpd to listen on."
   fi
 done
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"

@@ -4349,7 +4349,7 @@ check_txn_related(const svn_test_opts_t *opts,
   svn_revnum_t youngest_rev = 0;
 
   /* Create a filesystem and repository. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-check-related",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-check-txn-related",
                               opts, pool));
 
   /*** Step I: Build up some state in our repository through a series

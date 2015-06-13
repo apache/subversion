@@ -30,7 +30,7 @@
 #include "private/svn_fs_private.h"
 
 #ifndef DEFAULT_TIME_FORMAT
-#define DEFAULT_TIME_FORMAT "%F %H:%M:%S %z"
+#define DEFAULT_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
 #endif
 
 /* A bit like mod_status: add a location:

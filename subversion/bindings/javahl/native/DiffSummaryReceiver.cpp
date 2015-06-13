@@ -69,12 +69,12 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
   if (callback == 0)
     {
       // Initialize the method ID.
-      clazz = env->FindClass(JAVA_PACKAGE "/callback/DiffSummaryCallback");
+      clazz = env->FindClass(JAVAHL_CLASS("/callback/DiffSummaryCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       callback = env->GetMethodID(clazz, "onSummary",
-                                  "(L"JAVA_PACKAGE"/DiffSummary;)V");
+                                  "(" JAVAHL_ARG("/DiffSummary;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || callback == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -82,7 +82,7 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
   // Do some prep work for tranforming the DIFF parameter into a
   // Java equivalent.
   static jmethodID ctor = 0;
-  clazz = env->FindClass(JAVA_PACKAGE "/DiffSummary");
+  clazz = env->FindClass(JAVAHL_CLASS("/DiffSummary"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
@@ -90,8 +90,8 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
     {
       ctor = env->GetMethodID(clazz, "<init>",
                               "(Ljava/lang/String;"
-                              "L"JAVA_PACKAGE"/DiffSummary$DiffKind;Z"
-                              "L"JAVA_PACKAGE"/types/NodeKind;)V");
+                              JAVAHL_ARG("/DiffSummary$DiffKind;") "Z"
+                              JAVAHL_ARG("/types/NodeKind;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }

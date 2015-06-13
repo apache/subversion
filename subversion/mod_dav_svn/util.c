@@ -40,6 +40,7 @@
 
 #include "dav_svn.h"
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
@@ -820,7 +821,7 @@ request_body_to_string(svn_string_t **request_str,
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
                             "Request body is larger than the configured "
-                            "limit of %lu", (unsigned long)limit_req_body);
+                            "limit of %" APR_OFF_T_FMT, limit_req_body);
               result = HTTP_REQUEST_ENTITY_TOO_LARGE;
               goto cleanup;
             }
@@ -835,9 +836,7 @@ request_body_to_string(svn_string_t **request_str,
   apr_brigade_destroy(brigade);
 
   /* Make an svn_string_t from our svn_stringbuf_t. */
-  *request_str = svn_string_create_empty(pool);
-  (*request_str)->data = buf->data;
-  (*request_str)->len = buf->len;
+  *request_str = svn_stringbuf__morph_into_string(buf);
   return OK;
 
  cleanup:

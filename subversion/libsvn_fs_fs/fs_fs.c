@@ -1126,7 +1126,9 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Global configuration options. */
   SVN_ERR(read_global_config(fs));
 
-  return get_youngest(&(ffd->youngest_rev_cache), fs, pool);
+  ffd->youngest_rev_cache = 0;
+
+  return SVN_NO_ERROR;
 }
 
 /* Wrapper around svn_io_file_create which ignores EEXIST. */

@@ -1185,7 +1185,7 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
         {
           svn_wc_conflict_reason_t reason;
 
-          reason = svn_client_conflict_get_reason(desc);
+          reason = svn_client_conflict_get_local_change(desc);
           if (reason == svn_wc_conflict_reason_moved_away)
             {
               tc_opts = tree_conflict_options_update_moved_away;
@@ -1193,7 +1193,7 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
           else if (reason == svn_wc_conflict_reason_deleted ||
                    reason == svn_wc_conflict_reason_replaced)
             {
-              if (svn_client_conflict_get_action(desc) ==
+              if (svn_client_conflict_get_incoming_change(desc) ==
                   svn_wc_conflict_action_edit &&
                   svn_client_conflict_get_node_kind(desc) == svn_node_dir)
                 tc_opts = tree_conflict_options_update_edit_deleted_dir;
@@ -1365,8 +1365,9 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
      Conflicting edits on a property.
   */
   if (((svn_client_conflict_get_kind(desc) == svn_wc_conflict_kind_text)
-       && (svn_client_conflict_get_action(desc) == svn_wc_conflict_action_edit)
-       && (svn_client_conflict_get_reason(desc) ==
+       && (svn_client_conflict_get_incoming_change(desc) ==
+           svn_wc_conflict_action_edit)
+       && (svn_client_conflict_get_local_change(desc) ==
            svn_wc_conflict_reason_edited)))
     SVN_ERR(handle_text_conflict(*result, desc, b, scratch_pool));
   else if (svn_client_conflict_get_kind(desc) == svn_wc_conflict_kind_property)

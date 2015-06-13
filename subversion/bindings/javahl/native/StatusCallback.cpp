@@ -81,13 +81,13 @@ StatusCallback::doStatus(const char *local_abspath,
   // it can be cached.
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/StatusCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/StatusCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doStatus",
                              "(Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/Status;)V");
+                             JAVAHL_ARG("/types/Status;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
