@@ -80,13 +80,13 @@ CommitCallback::commitInfo(const svn_commit_info_t *commit_info,
   static jmethodID sm_mid = 0;
   if (sm_mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/CommitCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/CommitCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       sm_mid = env->GetMethodID(clazz,
                                 "commitInfo",
-                                "(L"JAVA_PACKAGE"/CommitInfo;)V");
+                                "(" JAVAHL_ARG("/CommitInfo;") ")V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
     }

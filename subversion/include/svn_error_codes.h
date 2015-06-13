@@ -923,9 +923,9 @@ SVN_ERROR_START
              "Repository upgrade is not supported")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
+  SVN_ERRDEF(SVN_ERR_REPOS_VERIFY_FAILED,
              SVN_ERR_REPOS_CATEGORY_START + 11,
-             "Repository is corrupt")
+             "Repository verification failed")
 
   /* generic RA errors */
 

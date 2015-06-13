@@ -236,7 +236,7 @@ svn_cl__get_human_readable_prop_conflict_description(
 
   /* We provide separately translatable strings for the values that we
    * know about, and a fall-back in case any other values occur. */
-  switch (svn_client_conflict_get_reason(conflict))
+  switch (svn_client_conflict_get_local_change(conflict))
     {
       case svn_wc_conflict_reason_edited:
         reason_str = _("local edit");
@@ -251,13 +251,14 @@ svn_cl__get_human_readable_prop_conflict_description(
         reason_str = _("local obstruction");
         break;
       default:
-        reason_str = apr_psprintf(pool, _("local %s"),
-                                  svn_token__to_word(
-                                    map_conflict_reason_xml,
-                                    svn_client_conflict_get_reason(conflict)));
+        reason_str = apr_psprintf(
+                       pool, _("local %s"),
+                       svn_token__to_word(
+                         map_conflict_reason_xml,
+                         svn_client_conflict_get_local_change(conflict)));
         break;
     }
-  switch (svn_client_conflict_get_action(conflict))
+  switch (svn_client_conflict_get_incoming_change(conflict))
     {
       case svn_wc_conflict_action_edit:
         action_str = _("incoming edit");
@@ -269,10 +270,11 @@ svn_cl__get_human_readable_prop_conflict_description(
         action_str = _("incoming delete");
         break;
       default:
-        action_str = apr_psprintf(pool, _("incoming %s"),
-                                  svn_token__to_word(
-                                    map_conflict_action_xml,
-                                    svn_client_conflict_get_action(conflict)));
+        action_str = apr_psprintf(
+                       pool, _("incoming %s"),
+                       svn_token__to_word(
+                         map_conflict_action_xml,
+                         svn_client_conflict_get_incoming_change(conflict)));
         break;
     }
   SVN_ERR_ASSERT(reason_str && action_str);
@@ -296,8 +298,8 @@ svn_cl__get_human_readable_tree_conflict_description(
   svn_wc_operation_t conflict_operation;
   svn_node_kind_t conflict_node_kind;
 
-  conflict_action = svn_client_conflict_get_action(conflict);
-  conflict_reason = svn_client_conflict_get_reason(conflict);
+  conflict_action = svn_client_conflict_get_incoming_change(conflict);
+  conflict_reason = svn_client_conflict_get_local_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
   conflict_node_kind = svn_client_conflict_get_node_kind(conflict);
 
@@ -434,11 +436,11 @@ append_tree_conflict_info_xml(svn_stringbuf_t *str,
                   svn_client_conflict_get_operation(conflict), pool));
 
   tmp = svn_token__to_word(map_conflict_action_xml,
-                           svn_client_conflict_get_action(conflict));
+                           svn_client_conflict_get_incoming_change(conflict));
   svn_hash_sets(att_hash, "action", tmp);
 
   tmp = svn_token__to_word(map_conflict_reason_xml,
-                           svn_client_conflict_get_reason(conflict));
+                           svn_client_conflict_get_local_change(conflict));
   svn_hash_sets(att_hash, "reason", tmp);
 
   /* Open the tree-conflict tag. */

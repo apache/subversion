@@ -1529,8 +1529,9 @@ finished:
 static svn_error_t *callback_bad_return_error(const char *message)
 {
   PyErr_SetString(PyExc_TypeError, message);
-  return svn_error_create(APR_EGENERAL, NULL,
-                          "Python callback returned an invalid object");
+  return svn_error_createf(APR_EGENERAL, NULL,
+                           "Python callback returned an invalid object: %s",
+                           message);
 }
 
 /* Return a generic error about not being able to map types. */

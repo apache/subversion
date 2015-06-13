@@ -42,7 +42,7 @@ ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
     : OperationContext(pool)
 {
     static jfieldID ctxFieldID = 0;
-    attachJavaObject(jsvnclient, "L"JAVA_PACKAGE"/SVNClient$ClientContext;", "clientContext", &ctxFieldID);
+    attachJavaObject(jsvnclient, JAVAHL_ARG("/SVNClient$ClientContext;"), "clientContext", &ctxFieldID);
 
     SVN_JNI_ERR(svn_client_create_context2(&m_context, NULL,
                                            pool.getPool()),
@@ -182,7 +182,7 @@ ClientContext::notify(void *baton,
         return;
 
       mid = env->GetMethodID(clazz, "onNotify",
-                             "(L"JAVA_PACKAGE"/ClientNotifyInformation;)V");
+                             "(" JAVAHL_ARG("/ClientNotifyInformation;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         return;
 
@@ -223,8 +223,8 @@ ClientContext::resolve(svn_wc_conflict_result_t **result,
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "resolve",
-                             "(L"JAVA_PACKAGE"/ConflictDescriptor;)"
-                             "L"JAVA_PACKAGE"/ConflictResult;");
+                             "(" JAVAHL_ARG("/ConflictDescriptor;") ")"
+                             JAVAHL_ARG("/ConflictResult;"));
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -276,7 +276,7 @@ ClientContext::javaResultToC(jobject jresult, apr_pool_t *pool)
   jclass clazz = NULL;
   if (getChoice == 0 || getMergedPath == 0)
     {
-      clazz = env->FindClass(JAVA_PACKAGE "/ConflictResult");
+      clazz = env->FindClass(JAVAHL_CLASS("/ConflictResult"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -284,7 +284,7 @@ ClientContext::javaResultToC(jobject jresult, apr_pool_t *pool)
   if (getChoice == 0)
     {
       getChoice = env->GetMethodID(clazz, "getChoice",
-                                   "()L"JAVA_PACKAGE"/ConflictResult$Choice;");
+                                   "()" JAVAHL_ARG("/ConflictResult$Choice;"));
       if (JNIUtil::isJavaExceptionThrown() || getChoice == 0)
         POP_AND_RETURN_NULL;
     }

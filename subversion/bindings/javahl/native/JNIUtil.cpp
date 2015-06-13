@@ -517,7 +517,7 @@ jobject construct_Jmessage_stack(const ErrorMessageStack& message_stack)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException$ErrorMessage");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ClientException$ErrorMessage"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
   mid = env->GetMethodID(clazz, "<init>",
@@ -606,7 +606,7 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/ClientException");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ClientException"));
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 

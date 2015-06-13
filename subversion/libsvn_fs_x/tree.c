@@ -1737,7 +1737,9 @@ compare_dir_structure(svn_boolean_t *changed,
 
       /* This is a different entry. */
       *changed = TRUE;
-      break;
+      svn_pool_destroy(iterpool);
+
+      return SVN_NO_ERROR;
     }
 
   svn_pool_destroy(iterpool);

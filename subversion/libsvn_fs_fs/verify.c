@@ -851,13 +851,15 @@ svn_fs_fs__verify(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
 
   /* Input validation. */
   if (! SVN_IS_VALID_REVNUM(start))
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
-    end = youngest;
+    {
+      SVN_ERR(svn_fs_fs__youngest_rev(&end, fs, pool));
+    }
+
   SVN_ERR(svn_fs_fs__ensure_revision_exists(start, fs, pool));
   SVN_ERR(svn_fs_fs__ensure_revision_exists(end, fs, pool));
 

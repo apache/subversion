@@ -1967,7 +1967,7 @@ svn_ra_get_locks(svn_ra_session_t *session,
 
 /**
  * Replay the changes from a range of revisions between @a start_revision
- * and @a end_revision.
+ * and @a end_revision (inclusive).
  *
  * When receiving information for one revision, a callback @a revstart_func is
  * called; this callback will provide an editor and baton through which the

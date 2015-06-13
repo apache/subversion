@@ -384,6 +384,8 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_remove_file2(proto_l2p_index_path, FALSE, pool));
   SVN_ERR(svn_io_remove_file2(proto_p2l_index_path, FALSE, pool));
 
+  /* Ensure that packed file is written to disk.*/
+  SVN_ERR(svn_io_file_flush_to_disk(context->pack_file, pool));
   SVN_ERR(svn_io_file_close(context->pack_file, pool));
 
   return SVN_NO_ERROR;
@@ -1654,7 +1656,9 @@ pack_phys_addressed(const char *pack_file_dir,
                     apr_pool_t *pool)
 {
   const char *pack_file_path, *manifest_file_path;
-  svn_stream_t *pack_stream, *manifest_stream;
+  apr_file_t *pack_file;
+  apr_file_t *manifest_file;
+  svn_stream_t *manifest_stream;
   svn_revnum_t end_rev, rev;
   apr_off_t next_offset;
   apr_pool_t *iterpool;
@@ -1663,13 +1667,18 @@ pack_phys_addressed(const char *pack_file_dir,
   pack_file_path = svn_dirent_join(pack_file_dir, PATH_PACKED, pool);
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST, pool);
 
-  /* Create the new directory and pack file. */
-  SVN_ERR(svn_stream_open_writable(&pack_stream, pack_file_path, pool,
-                                    pool));
+  /* Create the new directory and pack file.
+   * Use unbuffered apr_file_t since we're going to write using 16kb
+   * chunks. */
+  SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
+                           APR_WRITE | APR_CREATE | APR_EXCL,
+                           APR_OS_DEFAULT, pool));
 
   /* Create the manifest file. */
-  SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
-                                   pool, pool));
+  SVN_ERR(svn_io_file_open(&manifest_file, manifest_file_path,
+                           APR_WRITE | APR_BUFFERED | APR_CREATE | APR_EXCL,
+                           APR_OS_DEFAULT, pool));
+  manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE, pool);
 
   end_rev = start_rev + max_files_per_dir - 1;
   next_offset = 0;
@@ -1696,16 +1705,24 @@ pack_phys_addressed(const char *pack_file_dir,
 
       /* Copy all the bits from the rev file to the end of the pack file. */
       SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
-      SVN_ERR(svn_stream_copy3(rev_stream, svn_stream_disown(pack_stream,
-                                                             iterpool),
+      SVN_ERR(svn_stream_copy3(rev_stream,
+                               svn_stream_from_aprfile2(pack_file, TRUE, pool),
                                cancel_func, cancel_baton, iterpool));
     }
 
-  /* disallow write access to the manifest file */
+  /* Close stream over APR file. */
   SVN_ERR(svn_stream_close(manifest_stream));
+
+  /* Ensure that pack file is written to disk. */
+  SVN_ERR(svn_io_file_flush_to_disk(manifest_file, pool));
+  SVN_ERR(svn_io_file_close(manifest_file, pool));
+
+  /* disallow write access to the manifest file */
   SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, iterpool));
 
-  SVN_ERR(svn_stream_close(pack_stream));
+  /* Ensure that pack file is written to disk. */
+  SVN_ERR(svn_io_file_flush_to_disk(pack_file, pool));
+  SVN_ERR(svn_io_file_close(pack_file, pool));
 
   svn_pool_destroy(iterpool);
 

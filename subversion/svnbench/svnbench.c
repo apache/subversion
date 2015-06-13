@@ -534,10 +534,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                             opt_arg, pool) != 0)
           {
             SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-            return svn_error_createf
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Syntax error in revision argument '%s'"),
-                 utf8_opt_arg);
+            return svn_error_createf(
+                     SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                     _("Syntax error in revision argument '%s'"),
+                     utf8_opt_arg);
           }
         break;
       case 'v':
@@ -755,9 +755,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (subcommand->name[0] == '-')
             SVN_ERR(svn_cl__help(NULL, NULL, pool));
           else
-            svn_error_clear
-              (svn_cmdline_fprintf
-               (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
+            svn_error_clear(
+              svn_cmdline_fprintf(
+                stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
                                 "Type 'svnbench help %s' for usage.\n"),
                 subcommand->name, optstr, subcommand->name));
           *exit_code = EXIT_FAILURE;

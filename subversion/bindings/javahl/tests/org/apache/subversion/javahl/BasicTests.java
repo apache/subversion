@@ -139,9 +139,10 @@ public class BasicTests extends SVNTests
      */
     public void testVersionExtendedQuiet() throws Throwable
     {
+        VersionExtended vx = null;
         try
         {
-            VersionExtended vx = client.getVersionExtended(false);
+            vx = client.getVersionExtended(false);
             String result = vx.getBuildDate();
             if (result == null || result.trim().length() == 0)
                 throw new Exception("Build date empty");
@@ -160,6 +161,11 @@ public class BasicTests extends SVNTests
             fail("VersionExtended should always be available unless the " +
                  "native libraries failed to initialize: " + e);
         }
+        finally
+        {
+            if (vx != null)
+                vx.dispose();
+        }
     }
 
     /**
@@ -168,9 +174,10 @@ public class BasicTests extends SVNTests
      */
     public void testVersionExtendedVerbose() throws Throwable
     {
+        VersionExtended vx = null;
         try
         {
-            VersionExtended vx = client.getVersionExtended(true);
+            vx = client.getVersionExtended(true);
             String result = vx.getRuntimeHost();
             if (result == null || result.trim().length() == 0)
                 throw new Exception("Runtime host empty");
@@ -215,6 +222,11 @@ public class BasicTests extends SVNTests
         {
             fail("VersionExtended should always be available unless the " +
                  "native libraries failed to initialize: " + e);
+        }
+        finally
+        {
+            if (vx != null)
+                vx.dispose();
         }
     }
 

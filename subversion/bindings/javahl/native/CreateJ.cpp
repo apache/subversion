@@ -54,7 +54,7 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
     return NULL;
 
   // Create an instance of the conflict descriptor.
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/ConflictDescriptor");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ConflictDescriptor"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -62,16 +62,16 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
   if (ctor == 0)
     {
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Kind;"
-                              "L"JAVA_PACKAGE"/types/NodeKind;"
+                              JAVAHL_ARG("/ConflictDescriptor$Kind;")
+                              JAVAHL_ARG("/types/NodeKind;")
                               "Ljava/lang/String;ZLjava/lang/String;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Action;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Reason;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Operation;"
+                              JAVAHL_ARG("/ConflictDescriptor$Action;")
+                              JAVAHL_ARG("/ConflictDescriptor$Reason;")
+                              JAVAHL_ARG("/ConflictDescriptor$Operation;")
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
-                              "L"JAVA_PACKAGE"/types/ConflictVersion;"
-                              "L"JAVA_PACKAGE"/types/ConflictVersion;"
+                              JAVAHL_ARG("/types/ConflictVersion;")
+                              JAVAHL_ARG("/types/ConflictVersion;")
                               "Ljava/lang/String;[B[B[B[B)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
@@ -177,7 +177,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
     return NULL;
 
   // Create an instance of the conflict version.
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/ConflictVersion");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/ConflictVersion"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -187,7 +187,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
                                                "Ljava/lang/String;J"
                                                "Ljava/lang/String;"
-                                               "L"JAVA_PACKAGE"/types/NodeKind;"
+                                               JAVAHL_ARG("/types/NodeKind;")
                                                ")V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
@@ -228,7 +228,7 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Checksum");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Checksum"));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -238,7 +238,7 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
     {
       midConstructor = env->GetMethodID(clazz, "<init>",
                                         "([B"
-                                        "L"JAVA_PACKAGE"/types/Checksum$Kind;"
+                                        JAVAHL_ARG("/types/Checksum$Kind;")
                                         ")V");
       if (JNIUtil::isExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -273,7 +273,7 @@ CreateJ::DirEntry(const char *path, const char *absPath,
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/DirEntry");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/DirEntry"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -282,7 +282,7 @@ CreateJ::DirEntry(const char *path, const char *absPath,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/NodeKind;"
+                             JAVAHL_ARG("/types/NodeKind;")
                              "JZJJLjava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -327,7 +327,7 @@ CreateJ::Info(const char *path, const svn_client_info2_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Info");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Info"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -337,15 +337,16 @@ CreateJ::Info(const char *path, const svn_client_info2_t *info)
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;J"
-                             "L"JAVA_PACKAGE"/types/NodeKind;"
+                             JAVAHL_ARG("/types/NodeKind;")
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/Lock;Z"
-                             "L"JAVA_PACKAGE"/types/Info$ScheduleKind;"
+                             JAVAHL_ARG("/types/Lock;Z")
+                             JAVAHL_ARG("/types/Info$ScheduleKind;")
                              "Ljava/lang/String;JJ"
-                             "L"JAVA_PACKAGE"/types/Checksum;"
+                             JAVAHL_ARG("/types/Checksum;")
                              "Ljava/lang/String;JJ"
-                             "L"JAVA_PACKAGE"/types/Depth;Ljava/util/Set;)V");
+                             JAVAHL_ARG("/types/Depth;Ljava/util/Set;")
+                             ")V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -472,7 +473,7 @@ CreateJ::Lock(const svn_lock_t *lock)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Lock");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Lock"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -586,7 +587,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazzCP = env->FindClass(JAVA_PACKAGE"/types/ChangePath");
+  jclass clazzCP = env->FindClass(JAVAHL_CLASS("/types/ChangePath"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -596,10 +597,11 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
       midCP = env->GetMethodID(clazzCP,
                                "<init>",
                                "(Ljava/lang/String;JLjava/lang/String;"
-                               "L"JAVA_PACKAGE"/types/ChangePath$Action;"
-                               "L"JAVA_PACKAGE"/types/NodeKind;"
-                               "L"JAVA_PACKAGE"/types/Tristate;"
-                               "L"JAVA_PACKAGE"/types/Tristate;)V");
+                               JAVAHL_ARG("/types/ChangePath$Action;")
+                               JAVAHL_ARG("/types/NodeKind;")
+                               JAVAHL_ARG("/types/Tristate;")
+                               JAVAHL_ARG("/types/Tristate;")
+                               ")V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -647,7 +649,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Status");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Status"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -656,18 +658,18 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/NodeKind;"
+                             JAVAHL_ARG("/types/NodeKind;")
                              "JJJLjava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "ZZL"JAVA_PACKAGE"/types/Depth;"
-                             "ZZZL"JAVA_PACKAGE"/types/Lock;"
-                             "L"JAVA_PACKAGE"/types/Lock;"
-                             "JJL"JAVA_PACKAGE"/types/NodeKind;"
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             "ZZ" JAVAHL_ARG("/types/Depth;")
+                             "ZZZ" JAVAHL_ARG("/types/Lock;")
+                             JAVAHL_ARG("/types/Lock;")
+                             "JJ" JAVAHL_ARG("/types/NodeKind;")
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
@@ -790,7 +792,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
     return NULL;
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientNotifyInformation");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ClientNotifyInformation"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -798,16 +800,16 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
     {
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;"
-                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Action;"
-                               "L"JAVA_PACKAGE"/types/NodeKind;"
+                               JAVAHL_ARG("/ClientNotifyInformation$Action;")
+                               JAVAHL_ARG("/types/NodeKind;")
                                "Ljava/lang/String;"
-                               "L"JAVA_PACKAGE"/types/Lock;"
+                               JAVAHL_ARG("/types/Lock;")
                                "Ljava/lang/String;Ljava/util/List;"
-                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
-                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
-                               "L"JAVA_PACKAGE"/ClientNotifyInformation$LockStatus;"
+                               JAVAHL_ARG("/ClientNotifyInformation$Status;")
+                               JAVAHL_ARG("/ClientNotifyInformation$Status;")
+                               JAVAHL_ARG("/ClientNotifyInformation$LockStatus;")
                                "JLjava/lang/String;"
-                               "L"JAVA_PACKAGE"/types/RevisionRange;"
+                               JAVAHL_ARG("/types/RevisionRange;")
                                "Ljava/lang/String;"
                                "Ljava/lang/String;Ljava/lang/String;"
                                "Ljava/util/Map;JJJJJJI)V");
@@ -923,16 +925,16 @@ CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify)
     return NULL;
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ReposNotifyInformation");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ReposNotifyInformation"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>",
-                               "(L"JAVA_PACKAGE"/ReposNotifyInformation$Action;"
+                               "(" JAVAHL_ARG("/ReposNotifyInformation$Action;")
                                "JLjava/lang/String;JJJ"
-                               "L"JAVA_PACKAGE"/ReposNotifyInformation$NodeAction;"
+                               JAVAHL_ARG("/ReposNotifyInformation$NodeAction;")
                                "Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         POP_AND_RETURN_NULL;
@@ -981,7 +983,7 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitItem");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/CommitItem"));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -991,7 +993,7 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
     {
       midConstructor = env->GetMethodID(clazz, "<init>",
                                         "(Ljava/lang/String;"
-                                        "L"JAVA_PACKAGE"/types/NodeKind;"
+                                        JAVAHL_ARG("/types/NodeKind;")
                                         "ILjava/lang/String;"
                                         "Ljava/lang/String;J"
                                         "Ljava/lang/String;)V");
@@ -1063,7 +1065,7 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
     return NULL;
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitInfo");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/CommitInfo"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -1324,7 +1326,7 @@ jobject CreateJ::InheritedProps(apr_array_header_t *iprops)
     }
 
   jclass item_cls = env->FindClass(
-      JAVA_PACKAGE"/callback/InheritedProplistCallback$InheritedItem");
+      JAVAHL_CLASS("/callback/InheritedProplistCallback$InheritedItem"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -1377,7 +1379,7 @@ jobject CreateJ::Mergeinfo(svn_mergeinfo_t mergeinfo, apr_pool_t* scratch_pool)
 
   // Transform mergeinfo into Java Mergeinfo object.
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Mergeinfo");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Mergeinfo"));
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

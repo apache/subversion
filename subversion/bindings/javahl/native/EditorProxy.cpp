@@ -123,7 +123,7 @@ get_editor_method(jmethodID& mid, const char* name, const char* sig)
     return SVN_NO_ERROR;        // Already known.
 
   JNIEnv* env = JNIUtil::getEnv();
-  jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNEditor");
+  jclass cls = env->FindClass(JAVAHL_CLASS("/ISVNEditor"));
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   SVN_JNI_CATCH(mid = env->GetMethodID(cls, name, sig),
                  SVN_ERR_RA_SVN_EDIT_ABORTED);
@@ -202,7 +202,7 @@ EditorProxy::cb_add_file(void *baton,
       static jmethodID mid = 0;
       SVN_ERR(get_editor_method(mid, "addFile",
                                 "(Ljava/lang/String;"
-                                "L"JAVA_PACKAGE"/types/Checksum;"
+                                JAVAHL_ARG("/types/Checksum;")
                                 "Ljava/io/InputStream;"
                                 "Ljava/util/Map;J)V"));
 
@@ -282,7 +282,7 @@ EditorProxy::cb_add_absent(void *baton,
       static jmethodID mid = 0;
       SVN_ERR(get_editor_method(mid, "addAbsent",
                                 "(Ljava/lang/String;"
-                                "L"JAVA_PACKAGE"/types/NodeKind;"
+                                JAVAHL_ARG("/types/NodeKind;")
                                 "J)V"));
 
       jstring jrelpath = JNIUtil::makeJString(relpath);
@@ -359,7 +359,7 @@ EditorProxy::cb_alter_file(void *baton,
       static jmethodID mid = 0;
       SVN_ERR(get_editor_method(mid, "alterFile",
                                 "(Ljava/lang/String;J"
-                                "L"JAVA_PACKAGE"/types/Checksum;"
+                                JAVAHL_ARG("/types/Checksum;")
                                 "Ljava/io/InputStream;"
                                 "Ljava/util/Map;)V"));
 
