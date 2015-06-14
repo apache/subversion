@@ -176,23 +176,6 @@ typedef struct query_t
   void *cancel_baton;
 } query_t;
 
-/* Return the length of REV_FILE in *FILE_SIZE.
- * Use SCRATCH_POOL for temporary allocations.
- */
-static svn_error_t *
-get_file_size(apr_off_t *file_size,
-              svn_fs_fs__revision_file_t *rev_file,
-              apr_pool_t *scratch_pool)
-{
-  apr_finfo_t finfo;
-
-  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, rev_file->file,
-                               scratch_pool));
-
-  *file_size = finfo.size;
-  return SVN_NO_ERROR;
-}
-
 /* Initialize the LARGEST_CHANGES member in STATS with a capacity of COUNT
  * entries.  Allocate the result in RESULT_POOL.
  */
@@ -300,7 +283,7 @@ add_change(svn_fs_fs__stats_t *stats,
         add_to_histogram(&stats->dir_prop_rep_histogram, rep_size);
         add_to_histogram(&stats->dir_prop_histogram, expanded_size);
         break;
-      case file_property_rep: 
+      case file_property_rep:
         add_to_histogram(&stats->file_prop_rep_histogram, rep_size);
         add_to_histogram(&stats->file_prop_histogram, expanded_size);
         break;
@@ -436,8 +419,7 @@ parse_representation(rep_stats_t **representation,
        */
       result = apr_pcalloc(result_pool, sizeof(*result));
       result->revision = rep->revision;
-      result->expanded_size = (rep->expanded_size ? rep->expanded_size
-                                                  : rep->size);
+      result->expanded_size = rep->expanded_size;
       result->offset = (apr_off_t)rep->item_index;
       result->size = rep->size;
 
@@ -695,7 +677,7 @@ read_phys_revision(query_t *query,
   trailer = svn_stringbuf_ncreate(buf, len, scratch_pool);
 
   /* Parse that trailer. */
-  SVN_ERR(svn_fs_fs__parse_revision_trailer(&root_node_offset, 
+  SVN_ERR(svn_fs_fs__parse_revision_trailer(&root_node_offset,
                                             &changes_offset, trailer,
                                             info->revision));
   SVN_ERR(get_phys_change_count(query, info, scratch_pool));
@@ -729,12 +711,12 @@ read_phys_pack_file(query_t *query,
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
-  apr_off_t file_size = 0;
+  svn_filesize_t file_size = 0;
   svn_fs_fs__revision_file_t *rev_file;
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, query->fs, base,
                                            scratch_pool, scratch_pool));
-  SVN_ERR(get_file_size(&file_size, rev_file, scratch_pool));
+  SVN_ERR(svn_io_file_size_get(&file_size, rev_file->file, scratch_pool));
 
   /* process each revision in the pack file */
   for (i = 0; i < query->shard_size; ++i)
@@ -798,7 +780,7 @@ read_phys_revision_file(query_t *query,
                         apr_pool_t *scratch_pool)
 {
   revision_info_t *info = apr_pcalloc(result_pool, sizeof(*info));
-  apr_off_t file_size = 0;
+  svn_filesize_t file_size = 0;
   svn_fs_fs__revision_file_t *rev_file;
 
   /* cancellation support */
@@ -808,7 +790,7 @@ read_phys_revision_file(query_t *query,
   /* read the whole pack file into memory */
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, query->fs, revision,
                                            scratch_pool, scratch_pool));
-  SVN_ERR(get_file_size(&file_size, rev_file, scratch_pool));
+  SVN_ERR(svn_io_file_size_get(&file_size, rev_file->file, scratch_pool));
 
   /* create the revision info for the current rev */
   info->representations = apr_array_make(result_pool, 4, sizeof(rep_stats_t*));

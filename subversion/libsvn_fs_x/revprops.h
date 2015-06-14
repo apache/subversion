@@ -64,7 +64,7 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
 
 /* Return TRUE, if for REVISION in FS, we can find the revprop pack file.
  * Use SCRATCH_POOL for temporary allocations.
- * Set *MISSING, if the reason is a missing manifest or pack file. 
+ * Set *MISSING, if the reason is a missing manifest or pack file.
  */
 svn_boolean_t
 svn_fs_x__packed_revprop_available(svn_boolean_t *missing,

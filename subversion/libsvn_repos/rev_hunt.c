@@ -310,9 +310,8 @@ svn_repos_deleted_rev(svn_fs_t *fs,
                       svn_revnum_t *deleted,
                       apr_pool_t *pool)
 {
-  apr_pool_t *subpool;
-  svn_fs_root_t *start_root, *root, *copy_root;
-  const char *copy_path;
+  apr_pool_t *iterpool;
+  svn_fs_root_t *start_root, *root;
   svn_revnum_t mid_rev;
   svn_node_kind_t kind;
   svn_fs_node_relation_t node_relation;
@@ -379,6 +378,8 @@ svn_repos_deleted_rev(svn_fs_t *fs,
                                    root, path, pool));
       if (node_relation != svn_fs_node_unrelated)
         {
+          svn_fs_root_t *copy_root;
+          const char *copy_path;
           SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
                                       path, pool));
           if (!copy_root ||
@@ -432,15 +433,15 @@ svn_repos_deleted_rev(svn_fs_t *fs,
   */
 
   mid_rev = (start + end) / 2;
-  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
 
   while (1)
     {
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       /* Get revision root and node id for mid_rev at that revision. */
-      SVN_ERR(svn_fs_revision_root(&root, fs, mid_rev, subpool));
-      SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+      SVN_ERR(svn_fs_revision_root(&root, fs, mid_rev, iterpool));
+      SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
       if (kind == svn_node_none)
         {
           /* Case D: Look lower in the range. */
@@ -449,13 +450,15 @@ svn_repos_deleted_rev(svn_fs_t *fs,
         }
       else
         {
+          svn_fs_root_t *copy_root;
+          const char *copy_path;
           /* Determine the relationship between the start node
              and the current node. */
           SVN_ERR(svn_fs_node_relation(&node_relation, start_root, path,
-                                       root, path, pool));
+                                       root, path, iterpool));
           if (node_relation != svn_fs_node_unrelated)
-          SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
-                                      path, subpool));
+            SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
+                                        path, iterpool));
           if (node_relation == svn_fs_node_unrelated ||
               (copy_root &&
                (svn_fs_revision_root_revision(copy_root) > start)))
@@ -479,7 +482,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
         }
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -666,8 +669,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   /* First - let's sort the array of the revisions from the greatest revision
    * downward, so it will be easier to search on. */
   location_revisions = apr_array_copy(pool, location_revisions_orig);
-  qsort(location_revisions->elts, location_revisions->nelts,
-        sizeof(*revision_ptr), svn_sort_compare_revisions);
+  svn_sort__array(location_revisions, svn_sort_compare_revisions);
 
   revision_ptr = (svn_revnum_t *)location_revisions->elts;
   revision_ptr_end = revision_ptr + location_revisions->nelts;
@@ -835,27 +837,32 @@ svn_repos_node_location_segments(svn_repos_t *repos,
 {
   svn_fs_t *fs = svn_repos_fs(repos);
   svn_stringbuf_t *current_path;
-  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM, current_rev;
+  svn_revnum_t youngest_rev, current_rev;
   apr_pool_t *subpool;
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
 
   /* No PEG_REVISION?  We'll use HEAD. */
   if (! SVN_IS_VALID_REVNUM(peg_revision))
-    {
-      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
-      peg_revision = youngest_rev;
-    }
+    peg_revision = youngest_rev;
 
-  /* No START_REV?  We'll use HEAD (which we may have already fetched). */
+  if (peg_revision > youngest_rev)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), peg_revision);
+
+  /* No START_REV?  We'll use peg rev. */
   if (! SVN_IS_VALID_REVNUM(start_rev))
-    {
-      if (SVN_IS_VALID_REVNUM(youngest_rev))
-        start_rev = youngest_rev;
-      else
-        SVN_ERR(svn_fs_youngest_rev(&start_rev, fs, pool));
-    }
+    start_rev = peg_revision;
+  else if (start_rev > peg_revision)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), start_rev);
 
   /* No END_REV?  We'll use 0. */
-  end_rev = SVN_IS_VALID_REVNUM(end_rev) ? end_rev : 0;
+  if (! SVN_IS_VALID_REVNUM(end_rev))
+    end_rev = 0;
+  else if (end_rev > start_rev)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), end_rev);
 
   /* Are the revision properly ordered?  They better be -- the API
      demands it. */
@@ -1558,6 +1565,18 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   apr_hash_t *duplicate_path_revs;
   struct send_baton sb;
   int mainline_pos, merged_pos;
+
+  if (!SVN_IS_VALID_REVNUM(start)
+      || !SVN_IS_VALID_REVNUM(end))
+    {
+      svn_revnum_t youngest_rev;
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, repos->fs, scratch_pool));
+
+      if (!SVN_IS_VALID_REVNUM(start))
+        start = youngest_rev;
+      if (!SVN_IS_VALID_REVNUM(end))
+        end = youngest_rev;
+    }
 
   if (end < start)
     {

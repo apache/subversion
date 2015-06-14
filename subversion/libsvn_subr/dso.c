@@ -19,7 +19,6 @@
  * ====================================================================
  */
 
-#include <apr_thread_mutex.h>
 #include <apr_hash.h>
 
 #include "svn_hash.h"
@@ -29,6 +28,7 @@
 
 #include "private/svn_mutex.h"
 #include "private/svn_atomic.h"
+#include "private/svn_subr_private.h"
 
 /* A mutex to protect our global pool and cache. */
 static svn_mutex__t *dso_mutex = NULL;
@@ -50,12 +50,10 @@ static volatile svn_atomic_t atomic_init_status = 0;
    there.  */
 #define NOT_THERE ((void *) &not_there_sentinel)
 
-svn_error_t *
-svn_dso_initialize2(void)
+static svn_error_t *
+atomic_init_func(void *baton,
+                 apr_pool_t *pool)
 {
-  if (dso_pool)
-    return SVN_NO_ERROR;
-
   dso_pool = svn_pool_create(NULL);
 
   SVN_ERR(svn_mutex__init(&dso_mutex, TRUE, dso_pool));
@@ -64,11 +62,12 @@ svn_dso_initialize2(void)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-atomic_init_func(void *baton,
-            apr_pool_t *pool)
+svn_error_t *
+svn_dso_initialize2(void)
 {
-  SVN_ERR(svn_dso_initialize2());
+  SVN_ERR(svn_atomic__init_once(&atomic_init_status, atomic_init_func,
+                                NULL, NULL));
+
   return SVN_NO_ERROR;
 }
 
@@ -118,11 +117,17 @@ svn_dso_load_internal(apr_dso_handle_t **dso, const char *fname)
 svn_error_t *
 svn_dso_load(apr_dso_handle_t **dso, const char *fname)
 {
-  SVN_ERR(svn_atomic__init_once(&atomic_init_status, atomic_init_func,
-                                NULL, NULL));
+  SVN_ERR(svn_dso_initialize2());
 
   SVN_MUTEX__WITH_LOCK(dso_mutex, svn_dso_load_internal(dso, fname));
 
   return SVN_NO_ERROR;
 }
+
+apr_pool_t *
+svn_dso__pool(void)
+{
+  return dso_pool;
+}
+
 #endif /* APR_HAS_DSO */

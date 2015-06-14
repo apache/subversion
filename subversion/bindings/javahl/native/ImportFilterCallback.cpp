@@ -83,13 +83,14 @@ ImportFilterCallback::doImportFilter(svn_boolean_t *filtered,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ImportFilterCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/ImportFilterCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "filter",
                              "(Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/NodeKind;Z)Z");
+                             JAVAHL_ARG("/types/NodeKind;")
+                             "Z)Z");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }

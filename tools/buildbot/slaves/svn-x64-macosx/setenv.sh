@@ -50,11 +50,13 @@ export SVNBB_APR_15
 export SVNBB_APR_20_DEV
 export SVNBB_JUNIT
 export SVNBB_PARALLEL
-export LIBTOOL_CONFIG
 
 
 # Set the absolute source path
 abssrc=$(pwd)
+
+# Set the path to the RAMdisk device name file
+ramconf=$(dirname "${abssrc}")/ramdisk.conf
 
 # The RAMdisk volume name is the same as the name of the builder
 volume_name=$(basename $(dirname "${abssrc}"))

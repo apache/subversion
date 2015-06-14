@@ -495,8 +495,7 @@ def delete_missing(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 # Regression test for issue #854:
@@ -721,8 +720,7 @@ def replace_dir_delete_child(sbox):
 
   svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, sbox.wc_dir)
+                                        expected_status)
 
 
 ########################################################################

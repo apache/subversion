@@ -1,0 +1,65 @@
+A guide to the various backport scripts:
+========================================
+
+There two primary functions:
+
+F1. Auto-merge bot; the nightly svn-role commits.
+
+F2. Conflicts detector bot; the svn-backport-conflicts-1.9.x buildbot task.
+
+And two interactive functions, described later.
+
+
+
+The scripts are:
+
+backport.pl:
+    oldest script, implements both [F1] and [F2], plus two interactive
+    functions¹.  As of March 2015, used in production by svn-role and
+    by svn-backport-conflicts-1.9.x.
+
+nominate.pl:
+    Symlink to backport.pl.  Implements one of the two interactive features.
+    Not used by bots.
+
+backport_tests_pl.py:
+    Regression tests for backport.pl.
+
+
+backport/*.py:
+    New Python-based library implementation of STATUS parsing (status.py) and
+    of merging nominated revisions (merger.py).  Colloquially referred to as
+    'backport.py', even though there is no script by that name.  Written in
+    Python 3.
+
+    The modules include their unit tests, see 'python3 -munittest
+    backport.status' and 'python3 -munittest backport.merger'.  However,
+    changes to these files should be tested both by the unit tests and by the
+    backport_tests_py.py blackbox/regression tests.
+
+detect-conflicting-backports.py:
+    Implementation of [F2] using backport.py.
+
+merge-approved-backports.py:
+    Implementation of [F1] using backport.py.
+
+backport_tests_py.py:
+    Regression tests for detect-conflicting-backports.py and merge-approved-backports.py
+
+
+backport_tests.py:
+    Common part of backport_tests_pl.py and backport_tests_py.py.  Uses the
+    svntest framework (../../subversion/tests/cmdline/svntest/), which is
+    written in Python 2.
+
+backport*.dump:
+    Expected output files for backport_tests.py; see the BackportTest
+    decorator.
+
+
+All scripts can be run with '--help' to display their usage messages.
+
+
+
+¹ For backport.pl's interactive features, see:
+<http://mail-archives.apache.org/mod_mbox/subversion-dev/201503.mbox/%3c20150304225114.GD2036@tarsus.local2%3e>

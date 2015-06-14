@@ -250,7 +250,7 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_hotcopy_rev_range
 } svn_repos_notify_action_t;
 
-/** The type of error occurring.
+/** The type of warning occurring.
  *
  * @since New in 1.7.
  */
@@ -559,15 +559,18 @@ svn_repos_has_capability(svn_repos_t *repos,
                          apr_pool_t *pool);
 
 /**
- * Return a set capabilities supported by the running Subversion library and by
- * @a repos.  (Capabilities supported by this version of Subversion but not by
- * @a repos are not listed.  This may happen when svn_repos_upgrade2() has not
- * been called after a software upgrade.)
+ * Return a set of @a capabilities supported by the running Subversion
+ * library and by @a repos.  (Capabilities supported by this version of
+ * Subversion but not by @a repos are not listed.  This may happen when
+ * svn_repos_upgrade2() has not been called after a software upgrade.)
  *
- * The set is represented as a hash whose keys are the set members.  The values
- * are not defined.
+ * The set is represented as a hash whose const char * keys are the set
+ * members.  The values are not defined.
  *
- * @see svn_repos_info_format()
+ * Allocate @a capabilities in @a result_pool and use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @see svn_repos_info_format
  *
  * @since New in 1.9.
  */
@@ -626,12 +629,15 @@ svn_fs_t *
 svn_repos_fs(svn_repos_t *repos);
 
 /** Return the type of filesystem associated with repository object
- * @a repos allocated in @a pool.
+ * @a repos allocated in @a result_pool.
+ *
+ * @see #svn_fs_backend_names
  *
  * @since New in 1.9.
  */
 const char *
-svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool);
+svn_repos_fs_type(svn_repos_t *repos,
+                  apr_pool_t *result_pool);
 
 /** Make a hot copy of the Subversion repository found at @a src_path
  * to @a dst_path.
@@ -650,9 +656,15 @@ svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool);
  * called with the @a notify_baton and a notification structure containing
  * appropriate values in @c start_revision and @c end_revision (both
  * inclusive). @c start_revision might be equal to @c end_revision in
- * case the copied range consists of a single revision. Currently, this
- * notification is only supported for FSFS repositories. @a notify_func
+ * case the copied range consists of a single revision.  Currently, this
+ * notification is not triggered by the BDB backend. @a notify_func
  * may be @c NULL if this notification is not required.
+ *
+ * The optional @a cancel_func callback will be invoked with
+ * @a cancel_baton as usual to allow the user to preempt this potentially
+ * lengthy operation.
+ * 
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
@@ -665,7 +677,7 @@ svn_repos_hotcopy3(const char *src_path,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
-                   apr_pool_t *pool);
+                   apr_pool_t *scratch_pool);
 
 /**
  * Like svn_repos_hotcopy3(), but with @a notify_func and @a notify_baton
@@ -1522,19 +1534,20 @@ svn_repos_replay(svn_fs_root_t *root,
  * If @a commit_callback is non-NULL, then before @c close_edit returns (but
  * after the commit has succeeded) @c close_edit will invoke
  * @a commit_callback with a filled-in #svn_commit_info_t *, @a commit_baton,
- * and @a pool or some subpool thereof as arguments.  If @a commit_callback
+ * and @a pool or some subpool thereof as arguments.  The @c repos_root field
+ * of the #svn_commit_info_t is @c NULL.  If @a commit_callback
  * returns an error, that error will be returned from @c close_edit,
  * otherwise if there was a post-commit hook failure, then that error
  * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
- * (Note that prior to Subversion 1.6, @a commit_callback cannot be NULL; if
- * you don't need a callback, pass a dummy function.)
+ * (Note that prior to Subversion 1.6, @a commit_callback cannot be @c NULL;
+ * if you don't need a callback, pass a dummy function.)
  *
  * Calling @a (*editor)->abort_edit aborts the commit, and will also
  * abort the commit transaction unless @a txn was supplied (not @c
  * NULL).  Callers who supply their own transactions are responsible
  * for cleaning them up (either by committing them, or aborting them).
  *
- * @since New in 1.5.
+ * @since New in 1.5. Since 1.6, @a commit_callback can be @c NULL.
  *
  * @note Yes, @a repos_url_decoded is a <em>decoded</em> URL.  We realize
  * that's sorta wonky.  Sorry about that.
@@ -2082,7 +2095,7 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * the revision range for @a include_merged_revision @c FALSE reporting by
  * switching @a start with @a end.
  *
- * @note Prior to Subversion 1.9, this function may accept delta handlers
+ * @note Prior to Subversion 1.9, this function may request delta handlers
  * from @a handler even for empty text deltas.  Starting with 1.9, the
  * delta handler / baton return arguments passed to @a handler will be
  * #NULL unless there is an actual difference in the file contents between
@@ -2252,10 +2265,12 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * The pre-lock is run for every path in @a targets. Those targets for
  * which the pre-lock is successful are passed to svn_fs_lock_many and
  * the post-lock is run for those that are successfully locked.
+ * Pre-lock hook errors are passed to @a lock_callback.
  *
  * For each path in @a targets @a lock_callback will be invoked
  * passing @a lock_baton and the lock and error that apply to path.
- * @a lock_callback can be NULL in which case it is not called.
+ * @a lock_callback can be NULL in which case it is not called and any
+ * errors that would have been passed to the callback are not reported.
  *
  * If an error occurs when running the post-lock hook the error is
  * returned wrapped with #SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the
@@ -2268,11 +2283,16 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * The lock and path passed to @a lock_callback will be allocated in
  * @a result_pool.  Use @a scratch_pool for temporary allocations.
  *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain unlocked while others may have been locked.
+ *
+ * @see svn_fs_lock_many
+ *
  * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_fs_lock_many(svn_repos_t *repos,
-                       apr_hash_t *targets,
+                       apr_hash_t *lock_targets,
                        const char *comment,
                        svn_boolean_t is_dav_comment,
                        apr_time_t expiration_date,
@@ -2305,12 +2325,14 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * The pre-unlock hook is run for every path in @a targets. Those
  * targets for which the pre-unlock is successful are passed to
  * svn_fs_unlock_many and the post-unlock is run for those that are
- * successfully unlocked.
+ * successfully unlocked. Pre-unlock hook errors are passed to @a
+ * lock_callback.
  *
  * For each path in @a targets @a lock_callback will be invoked
  * passing @a lock_baton and error that apply to path.  The lock
  * passed to the callback will be NULL.  @a lock_callback can be NULL
- * in which case it is not called.
+ * in which case it is not called and any errors that would have been
+ * passed to the callback are not reported.
  *
  * If an error occurs when running the post-unlock hook, return the
  * original error wrapped with #SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.
@@ -2320,11 +2342,16 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * The path passed to @a lock_callback will be allocated in @a result_pool.
  * Use @a scratch_pool for temporary allocations.
  *
+ * @note This function is not atomic.  If it returns an error, some targets
+ * may remain locked while others may have been unlocked.
+ *
+ * @see svn_fs_unlock_many
+ *
  * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_fs_unlock_many(svn_repos_t *repos,
-                         apr_hash_t *targets,
+                         apr_hash_t *unlock_targets,
                          svn_boolean_t break_lock,
                          svn_fs_lock_callback_t lock_callback,
                          void *lock_baton,
@@ -2701,12 +2728,13 @@ svn_repos_node_from_baton(void *edit_baton);
  *
  * Set @a *repos_format to the repository format number of @a repos, which is
  * an integer that increases when incompatible changes are made (such as
- * by #svn_repos_upgrade).
+ * by #svn_repos_upgrade2).
  *
- * Set @a *supports_version to the version number of the minimum Subversion GA
- * release that can read and write @a repos.
+ * Set @a *supports_version to the version number of the minimum Subversion
+ * GA release that can read and write @a repos; allocate it in
+ * @a result_pool.  Use @a scratch_pool for temporary allocations.
  *
- * @see svn_fs_info_format(), svn_repos_capabilities()
+ * @see svn_fs_info_format, svn_repos_capabilities
  *
  * @since New in 1.9.
  */
@@ -3749,7 +3777,7 @@ svn_repos_authz_check_access(svn_authz_t *authz,
 typedef enum svn_repos_revision_access_level_t
 {
   /** no access allowed to the revision properties and all changed-paths
-   * information. */ 
+   * information. */
   svn_repos_revision_access_none,
   /** access granted to some (svn:date and svn:author) revision properties and
    * changed-paths information on paths the read has access to. */

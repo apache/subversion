@@ -616,7 +616,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  apr_hash_t *config,
                                  const svn_ra_callbacks2_t *callbacks,
                                  void *callbacks_baton,
-                                 apr_pool_t *pool)
+                                 svn_auth_baton_t *auth_baton,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   svn_ra_svn__session_baton_t *sess;
   svn_ra_svn_conn_t *conn;
@@ -624,6 +626,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *server_caplist, *repos_caplist;
   const char *client_string = NULL;
+  apr_pool_t *pool = result_pool;
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
@@ -636,6 +639,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess->callbacks = callbacks;
   sess->callbacks_baton = callbacks_baton;
   sess->bytes_read = sess->bytes_written = 0;
+  sess->auth_baton = auth_baton;
 
   if (config)
     SVN_ERR(svn_config_copy_config(&sess->config, config, pool));
@@ -804,6 +808,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
                                 const char *url,
                                 const svn_ra_callbacks2_t *callbacks,
                                 void *callback_baton,
+                                svn_auth_baton_t *auth_baton,
                                 apr_hash_t *config,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
@@ -839,30 +844,19 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
                ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG)
                : NULL;
   cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS) : NULL;
-  svn_auth_set_parameter(callbacks->auth_baton,
+  svn_auth_set_parameter(auth_baton,
                          SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG, cfg_client);
-  svn_auth_set_parameter(callbacks->auth_baton,
+  svn_auth_set_parameter(auth_baton,
                          SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS, cfg);
 
   /* We open the session in a subpool so we can get rid of it if we
      reparent with a server that doesn't support reparenting. */
   SVN_ERR(open_session(&sess, url, &uri, tunnel, tunnel_argv, config,
-                       callbacks, callback_baton, sess_pool));
+                       callbacks, callback_baton,
+                       auth_baton, sess_pool, scratch_pool));
   session->priv = sess;
 
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *ra_svn_open_pool(svn_ra_session_t *session,
-                                     const char **corrected_url,
-                                     const char *url,
-                                     const svn_ra_callbacks2_t *callbacks,
-                                     void *callback_baton,
-                                     apr_hash_t *config,
-                                     apr_pool_t *pool)
-{
-  return ra_svn_open(session, corrected_url, url, callbacks, callback_baton,
-                     config, pool, pool);
 }
 
 static svn_error_t *ra_svn_dup_session(svn_ra_session_t *new_session,
@@ -875,7 +869,7 @@ static svn_error_t *ra_svn_dup_session(svn_ra_session_t *new_session,
 
   SVN_ERR(ra_svn_open(new_session, NULL, new_session_url,
                       old_sess->callbacks, old_sess->callbacks_baton,
-                      old_sess->config,
+                      old_sess->auth_baton, old_sess->config,
                       result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -912,7 +906,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   if (! err)
     err = open_session(&new_sess, url, &uri, sess->tunnel_name, sess->tunnel_argv,
                        sess->config, sess->callbacks, sess->callbacks_baton,
-                       sess_pool);
+                       sess->auth_baton, sess_pool, sess_pool);
   /* We destroy the new session pool on error, since it is allocated in
      the main session pool. */
   if (err)
@@ -1073,6 +1067,9 @@ static svn_error_t *ra_svn_end_commit(void *baton)
                                  &(commit_info->author),
                                  &(commit_info->post_commit_err)));
 
+  commit_info->repos_root = apr_pstrdup(ccb->pool,
+                                        ccb->sess_baton->conn->repos_root);
+
   if (ccb->callback)
     SVN_ERR(ccb->callback(commit_info, ccb->callback_baton, ccb->pool));
 
@@ -1105,11 +1102,11 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
                                  "a log message with pre-1.5 servers; "
                                  "consider passing an empty one, or upgrading "
                                  "the server"));
-    } 
+    }
   else if (log_msg == NULL)
     /* 1.5+ server.  Set LOG_MSG to something, since the 'logmsg' argument
        to the 'commit' protocol command is non-optional; on the server side,
-       only REVPROP_TABLE will be used, and LOG_MSG will be ignored.  The 
+       only REVPROP_TABLE will be used, and LOG_MSG will be ignored.  The
        "svn:log" member of REVPROP_TABLE table is NULL, therefore the commit
        will have a NULL log message (not just "", really NULL).
 
@@ -1359,7 +1356,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
     SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_TIME));
   if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_LAST_AUTHOR));
-  
+
   /* Always send the, nominally optional, want-iprops as "false" to
      workaround a bug in svnserve 1.8.0-1.8.8 that causes the server
      to see "true" if it is omitted. */
@@ -1781,7 +1778,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
           - Except if the server sends more than a >= 1 limit top level items
           - Or when the callback reported a SVN_ERR_CEASE_INVOCATION
             in an earlier invocation. */
-      if (! (limit && (nest_level == 0) && (++nreceived > limit))
+      if (! ((limit > 0) && (nest_level == 0) && (++nreceived > limit))
           && ! *outer_error)
         {
           svn_error_t *err;
@@ -1809,7 +1806,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
                           SVN_PROP_REVISION_LOG, message);
 
           err = receiver(receiver_baton, log_entry, iterpool);
-          if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+          if (svn_error_find_cause(err, SVN_ERR_CEASE_INVOCATION))
             {
               *outer_error = svn_error_trace(
                                 svn_error_compose_create(*outer_error, err));
@@ -1997,14 +1994,15 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-ra_svn_get_location_segments(svn_ra_session_t *session,
-                             const char *path,
-                             svn_revnum_t peg_revision,
-                             svn_revnum_t start_rev,
-                             svn_revnum_t end_rev,
-                             svn_location_segment_receiver_t receiver,
-                             void *receiver_baton,
-                             apr_pool_t *pool)
+perform_get_location_segments(svn_error_t **outer_error,
+                              svn_ra_session_t *session,
+                              const char *path,
+                              svn_revnum_t peg_revision,
+                              svn_revnum_t start_rev,
+                              svn_revnum_t end_rev,
+                              svn_location_segment_receiver_t receiver,
+                              void *receiver_baton,
+                              apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -2051,7 +2049,17 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
           segment->path = ret_path;
           segment->range_start = range_start;
           segment->range_end = range_end;
-          SVN_ERR(receiver(segment, receiver_baton, iterpool));
+
+          if (!*outer_error)
+            {
+              svn_error_t *err = svn_error_trace(receiver(segment, receiver_baton,
+                                                          iterpool));
+
+              if (svn_error_find_cause(err, SVN_ERR_CEASE_INVOCATION))
+                *outer_error = err;
+              else
+                SVN_ERR(err);
+            }
         }
     }
   svn_pool_destroy(iterpool);
@@ -2061,6 +2069,26 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
   SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, ""));
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+ra_svn_get_location_segments(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t peg_revision,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             svn_location_segment_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool)
+{
+  svn_error_t *outer_err = SVN_NO_ERROR;
+  svn_error_t *err;
+
+  err = svn_error_trace(
+            perform_get_location_segments(&outer_err, session, path,
+                                          peg_revision, start_rev, end_rev,
+                                          receiver, receiver_baton, pool));
+  return svn_error_compose_create(outer_err, err);
 }
 
 static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
@@ -2723,10 +2751,16 @@ ra_svn_replay_range(svn_ra_session_t *session,
 
       SVN_ERR(svn_ra_svn__read_tuple(sess->conn, iterpool,
                                      "wl", &word, &list));
+
       if (strcmp(word, "revprops") != 0)
-        return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                 _("Expected 'revprops', found '%s'"),
-                                 word);
+        {
+          if (strcmp(word, "failure") == 0)
+            SVN_ERR(svn_ra_svn__handle_failure_status(list, iterpool));
+
+          return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                   _("Expected 'revprops', found '%s'"),
+                                   word);
+        }
 
       SVN_ERR(svn_ra_svn__parse_proplist(list, iterpool, &rev_props));
 
@@ -2869,7 +2903,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
   ra_svn_get_schemes,
-  ra_svn_open_pool,
+  ra_svn_open,
   ra_svn_dup_session,
   ra_svn_reparent,
   ra_svn_get_session_url,

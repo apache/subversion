@@ -24,7 +24,6 @@
 import os
 import shutil
 import copy
-import urllib
 import logging
 import re
 
@@ -114,7 +113,8 @@ class Sandbox:
     if empty or not read_only:  # use a local repo
       self.repo_dir = os.path.join(svntest.main.general_repo_dir, self.name)
       self.repo_url = (svntest.main.options.test_area_url + '/'
-                       + urllib.pathname2url(self.repo_dir))
+                       + svntest.wc.svn_uri_quote(
+                                self.repo_dir.replace(os.path.sep, '/')))
       self.add_test_path(self.repo_dir)
     else:
       self.repo_dir = svntest.main.pristine_greek_repos_dir
@@ -195,7 +195,8 @@ class Sandbox:
     path = (os.path.join(svntest.main.general_repo_dir, self.name)
             + '.' + suffix)
     url = svntest.main.options.test_area_url + \
-                                        '/' + urllib.pathname2url(path)
+                                        '/' + svntest.wc.svn_uri_quote(
+                                                path.replace(os.path.sep, '/'))
     self.add_test_path(path, remove)
     return path, url
 
@@ -275,6 +276,12 @@ class Sandbox:
     return '%s/REDIRECT-%s-%s' % (parts[0],
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
+
+  def file_protocol_repo_url(self):
+    """get a file:// url pointing to the repository"""
+    return svntest.main.file_scheme_prefix + \
+           svntest.wc.svn_uri_quote(
+                os.path.abspath(self.repo_dir).replace(os.path.sep, '/'))
 
   def simple_update(self, target=None, revision='HEAD'):
     """Update the WC or TARGET.
@@ -381,15 +388,18 @@ class Sandbox:
         raise Exception("Unexpected line '" + line + "' in proplist output" + str(out))
     return props
 
-  def simple_add_symlink(self, dest, target):
-    """Create a symlink TARGET pointing to DEST and add it to subversion"""
+  def simple_symlink(self, dest, target):
+    """Create a symlink TARGET pointing to DEST"""
     if svntest.main.is_posix_os():
       os.symlink(dest, self.ospath(target))
     else:
       svntest.main.file_write(self.ospath(target), "link %s" % dest)
+
+  def simple_add_symlink(self, dest, target, add=True):
+    """Create a symlink TARGET pointing to DEST and add it to subversion"""
+    self.simple_symlink(dest, target)
     self.simple_add(target)
-    if not svntest.main.is_posix_os():
-      # '*' is evaluated on Windows
+    if not svntest.main.is_posix_os():      # '*' is evaluated on Windows
       self.simple_propset('svn:special', 'X', target)
 
   def simple_add_text(self, text, *targets):
@@ -424,7 +434,7 @@ class Sandbox:
   def simple_append(self, dest, contents, truncate=False):
     """Append CONTENTS to file DEST, optionally truncating it first.
        DEST is a relpath relative to the WC."""
-    open(self.ospath(dest), truncate and 'w' or 'a').write(contents)
+    open(self.ospath(dest), truncate and 'wb' or 'ab').write(contents)
 
   def simple_lock(self, *targets):
     """Lock TARGETS in the WC.

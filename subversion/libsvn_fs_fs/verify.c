@@ -204,7 +204,7 @@ verify_index_checksum(apr_file_t *file,
       const char *file_name;
 
       SVN_ERR(svn_io_file_name_get(&file_name, file, scratch_pool));
-      SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+      SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool,
                                         _("%s checksum mismatch in file %s"),
                                         name, file_name));
     }
@@ -463,7 +463,8 @@ expect_buffer_nul(apr_file_t *file,
 
   /* read the whole data block; error out on failure */
   data.chunks[(size - 1)/ sizeof(apr_uint64_t)] = 0;
-  SVN_ERR(svn_io_file_read_full2(file, data.buffer, size, NULL, NULL, pool));
+  SVN_ERR(svn_io_file_read_full2(file, data.buffer, (apr_size_t)size, NULL,
+                                 NULL, pool));
 
   /* chunky check */
   for (i = 0; i < size / sizeof(apr_uint64_t); ++i)
@@ -476,7 +477,7 @@ expect_buffer_nul(apr_file_t *file,
       {
         const char *file_name;
         apr_off_t offset;
-        
+
         SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
         SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
         offset -= size - i;
@@ -793,7 +794,7 @@ verify_f7_metadata_consistency(svn_fs_t *fs,
       /* Check for external corruption to the indexes. */
       err = verify_index_checksums(fs, pack_start, cancel_func,
                                    cancel_baton, iterpool);
- 
+
       /* two-way index check */
       if (!err)
         err = compare_l2p_to_p2l_index(fs, pack_start, pack_end - pack_start,
@@ -850,13 +851,15 @@ svn_fs_fs__verify(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
 
   /* Input validation. */
   if (! SVN_IS_VALID_REVNUM(start))
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
-    end = youngest;
+    {
+      SVN_ERR(svn_fs_fs__youngest_rev(&end, fs, pool));
+    }
+
   SVN_ERR(svn_fs_fs__ensure_revision_exists(start, fs, pool));
   SVN_ERR(svn_fs_fs__ensure_revision_exists(end, fs, pool));
 

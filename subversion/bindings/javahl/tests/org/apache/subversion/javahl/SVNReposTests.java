@@ -40,13 +40,33 @@ import java.util.Map;
  */
 public class SVNReposTests extends SVNTests
 {
+    /**
+     * Base name of all our tests.
+     */
+    public final static String testName = "repos_test";
+
     public SVNReposTests()
     {
+        init();
     }
 
     public SVNReposTests(String name)
     {
         super(name);
+        init();
+    }
+
+    /**
+     * Initialize the testBaseName and the testCounter, if this is the
+     * first test of this class.
+     */
+    private void init()
+    {
+        if (!testName.equals(testBaseName))
+        {
+            testCounter = 0;
+            testBaseName = testName;
+        }
     }
 
     /**

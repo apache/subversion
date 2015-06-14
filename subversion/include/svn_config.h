@@ -63,6 +63,12 @@ typedef struct svn_config_t svn_config_t;
  * @{
  */
 
+/* If you add a new SVN_CONFIG_* category/section/option macro to this group,
+ * you have to re-run gen-make.py manually.
+ *
+ * ### This should be fixed in the build system; see issue #4581.
+ */
+
  /* This list of #defines is intentionally presented as a nested list
     that matches the in-config hierarchy.  */
 
@@ -782,7 +788,8 @@ svn_config_write_auth_data(apr_hash_t *hash,
  * fully purged) to allow perusal and selective removal of credentials.
  *
  * @a cred_kind and @a realmstring specify the key of the credential.
- * @a hash contains the hash data associated with the record.
+ * @a hash contains the hash data associated with the record. @a walk_baton
+ * is the baton passed to svn_config_walk_auth_data().
  *
  * Before returning set @a *delete_cred to TRUE to remove the credential from
  * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the

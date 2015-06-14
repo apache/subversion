@@ -71,6 +71,7 @@ typedef struct commit_context_t {
   const char *checked_in_url;    /* checked-in root to base CHECKOUTs from */
   const char *vcc_url;           /* vcc url */
 
+  int open_batons;               /* Number of open batons */
 } commit_context_t;
 
 #define USING_HTTPV2_COMMIT_SUPPORT(commit_ctx) ((commit_ctx)->txn_url != NULL)
@@ -101,6 +102,8 @@ typedef struct delete_context_t {
   svn_revnum_t revision;
 
   commit_context_t *commit_ctx;
+
+  svn_boolean_t non_recursive_if; /* Only create a non-recursive If header */
 } delete_context_t;
 
 /* Represents a directory. */
@@ -114,9 +117,6 @@ typedef struct dir_context_t {
   /* URL to operate against (used for CHECKOUT and PROPPATCH before
      HTTP v2, for PROPPATCH in HTTP v2).  */
   const char *url;
-
-  /* How many pending changes we have left in this directory. */
-  unsigned int ref_count;
 
   /* Is this directory being added?  (Otherwise, just opened.) */
   svn_boolean_t added;
@@ -1101,8 +1101,15 @@ setup_delete_headers(serf_bucket_t *headers,
   serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
                           apr_ltoa(pool, del->revision));
 
-  SVN_ERR(setup_if_header_recursive(&added, headers, del->commit_ctx,
-                                    del->relpath, pool));
+  if (! del->non_recursive_if)
+    SVN_ERR(setup_if_header_recursive(&added, headers, del->commit_ctx,
+                                      del->relpath, pool));
+  else
+    {
+      SVN_ERR(maybe_set_lock_token_header(headers, del->commit_ctx,
+                                          del->relpath, pool));
+      added = TRUE;
+    }
 
   if (added && del->commit_ctx->keep_locks)
     serf_bucket_headers_setn(headers, SVN_DAV_OPTIONS_HEADER,
@@ -1248,6 +1255,8 @@ open_root(void *edit_baton,
   apr_hash_index_t *hi;
   const char *proppatch_target = NULL;
   apr_pool_t *scratch_pool = svn_pool_create(dir_pool);
+
+  commit_ctx->open_batons++;
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(commit_ctx->session))
     {
@@ -1402,6 +1411,28 @@ open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_delete_body(serf_bucket_t **body_bkt,
+                   void *baton,
+                   serf_bucket_alloc_t *alloc,
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
+{
+  delete_context_t *ctx = baton;
+  serf_bucket_t *body;
+
+  body = serf_bucket_aggregate_create(alloc);
+
+  svn_ra_serf__add_xml_header_buckets(body, alloc);
+
+  svn_ra_serf__merge_lock_token_list(ctx->commit_ctx->lock_tokens,
+                                     ctx->relpath, body, alloc, pool);
+
+  *body_bkt = body;
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t revision,
@@ -1412,6 +1443,7 @@ delete_entry(const char *path,
   delete_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
   const char *delete_target;
+  svn_error_t *err;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
@@ -1446,7 +1478,23 @@ delete_entry(const char *path,
   handler->method = "DELETE";
   handler->path = delete_target;
 
-  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+  err = svn_ra_serf__context_run_one(handler, pool);
+  if (err && err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED
+      && handler->sline.code == 400)
+    {
+      svn_error_clear(err);
+
+      /* Try again with non-standard body to overcome Apache Httpd
+         header limit */
+      delete_ctx->non_recursive_if = TRUE;
+      handler->body_type = "text/xml";
+      handler->body_delegate = create_delete_body;
+      handler->body_delegate_baton = delete_ctx;
+
+      SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+    }
+  else
+    SVN_ERR(err);
 
   /* 204 No Content: item successfully deleted */
   if (handler->sline.code != 204)
@@ -1484,6 +1532,8 @@ add_directory(const char *path,
   dir->relpath = apr_pstrdup(dir->pool, path);
   dir->name = svn_relpath_basename(dir->relpath, NULL);
   dir->prop_changes = apr_hash_make(dir->pool);
+
+  dir->commit_ctx->open_batons++;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
@@ -1539,7 +1589,9 @@ add_directory(const char *path,
       handler->header_delegate = setup_copy_dir_headers;
       handler->header_delegate_baton = dir;
     }
-
+  /* We have the same problem as with DELETE here: if there are too many
+     locks, the request fails. But in this case there is no way to retry
+     with a non-standard request. #### How to fix? */
   SVN_ERR(svn_ra_serf__context_run_one(handler, dir->pool));
 
   if (handler->sline.code != 201)
@@ -1572,6 +1624,8 @@ open_directory(const char *path,
   dir->relpath = apr_pstrdup(dir->pool, path);
   dir->name = svn_relpath_basename(dir->relpath, NULL);
   dir->prop_changes = apr_hash_make(dir->pool);
+
+  dir->commit_ctx->open_batons++;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
@@ -1651,6 +1705,8 @@ close_directory(void *dir_baton,
                                  proppatch_ctx, dir->pool));
     }
 
+  dir->commit_ctx->open_batons--;
+
   return SVN_NO_ERROR;
 }
 
@@ -1670,8 +1726,6 @@ add_file(const char *path,
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
   new_file->pool = file_pool;
 
-  dir->ref_count++;
-
   new_file->parent_dir = dir;
   new_file->commit_ctx = dir->commit_ctx;
   new_file->relpath = apr_pstrdup(new_file->pool, path);
@@ -1681,6 +1735,8 @@ add_file(const char *path,
   new_file->copy_path = apr_pstrdup(new_file->pool, copy_path);
   new_file->copy_revision = copy_revision;
   new_file->prop_changes = apr_hash_make(new_file->pool);
+
+  dir->commit_ctx->open_batons++;
 
   /* Ensure that the file doesn't exist by doing a HEAD on the
      resource.  If we're using HTTP v2, we'll just look into the
@@ -1792,8 +1848,6 @@ open_file(const char *path,
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
   new_file->pool = file_pool;
 
-  parent->ref_count++;
-
   new_file->parent_dir = parent;
   new_file->commit_ctx = parent->commit_ctx;
   new_file->relpath = apr_pstrdup(new_file->pool, path);
@@ -1801,6 +1855,8 @@ open_file(const char *path,
   new_file->added = FALSE;
   new_file->base_revision = base_revision;
   new_file->prop_changes = apr_hash_make(new_file->pool);
+
+  parent->commit_ctx->open_batons++;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(parent->commit_ctx))
     {
@@ -1964,6 +2020,8 @@ close_file(void *file_baton,
                                  proppatch, scratch_pool));
     }
 
+  ctx->commit_ctx->open_batons--;
+
   return SVN_NO_ERROR;
 }
 
@@ -1975,6 +2033,12 @@ close_edit(void *edit_baton,
   const char *merge_target =
     ctx->activity_url ? ctx->activity_url : ctx->txn_url;
   const svn_commit_info_t *commit_info;
+  svn_error_t *err = NULL;
+
+  if (ctx->open_batons > 0)
+    return svn_error_create(
+              SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION, NULL,
+              _("Closing editor with directories or files open"));
 
   /* MERGE our activity */
   SVN_ERR(svn_ra_serf__run_merge(&commit_info,
@@ -1984,9 +2048,11 @@ close_edit(void *edit_baton,
                                  ctx->keep_locks,
                                  pool, pool));
 
+  ctx->txn_url = NULL; /* If HTTPv2, the txn is now done */
+
   /* Inform the WC that we did a commit.  */
   if (ctx->callback)
-    SVN_ERR(ctx->callback(commit_info, ctx->callback_baton, pool));
+    err = ctx->callback(commit_info, ctx->callback_baton, pool);
 
   /* If we're using activities, DELETE our completed activity.  */
   if (ctx->activity_url)
@@ -2003,11 +2069,15 @@ close_edit(void *edit_baton,
 
       ctx->activity_url = NULL; /* Don't try again in abort_edit() on fail */
 
-      SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+      SVN_ERR(svn_error_compose_create(
+                  err,
+                  svn_ra_serf__context_run_one(handler, pool)));
 
       if (handler->sline.code != 204)
         return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
+
+  SVN_ERR(err);
 
   return SVN_NO_ERROR;
 }

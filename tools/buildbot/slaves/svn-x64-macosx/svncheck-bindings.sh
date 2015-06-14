@@ -20,10 +20,11 @@
 
 run_tests() {
     check="$1"
+    cleanup="$2"
 
     echo "============ make check-${check}"
     cd ${absbld}
-    make check-${check} || exit 1
+    make check-${check} ${cleanup} || exit 1
 }
 
 
@@ -53,6 +54,6 @@ done
 ${check_swig_py} && run_tests swig-py
 ${check_swig_pl} && run_tests swig-pl
 ${check_swig_rb} && run_tests swig-rb
-${check_javahl} && run_tests javahl
+${check_javahl} && run_tests javahl JAVAHL_CLEANUP=1
 
 exit 0

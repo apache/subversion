@@ -327,7 +327,7 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
           key.second = offset;
 
           SVN_ERR(svn_cache__get_partial((void **)noderev_p, &is_cached,
-                                         ffd->noderevs_container_cache, &key, 
+                                         ffd->noderevs_container_cache, &key,
                                          svn_fs_x__noderevs_get_func,
                                          &sub_item, result_pool));
           if (is_cached)
@@ -481,7 +481,7 @@ typedef struct rep_state_t
   apr_uint32_t sub_item;
   apr_off_t current;/* The current offset relative to START. */
   apr_off_t size;   /* The on-disk size of the representation. */
-  int ver;          /* If a delta, what svndiff version? 
+  int ver;          /* If a delta, what svndiff version?
                        -1 for unknown delta version. */
   int chunk_index;  /* number of the window to read */
 } rep_state_t;
@@ -793,7 +793,7 @@ svn_fs_x__check_rep(svn_fs_x__representation_t *rep,
           && entry->type != SVN_FS_X__ITEM_TYPE_FILE_PROPS
           && entry->type != SVN_FS_X__ITEM_TYPE_DIR_PROPS
           && entry->type != SVN_FS_X__ITEM_TYPE_REPS_CONT))
-    return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("No representation found at offset %s "
                                "for item %s in revision %ld"),
                              apr_off_t_toa(scratch_pool, offset),
@@ -937,7 +937,7 @@ typedef struct rep_read_baton_t
   /* The text we've been reading, if we're going to cache it. */
   svn_stringbuf_t *current_fulltext;
 
-  /* If not NULL, attempt to read the data from this cache. 
+  /* If not NULL, attempt to read the data from this cache.
      Once that lookup fails, reset it to NULL. */
   svn_cache__t *fulltext_cache;
 
@@ -1009,7 +1009,7 @@ get_cached_window_sizes_func(void **out,
   window_sizes_t *result = apr_palloc(pool, sizeof(*result));
   result->packed_len = window->end_offset - window->start_offset;
   result->target_len = txdelta_window->tview_len;
-  
+
   *out = result;
 
   return SVN_NO_ERROR;
@@ -1724,13 +1724,13 @@ svn_fs_x__get_representation_length(svn_filesize_t *packed_len,
   svn_fs_x__representation_cache_key_t key = { 0 };
   rep_state_t rs = { 0 };
   svn_fs_x__rep_header_t *rep_header;
-  
+
   /* this function does not apply to representation containers */
   SVN_ERR_ASSERT(entry->type >= SVN_FS_X__ITEM_TYPE_FILE_REP
                  && entry->type <= SVN_FS_X__ITEM_TYPE_DIR_PROPS);
   SVN_ERR_ASSERT(entry->item_count == 1);
 
-  /* get / read the representation header */  
+  /* get / read the representation header */
   key.revision = svn_fs_x__get_revnum(entry->items[0].change_set);
   key.is_packed = svn_fs_x__is_packed_rev(fs, key.revision);
   key.item_index = entry->items[0].number;
@@ -1759,7 +1759,7 @@ get_contents_from_windows(rep_read_baton_t *rb,
   char *cur = buf;
   rep_state_t *rs;
 
-  /* Special case for when there are no delta reps, only a 
+  /* Special case for when there are no delta reps, only a
      containered text. */
   if (rb->rs_list->nelts == 0 && rb->buf == NULL)
     {
@@ -2060,7 +2060,7 @@ rep_read_contents(void *baton,
                              &rb->src_state, rb->fs, &rb->rep,
                              rb->filehandle_pool, rb->scratch_pool));
 
-      /* In case we did read from the fulltext cache before, make the 
+      /* In case we did read from the fulltext cache before, make the
        * window stream catch up.  Also, initialize the fulltext buffer
        * if we want to cache the fulltext at the end. */
       SVN_ERR(skip_contents(rb, rb->fulltext_delivered));
@@ -2488,7 +2488,7 @@ read_dir_entries(apr_array_header_t *entries,
       /* In incremental mode, update the hash; otherwise, write to the
        * final array. */
       if (incremental)
-        apr_hash_set(hash, entry.key, entry.keylen, dirent);
+        apr_hash_set(hash, dirent->name, entry.keylen, dirent);
       else
         APR_ARRAY_PUSH(entries, svn_fs_x__dirent_t *) = dirent;
     }

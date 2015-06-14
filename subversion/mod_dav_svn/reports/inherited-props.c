@@ -61,6 +61,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
   int i;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
   apr_pool_t *iterpool;
+  svn_node_kind_t kind;
 
   /* Sanity check. */
   if (!resource->info->repos_path)
@@ -113,6 +114,20 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "couldn't retrieve revision root",
                                 resource->pool);
+
+  serr = svn_fs_check_path(&kind, root, path, resource->pool);
+  if (!serr && kind == svn_node_none)
+    {
+      serr = svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               "'%s' path not found", path);
+    }
+
+  if (serr)
+    {
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
+                                  resource->pool);
+      goto cleanup;
+    }
 
   serr = svn_repos_fs_get_inherited_props(&inherited_props, root, path, NULL,
                                           dav_svn__authz_read_func(&arb),

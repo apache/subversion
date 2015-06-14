@@ -485,8 +485,10 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
   int i;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__read_conflicts(&conflicts,
-                                 wc_ctx->db, local_abspath, FALSE,
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, NULL,
+                                 wc_ctx->db, local_abspath,
+                                 FALSE /* temp files */,
+                                 TRUE /* only tree conflicts */,
                                  scratch_pool, scratch_pool));
 
   if (!conflicts || conflicts->nelts == 0)

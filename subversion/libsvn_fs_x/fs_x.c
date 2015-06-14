@@ -606,7 +606,7 @@ svn_fs_x__open(svn_fs_t *fs,
                                                 fs, scratch_pool));
 }
 
-/* Baton type bridging svn_fs_x__upgrade and upgrade_body carrying 
+/* Baton type bridging svn_fs_x__upgrade and upgrade_body carrying
  * parameters over between them. */
 typedef struct upgrade_baton_t
 {
@@ -660,7 +660,7 @@ svn_fs_x__upgrade(svn_fs_t *fs,
   baton.notify_baton = notify_baton;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
-  
+
   return svn_fs_x__with_all_locks(fs, upgrade_body, (void *)&baton,
                                   scratch_pool);
 }
@@ -814,7 +814,7 @@ svn_fs_x__file_checksum(svn_checksum_t **checksum,
     {
       svn_checksum_t temp;
       temp.kind = kind;
-      
+
       switch(kind)
         {
           case svn_checksum_md5:

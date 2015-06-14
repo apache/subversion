@@ -1283,7 +1283,7 @@ fi
 AC_PATH_PROGS(PYTHON, "$PYTHON", none)
 
 # The minimum version for the JVM runtime for our Java bytecode.
-JAVA_OLDEST_WORKING_VER='1.5'
+JAVA_OLDEST_WORKING_VER='1.6'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
 SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
@@ -1354,6 +1354,19 @@ AS_HELP_STRING([--enable-runtime-module-search],
       fi
       AC_DEFINE(SVN_USE_DSO, 1,
                 [Defined if svn should try to load DSOs])
+
+      dnl Mac OS X uses libname.MAJOR.SOVERSION.dylib
+      dnl Most other unixes use libname.MAJOR.so.SOVERSION
+      case "$host" in
+        *-*-darwin*)
+          AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.%d.dylib"],
+                    [Shared library file name suffix format])
+          ;;
+        *)
+          AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.so.%d"],
+                    [Shared library file name suffix format])
+          ;;
+      esac
     fi
 ])
 
@@ -1455,8 +1468,15 @@ if test "$do_javahl_build" = "yes"; then
   # it.
   AC_MSG_CHECKING([for additional flags to link C++ libraries])
   if test "x$ac_compiler_gnu" = "xyes"; then
-    LT_CXX_LIBADD="-lstdc++"
-    AC_MSG_RESULT([$LT_CXX_LIBADD])
+    case "$host" in
+      *freebsd10*)
+        AC_MSG_RESULT([none needed])
+      ;;
+      *)
+        LT_CXX_LIBADD="-lstdc++"
+        AC_MSG_RESULT([$LT_CXX_LIBADD])
+      ;;
+    esac
   else
     AC_MSG_RESULT([none needed])
   fi

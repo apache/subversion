@@ -1295,9 +1295,9 @@ svn_relpath_split(const char **dirpath,
 }
 
 const char *
-svn_relpath_limit(const char *relpath,
-                  int max_components,
-                  apr_pool_t *result_pool)
+svn_relpath_prefix(const char *relpath,
+                   int max_components,
+                   apr_pool_t *result_pool)
 {
   const char *end;
   assert(relpath_is_canonical(relpath));
@@ -1738,8 +1738,8 @@ relpath_is_canonical(const char *relpath)
   if (ptr[len-1] == '/' || (ptr[len-1] == '.' && ptr[len-2] == '/'))
     return FALSE;
 
-  /* '.' are rare. So, search for them globally. There will often be no 
-   * more than one hit.  Also note that we already checked for invalid 
+  /* '.' are rare. So, search for them globally. There will often be no
+   * more than one hit.  Also note that we already checked for invalid
    * starts and endings, i.e. we only need to check for "/./"
    */
   for (dot_pos = memchr(ptr, '.', len);

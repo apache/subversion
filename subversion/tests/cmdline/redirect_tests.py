@@ -154,7 +154,7 @@ def redirected_nonroot_update(sbox):
                                              checkout_url, wc_dir)
   if err:
     raise svntest.Failure
-  
+
   # Relocate (by cheating) the working copy to the redirect URL.  When
   # we then update, we'll expect to find ourselves automagically back
   # to the original URL.  (This is because we can't easily introduce a
@@ -241,6 +241,25 @@ def redirected_copy(sbox):
                                      sbox.redirected_root_url(temporary=True) + '/A',
                                      '^/copy-of-A')
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+def redirected_commands(sbox):
+  "redirected commands"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'log',
+                                     sbox.redirected_root_url() + '/A')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'ls',
+                                     sbox.redirected_root_url() + '/A')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'info',
+                                     sbox.redirected_root_url() + '/A')
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -253,6 +272,7 @@ test_list = [ None,
               redirected_nonroot_update,
               redirected_externals,
               redirected_copy,
+              redirected_commands,
              ]
 
 if __name__ == '__main__':

@@ -980,8 +980,8 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, A_COPY_path)
+                                       [], True, False,
+                                       A_COPY_path)
 
 #----------------------------------------------------------------------
 # Automatic merges should notice ancestory for replaced files
@@ -1073,8 +1073,8 @@ def merge_replacement(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, A_path)
+                                       [], True, False,
+                                       A_path)
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(4313)
