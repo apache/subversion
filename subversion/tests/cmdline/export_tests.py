@@ -500,8 +500,7 @@ def export_with_state_deleted(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   export_target = sbox.add_wc_path('export')
   expected_output = svntest.wc.State(export_target, {
@@ -1016,18 +1015,18 @@ def export_file_external(sbox):
 @Issue(4427)
 def export_file_externals2(sbox):
   "exporting file externals"
-  
+
   sbox.build()
   sbox.simple_mkdir('DIR', 'DIR2')
-  
+
   sbox.simple_propset('svn:externals', '^/iota file', 'DIR')
   sbox.simple_propset('svn:externals', '^/DIR TheDir', 'DIR2')
   sbox.simple_commit()
   sbox.simple_update()
-  
+
   tmp = sbox.add_wc_path('tmp')
   os.mkdir(tmp)
-  
+
   expected_output = svntest.wc.State(tmp, {
     'file'          : Item(status='A '),
   })
@@ -1040,7 +1039,7 @@ def export_file_externals2(sbox):
                                         tmp,
                                         expected_output,
                                         expected_disk)
-  
+
   expected_output = svntest.wc.State(tmp, {
     'DIR/file'           : Item(status='A '),
   })
@@ -1052,7 +1051,7 @@ def export_file_externals2(sbox):
                                         os.path.join(tmp, 'DIR'),
                                         expected_output,
                                         expected_disk)
-                                        
+
   expected_output = svntest.wc.State(tmp, {
     'DIR2/TheDir/file' : Item(status='A '),
   })

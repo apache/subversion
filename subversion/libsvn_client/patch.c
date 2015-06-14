@@ -326,7 +326,8 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
       const char *rev_str;
       const char *author;
       const char *url;
-      const char *root_url;
+      const char *repos_root_url;
+      const char *repos_relpath;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
                                             &changed_date,
@@ -335,15 +336,17 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
                                             scratch_pool,
                                             scratch_pool));
       rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
-      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx,
-                                   local_abspath,
-                                   scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL, &root_url, NULL,
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath, &repos_root_url,
+                                          NULL,
                                           wc_ctx, local_abspath,
                                           scratch_pool, scratch_pool));
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
+
       SVN_ERR(svn_subst_build_keywords3(keywords,
                                         keywords_val->data,
-                                        rev_str, url, root_url, changed_date,
+                                        rev_str, url, repos_root_url,
+                                        changed_date,
                                         author, result_pool));
     }
 
@@ -908,18 +911,18 @@ write_symlink(void *baton, const char *buf, apr_size_t len,
 {
   const char *target_abspath = baton;
   const char *new_name;
-  const char *link = apr_pstrndup(scratch_pool, buf, len);
+  const char *sym_link = apr_pstrndup(scratch_pool, buf, len);
 
-  if (strncmp(link, "link ", 5) != 0)
+  if (strncmp(sym_link, "link ", 5) != 0)
     return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL,
                             _("Invalid link representation"));
 
-  link += 5; /* Skip "link " */
+  sym_link += 5; /* Skip "link " */
 
   /* We assume the entire symlink is written at once, as the patch
      format is line based */
 
-  SVN_ERR(svn_io_create_unique_link(&new_name, target_abspath, link,
+  SVN_ERR(svn_io_create_unique_link(&new_name, target_abspath, sym_link,
                                     ".tmp", scratch_pool));
 
   SVN_ERR(svn_io_file_rename(new_name, target_abspath, scratch_pool));
@@ -1592,7 +1595,7 @@ static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_t *content,
               svn_diff_hunk_t *hunk, svn_linenum_t fuzz,
-              apr_int64_t previous_offset,
+              svn_linenum_t previous_offset,
               svn_boolean_t ignore_whitespace,
               svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1795,7 +1798,7 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                   && (!matched_line
                       || (matched_line > original_start
                           && (matched_line - original_start
-                              > original_start - search_start)))) 
+                              > original_start - search_start))))
                 {
                   svn_linenum_t search_start2 = 1;
 
@@ -2272,7 +2275,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   int i;
   static const svn_linenum_t MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
-  apr_int64_t previous_offset = 0;
+  svn_linenum_t previous_offset = 0;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));

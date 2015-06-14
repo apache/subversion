@@ -101,12 +101,11 @@ use SVN::Base qw(Delta svn_txdelta_ apply);
 
 # special case for backward compatibility.  When called with an additional
 # argument "md5", it's the old style and don't return the md5.
-# Note that since the returned m5 is to be populated upon the last window
-# sent to the handler, it's not currently working to magically change things
-# in Perl land.
 sub apply {
     if (@_ == 5 || (@_ == 4 && ref($_[-1]) ne 'SVN::Pool' && ref($_[-1]) ne '_p_apr_pool_t')) {
-        splice(@_, 3, 1);
+        # we're called as 
+        # apply($source, $target, $result_digest, $error_info [, $pool]) 
+        splice(@_, 2, 1);
         my @ret = SVN::_Delta::svn_txdelta_apply(@_);
         return @ret[1,2];
     }

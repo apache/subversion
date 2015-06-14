@@ -313,6 +313,32 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_wc__db_scan_addition_internal(
+              svn_wc__db_status_t *status,
+              const char **op_root_relpath_p,
+              const char **repos_relpath,
+              apr_int64_t *repos_id,
+              const char **original_repos_relpath,
+              apr_int64_t *original_repos_id,
+              svn_revnum_t *original_revision,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_scan_deletion_internal(
+                  const char **base_del_relpath,
+                  const char **moved_to_relpath,
+                  const char **work_del_relpath,
+                  const char **moved_to_op_root_relpath,
+                  svn_wc__db_wcroot_t *wcroot,
+                  const char *local_relpath,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
+
+
 /* Look up REPOS_ID in WCROOT->SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID
    to its root URL and UUID respectively.  If REPOS_ID is INVALID_REPOS_ID,
    use NULL for both URL and UUID.  Either or both output parameters may be
@@ -328,6 +354,8 @@ svn_wc__db_fetch_repos_info(const char **repos_root_url,
    DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
 svn_error_t *
 svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
+                                  svn_node_kind_t *kind,
+                                  apr_hash_t **props,
                                   svn_wc__db_wcroot_t *wcroot,
                                   const char *local_relpath,
                                   apr_pool_t *result_pool,
@@ -343,23 +371,6 @@ svn_wc__db_mark_conflict_internal(svn_wc__db_wcroot_t *wcroot,
 
 
 /* Transaction handling */
-
-/* A callback which supplies WCROOTs and LOCAL_RELPATHs. */
-typedef svn_error_t *(*svn_wc__db_txn_callback_t)(void *baton,
-                                          svn_wc__db_wcroot_t *wcroot,
-                                          const char *local_relpath,
-                                          apr_pool_t *scratch_pool);
-
-
-/* Run CB_FUNC in a SQLite transaction with CB_BATON, using WCROOT and
-   LOCAL_RELPATH.  If callbacks require additional information, they may
-   provide it using CB_BATON. */
-svn_error_t *
-svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
-                    const char *local_relpath,
-                    svn_wc__db_txn_callback_t cb_func,
-                    void *cb_baton,
-                    apr_pool_t *scratch_pool);
 
 /* Evaluate the expression EXPR within a transaction.
  *
@@ -399,6 +410,7 @@ svn_wc__db_op_copy_layer_internal(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_op_make_copy_internal(svn_wc__db_wcroot_t *wcroot,
                                  const char *local_relpath,
+                                 svn_boolean_t move_move_info,
                                  const svn_skel_t *conflicts,
                                  const svn_skel_t *work_items,
                                  apr_pool_t *scratch_pool);
@@ -485,16 +497,27 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_op_break_move_internal(svn_wc__db_wcroot_t *wcroot,
                                   const char *src_relpath,
-                                  int src_op_depth,
+                                  int delete_op_depth,
                                   const char *dst_relpath,
                                   const svn_skel_t *work_items,
                                   apr_pool_t *scratch_pool);
 
 svn_error_t *
+svn_wc__db_op_mark_resolved_internal(svn_wc__db_wcroot_t *wcroot,
+                                     const char *local_relpath,
+                                     svn_wc__db_t *db,
+                                     svn_boolean_t resolved_text,
+                                     svn_boolean_t resolved_props,
+                                     svn_boolean_t resolved_tree,
+                                     const svn_skel_t *work_items,
+                                     apr_pool_t *scratch_pool);
+
+/* op_depth is the depth at which the node is added. */
+svn_error_t *
 svn_wc__db_op_raise_moved_away_internal(
                         svn_wc__db_wcroot_t *wcroot,
                         const char *local_relpath,
-                        int delete_op_depth,
+                        int op_depth,
                         svn_wc__db_t *db,
                         svn_wc_operation_t operation,
                         svn_wc_conflict_action_t action,
@@ -508,6 +531,12 @@ svn_wc__db_update_move_list_notify(svn_wc__db_wcroot_t *wcroot,
                                    svn_revnum_t new_revision,
                                    svn_wc_notify_func2_t notify_func,
                                    void *notify_baton,
+                                   apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_verify_db_full_internal(svn_wc__db_wcroot_t *wcroot,
+                                   svn_wc__db_verify_cb_t callback,
+                                   void *baton,
                                    apr_pool_t *scratch_pool);
 
 #endif /* WC_DB_PRIVATE_H */

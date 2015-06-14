@@ -756,7 +756,7 @@ verify_metadata_consistency(svn_fs_t *fs,
       /* Check for external corruption to the indexes. */
       err = verify_index_checksums(fs, pack_start, cancel_func,
                                    cancel_baton, iterpool);
- 
+
       /* two-way index check */
       if (!err)
         err = compare_l2p_to_p2l_index(fs, pack_start, pack_end - pack_start,

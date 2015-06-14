@@ -1858,6 +1858,22 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
                                       "Attempting to modify out-of-date resource.",
                                       r->pool);
         }
+      else if (comb->priv.version_name > created_rev)
+        {
+          svn_revnum_t txn_base_rev;
+
+          txn_base_rev = svn_fs_txn_base_revision(comb->res.info->root.txn);
+          if (comb->priv.version_name > txn_base_rev)
+            {
+              serr = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                       "No such revision %ld",
+                                       comb->priv.version_name);
+
+              return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                          "Unknown base revision",
+                                          r->pool);
+            }
+        }
     }
   else if (comb->res.collection)
     {
@@ -1932,7 +1948,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
                                       r->pool);
         }
 
-      if (node_relation != svn_fs_node_same)
+      if (node_relation != svn_fs_node_unchanged)
         {
           serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
                                    "Directory '%s' is out of date",
@@ -2109,6 +2125,16 @@ get_resource(request_rec *r,
   repo_name = dav_svn__get_repo_name(r);
   xslt_uri = dav_svn__get_xslt_uri(r);
   fs_parent_path = dav_svn__get_fs_parent_path(r);
+
+  if (r->method_number == M_COPY)
+    {
+      /* Workaround for issue #4531: Avoid a depth-infinity walk on
+         the copy source by overriding the Depth header here.
+         mod_dav defaults to infinite depth if this header is not set
+         which makes copies O(size of source) rather than the desired O(1).
+         ### Should be fixed by an explicit provider API feature in mod_dav. */
+      apr_table_setn(r->headers_in, "Depth", "0");
+    }
 
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */
@@ -4098,6 +4124,22 @@ remove_resource(dav_resource *resource, dav_response **response)
           return dav_svn__convert_err(serr, HTTP_CONFLICT,
                                       "Can't DELETE out-of-date resource",
                                       resource->pool);
+        }
+      else if (resource->info->version_name > created_rev)
+        {
+          svn_revnum_t txn_base_rev;
+
+          txn_base_rev = svn_fs_txn_base_revision(resource->info->root.txn);
+          if (resource->info->version_name > txn_base_rev)
+            {
+              serr = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                       "No such revision %ld",
+                                       resource->info->version_name);
+
+              return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                          "Unknown base revision",
+                                          resource->pool);
+            }
         }
     }
 

@@ -40,7 +40,7 @@ svn_fs_x__hotcopy_prepare_target(svn_fs_t *src_fs,
  * not re-copy data which already exists in DST_FS.  Indicate progress via
  * the optional NOTIFY_FUNC callback using NOTIFY_BATON.
  * Use SCRATCH_POOL for temporary allocations. */
-svn_error_t * 
+svn_error_t *
 svn_fs_x__hotcopy(svn_fs_t *src_fs,
                   svn_fs_t *dst_fs,
                   svn_boolean_t incremental,

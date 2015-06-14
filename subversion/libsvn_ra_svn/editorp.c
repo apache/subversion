@@ -633,7 +633,7 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
 
   /* Close the directory and destroy the baton. */
   SVN_CMD_ERR(ds->editor->close_directory(entry->baton, pool));
-  svn_hash_sets(ds->tokens, token, NULL);
+  apr_hash_set(ds->tokens, token->data, token->len, NULL);
   svn_pool_destroy(entry->pool);
   return SVN_NO_ERROR;
 }
@@ -812,7 +812,7 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
 
   /* Close the file and destroy the baton. */
   SVN_CMD_ERR(ds->editor->close_file(entry->baton, text_checksum, pool));
-  svn_hash_sets(ds->tokens, token, NULL);
+  apr_hash_set(ds->tokens, token->data, token->len, NULL);
   if (--ds->file_refs == 0)
     svn_pool_clear(ds->file_pool);
   return SVN_NO_ERROR;
@@ -843,6 +843,14 @@ static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
 {
   SVN_CMD_ERR(ds->editor->close_edit(ds->edit_baton, pool));
   ds->done = TRUE;
+#ifdef SVN_DEBUG
+  /* Before enabling this in non-maintainer mode:
+     *  Note that this code is used on both client *and* server */
+  if (apr_hash_count(ds->tokens) != 0)
+    return svn_error_create(
+              SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION, NULL,
+              _("Closing editor with directories or files open"));
+#endif
   if (ds->aborted)
     *ds->aborted = FALSE;
   return svn_ra_svn__write_cmd_response(conn, pool, "");

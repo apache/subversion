@@ -222,7 +222,7 @@ write_digest_file(apr_hash_t *children,
                                  svn_io_file_del_none, pool, pool));
   if ((err = svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool)))
     {
-      svn_error_clear(svn_stream_close(stream));
+      err = svn_error_compose_create(err, svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Cannot write lock/entries hashfile '%s'"),
@@ -273,7 +273,7 @@ read_digest_file(apr_hash_t **children_p,
   hash = apr_hash_make(pool);
   if ((err = svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool)))
     {
-      svn_error_clear(svn_stream_close(stream));
+      err = svn_error_compose_create(err, svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Can't parse lock/entries hashfile '%s'"),
@@ -355,7 +355,7 @@ set_lock(const char *fs_path,
      always come back empty. */
   SVN_ERR(read_digest_file(&children, NULL, fs_path, digest_path, pool));
 
-  SVN_ERR(write_digest_file(children, lock, fs_path, digest_path, 
+  SVN_ERR(write_digest_file(children, lock, fs_path, digest_path,
                             perms_reference, pool));
 
   return SVN_NO_ERROR;
@@ -405,7 +405,7 @@ add_to_digest(const char *fs_path,
     }
 
   if (apr_hash_count(children) != original_count)
-    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path, 
+    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path,
                               perms_reference, pool));
 
   return SVN_NO_ERROR;
@@ -438,7 +438,7 @@ delete_from_digest(const char *fs_path,
     }
 
   if (apr_hash_count(children) || lock)
-    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path, 
+    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path,
                               perms_reference, pool));
   else
     SVN_ERR(svn_io_remove_file2(index_digest_path, TRUE, pool));
@@ -715,6 +715,7 @@ check_lock(svn_error_t **fs_err,
            const svn_fs_lock_target_t *target,
            struct lock_baton *lb,
            svn_fs_root_t *root,
+           svn_revnum_t youngest_rev,
            apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -751,6 +752,15 @@ check_lock(svn_error_t **fs_err,
   if (SVN_IS_VALID_REVNUM(target->current_rev))
     {
       svn_revnum_t created_rev;
+
+      if (target->current_rev > youngest_rev)
+        {
+          *fs_err = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                      _("No such revision %ld"),
+                                      target->current_rev);
+          return SVN_NO_ERROR;
+        }
+
       SVN_ERR(svn_fs_fs__node_created_rev(&created_rev, root, path,
                                           pool));
 
@@ -856,7 +866,7 @@ lock_body(void *baton, apr_pool_t *pool)
       info.fs_err = SVN_NO_ERROR;
 
       SVN_ERR(check_lock(&info.fs_err, info.path, item->value, lb, root,
-                         iterpool));
+                         youngest, iterpool));
 
       /* If no error occurred while pre-checking, schedule the index updates for
          this path. */
@@ -900,14 +910,17 @@ lock_body(void *baton, apr_pool_t *pool)
         {
           info->lock = svn_lock_create(lb->result_pool);
           if (target->token)
-            info->lock->token = target->token;
+            info->lock->token = apr_pstrdup(lb->result_pool, target->token);
           else
             SVN_ERR(svn_fs_fs__generate_lock_token(&(info->lock->token), lb->fs,
                                                    lb->result_pool));
 
+          /* The INFO->PATH is already allocated in LB->RESULT_POOL as a result
+             of svn_fspath__canonicalize() (see svn_fs_fs__lock()). */
           info->lock->path = info->path;
-          info->lock->owner = lb->fs->access_ctx->username;
-          info->lock->comment = lb->comment;
+          info->lock->owner = apr_pstrdup(lb->result_pool,
+                                          lb->fs->access_ctx->username);
+          info->lock->comment = apr_pstrdup(lb->result_pool, lb->comment);
           info->lock->is_dav_comment = lb->is_dav_comment;
           info->lock->creation_date = apr_time_now();
           info->lock->expiration_date = lb->expiration_date;
@@ -1096,6 +1109,7 @@ svn_fs_fs__lock(svn_fs_t *fs,
   apr_array_header_t *sorted_targets;
   apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
 
@@ -1136,23 +1150,26 @@ svn_fs_fs__lock(svn_fs_t *fs,
   lb.steal_lock = steal_lock;
   lb.result_pool = result_pool;
 
-  err = svn_fs_fs__with_write_lock(fs, lock_body, &lb, scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  err = svn_fs_fs__with_write_lock(fs, lock_body, &lb, iterpool);
   for (i = 0; i < lb.infos->nelts; ++i)
     {
       struct lock_info_t *info = &APR_ARRAY_IDX(lb.infos, i,
                                                 struct lock_info_t);
+      svn_pool_clear(iterpool);
       if (!cb_err && lock_callback)
         {
           if (!info->lock && !info->fs_err)
             info->fs_err = svn_error_createf(SVN_ERR_FS_LOCK_OPERATION_FAILED,
                                              0, _("Failed to lock '%s'"),
                                              info->path);
-                                             
+
           cb_err = lock_callback(lock_baton, info->path, info->lock,
-                                 info->fs_err, scratch_pool);
+                                 info->fs_err, iterpool);
         }
       svn_error_clear(info->fs_err);
     }
+  svn_pool_destroy(iterpool);
 
   if (err && cb_err)
     svn_error_compose(err, cb_err);
@@ -1192,6 +1209,7 @@ svn_fs_fs__unlock(svn_fs_t *fs,
   apr_array_header_t *sorted_targets;
   apr_hash_t *canonical_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
   svn_error_t *err, *cb_err = SVN_NO_ERROR;
   int i;
 
@@ -1226,11 +1244,13 @@ svn_fs_fs__unlock(svn_fs_t *fs,
   ub.break_lock = break_lock;
   ub.result_pool = result_pool;
 
-  err = svn_fs_fs__with_write_lock(fs, unlock_body, &ub, scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  err = svn_fs_fs__with_write_lock(fs, unlock_body, &ub, iterpool);
   for (i = 0; i < ub.infos->nelts; ++i)
     {
       struct unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i,
                                                   struct unlock_info_t);
+      svn_pool_clear(iterpool);
       if (!cb_err && lock_callback)
         {
           if (!info->done && !info->fs_err)
@@ -1238,10 +1258,11 @@ svn_fs_fs__unlock(svn_fs_t *fs,
                                              0, _("Failed to unlock '%s'"),
                                              info->path);
           cb_err = lock_callback(lock_baton, info->path, NULL, info->fs_err,
-                                 scratch_pool);
+                                 iterpool);
         }
       svn_error_clear(info->fs_err);
     }
+  svn_pool_destroy(iterpool);
 
   if (err && cb_err)
     svn_error_compose(err, cb_err);

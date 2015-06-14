@@ -751,7 +751,7 @@ dav_svn__checkout(dav_resource *resource,
                   svn_error_clear(serr);
                   return err;
                 }
-              if (node_relation != svn_fs_node_same)
+              if (node_relation != svn_fs_node_unchanged)
                 {
                   return dav_svn__new_error_svn
                     (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,

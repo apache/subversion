@@ -69,7 +69,7 @@
  * each of the 4 buckets separately.  The first three will simply order
  * their items by revision, starting with the newest once.  Placing rep
  * and noderev items is a more elaborate process documented in the code.
- * 
+ *
  * In short, we store items in the following order:
  * - changed paths lists
  * - node property
@@ -256,7 +256,7 @@ initialize_pack_context(pack_context_t *context,
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *temp_dir;
   int max_revs = MIN(ffd->max_files_per_dir, max_items);
-  
+
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT);
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
 
@@ -272,7 +272,7 @@ initialize_pack_context(pack_context_t *context,
   context->start_rev = shard_rev;
   context->end_rev = shard_rev;
   context->shard_end_rev = shard_rev + ffd->max_files_per_dir;
-  
+
   /* Create the new directory and pack file. */
   context->shard_dir = shard_dir;
   context->pack_file_dir = pack_file_dir;
@@ -349,7 +349,7 @@ reset_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_file_trunc(context->reps_file, 0, pool));
 
   svn_pool_clear(context->info_pool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -377,13 +377,15 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_fs_fs__add_index_data(context->fs, context->pack_file,
                                     proto_l2p_index_path,
                                     proto_p2l_index_path,
-                                    context->shard_rev, 
+                                    context->shard_rev,
                                     pool));
 
   /* remove proto index files */
   SVN_ERR(svn_io_remove_file2(proto_l2p_index_path, FALSE, pool));
   SVN_ERR(svn_io_remove_file2(proto_p2l_index_path, FALSE, pool));
 
+  /* Ensure that packed file is written to disk.*/
+  SVN_ERR(svn_io_file_flush_to_disk(context->pack_file, pool));
   SVN_ERR(svn_io_file_close(context->pack_file, pool));
 
   return SVN_NO_ERROR;
@@ -402,7 +404,7 @@ copy_file_data(pack_context_t *context,
   /* most non-representation items will be small.  Minimize the buffer
    * and infrastructure overhead in that case. */
   enum { STACK_BUFFER_SIZE = 1024 };
- 
+
   if (size < STACK_BUFFER_SIZE)
     {
       /* copy small data using a fixed-size buffer on stack */
@@ -481,9 +483,9 @@ copy_item_to_temp(pack_context_t *context,
 
   SVN_ERR(svn_fs_fs__get_file_offset(&new_entry->offset, temp_file, pool));
   APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *) = new_entry;
-  
+
   SVN_ERR(copy_file_data(context, temp_file, rev_file, entry->size, pool));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -572,7 +574,7 @@ copy_rep_to_temp(pack_context_t *context,
   /* read & parse the representation header */
   stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, stream, pool, pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* if the representation is a delta against some other rep, link the two */
   if (   rep_header->type == svn_fs_fs__rep_delta
@@ -643,17 +645,18 @@ compare_dir_entries_format6(const svn_sort__item_t *a,
 apr_array_header_t *
 svn_fs_fs__order_dir_entries(svn_fs_t *fs,
                              apr_hash_t *directory,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   apr_array_header_t *ordered
     = svn_sort__hash(directory,
                      svn_fs_fs__use_log_addressing(fs)
                        ? compare_dir_entries_format7
                        : compare_dir_entries_format6,
-                     pool);
+                     scratch_pool);
 
   apr_array_header_t *result
-    = apr_array_make(pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
+    = apr_array_make(result_pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
 
   int i;
   for (i = 0; i < ordered->nelts; ++i)
@@ -714,7 +717,7 @@ copy_node_to_temp(pack_context_t *context,
   /* read & parse noderev */
   stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool, pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
@@ -736,9 +739,7 @@ copy_node_to_temp(pack_context_t *context,
     {
       path_order->rep_id.revision = noderev->data_rep->revision;
       path_order->rep_id.number = noderev->data_rep->item_index;
-      path_order->expanded_size = noderev->data_rep->expanded_size
-                                ? noderev->data_rep->expanded_size
-                                : noderev->data_rep->size;
+      path_order->expanded_size = noderev->data_rep->expanded_size;
     }
 
   /* Sort path is the key used for ordering noderevs and associated reps.
@@ -1001,7 +1002,7 @@ sort_reps(pack_context_t *context)
   /* We now know the final ordering. */
   for (i = 0; i < count; ++i)
     path_order[i] = temp[i];
-  
+
   svn_pool_destroy(temp_pool);
 }
 
@@ -1290,7 +1291,7 @@ pack_range(pack_context_t *context,
 
       /* store the indirect array index */
       APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps->nelts;
-  
+
       /* read the phys-to-log index file until we covered the whole rev file.
        * That index contains enough info to build both target indexes from it. */
       while (offset < rev_file->l2p_offset)
@@ -1391,7 +1392,7 @@ pack_range(pack_context_t *context,
   SVN_ERR(write_l2p_index(context, revpool));
 
   svn_pool_destroy(revpool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1639,7 +1640,7 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
 
 /* Packing logic for physical addresssing mode:
  * Simply concatenate all revision contents.
- * 
+ *
  * Pack the revision shard starting at SHARD_REV containing exactly
  * MAX_FILES_PER_DIR revisions from SHARD_PATH into the PACK_FILE_DIR,
  * using POOL for allocations.  CANCEL_FUNC and CANCEL_BATON are what you
@@ -1655,7 +1656,9 @@ pack_phys_addressed(const char *pack_file_dir,
                     apr_pool_t *pool)
 {
   const char *pack_file_path, *manifest_file_path;
-  svn_stream_t *pack_stream, *manifest_stream;
+  apr_file_t *pack_file;
+  apr_file_t *manifest_file;
+  svn_stream_t *manifest_stream;
   svn_revnum_t end_rev, rev;
   apr_off_t next_offset;
   apr_pool_t *iterpool;
@@ -1664,13 +1667,18 @@ pack_phys_addressed(const char *pack_file_dir,
   pack_file_path = svn_dirent_join(pack_file_dir, PATH_PACKED, pool);
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST, pool);
 
-  /* Create the new directory and pack file. */
-  SVN_ERR(svn_stream_open_writable(&pack_stream, pack_file_path, pool,
-                                    pool));
+  /* Create the new directory and pack file.
+   * Use unbuffered apr_file_t since we're going to write using 16kb
+   * chunks. */
+  SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
+                           APR_WRITE | APR_CREATE | APR_EXCL,
+                           APR_OS_DEFAULT, pool));
 
   /* Create the manifest file. */
-  SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
-                                   pool, pool));
+  SVN_ERR(svn_io_file_open(&manifest_file, manifest_file_path,
+                           APR_WRITE | APR_BUFFERED | APR_CREATE | APR_EXCL,
+                           APR_OS_DEFAULT, pool));
+  manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE, pool);
 
   end_rev = start_rev + max_files_per_dir - 1;
   next_offset = 0;
@@ -1697,16 +1705,24 @@ pack_phys_addressed(const char *pack_file_dir,
 
       /* Copy all the bits from the rev file to the end of the pack file. */
       SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
-      SVN_ERR(svn_stream_copy3(rev_stream, svn_stream_disown(pack_stream,
-                                                             iterpool),
+      SVN_ERR(svn_stream_copy3(rev_stream,
+                               svn_stream_from_aprfile2(pack_file, TRUE, pool),
                                cancel_func, cancel_baton, iterpool));
     }
 
-  /* disallow write access to the manifest file */
+  /* Close stream over APR file. */
   SVN_ERR(svn_stream_close(manifest_stream));
+
+  /* Ensure that pack file is written to disk. */
+  SVN_ERR(svn_io_file_flush_to_disk(manifest_file, pool));
+  SVN_ERR(svn_io_file_close(manifest_file, pool));
+
+  /* disallow write access to the manifest file */
   SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, iterpool));
 
-  SVN_ERR(svn_stream_close(pack_stream));
+  /* Ensure that pack file is written to disk. */
+  SVN_ERR(svn_io_file_flush_to_disk(pack_file, pool));
+  SVN_ERR(svn_io_file_close(pack_file, pool));
 
   svn_pool_destroy(iterpool);
 
@@ -1756,7 +1772,7 @@ pack_rev_shard(svn_fs_t *fs,
     SVN_ERR(pack_phys_addressed(pack_file_dir, shard_path, shard_rev,
                                 max_files_per_dir, cancel_func,
                                 cancel_baton, pool));
-  
+
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
   SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, pool));
 

@@ -879,7 +879,7 @@ internal_open(svn_sqlite__db_t *db, const char *path, svn_sqlite__mode_t mode,
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t.  SQLite always
-       requires sqlite3_close() after sqlite3_open_v2() while Subversion 
+       requires sqlite3_close() after sqlite3_open_v2() while Subversion
        typically does not require close() after an open() that returns an
        error.  So we must ensure we close the handle if this function, or
        the caller svn_sqlite__open, returns an error to the application. */
@@ -1171,7 +1171,8 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  affects application(read: Subversion) performance/behavior. */
               "PRAGMA foreign_keys=OFF;"      /* SQLITE_DEFAULT_FOREIGN_KEYS*/
               "PRAGMA locking_mode = NORMAL;" /* SQLITE_DEFAULT_LOCKING_MODE */
-                            ),
+              "PRAGMA journal_mode = TRUNCATE;"
+              ),
                 *db);
 
 #if defined(SVN_DEBUG)
@@ -1306,7 +1307,7 @@ svn_sqlite__finish_transaction(svn_sqlite__db_t *db,
       err2 = get_internal_statement(&stmt, db,
                                     STMT_INTERNAL_ROLLBACK_TRANSACTION);
       if (!err2)
-        err2 = svn_sqlite__step_done(stmt);
+        err2 = svn_error_trace(svn_sqlite__step_done(stmt));
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
         {
@@ -1329,14 +1330,14 @@ svn_sqlite__finish_transaction(svn_sqlite__db_t *db,
              help diagnosing the original error and help in finding where
              a reset statement is missing. */
 
-          err2 = reset_all_statements(db, err2);
+          err2 = svn_error_trace(reset_all_statements(db, err2));
           err2 = svn_error_compose_create(
-                      svn_sqlite__step_done(stmt),
+                      svn_error_trace(svn_sqlite__step_done(stmt)),
                       err2);
+
         }
 
-      return svn_error_compose_create(err,
-                                      err2);
+      return svn_error_compose_create(err, err2);
     }
 
   SVN_ERR(get_internal_statement(&stmt, db, STMT_INTERNAL_COMMIT_TRANSACTION));
@@ -1357,7 +1358,7 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
                                     STMT_INTERNAL_ROLLBACK_TO_SAVEPOINT_SVN);
 
       if (!err2)
-        err2 = svn_sqlite__step_done(stmt);
+        err2 = svn_error_trace(svn_sqlite__step_done(stmt));
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
         {
@@ -1367,8 +1368,10 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
              ### See huge comment in svn_sqlite__finish_transaction for
                  further details */
 
-          err2 = reset_all_statements(db, err2);
-          err2 = svn_error_compose_create(svn_sqlite__step_done(stmt), err2);
+          err2 = svn_error_trace(reset_all_statements(db, err2));
+          err2 = svn_error_compose_create(
+                      svn_error_trace(svn_sqlite__step_done(stmt)),
+                      err2);
         }
 
       err = svn_error_compose_create(err, err2);
@@ -1376,9 +1379,9 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
                                     STMT_INTERNAL_RELEASE_SAVEPOINT_SVN);
 
       if (!err2)
-        err2 = svn_sqlite__step_done(stmt);
+        err2 = svn_error_trace(svn_sqlite__step_done(stmt));
 
-      return svn_error_trace(svn_error_compose_create(err, err2));
+      return svn_error_compose_create(err, err2);
     }
 
   SVN_ERR(get_internal_statement(&stmt, db,
@@ -1476,8 +1479,6 @@ struct function_wrapper_baton_t
 {
   svn_sqlite__func_t func;
   void *baton;
-
-  apr_pool_t *scratch_pool;
 };
 
 static void
@@ -1487,22 +1488,12 @@ wrapped_func(sqlite3_context *context,
 {
   struct function_wrapper_baton_t *fwb = sqlite3_user_data(context);
   svn_sqlite__context_t sctx;
-  svn_sqlite__value_t **local_vals =
-                            apr_palloc(fwb->scratch_pool,
-                                       sizeof(svn_sqlite__value_t *) * argc);
   svn_error_t *err;
-  int i;
+  void *void_values = values;
 
   sctx.context = context;
 
-  for (i = 0; i < argc; i++)
-    {
-      local_vals[i] = apr_palloc(fwb->scratch_pool, sizeof(*local_vals[i]));
-      local_vals[i]->value = values[i];
-    }
-
-  err = fwb->func(&sctx, argc, local_vals, fwb->scratch_pool);
-  svn_pool_clear(fwb->scratch_pool);
+  err = fwb->func(&sctx, argc, void_values, fwb->baton);
 
   if (err)
     {
@@ -1513,6 +1504,7 @@ wrapped_func(sqlite3_context *context,
       svn_error_clear(err);
     }
 }
+
 
 svn_error_t *
 svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
@@ -1526,7 +1518,6 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
   struct function_wrapper_baton_t *fwb = apr_pcalloc(db->state_pool,
                                                      sizeof(*fwb));
 
-  fwb->scratch_pool = svn_pool_create(db->state_pool);
   fwb->func = func;
   fwb->baton = baton;
 
@@ -1544,13 +1535,15 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
 int
 svn_sqlite__value_type(svn_sqlite__value_t *val)
 {
-  return sqlite3_value_type(val->value);
+  void *v = val;
+  return sqlite3_value_type(v);
 }
 
 const char *
 svn_sqlite__value_text(svn_sqlite__value_t *val)
 {
-  return (const char *) sqlite3_value_text(val->value);
+  void *v = val;
+  return (const char *) sqlite3_value_text(v);
 }
 
 void

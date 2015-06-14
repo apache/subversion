@@ -123,6 +123,7 @@ struct svn_ra_svn__session_baton_t {
   apr_pool_t *pool;
   svn_ra_svn_conn_t *conn;
   svn_boolean_t is_tunneled;
+  svn_auth_baton_t *auth_baton;
   const char *url;
   const char *user;
   const char *hostname; /* The remote hostname. */

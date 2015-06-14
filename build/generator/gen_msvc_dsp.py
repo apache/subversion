@@ -148,9 +148,9 @@ class Generator(gen_win.WinGeneratorBase):
       depends = [ ]
       if not isinstance(target, gen_base.TargetI18N):
         depends = self.adjust_win_depends(target, name)
-	#print name
-	#for dep in depends:
-	#  print "	",dep.name
+        #print name
+        #for dep in depends:
+        #  print "	",dep.name
 
       dep_names = [ ]
       for dep in depends:

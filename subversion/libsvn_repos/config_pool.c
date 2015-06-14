@@ -182,7 +182,7 @@ setter(void **target,
  * CONFIG_POOL, yet, parse CONTENTS and cache the result.  CASE_SENSITIVE
  * controls option and section name matching.
  *
- * RESULT_POOL determines the lifetime of the returned reference and 
+ * RESULT_POOL determines the lifetime of the returned reference and
  * SCRATCH_POOL is being used for temporary allocations.
  */
 static svn_error_t *
@@ -283,12 +283,12 @@ add_checksum(svn_repos__config_pool_t *config_pool,
   return SVN_NO_ERROR;
 }
 
-/* Set *CFG to the configuration stored in URL@HEAD and cache it in 
+/* Set *CFG to the configuration stored in URL@HEAD and cache it in
  * CONFIG_POOL.  CASE_SENSITIVE controls
  * option and section name matching.  If PREFERRED_REPOS is given,
  * use that if it also matches URL.
- * 
- * RESULT_POOL determines the lifetime of the returned reference and 
+ *
+ * RESULT_POOL determines the lifetime of the returned reference and
  * SCRATCH_POOL is being used for temporary allocations.
  */
 static svn_error_t *
@@ -416,7 +416,7 @@ key_by_url(svn_membuf_t **key,
 
   /* found *some* reference to a configuration.
    * Verify that it is still current.  Will fail for BDB repos. */
-  err = svn_stringbuf_from_file2(&contents, 
+  err = svn_stringbuf_from_file2(&contents,
                                  svn_dirent_join(config->repo_root,
                                                  "db/current", pool),
                                  pool);

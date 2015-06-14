@@ -935,15 +935,15 @@ def tree_replace1(sbox):
     {
       ''      : Item(status=' M', wc_rev=17),
       'B'     : Item(status='R ', copied='+', wc_rev='-'),
-      'B/f'   : Item(status='R ', copied='+', wc_rev='-'),
+      'B/f'   : Item(status='  ', copied='+', wc_rev='-'),
       'B/g'   : Item(status='D ', wc_rev=17),
-      'B/h'   : Item(status='A ', copied='+', wc_rev='-'),
-      'B/C'   : Item(status='R ', copied='+', wc_rev='-'),
-      'B/C/f' : Item(status='R ', copied='+', wc_rev='-'),
+      'B/h'   : Item(status='  ', copied='+', wc_rev='-'),
+      'B/C'   : Item(status='  ', copied='+', wc_rev='-'),
+      'B/C/f' : Item(status='  ', copied='+', wc_rev='-'),
       'B/D'   : Item(status='D ', wc_rev=17),
       'B/D/f' : Item(status='D ', wc_rev=17),
-      'B/E'   : Item(status='A ', copied='+', wc_rev='-'),
-      'B/E/f' : Item(status='A ', copied='+', wc_rev='-'),
+      'B/E'   : Item(status='  ', copied='+', wc_rev='-'),
+      'B/E/f' : Item(status='  ', copied='+', wc_rev='-'),
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
@@ -961,11 +961,11 @@ def tree_replace2(sbox):
       'B'     : Item(status='R ', copied='+', wc_rev='-'),
       'B/f'   : Item(status='D ', wc_rev=12),
       'B/D'   : Item(status='D ', wc_rev=12),
-      'B/g'   : Item(status='A ', copied='+', wc_rev='-'),
-      'B/E'   : Item(status='A ', copied='+', wc_rev='-'),
+      'B/g'   : Item(status='  ', copied='+', wc_rev='-'),
+      'B/E'   : Item(status='  ', copied='+', wc_rev='-'),
       'C'     : Item(status='R ', copied='+', wc_rev='-'),
-      'C/f'   : Item(status='A ', copied='+', wc_rev='-'),
-      'C/D'   : Item(status='A ', copied='+', wc_rev='-'),
+      'C/f'   : Item(status='  ', copied='+', wc_rev='-'),
+      'C/D'   : Item(status='  ', copied='+', wc_rev='-'),
       'C/g'   : Item(status='D ', wc_rev=12),
       'C/E'   : Item(status='D ', wc_rev=12),
     })
@@ -1438,6 +1438,48 @@ def upgrade_1_7_dir_external(sbox):
   # svn: warning: W200033: sqlite[S5]: database is locked
   svntest.actions.run_and_verify_svn(None, [], 'upgrade', sbox.wc_dir)
 
+@SkipUnless(svntest.wc.python_sqlite_can_read_wc)
+def auto_analyze(sbox):
+  """automatic SQLite ANALYZE"""
+
+  sbox.build(create_wc = False)
+
+  replace_sbox_with_tarfile(sbox, 'wc-without-stat1.tar.bz2')
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            '52ec7e4b-e5f0-451d-829f-f05d5571b4ab')
+
+  # Don't use svn to do relocate as that will add the table.
+  svntest.wc.sqlite_exec(sbox.wc_dir,
+                         "update repository "
+                         "set root ='" + sbox.repo_url + "'")
+  val = svntest.wc.sqlite_stmt(sbox.wc_dir,
+                               "select 1 from sqlite_master "
+                               "where name = 'sqlite_stat1'")
+  if val != []:
+    raise svntest.Failure("initial state failed")
+
+  # Make working copy read-only (but not wc_dir itself as
+  # svntest.main.chmod_tree will not reset it.)
+  for path, subdirs, files in os.walk(sbox.wc_dir):
+    for d in subdirs:
+      os.chmod(os.path.join(path, d), 0555)
+    for f in files:
+      os.chmod(os.path.join(path, f), 0444)
+
+  state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, state)
+
+  svntest.main.chmod_tree(sbox.wc_dir, 0666, 0022)
+
+  state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  svntest.actions.run_and_verify_status(sbox.wc_dir, state)
+
+  val = svntest.wc.sqlite_stmt(sbox.wc_dir,
+                               "select 1 from sqlite_master "
+                               "where name = 'sqlite_stat1'")
+  if val != [(1,)]:
+    raise svntest.Failure("analyze failed")
+
 ########################################################################
 # Run the tests
 
@@ -1494,6 +1536,7 @@ test_list = [ None,
               iprops_upgrade1_6,
               changelist_upgrade_1_6,
               upgrade_1_7_dir_external,
+              auto_analyze,
              ]
 
 

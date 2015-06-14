@@ -164,7 +164,7 @@ typedef struct svn_repos__config_pool_t svn_repos__config_pool_t;
 
 /* Create a new configuration pool object with a lifetime determined by
  * POOL and return it in *CONFIG_POOL.
- * 
+ *
  * The THREAD_SAFE flag indicates whether the pool actually needs to be
  * thread-safe and POOL must be also be thread-safe if this flag is set.
  */

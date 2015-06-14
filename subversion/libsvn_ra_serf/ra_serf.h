@@ -154,6 +154,7 @@ struct svn_ra_serf__session_t {
   /* Callback functions to get info from WC */
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
+  svn_auth_baton_t *auth_baton;
 
   /* Callback function to send progress info to the client */
   svn_ra_progress_notify_func_t progress_func;
@@ -1021,6 +1022,13 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
 
 /** MERGE-related functions **/
 
+void
+svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
+                                   const char *parent,
+                                   serf_bucket_t *body,
+                                   serf_bucket_alloc_t *alloc,
+                                   apr_pool_t *pool);
+
 /* Create an MERGE request aimed at the SESSION url, requesting the
    merge of the resource identified by MERGE_RESOURCE_URL.
    LOCK_TOKENS is a hash mapping paths to lock tokens owned by the
@@ -1078,7 +1086,7 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
 
 /* Set @a VCC_URL to the default VCC for our repository based on @a
  * ORIG_PATH for the session @a SESSION, ensuring that the VCC URL and
- * repository root URLs are cached in @a SESSION. 
+ * repository root URLs are cached in @a SESSION.
  *
  * All temporary allocations will be made in @a SCRATCH_POOL. */
 svn_error_t *

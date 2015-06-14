@@ -401,7 +401,7 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Be sure to use the correct lock ordering as documented in
-     fs_fs_shared_data_t.  The lock chain is being created in 
+     fs_fs_shared_data_t.  The lock chain is being created in
      innermost (last to acquire) -> outermost (first to acquire) order. */
   with_lock_baton_t *lock_baton
     = create_lock_baton(fs, write_lock, body, baton, pool);
@@ -1126,7 +1126,9 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Global configuration options. */
   SVN_ERR(read_global_config(fs));
 
-  return get_youngest(&(ffd->youngest_rev_cache), fs, pool);
+  ffd->youngest_rev_cache = 0;
+
+  return SVN_NO_ERROR;
 }
 
 /* Wrapper around svn_io_file_create which ignores EEXIST. */
@@ -1144,7 +1146,7 @@ create_file_ignore_eexist(const char *file,
   return svn_error_trace(err);
 }
 
-/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying 
+/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying
  * parameters over between them. */
 struct upgrade_baton_t
 {
@@ -1287,7 +1289,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs,
   baton.notify_baton = notify_baton;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
-  
+
   return svn_fs_fs__with_all_locks(fs, upgrade_body, (void *)&baton, pool);
 }
 
@@ -1377,38 +1379,9 @@ svn_fs_fs__file_length(svn_filesize_t *length,
       /* Treat "no representation" as "empty file". */
       *length = 0;
     }
-  else if (data_rep->expanded_size)
-    {
-      /* Standard case: a non-empty file. */
-      *length = data_rep->expanded_size;
-    }
   else
     {
-      /* Work around a FSFS format quirk (see issue #4554).
-
-         A plain representation may specify its EXPANDED LENGTH as "0"
-         in which case, the SIZE value is what we want.
-
-         Because EXPANDED_LENGTH will also be 0 for empty files, while
-         SIZE is non-null, we need to check wether the content is
-         actually empty.  We simply compare with the MD5 checksum of
-         empty content (sha-1 is not always available).
-       */
-      svn_checksum_t *empty_md5
-        = svn_checksum_empty_checksum(svn_checksum_md5, pool);
-
-      if (memcmp(empty_md5->digest, data_rep->md5_digest,
-                 sizeof(data_rep->md5_digest)))
-        {
-          /* Contents is not empty, i.e. EXPANDED_LENGTH cannot be the
-             actual file length. */
-          *length = data_rep->size;
-        }
-      else
-        {
-          /* Contents is empty. */
-          *length = 0;
-        }
+      *length = data_rep->expanded_size;
     }
 
   return SVN_NO_ERROR;
@@ -1556,7 +1529,7 @@ svn_fs_fs__file_checksum(svn_checksum_t **checksum,
     {
       svn_checksum_t temp;
       temp.kind = kind;
-      
+
       switch(kind)
         {
           case svn_checksum_md5:
@@ -1944,7 +1917,10 @@ get_node_origins_from_file(svn_fs_t *fs,
 
   stream = svn_stream_from_aprfile2(fd, FALSE, pool);
   *node_origins = apr_hash_make(pool);
-  SVN_ERR(svn_hash_read2(*node_origins, stream, SVN_HASH_TERMINATOR, pool));
+  err = svn_hash_read2(*node_origins, stream, SVN_HASH_TERMINATOR, pool);
+  if (err)
+    return svn_error_quick_wrapf(err, _("malformed node origin data in '%s'"),
+                                 node_origins_file);
   return svn_stream_close(stream);
 }
 

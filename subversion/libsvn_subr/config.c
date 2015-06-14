@@ -741,7 +741,7 @@ svn_config_set(svn_config_t *cfg,
   cfg_option_t *opt;
 
   /* Ignore write attempts to r/o configurations.
-   * 
+   *
    * Since we should never try to modify r/o data, trigger an assertion
    * in debug mode.
    */

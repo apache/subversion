@@ -70,7 +70,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     # On Windows we create svn_private_config.h in the output directory since
     # r1370526.
-    # 
+    #
     # Without this replacement all projects include a not-existing file,
     # which makes the MSBuild calculation to see whether a project is changed
     # far more expensive than necessary.
@@ -86,7 +86,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     printed = []
     for lib in sorted(self._libraries.values(), key = lambda s: s.name):
       if lib.name in printed:
-        continue 
+        continue
       printed.append(lib.name)
       print('Found %s %s' % (lib.name, lib.version))
 
@@ -761,7 +761,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     "Return the list of include directories for target"
 
     fakeincludes = [ "subversion/include" ]
-                     
+
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
         for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):

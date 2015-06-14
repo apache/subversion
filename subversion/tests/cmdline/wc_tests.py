@@ -222,8 +222,7 @@ def update_through_unversioned_symlink(sbox):
   # Subversion 1.8.0 crashes when updating a working copy through a symlink
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, 1,
-                                        symlink)
+                                        [], True, symlink)
 
 @Issue(3549)
 def cleanup_unversioned_items(sbox):
