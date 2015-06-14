@@ -63,7 +63,7 @@ Other candidate changes:
    Votes:
      +1: stsp
 
- * r1684325, r1685034
+ * r1684940, r1685034
    Make 'svnadmin verify --keep-going --quiet' print errors to stderr,
    as documented by 'svnadmin help verify'.
    Justification:
