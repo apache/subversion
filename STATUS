@@ -63,19 +63,6 @@ Other candidate changes:
    Votes:
      +1: stsp
 
- * r1684940, r1685034
-   Make 'svnadmin verify --keep-going --quiet' print errors to stderr,
-   as documented by 'svnadmin help verify'.
-   Justification:
-     Without this change, we'd only print the final error which, in
-     --keep-going mode, is just a summary of failed verifications.
-     This change makes 'svnadmin verify -q --keep-going' actually useful.
-   Note:
-     r1684325 fixes test failures with FSFSv4 and FSFSv6.
-   Votes:
-     +1: brane
-
-
 Veto-blocked changes:
 =====================
 
