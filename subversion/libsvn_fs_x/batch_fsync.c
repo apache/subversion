@@ -386,13 +386,19 @@ static void * APR_THREAD_FUNC
 flush_task(apr_thread_t *tid,
            void *data)
 {
-  svn_error_t *err;
   to_sync_t *to_sync = data;
 
-  err = svn_error_trace(svn_io_file_flush_to_disk(to_sync->file,
-                                                  to_sync->pool));
-  to_sync->result = svn_error_compose_create
-                       (err, waitable_counter__increment(to_sync->counter));
+  to_sync->result = svn_error_trace(svn_io_file_flush_to_disk
+                                        (to_sync->file, to_sync->pool));
+
+  /* As soon as the increment call returns, TO_SYNC may be invalid
+     (the main thread may have woken up and released the struct.
+
+     Therefore, we cannot chain this error into TO_SYNC->RESULT.
+     OTOH, the main thread will probably deadlock anyway if we got
+     an error here, thus there is no point in trying to tell the
+     main thread what the problem was. */
+  svn_error_clear(waitable_counter__increment(to_sync->counter));
 
   return NULL;
 }
