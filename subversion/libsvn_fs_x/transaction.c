@@ -3195,62 +3195,56 @@ verify_locks(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Return in *PATH the path to a file containing the properties that
-   make up the final revision properties file.  This involves setting
-   svn:date and removing any temporary properties associated with the
-   commit flags. */
+/* Based on the transaction properties of TXN, write the final revision
+   properties for REVISION into their final location. Return that location
+   in *PATH and schedule the necessary fsync calls in BATCH.  This involves
+   setting svn:date and removing any temporary properties associated with
+   the commit flags. */
 static svn_error_t *
 write_final_revprop(const char **path,
                     svn_fs_txn_t *txn,
-                    svn_fs_x__txn_id_t txn_id,
-                    apr_pool_t *pool)
+                    svn_revnum_t revision,
+                    svn_fs_x__batch_fsync_t *batch,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
-  apr_hash_t *txnprops;
-  svn_boolean_t final_mods = FALSE;
+  apr_hash_t *props;
   svn_string_t date;
   svn_string_t *client_date;
+  apr_file_t *file;
+  svn_stream_t *stream;
 
-  SVN_ERR(svn_fs_x__txn_proplist(&txnprops, txn, pool));
+  SVN_ERR(svn_fs_x__txn_proplist(&props, txn, scratch_pool));
 
   /* Remove any temporary txn props representing 'flags'. */
-  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_OOD))
-    {
-      svn_hash_sets(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, NULL);
-      final_mods = TRUE;
-    }
+  if (svn_hash_gets(props, SVN_FS__PROP_TXN_CHECK_OOD))
+    svn_hash_sets(props, SVN_FS__PROP_TXN_CHECK_OOD, NULL);
 
-  if (svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS))
-    {
-      svn_hash_sets(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL);
-      final_mods = TRUE;
-    }
+  if (svn_hash_gets(props, SVN_FS__PROP_TXN_CHECK_LOCKS))
+    svn_hash_sets(props, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL);
 
-  client_date = svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CLIENT_DATE);
+  client_date = svn_hash_gets(props, SVN_FS__PROP_TXN_CLIENT_DATE);
   if (client_date)
-    {
-      svn_hash_sets(txnprops, SVN_FS__PROP_TXN_CLIENT_DATE, NULL);
-      final_mods = TRUE;
-    }
+    svn_hash_sets(props, SVN_FS__PROP_TXN_CLIENT_DATE, NULL);
 
   /* Update commit time to ensure that svn:date revprops remain ordered if
      requested. */
   if (!client_date || strcmp(client_date->data, "1"))
     {
-      date.data = svn_time_to_cstring(apr_time_now(), pool);
+      date.data = svn_time_to_cstring(apr_time_now(), scratch_pool);
       date.len = strlen(date.data);
-      svn_hash_sets(txnprops, SVN_PROP_REVISION_DATE, &date);
-      final_mods = TRUE;
+      svn_hash_sets(props, SVN_PROP_REVISION_DATE, &date);
     }
 
-  if (final_mods)
-    {
-      SVN_ERR(set_txn_proplist(txn->fs, txn_id, txnprops, TRUE, pool));
-      *path = svn_fs_x__path_txn_props_final(txn->fs, txn_id, pool);
-    }
-  else
-    {
-      *path = svn_fs_x__path_txn_props(txn->fs, txn_id, pool);
-    }
+  /* Create a file at the final revprops location. */
+  *path = svn_fs_x__path_revprops(txn->fs, revision, result_pool);
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *path, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, *path, scratch_pool));
+
+  /* Write the new contents to the final revprops file. */
+  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
+  SVN_ERR(svn_hash_write2(props, stream, SVN_HASH_TERMINATOR, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
 
   return SVN_NO_ERROR;
 }
@@ -3414,10 +3408,10 @@ commit_body(void *baton,
   commit_baton_t *cb = baton;
   svn_fs_x__data_t *ffd = cb->fs->fsap_data;
   const char *old_rev_filename, *rev_filename;
-  const char *revprop_filename, *final_revprop;
+  const char *revprop_filename;
   svn_fs_x__id_t root_id, new_root_id;
   svn_revnum_t old_rev, new_rev;
-  apr_file_t *proto_file, *revprop_file;
+  apr_file_t *proto_file;
   apr_off_t initial_offset, changed_path_offset;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
@@ -3513,16 +3507,9 @@ commit_body(void *baton,
 
   /* Move the revprops file into place. */
   SVN_ERR_ASSERT(! svn_fs_x__is_packed_revprop(cb->fs, new_rev));
-  SVN_ERR(write_final_revprop(&revprop_filename, cb->txn, txn_id, subpool));
-
-  SVN_ERR(svn_io_file_open(&revprop_file, revprop_filename,
-                           APR_READ | APR_WRITE, APR_OS_DEFAULT, subpool));
-  SVN_ERR(svn_io_file_flush_to_disk(revprop_file, subpool));
-  SVN_ERR(svn_io_file_close(revprop_file, subpool));
-
-  final_revprop = svn_fs_x__path_revprops(cb->fs, new_rev, subpool);
-  SVN_ERR(svn_fs_x__move_into_place(revprop_filename, final_revprop,
-                                    old_rev_filename, subpool));
+  SVN_ERR(write_final_revprop(&revprop_filename, cb->txn, new_rev, batch,
+                              subpool, subpool));
+  SVN_ERR(svn_io_copy_perms(revprop_filename, old_rev_filename, subpool));
   svn_pool_clear(subpool);
 
   /* Commit all changes to disk. */
