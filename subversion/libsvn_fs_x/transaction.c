@@ -41,6 +41,7 @@
 #include "lock.h"
 #include "rep-cache.h"
 #include "index.h"
+#include "batch_fsync.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
@@ -3297,6 +3298,35 @@ svn_fs_x__add_index_data(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Make sure that the shard folder for REVSION exists in FS.  If we had to
+   create them, schedule their fsync in BATCH.  Use SCRATCH_POOL for
+   temporary allocations. */
+static svn_error_t *
+auto_create_shard(svn_fs_t *fs,
+                  svn_revnum_t revision,
+                  svn_fs_x__batch_fsync_t *batch,
+                  apr_pool_t *scratch_pool)
+{
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+  if (revision % ffd->max_files_per_dir == 0)
+    {
+      const char *new_dir = svn_fs_x__path_shard(fs, revision, scratch_pool);
+      svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT,
+                                         scratch_pool);
+
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
+        return svn_error_trace(err);
+      svn_error_clear(err);
+
+      SVN_ERR(svn_io_copy_perms(svn_dirent_join(fs->path, PATH_REVS_DIR,
+                                                scratch_pool),
+                                new_dir, scratch_pool));
+      SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, new_dir, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton used for commit_body below. */
 typedef struct commit_baton_t {
   svn_revnum_t *new_rev_p;
@@ -3325,6 +3355,7 @@ commit_body(void *baton,
   apr_off_t initial_offset, changed_path_offset;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
+  svn_fs_x__batch_fsync_t *batch;
 
   /* We perform a sequence of (potentially) large allocations.
      Keep the peak memory usage low by using a SUBPOOL and cleaning it
@@ -3372,6 +3403,13 @@ commit_body(void *baton,
   /* We are going to be one better than this puny old revision. */
   new_rev = old_rev + 1;
 
+  /* Use this to force all data to be flushed to physical storage
+     (to the degree our environment will allow). */
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
+
+  /* Set up the target directory. */
+  SVN_ERR(auto_create_shard(cb->fs, new_rev, batch, subpool));
+
   /* Get a write handle on the proto revision file. */
   SVN_ERR(get_writable_proto_rev(&proto_file, &proto_file_lockcookie,
                                  cb->fs, txn_id, scratch_pool));
@@ -3404,22 +3442,6 @@ commit_body(void *baton,
      race with another caller writing to the prototype revision file
      before we commit it. */
 
-  /* Create the shard for the rev and revprop file, if we're sharding and
-     this is the first revision of a new shard.  We don't care if this
-     fails because the shard already existed for some reason. */
-  if (new_rev % ffd->max_files_per_dir == 0)
-    {
-      const char *new_dir = svn_fs_x__path_shard(cb->fs, new_rev, subpool);
-      svn_error_t *err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, subpool);
-      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
-        return svn_error_trace(err);
-      svn_error_clear(err);
-      SVN_ERR(svn_io_copy_perms(svn_dirent_join(cb->fs->path,
-                                                PATH_REVS_DIR,
-                                                subpool),
-                                new_dir, subpool));
-    }
-
   /* Move the finished rev file into place.
 
      ### This "breaks" the transaction by removing the protorev file
@@ -3451,6 +3473,9 @@ commit_body(void *baton,
   SVN_ERR(svn_fs_x__move_into_place(revprop_filename, final_revprop,
                                     old_rev_filename, subpool));
   svn_pool_clear(subpool);
+
+  /* Commit all changes to disk. */
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, subpool));
 
   /* Update the 'current' file. */
   SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev, subpool));
