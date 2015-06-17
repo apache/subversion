@@ -334,14 +334,6 @@ svn_fs_x__path_txn_props(svn_fs_t *fs,
   return construct_txn_path(fs, txn_id, PATH_TXN_PROPS, result_pool);
 }
 
-const char *
-svn_fs_x__path_txn_props_final(svn_fs_t *fs,
-                               svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *result_pool)
-{
-  return construct_txn_path(fs, txn_id, PATH_TXN_PROPS_FINAL, result_pool);
-}
-
 const char*
 svn_fs_x__path_l2p_proto_index(svn_fs_t *fs,
                                svn_fs_x__txn_id_t txn_id,

@@ -1342,7 +1342,6 @@ static svn_error_t *
 set_txn_proplist(svn_fs_t *fs,
                  svn_fs_x__txn_id_t txn_id,
                  apr_hash_t *props,
-                 svn_boolean_t final,
                  apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
@@ -1359,12 +1358,9 @@ set_txn_proplist(svn_fs_t *fs,
 
   /* Replace the old file with the new one. */
   SVN_ERR(svn_io_file_rename(temp_path,
-                             (final
-                               ? svn_fs_x__path_txn_props_final(fs, txn_id,
-                                                                scratch_pool)
-                               : svn_fs_x__path_txn_props(fs, txn_id,
-                                                          scratch_pool)),
-                              scratch_pool));
+                             svn_fs_x__path_txn_props(fs, txn_id,
+                                                      scratch_pool),
+                             scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1421,8 +1417,7 @@ svn_fs_x__change_txn_props(svn_fs_txn_t *txn,
 
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
-  SVN_ERR(set_txn_proplist(txn->fs, ftd->txn_id, txn_prop, FALSE,
-                           scratch_pool));
+  SVN_ERR(set_txn_proplist(txn->fs, ftd->txn_id, txn_prop, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3819,7 +3814,7 @@ svn_fs_x__begin_txn(svn_fs_txn_t **txn_p,
                   svn_string_create("0", scratch_pool));
 
   ftd = (*txn_p)->fsap_data;
-  SVN_ERR(set_txn_proplist(fs, ftd->txn_id, props, FALSE, scratch_pool));
+  SVN_ERR(set_txn_proplist(fs, ftd->txn_id, props, scratch_pool));
 
   return SVN_NO_ERROR;
 }

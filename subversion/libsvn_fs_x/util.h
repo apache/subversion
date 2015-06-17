@@ -277,15 +277,6 @@ svn_fs_x__path_txn_props(svn_fs_t *fs,
                          svn_fs_x__txn_id_t txn_id,
                          apr_pool_t *result_pool);
 
-/* Return the path of the file containing the "final" transaction
- * properties for the transaction identified by TXN_ID in FS.
- * The result will be allocated in RESULT_POOL.
- */
-const char *
-svn_fs_x__path_txn_props_final(svn_fs_t *fs,
-                               svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *result_pool);
-
 /* Return the path of the file containing the node and copy ID counters for
  * the transaction identified by TXN_ID in FS.
  * The result will be allocated in RESULT_POOL.
