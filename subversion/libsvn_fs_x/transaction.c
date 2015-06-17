@@ -3327,6 +3327,73 @@ auto_create_shard(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Move the protype revision file of transaction TXN_ID in FS to the final
+   location for REVISION and return a handle to it in *FILE.  Schedule any
+   fsyncs in BATCH and use SCRATCH_POOL for temporaries.
+
+   Note that the lifetime of *FILE is determined by BATCH instead of
+   SCRATCH_POOL.  It will be invalidated by either BATCH being cleaned up
+   itself of by running svn_fs_x__batch_fsync_run on it.
+
+   This function will "destroy" the transaction by removing its prototype
+   revision file, so it can at most be called once per transaction.  Also,
+   later attempts to modify this txn will fail due to get_writable_proto_rev
+   not finding the protorev file.  Therefore, we will take out the lock for
+   it only until we move the file to its final location.
+
+   If the prototype revision file is already locked, return error
+   SVN_ERR_FS_REP_BEING_WRITTEN. */
+static svn_error_t *
+get_writable_final_rev(apr_file_t **file,
+                       svn_fs_t *fs,
+                       svn_fs_x__txn_id_t txn_id,
+                       svn_revnum_t revision,
+                       svn_fs_x__batch_fsync_t *batch,
+                       apr_pool_t *scratch_pool)
+{
+  get_writable_proto_rev_baton_t baton;
+  apr_off_t end_offset = 0;
+  void *lockcookie;
+
+  const char *proto_rev_filename
+    = svn_fs_x__path_txn_proto_rev(fs, txn_id, scratch_pool);
+  const char *final_rev_filename
+    = svn_fs_x__path_rev(fs, revision, scratch_pool);
+
+  /* Acquire exclusive access to the proto-rev file. */
+  baton.lockcookie = &lockcookie;
+  baton.txn_id = txn_id;
+
+  SVN_ERR(with_txnlist_lock(fs, get_writable_proto_rev_body, &baton,
+                            scratch_pool));
+
+  /* Move the proto-rev file to its final location as revision data file.
+     After that, we don't need to protect it anymore and can unlock it. */
+  SVN_ERR(svn_error_compose_create(svn_io_file_rename(proto_rev_filename,
+                                                      final_rev_filename,
+                                                      scratch_pool),
+                                   unlock_proto_rev(fs, txn_id, lockcookie,
+                                                    scratch_pool)));
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, final_rev_filename,
+                                         scratch_pool));
+
+  /* Now open the prototype revision file and seek to the end.
+     Note that BATCH always seeks to position 0 before returning the file. */
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(file, batch, final_rev_filename,
+                                          scratch_pool));
+  SVN_ERR(svn_io_file_seek(*file, APR_END, &end_offset, scratch_pool));
+
+  /* We don't want unused sections (such as leftovers from failed delta
+     stream) in our file.  If we use log addressing, we would need an
+     index entry for the unused section and that section would need to
+     be all NUL by convention.  So, detect and fix those cases by truncating
+     the protorev file. */
+  SVN_ERR(auto_truncate_proto_rev(fs, *file, end_offset, txn_id,
+                                  scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton used for commit_body below. */
 typedef struct commit_baton_t {
   svn_revnum_t *new_rev_p;
@@ -3346,12 +3413,11 @@ commit_body(void *baton,
 {
   commit_baton_t *cb = baton;
   svn_fs_x__data_t *ffd = cb->fs->fsap_data;
-  const char *old_rev_filename, *rev_filename, *proto_filename;
+  const char *old_rev_filename, *rev_filename;
   const char *revprop_filename, *final_revprop;
   svn_fs_x__id_t root_id, new_root_id;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file, *revprop_file;
-  void *proto_file_lockcookie;
   apr_off_t initial_offset, changed_path_offset;
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
@@ -3410,10 +3476,15 @@ commit_body(void *baton,
   /* Set up the target directory. */
   SVN_ERR(auto_create_shard(cb->fs, new_rev, batch, subpool));
 
-  /* Get a write handle on the proto revision file. */
-  SVN_ERR(get_writable_proto_rev(&proto_file, &proto_file_lockcookie,
-                                 cb->fs, txn_id, scratch_pool));
+  /* Get a write handle on the proto revision file.
+
+     ### This "breaks" the transaction by removing the protorev file
+     ### but the revision is not yet complete.  If this commit does
+     ### not complete for any reason the transaction will be lost. */
+  SVN_ERR(get_writable_final_rev(&proto_file, cb->fs, txn_id, new_rev,
+                                 batch, subpool));
   SVN_ERR(svn_fs_x__get_file_offset(&initial_offset, proto_file, subpool));
+  svn_pool_clear(subpool);
 
   /* Write out all the node-revisions and directory contents. */
   svn_fs_x__init_txn_root(&root_id, txn_id);
@@ -3435,30 +3506,10 @@ commit_body(void *baton,
                       new_rev, subpool));
   svn_pool_clear(subpool);
 
-  SVN_ERR(svn_io_file_flush_to_disk(proto_file, subpool));
-  SVN_ERR(svn_io_file_close(proto_file, subpool));
-
-  /* We don't unlock the prototype revision file immediately to avoid a
-     race with another caller writing to the prototype revision file
-     before we commit it. */
-
-  /* Move the finished rev file into place.
-
-     ### This "breaks" the transaction by removing the protorev file
-     ### but the revision is not yet complete.  If this commit does
-     ### not complete for any reason the transaction will be lost. */
+  /* Set the correct permissions. */
   old_rev_filename = svn_fs_x__path_rev_absolute(cb->fs, old_rev, subpool);
-
   rev_filename = svn_fs_x__path_rev(cb->fs, new_rev, subpool);
-  proto_filename = svn_fs_x__path_txn_proto_rev(cb->fs, txn_id, subpool);
-  SVN_ERR(svn_fs_x__move_into_place(proto_filename, rev_filename,
-                                    old_rev_filename, subpool));
-
-  /* Now that we've moved the prototype revision file out of the way,
-     we can unlock it (since further attempts to write to the file
-     will fail as it no longer exists).  We must do this so that we can
-     remove the transaction directory later. */
-  SVN_ERR(unlock_proto_rev(cb->fs, txn_id, proto_file_lockcookie, subpool));
+  SVN_ERR(svn_io_copy_perms(rev_filename, old_rev_filename, subpool));
 
   /* Move the revprops file into place. */
   SVN_ERR_ASSERT(! svn_fs_x__is_packed_revprop(cb->fs, new_rev));
