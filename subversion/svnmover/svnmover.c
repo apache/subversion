@@ -2016,6 +2016,46 @@ mk_branch(svn_branch_state_t **new_branch_p,
   return SVN_NO_ERROR;
 }
 
+/* Branch the subtree of FROM_BRANCH found at FROM_EID, to appear
+ * in the existing branch TO_BRANCH at TO_PARENT_EID:NEW_NAME.
+ *
+ * This is like merging the creation of the source subtree into TO_BRANCH.
+ *
+ * Any elements of the source subtree that already exist in TO_BRANCH
+ * are altered. This is like resolving any merge conflicts as 'theirs'.
+ *
+ * (### Sometimes the user might prefer that we throw an error if any
+ * element of the source subtree already exists in TO_BRANCH.)
+ */
+static svn_error_t *
+do_branch_into(svn_branch_state_t *from_branch,
+               int from_eid,
+               svn_branch_state_t *to_branch,
+               svn_branch_eid_t to_parent_eid,
+               const char *new_name,
+               apr_pool_t *scratch_pool)
+{
+  svn_branch_subtree_t *from_subtree;
+
+  /* Source element must exist */
+  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Cannot branch from %s e%d: "
+                                 "does not exist"),
+                               svn_branch_get_id(
+                                 from_branch, scratch_pool), from_eid);
+    }
+
+  from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
+
+  /* Populate the new branch mapping */
+  SVN_ERR(svn_branch_instantiate_subtree(to_branch, to_parent_eid, new_name,
+                                         *from_subtree, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* This commit callback prints not only a commit summary line but also
  * a log-style summary of the changes.
  */
@@ -2478,10 +2518,10 @@ execute(svnmover_wc_t *wc,
           VERIFY_EID_NONEXISTENT("branch-into", 1);
           VERIFY_PARENT_EID_EXISTS("branch-into", 1);
           {
-            SVN_ERR(svn_branch_branch_into(arg[0]->el_rev->branch, arg[0]->el_rev->eid,
-                                           arg[1]->el_rev->branch,
-                                           arg[1]->parent_el_rev->eid, arg[1]->path_name,
-                                           iterpool));
+            SVN_ERR(do_branch_into(arg[0]->el_rev->branch, arg[0]->el_rev->eid,
+                                   arg[1]->el_rev->branch,
+                                   arg[1]->parent_el_rev->eid, arg[1]->path_name,
+                                   iterpool));
             notify("A+   %s (subtree)", action->relpath[1]);
           }
           break;

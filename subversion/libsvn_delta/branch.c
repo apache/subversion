@@ -1417,35 +1417,6 @@ svn_branch_branch(svn_branch_state_t **new_branch_p,
 }
 
 svn_error_t *
-svn_branch_branch_into(svn_branch_state_t *from_branch,
-                       int from_eid,
-                       svn_branch_state_t *to_branch,
-                       svn_branch_eid_t to_parent_eid,
-                       const char *new_name,
-                       apr_pool_t *scratch_pool)
-{
-  svn_branch_subtree_t *from_subtree;
-
-  /* Source element must exist */
-  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Cannot branch from %s e%d: "
-                                 "does not exist"),
-                               svn_branch_get_id(
-                                 from_branch, scratch_pool), from_eid);
-    }
-
-  from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
-
-  /* Populate the new branch mapping */
-  SVN_ERR(svn_branch_instantiate_subtree(to_branch, to_parent_eid, new_name,
-                                         *from_subtree, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_branch_copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
                         svn_branch_state_t *to_branch,
                         svn_branch_eid_t to_parent_eid,
