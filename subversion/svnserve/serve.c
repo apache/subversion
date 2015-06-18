@@ -1779,12 +1779,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
           if (dirent_fields & SVN_DIRENT_HAS_PROPS)
             {
-              apr_hash_t *file_props;
-
               /* has_props */
-              SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
+              SVN_CMD_ERR(svn_fs_node_has_props(&has_props, root, file_path,
                                                subpool));
-              has_props = (apr_hash_count(file_props) > 0);
             }
 
           if ((dirent_fields & SVN_DIRENT_LAST_AUTHOR)
@@ -2506,31 +2503,55 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   abs_path = svn_fspath__join(b->repository->fs_path->data, relative_path,
                               pool);
 
-  if (SVN_IS_VALID_REVNUM(start_rev)
-      && SVN_IS_VALID_REVNUM(end_rev)
-      && (end_rev > start_rev))
-    {
-      err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                              "Get-location-segments end revision must not be "
-                              "younger than start revision");
-      return log_fail_and_flush(err, b, conn, pool);
-    }
-
-  if (SVN_IS_VALID_REVNUM(peg_revision)
-      && SVN_IS_VALID_REVNUM(start_rev)
-      && (start_rev > peg_revision))
-    {
-      err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                              "Get-location-segments start revision must not "
-                              "be younger than peg revision");
-      return log_fail_and_flush(err, b, conn, pool);
-    }
-
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_ERR(log_command(baton, conn, pool, "%s",
                       svn_log__get_location_segments(abs_path, peg_revision,
                                                      start_rev, end_rev,
                                                      pool)));
+
+  /* No START_REV or PEG_REVISION?  We'll use HEAD. */
+  if (!SVN_IS_VALID_REVNUM(start_rev) || !SVN_IS_VALID_REVNUM(peg_revision))
+    {
+      svn_revnum_t youngest;
+
+      err = svn_fs_youngest_rev(&youngest, b->repository->fs, pool);
+
+      if (err)
+        {
+          err = svn_error_compose_create(
+                    svn_ra_svn__write_word(conn, pool, "done"),
+                    err);
+
+          return log_fail_and_flush(err, b, conn, pool);
+        }
+
+      if (!SVN_IS_VALID_REVNUM(start_rev))
+        start_rev = youngest;
+      if (!SVN_IS_VALID_REVNUM(peg_revision))
+        peg_revision = youngest;
+    }
+
+  /* No END_REV?  We'll use 0. */
+  if (!SVN_IS_VALID_REVNUM(end_rev))
+    end_rev = 0;
+
+  if (end_rev > start_rev)
+    {
+      err = svn_ra_svn__write_word(conn, pool, "done");
+      err = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, err,
+                              "Get-location-segments end revision must not be "
+                              "younger than start revision");
+      return log_fail_and_flush(err, b, conn, pool);
+    }
+
+  if (start_rev > peg_revision)
+    {
+      err = svn_ra_svn__write_word(conn, pool, "done");
+      err = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, err,
+                              "Get-location-segments start revision must not "
+                              "be younger than peg revision");
+      return log_fail_and_flush(err, b, conn, pool);
+    }
 
   /* All the parameters are fine - let's perform the query against the
    * repository. */
@@ -2546,8 +2567,7 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (write_err)
     {
-      svn_error_clear(err);
-      return write_err;
+      return svn_error_compose_create(write_err, err);
     }
   SVN_CMD_ERR(err);
 
@@ -3296,6 +3316,7 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
   authz_baton_t ab;
+  svn_node_kind_t node_kind;
 
   ab.server = b;
   ab.conn = conn;
@@ -3311,15 +3332,18 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
   SVN_ERR(must_have_access(conn, iterpool, b, svn_authz_read,
                            full_path, FALSE));
 
-  if (!SVN_IS_VALID_REVNUM(rev))
-    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->repository->fs, pool));
-
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__get_inherited_props(full_path, rev,
                                                    iterpool)));
 
   /* Fetch the properties and a stream for the contents. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->repository->fs, rev, iterpool));
+  SVN_CMD_ERR(svn_fs_check_path(&node_kind, root, full_path, pool));
+  if (node_kind == svn_node_none)
+    {
+      SVN_CMD_ERR(svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                    _("'%s' path not found"), full_path));
+    }
   SVN_CMD_ERR(get_props(NULL, &inherited_props, &ab, root, full_path, pool));
 
   /* Send successful command response with revision and props. */

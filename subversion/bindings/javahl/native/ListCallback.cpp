@@ -87,13 +87,13 @@ ListCallback::doList(const char *path,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ListCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/ListCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doEntry",
-                             "(L"JAVA_PACKAGE"/types/DirEntry;"
-                             "L"JAVA_PACKAGE"/types/Lock;)V");
+                             "(" JAVAHL_ARG("/types/DirEntry;")
+                             JAVAHL_ARG("/types/Lock;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -113,10 +113,8 @@ ListCallback::doList(const char *path,
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, jdirentry, jlock);
-  // No need to check for exception here, because we'll just return anyway
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
 
 /**

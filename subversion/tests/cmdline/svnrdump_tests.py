@@ -571,6 +571,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.close()
 
   # Blow away the current repos and create an empty one in its place.
+  svntest.main.safe_rmtree(sbox.repo_dir, True) # Fix race with bdb in svnserve
   sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
@@ -606,6 +607,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 3: Load a full dump to an non-empty repository.
   #
   # Reset our sandbox.
+  svntest.main.safe_rmtree(sbox.repo_dir, True) # Fix race with bdb in svnserve
   sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
@@ -667,6 +669,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 4: Load a a series of incremental dumps to an non-empty repository.
   #
   # Reset our sandbox.
+  svntest.main.safe_rmtree(sbox.repo_dir, True) # Fix race with bdb in svnserve
   sbox.build(empty=True)
 
   # Create the revprop-change hook for this test

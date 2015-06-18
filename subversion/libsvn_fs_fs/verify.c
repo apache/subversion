@@ -463,7 +463,8 @@ expect_buffer_nul(apr_file_t *file,
 
   /* read the whole data block; error out on failure */
   data.chunks[(size - 1)/ sizeof(apr_uint64_t)] = 0;
-  SVN_ERR(svn_io_file_read_full2(file, data.buffer, size, NULL, NULL, pool));
+  SVN_ERR(svn_io_file_read_full2(file, data.buffer, (apr_size_t)size, NULL,
+                                 NULL, pool));
 
   /* chunky check */
   for (i = 0; i < size / sizeof(apr_uint64_t); ++i)
@@ -850,13 +851,15 @@ svn_fs_fs__verify(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
 
   /* Input validation. */
   if (! SVN_IS_VALID_REVNUM(start))
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
-    end = youngest;
+    {
+      SVN_ERR(svn_fs_fs__youngest_rev(&end, fs, pool));
+    }
+
   SVN_ERR(svn_fs_fs__ensure_revision_exists(start, fs, pool));
   SVN_ERR(svn_fs_fs__ensure_revision_exists(end, fs, pool));
 

@@ -4109,6 +4109,13 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * If @a remove_ignored_items is @c TRUE, remove ignored unversioned items
  * in @a dir after successful working copy cleanup.
  *
+ * If @a fix_recorded_timestamps is @c TRUE, this function fixes recorded
+ * timestamps for unmodified files in the working copy, reducing comparision
+ * time on future checks.
+ *
+ * If @a vacuum_pristines is @c TRUE, and @a dir_abspath points to the working
+ * copy root unreferenced files in the pristine store are removed.
+ *
  * When asked to remove unversioned or ignored items, and the working copy
  * is already locked, return #SVN_ERR_WC_LOCKED. This prevents accidental
  * working copy corruption in case users run the cleanup operation to
@@ -4345,6 +4352,112 @@ svn_client_revert(const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
+
+/** @} */
+
+/**
+ * @defgroup Conflicts Dealing with conflicted paths.
+ *
+ * @{
+ */
+
+/**
+ * Return the absolute path to the conflicted working copy node described
+ * by @a conflict.
+ *
+ * @since New in 1.10. 
+ */
+const char *
+svn_client_conflict_get_local_abspath(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return the operation during which the conflict described by @a
+ * conflict was recorded.
+ *
+ * @since New in 1.10. 
+ */
+svn_wc_operation_t
+svn_client_conflict_get_operation(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return the action an update, switch, or merge operation attempted to
+ * perform on the working copy node described by @a conflict.
+ * 
+ * @since New in 1.10. 
+ */
+svn_wc_conflict_action_t
+svn_client_conflict_get_incoming_change(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return the reason why the attempted action performed by an update, switch,
+ * or merge operation conflicted with the state of the node in the working copy.
+ *
+ * During update and switch operations this local change is part of uncommitted
+ * modifications in the working copy. During merge operations it may
+ * additionally be part of the history of the merge target branch, anywhere
+ * between the common ancestor revision and the working copy revision.
+ * 
+ * @since New in 1.10. 
+ */
+svn_wc_conflict_reason_t
+svn_client_conflict_get_local_change(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
+ * API for eventually replacing svn_wc_conflict_description2_t with an opaque
+ * type and providing improved APIs for conflict resolution.
+ * 
+ * @since New in 1.10. 
+ */
+
+#define svn_client_conflict_get_node_kind(conflict) \
+  ((conflict)->node_kind)
+
+#define svn_client_conflict_get_kind(conflict) \
+  ((conflict)->kind)
+
+#define svn_client_conflict_get_property_name(conflict) \
+  ((conflict)->property_name)
+
+#define svn_client_conflict_get_is_binary(conflict) \
+  ((conflict)->is_binary)
+
+#define svn_client_conflict_get_mime_type(conflict) \
+  ((conflict)->mime_type)
+
+#define svn_client_conflict_get_base_abspath(conflict) \
+  ((conflict)->base_abspath)
+
+#define svn_client_conflict_get_their_abspath(conflict) \
+  ((conflict)->their_abspath)
+
+#define svn_client_conflict_get_my_abspath(conflict) \
+  ((conflict)->my_abspath)
+
+#define svn_client_conflict_get_merged_file(conflict) \
+  ((conflict)->merged_file)
+
+#define svn_client_conflict_get_src_left_version(conflict) \
+  ((conflict)->src_left_version)
+
+#define svn_client_conflict_get_src_right_version(conflict) \
+  ((conflict)->src_right_version)
+
+#define svn_client_conflict_get_prop_reject_abspath(conflict) \
+  ((conflict)->prop_reject_abspath)
+
+#define svn_client_conflict_get_prop_value_working(conflict) \
+  ((conflict)->prop_value_working)
+
+#define svn_client_conflict_get_prop_value_incoming_old(conflict) \
+  ((conflict)->prop_value_incoming_old)
+
+#define svn_client_conflict_get_prop_value_incoming_new(conflict) \
+  ((conflict)->prop_value_incoming_new)
 
 /** @} */
 

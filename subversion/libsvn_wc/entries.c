@@ -483,9 +483,10 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           child_abspath = svn_dirent_join(dir_abspath, child_name,
                                           scratch_pool);
 
-          SVN_ERR(svn_wc__read_conflicts(&child_conflicts,
+          SVN_ERR(svn_wc__read_conflicts(&child_conflicts, NULL,
                                          db, child_abspath,
                                          FALSE /* create tempfiles */,
+                                         TRUE /* tree_conflicts_only */,
                                          scratch_pool, scratch_pool));
 
           for (j = 0; j < child_conflicts->nelts; j++)
@@ -938,7 +939,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       svn_skel_t *conflict;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
-      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL,
+      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, NULL,
                                                 wcroot, entry_relpath,
                                                 scratch_pool, scratch_pool));
 

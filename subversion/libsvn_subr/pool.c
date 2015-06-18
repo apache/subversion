@@ -30,7 +30,6 @@
 #include <apr_version.h>
 #include <apr_general.h>
 #include <apr_pools.h>
-#include <apr_thread_mutex.h>
 
 #include "svn_pools.h"
 

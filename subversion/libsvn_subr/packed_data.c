@@ -561,7 +561,7 @@ write_stream_data(svn_stream_t *stream,
                   svn_stringbuf_t *uncompressed,
                   svn_stringbuf_t *compressed)
 {
-  SVN_ERR(svn__compress(uncompressed,
+  SVN_ERR(svn__compress(uncompressed->data, uncompressed->len,
                         compressed,
                         SVN_DELTA_COMPRESSION_LEVEL_DEFAULT));
 
@@ -972,7 +972,8 @@ read_stream_data(svn_stream_t *stream,
   SVN_ERR(svn_stream_read_full(stream, compressed->data, &compressed->len));
   compressed->data[compressed_len] = '\0';
 
-  SVN_ERR(svn__decompress(compressed, uncompressed, uncompressed_len));
+  SVN_ERR(svn__decompress(compressed->data, compressed->len,
+                          uncompressed, uncompressed_len));
 
   return SVN_NO_ERROR;
 }

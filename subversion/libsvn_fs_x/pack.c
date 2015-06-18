@@ -625,13 +625,14 @@ compare_dir_entries(const svn_sort__item_t *a,
 apr_array_header_t *
 svn_fs_x__order_dir_entries(svn_fs_t *fs,
                             apr_hash_t *directory,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   apr_array_header_t *ordered
-    = svn_sort__hash(directory, compare_dir_entries, pool);
+    = svn_sort__hash(directory, compare_dir_entries, scratch_pool);
 
   apr_array_header_t *result
-    = apr_array_make(pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
+    = apr_array_make(result_pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
 
   int i;
   for (i = 0; i < ordered->nelts; ++i)

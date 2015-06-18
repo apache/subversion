@@ -50,14 +50,14 @@ SVNRepos *SVNRepos::getCppObject(jobject jthis)
 {
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-                                                 JAVA_PACKAGE"/SVNRepos");
+                                                 JAVAHL_CLASS("/SVNRepos"));
   return (cppAddr == 0 ? NULL : reinterpret_cast<SVNRepos *>(cppAddr));
 }
 
 void SVNRepos::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNRepos");
+  SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/SVNRepos"));
 }
 
 void SVNRepos::cancelOperation()
@@ -716,7 +716,7 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
               NULL);
 
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Lock");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Lock"));
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

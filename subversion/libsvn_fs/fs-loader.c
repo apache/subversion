@@ -27,7 +27,6 @@
 #include <apr_atomic.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
-#include <apr_thread_mutex.h>
 #include <apr_uuid.h>
 #include <apr_strings.h>
 
@@ -140,7 +139,7 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
                                  _("Invalid name for FS type '%s'"),
                                  name);
 
-    libname = apr_psprintf(pool, "libsvn_fs_%s-%d.so.%d",
+    libname = apr_psprintf(pool, "libsvn_fs_%s-" SVN_DSO_SUFFIX_FMT,
                            name, SVN_VER_MAJOR, SVN_SOVERSION);
     funcname = apr_psprintf(pool, "svn_fs_%s__init", name);
 
@@ -561,19 +560,19 @@ svn_fs_upgrade2(const char *path,
                 void *notify_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
   svn_fs_t *fs;
 
-  SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = fs_new(NULL, pool);
+  SVN_ERR(fs_library_vtable(&vtable, path, scratch_pool));
+  fs = fs_new(NULL, scratch_pool);
 
   SVN_ERR(vtable->upgrade_fs(fs, path,
                              notify_func, notify_baton,
                              cancel_func, cancel_baton,
                              common_pool_lock,
-                             pool, common_pool));
+                             scratch_pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1141,7 +1140,7 @@ svn_error_t *
 svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      svn_fs_root_t *root_a, const char *path_a,
                      svn_fs_root_t *root_b, const char *path_b,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
   /* Different repository types? */
   if (root_a->fs != root_b->fs)
@@ -1150,9 +1149,10 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_trace(root_a->vtable->node_relation(relation, root_a,
-                                                       path_a, root_b,
-                                                       path_b, pool));
+  return svn_error_trace(root_a->vtable->node_relation(relation,
+                                                       root_a, path_a,
+                                                       root_b, path_b,
+                                                       scratch_pool));
 }
 
 svn_error_t *
@@ -1196,6 +1196,16 @@ svn_fs_node_proplist(apr_hash_t **table_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_node_has_props(svn_boolean_t *has_props,
+                      svn_fs_root_t *root,
+                      const char *path,
+                      apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(root->vtable->node_has_props(has_props, root, path,
+                                                      scratch_pool));
+}
+
+svn_error_t *
 svn_fs_change_node_prop(svn_fs_root_t *root, const char *path,
                         const char *name, const svn_string_t *value,
                         apr_pool_t *pool)
@@ -1207,12 +1217,12 @@ svn_fs_change_node_prop(svn_fs_root_t *root, const char *path,
 svn_error_t *
 svn_fs_props_different(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                        const char *path1, svn_fs_root_t *root2,
-                       const char *path2, apr_pool_t *pool)
+                       const char *path2, apr_pool_t *scratch_pool)
 {
   return svn_error_trace(root1->vtable->props_changed(changed_p,
                                                       root1, path1,
                                                       root2, path2,
-                                                      TRUE, pool));
+                                                      TRUE, scratch_pool));
 }
 
 svn_error_t *
@@ -1320,10 +1330,13 @@ svn_error_t *
 svn_fs_dir_optimal_order(apr_array_header_t **ordered_p,
                          svn_fs_root_t *root,
                          apr_hash_t *entries,
-                         apr_pool_t *pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   return svn_error_trace(root->vtable->dir_optimal_order(ordered_p, root,
-                                                         entries, pool));
+                                                         entries,
+                                                         result_pool,
+                                                         scratch_pool));
 }
 
 svn_error_t *
@@ -1484,12 +1497,13 @@ svn_fs_apply_text(svn_stream_t **contents_p, svn_fs_root_t *root,
 svn_error_t *
 svn_fs_contents_different(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                           const char *path1, svn_fs_root_t *root2,
-                          const char *path2, apr_pool_t *pool)
+                          const char *path2, apr_pool_t *scratch_pool)
 {
   return svn_error_trace(root1->vtable->contents_changed(changed_p,
                                                          root1, path1,
                                                          root2, path2,
-                                                         TRUE, pool));
+                                                         TRUE,
+                                                         scratch_pool));
 }
 
 svn_error_t *
@@ -1757,9 +1771,10 @@ svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
 svn_fs_lock_target_t *
 svn_fs_lock_target_create(const char *token,
                           svn_revnum_t current_rev,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
-  svn_fs_lock_target_t *target = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
+  svn_fs_lock_target_t *target = apr_palloc(result_pool,
+                                            sizeof(svn_fs_lock_target_t));
 
   target->token = token;
   target->current_rev = current_rev;
@@ -1897,7 +1912,7 @@ svn_fs_compare_ids(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   switch (a->vtable->compare(a, b))
     {
-    case svn_fs_node_same:
+    case svn_fs_node_unchanged:
       return 0;
     case svn_fs_node_common_ancestor:
       return 1;

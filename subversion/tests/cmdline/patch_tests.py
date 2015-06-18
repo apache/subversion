@@ -5437,6 +5437,189 @@ def patch_closest(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+@SkipUnless(svntest.main.is_posix_os)
+def patch_symlink_traversal(sbox):
+  """symlink traversal behaviour"""
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+  alpha_contents = "This is the file 'alpha'.\n"
+
+  # A/B/E/unversioned -> alpha
+  # A/B/E/versioned -> alpha
+  # A/B/unversioned -> E         (so A/B/unversioned/alpha is A/B/E/alpha)
+  # A/B/versioned -> E           (so A/B/versioned/alpha is A/B/E/alpha)
+  os.symlink('alpha', sbox.ospath('A/B/E/unversioned'))
+  os.symlink('alpha', sbox.ospath('A/B/E/versioned'))
+  os.symlink('E', sbox.ospath('A/B/unversioned'))
+  os.symlink('E', sbox.ospath('A/B/versioned'))
+  sbox.simple_add('A/B/E/versioned', 'A/B/versioned')
+
+  prepatch_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  prepatch_status.add({'A/B/E/versioned' : Item(status='A ', wc_rev='-')})
+  prepatch_status.add({'A/B/versioned' : Item(status='A ', wc_rev='-')})
+  svntest.actions.run_and_verify_status(wc_dir, prepatch_status)
+
+  # Patch through unversioned symlink to file
+  unidiff_patch = (
+    "Index: A/B/E/unversioned\n"
+    "===================================================================\n"
+    "--- A/B/E/unversioned\t(revision 2)\n"
+    "+++ A/B/E/unversioned\t(working copy)\n"
+    "@@ -1 +1,2 @@\n"
+    " This is the file 'alpha'.\n"
+    "+xx\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = [
+    'Skipped missing target: \'%s\'\n' % sbox.ospath('A/B/E/unversioned'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'A/B/E/unversioned' : Item(contents=alpha_contents)})
+  expected_disk.add({'A/B/E/versioned' : Item(contents=alpha_contents)})
+  expected_disk.add({'A/B/unversioned' : Item()})
+  expected_disk.add({'A/B/versioned' : Item()})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'A/B/E/versioned' : Item(status='A ', wc_rev='-')})
+  expected_status.add({'A/B/versioned' : Item(status='A ', wc_rev='-')})
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/E/unversioned') : Item(verb='Skipped missing target'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+  svntest.actions.run_and_verify_status(wc_dir, prepatch_status)
+
+  # Patch through versioned symlink to file
+  unidiff_patch = (
+    "Index: A/B/E/versioned\n"
+    "===================================================================\n"
+    "--- A/B/E/versioned\t(revision 2)\n"
+    "+++ A/B/E/versioned\t(working copy)\n"
+    "@@ -1 +1,2 @@\n"
+    " This is the file 'alpha'.\n"
+    "+xx\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+  reject_contents = (
+    "--- A/B/E/versioned\n"
+    "+++ A/B/E/versioned\n"
+    "@@ -1,1 +1,2 @@\n"
+    " This is the file 'alpha'.\n"
+    "+xx\n"
+  )
+
+  expected_output = [
+    'C         %s\n' % sbox.ospath('A/B/E/versioned'),
+    '>         rejected hunk @@ -1,1 +1,2 @@\n',
+  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_disk.add({'A/B/E/versioned.svnpatch.rej'
+                     : Item(contents=reject_contents)})
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+  os.remove(sbox.ospath('A/B/E/versioned.svnpatch.rej'))
+  expected_disk.remove('A/B/E/versioned.svnpatch.rej')
+  svntest.actions.run_and_verify_status(wc_dir, prepatch_status)
+
+  # Patch through unversioned symlink to parent of file
+  unidiff_patch = (
+    "Index: A/B/unversioned/alpha\n"
+    "===================================================================\n"
+    "--- A/B/unversioned/alpha\t(revision 2)\n"
+    "+++ A/B/unversioned/alpha\t(working copy)\n"
+    "@@ -1 +1,2 @@\n"
+    " This is the file 'alpha'.\n"
+    "+xx\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = [
+    'Skipped missing target: \'%s\'\n' % sbox.ospath('A/B/unversioned/alpha'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/unversioned/alpha') : Item(verb='Skipped missing target'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+  svntest.actions.run_and_verify_status(wc_dir, prepatch_status)
+
+  # Patch through versioned symlink to parent of file
+  unidiff_patch = (
+    "Index: A/B/versioned/alpha\n"
+    "===================================================================\n"
+    "--- A/B/versioned/alpha\t(revision 2)\n"
+    "+++ A/B/versioned/alpha\t(working copy)\n"
+    "@@ -1 +1,2 @@\n"
+    " This is the file 'alpha'.\n"
+    "+xx\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = [
+    'Skipped missing target: \'%s\'\n' % sbox.ospath('A/B/versioned/alpha'),
+  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_skip = wc.State('', {
+    sbox.ospath('A/B/versioned/alpha') :  Item(verb='Skipped missing target'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+  svntest.actions.run_and_verify_status(wc_dir, prepatch_status)
+
+@SkipUnless(svntest.main.is_posix_os)
+def patch_obstructing_symlink_traversal(sbox):
+  """obstructing symlink traversal behaviour"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  alpha_contents = "This is the file 'alpha'.\n"
+  sbox.simple_append('A/B/F/alpha', alpha_contents)
+  sbox.simple_add('A/B/F/alpha')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Unversioned symlink A/B/E -> F obstructing versioned A/B/E so
+  # versioned A/B/E/alpha is A/B/F/alpha
+  svntest.main.safe_rmtree(sbox.ospath('A/B/E'))
+  os.symlink('F', sbox.ospath('A/B/E'))
+
+  unidiff_patch = (
+    "Index: A/B/E/alpha\n"
+    "===================================================================\n"
+    "--- A/B/E/alpha\t(revision 2)\n"
+    "+++ A/B/E/alpha\t(working copy)\n"
+    "@@ -1 +1,2 @@\n"
+    " This is the file 'alpha'.\n"
+    "+xx\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  ### Patch applies through the unversioned symlink
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/B/E/alpha'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta')
+  expected_disk.add({'A/B/F/alpha' : Item(contents=alpha_contents+"xx\n")})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({'A/B/F/alpha' : Item(status='  ', wc_rev=2)})
+  expected_status.tweak('A/B/E', status='~ ')
+  expected_status.tweak('A/B/E/alpha', 'A/B/F/alpha', status='M ')
+  expected_status.tweak('A/B/E/beta', status='! ')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
 ########################################################################
 #Run the tests
 
@@ -5496,6 +5679,8 @@ test_list = [ None,
               patch_hunk_overlap,
               patch_delete_modified,
               patch_closest,
+              patch_symlink_traversal,
+              patch_obstructing_symlink_traversal,
             ]
 
 if __name__ == '__main__':
