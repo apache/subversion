@@ -415,6 +415,75 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
   return svn_error_trace(with_lock(lock_baton, pool));
 }
 
+/* Set *READ_ONLY to TRUE, if the (lock) file at PATH is read-only.
+   Should that file not exist, try to create an empty one at PATH.
+   If that fails due to insufficient access rights, set *READ_ONLY
+   to TRUE as well.  Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+is_read_only(svn_boolean_t *read_only,
+             const char *path,
+             apr_pool_t *scratch_pool)
+{
+  apr_finfo_t finfo;
+
+  svn_error_t *err
+    = svn_io_stat(&finfo, path, SVN__APR_FINFO_READONLY, scratch_pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* No lock file?  Try to create one.
+         If that is not allowed, the repo can't be written to.
+         Report it as r/o in that case. */
+      svn_error_clear(err);
+
+      /* This file creation is racy (see further below). */
+      err = svn_io_file_create_empty(path, scratch_pool);
+      if (err && APR_STATUS_IS_EACCES(err->apr_err))
+        {
+          /* File creation is not allowed. */
+          svn_error_clear(err);
+          *read_only = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      /* Don't leak ... */
+      svn_error_clear(err);
+
+      /* At this point, there should either be a file or something pretty
+         bad happened.  In the latter case, this will fail with some error. */
+      SVN_ERR(svn_io_stat(&finfo, path, SVN__APR_FINFO_READONLY,
+                          scratch_pool));
+    }
+
+  SVN_ERR(svn_io__is_finfo_read_only(read_only, &finfo, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__is_read_only(svn_boolean_t *read_only,
+                        svn_fs_t *fs,
+                        apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  *read_only = FALSE;
+  SVN_ERR(is_read_only(read_only,
+                       svn_fs_fs__path_lock(fs, scratch_pool),
+                       scratch_pool));
+
+  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT && !*read_only)
+    SVN_ERR(is_read_only(read_only,
+                         svn_fs_fs__path_txn_current_lock(fs, scratch_pool),
+                         scratch_pool));
+
+  if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT && !*read_only)
+    SVN_ERR(is_read_only(read_only,
+                         svn_fs_fs__path_pack_lock(fs, scratch_pool),
+                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 
