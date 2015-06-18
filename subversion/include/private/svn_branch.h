@@ -458,6 +458,9 @@ typedef struct svn_branch_subtree_t
 } svn_branch_subtree_t;
 
 /* Create an empty subtree (no elements populated, not even ROOT_EID).
+ *
+ * The result contains a *shallow* copy of E_MAP, or a new empty mapping
+ * if E_MAP is null.
  */
 svn_branch_subtree_t *
 svn_branch_subtree_create(apr_hash_t *e_map,
