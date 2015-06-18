@@ -208,9 +208,9 @@ def expected_ls_output(paths, subbranch_paths=[]):
      for the given plain PATHS and subbranch-root paths SUBBRANCH_PATHS.
   """
   expected_out = svntest.verify.UnorderedRegexListOutput(
-    [r'    ' + re.escape(p) + '\n'
+    [r'    ' + re.escape(p) + ' *\n'
      for p in paths] +
-    [r'    ' + re.escape(p) + r' \(branch B[0-9.]+\)' + '\n'
+    [r'    ' + re.escape(p) + r' +\(branch B[0-9.]+\)' + ' *\n'
      for p in subbranch_paths])
   return expected_out
 
