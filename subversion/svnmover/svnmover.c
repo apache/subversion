@@ -524,9 +524,9 @@ static const action_defn_t action_defn[] =
     "branch the branch-root or branch-subtree at SRC" NL
     "to make a new branch at DST"},
   {ACTION_BRANCH_INTO,      "branch-into", 2, "SRC DST",
-    "make a copy of the branch-root or branch-subtree at SRC" NL
-    "appear at DST in the existing branch that contains DST" NL
-    "(like merging the creation of the subtree at SRC to DST)"},
+    "make a branch of the existing subtree SRC appear at" NL
+    "DST as part of the existing branch that contains DST" NL
+    "(like merging the creation of SRC to DST)"},
   {ACTION_MKBRANCH,         "mkbranch", 1, "ROOT",
     "make a directory that's the root of a new subbranch"},
   {ACTION_DIFF,             "diff", 2, "LEFT@REV RIGHT@REV",
@@ -813,7 +813,7 @@ list_branch_elements(flat_branch_t *fb,
       const char *relpath = pi->key;
       int eid = *pi->val;
 
-      printf("    %s%s\n",
+      printf("    %-20s%s\n",
              relpath[0] ? relpath : ".",
              flat_branch_subbranch_str(fb, eid, scratch_pool));
     }
@@ -832,6 +832,21 @@ sort_compare_items_by_eid(const svn_sort__item_t *a,
   return eid_a - eid_b;
 }
 
+static const char *
+peid_name(const svn_branch_el_rev_content_t *element,
+          apr_pool_t *scratch_pool)
+{
+  if (element->parent_eid == -1)
+    return apr_psprintf(scratch_pool, "%3s %-10s", "", ".");
+
+  return apr_psprintf(scratch_pool, "%3d/%-10s",
+                      element->parent_eid, element->name);
+}
+
+static const char elements_by_eid_header[]
+  = "    eid  parent-eid/name\n"
+    "    ---  ----------/----\n";
+
 /* List all elements in branch BRANCH, in element notation.
  */
 static svn_error_t *
@@ -840,23 +855,18 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
 {
   SVN_ITER_T(svn_branch_el_rev_content_t) *pi;
 
+  printf("%s", elements_by_eid_header);
   for (SVN_HASH_ITER_SORTED(pi, svn_branch_get_elements(branch),
                             sort_compare_items_by_eid, scratch_pool))
     {
       int eid = *(const int *)(pi->key);
       svn_branch_el_rev_content_t *element = pi->val;
 
-      if (element && element->parent_eid == -1)
+      if (element)
         {
-          /* root element of this branch */
-          printf("    e%-3d  %-3s .\n",
-                 eid, "");
-        }
-      else if (element)
-        {
-          printf("    e%-3d e%-3d/%s%s\n",
-                 eid, element->parent_eid,
-                 element->name,
+          printf("    e%-3d %21s%s\n",
+                 eid,
+                 peid_name(element, scratch_pool),
                  subbranch_str(branch, eid, scratch_pool));
         }
     }
@@ -864,49 +874,65 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
   return SVN_NO_ERROR;
 }
 
+static const char branch_info_by_paths_header[]
+  = "  branch-id  root-path\n"
+    "  ---------  ---------\n";
+
 /* Show the id and path of BRANCH. If VERBOSE is true, also list its elements.
  */
 static svn_error_t *
 branch_info_by_paths(flat_branch_t *fb,
-                     svn_boolean_t verbose,
+                     svn_boolean_t with_elements,
                      apr_pool_t *scratch_pool)
 {
-  const char *id_and_path = flat_branch_id_and_path(fb, scratch_pool);
-
-  printf("  %s\n",
-         id_and_path);
-  if (verbose)
+  printf("  %-10s /%s\n",
+         fb->bid, fb->rrpath);
+  if (with_elements)
     SVN_ERR(list_branch_elements(fb, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* Show the id of BRANCH. If VERBOSE is true, also list its elements.
+static const char branch_info_by_eids_header[]
+  = "  branch-id  root-eid\n"
+    "  ---------  --------\n";
+
+/* Show the id of BRANCH. If WITH_ELEMENTS is true, also list its elements.
  */
 static svn_error_t *
 branch_info_by_eids(svn_branch_state_t *branch,
-                    svn_boolean_t verbose,
+                    svn_boolean_t with_elements,
                     apr_pool_t *scratch_pool)
 {
-  printf("  %s root=e%d\n",
+  printf("  %-10s root=e%d\n",
          svn_branch_get_id(branch, scratch_pool),
          branch->root_eid);
-  if (verbose)
+  if (with_elements)
     SVN_ERR(list_branch_elements_by_eid(branch, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* List all branches rooted at EID.
+/* List all branches rooted at EID. If WITH_ELEMENTS is true, also list
+ * the elements in each branch.
  */
 static svn_error_t *
 list_branches(svn_branch_revision_root_t *rev_root,
               int eid,
-              svn_boolean_t verbose,
+              svn_boolean_t with_elements,
               apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *branches;
   SVN_ITER_T(svn_branch_state_t) *bi;
+
+  if (the_ui_mode == UI_MODE_PATHS)
+    {
+      printf("%s", branch_info_by_paths_header);
+    }
+  else
+    {
+      printf("%s", branch_info_by_eids_header);
+    }
 
   branches = svn_branch_revision_root_get_branches(rev_root, scratch_pool);
 
@@ -922,18 +948,21 @@ list_branches(svn_branch_revision_root_t *rev_root,
           flat_branch_t *fb
             = branch_get_flat_branch(branch, branch->root_eid, scratch_pool);
 
-          SVN_ERR(branch_info_by_paths(fb, verbose, scratch_pool));
+          SVN_ERR(branch_info_by_paths(fb, with_elements, scratch_pool));
         }
       else
         {
-          SVN_ERR(branch_info_by_eids(branch, verbose, scratch_pool));
+          SVN_ERR(branch_info_by_eids(branch, with_elements, scratch_pool));
         }
+      if (with_elements)  /* separate branches by a blank line */
+        printf("\n");
     }
 
   return SVN_NO_ERROR;
 }
 
-/* List all branches.
+/* List all branches. If WITH_ELEMENTS is true, also list the elements
+ * in each branch.
  */
 static svn_error_t *
 list_all_branches(svn_branch_revision_root_t *rev_root,
@@ -962,6 +991,8 @@ list_all_branches(svn_branch_revision_root_t *rev_root,
         {
           SVN_ERR(branch_info_by_eids(branch, verbose, bi->iterpool));
         }
+      if (verbose)  /* separate branches by a blank line */
+        printf("\n");
     }
 
   return SVN_NO_ERROR;
@@ -1614,7 +1645,6 @@ flat_branch_diff(svn_editor3_t *editor,
                  flat_branch_t *right,
                  const char *prefix,
                  const char *header,
-                 int eid_width,
                  apr_pool_t *scratch_pool)
 {
   svn_array_t *diff_changes;
@@ -1670,18 +1700,17 @@ flat_branch_diff(svn_editor3_t *editor,
         }
       else
         {
-          printf("%s%c%c%c e%-*d  %s%s%s%s\n",
+          printf("%s%c%c%c e%-3d  %s%s%s%s%s\n",
                  prefix,
                  status_mod,
                  item->reparented ? 'v' : ' ', item->renamed ? 'r' : ' ',
-                 eid_width, item->eid,
-                 e1 ? apr_psprintf(scratch_pool, "e%-*d/%s",
-                                   eid_width, e1->parent_eid, e1->name) : "",
+                 item->eid,
+                 e1 ? peid_name(e1, scratch_pool) : "",
                  flat_branch_subbranch_str(e0 ? left : right,
                                        item->eid, scratch_pool),
-                 e0 && e1 ? " from " : "",
-                 e0 ? apr_psprintf(scratch_pool, "e%-*d/%s",
-                                   eid_width, e0->parent_eid, e0->name) : "");
+                 e0 && e1 ? " (from " : "",
+                 e0 ? peid_name(e0, scratch_pool) : "",
+                 e0 && e1 ? ")" : "");
         }
     }
 
@@ -1694,7 +1723,6 @@ svn_branch_diff_func_t(svn_editor3_t *editor,
                        flat_branch_t *right,
                        const char *prefix,
                        const char *header,
-                       int eid_width,
                        apr_pool_t *scratch_pool);
 
 /* Display differences between flat branches LEFT and RIGHT.
@@ -1747,7 +1775,7 @@ flat_branch_diff_r(svn_editor3_t *editor,
                      scratch_pool, "--- diff branch %s : %s\n",
                      left_str, right_str);
         }
-      SVN_ERR(diff_func(editor, fb_left, fb_right, prefix, header, 3 /*eid_width*/,
+      SVN_ERR(diff_func(editor, fb_left, fb_right, prefix, header,
                         scratch_pool));
     }
 
@@ -3006,7 +3034,7 @@ parse_actions(apr_array_header_t **actions,
         }
       if (j == sizeof(action_defn) / sizeof(action_defn[0]))
         return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                 "'%s' is not an action",
+                                 "'%s' is not an action; try 'help'.",
                                  action_string);
 
       if (action->action == ACTION_CP)
