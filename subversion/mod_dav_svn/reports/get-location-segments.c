@@ -124,12 +124,12 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
 
   /* Sanity check. */
   if (!resource->info->repos_path)
-    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                               "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
                                     "certain required elements");
@@ -175,7 +175,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
 
   /* Check that all parameters are present and valid. */
   if (! abs_path)
-    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                   "Not all parameters passed");
 
   /* No START_REV or PEG_REVISION?  We'll use HEAD. */
@@ -202,12 +202,12 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
 
   if (end_rev > start_rev)
     return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST,
-                                  SVN_ERR_FS_NO_SUCH_REVISION,
+                                  SVN_ERR_FS_NO_SUCH_REVISION, 0,
                                   "End revision must not be younger than "
                                   "start revision");
   if (start_rev > peg_revision)
     return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST,
-                                  SVN_ERR_FS_NO_SUCH_REVISION,
+                                  SVN_ERR_FS_NO_SUCH_REVISION, 0,
                                   "Start revision must not be younger than "
                                   "peg revision");
 

@@ -801,6 +801,7 @@ dav_error *
 dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
+                       apr_status_t aprerr,
                        const char *desc);
 
 
@@ -818,6 +819,7 @@ dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
                    int error_id,
+                   apr_status_t aprerr,
                    const char *desc);
 
 
