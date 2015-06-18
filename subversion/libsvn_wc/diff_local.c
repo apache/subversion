@@ -281,7 +281,8 @@ diff_status_callback(void *baton,
       {
         local_only = TRUE; /* Only report additions */
       }
-    else if (db_status == svn_wc__db_status_normal)
+    else if (db_status == svn_wc__db_status_normal
+             || db_status == svn_wc__db_status_incomplete)
       {
         /* Simple diff */
         base_kind = db_kind;
@@ -297,7 +298,8 @@ diff_status_callback(void *baton,
                                          eb->db, local_abspath,
                                          scratch_pool, scratch_pool));
 
-        if (base_status != svn_wc__db_status_normal)
+        if (base_status != svn_wc__db_status_normal
+            && base_status != svn_wc__db_status_incomplete)
           return SVN_NO_ERROR;
       }
     else
@@ -312,7 +314,8 @@ diff_status_callback(void *baton,
                                          eb->db, local_abspath,
                                          scratch_pool, scratch_pool));
 
-        if (base_status != svn_wc__db_status_normal)
+        if (base_status != svn_wc__db_status_normal
+            && base_status != svn_wc__db_status_incomplete)
           local_only = TRUE;
         else if (base_kind != db_kind || !eb->ignore_ancestry)
           {

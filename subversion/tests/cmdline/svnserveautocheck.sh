@@ -92,16 +92,19 @@ random_port() {
   fi
 }
 
-if type time > /dev/null; then
-  TIME_CMD=time
-else
-  TIME_CMD=""
-fi
+if type time > /dev/null ; then TIME_CMD() { time "$@"; } ; else TIME_CMD() { "$@"; } ; fi
 
 MAKE=${MAKE:-make}
+PATH="$PATH:/usr/sbin/:/usr/local/sbin/"
+
+ss > /dev/null 2>&1 || netstat > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
 
 SVNSERVE_PORT=$(random_port)
-while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
+while \
+  (ss -ltn sport = :$SVNSERVE_PORT 2>&1 | grep :$SVNSERVE_PORT > /dev/null ) \
+  || \
+  (netstat -an 2>&1 | grep $SVNSERVE_PORT | grep 'LISTEN' > /dev/null ) \
+  do
   SVNSERVE_PORT=$(random_port)
 done
 
@@ -121,13 +124,13 @@ fi
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
 if [ $# = 0 ]; then
-  $TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL"
+  TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL"
   r=$?
 else
   cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  $TIME_CMD "./${TEST}_tests.py" "--url=$BASE_URL" $*
+  TIME_CMD "./${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
   cd - > /dev/null
 fi

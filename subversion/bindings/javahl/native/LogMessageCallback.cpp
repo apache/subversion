@@ -81,7 +81,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
   static jmethodID sm_mid = 0;
   if (sm_mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/LogMessageCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/LogMessageCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
@@ -125,8 +125,6 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
                       (jlong)log_entry->revision,
                       jrevprops,
                       (jboolean)log_entry->has_children);
-  // No need to check for an exception here, because we return anyway.
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }

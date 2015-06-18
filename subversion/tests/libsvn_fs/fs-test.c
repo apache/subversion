@@ -4268,7 +4268,7 @@ check_related(const svn_test_opts_t *opts,
             if (i == j)
               {
                 /* Identical note. */
-                if (!related || relation != svn_fs_node_same)
+                if (!related || relation != svn_fs_node_unchanged)
                   {
                     return svn_error_createf
                       (SVN_ERR_TEST_FAILED, NULL,
@@ -4319,7 +4319,7 @@ check_related(const svn_test_opts_t *opts,
                                          rev_root, path, subpool));
 
             /* They shall use the same noderevs */
-            if (relation != svn_fs_node_same)
+            if (relation != svn_fs_node_unchanged)
               {
                 return svn_error_createf
                   (SVN_ERR_TEST_FAILED, NULL,
@@ -4328,6 +4328,209 @@ check_related(const svn_test_opts_t *opts,
                   path, (int)latest, path, (int)rev);
               }
           } /* for ... */
+      } /* for ... */
+  }
+
+  /* Destroy the subpool. */
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+check_txn_related(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn[3];
+  svn_fs_root_t *root[3];
+  svn_revnum_t youngest_rev = 0;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-check-txn-related",
+                              opts, pool));
+
+  /*** Step I: Build up some state in our repository through a series
+       of commits */
+
+  /* This is the node graph we are testing.  It contains one revision (r1)
+     and two transactions, T1 and T2 - yet uncommitted.
+
+     A is a file that exists in r1 (A-0) and gets modified in both txns.
+     C is a copy of A-0 made in both txns.
+     B is a new node created in both txns
+     D is a file that exists in r1 (D-0) and never gets modified.
+     / is the root folder, touched in r0, r1 and both txns (root-0)
+     R is a copy of the root-0 made in both txns.
+
+     The edges in the graph connect related noderevs:
+
+                 +--A-0--+                D-0           +-root-0-+
+                 |       |                              |        |
+           +-----+       +-----+                 +------+        +------+
+           |     |       |     |                 |      |        |      |
+     B-1   C-1   A-1     A-2   C-2   B-2         R-1    root-1   root-2 R-2
+  */
+  /* Revision 1 */
+  SVN_ERR(svn_fs_begin_txn(&txn[0], fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&root[0], txn[0], subpool));
+  SVN_ERR(svn_fs_make_file(root[0], "A", subpool));
+  SVN_ERR(svn_test__set_file_contents(root[0], "A", "1", subpool));
+  SVN_ERR(svn_fs_make_file(root[0], "D", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn[0], subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
+  SVN_ERR(svn_fs_revision_root(&root[0], fs, youngest_rev, pool));
+
+  /* Transaction 1 */
+  SVN_ERR(svn_fs_begin_txn(&txn[1], fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root[1], txn[1], pool));
+  SVN_ERR(svn_test__set_file_contents(root[1], "A", "2", pool));
+  SVN_ERR(svn_fs_copy(root[0], "A", root[1], "C", pool));
+  SVN_ERR(svn_fs_copy(root[0], "", root[1], "R", pool));
+  SVN_ERR(svn_fs_make_file(root[1], "B", pool));
+
+  /* Transaction 2 */
+  SVN_ERR(svn_fs_begin_txn(&txn[2], fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root[2], txn[2], pool));
+  SVN_ERR(svn_test__set_file_contents(root[2], "A", "2", pool));
+  SVN_ERR(svn_fs_copy(root[0], "A", root[2], "C", pool));
+  SVN_ERR(svn_fs_copy(root[0], "", root[2], "R", pool));
+  SVN_ERR(svn_fs_make_file(root[2], "B", pool));
+
+  /*** Step II: Exhaustively verify relationship between all nodes in
+       existence. */
+  {
+    enum { NODE_COUNT = 13 };
+    int i, j;
+
+    struct path_rev_t
+    {
+      const char *path;
+      int root;
+    };
+
+    /* Our 16 existing files/revisions. */
+    struct path_rev_t path_revs[NODE_COUNT] = {
+      { "A", 0 }, { "A", 1 }, { "A", 2 },
+      { "B", 1 }, { "B", 2 },
+      { "C", 1 }, { "C", 2 },
+      { "D", 0 },
+      { "/", 0 }, { "/", 1 }, { "/", 2 },
+      { "R", 1 }, { "R", 2 }
+    };
+
+    int related_matrix[NODE_COUNT][NODE_COUNT] = {
+      /* A-0 ... R-2 across the top here*/
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-0 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* A-2 */
+      { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* B-1 */
+      { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 }, /* B-2 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* C-1 */
+      { 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 }, /* C-2 */
+      { 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 }, /* D-0 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-0 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-1 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* root-2 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* R-1 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 }, /* R-2 */
+    };
+
+    /* Here's the fun part.  Running the tests. */
+    for (i = 0; i < NODE_COUNT; i++)
+      {
+        for (j = 0; j < NODE_COUNT; j++)
+          {
+            struct path_rev_t pr1 = path_revs[i];
+            struct path_rev_t pr2 = path_revs[j];
+            const svn_fs_id_t *id1, *id2;
+            int related = 0;
+            svn_fs_node_relation_t relation;
+
+            svn_pool_clear(subpool);
+
+            /* Get the ID for the first path/revision combination. */
+            SVN_ERR(svn_fs_node_id(&id1, root[pr1.root], pr1.path, subpool));
+
+            /* Get the ID for the second path/revision combination. */
+            SVN_ERR(svn_fs_node_id(&id2, root[pr2.root], pr2.path, subpool));
+
+            /* <exciting> Now, run the relationship check! </exciting> */
+            related = svn_fs_check_related(id1, id2) ? 1 : 0;
+            if (related == related_matrix[i][j])
+              {
+                /* xlnt! */
+              }
+            else if ((! related) && related_matrix[i][j])
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s-%d' to be related to '%s-%d'; it was not",
+                   pr1.path, pr1.root, pr2.path, pr2.root);
+              }
+            else if (related && (! related_matrix[i][j]))
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s-%d' to not be related to '%s-%d'; it was",
+                   pr1.path, pr1.root, pr2.path, pr2.root);
+              }
+
+            /* Asking directly, i.e. without involving the noderev IDs as
+             * an intermediate, should yield the same results. */
+            SVN_ERR(svn_fs_node_relation(&relation, root[pr1.root], pr1.path,
+                                         root[pr2.root], pr2.path, subpool));
+            if (i == j)
+              {
+                /* Identical noderev. */
+                if (!related || relation != svn_fs_node_unchanged)
+                  {
+                    return svn_error_createf
+                      (SVN_ERR_TEST_FAILED, NULL,
+                      "expected '%s-%d' to be the same as '%s-%d';"
+                      " it was not",
+                      pr1.path, pr1.root, pr2.path, pr2.root);
+                  }
+              }
+            else if (related && relation != svn_fs_node_common_ancestor)
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s-%d' to have a common ancestor with '%s-%d';"
+                   " it had not",
+                   pr1.path, pr1.root, pr2.path, pr2.root);
+              }
+            else if (!related && relation != svn_fs_node_unrelated)
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, NULL,
+                   "expected '%s-%d' to not be related to '%s-%d'; it was",
+                   pr1.path, pr1.root, pr2.path, pr2.root);
+              }
+          } /* for ... */
+      } /* for ... */
+
+    /* Verify that the noderevs stay the same after their last change.
+       There is only D that is not changed. */
+    for (i = 1; i <= 2; ++i)
+      {
+        svn_fs_node_relation_t relation;
+        svn_pool_clear(subpool);
+
+        /* Query their noderev relationship to the latest change. */
+        SVN_ERR(svn_fs_node_relation(&relation, root[i], "D",
+                                     root[0], "D", subpool));
+
+        /* They shall use the same noderevs */
+        if (relation != svn_fs_node_unchanged)
+          {
+            return svn_error_createf
+              (SVN_ERR_TEST_FAILED, NULL,
+              "expected 'D-%d' to be the same as 'D-0'; it was not", i);
+          }
       } /* for ... */
   }
 
@@ -4709,7 +4912,7 @@ unordered_txn_dirprops(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *txn_root2;
   svn_string_t pval;
   svn_revnum_t new_rev, not_rev;
-  svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
+  svn_boolean_t is_bdb = strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0;
 
   /* This is a regression test for issue #2751. */
 
@@ -5341,7 +5544,7 @@ dir_prop_merge(const svn_test_opts_t *opts,
   svn_revnum_t head_rev;
   svn_fs_root_t *root;
   svn_fs_txn_t *txn, *mid_txn, *top_txn, *sub_txn, *c_txn;
-  svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
+  svn_boolean_t is_bdb = strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0;
 
   /* Create test repository. */
   SVN_ERR(svn_test__create_fs(&fs, "test-fs-dir_prop-merge", opts, pool));
@@ -5405,100 +5608,6 @@ dir_prop_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_abort_txn(sub_txn, pool));
 
   return SVN_NO_ERROR;
-}
-
-#if APR_HAS_THREADS
-struct reopen_modify_baton_t {
-  const char *fs_path;
-  const char *txn_name;
-  apr_pool_t *pool;
-  svn_error_t *err;
-};
-
-static void * APR_THREAD_FUNC
-reopen_modify_child(apr_thread_t *tid, void *data)
-{
-  struct reopen_modify_baton_t *baton = data;
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *root;
-
-  baton->err = svn_fs_open(&fs, baton->fs_path, NULL, baton->pool);
-  if (!baton->err)
-    baton->err = svn_fs_open_txn(&txn, fs, baton->txn_name, baton->pool);
-  if (!baton->err)
-    baton->err = svn_fs_txn_root(&root, txn, baton->pool);
-  if (!baton->err)
-    baton->err = svn_fs_change_node_prop(root, "A", "name",
-                                         svn_string_create("value",
-                                                           baton->pool),
-                                         baton->pool);
-  svn_pool_destroy(baton->pool);
-  apr_thread_exit(tid, 0);
-  return NULL;
-}
-#endif
-
-static svn_error_t *
-reopen_modify(const svn_test_opts_t *opts,
-              apr_pool_t *pool)
-{
-#if APR_HAS_THREADS
-  svn_fs_t *fs;
-  svn_revnum_t head_rev = 0;
-  svn_fs_root_t *root;
-  svn_fs_txn_t *txn;
-  const char *fs_path, *txn_name;
-  svn_string_t *value;
-  struct reopen_modify_baton_t baton;
-  apr_status_t status, child_status;
-  apr_threadattr_t *tattr;
-  apr_thread_t *tid;
-
-  /* Create test repository with greek tree. */
-  fs_path = "test-reopen-modify";
-  SVN_ERR(svn_test__create_fs(&fs, fs_path, opts, pool));
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
-  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
-  SVN_ERR(svn_test__create_greek_tree(root, pool));
-  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
-
-  /* Create txn with changes. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, head_rev, pool));
-  SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
-  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
-  SVN_ERR(svn_fs_make_dir(root, "X", pool));
-
-  /* In another thread: reopen fs and txn, and add more changes.  This
-     works in BDB and FSX but in FSFS the txn_dir_cache becomes
-     out-of-date and the thread's changes don't reach the revision. */
-  baton.fs_path = fs_path;
-  baton.txn_name = txn_name;
-  baton.pool = svn_pool_create(pool);
-  status = apr_threadattr_create(&tattr, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't create threadattr"));
-  status = apr_thread_create(&tid, tattr, reopen_modify_child, &baton, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't create thread"));
-  status = apr_thread_join(&child_status, tid);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't join thread"));
-  if (baton.err)
-    return svn_error_trace(baton.err);
-
-  /* Commit */
-  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
-
-  /* Check for change made by thread. */
-  SVN_ERR(svn_fs_revision_root(&root, fs, head_rev, pool));
-  SVN_ERR(svn_fs_node_prop(&value, root, "A", "name", pool));
-  SVN_TEST_ASSERT(value && !strcmp(value->data, "value"));
-
-  return SVN_NO_ERROR;
-#else
-  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, "no thread support");
-#endif
 }
 
 static svn_error_t *
@@ -5606,7 +5715,7 @@ test_paths_changed(const svn_test_opts_t *opts,
   int i;
 
   /* The "mergeinfo_mod flag will say "unknown" until recently. */
-  if (   strcmp(opts->fs_type, "bdb") != 0
+  if (   strcmp(opts->fs_type, SVN_FS_TYPE_BDB) != 0
       && (!opts->server_minor_version || (opts->server_minor_version >= 9)))
     has_mergeinfo_mod = TRUE;
 
@@ -6190,11 +6299,11 @@ test_print_modules(const svn_test_opts_t *opts,
   svn_stringbuf_t *modules = svn_stringbuf_create_empty(pool);
 
   /* Name of the providing module */
-  if (strcmp(opts->fs_type, "fsx") == 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSX) == 0)
     module_name = "fs_x";
-  else if (strcmp(opts->fs_type, "fsfs") == 0)
+  else if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) == 0)
     module_name = "fs_fs";
-  else if (strcmp(opts->fs_type, "bdb") == 0)
+  else if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
     module_name = "fs_base";
   else
     return svn_error_createf(SVN_ERR_TEST_SKIPPED, NULL,
@@ -6321,7 +6430,7 @@ test_dir_optimal_order(const svn_test_opts_t *opts,
 
   /* Call the API function we are interested in. */
   SVN_ERR(svn_fs_dir_entries(&unordered, root, "A", pool));
-  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool));
+  SVN_ERR(svn_fs_dir_optimal_order(&ordered, root, unordered, pool, pool));
 
   /* Verify that all entries are returned. */
   SVN_TEST_ASSERT(ordered->nelts == apr_hash_count(unordered));
@@ -6521,7 +6630,7 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
   const svn_fs_fsfs_info_t *fsfs_info;
 
   /* Bail (with SKIP) on known-untestable scenarios */
-  if (strcmp(opts->fs_type, "fsfs") != 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "this will test FSFS repositories only");
 
@@ -6627,9 +6736,9 @@ test_modify_txn_being_written(const svn_test_opts_t *opts,
   svn_stream_t *bar_contents;
 
   /* Bail (with success) on known-untestable scenarios */
-  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "this will test FSFS repositories only");
+                            "this will not test BDB repositories");
 
   /* Create a new repo. */
   SVN_ERR(svn_test__create_fs(&fs, "test-modify-txn-being-written",
@@ -6782,6 +6891,71 @@ test_internal_txn_props(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* A freeze function that expects an 'svn_error_t *' baton, and returns it. */
+/* This function implements svn_fs_freeze_func_t. */
+static svn_error_t *
+freeze_func(void *baton, apr_pool_t *pool)
+{
+  return baton;
+}
+
+static svn_error_t *
+freeze_and_commit(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t new_rev = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  if (!strcmp(opts->fs_type, "bdb"))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will not test BDB repositories");
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-freeze-and-commit", opts, subpool));
+
+  /* This test used to FAIL with an SQLite error since svn_fs_freeze()
+   * wouldn't unlock rep-cache.db.  Therefore, part of the role of creating
+   * the Greek tree is to create a rep-cache.db, in order to test that
+   * svn_fs_freeze() unlocks it. */
+
+  /* r1: Commit the Greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, subpool));
+
+  /* Freeze and unfreeze. */
+  SVN_ERR(svn_fs_freeze(fs, freeze_func, SVN_NO_ERROR, pool));
+
+  /* Freeze again, but have freeze_func fail. */
+    {
+      svn_error_t *err = svn_error_create(APR_EGENERAL, NULL, NULL);
+      SVN_TEST_ASSERT_ERROR(svn_fs_freeze(fs, freeze_func, err, pool),
+                            err->apr_err);
+    }
+
+  /* Make some commit using same FS instance. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "", "temperature",
+                                  svn_string_create("310.05", pool),
+                                  pool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  /* Re-open FS and make another commit. */
+  SVN_ERR(svn_fs_open(&fs, "test-freeze-and-commit", NULL, subpool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "temperature",
+                                  svn_string_create("451", pool),
+                                  pool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -6876,9 +7050,6 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs__compatible_version"),
     SVN_TEST_OPTS_PASS(dir_prop_merge,
                        "test merge directory properties"),
-    SVN_TEST_OPTS_XFAIL_OTOH(reopen_modify,
-                             "test reopen and modify txn",
-                             SVN_TEST_PASS_IF_FS_TYPE_IS_NOT("fsfs")),
     SVN_TEST_OPTS_PASS(upgrade_while_committing,
                        "upgrade while committing"),
     SVN_TEST_OPTS_PASS(test_paths_changed,
@@ -6910,11 +7081,15 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_txn_pool_lifetime,
                        "test pool lifetime dependencies with txn roots"),
     SVN_TEST_OPTS_PASS(test_modify_txn_being_written,
-                       "test modify txn being written in FSFS"),
+                       "test modify txn being written"),
     SVN_TEST_OPTS_PASS(test_prop_and_text_rep_sharing_collision,
                        "test property and text rep-sharing collision"),
     SVN_TEST_OPTS_PASS(test_internal_txn_props,
                        "test setting and getting internal txn props"),
+    SVN_TEST_OPTS_PASS(check_txn_related,
+                       "test svn_fs_check_related for transactions"),
+    SVN_TEST_OPTS_PASS(freeze_and_commit,
+                       "freeze and commit"),
     SVN_TEST_NULL
   };
 

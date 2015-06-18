@@ -40,6 +40,7 @@
 
 #include "dav_svn.h"
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
@@ -135,6 +136,7 @@ dav_svn__convert_err(svn_error_t *serr,
   switch (purged_serr->apr_err)
     {
     case SVN_ERR_FS_NOT_FOUND:
+    case SVN_ERR_FS_NO_SUCH_REVISION:
       status = HTTP_NOT_FOUND;
       break;
     case SVN_ERR_UNSUPPORTED_FEATURE:
@@ -216,7 +218,7 @@ dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
       return revision;
     }
 
-  if (node_relation == svn_fs_node_same)
+  if (node_relation == svn_fs_node_unchanged)
     return history_rev;  /* the history rev is safe!  the same node
                             exists at the same path in both revisions. */
 
@@ -819,7 +821,7 @@ request_body_to_string(svn_string_t **request_str,
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
                             "Request body is larger than the configured "
-                            "limit of %lu", (unsigned long)limit_req_body);
+                            "limit of %" APR_OFF_T_FMT, limit_req_body);
               result = HTTP_REQUEST_ENTITY_TOO_LARGE;
               goto cleanup;
             }
@@ -834,9 +836,7 @@ request_body_to_string(svn_string_t **request_str,
   apr_brigade_destroy(brigade);
 
   /* Make an svn_string_t from our svn_stringbuf_t. */
-  *request_str = svn_string_create_empty(pool);
-  (*request_str)->data = buf->data;
-  (*request_str)->len = buf->len;
+  *request_str = svn_stringbuf__morph_into_string(buf);
   return OK;
 
  cleanup:

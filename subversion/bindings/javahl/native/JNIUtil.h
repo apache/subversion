@@ -38,13 +38,28 @@ class SVNBase;
 #include <apr_time.h>
 #include <string>
 #include <vector>
+
 struct svn_error_t;
+struct svn_string_t;
 
 #include "svn_error.h"
 
-#define JAVA_PACKAGE "org/apache/subversion/javahl"
 
-struct svn_string_t;
+/**
+ * The name of the package in which the JavaHL classes are defined.
+ */
+#define JAVAHL_PACKAGE "org/apache/subversion/javahl"
+
+/**
+ * Construct a JavaHL class name for JNIEnv::FindClass.
+ */
+#define JAVAHL_CLASS(name) JAVAHL_PACKAGE name
+
+/**
+ * Construct a JavaHL class parameter name for JNIEnv::GetMethodID & co.
+ */
+#define JAVAHL_ARG(name) "L" JAVAHL_PACKAGE name
+
 
 /**
  * Class to hold a number of JNI related utility methods.  No Objects
@@ -85,6 +100,9 @@ class JNIUtil
     {
       return getEnv()->ExceptionCheck();
     }
+
+  static svn_error_t *wrapJavaException();
+  static jthrowable unwrapJavaException(const svn_error_t *err);
 
   static void handleAPRError(int error, const char *op);
 
@@ -143,7 +161,7 @@ class JNIUtil
    */
   static void throwError(const char *message)
     {
-      raiseThrowable(JAVA_PACKAGE"/JNIError", message);
+      raiseThrowable(JAVAHL_CLASS("/JNIError"), message);
     }
 
   static apr_pool_t *getPool();
@@ -263,6 +281,16 @@ class JNIUtil
       env->PopLocalFrame(NULL);         \
       return;                           \
     }                                   \
+  while (0)
+
+#define POP_AND_RETURN_EXCEPTION_AS_SVNERROR()                            \
+  do                                                                      \
+    {                                                                     \
+      svn_error_t *svn__err_for_exception = JNIUtil::wrapJavaException(); \
+                                                                          \
+      env->PopLocalFrame(NULL);                                           \
+      return svn__err_for_exception;                                      \
+    }                                                                     \
   while (0)
 
 

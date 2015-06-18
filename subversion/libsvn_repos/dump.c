@@ -2334,7 +2334,7 @@ verify_one_revision(svn_fs_t *fs,
 }
 
 /* Baton type used for forwarding notifications from FS API to REPOS API. */
-struct verify_fs2_notify_func_baton_t
+struct verify_fs_notify_func_baton_t
 {
    /* notification function to call (must not be NULL) */
    svn_repos_notify_func_t notify_func;
@@ -2348,11 +2348,11 @@ struct verify_fs2_notify_func_baton_t
 
 /* Forward the notification to BATON. */
 static void
-verify_fs2_notify_func(svn_revnum_t revision,
+verify_fs_notify_func(svn_revnum_t revision,
                        void *baton,
                        apr_pool_t *pool)
 {
-  struct verify_fs2_notify_func_baton_t *notify_baton = baton;
+  struct verify_fs_notify_func_baton_t *notify_baton = baton;
 
   notify_baton->notify->revision = revision;
   notify_baton->notify_func(notify_baton->notify_baton,
@@ -2378,9 +2378,10 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_repos_notify_t *notify;
   svn_fs_progress_notify_func_t verify_notify = NULL;
-  struct verify_fs2_notify_func_baton_t *verify_notify_baton = NULL;
+  struct verify_fs_notify_func_baton_t *verify_notify_baton = NULL;
   svn_error_t *err;
-  svn_boolean_t found_corruption = FALSE;
+  svn_boolean_t failed_metadata = FALSE;
+  svn_revnum_t failed_revisions = 0;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -2409,7 +2410,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
     {
       notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end, pool);
 
-      verify_notify = verify_fs2_notify_func;
+      verify_notify = verify_fs_notify_func;
       verify_notify_baton = apr_palloc(pool, sizeof(*verify_notify_baton));
       verify_notify_baton->notify_func = notify_func;
       verify_notify_baton->notify_baton = notify_baton;
@@ -2423,34 +2424,26 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                       verify_notify, verify_notify_baton,
                       cancel_func, cancel_baton, pool);
 
-  if (err)
+  if (err && err->apr_err == SVN_ERR_CANCELLED)
     {
-      if (err->apr_err == SVN_ERR_CANCELLED)
-        return svn_error_trace(err);
-
-      found_corruption = TRUE;
+      return svn_error_trace(err);
+    }
+  else if (err)
+    {
       notify_verification_error(SVN_INVALID_REVNUM, err, notify_func,
                                 notify_baton, iterpool);
 
-      /* If we already reported the error, reset it. */
-      if (notify_func)
-        {
-          svn_error_clear(err);
-          err = NULL;
-        }
-
-      /* If we abort the verification now, combine yet unreported error
-         info with the generic one we return. */
       if (!keep_going)
-        /* ### Jump to "We're done" and so send the final notification,
-               for consistency? */
-        return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, err,
-                                _("Repository '%s' failed to verify"),
-                                svn_dirent_local_style(svn_repos_path(repos,
-                                                                      pool),
-                                                        pool));
-
-      svn_error_clear(err);
+        {
+          /* Return the error, the caller doesn't want us to continue. */
+          return svn_error_trace(err);
+        }
+      else
+        {
+          /* Clear the error and keep going. */
+          failed_metadata = TRUE;
+          svn_error_clear(err);
+        }
     }
 
   if (!metadata_only)
@@ -2464,24 +2457,30 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                                   cancel_func, cancel_baton,
                                   iterpool);
 
-        if (err)
+        if (err && err->apr_err == SVN_ERR_CANCELLED)
           {
-            if (err->apr_err == SVN_ERR_CANCELLED)
-              return svn_error_trace(err);
-
-            found_corruption = TRUE;
+            return svn_error_trace(err);
+          }
+        else if (err)
+          {
             notify_verification_error(rev, err, notify_func, notify_baton,
                                       iterpool);
-            svn_error_clear(err);
 
-            if (keep_going)
-              continue;
+            if (!keep_going)
+              {
+                /* Return the error, the caller doesn't want us to continue. */
+                return svn_error_trace(err);
+              }
             else
-              break;
+              {
+                /* Clear the error and keep going. */
+                ++failed_revisions;
+                svn_error_clear(err);
+              }
           }
-
-        if (notify_func)
+        else if (notify_func)
           {
+            /* Tell the caller that we're done with this revision. */
             notify->revision = rev;
             notify_func(notify_baton, notify, iterpool);
           }
@@ -2496,12 +2495,40 @@ svn_repos_verify_fs3(svn_repos_t *repos,
 
   svn_pool_destroy(iterpool);
 
-  if (found_corruption)
-    return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
-                             _("Repository '%s' failed to verify"),
-                             svn_dirent_local_style(svn_repos_path(repos,
-                                                                   pool),
-                                                    pool));
+  /* Summarize the results. */
+  if (failed_metadata || 0 != failed_revisions)
+    {
+      const char *const repos_path =
+        svn_dirent_local_style(svn_repos_path(repos, pool), pool);
+
+      if (0 == failed_revisions)
+        {
+          return svn_error_createf(
+              SVN_ERR_REPOS_VERIFY_FAILED, NULL,
+              _("Metadata verification failed on repository '%s'"),
+              repos_path);
+        }
+      else
+        {
+          const char* format_string;
+
+          if (failed_metadata)
+            format_string = apr_psprintf(
+                pool, _("Verification of metadata and"
+                        " %%%s out of %%%s revisions"
+                        " failed on repository '%%s'"),
+                SVN_REVNUM_T_FMT, SVN_REVNUM_T_FMT);
+          else
+            format_string = apr_psprintf(
+                pool, _("Verification of %%%s out of %%%s revisions"
+                        " failed on repository '%%s'"),
+                SVN_REVNUM_T_FMT, SVN_REVNUM_T_FMT);
+
+          return svn_error_createf(
+              SVN_ERR_REPOS_VERIFY_FAILED, NULL, format_string,
+              failed_revisions, end_rev - start_rev + 1, repos_path);
+        }
+    }
 
   return SVN_NO_ERROR;
 }

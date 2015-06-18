@@ -843,6 +843,14 @@ static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
 {
   SVN_CMD_ERR(ds->editor->close_edit(ds->edit_baton, pool));
   ds->done = TRUE;
+#ifdef SVN_DEBUG
+  /* Before enabling this in non-maintainer mode:
+     *  Note that this code is used on both client *and* server */
+  if (apr_hash_count(ds->tokens) != 0)
+    return svn_error_create(
+              SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION, NULL,
+              _("Closing editor with directories or files open"));
+#endif
   if (ds->aborted)
     *ds->aborted = FALSE;
   return svn_ra_svn__write_cmd_response(conn, pool, "");

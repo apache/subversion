@@ -144,3 +144,34 @@ svn_client_resolve(const char *path,
 
   return svn_error_trace(err);
 }
+
+
+/*** Dealing with conflicts. ***/
+
+const char *
+svn_client_conflict_get_local_abspath(
+  const svn_wc_conflict_description2_t *conflict)
+{
+  return conflict->local_abspath;
+}
+
+svn_wc_operation_t
+svn_client_conflict_get_operation(
+  const svn_wc_conflict_description2_t *conflict)
+{
+  return conflict->operation;
+}
+
+svn_wc_conflict_action_t
+svn_client_conflict_get_incoming_change(
+  const svn_wc_conflict_description2_t *conflict)
+{
+  return conflict->action;
+}
+
+svn_wc_conflict_reason_t
+svn_client_conflict_get_local_change(
+  const svn_wc_conflict_description2_t *conflict)
+{
+  return conflict->reason;
+}

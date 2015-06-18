@@ -771,7 +771,7 @@ def refresh_read_only_attribute(sbox):
   # behavior, just skip the test.
   if os.name == 'posix':
     if os.geteuid() == 0:
-      raise svntest.Skip
+      raise svntest.Skip('Test doesn\'t work as uid 0')
 
   sbox.build()
   wc_dir = sbox.wc_dir

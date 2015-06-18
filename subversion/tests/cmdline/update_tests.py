@@ -2227,6 +2227,7 @@ def forced_update_failures(sbox):
 # Test for issue #2556. The tests maps a virtual drive to a working copy
 # and tries some basic update, commit and status actions on the virtual
 # drive.
+@SkipUnless(svntest.main.is_os_windows)
 def update_wc_on_windows_drive(sbox):
   "update wc on the root of a Windows (virtual) drive"
 
@@ -2253,10 +2254,6 @@ def update_wc_on_windows_drive(sbox):
 
     return None
 
-  # Skip the test if not on Windows
-  if not svntest.main.windows:
-    raise svntest.Skip
-
   # just create an empty folder, we'll checkout later.
   sbox.build(create_wc = False)
   svntest.main.safe_rmtree(sbox.wc_dir)
@@ -2265,7 +2262,7 @@ def update_wc_on_windows_drive(sbox):
   # create a virtual drive to the working copy folder
   drive = find_the_next_available_drive_letter()
   if drive is None:
-    raise svntest.Skip
+    raise svntest.Skip('No drive letter available')
 
   subprocess.call(['subst', drive +':', sbox.wc_dir])
   wc_dir = drive + ':/'
@@ -5137,7 +5134,7 @@ def skip_access_denied(sbox):
   try:
     import msvcrt
   except ImportError:
-    raise svntest.Skip
+    raise svntest.Skip('python msvcrt library not available')
 
   sbox.build()
   wc_dir = sbox.wc_dir

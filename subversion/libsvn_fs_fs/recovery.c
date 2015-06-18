@@ -160,6 +160,7 @@ recover_find_max_ids(svn_fs_t *fs,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
   node_revision_t *noderev;
+  svn_error_t *err;
 
   baton.stream = rev_file->stream;
   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
@@ -196,16 +197,23 @@ recover_find_max_ids(svn_fs_t *fs,
      stored in the representation.  Note that this is a directory, i.e.
      represented using the hash format on disk and can never have 0 length. */
   baton.pool = pool;
-  baton.remaining = noderev->data_rep->expanded_size
-                  ? noderev->data_rep->expanded_size
-                  : noderev->data_rep->size;
+  baton.remaining = noderev->data_rep->expanded_size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read2(stream, NULL /* only full read support */,
                        read_handler_recover);
 
   /* Now read the entries from that stream. */
   entries = apr_hash_make(pool);
-  SVN_ERR(svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool));
+  err = svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool);
+  if (err)
+    {
+      svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
+
+      err = svn_error_compose_create(err, svn_stream_close(stream));
+      return svn_error_quick_wrapf(err,
+                _("malformed representation for node-revision '%s'"),
+                id_str->data);
+    }
   SVN_ERR(svn_stream_close(stream));
 
   /* Now check each of the entries in our directory to find new node and

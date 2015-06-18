@@ -1470,13 +1470,12 @@ $(MOD_DONTDOTHAT_CONF):
 	echo >>$@.tmp '/ = deny'
 	mv -f $@.tmp $@
 
-$(HTTPD_CHECK_USERS):
+$(HTTPD_CHECK_CONF): $(MOD_DONTDOTHAT_CONF)
 	mkdir -p $(dir $@)
-	echo > $@.tmp 'jrandom:xCGl35kV9oWCY'
-	echo >>$@.tmp 'jconstant:xCGl35kV9oWCY'
-	mv -f $@.tmp $@
-
-$(HTTPD_CHECK_CONF): $(HTTPD_CHECK_USERS) $(MOD_DONTDOTHAT_CONF)
+	$(PREFIX)/httpd/bin/htpasswd -bc $(HTTPD_CHECK_USERS).tmp jrandom rayjandom
+	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp jconstant rayjandom
+	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp __dumpster__ __loadster__
+	mv -f $(HTTPD_CHECK_USERS).tmp $(HTTPD_CHECK_USERS)
 	echo > $@.tmp '# httpd config for make check'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:$(HTTPD_CHECK_PORT)'

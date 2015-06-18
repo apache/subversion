@@ -911,18 +911,18 @@ write_symlink(void *baton, const char *buf, apr_size_t len,
 {
   const char *target_abspath = baton;
   const char *new_name;
-  const char *link = apr_pstrndup(scratch_pool, buf, len);
+  const char *sym_link = apr_pstrndup(scratch_pool, buf, len);
 
-  if (strncmp(link, "link ", 5) != 0)
+  if (strncmp(sym_link, "link ", 5) != 0)
     return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL,
                             _("Invalid link representation"));
 
-  link += 5; /* Skip "link " */
+  sym_link += 5; /* Skip "link " */
 
   /* We assume the entire symlink is written at once, as the patch
      format is line based */
 
-  SVN_ERR(svn_io_create_unique_link(&new_name, target_abspath, link,
+  SVN_ERR(svn_io_create_unique_link(&new_name, target_abspath, sym_link,
                                     ".tmp", scratch_pool));
 
   SVN_ERR(svn_io_file_rename(new_name, target_abspath, scratch_pool));

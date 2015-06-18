@@ -71,6 +71,7 @@ typedef struct commit_context_t {
   const char *checked_in_url;    /* checked-in root to base CHECKOUTs from */
   const char *vcc_url;           /* vcc url */
 
+  int open_batons;               /* Number of open batons */
 } commit_context_t;
 
 #define USING_HTTPV2_COMMIT_SUPPORT(commit_ctx) ((commit_ctx)->txn_url != NULL)
@@ -116,9 +117,6 @@ typedef struct dir_context_t {
   /* URL to operate against (used for CHECKOUT and PROPPATCH before
      HTTP v2, for PROPPATCH in HTTP v2).  */
   const char *url;
-
-  /* How many pending changes we have left in this directory. */
-  unsigned int ref_count;
 
   /* Is this directory being added?  (Otherwise, just opened.) */
   svn_boolean_t added;
@@ -1258,6 +1256,8 @@ open_root(void *edit_baton,
   const char *proppatch_target = NULL;
   apr_pool_t *scratch_pool = svn_pool_create(dir_pool);
 
+  commit_ctx->open_batons++;
+
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(commit_ctx->session))
     {
       post_response_ctx_t *prc;
@@ -1533,6 +1533,8 @@ add_directory(const char *path,
   dir->name = svn_relpath_basename(dir->relpath, NULL);
   dir->prop_changes = apr_hash_make(dir->pool);
 
+  dir->commit_ctx->open_batons++;
+
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
       dir->url = svn_path_url_add_component2(parent->commit_ctx->txn_root_url,
@@ -1623,6 +1625,8 @@ open_directory(const char *path,
   dir->name = svn_relpath_basename(dir->relpath, NULL);
   dir->prop_changes = apr_hash_make(dir->pool);
 
+  dir->commit_ctx->open_batons++;
+
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
       dir->url = svn_path_url_add_component2(parent->commit_ctx->txn_root_url,
@@ -1701,6 +1705,8 @@ close_directory(void *dir_baton,
                                  proppatch_ctx, dir->pool));
     }
 
+  dir->commit_ctx->open_batons--;
+
   return SVN_NO_ERROR;
 }
 
@@ -1720,8 +1726,6 @@ add_file(const char *path,
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
   new_file->pool = file_pool;
 
-  dir->ref_count++;
-
   new_file->parent_dir = dir;
   new_file->commit_ctx = dir->commit_ctx;
   new_file->relpath = apr_pstrdup(new_file->pool, path);
@@ -1731,6 +1735,8 @@ add_file(const char *path,
   new_file->copy_path = apr_pstrdup(new_file->pool, copy_path);
   new_file->copy_revision = copy_revision;
   new_file->prop_changes = apr_hash_make(new_file->pool);
+
+  dir->commit_ctx->open_batons++;
 
   /* Ensure that the file doesn't exist by doing a HEAD on the
      resource.  If we're using HTTP v2, we'll just look into the
@@ -1842,8 +1848,6 @@ open_file(const char *path,
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
   new_file->pool = file_pool;
 
-  parent->ref_count++;
-
   new_file->parent_dir = parent;
   new_file->commit_ctx = parent->commit_ctx;
   new_file->relpath = apr_pstrdup(new_file->pool, path);
@@ -1851,6 +1855,8 @@ open_file(const char *path,
   new_file->added = FALSE;
   new_file->base_revision = base_revision;
   new_file->prop_changes = apr_hash_make(new_file->pool);
+
+  parent->commit_ctx->open_batons++;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(parent->commit_ctx))
     {
@@ -2014,6 +2020,8 @@ close_file(void *file_baton,
                                  proppatch, scratch_pool));
     }
 
+  ctx->commit_ctx->open_batons--;
+
   return SVN_NO_ERROR;
 }
 
@@ -2026,6 +2034,11 @@ close_edit(void *edit_baton,
     ctx->activity_url ? ctx->activity_url : ctx->txn_url;
   const svn_commit_info_t *commit_info;
   svn_error_t *err = NULL;
+
+  if (ctx->open_batons > 0)
+    return svn_error_create(
+              SVN_ERR_FS_INCORRECT_EDITOR_COMPLETION, NULL,
+              _("Closing editor with directories or files open"));
 
   /* MERGE our activity */
   SVN_ERR(svn_ra_serf__run_merge(&commit_info,

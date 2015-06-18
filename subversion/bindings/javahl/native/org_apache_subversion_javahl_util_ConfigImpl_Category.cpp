@@ -270,12 +270,12 @@ Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_enumerate(
       {
         enumerator_t* enmr = static_cast<enumerator_t*>(baton);
         JNIEnv* const e = enmr->m_env;
-        const jobject jh = enmr->m_jhandler;;
+        const jobject jh = enmr->m_jhandler;
 
         static jmethodID mid = 0;
         if (0 == mid)
           {
-            jclass cls = e->FindClass(JAVA_PACKAGE"/ISVNConfig$Enumerator");
+            jclass cls = e->FindClass(JAVAHL_CLASS("/ISVNConfig$Enumerator"));
             if (JNIUtil::isJavaExceptionThrown())
               return false;
             mid = e->GetMethodID(cls, "option",

@@ -1443,13 +1443,14 @@ svn_error_t *
 svn_stringbuf_from_stream(svn_stringbuf_t **str,
                           svn_stream_t *stream,
                           apr_size_t len_hint,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
 #define MIN_READ_SIZE 64
 
   apr_size_t to_read = 0;
   svn_stringbuf_t *text
-    = svn_stringbuf_create_ensure(len_hint ? len_hint : MIN_READ_SIZE, pool);
+    = svn_stringbuf_create_ensure(len_hint ? len_hint : MIN_READ_SIZE,
+                                  result_pool);
 
   do
     {
@@ -2199,11 +2200,11 @@ svn_stream__install_stream(svn_stream_t *install_stream,
 
       apr_os_file_get(&hFile, ib->baton_apr.file);
 
-      SVN_ERR(svn_utf__win32_utf8_to_utf16(&w_final_abspath,
-                                           svn_dirent_local_style(
+      SVN_ERR(svn_io__utf8_to_unicode_longpath(&w_final_abspath,
+                                               svn_dirent_local_style(
                                                           final_abspath,
                                                           scratch_pool),
-                                           NULL, scratch_pool));
+                                               scratch_pool));
       path_len = wcslen(w_final_abspath);
       rename_size = sizeof(*rename_info) + sizeof(WCHAR) * path_len;
 
