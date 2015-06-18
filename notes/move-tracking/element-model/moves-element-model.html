@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <meta name="generator" content="http://www.nongnu.org/elyxer/"/>
-<meta name="create-date" content="2015-06-17"/>
+<meta name="create-date" content="2015-06-18"/>
 <link rel="stylesheet" href="http://elyxer.nongnu.org/lyx.css" type="text/css" media="all"/>
 <title>Element Model</title>
 </head>
@@ -19,11 +19,6 @@ Julian Foad
 <div class="fulltoc">
 <div class="tocheader">
 Table of Contents
-</div>
-<div class="tocindent">
-<div class="toc">
-<a class="Link" href="#toc-Section--1">Section: TODO (in the document)</a>
-</div>
 </div>
 <div class="toc">
 <a class="Link" href="#toc-Part-I">Part I: Overview</a>
@@ -64,15 +59,6 @@ Table of Contents
 </div>
 
 </div>
-<h1 class="Section-">
-<a class="toc" name="toc-Section--1"></a>TODO (in the document)
-</h1>
-<ul>
-<li>
-rename ’subbranch-root’ to ’branch-point’?
-</li>
-
-</ul>
 <h1 class="Part">
 <a class="toc" name="toc-Part-I">Part I.</a> Overview
 </h1>
@@ -284,31 +270,46 @@ The mental model will be unfamiliar to users, at first.
 Branching — how to track the ’from’ branch and revision.
 </div>
 <div class="Standard">
-Merging — how to deal with a subtree root node.
+3-way merge — how to deal with a subtree root node.
 </div>
 <div class="Standard">
 Merge history.
 </div>
-<div class="Standard">
-Backward compatibility / migration.
-</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-1.5">1.5</a> TODO (in the document)
+</h2>
+<ul>
+<li>
+rename ’subbranch-root’ to something less like ’branch root’: perhaps ’branch-point’ or ’subbranch-element’?
+</li>
+
+</ul>
 <h1 class="Section">
 <a class="toc" name="toc-Section-2">2</a> Glossary
 </h1>
 <div class="Description">
+<span class="Description-entry">branch</span> a set of elements arranged in a tree, with a branch-root element at the root of the tree; a leaf node of the tree can be a file node element or a subbranch-root element; a subbranch-root element is part of this branch but the subbranch it links to is not
+</div>
+<div class="Description">
 <span class="Description-entry">branch-root</span> the root element of a branch; carries its own payload, but its location is determined solely by the corresponding (linked) subbranch-root element of the outer branch; see also subbranch-root
 </div>
 <div class="Description">
-<span class="Description-entry">eid</span> element identifier (unique within a branch, and matching across branches); an arbitrary token (for example, an integer)
+<span class="Description-entry">eid</span> element identifier, uniquely identifying an element within a branch and matching the equivalent element in another branch; an arbitrary token that supports comparison for equality and being used as an index key
 </div>
 <div class="Description">
-<span class="Description-entry">element</span> the smallest unit of merging; a file or directory or subbranch-root; unique within a branch; versioned content is (depending on context) its parent element id and name, and/or its payload;
+<span class="Description-entry">element</span> a file or directory or subbranch-root; the smallest unit of merging; versioned content is (depending on context) its parent element id and name, and/or its payload;
 </div>
 <div class="Description">
-<span class="Description-entry">subbranch-root</span> the kind of element that separates a subbranch from its outer branch; has a versioned parent-eid and name
+<span class="Description-entry">location</span> the tree-structure part of the versioned content of an element: that is, the element’s parent-eid and name
 </div>
 <div class="Description">
-<span class="Description-entry">target</span> may refer to the target path of a symlink, if symlinks are supported; or the target of a merge
+<span class="Description-entry">payload</span> the non-tree-structure part of the versioned content of an element: that is, the element’s properties (for a file or directory) and text (for a file)
+</div>
+<div class="Description">
+<span class="Description-entry">subbranch-root</span> the kind of element that links a subbranch to an outer branch; has a versioned parent-eid and name
+</div>
+<div class="Description">
+<span class="Description-entry">target</span> may refer to the target of a merge; or to the target path of a symlink, if symlinks are supported
 </div>
 <h1 class="Part">
 <a class="toc" name="toc-Part-II">Part II.</a> The Model
@@ -317,20 +318,74 @@ Backward compatibility / migration.
 <a class="toc" name="toc-Section-3">3</a> Layers
 </h1>
 <div class="Standard">
-Layers of modelling:
+<div class="float">
+<a class="Label" name="Table-1"> </a><div class="table">
+<div class="caption">
+Table 1 Layers of modelling
 </div>
-<ul>
-<li>
-Element Model — described here
-</li>
-<li>
-Merge History — TBD
-</li>
-<li>
-Branch Management — not included
-</li>
+<table>
+<tr>
+<td align="center" valign="top">
+(client/UI)
+</td>
+<td align="center" valign="top">
 
-</ul>
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+Branch Management
+</td>
+<td align="center" valign="top">
+possible future addition
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+Merge History
+</td>
+<td align="center" valign="top">
+TBD; to be described here
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+Element Model
+</td>
+<td align="center" valign="top">
+described here
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+Repository Storage
+</td>
+<td align="center" valign="top">
+TBD; to be described elsewhere
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+(server/fs)
+</td>
+<td align="center" valign="top">
+
+</td>
+
+</tr>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
 <h1 class="Section">
 <a class="toc" name="toc-Section-4">4</a> Element Model
 </h1>
@@ -410,7 +465,7 @@ A subbranch-root element acts like a container that contains a nested subbranch.
 The term ’elements’ refers collectively to nodes and to subbranch-root elements.
 </div>
 <h2 class="Subsection">
-<a class="toc" name="toc-Subsection-4.2">4.2</a> Elements and Nodes and Paths
+<a class="toc" name="toc-Subsection-4.2">4.2</a> Elements, Nodes, Paths, Payloads
 </h2>
 <div class="Standard">
 An element is either a node element or a subbranch-root element.
@@ -542,7 +597,7 @@ It may be useful to (partially) order the merging of elements, so as to build up
 <a class="toc" name="toc-Subsection-5.2">5.2</a> Per element, 3-way merge
 </h2>
 <div class="Standard">
-For each element that appears in any of the three sides of the merge, we merge the two changes to the element’s (parent-eid, name) pair according to <a class="Reference" href="#tab:3-way-mg-single">Table 1↓</a>.
+For each element that appears in any of the three sides of the merge, we merge the two changes to the element’s (parent-eid, name) pair according to <a class="Reference" href="#tab:3-way-mg-single">Table 2↓</a>.
 </div>
 <div class="Standard">
 In this table, each row represents an element, and a letter (O, R, X, Y) represents a particular value of the element’s (parent-eid, name) pair: different letters mean the parent-eid differs and/or the name differs. The semantics are symmetric with respect to Side 1 and Side 2; only one row of a symmetric pair is shown.
@@ -767,7 +822,7 @@ mv vs. del
 
 </div>
 <div class="caption">
-Table 1 3-way merge of a single element
+Table 2 3-way merge of a single element
 </div>
 
 </div>
@@ -1204,7 +1259,7 @@ there is no such thing as a broken/split/half move
 
 <hr class="footer"/>
 <div class="footer" id="generated-by">
-Document generated by <a href="http://elyxer.nongnu.org/">eLyXer 1.2.5 (2013-03-10)</a> on <span class="create-date">2015-06-17T21:01:51.742757</span>
+Document generated by <a href="http://elyxer.nongnu.org/">eLyXer 1.2.5 (2013-03-10)</a> on <span class="create-date">2015-06-18T09:16:56.348899</span>
 </div>
 </div>
 </body>
