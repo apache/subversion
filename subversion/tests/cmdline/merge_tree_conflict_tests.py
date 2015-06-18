@@ -2124,18 +2124,16 @@ def merge_obstruction_recording(sbox):
   })
   expected_mergeinfo_output = wc.State(wc_dir, {
     ''             : Item(status=' U'),
-    'dir'          : Item(status=' U'), # Because dir already exists
   })
   expected_elision_output = wc.State(wc_dir, {
   })
   expected_disk = wc.State('', {
     'dir/file.txt' : Item(contents="The file on branch\n"),
-    'dir'          : Item(props={'svn:mergeinfo':''}),
     '.'            : Item(props={'svn:mergeinfo':'/trunk:2-4'}),
   })
   expected_status = wc.State(wc_dir, {
     ''             : Item(status=' M', wc_rev='4'),
-    'dir'          : Item(status=' M', treeconflict='C', wc_rev='4'),
+    'dir'          : Item(status='  ', treeconflict='C', wc_rev='4'),
     'dir/file.txt' : Item(status='  ', wc_rev='4'),
   })
   expected_skip = wc.State('', {
@@ -2172,7 +2170,7 @@ def merge_obstruction_recording(sbox):
   expected_output = [
     '--- Recording mergeinfo for merge of r4 into \'%s\':\n' % \
             sbox.ospath('dir'),
-    ' G   %s\n' % sbox.ospath('dir'),
+    ' U   %s\n' % sbox.ospath('dir'),
   ]
   # ### Why are r1-r3 not recorded?
   # ### Guess: Because dir's history only exists since r4.
