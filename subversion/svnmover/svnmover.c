@@ -878,7 +878,8 @@ static const char branch_info_by_paths_header[]
   = "  branch-id  root-path\n"
     "  ---------  ---------\n";
 
-/* Show the id and path of BRANCH. If VERBOSE is true, also list its elements.
+/* Show the id and path of BRANCH. If WITH_ELEMENTS is true, also list its
+ * elements.
  */
 static svn_error_t *
 branch_info_by_paths(flat_branch_t *fb,
