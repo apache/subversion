@@ -1242,6 +1242,25 @@ def modify_payload_of_branch_root_element(sbox):
   test_svnmover2(sbox, '', None,
                  'put ' + mk_file(sbox, 'f2') + ' f2')
 
+def merge_detects_clash_conflicts(sbox):
+  "merge detects clash conflicts"
+  sbox_build_svnmover(sbox)
+
+  # Make a trunk and a branch
+  test_svnmover2(sbox, '', None,
+                 'mkbranch A ' +
+                 'branch A B')
+
+  # Make new elements at the same path in each branch
+  test_svnmover2(sbox, '', None,
+                 'mkdir A/D ' +
+                 'mkdir B/D')
+
+  # Merge: should generate a clash conflict
+  xtest_svnmover(sbox.repo_url, 'Merge failed.*clash',
+                 'merge A B A@1')
+
+
 ######################################################################
 
 test_list = [ None,
@@ -1262,6 +1281,7 @@ test_list = [ None,
               branch_to_subbranch_of_self,
               merge_from_subbranch_to_subtree,
               modify_payload_of_branch_root_element,
+              merge_detects_clash_conflicts,
             ]
 
 if __name__ == '__main__':

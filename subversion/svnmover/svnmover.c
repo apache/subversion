@@ -1357,6 +1357,54 @@ merge_subbranch(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static int
+sort_compare_items_by_peid_and_name(const svn_sort__item_t *a,
+                                    const svn_sort__item_t *b)
+{
+  svn_branch_el_rev_content_t *element_a = a->value;
+  svn_branch_el_rev_content_t *element_b = b->value;
+
+  if (element_a->parent_eid != element_b->parent_eid)
+    return element_a->parent_eid - element_b->parent_eid;
+  return strcmp(element_a->name, element_b->name);
+}
+
+/* Return an array of (what type?) clashes...
+ */
+static svn_error_t *
+detect_clashes(apr_array_header_t **clashes_p,
+               svn_branch_state_t *branch,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *clashes = apr_array_make(result_pool, 0, sizeof(void *));
+  SVN_ITER_T(svn_branch_el_rev_content_t) *pi;
+  int prev_eid = -1;
+  svn_branch_el_rev_content_t *prev_element = NULL;
+
+  for (SVN_HASH_ITER_SORTED(pi, svn_branch_get_elements(branch),
+                            sort_compare_items_by_peid_and_name, scratch_pool))
+    {
+      int eid = *(const int *)(pi->key);
+      svn_branch_el_rev_content_t *element = pi->val;
+
+      if (prev_element
+          && element->parent_eid == prev_element->parent_eid
+          && strcmp(element->name, prev_element->name) == 0)
+        {
+          notify("  clash: e%d, e%d: %s",
+                 prev_eid, eid, peid_name(element, scratch_pool));
+          APR_ARRAY_PUSH(clashes, void *) = element;
+        }
+      prev_eid = eid;
+      prev_element = element;
+    }
+
+  *clashes_p = clashes;
+  return SVN_NO_ERROR;
+}
+
 /* Merge ...
  *
  * Merge any sub-branches in the same way, recursively.
@@ -1370,7 +1418,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
 {
   svn_branch_subtree_t *s_src, *s_tgt, *s_yca;
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
-  svn_boolean_t had_conflict = FALSE;
+  int single_element_conflicts = 0;
+  apr_array_header_t *clashes;
   SVN_ITER_T(svn_branch_el_rev_content_t *) *pi;
   apr_hash_t *all_elements;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
@@ -1458,7 +1507,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
       if (conflict)
         {
           notify_v("!    e%d <conflict>", eid);
-          had_conflict = TRUE;
+          ++single_element_conflicts;
         }
       else if (e_tgt && result)
         {
@@ -1501,13 +1550,25 @@ branch_merge_subtree_r(svn_editor3_t *editor,
     }
   svn_pool_destroy(iterpool);
 
+  /* Detect clashes.
+     ### TODO: Detect clashes, cycles and orphans; and report full conflict
+               info (including the relevant incoming changes) for each
+               kind of conflict. If there are no conflicts, flatten the
+               merge result into a tree. */
+  SVN_ERR(detect_clashes(&clashes,
+                         tgt->branch,
+                         scratch_pool, scratch_pool));
+
   notify_v("merging into branch %s -- finished",
            svn_branch_get_id(tgt->branch, scratch_pool));
 
-  if (had_conflict)
+  if (single_element_conflicts || clashes->nelts /* || ... */)
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Merge failed: conflict(s) occurred"));
+                               _("Merge failed: %d single-element conflicts and %d clashes occurred"),
+                               single_element_conflicts, clashes->nelts);
+      /* TODO: Return all conflicts to the caller;
+               have the caller display them. */
     }
   else
     {
