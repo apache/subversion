@@ -92,11 +92,25 @@ static const svn_token_map_t ui_mode_map[]
   (strcmp(svn_branch_get_id(branch1, scratch_pool), \
           svn_branch_get_id(branch2, scratch_pool)) == 0)
 
-/*  */
+/* Print a notification. */
 __attribute__((format(printf, 1, 2)))
 static void
 notify(const char *fmt,
        ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  vprintf(fmt, ap);
+  va_end(ap);
+  printf("\n");
+}
+
+/* Print a verbose notification: in 'quiet' mode, don't print it. */
+__attribute__((format(printf, 1, 2)))
+static void
+notify_v(const char *fmt,
+         ...)
 {
   va_list ap;
 
@@ -813,7 +827,7 @@ list_branch_elements(flat_branch_t *fb,
       const char *relpath = pi->key;
       int eid = *pi->val;
 
-      printf("    %-20s%s\n",
+      notify("    %-20s%s",
              relpath[0] ? relpath : ".",
              flat_branch_subbranch_str(fb, eid, scratch_pool));
     }
@@ -845,7 +859,7 @@ peid_name(const svn_branch_el_rev_content_t *element,
 
 static const char elements_by_eid_header[]
   = "    eid  parent-eid/name\n"
-    "    ---  ----------/----\n";
+    "    ---  ----------/----";
 
 /* List all elements in branch BRANCH, in element notation.
  */
@@ -855,7 +869,7 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
 {
   SVN_ITER_T(svn_branch_el_rev_content_t) *pi;
 
-  printf("%s", elements_by_eid_header);
+  notify_v("%s", elements_by_eid_header);
   for (SVN_HASH_ITER_SORTED(pi, svn_branch_get_elements(branch),
                             sort_compare_items_by_eid, scratch_pool))
     {
@@ -864,7 +878,7 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
 
       if (element)
         {
-          printf("    e%-3d %21s%s\n",
+          notify("    e%-3d %21s%s",
                  eid,
                  peid_name(element, scratch_pool),
                  subbranch_str(branch, eid, scratch_pool));
@@ -874,48 +888,87 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
   return SVN_NO_ERROR;
 }
 
-static const char branch_info_by_paths_header[]
-  = "  branch-id  root-path\n"
-    "  ---------  ---------\n";
+/*  */
+static const char *
+branch_id_header_str(const char *prefix,
+                     apr_pool_t *result_pool)
+{
+  if (the_ui_mode == UI_MODE_PATHS)
+    {
+      return apr_psprintf(result_pool,
+                          "%sbranch-id  root-path\n"
+                          "%s---------  ---------",
+                          prefix, prefix);
+    }
+  else
+    {
+      return apr_psprintf(result_pool,
+                          "%sbranch-id  branch-name  root-eid\n"
+                          "%s---------  -----------  --------",
+                          prefix, prefix);
+    }
+}
 
-/* Show the id and path of BRANCH. If WITH_ELEMENTS is true, also list its
- * elements.
+/* Show the id and path or root-eid of BRANCH.
+ */
+static const char *
+branch_id_str(svn_branch_state_t *branch,
+              apr_pool_t *result_pool)
+{
+  apr_pool_t *scratch_pool = result_pool;
+
+  if (the_ui_mode == UI_MODE_PATHS)
+    {
+      return apr_psprintf(result_pool, "%-10s /%s",
+                          svn_branch_get_id(branch, scratch_pool),
+                          svn_branch_get_root_rrpath(branch, scratch_pool));
+    }
+  else
+    {
+      svn_branch_el_rev_content_t *outer_el = NULL;
+
+      if (branch->outer_branch)
+        outer_el = svn_branch_get_element(branch->outer_branch,
+                                          branch->outer_eid);
+
+      return apr_psprintf(result_pool, "%-10s %-12s root=e%d",
+                          svn_branch_get_id(branch, scratch_pool),
+                          outer_el ? outer_el->name : "/",
+                          branch->root_eid);
+    }
+}
+
+/* List the branch BRANCH.
+ *
+ * If WITH_ELEMENTS is true, also list the elements in it.
  */
 static svn_error_t *
-branch_info_by_paths(flat_branch_t *fb,
-                     svn_boolean_t with_elements,
-                     apr_pool_t *scratch_pool)
+list_branch(svn_branch_state_t *branch,
+            svn_boolean_t with_elements,
+            apr_pool_t *scratch_pool)
 {
-  printf("  %-10s /%s\n",
-         fb->bid, fb->rrpath);
-  if (with_elements)
-    SVN_ERR(list_branch_elements(fb, scratch_pool));
+  notify_v("  %s", branch_id_str(branch, scratch_pool));
 
+  if (with_elements)
+    {
+      if (the_ui_mode == UI_MODE_PATHS)
+        {
+          flat_branch_t *fb
+            = branch_get_flat_branch(branch, branch->root_eid, scratch_pool);
+
+          SVN_ERR(list_branch_elements(fb, scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(list_branch_elements_by_eid(branch, scratch_pool));
+        }
+    }
   return SVN_NO_ERROR;
 }
 
-static const char branch_info_by_eids_header[]
-  = "  branch-id  root-eid\n"
-    "  ---------  --------\n";
-
-/* Show the id of BRANCH. If WITH_ELEMENTS is true, also list its elements.
- */
-static svn_error_t *
-branch_info_by_eids(svn_branch_state_t *branch,
-                    svn_boolean_t with_elements,
-                    apr_pool_t *scratch_pool)
-{
-  printf("  %-10s root=e%d\n",
-         svn_branch_get_id(branch, scratch_pool),
-         branch->root_eid);
-  if (with_elements)
-    SVN_ERR(list_branch_elements_by_eid(branch, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* List all branches rooted at EID. If WITH_ELEMENTS is true, also list
- * the elements in each branch.
+/* List all branches rooted at EID.
+ *
+ * If WITH_ELEMENTS is true, also list the elements in each branch.
  */
 static svn_error_t *
 list_branches(svn_branch_revision_root_t *rev_root,
@@ -925,15 +978,9 @@ list_branches(svn_branch_revision_root_t *rev_root,
 {
   const apr_array_header_t *branches;
   SVN_ITER_T(svn_branch_state_t) *bi;
+  svn_boolean_t printed_header = FALSE;
 
-  if (the_ui_mode == UI_MODE_PATHS)
-    {
-      printf("%s", branch_info_by_paths_header);
-    }
-  else
-    {
-      printf("%s", branch_info_by_eids_header);
-    }
+  notify_v("%s", branch_id_header_str("  ", scratch_pool));
 
   branches = svn_branch_revision_root_get_branches(rev_root, scratch_pool);
 
@@ -944,18 +991,29 @@ list_branches(svn_branch_revision_root_t *rev_root,
       if (branch->root_eid != eid)
         continue;
 
-      if (the_ui_mode == UI_MODE_PATHS)
-        {
-          flat_branch_t *fb
-            = branch_get_flat_branch(branch, branch->root_eid, scratch_pool);
+      SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
+      if (with_elements) /* separate branches by a blank line */
+        printf("\n");
+    }
 
-          SVN_ERR(branch_info_by_paths(fb, with_elements, scratch_pool));
-        }
-      else
+  for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
+    {
+      svn_branch_state_t *branch = bi->val;
+
+      if (! svn_branch_get_element(branch, eid)
+          || branch->root_eid == eid)
+        continue;
+
+      if (! printed_header)
         {
-          SVN_ERR(branch_info_by_eids(branch, with_elements, scratch_pool));
+          if (the_ui_mode == UI_MODE_PATHS)
+            notify_v("branches containing but not rooted at that element:");
+          else
+            notify_v("branches containing but not rooted at e%d:", eid);
+          printed_header = TRUE;
         }
-      if (with_elements)  /* separate branches by a blank line */
+      SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
+      if (with_elements) /* separate branches by a blank line */
         printf("\n");
     }
 
@@ -967,7 +1025,7 @@ list_branches(svn_branch_revision_root_t *rev_root,
  */
 static svn_error_t *
 list_all_branches(svn_branch_revision_root_t *rev_root,
-                  svn_boolean_t verbose,
+                  svn_boolean_t with_elements,
                   apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *branches;
@@ -975,24 +1033,14 @@ list_all_branches(svn_branch_revision_root_t *rev_root,
 
   branches = svn_branch_revision_root_get_branches(rev_root, scratch_pool);
 
-  printf("branches:\n");
+  notify_v("branches:");
 
   for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
     {
       svn_branch_state_t *branch = bi->val;
 
-      if (the_ui_mode == UI_MODE_PATHS)
-        {
-          flat_branch_t *fb
-            = branch_get_flat_branch(branch, branch->root_eid, scratch_pool);
-
-          SVN_ERR(branch_info_by_paths(fb, verbose, bi->iterpool));
-        }
-      else
-        {
-          SVN_ERR(branch_info_by_eids(branch, verbose, bi->iterpool));
-        }
-      if (verbose)  /* separate branches by a blank line */
+      SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
+      if (with_elements) /* separate branches by a blank line */
         printf("\n");
     }
 
@@ -1341,8 +1389,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
            yca->rev,
            svn_branch_get_id(yca->branch, scratch_pool), yca->eid));
 
-  notify("merging into branch %s",
-         svn_branch_get_id(tgt->branch, scratch_pool));
+  notify_v("merging into branch %s",
+           svn_branch_get_id(tgt->branch, scratch_pool));
   /*
       for (eid, diff1) in element_differences(YCA, FROM):
         diff2 = element_diff(eid, YCA, TO)
@@ -1409,14 +1457,14 @@ branch_merge_subtree_r(svn_editor3_t *editor,
 
       if (conflict)
         {
-          notify("!    e%d <conflict>", eid);
+          notify_v("!    e%d <conflict>", eid);
           had_conflict = TRUE;
         }
       else if (e_tgt && result)
         {
-          notify("M/V  e%d %s%s",
-                 eid, result->name,
-                 subbranch_str(tgt->branch, eid, iterpool));
+          notify_v("M/V  e%d %s%s",
+                   eid, result->name,
+                   subbranch_str(tgt->branch, eid, iterpool));
 
           SVN_ERR(svn_editor3_alter(editor, tgt->branch, eid,
                                     result->parent_eid, result->name,
@@ -1426,16 +1474,16 @@ branch_merge_subtree_r(svn_editor3_t *editor,
         }
       else if (e_tgt)
         {
-          notify("D    e%d %s%s",
-                 eid, e_yca->name,
-                 subbranch_str(yca->branch, eid, iterpool));
+          notify_v("D    e%d %s%s",
+                   eid, e_yca->name,
+                   subbranch_str(yca->branch, eid, iterpool));
           SVN_ERR(svn_editor3_delete(editor, tgt->branch, eid));
         }
       else if (result)
         {
-          notify("A    e%d %s%s",
-                 eid, result->name,
-                 subbranch_str(src->branch, eid, iterpool));
+          notify_v("A    e%d %s%s",
+                   eid, result->name,
+                   subbranch_str(src->branch, eid, iterpool));
 
           /* In BRANCH, create an instance of the element EID with new content.
            *
@@ -1453,8 +1501,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
     }
   svn_pool_destroy(iterpool);
 
-  notify("merging into branch %s -- finished",
-         svn_branch_get_id(tgt->branch, scratch_pool));
+  notify_v("merging into branch %s -- finished",
+           svn_branch_get_id(tgt->branch, scratch_pool));
 
   if (had_conflict)
     {
@@ -1658,7 +1706,7 @@ flat_branch_diff(svn_editor3_t *editor,
                        scratch_pool, scratch_pool));
 
   if (header && diff_changes->nelts)
-    printf("%s%s", prefix, header);
+    notify("%s%s", prefix, header);
 
   for (SVN_ARRAY_ITER_SORTED(ai, diff_changes,
                              (the_ui_mode == UI_MODE_EIDS)
@@ -1690,7 +1738,7 @@ flat_branch_diff(svn_editor3_t *editor,
                                     " (moved+renamed from %s)",
                                     item->relpath0);
             }
-          printf("%s%c%c%c %s%s%s\n",
+          notify("%s%c%c%c %s%s%s",
                  prefix,
                  status_mod,
                  item->reparented ? 'v' : ' ', item->renamed ? 'r' : ' ',
@@ -1701,7 +1749,7 @@ flat_branch_diff(svn_editor3_t *editor,
         }
       else
         {
-          printf("%s%c%c%c e%-3d  %s%s%s%s%s\n",
+          notify("%s%c%c%c e%-3d  %s%s%s%s%s",
                  prefix,
                  status_mod,
                  item->reparented ? 'v' : ' ', item->renamed ? 'r' : ' ',
@@ -1751,29 +1799,29 @@ flat_branch_diff_r(svn_editor3_t *editor,
   if (!fb_left)
     {
       header = apr_psprintf(scratch_pool,
-                 "--- added branch %s\n",
+                 "--- added branch %s",
                  right_str);
-      printf("%s%s", prefix, header);
+      notify("%s%s", prefix, header);
     }
   else if (!fb_right)
     {
       header = apr_psprintf(scratch_pool,
-                 "--- deleted branch %s\n",
+                 "--- deleted branch %s",
                  left_str);
-      printf("%s%s", prefix, header);
+      notify("%s%s", prefix, header);
     }
   else
     {
       if (strcmp(left_str, right_str) == 0)
         {
           header = apr_psprintf(
-                     scratch_pool, "--- diff branch %s\n",
+                     scratch_pool, "--- diff branch %s",
                      left_str);
         }
       else
         {
           header = apr_psprintf(
-                     scratch_pool, "--- diff branch %s : %s\n",
+                     scratch_pool, "--- diff branch %s : %s",
                      left_str, right_str);
         }
       SVN_ERR(diff_func(editor, fb_left, fb_right, prefix, header,
@@ -1944,7 +1992,7 @@ do_move(svn_editor3_t *editor,
          We could instead check and either throw an error or fall back to
          copy-and-delete in that case. */
 
-      printf("mv: moving by branch-and-delete\n");
+      notify_v("mv: moving by branch-and-delete");
 
       SVN_ERR(move_by_branch_and_delete(editor, el_rev,
                                         to_parent_el_rev->branch,
@@ -1954,7 +2002,7 @@ do_move(svn_editor3_t *editor,
     }
 
   /* Move by copy-and-delete */
-  printf("mv: moving by copy-and-delete\n");
+  notify_v("mv: moving by copy-and-delete");
 
   SVN_ERR(move_by_copy_and_delete(editor, el_rev,
                                   to_parent_el_rev->branch,
@@ -2002,9 +2050,9 @@ svn_branch_log(svn_editor3_t *editor,
 
       SVN_ERR(svn_branch_find_predecessor_el_rev(&el_rev_left, right, scratch_pool));
 
-      printf(SVN_CL__LOG_SEP_STRING "r%ld | ...\n",
+      notify(SVN_CL__LOG_SEP_STRING "r%ld | ...",
              rev);
-      printf("Changed elements:\n");
+      notify("Changed elements:");
       SVN_ERR(svn_branch_diff_r(editor,
                                 el_rev_left, right,
                                 flat_branch_diff, "   ",
@@ -2487,12 +2535,12 @@ execute(svnmover_wc_t *wc,
             VERIFY_EID_EXISTS("branches", 0);
             if (the_ui_mode == UI_MODE_PATHS)
               {
-                printf("branches rooted at same element as '%s':\n",
+                notify_v("branches rooted at same element as '%s':",
                        action->relpath[0]);
               }
             else
               {
-                printf("branches rooted at e%d:\n", arg[0]->el_rev->eid);
+                notify_v("branches rooted at e%d:", arg[0]->el_rev->eid);
               }
             SVN_ERR(list_branches(
                       arg[0]->el_rev->branch->rev_root,
@@ -2536,8 +2584,8 @@ execute(svnmover_wc_t *wc,
                                       arg[1]->el_rev->branch, arg[1]->parent_el_rev->eid,
                                       arg[1]->path_name,
                                       iterpool));
-            notify("A+   %s%s", action->relpath[1],
-                   branch_str(new_branch, iterpool));
+            notify_v("A+   %s%s", action->relpath[1],
+                     branch_str(new_branch, iterpool));
           }
           break;
 
@@ -2551,7 +2599,7 @@ execute(svnmover_wc_t *wc,
                                    arg[1]->el_rev->branch,
                                    arg[1]->parent_el_rev->eid, arg[1]->path_name,
                                    iterpool));
-            notify("A+   %s (subtree)", action->relpath[1]);
+            notify_v("A+   %s (subtree)", action->relpath[1]);
           }
           break;
 
@@ -2569,8 +2617,8 @@ execute(svnmover_wc_t *wc,
                               editor, arg[0]->parent_el_rev->branch,
                               arg[0]->parent_el_rev->eid, arg[0]->path_name,
                               payload, iterpool));
-            notify("A    %s%s", action->relpath[0],
-                   branch_str(new_branch, iterpool));
+            notify_v("A    %s%s", action->relpath[0],
+                     branch_str(new_branch, iterpool));
           }
           break;
 
@@ -2605,7 +2653,7 @@ execute(svnmover_wc_t *wc,
           VERIFY_PARENT_EID_EXISTS("mv", 1);
           SVN_ERR(do_move(editor, arg[0]->el_rev, arg[1]->parent_el_rev, arg[1]->path_name,
                           iterpool));
-          notify("V    %s (from %s)", action->relpath[1], action->relpath[0]);
+          notify_v("V    %s (from %s)", action->relpath[1], action->relpath[0]);
           break;
 
         case ACTION_CP:
@@ -2619,7 +2667,7 @@ execute(svnmover_wc_t *wc,
                                         arg[0]->el_rev,
                                         arg[1]->parent_el_rev->branch,
                                         arg[1]->parent_el_rev->eid, arg[1]->path_name));
-          notify("A+   %s (from %s)", action->relpath[1], action->relpath[0]);
+          notify_v("A+   %s (from %s)", action->relpath[1], action->relpath[0]);
           break;
 
         case ACTION_RM:
@@ -2634,7 +2682,7 @@ execute(svnmover_wc_t *wc,
           VERIFY_EID_EXISTS("rm", 0);
           SVN_ERR(svn_editor3_delete(editor,
                                      arg[0]->el_rev->branch, arg[0]->el_rev->eid));
-          notify("D    %s", action->relpath[0]);
+          notify_v("D    %s", action->relpath[0]);
           break;
 
         case ACTION_MKDIR:
@@ -2654,7 +2702,7 @@ execute(svnmover_wc_t *wc,
                                     arg[0]->parent_el_rev->eid, arg[0]->path_name,
                                     payload));
           }
-          notify("A    %s", action->relpath[0]);
+          notify_v("A    %s", action->relpath[0]);
           break;
 
         case ACTION_PUT_FILE:
@@ -2721,7 +2769,7 @@ execute(svnmover_wc_t *wc,
                                         payload));
               }
           }
-          notify("A    %s", action->relpath[1]);
+          notify_v("A    %s", action->relpath[1]);
           break;
 
         case ACTION_COMMIT:
@@ -2735,7 +2783,7 @@ execute(svnmover_wc_t *wc,
               }
             else
               {
-                printf("There are no changes to commit.\n");
+                notify_v("There are no changes to commit.");
               }
           }
           break;
@@ -2917,12 +2965,12 @@ mutually_exclusive_logs_error(void)
 /* Obtain the log message from multiple sources, producing an error
    if there are multiple sources. Store the result in *FINAL_MESSAGE.  */
 static svn_error_t *
-sanitize_log_sources(const char **final_message,
-                     const char *message,
-                     apr_hash_t *revprops,
-                     svn_stringbuf_t *filedata,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+get_log_message(const char **final_message,
+                const char *message,
+                apr_hash_t *revprops,
+                svn_stringbuf_t *filedata,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   svn_string_t *msg;
 
@@ -2936,9 +2984,7 @@ sanitize_log_sources(const char **final_message,
       if (filedata || message)
         return mutually_exclusive_logs_error();
 
-      *final_message = apr_pstrdup(result_pool, msg->data);
-
-      /* Will be re-added by libsvn_client */
+      /* Remove it from the revprops; it will be re-added later */
       svn_hash_sets(revprops, SVN_PROP_REVISION_LOG, NULL);
     }
   else if (filedata)
@@ -2946,59 +2992,32 @@ sanitize_log_sources(const char **final_message,
       if (message)
         return mutually_exclusive_logs_error();
 
-      *final_message = apr_pstrdup(result_pool, filedata->data);
+      msg = svn_string_create(filedata->data, scratch_pool);
     }
   else if (message)
     {
-      *final_message = apr_pstrdup(result_pool, message);
+      msg = svn_string_create(message, scratch_pool);
+    }
+
+  if (msg)
+    {
+      SVN_ERR_W(svn_subst_translate_string2(&msg, NULL, NULL,
+                                            msg, NULL, FALSE,
+                                            result_pool, scratch_pool),
+                _("Error normalizing log message to internal format"));
+
+      *final_message = msg->data;
     }
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-log_message_func(const char **log_msg,
-                 svn_boolean_t non_interactive,
-                 const char *log_message,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+static const char *const special_commands[] =
 {
-  if (log_message)
-    {
-      svn_string_t *message = svn_string_create(log_message, pool);
-
-      SVN_ERR_W(svn_subst_translate_string2(&message, NULL, NULL,
-                                            message, NULL, FALSE,
-                                            pool, pool),
-                _("Error normalizing log message to internal format"));
-
-      *log_msg = message->data;
-
-      return SVN_NO_ERROR;
-    }
-
-  if (non_interactive)
-    {
-      return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                              _("Cannot invoke editor to get log message "
-                                "when non-interactive"));
-    }
-  else
-    {
-      svn_string_t *msg = svn_string_create("", pool);
-
-      SVN_ERR(svn_cmdline__edit_string_externally(
-                      &msg, NULL, NULL, "", msg, "svnmover-commit",
-                      ctx->config, TRUE, NULL, pool));
-
-      if (msg && msg->data)
-        *log_msg = msg->data;
-      else
-        *log_msg = NULL;
-
-      return SVN_NO_ERROR;
-    }
-}
+  "help",
+  "--verbose",
+  "--ui=paths", "--ui=eids",
+};
 
 /* Parse the action arguments into action structures. */
 static svn_error_t *
@@ -3017,12 +3036,29 @@ parse_actions(apr_array_header_t **actions,
       action_t *action = apr_pcalloc(pool, sizeof(*action));
       const char *cp_from_rev = NULL;
 
-      /* First, parse the action. */
+      /* First, parse the action. Handle some special actions immediately;
+         handle normal subcommands by looking them up in the table. */
       if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
           || ! strcmp(action_string, "help"))
         {
           usage_actions_only(stdout, pool);
           return SVN_NO_ERROR;
+        }
+      if (! strncmp(action_string, "--ui=", 5))
+        {
+          SVN_ERR(svn_token__from_word_err(&the_ui_mode, ui_mode_map,
+                                           action_string + 5));
+          continue;
+        }
+      if (! strcmp(action_string, "--verbose")
+          || ! strcmp(action_string, "-v"))
+        {
+          svn_boolean_t be_quiet = svn_dbg__quiet_mode();
+
+          be_quiet = !be_quiet;
+          svn_dbg__set_quiet_mode(be_quiet);
+          printf("verbose debug messages %s\n", be_quiet ? "off" : "on");
+          continue;
         }
       for (j = 0; j < sizeof(action_defn) / sizeof(action_defn[0]); j++)
         {
@@ -3103,6 +3139,21 @@ static void
 linenoise_completion(const char *buf, linenoiseCompletions *lc)
 {
   int i;
+
+  for (i = 0; i < sizeof(special_commands) / sizeof(special_commands[0]); i++)
+    {
+      /* Suggest each command that matches (and is longer than) what the
+         user has already typed. Add a space. */
+      if (strncmp(buf, special_commands[i], strlen(buf)) == 0
+          && strlen(special_commands[i]) > strlen(buf))
+        {
+          static char completion[100];
+
+          apr_cpystrn(completion, special_commands[i], 99);
+          strcat(completion, " ");
+          linenoiseAddCompletion(lc, completion);
+        }
+    }
 
   for (i = 0; i < sizeof(action_defn) / sizeof(action_defn[0]); i++)
     {
@@ -3384,14 +3435,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                         ctx->cancel_baton,
                                         pool));
 
-  /* Make sure we have a log message to use. */
-  SVN_ERR(sanitize_log_sources(&log_msg, message, revprops, filedata,
-                               pool, pool));
-
   /* Get the commit log message */
-  SVN_ERR(log_message_func(&log_msg, non_interactive, log_msg, ctx, pool));
-  if (! log_msg)
-    return SVN_NO_ERROR;
+  SVN_ERR(get_log_message(&log_msg, message, revprops, filedata,
+                          pool, pool));
 
   /* Put the log message in the list of revprops, and check that the user
      did not try to supply any other "svn:*" revprops. */
