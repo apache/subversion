@@ -60,7 +60,8 @@ struct encoder_baton {
   svn_boolean_t header_done;
   int version;
   int compression_level;
-  apr_pool_t *pool;
+  /* Pool for temporary allocations, will be cleared periodically. */
+  apr_pool_t *scratch_pool;
 };
 
 /* This is at least as big as the largest size for a single instruction. */
@@ -146,57 +147,28 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
+/* Encodes delta window WINDOW to svndiff-format.
+   The svndiff version is VERSION. COMPRESSION_LEVEL is the zlib
+   compression level to use.
+   Returned values will be allocated in POOL or refer to *WINDOW
+   fields. */
 static svn_error_t *
-window_handler(svn_txdelta_window_t *window, void *baton)
+encode_window(svn_stringbuf_t **instructions_p,
+              svn_stringbuf_t **header_p,
+              const svn_string_t **newdata_p,
+              svn_txdelta_window_t *window,
+              int version,
+              int compression_level,
+              apr_pool_t *pool)
 {
-  struct encoder_baton *eb = baton;
-  apr_pool_t *pool;
   svn_stringbuf_t *instructions;
-  svn_stringbuf_t *i1;
   svn_stringbuf_t *header;
   const svn_string_t *newdata;
   unsigned char ibuf[MAX_INSTRUCTION_LEN], *ip;
   const svn_txdelta_op_t *op;
-  apr_size_t len;
-
-  /* use specialized code if there is no source */
-  if (window && !window->src_ops && window->num_ops == 1 && !eb->version)
-    return svn_error_trace(send_simple_insertion_window(window, eb));
-
-  /* Make sure we write the header.  */
-  if (!eb->header_done)
-    {
-      len = SVNDIFF_HEADER_SIZE;
-      SVN_ERR(svn_stream_write(eb->output, get_svndiff_header(eb->version),
-                               &len));
-      eb->header_done = TRUE;
-    }
-
-  if (window == NULL)
-    {
-      svn_stream_t *output = eb->output;
-
-      /* We're done; clean up.
-
-         We clean our pool first. Given that the output stream was passed
-         TO us, we'll assume it has a longer lifetime, and that it will not
-         be affected by our pool destruction.
-
-         The contrary point of view (close the stream first): that could
-         tell our user that everything related to the output stream is done,
-         and a cleanup of the user pool should occur. However, that user
-         pool could include the subpool we created for our work (eb->pool),
-         which would then make our call to svn_pool_destroy() puke.
-       */
-      svn_pool_destroy(eb->pool);
-
-      return svn_stream_close(output);
-    }
 
   /* create the necessary data buffers */
-  pool = svn_pool_create(eb->pool);
   instructions = svn_stringbuf_create_empty(pool);
-  i1 = svn_stringbuf_create_empty(pool);
   header = svn_stringbuf_create_empty(pool);
 
   /* Encode the instructions.  */
@@ -223,25 +195,72 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   append_encoded_int(header, window->sview_offset);
   append_encoded_int(header, window->sview_len);
   append_encoded_int(header, window->tview_len);
-  if (eb->version == 1)
+  if (version == 1)
     {
+      svn_stringbuf_t *compressed_instructions;
+      compressed_instructions = svn_stringbuf_create_empty(pool);
       SVN_ERR(svn__compress(instructions->data, instructions->len,
-                            i1, eb->compression_level));
-      instructions = i1;
+                            compressed_instructions, compression_level));
+      instructions = compressed_instructions;
     }
   append_encoded_int(header, instructions->len);
-  if (eb->version == 1)
+  if (version == 1)
     {
       svn_stringbuf_t *compressed = svn_stringbuf_create_empty(pool);
 
       SVN_ERR(svn__compress(window->new_data->data, window->new_data->len,
-                            compressed, eb->compression_level));
+                            compressed, compression_level));
       newdata = svn_stringbuf__morph_into_string(compressed);
     }
   else
     newdata = window->new_data;
 
   append_encoded_int(header, newdata->len);
+
+  *instructions_p = instructions;
+  *header_p = header;
+  *newdata_p = newdata;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+window_handler(svn_txdelta_window_t *window, void *baton)
+{
+  struct encoder_baton *eb = baton;
+  apr_size_t len;
+  svn_stringbuf_t *instructions;
+  svn_stringbuf_t *header;
+  const svn_string_t *newdata;
+
+  /* use specialized code if there is no source */
+  if (window && !window->src_ops && window->num_ops == 1 && !eb->version)
+    return svn_error_trace(send_simple_insertion_window(window, eb));
+
+  /* Make sure we write the header.  */
+  if (!eb->header_done)
+    {
+      len = SVNDIFF_HEADER_SIZE;
+      SVN_ERR(svn_stream_write(eb->output, get_svndiff_header(eb->version),
+                               &len));
+      eb->header_done = TRUE;
+    }
+
+  if (window == NULL)
+    {
+      /* We're done; clean up. */
+      SVN_ERR(svn_stream_close(eb->output));
+
+      svn_pool_destroy(eb->scratch_pool);
+
+      return SVN_NO_ERROR;
+    }
+
+  svn_pool_clear(eb->scratch_pool);
+
+  SVN_ERR(encode_window(&instructions, &header, &newdata, window,
+                        eb->version, eb->compression_level,
+                        eb->scratch_pool));
 
   /* Write out the window.  */
   len = header->len;
@@ -257,7 +276,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       SVN_ERR(svn_stream_write(eb->output, newdata->data, &len));
     }
 
-  svn_pool_destroy(pool);
   return SVN_NO_ERROR;
 }
 
@@ -269,13 +287,12 @@ svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
                         int compression_level,
                         apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
   struct encoder_baton *eb;
 
-  eb = apr_palloc(subpool, sizeof(*eb));
+  eb = apr_palloc(pool, sizeof(*eb));
   eb->output = output;
   eb->header_done = FALSE;
-  eb->pool = subpool;
+  eb->scratch_pool = svn_pool_create(pool);
   eb->version = svndiff_version;
   eb->compression_level = compression_level;
 

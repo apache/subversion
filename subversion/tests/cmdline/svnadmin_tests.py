@@ -3003,6 +3003,22 @@ def load_no_svndate_r0(sbox):
                                          'proplist', '--revprop', '-r0',
                                          sbox.repo_dir)
 
+# This is only supported for FSFS and BDB
+# The port to FSX is still pending.
+@Skip(svntest.main.is_fs_type_fsx)
+def hotcopy_read_only(sbox):
+  "'svnadmin hotcopy' a read-only source repository"
+  sbox.build()
+  svntest.main.chmod_tree(sbox.repo_dir, 0444, 0444)
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  exit_code, output, errput = svntest.main.run_svnadmin("hotcopy",
+                                                        sbox.repo_dir,
+                                                        backup_dir)
+  if errput:
+    logger.warn("Error: hotcopy failed")
+    raise svntest.Failure
+
 ########################################################################
 # Run the tests
 
@@ -3059,6 +3075,7 @@ test_list = [ None,
               upgrade,
               load_txdelta,
               load_no_svndate_r0,
+              hotcopy_read_only,
              ]
 
 if __name__ == '__main__':
