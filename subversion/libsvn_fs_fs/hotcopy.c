@@ -1003,10 +1003,21 @@ hotcopy_locking_src_body(void *baton, apr_pool_t *pool)
   struct hotcopy_body_baton *hbb = baton;
   fs_fs_data_t *src_ffd = hbb->src_fs->fsap_data;
 
-  return src_ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT
-    ? svn_error_trace(svn_fs_fs__with_pack_lock(hbb->src_fs, hotcopy_body,
-                                                baton, pool))
-    : hotcopy_body(baton, pool);
+  /* Hotcopying while packing is racy and can lead to hotcopy failure.
+     Therefore, we try to block packing while we are copying data. */
+  if (src_ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
+    {
+      svn_boolean_t read_only;
+      SVN_ERR(svn_fs_fs__is_read_only(&read_only, hbb->src_fs, pool));
+      if (!read_only)
+        return svn_error_trace(svn_fs_fs__with_pack_lock(hbb->src_fs,
+                                                         hotcopy_body,
+                                                         baton, pool));
+    }
+
+  /* Fall-back code: Just copy. This may fail with ENOENT if the source
+     repo is being packed at the same time. */
+  return svn_error_trace(hotcopy_body(baton, pool));
 }
 
 /* Create an empty filesystem at DST_FS at DST_PATH with the same

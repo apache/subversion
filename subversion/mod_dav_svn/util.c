@@ -46,6 +46,7 @@ dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
                    int error_id,
+                   apr_status_t aprerr,
                    const char *desc)
 {
   if (error_id == 0)
@@ -59,10 +60,10 @@ dav_svn__new_error(apr_pool_t *pool,
  * > 2.2 below perpetuates this.
  */
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
-  return dav_new_error(pool, status, error_id, 0, desc);
+  return dav_new_error(pool, status, error_id, aprerr, desc);
 #else
 
-  errno = 0; /* For the same reason as in dav_svn__new_error_svn */
+  errno = aprerr; /* For the same reason as in dav_svn__new_error_svn */
 
   return dav_new_error(pool, status, error_id, desc);
 #endif
@@ -72,20 +73,22 @@ dav_error *
 dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
+                       apr_status_t aprerr,
                        const char *desc)
 {
   if (error_id == 0)
     error_id = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
-  return dav_new_error_tag(pool, status, error_id, 0,
+  return dav_new_error_tag(pool, status, error_id, aprerr,
                            desc, SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 #else
-  /* dav_new_error_tag will record errno but Subversion makes no attempt
-     to ensure that it is valid.  We reset it to avoid putting incorrect
-     information into the error log, at the expense of possibly removing
-     valid information. */
-  errno = 0;
+  /* dav_new_error_tag will record errno so we use it to pass aprerr.
+     This overrwites any existing errno value but since Subversion
+     makes no attempt to avoid system calls after a failed system call
+     there is no guarantee that any existing errno represents a
+     relevant error. */
+  errno = aprerr;
 
   return dav_new_error_tag(pool, status, error_id, desc,
                            SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
@@ -101,7 +104,7 @@ build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
   char buffer[128];
   const char *msg = svn_err_best_message(err, buffer, sizeof(buffer));
 
-  dav_error *derr = dav_svn__new_error_svn(pool, status, err->apr_err,
+  dav_error *derr = dav_svn__new_error_svn(pool, status, err->apr_err, 0,
                                            apr_pstrdup(pool, msg));
 
   if (err->child)
@@ -540,7 +543,7 @@ dav_svn__test_canonical(const char *path, apr_pool_t *pool)
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
   return dav_svn__new_error_svn(
-     pool, HTTP_BAD_REQUEST, 0,
+     pool, HTTP_BAD_REQUEST, 0, 0,
      apr_psprintf(pool,
                   "Path '%s' is not canonicalized; "
                   "there is a problem with the client.", path));
@@ -658,7 +661,7 @@ dav_svn__final_flush_or_error(request_rec *r,
     {
       apr_status_t apr_err = ap_fflush(output, bb);
       if (apr_err && (! derr))
-        derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0, apr_err,
                                   "Error flushing brigade.");
     }
   return derr;
