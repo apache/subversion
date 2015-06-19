@@ -37,14 +37,6 @@ The model:
 
 BUGS:
 
-  * merge doesn't detect 'clashes' (same path exists more than once):
-    - mkdir a
-    - commit
-    - update .@(head - 1)   # should report a conflict, but doesn't
-    - mkdir a           # has a different element number
-    - update .@head     # now two paths 'a' exist
-    - commit            # should fail
-
   * In 'do_move()' svnmover always performs a cross-branch move by
     branch-and-delete, never by copy-and-delete. Is that right? If so,
     delete the 'if' and the 'else' code block.
