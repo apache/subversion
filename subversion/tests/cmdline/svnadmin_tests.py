@@ -3009,12 +3009,15 @@ def load_no_svndate_r0(sbox):
 def hotcopy_read_only(sbox):
   "'svnadmin hotcopy' a read-only source repository"
   sbox.build()
-  svntest.main.chmod_tree(sbox.repo_dir, 0444, 0444)
+  svntest.main.chmod_tree(sbox.repo_dir, 0, 0222)
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
   exit_code, output, errput = svntest.main.run_svnadmin("hotcopy",
                                                         sbox.repo_dir,
                                                         backup_dir)
+
+  # r/o repos are hard to clean up. Make it writable again.
+  svntest.main.chmod_tree(sbox.repo_dir, 0222, 0222)
   if errput:
     logger.warn("Error: hotcopy failed")
     raise svntest.Failure
