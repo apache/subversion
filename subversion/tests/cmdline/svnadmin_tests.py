@@ -3020,7 +3020,7 @@ def hotcopy_read_only(sbox):
   svntest.main.chmod_tree(sbox.repo_dir, 0222, 0222)
   if errput:
     logger.warn("Error: hotcopy failed")
-    raise svntest.Failure
+    raise SVNUnexpectedStderr(errput)
 
 ########################################################################
 # Run the tests
