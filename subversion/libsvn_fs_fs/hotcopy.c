@@ -982,6 +982,10 @@ hotcopy_body(void *baton, apr_pool_t *pool)
       if (kind == svn_node_file)
         {
           SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
+
+          /* The source might have r/o flags set on it - which would be
+             carried over to the copy. */
+          SVN_ERR(svn_io_set_file_read_write(dst_subdir, FALSE, pool));
           SVN_ERR(svn_fs_fs__del_rep_reference(dst_fs, src_youngest, pool));
         }
     }
