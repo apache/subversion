@@ -994,21 +994,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Wrapper around hotcopy_body taking out all necessary source repository
- * locks.
- */
-static svn_error_t *
-hotcopy_locking_src_body(void *baton, apr_pool_t *pool)
-{
-  struct hotcopy_body_baton *hbb = baton;
-  fs_fs_data_t *src_ffd = hbb->src_fs->fsap_data;
-
-  return src_ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT
-    ? svn_error_trace(svn_fs_fs__with_pack_lock(hbb->src_fs, hotcopy_body,
-                                                baton, pool))
-    : hotcopy_body(baton, pool);
-}
-
 /* Create an empty filesystem at DST_FS at DST_PATH with the same
  * configuration as SRC_FS (uuid, format, and other parameters).
  * After creation DST_FS has no revisions, not even revision zero. */
@@ -1102,8 +1087,7 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
   hbb.notify_baton = notify_baton;
   hbb.cancel_func = cancel_func;
   hbb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_locking_src_body, &hbb,
-                                    pool));
+  SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_body, &hbb, pool));
 
   return SVN_NO_ERROR;
 }
