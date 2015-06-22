@@ -230,6 +230,19 @@ static apr_thread_pool_t *thread_pool = NULL;
 /* We open non-directory files with these flags. */
 #define FILE_FLAGS (APR_READ | APR_WRITE | APR_BUFFERED | APR_CREATE)
 
+/* Destructor function that implicitly cleans up any running threads
+   in the thread_pool given as DATA and releases their memory pools
+   before they get destroyed themselves.
+
+   Must be run as a pre-cleanup hook.
+ */
+static apr_status_t
+thread_pool_pre_cleanup(void *data)
+{
+  apr_thread_pool_t *tp = data;
+  return apr_thread_pool_destroy(tp);
+}
+
 svn_error_t *
 svn_fs_x__batch_fsync_init()
 {
@@ -242,6 +255,11 @@ svn_fs_x__batch_fsync_init()
      gets cleared.  No additional cleanup callback is needed. */
   WRAP_APR_ERR(apr_thread_pool_create(&thread_pool, 0, MAX_THREADS, pool),
                _("Can't create fsync thread pool in FSX"));
+
+  /* Work around an APR bug:  The cleanup must happen in the pre-cleanup
+     hook instead of the normal cleanup hook.  Otherwise, the sub-pools
+     containing the thread objects would already be invalid. */
+  apr_pool_pre_cleanup_register(pool, thread_pool, thread_pool_pre_cleanup);
 
   /* let idle threads linger for a while in case more requests are
      coming in */
