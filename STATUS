@@ -63,6 +63,20 @@ Other candidate changes:
    Votes:
      +1: stsp
 
+ * r1686554, r1686557, r1686239, r1686541, r1686543, r1686802
+   Fix 'svnadmin hotcopy' for read-only FSFS repositories
+   Justification:
+     Format 7 repositories could not be hotcopied without write access to
+     the source repo - which is a regression vs. older formats.  Because
+     the new test case also uncovered another regression with hotcopying
+     the rep-cache.db from r/o repos.
+   Notes:
+     The first two revisions contain the actual fix, the others provide a
+     test case.  Since the total lines changed is small, the most efficient
+     way to review the combined diff.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
