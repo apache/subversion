@@ -4362,6 +4362,15 @@ svn_client_revert(const apr_array_header_t *paths,
  */
 
 /**
+ * Return the kind of conflict (text conflict, property conflict,
+ * or tree conflict) represented by @a conflict.
+ *
+ * New in 1.10.
+ */
+svn_wc_conflict_kind_t
+svn_client_conflict_get_kind(const svn_wc_conflict_description2_t *conflict);
+
+/**
  * Return the absolute path to the conflicted working copy node described
  * by @a conflict.
  *
@@ -4424,8 +4433,6 @@ svn_client_conflict_tree_get_victim_node_kind(
  * 
  * @since New in 1.10. 
  */
-#define svn_client_conflict_get_kind(conflict) \
-  ((conflict)->kind)
 
 #define svn_client_conflict_get_property_name(conflict) \
   ((conflict)->property_name)
