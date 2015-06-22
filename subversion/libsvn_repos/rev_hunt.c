@@ -1336,6 +1336,7 @@ struct send_baton
   apr_hash_t *last_props;
   const char *last_path;
   svn_fs_root_t *last_root;
+  svn_boolean_t include_merged_revisions;
 };
 
 /* Send PATH_REV to HANDLER and HANDLER_BATON, using information provided by
@@ -1379,10 +1380,11 @@ send_path_revision(struct path_revision *path_rev,
       /* Special case: In the first revision, we always provide a delta. */
       contents_changed = TRUE;
     }
-  else if (strcmp(sb->last_path, path_rev->path))
+  else if (sb->include_merged_revisions
+           && strcmp(sb->last_path, path_rev->path))
     {
       /* This is a HACK!!!
-       * Blame, in older clients anyways, relies on getting a notification
+       * Blame -g, in older clients anyways, relies on getting a notification
        * whenever the path changes - even if there was no content change.
        *
        * TODO: A future release should take an extra parameter and depending
@@ -1466,6 +1468,7 @@ get_file_revs_backwards(svn_repos_t *repos,
   last_pool = svn_pool_create(scratch_pool);
   sb.iterpool = svn_pool_create(scratch_pool);
   sb.last_pool = svn_pool_create(scratch_pool);
+  sb.include_merged_revisions = FALSE;
 
   /* We want the first txdelta to be against the empty file. */
   sb.last_root = NULL;
@@ -1621,6 +1624,9 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   /* Create an empty hash table for the first property diff. */
   sb.last_props = apr_hash_make(sb.last_pool);
 
+  /* Inform send_path_revision() whether workarounds / special behavior
+   * may be needed. */
+  sb.include_merged_revisions = include_merged_revisions;
 
   /* Get the revisions we are interested in. */
   duplicate_path_revs = apr_hash_make(scratch_pool);
