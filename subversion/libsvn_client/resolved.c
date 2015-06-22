@@ -175,3 +175,10 @@ svn_client_conflict_get_local_change(
 {
   return conflict->reason;
 }
+
+svn_node_kind_t
+svn_client_conflict_tree_get_victim_node_kind(
+  const svn_wc_conflict_description2_t *conflict)
+{
+  return conflict->node_kind;
+}

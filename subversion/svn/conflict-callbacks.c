@@ -1195,7 +1195,8 @@ handle_tree_conflict(svn_wc_conflict_result_t *result,
             {
               if (svn_client_conflict_get_incoming_change(desc) ==
                   svn_wc_conflict_action_edit &&
-                  svn_client_conflict_get_node_kind(desc) == svn_node_dir)
+                  svn_client_conflict_tree_get_victim_node_kind(desc) ==
+                  svn_node_dir)
                 tc_opts = tree_conflict_options_update_edit_deleted_dir;
             }
         }

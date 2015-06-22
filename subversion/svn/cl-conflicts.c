@@ -301,7 +301,7 @@ svn_cl__get_human_readable_tree_conflict_description(
   conflict_action = svn_client_conflict_get_incoming_change(conflict);
   conflict_reason = svn_client_conflict_get_local_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
-  conflict_node_kind = svn_client_conflict_get_node_kind(conflict);
+  conflict_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
 
   /* Determine the node kind of the incoming change. */
   incoming_kind = svn_node_unknown;
@@ -429,7 +429,7 @@ append_tree_conflict_info_xml(svn_stringbuf_t *str,
 
   svn_hash_sets(att_hash, "kind",
                 svn_cl__node_kind_str_xml(
-                  svn_client_conflict_get_node_kind(conflict)));
+                  svn_client_conflict_tree_get_victim_node_kind(conflict)));
 
   svn_hash_sets(att_hash, "operation",
                 svn_cl__operation_str_xml(

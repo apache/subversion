@@ -4407,16 +4407,27 @@ svn_client_conflict_get_local_change(
   const svn_wc_conflict_description2_t *conflict);
 
 /**
+ * Return the node kind of the tree conflict victim described by @a conflict.
+ * The victim is the local node in the working copy which was affected by the
+ * tree conflict at the time the conflict was raised.
+ * 
+ * The node kinds of the repository nodes which contributed to this
+ * conflict are available via svn_client_conflict_get_src_left_version()
+ * and svn_client_conflict_get_src_right_version().
+ *
+ * @since New in 1.10.
+ */
+svn_node_kind_t
+svn_client_conflict_tree_get_victim_node_kind(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
  * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
  * API for eventually replacing svn_wc_conflict_description2_t with an opaque
  * type and providing improved APIs for conflict resolution.
  * 
  * @since New in 1.10. 
  */
-
-#define svn_client_conflict_get_node_kind(conflict) \
-  ((conflict)->node_kind)
-
 #define svn_client_conflict_get_kind(conflict) \
   ((conflict)->kind)
 
