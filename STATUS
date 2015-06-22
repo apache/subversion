@@ -53,7 +53,7 @@ Other candidate changes:
      This is not regression since 1.8.x and change can be released in patch
      release.
    Votes:
-     +1: ivan
+     +1: ivan, stefan2
 
  * r1685085
    Install svnbench as part of 'make install'.
@@ -61,7 +61,7 @@ Other candidate changes:
      svnbench moved from  tools/ to subversion/ so it should be installed
      by default.
    Votes:
-     +1: stsp
+     +1: stsp, stefan2
 
  * r1686554, r1686557, r1686239, r1686541, r1686543, r1686802
    Fix 'svnadmin hotcopy' for read-only FSFS repositories
