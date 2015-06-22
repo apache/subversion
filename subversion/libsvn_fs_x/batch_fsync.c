@@ -231,14 +231,16 @@ static apr_thread_pool_t *thread_pool = NULL;
 #define FILE_FLAGS (APR_READ | APR_WRITE | APR_BUFFERED | APR_CREATE)
 
 svn_error_t *
-svn_fs_x__batch_fsync_init(apr_pool_t *global_pool)
+svn_fs_x__batch_fsync_init()
 {
 #ifdef APR_HAS_THREADS
+  /* The thread-pool must be allocated from a thread-safe pool.
+     GLOBAL_POOL may be single-threaded, though. */
+  apr_pool_t *pool = svn_pool_create(NULL);
 
   /* This thread pool will get cleaned up automatically when GLOBAL_POOL
      gets cleared.  No additional cleanup callback is needed. */
-  WRAP_APR_ERR(apr_thread_pool_create(&thread_pool, 0, MAX_THREADS,
-                                      global_pool),
+  WRAP_APR_ERR(apr_thread_pool_create(&thread_pool, 0, MAX_THREADS, pool),
                _("Can't create fsync thread pool in FSX"));
 
   /* let idle threads linger for a while in case more requests are
