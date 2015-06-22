@@ -148,6 +148,12 @@ svn_client_resolve(const char *path,
 
 /*** Dealing with conflicts. ***/
 
+svn_wc_conflict_kind_t
+svn_client_conflict_get_kind(const svn_wc_conflict_description2_t *conflict)
+{
+  return conflict->kind;
+}
+
 const char *
 svn_client_conflict_get_local_abspath(
   const svn_wc_conflict_description2_t *conflict)
