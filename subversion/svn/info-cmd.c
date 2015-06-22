@@ -669,8 +669,7 @@ print_info(void *baton,
                 SVN_ERR(svn_cl__get_human_readable_action_description(&desc,
                           svn_wc_conflict_action_edit,
                           svn_client_conflict_get_operation(conflict),
-                          svn_client_conflict_tree_get_victim_node_kind(
-                            conflict),
+                          info->kind,
                           pool));
 
                 SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
