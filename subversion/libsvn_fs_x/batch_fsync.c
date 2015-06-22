@@ -132,9 +132,9 @@ waitable_counter__increment(waitable_counter_t *counter)
 {
   SVN_ERR(svn_mutex__lock(counter->mutex));
   counter->value++;
-  SVN_ERR(svn_mutex__unlock(counter->mutex, SVN_NO_ERROR));
 
   SVN_ERR(svn_thread_cond__broadcast(counter->cond));
+  SVN_ERR(svn_mutex__unlock(counter->mutex, SVN_NO_ERROR));
 
   return SVN_NO_ERROR;
 }
