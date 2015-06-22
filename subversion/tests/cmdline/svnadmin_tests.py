@@ -3003,9 +3003,9 @@ def load_no_svndate_r0(sbox):
                                          'proplist', '--revprop', '-r0',
                                          sbox.repo_dir)
 
-# This is only supported for FSFS and BDB
-# The port to FSX is still pending.
-@Skip(svntest.main.is_fs_type_fsx)
+# This is only supported for FSFS
+# The port to FSX is still pending, BDB won't support it.
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def hotcopy_read_only(sbox):
   "'svnadmin hotcopy' a read-only source repository"
   sbox.build()
