@@ -120,7 +120,7 @@ Candidate changes:
      of Visual Studio requires manual upgrade steps. This patch does
      the minimal amount of work to handle things automatically.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * ^/subversion/branches/1.7.x-r1674455
    Make 'svn cp ^/A/D/H@1 ^/A' properly create A
@@ -130,7 +130,7 @@ Candidate changes:
    Notes:
      Needs backport branch since the test framework changed on trunk
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
 Veto-blocked changes:
 =====================
