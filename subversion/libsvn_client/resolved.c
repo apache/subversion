@@ -186,5 +186,8 @@ svn_node_kind_t
 svn_client_conflict_tree_get_victim_node_kind(
   const svn_wc_conflict_description2_t *conflict)
 {
+  SVN_ERR_ASSERT_NO_RETURN(svn_client_conflict_get_kind(conflict)
+      == svn_wc_conflict_kind_tree);
+
   return conflict->node_kind;
 }
