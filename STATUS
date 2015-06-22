@@ -32,17 +32,6 @@ Other candidate changes:
      +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
- * r1683378
-   Prevent a possible FSFS repository corruption with power or network disk
-   failures during 'svnadmin pack'.
-   Justification:
-     Repository corruption/data loss.
-   Note:
-     This is not regression since 1.8.x and change can be released in patch
-     release.
-   Votes:
-     +1: ivan, stefan2
-
  * r1685085
    Install svnbench as part of 'make install'.
    Justification:
@@ -75,7 +64,7 @@ Other candidate changes:
      new server would cause much worse results in old clients especially
      in simple cases where lines of development are kept in close sync.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1682714, r1682854, r1683126, r1683135, r1683290
    Fix segfaults in FSX's directory processing code.
@@ -106,3 +95,13 @@ Approved changes:
    Votes:
      +1: rhuijben, brane, stefan2
 
+ * r1683378
+   Prevent a possible FSFS repository corruption with power or network disk
+   failures during 'svnadmin pack'.
+   Justification:
+     Repository corruption/data loss.
+   Note:
+     This is not regression since 1.8.x and change can be released in patch
+     release.
+   Votes:
+     +1: ivan, stefan2, rhuijben
