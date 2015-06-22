@@ -2301,6 +2301,14 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
                                        apr_pool_t *pool)
 {
   apr_os_file_t filehand;
+  const char *fname;
+  apr_status_t apr_err;
+
+  /* We need this only in case of an error but this is cheap to get -
+   * so we do it here for clarity. */
+  apr_err = apr_file_name_get(&fname, file);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
   /* ### In apr 1.4+ we could delegate most of this function to
          apr_file_sync(). The only major difference is that this doesn't
@@ -2318,7 +2326,8 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 
     if (! FlushFileBuffers(filehand))
         return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file to disk"));
+                                  _("Can't flush file '%s' to disk"),
+                                  try_utf8_from_internal_style(fname, pool));
 
 #else
       int rv;
@@ -2339,7 +2348,8 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 
       if (rv == -1)
         return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file to disk"));
+                                  _("Can't flush file '%s' to disk"),
+                                  try_utf8_from_internal_style(fname, pool));
 
 #endif
   }
