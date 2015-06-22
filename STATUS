@@ -42,8 +42,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-issue4554-v2
    Votes:
-     +1: rhuijben
-     +1: stefan2 (before -v2 branch)
+     +1: rhuijben, stefan2
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
                    7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
@@ -92,7 +91,24 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1667228
    Votes:
-     +1: stsp
+     +1: stsp, stefan2
+
+ * r1674522
+   Skip the 'upgrade_tests.py 36: automatic SQLite ANALYZE' test on old python
+   Justification:
+     Our testsuite shouldn't fail just because python has an old sqlite
+     version compiled in.
+   Notes:
+     This nomination is partially to just mark this problem as 'known issue'.
+     This patch was already accepted for 1.9.x
+   Votes:
+     +1: rhuijben, stefan2
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
 
  * r1674455
    Make 'svn cp ^/A/D/H@1 ^/A' properly create A
@@ -105,29 +121,13 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1674455
    Votes:
-     +1: rhuijben, stsp
+     +1: rhuijben, stsp, stefan2
 
- * r1678494, r1680495, r1680495
+ * r1678494, r1680495, r1680705
    Document svn:auto-props.
    Justification:
      Documentation should be complete.
    Votes:
-     +1: danielsh, rhuijben
+     +1: danielsh, rhuijben, stefan2
      +1: stsp (without r1680705)
 
- * r1674522
-   Skip the 'upgrade_tests.py 36: automatic SQLite ANALYZE' test on old python
-   Justification:
-     Our testsuite shouldn't fail just because python has an old sqlite
-     version compiled in.
-   Notes:
-     This nomination is partially to just mark this problem as 'known issue'.
-     This patch was already accepted for 1.9.x
-   Votes:
-     +1: rhuijben
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
