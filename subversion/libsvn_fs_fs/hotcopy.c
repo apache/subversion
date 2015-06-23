@@ -1086,7 +1086,15 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
   hbb.notify_baton = notify_baton;
   hbb.cancel_func = cancel_func;
   hbb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_body, &hbb, pool));
+
+  /* Lock the destination in the incremental mode.  For a non-incremental
+   * hotcopy, don't take any locks.  In that case the destination cannot be
+   * opened until the hotcopy finishes, and we don't have to worry about
+   * concurrency. */
+  if (incremental)
+    SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_body, &hbb, pool));
+  else
+    SVN_ERR(hotcopy_body(&hbb, pool));
 
   return SVN_NO_ERROR;
 }
