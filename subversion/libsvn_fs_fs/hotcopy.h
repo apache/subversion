@@ -28,7 +28,9 @@
 /* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
  * DST_PATH.  If INCREMENTAL is TRUE, do not re-copy data which already
  * exists in DST_FS.  Indicate progress via the optional NOTIFY_FUNC
- * callback using NOTIFY_BATON.  Use POOL for temporary allocations. */
+ * callback using NOTIFY_BATON.  Use COMMON_POOL for process-wide and
+ * POOL for temporary allocations.  Use COMMON_POOL_LOCK to ensure
+ * that the initialization of the shared data is serialized. */
 svn_error_t * svn_fs_fs__hotcopy(svn_fs_t *src_fs,
                                  svn_fs_t *dst_fs,
                                  const char *src_path,
@@ -38,6 +40,8 @@ svn_error_t * svn_fs_fs__hotcopy(svn_fs_t *src_fs,
                                  void *notify_baton,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
-                                 apr_pool_t *pool);
+                                 svn_mutex__t *common_pool_lock,
+                                 apr_pool_t *pool,
+                                 apr_pool_t *common_pool);
 
 #endif

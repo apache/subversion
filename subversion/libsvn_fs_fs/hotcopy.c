@@ -1001,20 +1001,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Set up shared data between SRC_FS and DST_FS. */
-static void
-hotcopy_setup_shared_fs_data(svn_fs_t *src_fs, svn_fs_t *dst_fs)
-{
-  fs_fs_data_t *src_ffd = src_fs->fsap_data;
-  fs_fs_data_t *dst_ffd = dst_fs->fsap_data;
-
-  /* The common pool and mutexes are shared between src and dst filesystems.
-   * During hotcopy we only grab the mutexes for the destination, so there
-   * is no risk of dead-lock. We don't write to the src filesystem. Shared
-   * data for the src_fs has already been initialised in fs_hotcopy(). */
-  dst_ffd->shared = src_ffd->shared;
-}
-
 svn_error_t *
 svn_fs_fs__hotcopy(svn_fs_t *src_fs,
                    svn_fs_t *dst_fs,
@@ -1025,7 +1011,9 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
-                   apr_pool_t *pool)
+                   svn_mutex__t *common_pool_lock,
+                   apr_pool_t *pool,
+                   apr_pool_t *common_pool)
 {
   struct hotcopy_body_baton hbb;
 
@@ -1056,7 +1044,8 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
       SVN_ERR(svn_fs_fs__open(dst_fs, dst_path, pool));
       SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs, pool));
 
-      hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+      SVN_ERR(svn_fs_fs__initialize_shared_data(dst_fs, common_pool_lock,
+                                                pool, common_pool));
       SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
     }
   else
@@ -1082,7 +1071,8 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
       SVN_ERR(hotcopy_remove_file(svn_fs_fs__path_revprops(dst_fs, 0, pool),
                                   pool));
 
-      hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+      SVN_ERR(svn_fs_fs__initialize_shared_data(dst_fs, common_pool_lock,
+                                                pool, common_pool));
       SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
     }
 

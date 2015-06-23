@@ -134,6 +134,18 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__initialize_shared_data(svn_fs_t *fs,
+                                  svn_mutex__t *common_pool_lock,
+                                  apr_pool_t *pool,
+                                  apr_pool_t *common_pool)
+{
+  SVN_MUTEX__WITH_LOCK(common_pool_lock,
+                       fs_serialized_init(fs, common_pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* This function is provided for Subversion 1.0.x compatibility.  It
@@ -491,7 +503,8 @@ fs_hotcopy(svn_fs_t *src_fs,
    */
   return svn_fs_fs__hotcopy(src_fs, dst_fs, src_path, dst_path,
                             incremental, notify_func, notify_baton,
-                            cancel_func, cancel_baton, pool);
+                            cancel_func, cancel_baton, common_pool_lock,
+                            pool, common_pool);
 }
 
 
