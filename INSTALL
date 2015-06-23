@@ -590,7 +590,10 @@ II.   INSTALLATION
           $ make
           # make install
 
-      You can also run the full test suite by running 'make check'.
+      You can also run the full test suite by running 'make check'.  Even
+      in successful runs, some tests will report XFAIL; that is normal.
+      Failed runs are indicated by FAIL or XPASS results, or a non-zero exit
+      code from "make check".
 
 
   B.  Building the Latest Source under Unix

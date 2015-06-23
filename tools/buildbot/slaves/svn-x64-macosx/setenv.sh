@@ -50,7 +50,6 @@ export SVNBB_APR_15
 export SVNBB_APR_20_DEV
 export SVNBB_JUNIT
 export SVNBB_PARALLEL
-export LIBTOOL_CONFIG
 
 
 # Set the absolute source path

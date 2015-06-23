@@ -140,9 +140,7 @@ def basic_commit(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 
 #----------------------------------------------------------------------
@@ -176,7 +174,7 @@ def basic_update(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -406,8 +404,7 @@ def basic_commit_corruption(sbox):
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         None, # expected_status,
-                                        "svn: E200014: Checksum",
-                                        wc_dir)
+                                        "svn: E200014: Checksum")
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
@@ -419,7 +416,7 @@ def basic_commit_corruption(sbox):
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def basic_update_corruption(sbox):
@@ -463,7 +460,7 @@ def basic_update_corruption(sbox):
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the other_wc.
   expected_output = wc.State(other_wc, {
@@ -499,7 +496,7 @@ def basic_update_corruption(sbox):
                                         fail_output,
                                         expected_disk,
                                         fail_status,
-                                        "svn: E155017: Checksum", other_wc)
+                                        "svn: E155017: Checksum")
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
@@ -556,7 +553,7 @@ def basic_merging_update(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir)
 
   # Make a backup copy of the working copy
@@ -582,7 +579,7 @@ def basic_merging_update(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir)
 
   # Make local mods to wc_backup by recreating mu and rho
@@ -663,7 +660,7 @@ def basic_conflict(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -707,9 +704,7 @@ def basic_conflict(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
+                                        extra_files=extra_files)
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
@@ -977,7 +972,7 @@ def basic_switch(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
   ### Switch the directory `A/D/H' to `A/D/G'.
@@ -1037,7 +1032,7 @@ def basic_switch(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
@@ -1290,8 +1285,7 @@ def basic_checkout_deleted(sbox):
                          'A/D/gamma')
 
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Now try to checkout revision 1 of A/D.
   url = sbox.repo_url + '/A/D'
@@ -1333,8 +1327,7 @@ def basic_node_kind_change(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', status='  ', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Try and fail to create a directory (file deleted)
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
@@ -1412,8 +1405,7 @@ def basic_import(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        [], True)
 
 #----------------------------------------------------------------------
 
@@ -1679,9 +1671,7 @@ def basic_add_parents(sbox):
   # Commit and verify
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   svntest.actions.run_and_verify_svn(None, [],
                                      'rm', X_path, '--keep-local')
@@ -1850,9 +1840,7 @@ def info_nonhead(sbox):
   expected_status.remove("iota")
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
   # Get info for old iota at r1.
   expected_infos = [
       { 'URL' : '.*' },
@@ -1881,8 +1869,7 @@ def ls_nonhead(sbox):
   expected_status.remove('A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',)
 
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Check that we can list a file in A/D/G at revision 1.
   rho_url = sbox.repo_url + "/A/D/G/rho"
@@ -1949,9 +1936,7 @@ def delete_keep_local(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Update working copy to check disk state still greek tree
   expected_disk = svntest.main.greek_state.copy()
@@ -2206,7 +2191,7 @@ def automatic_conflict_resolution(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -2285,21 +2270,7 @@ def automatic_conflict_resolution(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
-
-  # verify that the extra_files list is now empty.
-  if len(extra_files) != 0:
-    # Because we want to be a well-behaved test, we silently raise if
-    # the test fails.  However, these two print statements would
-    # probably reveal the cause for the failure, if they were
-    # uncommented:
-    #
-    # logger.warn("Not all extra reject files have been accounted for:")
-    # logger.warn(extra_files)
-    ### we should raise a less generic error here. which?
-    raise svntest.Failure
+                                        extra_files=extra_files)
 
   # So now lambda, mu and rho are all in a "conflicted" state.  Run 'svn
   # resolve' with the respective "--accept[mine|orig|repo]" flag.
@@ -2387,9 +2358,7 @@ def automatic_conflict_resolution(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
+                                        extra_files=extra_files)
 
 def info_nonexisting_file(sbox):
   "get info on a file not in the repo"
@@ -2687,9 +2656,7 @@ def delete_and_add_same_file(sbox):
   # not found".
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 def delete_child_parent_update(sbox):
   "rm child, commit, rm parent"
@@ -2708,9 +2675,7 @@ def delete_child_parent_update(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E'))
   expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')
@@ -3108,6 +3073,48 @@ def mkdir_parents_target_exists_on_disk(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+@Skip(svntest.main.is_ra_type_file)
+def plaintext_password_storage_disabled(sbox):
+  "test store-plaintext-passwords = no"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  sbox.simple_append("iota", "New content for iota.")
+
+  config_dir_path = sbox.get_tempname(prefix="config-dir")
+  os.mkdir(config_dir_path)
+
+  # disable all encryped password stores
+  config_file = file(os.path.join(config_dir_path, "config"), "w")
+  config_file.write("[auth]\npassword-stores =\n")
+  config_file.close()
+
+  # disable plaintext password storage
+  servers_file = file(os.path.join(config_dir_path, "servers"), "w")
+  servers_file.write("[global]\nstore-plaintext-passwords=no\n")
+  servers_file.close()
+  
+  svntest.main.run_command(svntest.main.svn_binary, False, False,
+   "commit", "--config-dir", config_dir_path,
+    "-m", "committing with plaintext password storage disabled",
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd,
+    "--trust-server-cert-failures", "unknown-ca",
+    "--non-interactive", wc_dir)
+
+  # Verify that the password was not stored in plaintext
+  for root, dirs, files, in os.walk(os.path.join(config_dir_path, "auth")):
+    for file_name in files:
+      path = os.path.join(root, file_name)
+      f = file(path, "r")
+      for line in f.readlines():
+        if svntest.main.wc_passwd in line:
+          f.close()
+          raise svntest.Failure("password was found in '%s'" % path)
+      f.close()
+
+
 ########################################################################
 # Run the tests
 
@@ -3177,6 +3184,7 @@ test_list = [ None,
               delete_conflicts_one_of_many,
               peg_rev_on_non_existent_wc_path,
               mkdir_parents_target_exists_on_disk,
+              plaintext_password_storage_disabled,
              ]
 
 if __name__ == '__main__':

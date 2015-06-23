@@ -152,7 +152,7 @@ def move_file_test(sbox, source, dest, move_func, test):
     # update to start_rev
     svntest.actions.run_and_verify_update(wc_dir, test['start_output'],
                                           test['start_disk'], test['start_status'],
-                                          None, None, None, None, None, False,
+                                          [], False,
                                           '-r', test['start_rev'], wc_dir)
     # execute the move
     move_func(test['start_rev'])
@@ -162,7 +162,7 @@ def move_file_test(sbox, source, dest, move_func, test):
     # properties.
     svntest.actions.run_and_verify_update(wc_dir, test['up_output'],
                                           test['up_disk'], test['up_status'],
-                                          None, None, None, None, None, True,
+                                          [], True,
                                           '-r', test['end_rev'], wc_dir)
 
     revert_paths = None
@@ -1403,8 +1403,7 @@ def move_many_update_add(sbox):
 
   svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, None,
+                                        [], False,
                                         wc_dir, '--accept', 'mine-conflict')
 
   # And another one
@@ -1434,8 +1433,7 @@ def move_many_update_add(sbox):
   # This currently triggers an assertion failure
   svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, None,
+                                        [], False,
                                         wc_dir, '--accept', 'mine-conflict')
 
 @Issue(4437)
@@ -1696,6 +1694,75 @@ def move_conflict_details(sbox):
   svntest.actions.run_and_verify_info(expected_info, sbox.ospath('B'),
                                       '--depth', 'infinity')
 
+def move_conflict_markers(sbox):
+  "move conflict markers"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_propset('key','val', 'iota', 'A/B/E', 'A/B/E/beta')
+  sbox.simple_commit()
+  sbox.simple_update('', 1)
+  sbox.simple_propset('key','false', 'iota', 'A/B/E', 'A/B/E/beta')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status=' C'),
+    'A/B/E/beta'  : Item(status=' C'),
+    'iota'        : Item(status=' C'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('iota', 'A/B/E', 'A/B/E/beta', status=' C')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/E/dir_conflicts.prej' : Item(contents=
+                                      "Trying to add new property 'key'\n"
+                                      "but the property already exists.\n"
+                                      "<<<<<<< (local property value)\n"
+                                      "false||||||| (incoming 'changed from' value)\n"
+                                      "=======\n"
+                                      "val>>>>>>> (incoming 'changed to' value)\n"),
+    'A/B/E/beta.prej'          : Item(contents=
+                                      "Trying to add new property 'key'\n"
+                                      "but the property already exists.\n"
+                                      "<<<<<<< (local property value)\n"
+                                      "false||||||| (incoming 'changed from' value)\n"
+                                      "=======\n"
+                                      "val>>>>>>> (incoming 'changed to' value)\n"),
+    'iota.prej'                : Item(contents=
+                                      "Trying to add new property 'key'\n"
+                                      "but the property already exists.\n"
+                                      "<<<<<<< (local property value)\n"
+                                      "false||||||| (incoming 'changed from' value)\n"
+                                      "=======\n"
+                                      "val>>>>>>> (incoming 'changed to' value)\n"),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  sbox.simple_move('iota', 'A/iotb')
+  sbox.simple_move('A/B/E', 'E')
+
+  expected_status.tweak('iota', status='D ', moved_to='A/iotb')
+  expected_status.tweak('A/B/E', status='D ', moved_to='E')
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/iotb'  : Item(status='A ', copied='+', moved_from='iota', wc_rev='-'),
+    'E'       : Item(status='A ', copied='+', moved_from='A/B/E', wc_rev='-'),
+    'E/beta'  : Item(status=' M', copied='+', wc_rev='-'),
+    'E/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+  })
+  expected_disk.remove('iota', 'iota.prej',
+                       'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/E/dir_conflicts.prej', 
+                       'A/B/E/beta.prej')
+  expected_disk.add({
+    'A/iotb'  : Item(contents="This is the file 'iota'.\n"),
+    'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
 
 #######################################################################
 # Run the tests
@@ -1716,6 +1783,7 @@ test_list = [ None,
               move_to_from_external,
               revert_del_root_of_move,
               move_conflict_details,
+              move_conflict_markers,
             ]
 
 if __name__ == '__main__':

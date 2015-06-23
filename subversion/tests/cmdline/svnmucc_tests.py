@@ -345,7 +345,7 @@ def propset_root_internal(sbox, target):
                                          'propset', 'foo', 'bar',
                                          target)
   svntest.actions.run_and_verify_svn('bar', [],
-                                     'propget', '--strict', 'foo',
+                                     'propget', '--no-newline', 'foo',
                                      target)
 
   ## propdel on ^/
@@ -355,7 +355,7 @@ def propset_root_internal(sbox, target):
                                          target)
   svntest.actions.run_and_verify_svn([],
                                      '.*W200017: Property.*not found',
-                                     'propget', '--strict', 'foo',
+                                     'propget', '--no-newline', 'foo',
                                      target)
 
 @Issues(3663)
@@ -453,6 +453,56 @@ rm A/B/C/Y
                                      'log', '-qvr3', repo_url)
 
 
+def prohibited_deletes_and_moves(sbox):
+  "test prohibited delete and move operations"
+
+  # These action sequences were allowed in 1.8.13, but are prohibited in 1.9.x
+  # and later.  Most of them probably indicate an inadvertent user mistake.
+  # See dev@, 2015-05-11, "Re: Issue 4579 / svnmucc fails to process certain
+  # deletes", <http://svn.haxx.se/dev/archive-2015-05/0038.shtml>
+
+  sbox.build()
+  svntest.main.file_write(sbox.ospath('file'), "New contents")
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'iota'",
+                 ], #---------
+                '-m', 'r2: modify and delete /iota',
+                'put', sbox.ospath('file'), 'iota',
+                'rm', 'iota')
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'iota'",
+                 ], #---------
+                '-m', 'r2: propset and delete /iota',
+                'propset', 'prop', 'val', 'iota',
+                'rm', 'iota')
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E160013: Can't delete node at 'iota' as it does "
+                 "not exist",
+                 ], #---------
+                '-m', 'r2: delete and delete /iota',
+                'rm', 'iota',
+                'rm', 'iota')
+
+  # Subversion 1.8.13 used to move /iota without applying the text change.
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'iota'",
+                 ], #---------
+                '-m', 'r2: modify and move /iota',
+                'put', sbox.ospath('file'), 'iota',
+                'mv', 'iota', 'iota2')
+
+  # Subversion 1.8.13 used to move /A without applying the inner remove.
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'A'",
+                 ], #---------
+                '-m', 'r2: delete /A/B and move /A',
+                'rm', 'A/B',
+                'mv', 'A', 'A1')
+
+
 ######################################################################
 
 test_list = [ None,
@@ -462,6 +512,7 @@ test_list = [ None,
               too_many_log_messages,
               no_log_msg_non_interactive,
               nested_replaces,
+              prohibited_deletes_and_moves,
             ]
 
 if __name__ == '__main__':

@@ -108,6 +108,7 @@ static const int slow_statements[] =
   /* Slow, but just if foreign keys are enabled:
    * STMT_DELETE_PRISTINE_IF_UNREFERENCED,
    */
+  STMT_HAVE_STAT1_TABLE, /* Queries sqlite_master which has no index */
 
   -1 /* final marker */
 };
@@ -924,6 +925,15 @@ test_schema_statistics(apr_pool_t *scratch_pool)
       sqlite3_exec(sdb,
                    "INSERT INTO lock (repos_id, repos_relpath, lock_token) "
                    "VALUES (1, '', '')",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO EXTERNALS (wc_id, local_relpath,"
+                   "                       parent_relpath, repos_id,"
+                   "                       presence, kind, def_local_relpath,"
+                   "                       def_repos_relpath) "
+                   "VALUES (1, 'subdir', '', 1, 'normal', 'dir', '', '')",
                    NULL, NULL, NULL));
 
   /* These are currently not necessary for query optimization, but it's better

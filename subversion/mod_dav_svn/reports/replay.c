@@ -401,7 +401,7 @@ make_editor(const svn_delta_editor_t **editor,
 static dav_error *
 malformed_element_error(const char *tagname, apr_pool_t *pool)
 {
-  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0,
+  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, 0,
                                 apr_pstrcat(pool,
                                             "The request's '", tagname,
                                             "' element is malformed; there "
@@ -455,7 +455,7 @@ dav_svn__replay_report(const dav_resource *resource,
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
-    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                   "The request does not contain the 'svn:' "
                                   "namespace, so it is not going to have an "
                                   "svn:revision element. That element is "
@@ -519,12 +519,12 @@ dav_svn__replay_report(const dav_resource *resource,
 
   if (! SVN_IS_VALID_REVNUM(rev))
     return dav_svn__new_error_svn
-             (resource->pool, HTTP_BAD_REQUEST, 0,
+             (resource->pool, HTTP_BAD_REQUEST, 0, 0,
               "Request was missing the revision argument");
 
   if (! SVN_IS_VALID_REVNUM(low_water_mark))
     return dav_svn__new_error_svn
-             (resource->pool, HTTP_BAD_REQUEST, 0,
+             (resource->pool, HTTP_BAD_REQUEST, 0, 0,
               "Request was missing the low-water-mark argument");
 
   if (! base_dir)

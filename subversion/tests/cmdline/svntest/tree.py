@@ -610,6 +610,11 @@ def detect_conflict_files(node, extra_files):
     logger.warn(str(node))
     raise SVNTreeUnequal(msg)
 
+def detect_conflict_files_done(extra_files):
+   """Done handler for detect_conflict_files"""
+   if len(extra_files):
+    raise SVNTreeError("Not all extra reject files have been accounted for")
+
 ###########################################################################
 ###########################################################################
 # EXPORTED ROUTINES ARE BELOW

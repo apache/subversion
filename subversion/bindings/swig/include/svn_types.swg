@@ -423,9 +423,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
         if (SvOK(exception_handler)) {
             SV *callback_result;
 
+            PUTBACK;
             svn_swig_pl_callback_thunk (CALL_SV, exception_handler,
                                         &callback_result, "S", $1,
                                         $1_descriptor);
+            SPAGAIN;
         } else {
             $result = SWIG_NewPointerObj($1, $1_descriptor, 0);
             argvi++;
@@ -548,6 +550,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in) apr_pool_t *pool "";
 %typemap(default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
+    SPAGAIN;
 }
 #endif
 #ifdef SWIGRUBY
@@ -935,15 +938,24 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPERL
 %typemap(in) svn_stream_t * {
     svn_swig_pl_make_stream (&$1, $input);
+    SPAGAIN;
 }
 
 %typemap(out) svn_stream_t * {
-    $result = svn_swig_pl_from_stream ($1);
+    SV* tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_stream ($1);
+    SPAGAIN;
+    $result = tmp;
     argvi++;
 }
 
 %typemap(argout) svn_stream_t ** {
-  %append_output(svn_swig_pl_from_stream(*$1));
+    SV *tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_stream(*$1);
+    SPAGAIN;
+    %append_output(tmp);
 }
 #endif
 
@@ -1116,11 +1128,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 
 %typemap(argout) unsigned char *result_digest {
-  /* FIXME: This code is clearly buggy. The return value of sv_newmortal()
-     is immediately overwritten by the return value
-     of svn_swig_pl_from_md5(). */
-    ST(argvi) = sv_newmortal();
-    ST(argvi++) = svn_swig_pl_from_md5($1);
+    SV *tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_md5($1);
+    SPAGAIN;
+    %append_output(tmp);
 }
 #endif
 
@@ -1174,8 +1186,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in) svn_opt_revision_t * 
   (svn_opt_revision_t rev, apr_pool_t *_global_pool = NULL)
 {
-  if (_global_pool == NULL)
+  if (_global_pool == NULL) {
     _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+    SPAGAIN;
+  }
   $1 = svn_swig_pl_set_revision(&rev, $input, TRUE, _global_pool);
 }
 #endif

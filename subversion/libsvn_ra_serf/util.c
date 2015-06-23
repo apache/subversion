@@ -313,11 +313,11 @@ ssl_server_cert(void *baton, int failures,
     {
       svn_error_t *err;
 
-      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+      svn_auth_set_parameter(conn->session->auth_baton,
                              SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                              &cert_info);
 
-      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+      svn_auth_set_parameter(conn->session->auth_baton,
                              SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                              &svn_failures);
 
@@ -327,13 +327,13 @@ ssl_server_cert(void *baton, int failures,
       err = svn_auth_first_credentials(&creds, &state,
                                        SVN_AUTH_CRED_SSL_SERVER_AUTHORITY,
                                        realmstring,
-                                       conn->session->wc_callbacks->auth_baton,
+                                       conn->session->auth_baton,
                                        scratch_pool);
 
-      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+      svn_auth_set_parameter(conn->session->auth_baton,
                              SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
-      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+      svn_auth_set_parameter(conn->session->auth_baton,
                              SVN_AUTH_PARAM_SSL_SERVER_FAILURES, NULL);
 
       if (err)
@@ -360,11 +360,11 @@ ssl_server_cert(void *baton, int failures,
       return APR_SUCCESS;
     }
 
-  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+  svn_auth_set_parameter(conn->session->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                          &svn_failures);
 
-  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+  svn_auth_set_parameter(conn->session->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                          &cert_info);
 
@@ -373,7 +373,7 @@ ssl_server_cert(void *baton, int failures,
   SVN_ERR(svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_SSL_SERVER_TRUST,
                                      realmstring,
-                                     conn->session->wc_callbacks->auth_baton,
+                                     conn->session->auth_baton,
                                      scratch_pool));
   if (creds)
     {
@@ -394,7 +394,7 @@ ssl_server_cert(void *baton, int failures,
         }
     }
 
-  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+  svn_auth_set_parameter(conn->session->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
   /* Are there non accepted failures left? */
@@ -648,7 +648,7 @@ handle_client_cert(void *data,
                                            &conn->ssl_client_auth_state,
                                            SVN_AUTH_CRED_SSL_CLIENT_CERT,
                                            realm,
-                                           session->wc_callbacks->auth_baton,
+                                           session->auth_baton,
                                            pool));
       }
     else
@@ -700,7 +700,7 @@ handle_client_cert_pw(void *data,
                                            &conn->ssl_client_pw_auth_state,
                                            SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
                                            cert_path,
-                                           session->wc_callbacks->auth_baton,
+                                           session->auth_baton,
                                            pool));
       }
     else
@@ -947,6 +947,22 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
   return SVN_NO_ERROR;
 }
 
+/* Ensure that a handler is no longer scheduled on the connection.
+
+   Eventually serf will have a reliable way to cancel existing requests,
+   but currently it doesn't even have a way to relyable identify a request
+   after rescheduling, for auth reasons.
+
+   So the only thing we can do today is reset the connection, which
+   will cancel all outstanding requests and prepare the connection
+   for re-use.
+*/
+static void
+svn_ra_serf__unschedule_handler(svn_ra_serf__handler_t *handler)
+{
+  serf_connection_reset(handler->conn->conn);
+  handler->scheduled = FALSE;
+}
 
 svn_error_t *
 svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
@@ -960,6 +976,15 @@ svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
   /* Wait until the response logic marks its DONE status.  */
   err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
                                       scratch_pool);
+
+  if (handler->scheduled)
+    {
+      /* We reset the connection (breaking  pipelining, etc.), as
+         if we didn't the next data would still be handled by this handler,
+         which is done as far as our caller is concerned. */
+      svn_ra_serf__unschedule_handler(handler);
+    }
+
   return svn_error_trace(err);
 }
 
@@ -1082,7 +1107,9 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
 
   hdrs = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(hdrs, "Content-Type");
-  if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
+  if (val
+      && (handler->sline.code < 200 || handler->sline.code >= 300)
+      && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
     {
       svn_ra_serf__server_error_t *server_err;
 
@@ -1095,7 +1122,7 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
     }
   else
     {
-      /* The body was not text/xml, so we don't know what to do with it.
+      /* The body was not text/xml, or we got a success code.
          Toss anything that arrives.  */
       handler->discard_body = TRUE;
     }
@@ -1132,7 +1159,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
                                            &session->auth_state,
                                            SVN_AUTH_CRED_SIMPLE,
                                            realm,
-                                           session->wc_callbacks->auth_baton,
+                                           session->auth_baton,
                                            session->pool);
         }
       else
@@ -1453,7 +1480,13 @@ handle_response_cb(serf_request_t *request,
     {
       handler->discard_body = TRUE; /* Discard further data */
       handler->done = TRUE; /* Mark as done */
-      handler->scheduled = FALSE;
+      /* handler->scheduled is still TRUE, as we still expect data.
+         If we would return an error outer-status the connection
+         would have to be restarted. With scheduled still TRUE
+         destroying the handler's pool will still reset the
+         connection, avoiding the posibility of returning
+         an error for this handler when a new request is
+         scheduled. */
       outer_status = APR_EAGAIN; /* Exit context loop */
     }
 
@@ -1762,8 +1795,9 @@ svn_ra_serf__error_on_status(serf_status_line sline,
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);
       case 405:
-        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                 _("'%s' is out of date"), path);
+        return svn_error_createf(SVN_ERR_RA_DAV_METHOD_NOT_ALLOWED, NULL,
+                                 _("HTTP method is not allowed on '%s'"),
+                                 path);
       case 409:
         return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
                                  _("'%s' conflicts"), path);
@@ -1802,9 +1836,10 @@ svn_error_t *
 svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler)
 {
   /* Is it a standard error status? */
-  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                       handler->path,
-                                       handler->location));
+  if (handler->sline.code != 405)
+    SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                         handler->path,
+                                         handler->location));
 
   switch (handler->sline.code)
     {
@@ -1817,6 +1852,11 @@ svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler)
                                  _("Path '%s' already exists"),
                                  handler->path);
 
+      case 405:
+        return svn_error_createf(SVN_ERR_RA_DAV_METHOD_NOT_ALLOWED, NULL,
+                                 _("The HTTP method '%s' is not allowed"
+                                   " on '%s'"),
+                                 handler->method, handler->path);
       default:
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Unexpected HTTP status %d '%s' on '%s' "
@@ -1874,14 +1914,14 @@ response_done(serf_request_t *request,
    handlers registered in no freed memory.
 
    This fallback kills the connection for this case, which will make serf
-   unregister any*/
+   unregister any outstanding requests on it. */
 static apr_status_t
 handler_cleanup(void *baton)
 {
   svn_ra_serf__handler_t *handler = baton;
-  if (handler->scheduled && handler->conn && handler->conn->conn)
+  if (handler->scheduled)
     {
-      serf_connection_reset(handler->conn->conn);
+      svn_ra_serf__unschedule_handler(handler);
     }
 
   return APR_SUCCESS;

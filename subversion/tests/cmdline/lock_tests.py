@@ -176,9 +176,7 @@ def commit_file_unlock(sbox):
   # Make sure both iota an mu are unlocked, but only mu is bumped
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def commit_propchange(sbox):
@@ -896,7 +894,7 @@ def lock_uri_encoded(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         file_path)
 
   svntest.actions.run_and_verify_svn(".*locked by user", [], 'lock',
@@ -1215,9 +1213,7 @@ def info_moved_path(sbox):
   expected_status.remove("iota")
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Create a new, unrelated iota, creating r3.
   svntest.main.file_append(fname, "Another iota")
@@ -1231,9 +1227,7 @@ def info_moved_path(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Lock the new iota.
   svntest.actions.run_and_verify_svn(".*locked by user", [],
@@ -1274,9 +1268,7 @@ def ls_url_encoded(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Lock the file.
   svntest.actions.run_and_verify_svn(".*locked by user",
@@ -1343,7 +1335,7 @@ def examine_lock_encoded_recurse(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         file_path)
 
   # lock the file and validate the contents
@@ -1838,8 +1830,7 @@ def commit_stolen_lock(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         [],
                                         expected_status,
-                                        err_re,
-                                        wc_dir)
+                                        err_re)
 
 # When removing directories, the locks of contained files were not
 # correctly removed from the working copy database, thus they later
@@ -1863,9 +1854,7 @@ def drop_locks_on_parent_deletion(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         [],
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # now re-add entities to the deleted pathes.
   sbox.simple_mkdir('A/B')
@@ -1886,9 +1875,7 @@ def drop_locks_on_parent_deletion(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         [],
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 
 def copy_with_lock(sbox):
@@ -1917,9 +1904,7 @@ def copy_with_lock(sbox):
   # copy source and so the commit fails.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 def lock_hook_messages(sbox):
   "verify (un)lock message is transferred correctly"
@@ -2091,22 +2076,36 @@ def dav_lock_timeout(sbox):
   expected_status.tweak('iota', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def http_connection(repo_url):
+
+  import httplib
+  from urlparse import urlparse
+
+  loc = urlparse(repo_url)
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    try:
+      import ssl # new in python 2.6
+      c = ssl.create_default_context()
+      c.check_hostname = False
+      c.verify_mode = ssl.CERT_NONE
+      h = httplib.HTTPSConnection(loc.hostname, loc.port, context=c)
+    except:
+      h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  return h
+
 @SkipUnless(svntest.main.is_ra_type_dav)
 def create_dav_lock_timeout(sbox):
   "create generic DAV lock with timeout"
 
   import httplib
-  from urlparse import urlparse
   import base64
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  loc = urlparse(sbox.repo_url)
 
-  if loc.scheme == 'http':
-    h = httplib.HTTPConnection(loc.hostname, loc.port)
-  else:
-    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  h = http_connection(sbox.repo_url)
 
   lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
               '<D:lockinfo xmlns:D="DAV:">' \
@@ -2242,7 +2241,6 @@ def dav_lock_refresh(sbox):
   "refresh timeout of DAV lock"
 
   import httplib
-  from urlparse import urlparse
   import base64
 
   sbox.build(create_wc = False)
@@ -2252,12 +2250,7 @@ def dav_lock_refresh(sbox):
                                      sbox.repo_url + '/iota')
 
   # Try to refresh lock using 'If' header
-  loc = urlparse(sbox.repo_url)
-
-  if loc.scheme == 'http':
-    h = httplib.HTTPConnection(loc.hostname, loc.port)
-  else:
-    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  h = http_connection(sbox.repo_url)
 
   lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
 
@@ -2338,8 +2331,7 @@ def lock_commit_bump(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # We explicitly check both the Revision and Last Changed Revision.
   expected_infos = [ {
@@ -2397,8 +2389,15 @@ def delete_dir_with_lots_of_locked_files(sbox):
   svntest.actions.run_and_verify_svn(None, [], 'lock',
                                      '-m', 'All locks',
                                       *locked_paths)
-  # Locally delete A
+  # Locally delete A (regression against earlier versions, which
+  #                   always used a special non-standard request)
   sbox.simple_rm("A")
+
+  # But a further replacement never worked
+  sbox.simple_mkdir("A")
+  # And an additional propset didn't work either
+  # (but doesn't require all lock tokens recursively)
+  sbox.simple_propset("k", "v", "A")
 
   # Commit the deletion
   # XFAIL: As of 1.8.10, this commit fails with:

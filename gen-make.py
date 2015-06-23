@@ -67,6 +67,7 @@ def main(fname, gentype, verfname=None,
   generator.write()
   generator.write_sqlite_headers()
   generator.write_errno_table()
+  generator.write_config_keys()
 
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
@@ -206,7 +207,7 @@ def _usage_exit(err=None):
   print("")
   print("  --vsnet-version=VER")
   print("           generate for VS.NET version VER (2002, 2003, 2005, 2008,")
-  print("           2010, 2012 or 2013)")
+  print("           2010, 2012, 2013 or 2015)")
   print("           [only valid in combination with '-t vcproj']")
   print("")
   print(" -D NAME[=value]")

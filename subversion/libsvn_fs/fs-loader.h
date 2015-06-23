@@ -99,7 +99,7 @@ typedef struct fs_library_vtable_t
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
                              svn_mutex__t *common_pool_lock,
-                             apr_pool_t *pool,
+                             apr_pool_t *scratch_pool,
                              apr_pool_t *common_pool);
   svn_error_t *(*verify_fs)(svn_fs_t *fs, const char *path,
                             svn_revnum_t start,
@@ -314,7 +314,7 @@ typedef struct root_vtable_t
   svn_error_t *(*node_relation)(svn_fs_node_relation_t *relation,
                                 svn_fs_root_t *root_a, const char *path_a,
                                 svn_fs_root_t *root_b, const char *path_b,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
   svn_error_t *(*node_created_rev)(svn_revnum_t *revision,
                                    svn_fs_root_t *root, const char *path,
                                    apr_pool_t *pool);
@@ -346,6 +346,8 @@ typedef struct root_vtable_t
                             apr_pool_t *pool);
   svn_error_t *(*node_proplist)(apr_hash_t **table_p, svn_fs_root_t *root,
                                 const char *path, apr_pool_t *pool);
+  svn_error_t *(*node_has_props)(svn_boolean_t *has_props, svn_fs_root_t *root,
+                                 const char *path, apr_pool_t *scratch_pool);
   svn_error_t *(*change_node_prop)(svn_fs_root_t *root, const char *path,
                                    const char *name,
                                    const svn_string_t *value,
@@ -353,7 +355,7 @@ typedef struct root_vtable_t
   svn_error_t *(*props_changed)(int *changed_p, svn_fs_root_t *root1,
                                 const char *path1, svn_fs_root_t *root2,
                                 const char *path2, svn_boolean_t strict,
-                                apr_pool_t *pool);
+                                apr_pool_t *scratch_pool);
 
   /* Directories */
   svn_error_t *(*dir_entries)(apr_hash_t **entries_p, svn_fs_root_t *root,
@@ -361,7 +363,8 @@ typedef struct root_vtable_t
   svn_error_t *(*dir_optimal_order)(apr_array_header_t **ordered_p,
                                     svn_fs_root_t *root,
                                     apr_hash_t *entries,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
   svn_error_t *(*make_dir)(svn_fs_root_t *root, const char *path,
                            apr_pool_t *pool);
 
@@ -394,7 +397,7 @@ typedef struct root_vtable_t
   svn_error_t *(*contents_changed)(int *changed_p, svn_fs_root_t *root1,
                                    const char *path1, svn_fs_root_t *root2,
                                    const char *path2, svn_boolean_t strict,
-                                   apr_pool_t *pool);
+                                   apr_pool_t *scratch_pool);
   svn_error_t *(*get_file_delta_stream)(svn_txdelta_stream_t **stream_p,
                                         svn_fs_root_t *source_root,
                                         const char *source_path,
@@ -446,7 +449,7 @@ typedef struct id_vtable_t
 /*** Definitions of the abstract FS object types ***/
 
 /* These are transaction properties that correspond to the bitfields
-   in the 'flags' argument to svn_fs_lock().  */
+   in the 'flags' argument to svn_fs_begin_txn2().  */
 #define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
 #define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
 /* Set to "0" at the start of the txn, to "1" when svn:date changes. */

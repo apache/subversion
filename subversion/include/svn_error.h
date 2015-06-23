@@ -165,13 +165,24 @@ svn_error_wrap_apr(apr_status_t status,
                    ...)
        __attribute__((format(printf, 2, 3)));
 
-/** A quick n' easy way to create a wrapped exception with your own
- * message, before throwing it up the stack.  (It uses all of the
- * @a child's fields.)
+/** If @a child is SVN_NO_ERROR, return SVN_NO_ERROR.
+ * Else, prepend a new error to the error chain of @a child. The new error
+ * uses @a new_msg as error message but all other error attributes (such
+ * as the error code) are copied from @a child.
  */
 svn_error_t *
 svn_error_quick_wrap(svn_error_t *child,
                      const char *new_msg);
+
+/** Like svn_error_quick_wrap(), but with format string support.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_error_quick_wrapf(svn_error_t *child,
+                      const char *fmt,
+                      ...)
+       __attribute__((format(printf, 2, 3)));
 
 /** Compose two errors, returning the composition as a brand new error
  * and consuming the original errors.  Either or both of @a err1 and
@@ -256,6 +267,8 @@ svn_error__locate(const char *file,
   (svn_error__locate(__FILE__,__LINE__), (svn_error_wrap_apr))
 #define svn_error_quick_wrap \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
+#define svn_error_quick_wrapf \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrapf))
 #endif
 
 
@@ -440,7 +453,10 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_FS_NOT_FOUND           ||        \
    err->apr_err == SVN_ERR_FS_OUT_OF_DATE         ||        \
    err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN      ||        \
-   err->apr_err == SVN_ERR_REPOS_HOOK_FAILURE)
+   err->apr_err == SVN_ERR_REPOS_HOOK_FAILURE     ||        \
+   err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION    ||        \
+   err->apr_err == SVN_ERR_FS_OUT_OF_DATE         ||        \
+   err->apr_err == SVN_ERR_FS_NOT_FILE)
 
 /**
  * Return TRUE if @a err is an error specifically related to unlocking
