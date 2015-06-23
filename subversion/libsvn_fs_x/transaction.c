@@ -316,8 +316,8 @@ with_lock(void *baton,
 /* Enum identifying a filesystem lock. */
 typedef enum lock_id_t
 {
-  write_lock,
   txn_lock,
+  write_lock,
   pack_lock
 } lock_id_t;
 
@@ -333,17 +333,17 @@ init_lock_baton(with_lock_baton_t *baton,
 
   switch (lock_id)
     {
-    case write_lock:
-      baton->mutex = ffsd->fs_write_lock;
-      baton->lock_path = svn_fs_x__path_lock(baton->fs, baton->lock_pool);
-      baton->is_global_lock = TRUE;
-      break;
-
     case txn_lock:
       baton->mutex = ffsd->txn_current_lock;
       baton->lock_path = svn_fs_x__path_txn_current_lock(baton->fs,
                                                          baton->lock_pool);
       baton->is_global_lock = FALSE;
+      break;
+
+    case write_lock:
+      baton->mutex = ffsd->fs_write_lock;
+      baton->lock_path = svn_fs_x__path_lock(baton->fs, baton->lock_pool);
+      baton->is_global_lock = TRUE;
       break;
 
     case pack_lock:
@@ -478,10 +478,10 @@ svn_fs_x__with_all_locks(svn_fs_t *fs,
      fs_fs_shared_data_t.  The lock chain is being created in
      innermost (last to acquire) -> outermost (first to acquire) order. */
   with_lock_baton_t *lock_baton
-    = create_lock_baton(fs, write_lock, body, baton, scratch_pool);
+    = create_lock_baton(fs, txn_lock, body, baton, scratch_pool);
 
+  lock_baton = chain_lock_baton(write_lock, lock_baton);
   lock_baton = chain_lock_baton(pack_lock, lock_baton);
-  lock_baton = chain_lock_baton(txn_lock, lock_baton);
 
   return svn_error_trace(with_lock(lock_baton, scratch_pool));
 }
@@ -1268,19 +1268,33 @@ create_txn_dir(const char **id_p,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  get_and_increment_txn_key_baton_t cb;
   const char *txn_dir;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
-  /* Get the current transaction sequence value, which is a base-36
-     number, from the txn-current file, and write an
-     incremented value back out to the file.  Place the revision
-     number the transaction is based off into the transaction id. */
-  cb.fs = fs;
-  SVN_ERR(svn_fs_x__with_txn_current_lock(fs,
-                                          get_and_increment_txn_key_body,
-                                          &cb,
-                                          scratch_pool));
-  *txn_id = cb.txn_number;
+  /* If we recently committed a revision through FS, we will have a
+     pre-allocated txn-ID that we can just use. */
+  if (ffd->next_txn_id)
+    {
+      *txn_id = ffd->next_txn_id;
+
+      /* Not pre-allocated anymore. */
+      ffd->next_txn_id = 0;
+    }
+  else
+    {
+      get_and_increment_txn_key_baton_t cb;
+
+      /* Get the current transaction sequence value, which is a base-36
+        number, from the txn-current file, and write an
+        incremented value back out to the file.  Place the revision
+        number the transaction is based off into the transaction id. */
+      cb.fs = fs;
+      SVN_ERR(svn_fs_x__with_txn_current_lock(fs,
+                                              get_and_increment_txn_key_body,
+                                              &cb,
+                                              scratch_pool));
+      *txn_id = cb.txn_number;
+    }
 
   *id_p = svn_fs_x__txn_name(*txn_id, result_pool);
   txn_dir = svn_fs_x__path_txn_dir(fs, *txn_id, scratch_pool);
@@ -3451,6 +3465,48 @@ write_next_file(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with bump_ids. */
+typedef struct bump_ids_baton_t
+{
+  svn_fs_t *fs;
+  svn_revnum_t new_rev;
+  svn_fs_x__batch_fsync_t *batch;
+} bump_ids_baton_t;
+
+/* Bump the 'current' and 'txn-current' files in BATON->FS. */
+static svn_error_t *
+bump_ids(void *baton,
+         apr_pool_t *scratch_pool)
+{
+  bump_ids_baton_t *b = baton;
+  svn_fs_x__data_t *ffd = b->fs->fsap_data;
+  const char *current_filename;
+
+  /* Write the 'next' file. */
+  SVN_ERR(write_next_file(b->fs, b->new_rev, b->batch, scratch_pool));
+
+  /* Allocate a new txn id. */
+  SVN_ERR(get_and_txn_key(&ffd->next_txn_id, b->fs, b->batch, scratch_pool));
+
+  /* Commit all changes to disk. */
+  SVN_ERR(svn_fs_x__batch_fsync_run(b->batch, scratch_pool));
+
+  /* Make the revision visible to all processes and threads. */
+  current_filename = svn_fs_x__path_current(b->fs, scratch_pool);
+  SVN_ERR(svn_io_file_rename(svn_fs_x__path_next(b->fs, scratch_pool),
+                             current_filename, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(b->batch, current_filename,
+                                         scratch_pool));
+
+  /* Bump txn id. */
+  SVN_ERR(bump_txn_key(b->fs, b->batch, scratch_pool));
+
+  /* Make the new revision permanently visible. */
+  SVN_ERR(svn_fs_x__batch_fsync_run(b->batch, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton used for commit_body below. */
 typedef struct commit_baton_t {
   svn_revnum_t *new_rev_p;
@@ -3472,7 +3528,6 @@ commit_body(void *baton,
   svn_fs_x__data_t *ffd = cb->fs->fsap_data;
   const char *old_rev_filename, *rev_filename;
   const char *revprop_filename;
-  const char *current_filename;
   svn_fs_x__id_t root_id, new_root_id;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
@@ -3480,6 +3535,7 @@ commit_body(void *baton,
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
   svn_fs_x__batch_fsync_t *batch;
+  bump_ids_baton_t bump_ids_baton;
 
   /* We perform a sequence of (potentially) large allocations.
      Keep the peak memory usage low by using a SUBPOOL and cleaning it
@@ -3574,20 +3630,16 @@ commit_body(void *baton,
   SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev,
                                                       subpool));
 
-  /* Write the 'next' file. */
-  SVN_ERR(write_next_file(cb->fs, new_rev, batch, subpool));
-
-  /* Commit all changes to disk. */
-  SVN_ERR(svn_fs_x__batch_fsync_run(batch, subpool));
-
-  /* Make the revision visible to all processes and threads. */
-  current_filename = svn_fs_x__path_current(cb->fs, subpool);
-  SVN_ERR(svn_io_file_rename(svn_fs_x__path_next(cb->fs, subpool),
-                             current_filename, scratch_pool));
-  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, current_filename, subpool));
-
-  /* Make the new revision permanently visible. */
-  SVN_ERR(svn_fs_x__batch_fsync_run(batch, subpool));
+  /* Bump 'current' and 'txn-current'.
+     The latter is a piggy-back allocation of a new txn ID such that
+     reusing this FS for multiple commits does not involve additional
+     fsync latencies.  If that txn ID goes to waste, it's not a big loss
+     because we've got 18 quintillion of them ... */
+  bump_ids_baton.fs = cb->fs;
+  bump_ids_baton.new_rev = new_rev;
+  bump_ids_baton.batch = batch;
+  SVN_ERR(svn_fs_x__with_txn_current_lock(cb->fs, bump_ids, &bump_ids_baton,
+                                          subpool));
 
   /* At this point the new revision is committed and globally visible
      so let the caller know it succeeded by giving it the new revision
