@@ -57,7 +57,7 @@ Other candidate changes:
      in simple cases where lines of development are kept in close sync.
    Votes:
      +1: stefan2, rhuijben (without r1686984)
-     +1: brane
+     +1: brane, philip
 
  * r1682714, r1682854, r1683126, r1683135, r1683290
    Fix segfaults in FSX's directory processing code.
