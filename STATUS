@@ -63,7 +63,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4554
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
  * r1659867
    Make editor-aborts after close edit safe.
@@ -77,7 +77,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1659867
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
      +1: danielsh (libsvn_repos part only)
 
 Veto-blocked changes:
