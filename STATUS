@@ -52,16 +52,6 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1561419
-   Fix 'svnadmin recover' for pre-1.4 FSFS repositories.
-   Justification:
-     After recovering a repository committed to by 1.8, future commits may
-     otherwise use ambiguous IDs.
-   Branch:
-     ^/subversion/branches/1.7.x-r1561419
-   Votes:
-     +1: stefan2, stsp
-
  * r1654932, r1654933, r1654934, r1654937
    Fix issue #4554, "0 file length reported in FSFS".
    Justification:
@@ -182,3 +172,13 @@ Approved changes:
      r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
    Votes:
      +1: julianfoad, stefan2, brane
+
+ * r1561419
+   Fix 'svnadmin recover' for pre-1.4 FSFS repositories.
+   Justification:
+     After recovering a repository committed to by 1.8, future commits may
+     otherwise use ambiguous IDs.
+   Branch:
+     ^/subversion/branches/1.7.x-r1561419
+   Votes:
+     +1: stefan2, stsp, brane
