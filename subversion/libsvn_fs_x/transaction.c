@@ -3387,6 +3387,33 @@ get_writable_final_rev(apr_file_t **file,
   return SVN_NO_ERROR;
 }
 
+/* Write REVISION into FS' 'next' file and schedule necessary fsyncs in BATCH.
+   Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+write_next_file(svn_fs_t *fs,
+                svn_revnum_t revision,
+                svn_fs_x__batch_fsync_t *batch,
+                apr_pool_t *scratch_pool)
+{
+  apr_file_t *file;
+  const char *path = svn_fs_x__path_next(fs, scratch_pool);
+  const char *perms_path = svn_fs_x__path_current(fs, scratch_pool);
+  char *buf;
+
+  /* Create / open the 'next' file. */
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, path, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, scratch_pool));
+
+  /* Write its contents. */
+  buf = apr_psprintf(scratch_pool, "%ld\n", revision);
+  SVN_ERR(svn_io_file_write_full(file, buf, strlen(buf), NULL, scratch_pool));
+
+  /* Adjust permissions. */
+  SVN_ERR(svn_io_copy_perms(perms_path, path, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton used for commit_body below. */
 typedef struct commit_baton_t {
   svn_revnum_t *new_rev_p;
@@ -3408,6 +3435,7 @@ commit_body(void *baton,
   svn_fs_x__data_t *ffd = cb->fs->fsap_data;
   const char *old_rev_filename, *rev_filename;
   const char *revprop_filename;
+  const char *current_filename;
   svn_fs_x__id_t root_id, new_root_id;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
@@ -3505,12 +3533,23 @@ commit_body(void *baton,
   SVN_ERR(svn_io_copy_perms(revprop_filename, old_rev_filename, subpool));
   svn_pool_clear(subpool);
 
+  /* Write the 'next' file. */
+  SVN_ERR(write_next_file(cb->fs, new_rev, batch, subpool));
+
   /* Commit all changes to disk. */
   SVN_ERR(svn_fs_x__batch_fsync_run(batch, subpool));
 
-  /* Update the 'current' file. */
-  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev, subpool));
-  SVN_ERR(svn_fs_x__write_current(cb->fs, new_rev, subpool));
+  /* Make the revision visible to all processes and threads. */
+  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev,
+                                                      subpool));
+
+  current_filename = svn_fs_x__path_current(cb->fs, subpool);
+  SVN_ERR(svn_io_file_rename(svn_fs_x__path_next(cb->fs, subpool),
+                             current_filename, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, current_filename, subpool));
+
+  /* Make the new revision permanently visible. */
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, subpool));
 
   /* At this point the new revision is committed and globally visible
      so let the caller know it succeeded by giving it the new revision
