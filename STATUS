@@ -32,14 +32,6 @@ Other candidate changes:
      +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
- * r1685085
-   Install svnbench as part of 'make install'.
-   Justification:
-     svnbench moved from  tools/ to subversion/ so it should be installed
-     by default.
-   Votes:
-     +1: stsp, stefan2
-
  * r1686554, r1686557, r1686239, r1686541, r1686543, r1686802
    Fix 'svnadmin hotcopy' for read-only FSFS repositories
    Justification:
@@ -82,3 +74,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1685085
+   Install svnbench as part of 'make install'.
+   Justification:
+     svnbench moved from  tools/ to subversion/ so it should be installed
+     by default.
+   Votes:
+     +1: stsp, stefan2, brane
