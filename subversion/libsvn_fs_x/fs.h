@@ -181,10 +181,14 @@ typedef struct svn_fs_x__shared_data_t
      declaration here.  Any subset may be acquired and held at any given
      time but their relative acquisition order must not change.
 
-     (lock 'txn-current' before 'pack' before 'write' before 'txn-list') */
+     (lock 'pack' before 'write' before 'txn-current' before 'txn-list') */
 
   /* A lock for intra-process synchronization when accessing the TXNS list. */
   svn_mutex__t *txn_list_lock;
+
+  /* A lock for intra-process synchronization when locking the
+     txn-current file. */
+  svn_mutex__t *txn_current_lock;
 
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
@@ -193,10 +197,6 @@ typedef struct svn_fs_x__shared_data_t
   /* A lock for intra-process synchronization when grabbing the
      repository pack operation lock. */
   svn_mutex__t *fs_pack_lock;
-
-  /* A lock for intra-process synchronization when locking the
-     txn-current file. */
-  svn_mutex__t *txn_current_lock;
 
   /* The common pool, under which this object is allocated, subpools
      of which are used to allocate the transaction objects. */
@@ -409,6 +409,10 @@ typedef struct svn_fs_x__data_t
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
                                apr_pool_t *, apr_pool_t *);
+
+  /* If not 0, this is a pre-allocated transaction ID that can just be
+     used for a new txn without needing to consult 'txn-current'. */
+  apr_uint64_t next_txn_id;
 } svn_fs_x__data_t;
 
 
