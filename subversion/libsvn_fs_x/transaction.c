@@ -1176,6 +1176,60 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   return svn_fs_x__put_node_revision(fs, noderev, scratch_pool);
 }
 
+/* Read 'txn-current', return it in *TXN_NUMBER and write the next value
+   into 'txn-next' for FS.  Schedule fsyncs in BATCH.  Use SCRATCH_POOL
+   for temporaries. */
+static svn_error_t *
+get_and_txn_key(apr_uint64_t *txn_number,
+                svn_fs_t *fs,
+                svn_fs_x__batch_fsync_t *batch,
+                apr_pool_t *scratch_pool)
+{
+  const char *txn_current_path = svn_fs_x__path_txn_current(fs, scratch_pool);
+  const char *txn_next_path = svn_fs_x__path_txn_next(fs, scratch_pool);
+
+  apr_file_t *file;
+  char new_id_str[SVN_INT64_BUFFER_SIZE];
+
+  svn_stringbuf_t *buf;
+  SVN_ERR(svn_fs_x__read_content(&buf, txn_current_path, scratch_pool));
+
+  /* remove trailing newlines */
+  *txn_number = svn__base36toui64(NULL, buf->data);
+  if (*txn_number == 0)
+    ++(*txn_number);
+
+  /* Increment the key and add a trailing \n to the string so the
+     txn-current file has a newline in it. */
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, txn_next_path,
+                                          scratch_pool));
+  SVN_ERR(svn_io_file_write_full(file, new_id_str,
+                                 svn__ui64tobase36(new_id_str, *txn_number+1),
+                                 NULL, scratch_pool));
+  SVN_ERR(svn_io_copy_perms(txn_current_path, txn_next_path, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Move 'txn-next' into place as 'txn-current' for FS.  Schedule fsyncs
+   in BATCH.  Use SCRATCH_POOL for temporaries. */
+static svn_error_t *
+bump_txn_key(svn_fs_t *fs,
+             svn_fs_x__batch_fsync_t *batch,
+             apr_pool_t *scratch_pool)
+{
+  const char *txn_current_path = svn_fs_x__path_txn_current(fs, scratch_pool);
+  const char *txn_next_path = svn_fs_x__path_txn_next(fs, scratch_pool);
+
+  /* Increment the key and add a trailing \n to the string so the
+     txn-current file has a newline in it. */
+  SVN_ERR(svn_io_file_rename(txn_next_path, txn_current_path, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, txn_current_path,
+                                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* A structure used by get_and_increment_txn_key_body(). */
 typedef struct get_and_increment_txn_key_baton_t
 {
@@ -1191,31 +1245,14 @@ get_and_increment_txn_key_body(void *baton,
                                apr_pool_t *scratch_pool)
 {
   get_and_increment_txn_key_baton_t *cb = baton;
-  const char *txn_current_filename = svn_fs_x__path_txn_current(cb->fs,
-                                                                scratch_pool);
-  const char *tmp_filename = svn_fs_x__path_txn_next(cb->fs, scratch_pool);
-  apr_file_t *file;
+  svn_fs_x__batch_fsync_t *batch;
 
-  char new_id_str[SVN_INT64_BUFFER_SIZE];
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
+  SVN_ERR(get_and_txn_key(&cb->txn_number, cb->fs, batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
-  svn_stringbuf_t *buf;
-  SVN_ERR(svn_fs_x__read_content(&buf, txn_current_filename, scratch_pool));
-
-  /* remove trailing newlines */
-  cb->txn_number = svn__base36toui64(NULL, buf->data);
-
-  /* Increment the key. */
-  SVN_ERR(svn_io_file_open(&file, tmp_filename,
-                           APR_WRITE | APR_CREATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, scratch_pool));
-  SVN_ERR(svn_io_file_write_full(file, new_id_str,
-                                 svn__ui64tobase36(new_id_str,
-                                                   cb->txn_number+1),
-                                 NULL, scratch_pool));
-  SVN_ERR(svn_io_file_close(file, scratch_pool));
-
-  SVN_ERR(svn_fs_x__move_into_place(tmp_filename, txn_current_filename,
-                                    txn_current_filename, scratch_pool));
+  SVN_ERR(bump_txn_key(cb->fs, batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   return SVN_NO_ERROR;
 }
