@@ -84,6 +84,12 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1667228, r1667234, r1667691
    Fix conflict description for binary file conflicts.
    Justification:
@@ -91,13 +97,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1667228
    Votes:
-     +1: stsp, stefan2
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: stsp, stefan2, brane
 
  * r1674522
    Skip the 'upgrade_tests.py 36: automatic SQLite ANALYZE' test on old python
