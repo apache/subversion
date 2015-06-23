@@ -1015,39 +1015,6 @@ hotcopy_setup_shared_fs_data(svn_fs_t *src_fs, svn_fs_t *dst_fs)
   dst_ffd->shared = src_ffd->shared;
 }
 
-/* Create an empty filesystem at DST_FS at DST_PATH with the same
- * configuration as SRC_FS (uuid, format, and other parameters).
- * After creation DST_FS has no revisions, not even revision zero. */
-static svn_error_t *
-hotcopy_create_empty_dest(svn_fs_t *src_fs,
-                          svn_fs_t *dst_fs,
-                          const char *dst_path,
-                          apr_pool_t *pool)
-{
-  fs_fs_data_t *src_ffd = src_fs->fsap_data;
-
-  /* Create the DST_FS repository with the same layout as SRC_FS. */
-  SVN_ERR(svn_fs_fs__create_file_tree(dst_fs, dst_path, src_ffd->format,
-                                      src_ffd->max_files_per_dir,
-                                      src_ffd->use_log_addressing,
-                                      pool));
-
-  /* Copy the UUID.  Hotcopy destination receives a new instance ID, but
-   * has the same filesystem UUID as the source. */
-  SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, NULL, pool));
-
-  /* Remove revision 0 contents.  Otherwise, it may not get overwritten
-   * due to having a newer timestamp. */
-  SVN_ERR(hotcopy_remove_file(svn_fs_fs__path_rev(dst_fs, 0, pool), pool));
-  SVN_ERR(hotcopy_remove_file(svn_fs_fs__path_revprops(dst_fs, 0, pool),
-                              pool));
-
-  hotcopy_setup_shared_fs_data(src_fs, dst_fs);
-  SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_fs__hotcopy(svn_fs_t *src_fs,
                    svn_fs_t *dst_fs,
@@ -1096,7 +1063,27 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
     {
       /* Start out with an empty destination using the same configuration
        * as the source. */
-      SVN_ERR(hotcopy_create_empty_dest(src_fs, dst_fs, dst_path, pool));
+      fs_fs_data_t *src_ffd = src_fs->fsap_data;
+
+      /* Create the DST_FS repository with the same layout as SRC_FS. */
+      SVN_ERR(svn_fs_fs__create_file_tree(dst_fs, dst_path, src_ffd->format,
+                                          src_ffd->max_files_per_dir,
+                                          src_ffd->use_log_addressing,
+                                          pool));
+
+      /* Copy the UUID.  Hotcopy destination receives a new instance ID, but
+       * has the same filesystem UUID as the source. */
+      SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, NULL, pool));
+
+      /* Remove revision 0 contents.  Otherwise, it may not get overwritten
+       * due to having a newer timestamp. */
+      SVN_ERR(hotcopy_remove_file(svn_fs_fs__path_rev(dst_fs, 0, pool),
+                                  pool));
+      SVN_ERR(hotcopy_remove_file(svn_fs_fs__path_revprops(dst_fs, 0, pool),
+                                  pool));
+
+      hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+      SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
     }
 
   if (cancel_func)
