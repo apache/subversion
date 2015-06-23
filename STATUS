@@ -52,18 +52,6 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1542765, r1571214
-   Add Sqlite index information.
-   Justification:
-     Adding this information explains to Sqlite how we use our indexes. While
-     Subversion 1.7 doesn't depend on this as much as 1.8 as we didn't tune the
-     queries as much at that time, this information will make several queries
-     use indexes instead of table scans.
-   Branch:
-     ^/subversion/branches/1.7.x-r1542765
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
    Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
    non-deltas dumpfile".
@@ -182,3 +170,15 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1542765, r1571214
+   Add Sqlite index information.
+   Justification:
+     Adding this information explains to Sqlite how we use our indexes. While
+     Subversion 1.7 doesn't depend on this as much as 1.8 as we didn't tune the
+     queries as much at that time, this information will make several queries
+     use indexes instead of table scans.
+   Branch:
+     ^/subversion/branches/1.7.x-r1542765
+   Votes:
+     +1: rhuijben, stefan2, brane
