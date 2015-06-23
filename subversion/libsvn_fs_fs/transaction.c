@@ -89,15 +89,6 @@ path_txn_props(svn_fs_t *fs,
 }
 
 static APR_INLINE const char *
-path_txn_props_final(svn_fs_t *fs,
-                     const svn_fs_fs__id_part_t *txn_id,
-                     apr_pool_t *pool)
-{
-  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
-                         PATH_TXN_PROPS_FINAL, pool);
-}
-
-static APR_INLINE const char *
 path_txn_next_ids(svn_fs_t *fs,
                   const svn_fs_fs__id_part_t *txn_id,
                   apr_pool_t *pool)
@@ -1160,7 +1151,6 @@ static svn_error_t *
 set_txn_proplist(svn_fs_t *fs,
                  const svn_fs_fs__id_part_t *txn_id,
                  apr_hash_t *props,
-                 svn_boolean_t final,
                  apr_pool_t *pool)
 {
   svn_stringbuf_t *buf;
@@ -1173,9 +1163,7 @@ set_txn_proplist(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* Open the transaction properties file and write new contents to it. */
-  SVN_ERR(svn_io_write_atomic((final
-                               ? path_txn_props_final(fs, txn_id, pool)
-                               : path_txn_props(fs, txn_id, pool)),
+  SVN_ERR(svn_io_write_atomic(path_txn_props(fs, txn_id, pool),
                               buf->data, buf->len,
                               NULL /* copy_perms_path */, pool));
   return SVN_NO_ERROR;
@@ -1232,7 +1220,7 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
 
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
-  SVN_ERR(set_txn_proplist(txn->fs, &ftd->txn_id, txn_prop, FALSE, pool));
+  SVN_ERR(set_txn_proplist(txn->fs, &ftd->txn_id, txn_prop, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3912,6 +3900,5 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
                   svn_string_create("0", pool));
 
   ftd = (*txn_p)->fsap_data;
-  return svn_error_trace(set_txn_proplist(fs, &ftd->txn_id, props, FALSE,
-                                          pool));
+  return svn_error_trace(set_txn_proplist(fs, &ftd->txn_id, props, pool));
 }
