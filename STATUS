@@ -46,17 +46,6 @@ Other candidate changes:
    Votes:
      +1: stefan2, brane
 
- * r1682714, r1682854, r1683126, r1683135, r1683290
-   Fix segfaults in FSX's directory processing code.
-   Justification:
-     Despite its experimental state, FSX shall not segfault the server.
-   Notes:
-     The last 3 patches combine to a 1-liner and are included verbatim
-     to prevent conflicts.  Since the total lines changed is small, the
-     most efficient way to review is to do it via the combined diff.
-   Votes:
-     +1: stefan2, brane
-
 Veto-blocked changes:
 =====================
 
@@ -83,3 +72,14 @@ Approved changes:
    Votes:
      +1: stefan2 (without r1686984)
      +1: brane, philip, rhuijben
+
+ * r1682714, r1682854, r1683126, r1683135, r1683290
+   Fix segfaults in FSX's directory processing code.
+   Justification:
+     Despite its experimental state, FSX shall not segfault the server.
+   Notes:
+     The last 3 patches combine to a 1-liner and are included verbatim
+     to prevent conflicts.  Since the total lines changed is small, the
+     most efficient way to review is to do it via the combined diff.
+   Votes:
+     +1: stefan2, brane, rhuijben
