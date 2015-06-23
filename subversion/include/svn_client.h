@@ -4427,15 +4427,21 @@ svn_client_conflict_tree_get_victim_node_kind(
   const svn_wc_conflict_description2_t *conflict);
 
 /**
+ * Return the name of the conflicted property represented by @a conflict.
+ *
+ * @since New in 1.10.
+ */
+const char *
+svn_client_conflict_prop_get_propname(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
  * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
  * API for eventually replacing svn_wc_conflict_description2_t with an opaque
  * type and providing improved APIs for conflict resolution.
  * 
  * @since New in 1.10. 
  */
-
-#define svn_client_conflict_get_property_name(conflict) \
-  ((conflict)->property_name)
 
 #define svn_client_conflict_get_is_binary(conflict) \
   ((conflict)->is_binary)

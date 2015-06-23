@@ -1061,7 +1061,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
   SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
                               _("Conflict for property '%s' discovered"
                                 " on '%s'.\n"),
-                              svn_client_conflict_get_property_name(desc),
+                              svn_client_conflict_prop_get_propname(desc),
                               svn_cl__local_style_skip_ancestor(
                                 b->path_prefix,
                                 svn_client_conflict_get_local_abspath(desc),

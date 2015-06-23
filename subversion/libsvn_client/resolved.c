@@ -191,3 +191,13 @@ svn_client_conflict_tree_get_victim_node_kind(
 
   return conflict->node_kind;
 }
+
+const char *
+svn_client_conflict_prop_get_propname(
+  const svn_wc_conflict_description2_t *conflict)
+{
+  SVN_ERR_ASSERT_NO_RETURN(svn_client_conflict_get_kind(conflict)
+      == svn_wc_conflict_kind_property);
+
+  return conflict->property_name;
+}
