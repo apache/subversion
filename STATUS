@@ -110,19 +110,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1674455
-   Make 'svn cp ^/A/D/H@1 ^/A' properly create A
-   Justification:
-     Resurrecting a child as its own ancestor should work, instead of produce
-     an error message on a non existing problem.
-   Notes:
-     Not a regression. Same issue exists in 1.7.x
-     Needs backport branch since the test framework changed on trunk
-   Branch:
-     ^/subversion/branches/1.8.x-r1674455
-   Votes:
-     +1: rhuijben, stsp, stefan2
-
  * r1678494, r1680495, r1680705
    Document svn:auto-props.
    Justification:
@@ -130,4 +117,3 @@ Approved changes:
    Votes:
      +1: danielsh, rhuijben, stefan2
      +1: stsp (without r1680705)
-
