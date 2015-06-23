@@ -3627,6 +3627,7 @@ commit_body(void *baton,
   svn_pool_clear(subpool);
 
   /* Verify contents (no-op outside DEBUG mode). */
+  SVN_ERR(svn_io_file_flush(proto_file, subpool));
   SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev,
                                                       subpool));
 
