@@ -1193,7 +1193,9 @@ get_and_increment_txn_key_body(void *baton,
   get_and_increment_txn_key_baton_t *cb = baton;
   const char *txn_current_filename = svn_fs_x__path_txn_current(cb->fs,
                                                                 scratch_pool);
-  const char *tmp_filename;
+  const char *tmp_filename = svn_fs_x__path_txn_next(cb->fs, scratch_pool);
+  apr_file_t *file;
+
   char new_id_str[SVN_INT64_BUFFER_SIZE];
 
   svn_stringbuf_t *buf;
@@ -1202,14 +1204,16 @@ get_and_increment_txn_key_body(void *baton,
   /* remove trailing newlines */
   cb->txn_number = svn__base36toui64(NULL, buf->data);
 
-  /* Increment the key and add a trailing \n to the string so the
-     txn-current file has a newline in it. */
-  SVN_ERR(svn_io_write_unique(&tmp_filename,
-                              svn_dirent_dirname(txn_current_filename,
-                                                 scratch_pool),
-                              new_id_str,
-                              svn__ui64tobase36(new_id_str, cb->txn_number+1),
-                              svn_io_file_del_none, scratch_pool));
+  /* Increment the key. */
+  SVN_ERR(svn_io_file_open(&file, tmp_filename,
+                           APR_WRITE | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, scratch_pool));
+  SVN_ERR(svn_io_file_write_full(file, new_id_str,
+                                 svn__ui64tobase36(new_id_str,
+                                                   cb->txn_number+1),
+                                 NULL, scratch_pool));
+  SVN_ERR(svn_io_file_close(file, scratch_pool));
+
   SVN_ERR(svn_fs_x__move_into_place(tmp_filename, txn_current_filename,
                                     txn_current_filename, scratch_pool));
 

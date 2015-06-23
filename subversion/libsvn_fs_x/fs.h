@@ -53,12 +53,14 @@ extern "C" {
 #define PATH_FORMAT           "format"           /* Contains format number */
 #define PATH_UUID             "uuid"             /* Contains UUID */
 #define PATH_CURRENT          "current"          /* Youngest revision */
+#define PATH_NEXT             "next"             /* Revision begin written. */
 #define PATH_LOCK_FILE        "write-lock"       /* Revision lock file */
 #define PATH_PACK_LOCK_FILE   "pack-lock"        /* Pack lock file */
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
+#define PATH_TXN_NEXT         "txn-next"         /* Will become txn-current */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
