@@ -446,7 +446,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_ERR(svn_cmdline__parse_config_option(opt_state.config_options,
-                                                 utf8_opt_arg, pool));
+                                                 utf8_opt_arg,
+                                                 "svn-mi-normalizer: ",
+                                                 pool));
         break;
       case opt_allow_mixed_revisions:
         opt_state.allow_mixed_rev = TRUE;
