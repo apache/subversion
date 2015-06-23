@@ -6694,6 +6694,46 @@ def update_conflict_details(sbox):
   svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B'),
                                       '--depth', 'infinity')
 
+# Keywords should be updated in local file even if text change is shortcut
+# (due to the local change being the same as the incoming change, for example).
+@XFail()
+def update_keywords_on_shortcut(sbox):
+  "update_keywords_on_shortcut"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Start with a file with keywords expanded
+  mu_path = sbox.ospath('A/mu')
+  svntest.main.file_append(mu_path, '$LastChangedRevision$\n')
+  svntest.main.run_svn(None, 'ps', 'svn:keywords', 'LastChangedRevision', mu_path)
+  sbox.simple_commit('A/mu')
+
+  # Modify the text, and commit
+  svntest.main.file_append(mu_path, 'New line.\n')
+  sbox.simple_commit('A/mu')
+
+  # Update back to the previous revision
+  sbox.simple_update('A/mu', 2)
+
+  # Make the same change again locally
+  svntest.main.file_append(mu_path, 'New line.\n')
+
+  # Update, so that merging the text change is a short-cut merge
+  text_before_up = open(sbox.ospath('A/mu'), 'r').readlines()
+  sbox.simple_update('A/mu')
+  text_after_up = open(sbox.ospath('A/mu'), 'r').readlines()
+
+  # Check the keywords have been updated
+  print 'old: ' + repr(text_before_up)
+  print 'new: ' + repr(text_after_up)
+  if not any(['$LastChangedRevision: 2 $' in line
+              for line in text_before_up]):
+    raise svntest.Failure("keyword not as expected in test set-up phase")
+  if not any(['$LastChangedRevision: 3 $' in line
+              for line in text_after_up]):
+    raise svntest.Failure("update did not update the LastChangedRevision keyword")
+
 #######################################################################
 # Run the tests
 
@@ -6780,6 +6820,7 @@ test_list = [ None,
               bump_below_tree_conflict,
               update_child_below_add,
               update_conflict_details,
+              update_keywords_on_shortcut,
              ]
 
 if __name__ == '__main__':
