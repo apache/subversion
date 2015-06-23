@@ -44,7 +44,7 @@ Other candidate changes:
      test case.  Since the total lines changed is small, the most efficient
      way to review is to via the combined diff.
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
  * r1686478, r1686888, r1686984
    Make 'blame -g' work with old clients against new servers.
