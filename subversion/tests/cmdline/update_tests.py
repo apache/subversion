@@ -6725,8 +6725,6 @@ def update_keywords_on_shortcut(sbox):
   text_after_up = open(sbox.ospath('A/mu'), 'r').readlines()
 
   # Check the keywords have been updated
-  print 'old: ' + repr(text_before_up)
-  print 'new: ' + repr(text_after_up)
   if not any(['$LastChangedRevision: 2 $' in line
               for line in text_before_up]):
     raise svntest.Failure("keyword not as expected in test set-up phase")
