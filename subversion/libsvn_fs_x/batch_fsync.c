@@ -244,7 +244,7 @@ thread_pool_pre_cleanup(void *data)
 }
 
 svn_error_t *
-svn_fs_x__batch_fsync_init()
+svn_fs_x__batch_fsync_init(void)
 {
 #ifdef APR_HAS_THREADS
   /* The thread-pool must be allocated from a thread-safe pool.
