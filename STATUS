@@ -83,18 +83,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1683303
-   Resolve a race condition in some test suite cleanup code.
-   Justification:
-     Without this patch running the testsuite on bdb x svnserve consistently
-     fails on at least some Windows test systems. bdb x serf sometimes
-     triggers the same problem, but in far less cases.
-     .
-     This specific test -unlike other tests- cleans up its own environment a
-     few times to retry some scenarios on the same paths.
-   Votes:
-     +1: rhuijben, brane, stefan2
-
  * r1683378
    Prevent a possible FSFS repository corruption with power or network disk
    failures during 'svnadmin pack'.
