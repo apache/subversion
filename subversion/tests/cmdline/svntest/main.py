@@ -112,7 +112,7 @@ class SVNRepositoryCreateFailure(Failure):
 # Windows specifics
 if sys.platform == 'win32':
   windows = True
-  file_scheme_prefix = 'file:'
+  file_scheme_prefix = 'file:///'
   _exe = '.exe'
   _bat = '.bat'
   os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
@@ -151,7 +151,10 @@ os.environ['LC_ALL'] = 'C'
 def P(relpath,
       head=os.path.dirname(os.path.dirname(os.path.abspath('.')))
       ):
-  return os.path.join(head, relpath)
+  if sys.platform=='win32':
+    return os.path.join(head, relpath + '.exe')
+  else:
+    return os.path.join(head, relpath)
 svn_binary = P('svn/svn')
 svnadmin_binary = P('svnadmin/svnadmin')
 svnlook_binary = P('svnlook/svnlook')
@@ -878,6 +881,8 @@ def youngest(repos_path):
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
+  """For each node in the OS filesystem tree PATH, subtract MASK from its
+  permissions and add MODE to them."""
   for dirpath, dirs, files in os.walk(path):
     for name in dirs + files:
       fullname = os.path.join(dirpath, name)
@@ -1524,9 +1529,16 @@ def is_plaintext_password_storage_disabled():
 
 
 # https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
 __mod_dav_url_quoting_broken_versions = frozenset([
+    '2.2.27',
     '2.2.26',
+    '2.2.25',
     '2.4.9',
+    '2.4.8',
+    '2.4.7',
+    '2.4.6',
+    '2.4.5',
 ])
 def is_mod_dav_url_quoting_broken():
     if is_ra_type_dav():
@@ -1977,7 +1989,9 @@ def _create_parser():
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
         url=file_scheme_prefix + \
-                        urllib.pathname2url(os.path.abspath(os.getcwd())),
+                        svntest.wc.svn_uri_quote(
+                           os.path.abspath(
+                               os.getcwd()).replace(os.path.sep, '/')),
         http_library=_default_http_library)
 
   return parser
@@ -2226,7 +2240,9 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   # Calculate pristine_greek_repos_url from test_area_url.
   pristine_greek_repos_url = options.test_area_url + '/' + \
-                                urllib.pathname2url(pristine_greek_repos_dir)
+                                svntest.wc.svn_uri_quote(
+                                  pristine_greek_repos_dir.replace(
+                                      os.path.sep, '/'))
 
   if options.use_jsvn:
     if options.svn_bin is None:

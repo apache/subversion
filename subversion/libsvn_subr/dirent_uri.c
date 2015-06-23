@@ -1295,9 +1295,9 @@ svn_relpath_split(const char **dirpath,
 }
 
 const char *
-svn_relpath_limit(const char *relpath,
-                  int max_components,
-                  apr_pool_t *result_pool)
+svn_relpath_prefix(const char *relpath,
+                   int max_components,
+                   apr_pool_t *result_pool)
 {
   const char *end;
   assert(relpath_is_canonical(relpath));

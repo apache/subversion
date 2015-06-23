@@ -599,6 +599,35 @@ sbox_wc_resolve(svn_test__sandbox_t *b, const char *path, svn_depth_t depth,
 }
 
 svn_error_t *
+sbox_wc_resolve_prop(svn_test__sandbox_t *b, const char *path,
+                     const char *propname,
+                     svn_wc_conflict_choice_t conflict_choice)
+{
+  const char *lock_abspath;
+  svn_error_t *err;
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, b->wc_ctx,
+                                                 sbox_wc_path(b, path),
+                                                 b->pool, b->pool));
+  err = svn_wc__resolve_conflicts(b->wc_ctx, sbox_wc_path(b, path),
+                                  svn_depth_empty,
+                                  FALSE,
+                                  propname,
+                                  FALSE,
+                                  conflict_choice,
+                                  NULL, NULL, /* conflict func */
+                                  NULL, NULL, /* cancellation */
+                                  NULL, NULL, /* notification */
+                                  b->pool);
+
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(b->wc_ctx,
+                                                                 lock_abspath,
+                                                                 b->pool));
+  return err;
+}
+
+
+svn_error_t *
 sbox_wc_move(svn_test__sandbox_t *b, const char *src, const char *dst)
 {
   svn_client_ctx_t *ctx;

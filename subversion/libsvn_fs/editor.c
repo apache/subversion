@@ -249,7 +249,7 @@ can_modify(svn_fs_root_t *txn_root,
       svn_fs_close_root(rev_root);
 
       /* Has the target node changed in the future?  */
-      if (relation != svn_fs_node_same)
+      if (relation != svn_fs_node_unchanged)
         {
           /* Restarting the commit will base the txn on the future/new
              revision, allowing the modification at REVISION.  */
@@ -777,16 +777,24 @@ svn_fs__editor_commit(svn_revnum_t *revision,
   /* Clean up internal resources (eg. eb->root). This also allows the
      editor infrastructure to know this editor is "complete".  */
   err = svn_editor_complete(editor);
+  if (err)
+    {
+      svn_fs_txn_t *txn = eb->txn;
+
+      eb->txn = NULL;
+      return svn_error_trace(svn_error_compose_create(
+                  err,
+                  svn_fs_abort_txn(txn, scratch_pool)));
+    }
 
   /* Note: docco for svn_fs_commit_txn() states that CONFLICT_PATH will
      be allocated in the txn's pool. But it lies. Regardless, we want
      it placed into RESULT_POOL.  */
 
-  if (!err)
-    err = svn_fs_commit_txn(&inner_conflict_path,
-                             revision,
-                             eb->txn,
-                             scratch_pool);
+  err = svn_fs_commit_txn(&inner_conflict_path,
+                          revision,
+                          eb->txn,
+                          scratch_pool);
   if (SVN_IS_VALID_REVNUM(*revision))
     {
       if (err)

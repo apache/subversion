@@ -110,7 +110,7 @@ typedef enum svn_cl__longopt_t {
   opt_remove,
   opt_revprop,
   opt_stop_on_copy,
-  opt_strict,
+  opt_strict,                   /* ### DEPRECATED */
   opt_targets,
   opt_depth,
   opt_set_depth,
@@ -125,11 +125,7 @@ typedef enum svn_cl__longopt_t {
   opt_show_revs,
   opt_reintegrate,
   opt_trust_server_cert,
-  opt_trust_server_cert_unknown_ca,
-  opt_trust_server_cert_cn_mismatch,
-  opt_trust_server_cert_expired,
-  opt_trust_server_cert_not_yet_valid,
-  opt_trust_server_cert_other_failure,
+  opt_trust_server_cert_failures,
   opt_strip,
   opt_ignore_keywords,
   opt_reverse_diff,
@@ -146,6 +142,7 @@ typedef enum svn_cl__longopt_t {
   opt_no_newline,
   opt_show_passwords,
   opt_pin_externals,
+  opt_show_item,
 } svn_cl__longopt_t;
 
 
@@ -232,7 +229,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "'empty', 'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
-  {"strict",        opt_strict, 0, N_("use strict semantics")},
+  {"strict",        opt_strict, 0, N_("DEPRECATED")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
                     N_("do not cross copies while traversing history")},
   {"no-ignore",     opt_no_ignore, 0,
@@ -242,29 +239,23 @@ const apr_getopt_option_t svn_cl__options[] =
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
-                    N_("deprecated; same as --trust-unknown-ca")},
-  {"trust-unknown-ca", opt_trust_server_cert_unknown_ca, 0,
+                    N_("deprecated; same as\n"
+                       "                             "
+                       "--trust-server-cert-failures=unknown-ca")},
+  {"trust-server-cert-failures", opt_trust_server_cert_failures, 1,
                     N_("with --non-interactive, accept SSL server\n"
                        "                             "
-                       "certificates from unknown certificate authorities")},
-  {"trust-cn-mismatch", opt_trust_server_cert_cn_mismatch, 0,
-                    N_("with --non-interactive, accept SSL server\n"
+                       "certificates with failures; ARG is comma-separated\n"
                        "                             "
-                       "certificates even if the server hostname does not\n"
+                       "list of 'unknown-ca' (Unknown Authority),\n"
                        "                             "
-                       "match the certificate's common name attribute")},
-  {"trust-expired", opt_trust_server_cert_expired, 0,
-                    N_("with --non-interactive, accept expired SSL server\n"
+                       "'cn-mismatch' (Hostname mismatch), 'expired'\n"
                        "                             "
-                       "certificates")},
-  {"trust-not-yet-valid", opt_trust_server_cert_not_yet_valid, 0,
-                    N_("with --non-interactive, accept SSL server\n"
+                       "(Expired certificate), 'not-yet-valid' (Not yet\n"
                        "                             "
-                       "certificates from the future")},
-  {"trust-other-failure", opt_trust_server_cert_other_failure, 0,
-                    N_("with --non-interactive, accept SSL server\n"
+                       "valid certificate) and 'other' (all other not\n"
                        "                             "
-                       "certificates with failures other than the above")},
+                       "separately classified certificate errors).")},
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting (default is to prompt\n"
                        "                             "
@@ -407,7 +398,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "svn:externals properties")},
   {"show-inherited-props", opt_show_inherited_props, 0,
-                       N_("retrieve target's inherited properties")},
+                       N_("retrieve properties set on parents of the target")},
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax)")},
   {"search-and", opt_search_and, 1,
@@ -423,6 +414,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("pin externals with no explicit revision to their\n"
                           "                             "
                           "current revision (recommended when tagging)")},
+  {"show-item", opt_show_item, 1,
+                       N_("print only the item identified by ARG")},
 
   /* Long-opt Aliases
    *
@@ -456,9 +449,7 @@ const apr_getopt_option_t svn_cl__options[] =
 const int svn_cl__global_options[] =
 { opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
   opt_force_interactive, opt_trust_server_cert,
-  opt_trust_server_cert_unknown_ca, opt_trust_server_cert_cn_mismatch,
-  opt_trust_server_cert_expired, opt_trust_server_cert_not_yet_valid,
-  opt_trust_server_cert_other_failure,
+  opt_trust_server_cert_failures,
   opt_config_dir, opt_config_options, 0
 };
 
@@ -736,9 +727,24 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Print information about each TARGET (default: '.').\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
-     "  determines in which revision the target is first looked up.\n"),
+     "  determines in which revision the target is first looked up.\n"
+     "\n"
+     "  With --show-item, print only the value of one item of information\n"
+     "  about TARGET. One of the following items can be selected:\n"
+     "     kind                  the kind of TARGET\n"
+     "     url                   the URL of TARGET in the repository\n"
+     "     relative-url          the repository-relative URL\n"
+     "     repos-root-url        the repository root URL\n"
+     "     repos-uuid            the repository UUID\n"
+     "     revision              the revision of TARGET (defaults to BASE\n"
+     "                           for working copy paths and HEAD for URLs)\n"
+     "     last-changed-revision the most recent revision in which TARGET\n"
+     "                           was changed\n"
+     "     last-changed-date     the date of the last-changed revision\n"
+     "     last-changed-author   the author of the last-changed revision\n"
+     "     wc-root               the root of TARGET's working copy"),
     {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
-     opt_changelist, opt_include_externals}
+     opt_changelist, opt_include_externals, opt_show_item, opt_no_newline}
   },
 
   { "list", svn_cl__list, {"ls"}, N_
@@ -1355,14 +1361,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  By default, an extra newline is printed after the property value so that\n"
      "  the output looks pretty.  With a single TARGET, depth 'empty' and without\n"
-     "  --show-inherited-props, you can use the --strict option to disable this\n"
+     "  --show-inherited-props, you can use the --no-newline option to disable this\n"
      "  (useful when redirecting a binary property value to a file, for example).\n"
      "\n"
      "  See 'svn help propset' for descriptions of the svn:* special properties.\n"),
-    {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
+    {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_no_newline, opt_xml,
      opt_changelist, opt_show_inherited_props },
     {{'v', N_("print path, name and value on separate lines")},
-     {opt_strict, N_("don't print an extra newline")}} },
+     {opt_strict, N_("(deprecated; use --no-newline)")}} },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
@@ -1439,6 +1445,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  directory:\n"
      "    svn:ignore         - A list of file glob patterns to ignore, one per line.\n"
      "    svn:global-ignores - Like svn:ignore, but inheritable.\n"
+     "    svn:auto-props     - Automatically set properties on files when they are\n"
+     "      added or imported. Contains key-value pairs, one per line, in the format:\n"
+     "        PATTERN = PROPNAME=VALUE[;PROPNAME=VALUE ...]\n"
+     "      Example (where a literal ';' is escaped by adding another ';'):\n"
+     "        *.html = svn:eol-style=native;svn:mime-type=text/html;; charset=UTF8\n"
+     "      Applies recursively to all files added or imported under the directory\n"
+     "      it is set on.  See also [auto-props] in the client configuration file.\n"
      "    svn:externals      - A list of module specifiers, one per line, in the\n"
      "      following format similar to the syntax of 'svn checkout':\n"
      "        [-r REV] URL[@PEG] LOCALPATH\n"
@@ -1620,8 +1633,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    !     C wc/qaz.c\n"
      "          >   local missing, incoming edit upon update\n"
      "    D       wc/qax.c\n"),
-    { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
-      opt_ignore_externals, opt_changelist},
+    { 'u', 'v', 'N', opt_depth, 'r', 'q', opt_no_ignore, opt_incremental,
+      opt_xml, opt_ignore_externals, opt_changelist},
     {{'q', N_("don't print unversioned items")}} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
@@ -2154,9 +2167,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_stop_on_copy:
         opt_state.stop_on_copy = TRUE;
         break;
-      case opt_strict:
-        opt_state.strict = TRUE;
-        break;
       case opt_no_ignore:
         opt_state.no_ignore = TRUE;
         break;
@@ -2170,20 +2180,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         force_interactive = TRUE;
         break;
       case opt_trust_server_cert: /* backwards compat to 1.8 */
-      case opt_trust_server_cert_unknown_ca:
         opt_state.trust_server_cert_unknown_ca = TRUE;
         break;
-      case opt_trust_server_cert_cn_mismatch:
-        opt_state.trust_server_cert_cn_mismatch = TRUE;
-        break;
-      case opt_trust_server_cert_expired:
-        opt_state.trust_server_cert_expired = TRUE;
-        break;
-      case opt_trust_server_cert_not_yet_valid:
-        opt_state.trust_server_cert_not_yet_valid = TRUE;
-        break;
-      case opt_trust_server_cert_other_failure:
-        opt_state.trust_server_cert_other_failure = TRUE;
+      case opt_trust_server_cert_failures:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_cmdline__parse_trust_options(
+                      &opt_state.trust_server_cert_unknown_ca,
+                      &opt_state.trust_server_cert_cn_mismatch,
+                      &opt_state.trust_server_cert_expired,
+                      &opt_state.trust_server_cert_not_yet_valid,
+                      &opt_state.trust_server_cert_other_failure,
+                      utf8_opt_arg, pool));
         break;
       case opt_no_diff_added:
         opt_state.diff.no_diff_added = TRUE;
@@ -2250,7 +2257,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_ERR(svn_cmdline__parse_config_option(opt_state.config_options,
-                                                 utf8_opt_arg, pool));
+                                                 utf8_opt_arg, "svn: ", pool));
         break;
       case opt_autoprops:
         opt_state.autoprops = TRUE;
@@ -2398,6 +2405,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.remove_ignored = TRUE;
         break;
       case opt_no_newline:
+      case opt_strict:          /* ### DEPRECATED */
         opt_state.no_newline = TRUE;
         break;
       case opt_show_passwords:
@@ -2405,6 +2413,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_pin_externals:
         opt_state.pin_externals = TRUE;
+        break;
+      case opt_show_item:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        opt_state.show_item = utf8_opt_arg;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -2615,25 +2627,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* --trust-* options can only be used with --non-interactive */
   if (!opt_state.non_interactive)
     {
-      if (opt_state.trust_server_cert_unknown_ca)
+      if (opt_state.trust_server_cert_unknown_ca
+          || opt_state.trust_server_cert_cn_mismatch
+          || opt_state.trust_server_cert_expired
+          || opt_state.trust_server_cert_not_yet_valid
+          || opt_state.trust_server_cert_other_failure)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-unknown-ca requires "
-                                  "--non-interactive"));
-      if (opt_state.trust_server_cert_cn_mismatch)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-cn-mismatch requires "
-                                  "--non-interactive"));
-      if (opt_state.trust_server_cert_expired)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-expired requires "
-                                  "--non-interactive"));
-      if (opt_state.trust_server_cert_not_yet_valid)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-not-yet-valid requires "
-                                  "--non-interactive"));
-      if (opt_state.trust_server_cert_other_failure)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-other-failure requires "
+                                _("--trust-server-cert-failures requires "
                                   "--non-interactive"));
     }
 
@@ -3038,10 +3038,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
           || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          err = svn_error_quick_wrap(
-                  err, apr_psprintf(pool,
-                                    _("Try 'svn help %s' for more information"),
-                                    subcommand->name));
+          err = svn_error_quick_wrapf(
+                  err, _("Try 'svn help %s' for more information"),
+                  subcommand->name);
         }
       if (err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
         {

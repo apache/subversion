@@ -1342,20 +1342,19 @@ x_node_relation(svn_fs_node_relation_t *relation,
       return SVN_NO_ERROR;
     }
 
-  /* Nodes from different transactions are never related. */
-  if (root_a->is_txn_root && root_b->is_txn_root
-      && strcmp(root_a->txn, root_b->txn))
-    {
-      *relation = svn_fs_node_unrelated;
-      return SVN_NO_ERROR;
-    }
-
   /* Are both (!) root paths? Then, they are related and we only test how
    * direct the relation is. */
   if (a_is_root_dir && b_is_root_dir)
     {
-      *relation = root_a->rev == root_b->rev
-                ? svn_fs_node_same
+      svn_boolean_t different_txn
+        = root_a->is_txn_root && root_b->is_txn_root
+            && strcmp(root_a->txn, root_b->txn);
+
+      /* For txn roots, root->REV is the base revision of that TXN. */
+      *relation = (   (root_a->rev == root_b->rev)
+                   && (root_a->is_txn_root == root_b->is_txn_root)
+                   && !different_txn)
+                ? svn_fs_node_unchanged
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
@@ -1370,8 +1369,10 @@ x_node_relation(svn_fs_node_relation_t *relation,
   noderev_id_b = *svn_fs_x__dag_get_id(node);
   SVN_ERR(svn_fs_x__dag_get_node_id(&node_id_b, node));
 
+  /* In FSX, even in-txn IDs are globally unique.
+   * So, we can simply compare them. */
   if (svn_fs_x__id_eq(&noderev_id_a, &noderev_id_b))
-    *relation = svn_fs_node_same;
+    *relation = svn_fs_node_unchanged;
   else if (svn_fs_x__id_eq(&node_id_a, &node_id_b))
     *relation = svn_fs_node_common_ancestor;
   else
@@ -1499,6 +1500,20 @@ x_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+x_node_has_props(svn_boolean_t *has_props,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+
+  SVN_ERR(x_node_proplist(&props, root, path, scratch_pool));
+
+  *has_props = (0 < apr_hash_count(props));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 increment_mergeinfo_up_tree(parent_path_t *pp,
@@ -1679,6 +1694,15 @@ compare_dir_structure(svn_boolean_t *changed,
   SVN_ERR(svn_fs_x__dag_dir_entries(&rhs_entries, rhs, scratch_pool,
                                     iterpool));
 
+  /* different number of entries -> some addition / removal */
+  if (lhs_entries->nelts != rhs_entries->nelts)
+    {
+      svn_pool_destroy(iterpool);
+      *changed = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+
   /* Since directories are sorted by name, we can simply compare their
      entries one-by-one without binary lookup etc. */
   for (i = 0; i < lhs_entries->nelts; ++i)
@@ -1713,7 +1737,9 @@ compare_dir_structure(svn_boolean_t *changed,
 
       /* This is a different entry. */
       *changed = TRUE;
-      break;
+      svn_pool_destroy(iterpool);
+
+      return SVN_NO_ERROR;
     }
 
   svn_pool_destroy(iterpool);
@@ -2410,9 +2436,11 @@ static svn_error_t *
 x_dir_optimal_order(apr_array_header_t **ordered_p,
                     svn_fs_root_t *root,
                     apr_hash_t *entries,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
-  *ordered_p = svn_fs_x__order_dir_entries(root->fs, entries, pool);
+  *ordered_p = svn_fs_x__order_dir_entries(root->fs, entries, result_pool,
+                                           scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -4211,6 +4239,7 @@ static root_vtable_t root_vtable = {
   x_closest_copy,
   x_node_prop,
   x_node_proplist,
+  x_node_has_props,
   x_change_node_prop,
   x_props_changed,
   x_dir_entries,

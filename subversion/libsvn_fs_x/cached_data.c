@@ -838,7 +838,7 @@ svn_fs_x__check_rep(svn_fs_x__representation_t *rep,
           && entry->type != SVN_FS_X__ITEM_TYPE_FILE_PROPS
           && entry->type != SVN_FS_X__ITEM_TYPE_DIR_PROPS
           && entry->type != SVN_FS_X__ITEM_TYPE_REPS_CONT))
-    return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("No representation found at offset %s "
                                "for item %s in revision %ld"),
                              apr_off_t_toa(scratch_pool, offset),
@@ -2534,7 +2534,7 @@ read_dir_entries(apr_array_header_t *entries,
       /* In incremental mode, update the hash; otherwise, write to the
        * final array. */
       if (incremental)
-        apr_hash_set(hash, entry.key, entry.keylen, dirent);
+        apr_hash_set(hash, dirent->name, entry.keylen, dirent);
       else
         APR_ARRAY_PUSH(entries, svn_fs_x__dirent_t *) = dirent;
     }

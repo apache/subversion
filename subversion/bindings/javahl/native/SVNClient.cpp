@@ -96,21 +96,21 @@ SVNClient *SVNClient::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
     jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-                                                   JAVA_PACKAGE"/SVNClient");
+                                                   JAVAHL_CLASS("/SVNClient"));
     return (cppAddr == 0 ? NULL : reinterpret_cast<SVNClient *>(cppAddr));
 }
 
 void SVNClient::dispose(jobject jthis)
 {
     static jfieldID fid = 0;
-    SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNClient");
+    SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/SVNClient"));
 }
 
 jobject SVNClient::getVersionExtended(bool verbose)
 {
     JNIEnv *const env = JNIUtil::getEnv();
 
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/types/VersionExtended");
+    jclass clazz = env->FindClass(JAVAHL_CLASS("/types/VersionExtended"));
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 

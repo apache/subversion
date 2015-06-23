@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file ReposFreezeAction.h
+ * @file ReposFreezeAction.cpp
  * @brief Native mirror of the ReposFreezeAction callback interface
  */
 
@@ -39,7 +39,7 @@ svn_error_t* ReposFreezeAction::invoke()
   static volatile jmethodID mid = 0;
   if (!mid)
     {
-      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/ReposFreezeAction");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/callback/ReposFreezeAction"));
       if (!JNIUtil::isJavaExceptionThrown())
         mid = env->GetMethodID(cls, "invoke", "()V");
     }

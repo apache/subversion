@@ -74,12 +74,20 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
   apr_hash_index_t *hi;
   svn_boolean_t locked;
   svn_error_t *err;
+  svn_wc_context_t *wc_ctx = NULL;
+  const char *dir_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
 
   err = svn_wc_adm_open3(&adm_access, related, dir_path, FALSE, 0,
                          NULL, NULL, pool);
   if (!err)
     {
-      SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
+      SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                             svn_wc__adm_get_db(adm_access),
+                                             pool));
+
+      SVN_ERR(svn_wc_locked2(NULL, &locked, wc_ctx, dir_abspath, pool));
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
     }
   else if (err && err->apr_err == SVN_ERR_WC_LOCKED
@@ -88,12 +96,17 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
     {
       /* Common caller error: Can't open a baton when there is one. */
       svn_error_clear(err);
-      SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
+
+      SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                             svn_wc__adm_get_db(related),
+                                             pool));
+
+      SVN_ERR(svn_wc_locked2(NULL, &locked, wc_ctx, dir_abspath, pool));
       SVN_ERR(svn_wc_entries_read(&entries, related, TRUE, pool));
     }
   else
     {
-      const char *dir_abspath, *lockfile_path;
+      const char *lockfile_path;
       svn_node_kind_t kind;
 
       /* ### Should svn_wc_adm_open3 be returning UPGRADE_REQUIRED? */
@@ -101,7 +114,6 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
         return err;
       svn_error_clear(err);
       adm_access = NULL;
-      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
       SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath, pool, pool));
       lockfile_path = svn_dirent_join_many(pool, dir_path,
                                            svn_wc_get_adm_dir(pool),
@@ -160,6 +172,9 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
       bool_value("locked", locked && *entry->name == '\0');
       printf("entries['%s'] = e\n", (const char *)key);
     }
+
+  if (wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   if (adm_access)
     SVN_ERR(svn_wc_adm_close2(adm_access, pool));
@@ -271,6 +286,16 @@ tree_dump_dir(const char *local_abspath,
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;
 
+  if (strcmp(local_abspath, bt->root_abspath) != 0)
+    {
+      svn_boolean_t is_wcroot;
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, bt->wc_ctx->db,
+                                   local_abspath, scratch_pool));
+
+      if (is_wcroot)
+        return SVN_NO_ERROR; /* Report the stub, but not the data */
+    }
+
   /* If LOCAL_ABSPATH a child of or equal to ROOT_ABSPATH, then display
      a relative path starting with PREFIX_PATH. */
   path = svn_dirent_skip_ancestor(bt->root_abspath, local_abspath);
@@ -285,19 +310,6 @@ tree_dump_dir(const char *local_abspath,
   printf("dirs['%s'] = entries\n", path);
   return SVN_NO_ERROR;
 
-}
-
-static svn_error_t *
-tree_dump_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
-{
-  struct directory_walk_baton *bt = baton;
-
-  SVN_ERR(svn_wc__internal_walk_children(bt->wc_ctx->db, bt->root_abspath, FALSE,
-                                         NULL, tree_dump_dir, bt,
-                                         svn_depth_infinity,
-                                         NULL, NULL, scratch_pool));
-
-  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -325,7 +337,12 @@ tree_dump(const char *path,
   SVN_ERR(svn_wc__db_temp_borrow_sdb(&sdb, bt.wc_ctx->db, bt.root_abspath,
                                      scratch_pool));
 
-  SVN_ERR(svn_sqlite__with_lock(sdb, tree_dump_txn, &bt, scratch_pool));
+  SVN_SQLITE__WITH_LOCK(
+      svn_wc__internal_walk_children(db, bt.root_abspath, FALSE,
+                                     NULL, tree_dump_dir, &bt,
+                                     svn_depth_infinity,
+                                     NULL, NULL, scratch_pool),
+      sdb);
 
   /* And close everything we've opened */
   SVN_ERR(svn_wc_context_destroy(bt.wc_ctx));

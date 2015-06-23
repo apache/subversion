@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_wc_db.h
+ * @file wc_db.h
  * @brief The Subversion Working Copy Library - Metadata/Base-Text Support
  *
  * Requires:
@@ -2019,6 +2019,7 @@ struct svn_wc__db_info_t {
   svn_boolean_t moved_here;     /* Only on op-roots. */
 
   svn_boolean_t file_external;
+  svn_boolean_t has_descendants; /* Is dir, or has tc descendants */
 };
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for
@@ -2363,7 +2364,9 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
 
 /* Read the conflict information recorded on LOCAL_ABSPATH in *CONFLICT,
    an editable conflict skel. If kind is not NULL, also read the node kind
-   in *KIND. (SHOW_HIDDEN: false, SHOW_DELETED: true)
+   in *KIND. (SHOW_HIDDEN: false, SHOW_DELETED: true). If props is not NULL
+   read the actual properties in this value if they exist. (Set to NULL in case
+   the node is deleted, etc.)
 
    If the node exists, but does not have a conflict set *CONFLICT to NULL,
    otherwise return a SVN_ERR_WC_PATH_NOT_FOUND error.
@@ -2373,6 +2376,7 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
 svn_error_t *
 svn_wc__db_read_conflict(svn_skel_t **conflict,
                          svn_node_kind_t *kind,
+                         apr_hash_t **props,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

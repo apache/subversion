@@ -322,11 +322,11 @@ svn_cl__propget(apr_getopt_t *os,
   svn_stream_t *out;
   svn_boolean_t warned = FALSE;
 
-  if (opt_state->verbose && (opt_state->revprop || opt_state->strict
+  if (opt_state->verbose && (opt_state->revprop || opt_state->no_newline
                              || opt_state->xml))
     return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                             _("--verbose cannot be used with --revprop or "
-                              "--strict or --xml"));
+                              "--no-newline or --xml"));
 
   /* PNAME is first argument (and PNAME_UTF8 will be a UTF-8 version
      thereof) */
@@ -411,7 +411,7 @@ svn_cl__propget(apr_getopt_t *os,
 
               SVN_ERR(stream_write(out, printable_val->data,
                                    printable_val->len));
-              if (! opt_state->strict)
+              if (! opt_state->no_newline)
                 SVN_ERR(stream_write(out, APR_EOL_STR, strlen(APR_EOL_STR)));
             }
         }
@@ -427,16 +427,16 @@ svn_cl__propget(apr_getopt_t *os,
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;
 
-      /* Strict mode only makes sense for a single target.  So make
+      /* No-newline mode only makes sense for a single target.  So make
          sure we have only a single target, and that we're not being
          asked to recurse on that target. */
-      if (opt_state->strict
+      if (opt_state->no_newline
           && ((targets->nelts > 1) || (opt_state->depth != svn_depth_empty)
               || (opt_state->show_inherited_props)))
         return svn_error_create
           (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-           _("Strict output of property values only available for single-"
-             "target, non-recursive propget operations"));
+           _("--no-newline is only available for single-target,"
+             " non-recursive propget operations"));
 
       for (i = 0; i < targets->nelts; i++)
         {
@@ -472,15 +472,15 @@ svn_cl__propget(apr_getopt_t *os,
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,
              we'll print filenames.  That is, unless we've been told
-             not to do so with the --strict option. */
+             not to do so with the --no-newline option. */
           print_filenames = ((opt_state->depth > svn_depth_empty
                               || targets->nelts > 1
                               || apr_hash_count(props) > 1
                               || opt_state->verbose
                               || opt_state->show_inherited_props)
-                             && (! opt_state->strict));
-          omit_newline = opt_state->strict;
-          like_proplist = opt_state->verbose && !opt_state->strict;
+                             && (! opt_state->no_newline));
+          omit_newline = opt_state->no_newline;
+          like_proplist = opt_state->verbose && !opt_state->no_newline;
 
           /* If there are no properties, and exactly one node was queried,
              then warn. */

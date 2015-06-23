@@ -384,6 +384,8 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_remove_file2(proto_l2p_index_path, FALSE, pool));
   SVN_ERR(svn_io_remove_file2(proto_p2l_index_path, FALSE, pool));
 
+  /* Ensure that packed file is written to disk.*/
+  SVN_ERR(svn_io_file_flush_to_disk(context->pack_file, pool));
   SVN_ERR(svn_io_file_close(context->pack_file, pool));
 
   return SVN_NO_ERROR;
@@ -572,7 +574,7 @@ copy_rep_to_temp(pack_context_t *context,
   /* read & parse the representation header */
   stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, stream, pool, pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* if the representation is a delta against some other rep, link the two */
   if (   rep_header->type == svn_fs_fs__rep_delta
@@ -643,17 +645,18 @@ compare_dir_entries_format6(const svn_sort__item_t *a,
 apr_array_header_t *
 svn_fs_fs__order_dir_entries(svn_fs_t *fs,
                              apr_hash_t *directory,
-                             apr_pool_t *pool)
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   apr_array_header_t *ordered
     = svn_sort__hash(directory,
                      svn_fs_fs__use_log_addressing(fs)
                        ? compare_dir_entries_format7
                        : compare_dir_entries_format6,
-                     pool);
+                     scratch_pool);
 
   apr_array_header_t *result
-    = apr_array_make(pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
+    = apr_array_make(result_pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
 
   int i;
   for (i = 0; i < ordered->nelts; ++i)
@@ -714,7 +717,7 @@ copy_node_to_temp(pack_context_t *context,
   /* read & parse noderev */
   stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool, pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
@@ -736,9 +739,7 @@ copy_node_to_temp(pack_context_t *context,
     {
       path_order->rep_id.revision = noderev->data_rep->revision;
       path_order->rep_id.number = noderev->data_rep->item_index;
-      path_order->expanded_size = noderev->data_rep->expanded_size
-                                ? noderev->data_rep->expanded_size
-                                : noderev->data_rep->size;
+      path_order->expanded_size = noderev->data_rep->expanded_size;
     }
 
   /* Sort path is the key used for ordering noderevs and associated reps.
@@ -1655,7 +1656,9 @@ pack_phys_addressed(const char *pack_file_dir,
                     apr_pool_t *pool)
 {
   const char *pack_file_path, *manifest_file_path;
-  svn_stream_t *pack_stream, *manifest_stream;
+  apr_file_t *pack_file;
+  apr_file_t *manifest_file;
+  svn_stream_t *manifest_stream;
   svn_revnum_t end_rev, rev;
   apr_off_t next_offset;
   apr_pool_t *iterpool;
@@ -1664,13 +1667,18 @@ pack_phys_addressed(const char *pack_file_dir,
   pack_file_path = svn_dirent_join(pack_file_dir, PATH_PACKED, pool);
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST, pool);
 
-  /* Create the new directory and pack file. */
-  SVN_ERR(svn_stream_open_writable(&pack_stream, pack_file_path, pool,
-                                    pool));
+  /* Create the new directory and pack file.
+   * Use unbuffered apr_file_t since we're going to write using 16kb
+   * chunks. */
+  SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
+                           APR_WRITE | APR_CREATE | APR_EXCL,
+                           APR_OS_DEFAULT, pool));
 
   /* Create the manifest file. */
-  SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
-                                   pool, pool));
+  SVN_ERR(svn_io_file_open(&manifest_file, manifest_file_path,
+                           APR_WRITE | APR_BUFFERED | APR_CREATE | APR_EXCL,
+                           APR_OS_DEFAULT, pool));
+  manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE, pool);
 
   end_rev = start_rev + max_files_per_dir - 1;
   next_offset = 0;
@@ -1697,16 +1705,24 @@ pack_phys_addressed(const char *pack_file_dir,
 
       /* Copy all the bits from the rev file to the end of the pack file. */
       SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
-      SVN_ERR(svn_stream_copy3(rev_stream, svn_stream_disown(pack_stream,
-                                                             iterpool),
+      SVN_ERR(svn_stream_copy3(rev_stream,
+                               svn_stream_from_aprfile2(pack_file, TRUE, pool),
                                cancel_func, cancel_baton, iterpool));
     }
 
-  /* disallow write access to the manifest file */
+  /* Close stream over APR file. */
   SVN_ERR(svn_stream_close(manifest_stream));
+
+  /* Ensure that pack file is written to disk. */
+  SVN_ERR(svn_io_file_flush_to_disk(manifest_file, pool));
+  SVN_ERR(svn_io_file_close(manifest_file, pool));
+
+  /* disallow write access to the manifest file */
   SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, iterpool));
 
-  SVN_ERR(svn_stream_close(pack_stream));
+  /* Ensure that pack file is written to disk. */
+  SVN_ERR(svn_io_file_flush_to_disk(pack_file, pool));
+  SVN_ERR(svn_io_file_close(pack_file, pool));
 
   svn_pool_destroy(iterpool);
 
@@ -1915,6 +1931,34 @@ pack_shard(struct pack_baton *baton,
   return SVN_NO_ERROR;
 }
 
+/* Read the youngest rev and the first non-packed rev info for FS from disk.
+   Set *FULLY_PACKED when there is no completed unpacked shard.
+   Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+get_pack_status(svn_boolean_t *fully_packed,
+                svn_fs_t *fs,
+                apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_int64_t completed_shards;
+  svn_revnum_t youngest;
+
+  SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs,
+                                           scratch_pool));
+
+  SVN_ERR(svn_fs_fs__youngest_rev(&youngest, fs, scratch_pool));
+  completed_shards = (youngest + 1) / ffd->max_files_per_dir;
+
+  /* See if we've already completed all possible shards thus far. */
+  if (ffd->min_unpacked_rev == (completed_shards * ffd->max_files_per_dir))
+    *fully_packed = TRUE;
+  else
+    *fully_packed = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
 /* The work-horse for svn_fs_fs__pack, called with the FS write lock.
    This implements the svn_fs_fs__with_write_lock() 'body' callback
    type.  BATON is a 'struct pack_baton *'.
@@ -1936,30 +1980,16 @@ pack_body(void *baton,
   struct pack_baton *pb = baton;
   fs_fs_data_t *ffd = pb->fs->fsap_data;
   apr_int64_t completed_shards;
-  svn_revnum_t youngest;
   apr_pool_t *iterpool;
+  svn_boolean_t fully_packed;
 
-  /* If the repository isn't a new enough format, we don't support packing.
-     Return a friendly error to that effect. */
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-      _("FSFS format (%d) too old to pack; please upgrade the filesystem."),
-      ffd->format);
-
-  /* If we aren't using sharding, we can't do any packing, so quit. */
-  if (!ffd->max_files_per_dir)
+  /* Since another process might have already packed the repo,
+     we need to re-read the pack status. */
+  SVN_ERR(get_pack_status(&fully_packed, pb->fs, pool));
+  if (fully_packed)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev, pb->fs,
-                                           pool));
-
-  SVN_ERR(svn_fs_fs__youngest_rev(&youngest, pb->fs, pool));
-  completed_shards = (youngest + 1) / ffd->max_files_per_dir;
-
-  /* See if we've already completed all possible shards thus far. */
-  if (ffd->min_unpacked_rev == (completed_shards * ffd->max_files_per_dir))
-    return SVN_NO_ERROR;
-
+  completed_shards = (ffd->youngest_rev_cache + 1) / ffd->max_files_per_dir;
   pb->revs_dir = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     pb->revsprops_dir = svn_dirent_join(pb->fs->path, PATH_REVPROPS_DIR,
@@ -1993,7 +2023,25 @@ svn_fs_fs__pack(svn_fs_t *fs,
   struct pack_baton pb = { 0 };
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
+  svn_boolean_t fully_packed;
 
+  /* If the repository isn't a new enough format, we don't support packing.
+     Return a friendly error to that effect. */
+  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+      _("FSFS format (%d) too old to pack; please upgrade the filesystem."),
+      ffd->format);
+
+  /* If we aren't using sharding, we can't do any packing, so quit. */
+  if (!ffd->max_files_per_dir)
+    return SVN_NO_ERROR;
+
+  /* Is there we even anything to do?. */
+  SVN_ERR(get_pack_status(&fully_packed, fs, pool));
+  if (fully_packed)
+    return SVN_NO_ERROR;
+
+  /* Lock the repo and start the pack process. */
   pb.fs = fs;
   pb.notify_func = notify_func;
   pb.notify_baton = notify_baton;

@@ -1002,10 +1002,9 @@ svn_io_copy_perms(const char *src,
           svn_error_clear(err);
         else
           {
-            const char *message;
-            message = apr_psprintf(pool, _("Can't set permissions on '%s'"),
-                                   svn_dirent_local_style(dst, pool));
-            return svn_error_quick_wrap(err, message);
+            return svn_error_quick_wrapf(
+                     err, _("Can't set permissions on '%s'"),
+                     svn_dirent_local_style(dst, pool));
           }
       }
   }
@@ -1192,7 +1191,7 @@ svn_error_t *
 svn_io_file_create_bytes(const char *file,
                          const void *contents,
                          apr_size_t length,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   apr_file_t *f;
   apr_size_t written;
@@ -1201,13 +1200,14 @@ svn_io_file_create_bytes(const char *file,
   SVN_ERR(svn_io_file_open(&f, file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
-                           pool));
+                           scratch_pool));
   if (length)
-    err = svn_io_file_write_full(f, contents, length, &written, pool);
+    err = svn_io_file_write_full(f, contents, length, &written,
+                                 scratch_pool);
 
   err = svn_error_compose_create(
                     err,
-                    svn_io_file_close(f, pool));
+                    svn_io_file_close(f, scratch_pool));
 
   if (err)
     {
@@ -1217,7 +1217,7 @@ svn_io_file_create_bytes(const char *file,
       return svn_error_trace(
                 svn_error_compose_create(
                     err,
-                    svn_io_remove_file2(file, TRUE, pool)));
+                    svn_io_remove_file2(file, TRUE, scratch_pool)));
     }
 
   return SVN_NO_ERROR;
@@ -1236,9 +1236,10 @@ svn_io_file_create(const char *file,
 
 svn_error_t *
 svn_io_file_create_empty(const char *file,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_io_file_create_bytes(file, NULL, 0, pool));
+  return svn_error_trace(svn_io_file_create_bytes(file, NULL, 0,
+                                                  scratch_pool));
 }
 
 svn_error_t *
@@ -1855,7 +1856,7 @@ io_win_file_attrs_set(const char *fname,
                                   _("Can't set attributes of file '%s'"),
                                   svn_dirent_local_style(fname, pool));
 
-    return SVN_NO_ERROR;;
+    return SVN_NO_ERROR;
 }
 
 static svn_error_t *win_init_dynamic_imports(void *baton, apr_pool_t *pool)
@@ -2300,6 +2301,14 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
                                        apr_pool_t *pool)
 {
   apr_os_file_t filehand;
+  const char *fname;
+  apr_status_t apr_err;
+
+  /* We need this only in case of an error but this is cheap to get -
+   * so we do it here for clarity. */
+  apr_err = apr_file_name_get(&fname, file);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
   /* ### In apr 1.4+ we could delegate most of this function to
          apr_file_sync(). The only major difference is that this doesn't
@@ -2317,7 +2326,8 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 
     if (! FlushFileBuffers(filehand))
         return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file to disk"));
+                                  _("Can't flush file '%s' to disk"),
+                                  try_utf8_from_internal_style(fname, pool));
 
 #else
       int rv;
@@ -2338,7 +2348,8 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 
       if (rv == -1)
         return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file to disk"));
+                                  _("Can't flush file '%s' to disk"),
+                                  try_utf8_from_internal_style(fname, pool));
 
 #endif
   }
@@ -2566,7 +2577,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
      If we need to bail out, do so early. */
 
   if (cancel_func)
-    SVN_ERR((*cancel_func)(cancel_baton));
+    SVN_ERR(cancel_func(cancel_baton));
 
   subpool = svn_pool_create(pool);
 
@@ -2599,7 +2610,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
       else
         {
           if (cancel_func)
-            SVN_ERR((*cancel_func)(cancel_baton));
+            SVN_ERR(cancel_func(cancel_baton));
 
           err = svn_io_remove_file2(fullpath, FALSE, subpool);
           if (err)
@@ -3581,6 +3592,16 @@ svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted,
              pool);
 }
 
+svn_error_t *
+svn_io_file_size_get(svn_filesize_t *filesize_p, apr_file_t *file,
+                     apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, file, pool));
+
+  *filesize_p = finfo.size;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_file_read(apr_file_t *file, void *buf,
@@ -3634,7 +3655,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
                          apr_off_t block_size,
                          apr_off_t *buffer_start,
                          apr_off_t offset,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
   const apr_size_t apr_default_buffer_size = 4096;
   apr_size_t file_buffer_size = apr_default_buffer_size;
@@ -3684,7 +3705,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
          buffer and no I/O will actually happen in the FILL_BUFFER
          section below.
        */
-      SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, scratch_pool));
       fill_buffer = aligned_offset + file_buffer_size <= current
                  || current <= aligned_offset;
     }
@@ -3695,7 +3716,8 @@ svn_io_file_aligned_seek(apr_file_t *file,
       apr_status_t status;
 
       /* seek to the start of the block and cause APR to read 1 block */
-      SVN_ERR(svn_io_file_seek(file, APR_SET, &aligned_offset, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &aligned_offset,
+                               scratch_pool));
       status = apr_file_getc(&dummy, file);
 
       /* read may fail if we seek to or behind EOF.  That's ok then. */
@@ -3703,17 +3725,17 @@ svn_io_file_aligned_seek(apr_file_t *file,
         return do_io_file_wrapper_cleanup(file, status,
                                           N_("Can't read file '%s'"),
                                           N_("Can't read stream"),
-                                          pool);
+                                          scratch_pool);
     }
 
   /* finally, seek to the OFFSET the caller wants */
   desired_offset = offset;
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, scratch_pool));
   if (desired_offset != offset)
     return do_io_file_wrapper_cleanup(file, APR_EOF,
                                       N_("Can't seek in file '%s'"),
                                       N_("Can't seek in stream"),
-                                      pool);
+                                      scratch_pool);
 
   /* return the buffer start that we (probably) enforced */
   if (buffer_start)
@@ -3866,11 +3888,10 @@ svn_io_write_atomic(const char *final_path,
                                                       scratch_pool));
     }
 
-#ifdef __linux__
+#if SVN_ON_POSIX
   {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
+    /* On POSIX, the file name is stored in the file's directory entry.
+       Hence, we need to fsync() that directory as well.
        On other operating systems, we'd only be asking for trouble
        by trying to open and fsync a directory. */
     apr_file_t *file;
@@ -4044,37 +4065,16 @@ svn_error_t *
 svn_io_file_move(const char *from_path, const char *to_path,
                  apr_pool_t *pool)
 {
-  svn_error_t *err = svn_io_file_rename(from_path, to_path, pool);
+  svn_error_t *err = svn_error_trace(svn_io_file_rename(from_path, to_path,
+                                                        pool));
 
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
-      const char *tmp_to_path;
-
       svn_error_clear(err);
 
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_to_path,
-                                       svn_dirent_dirname(to_path, pool),
-                                       svn_io_file_del_none,
-                                       pool, pool));
-
-      err = svn_io_copy_file(from_path, tmp_to_path, TRUE, pool);
-      if (err)
-        goto failed_tmp;
-
-      err = svn_io_file_rename(tmp_to_path, to_path, pool);
-      if (err)
-        goto failed_tmp;
-
-      err = svn_io_remove_file2(from_path, FALSE, pool);
-      if (! err)
-        return SVN_NO_ERROR;
-
-      svn_error_clear(svn_io_remove_file2(to_path, FALSE, pool));
-
-      return err;
-
-    failed_tmp:
-      svn_error_clear(svn_io_remove_file2(tmp_to_path, FALSE, pool));
+      /* svn_io_copy_file() performs atomic copy via temporary file. */
+      err = svn_error_trace(svn_io_copy_file(from_path, to_path, TRUE,
+                                             pool));
     }
 
   return err;
@@ -5080,12 +5080,9 @@ svn_io_open_unique_file3(apr_file_t **file,
             svn_error_clear(err);
           else
             {
-              const char *message;
-              message = apr_psprintf(scratch_pool,
-                                     _("Can't set permissions on '%s'"),
-                                     svn_dirent_local_style(tempname,
-                                                            scratch_pool));
-              return svn_error_quick_wrap(err, message);
+              return svn_error_quick_wrapf(
+                       err, _("Can't set permissions on '%s'"),
+                       svn_dirent_local_style(tempname, scratch_pool));
             }
         }
     }

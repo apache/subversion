@@ -781,8 +781,7 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive \
-	       --trust-server-cert --trust-unknown-ca --trust-cn-mismatch \
-	       --trust-expired --trust-not-yet-valid --trust-other-failure \
+	       --trust-server-cert-failures \
 	       --force-interactive"
 	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
 	rOpts="-r --revision"
@@ -829,7 +828,7 @@ _svn()
 		;;
 	copy|cp)
 		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts --parents \
-		         --ignore-externals"
+		         --ignore-externals --pin-externals"
 		;;
 	delete|del|remove|rm)
 		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts \
@@ -856,7 +855,8 @@ _svn()
 		;;
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive --depth \
-                         --include-externals --incremental --xml $cOpts"
+                         --include-externals --incremental --xml \
+                         --show-item --no-newline $cOpts"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
@@ -876,7 +876,7 @@ _svn()
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
 		         $pOpts --ignore-ancestry -c --change -x --extensions \
-                         --record-only --accept --reintegrate \
+                         --record-only --accept \
 		         --allow-mixed-revisions -v --verbose"
 		;;
 	mergeinfo)
@@ -905,7 +905,7 @@ _svn()
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		;;
 	propget|pget|pg)
-	        cmdOpts="-v --verbose -R --recursive $rOpts --strict \
+	        cmdOpts="-v --verbose -R --recursive $rOpts --no-newline \
 		         $pOpts $cOpts --depth --xml --show-inherited-props"
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
@@ -937,7 +937,7 @@ _svn()
 	status|stat|st)
 		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts \
 		         --no-ignore --ignore-externals --incremental --xml \
-                         $cOpts"
+                         $rOpts $cOpts"
 		;;
 	switch|sw)
 		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd \

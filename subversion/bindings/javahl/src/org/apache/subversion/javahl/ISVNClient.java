@@ -502,9 +502,9 @@ public interface ISVNClient
      * Recursively cleans up a local directory, finishing any
      * incomplete operations, removing lockfiles, etc.
      * <p>
-     * Behaves like the 1.9 version with <code>breakLocks</code> and
-     * <code>includeExternals</code> set to <code>false<code>, and the
-     * other flags to <code>true</code>.
+     * Behaves like the 1.9 version with <code>includeExternals</code>
+     * set to <code>false<code>, and the other flags to
+     * <code>true</code>.
      * @param path a local directory.
      * @throws ClientException
      */

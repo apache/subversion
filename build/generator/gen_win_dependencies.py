@@ -253,6 +253,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.sln_version = '12.00'
           self.vcproj_version = '12.0'
           self.vcproj_extension = '.vcxproj'
+        elif val == '2015' or val == '14':
+          self.vs_version = '2015'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.0'
+          self.vcproj_extension = '.vcxproj'
+        elif re.match('^20\d+$', val):
+          print('WARNING: Unknown VS.NET version "%s",'
+                ' assuming VS2012. Your VS can probably upgrade')
+          self.vs_version = '2012'
+          self.sln_version = '12.00'
+          self.vcproj_version = '11.0'
+          self.vcproj_extension = '.vcxproj'
         elif re.match('^1\d+$', val):
           self.vs_version = val
           self.sln_version = '12.00'
@@ -284,7 +296,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     # Required dependencies
     self._find_apr()
-    self._find_apr_util_and_expat()
+    self._find_apr_util_etc()
     self._find_zlib()
     self._find_sqlite(show_warnings)
 
@@ -412,7 +424,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                               defines=defines,
                                               extra_bin=extra_bin)
 
-  def _find_apr_util_and_expat(self):
+  def _find_apr_util_etc(self):
     "Find the APR-util library and version"
 
     minimal_aprutil_version = (1, 3, 0)
@@ -513,6 +525,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                    debug_dll_dir=debug_dll_dir,
                                                    defines=defines,
                                                    extra_bin=extra_bin)
+
+    # Perhaps apr-util can also provide memcached support
+    if version >= (1, 3, 0) :
+      self._libraries['apr_memcache'] = SVNCommonLibrary(
+                                          'apr_memcache', inc_path, lib_dir,
+                                          None, aprutil_version,
+                                          defines=['SVN_HAVE_MEMCACHE'])
 
     # And now find expat
     # If we have apr-util as a source location, it is in a subdir.
