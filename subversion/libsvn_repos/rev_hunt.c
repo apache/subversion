@@ -1383,7 +1383,7 @@ send_path_revision(struct path_revision *path_rev,
   else if (sb->include_merged_revisions
            && strcmp(sb->last_path, path_rev->path))
     {
-      /* This is a HACK!!!
+      /* ### This is a HACK!!!
        * Blame -g, in older clients anyways, relies on getting a notification
        * whenever the path changes - even if there was no content change.
        *
