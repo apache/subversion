@@ -68,7 +68,7 @@ Other candidate changes:
      to prevent conflicts.  Since the total lines changed is small, the
      most efficient way to review is to do it via the combined diff.
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
 Veto-blocked changes:
 =====================
