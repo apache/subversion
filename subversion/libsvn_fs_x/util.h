@@ -102,6 +102,12 @@ const char *
 svn_fs_x__path_current(svn_fs_t *fs,
                        apr_pool_t *result_pool);
 
+/* Return the path to the 'next' file in FS.
+   Perform allocation in RESULT_POOL. */
+const char *
+svn_fs_x__path_next(svn_fs_t *fs,
+                    apr_pool_t *result_pool);
+
 /* Return the full path of the "uuid" file in FS.
  * The result will be allocated in RESULT_POOL.
  */
@@ -115,6 +121,13 @@ svn_fs_x__path_uuid(svn_fs_t *fs,
 const char *
 svn_fs_x__path_txn_current(svn_fs_t *fs,
                            apr_pool_t *result_pool);
+
+/* Return the full path of the "txn-next" file in FS.
+ * The result will be allocated in RESULT_POOL.
+ */
+const char *
+svn_fs_x__path_txn_next(svn_fs_t *fs,
+                        apr_pool_t *result_pool);
 
 /* Return the full path of the "txn-current-lock" file in FS.
  * The result will be allocated in RESULT_POOL.

@@ -110,11 +110,24 @@ svn_fs_x__path_current(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_x__path_next(svn_fs_t *fs,
+                       apr_pool_t *result_pool)
+{
+  return svn_dirent_join(fs->path, PATH_NEXT, result_pool);
+}
+
+const char *
 svn_fs_x__path_txn_current(svn_fs_t *fs,
                            apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_TXN_CURRENT,
-                         result_pool);
+  return svn_dirent_join(fs->path, PATH_TXN_CURRENT, result_pool);
+}
+
+const char *
+svn_fs_x__path_txn_next(svn_fs_t *fs,
+                           apr_pool_t *result_pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXN_NEXT, result_pool);
 }
 
 const char *
@@ -569,15 +582,20 @@ svn_fs_x__write_current(svn_fs_t *fs,
 {
   char *buf;
   const char *tmp_name, *name;
+  apr_file_t *file;
 
   /* Now we can just write out this line. */
   buf = apr_psprintf(scratch_pool, "%ld\n", rev);
 
   name = svn_fs_x__path_current(fs, scratch_pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name,
-                              svn_dirent_dirname(name, scratch_pool),
-                              buf, strlen(buf),
-                              svn_io_file_del_none, scratch_pool));
+  tmp_name = svn_fs_x__path_next(fs, scratch_pool);
+
+  SVN_ERR(svn_io_file_open(&file, tmp_name,
+                           APR_WRITE | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, scratch_pool));
+  SVN_ERR(svn_io_file_write_full(file, buf, strlen(buf), NULL,
+                                 scratch_pool));
+  SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   return svn_fs_x__move_into_place(tmp_name, name, name, scratch_pool);
 }
