@@ -1078,19 +1078,19 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
       SVN_ERR(svn_io_check_path(dst_format_abspath, &dst_format_kind, pool));
       if (dst_format_kind == svn_node_none)
         {
-          /* Destination doesn't exist yet. Perform a normal hotcopy to a
-           * empty destination using the same configuration as the source. */
-          SVN_ERR(hotcopy_create_empty_dest(src_fs, dst_fs, dst_path, pool));
+          /* No destination?  Fallback to a non-incremental hotcopy. */
+          incremental = FALSE;
         }
-      else
-        {
-          /* Check the existing repository. */
-          SVN_ERR(svn_fs_fs__open(dst_fs, dst_path, pool));
-          SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs,
-                                                          pool));
-          hotcopy_setup_shared_fs_data(src_fs, dst_fs);
-          SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
-        }
+    }
+
+  if (incremental)
+    {
+      /* Check the existing repository. */
+      SVN_ERR(svn_fs_fs__open(dst_fs, dst_path, pool));
+      SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs, pool));
+
+      hotcopy_setup_shared_fs_data(src_fs, dst_fs);
+      SVN_ERR(svn_fs_fs__initialize_caches(dst_fs, pool));
     }
   else
     {
