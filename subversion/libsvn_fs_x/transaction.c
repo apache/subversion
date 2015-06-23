@@ -3533,6 +3533,10 @@ commit_body(void *baton,
   SVN_ERR(svn_io_copy_perms(revprop_filename, old_rev_filename, subpool));
   svn_pool_clear(subpool);
 
+  /* Verify contents (no-op outside DEBUG mode). */
+  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev,
+                                                      subpool));
+
   /* Write the 'next' file. */
   SVN_ERR(write_next_file(cb->fs, new_rev, batch, subpool));
 
@@ -3540,9 +3544,6 @@ commit_body(void *baton,
   SVN_ERR(svn_fs_x__batch_fsync_run(batch, subpool));
 
   /* Make the revision visible to all processes and threads. */
-  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev,
-                                                      subpool));
-
   current_filename = svn_fs_x__path_current(cb->fs, subpool);
   SVN_ERR(svn_io_file_rename(svn_fs_x__path_next(cb->fs, subpool),
                              current_filename, scratch_pool));
