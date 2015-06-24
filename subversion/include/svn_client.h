@@ -4488,15 +4488,6 @@ svn_client_conflict_prop_get_propvals(
 #define svn_client_conflict_get_prop_reject_abspath(conflict) \
   ((conflict)->prop_reject_abspath)
 
-#define svn_client_conflict_get_prop_value_working(conflict) \
-  ((conflict)->prop_value_working)
-
-#define svn_client_conflict_get_prop_value_incoming_old(conflict) \
-  ((conflict)->prop_value_incoming_old)
-
-#define svn_client_conflict_get_prop_value_incoming_new(conflict) \
-  ((conflict)->prop_value_incoming_new)
-
 /** @} */
 
 /**
