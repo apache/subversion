@@ -131,17 +131,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1652182, r1652195, r1652200, r1653622, r1653623, r1653988, r1654039, r1654162, r1654186, r1654271
-   Fix issue #4551 "svnrdump load commits wrong properties, or fails, on a
-   non-deltas dumpfile".
-   Justification:
-     Data loss.
-   Branch: ^/subversion/branches/1.7.x-issue4551
-   Notes:
-     r1653988, r1654039, r1654271 contain the fixes; the rest are adding tests.
-   Votes:
-     +1: julianfoad, stefan2, brane
-
  * r1561419
    Fix 'svnadmin recover' for pre-1.4 FSFS repositories.
    Justification:
