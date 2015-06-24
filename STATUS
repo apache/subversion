@@ -131,16 +131,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1561419
-   Fix 'svnadmin recover' for pre-1.4 FSFS repositories.
-   Justification:
-     After recovering a repository committed to by 1.8, future commits may
-     otherwise use ambiguous IDs.
-   Branch:
-     ^/subversion/branches/1.7.x-r1561419
-   Votes:
-     +1: stefan2, stsp, brane
-
  * ^/subversion/branches/v1.7.x-VS2012-15
    Support building with Visual Studio 2012, 2013 and 2015
    Justification:
