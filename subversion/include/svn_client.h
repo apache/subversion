@@ -4459,6 +4459,7 @@ svn_client_conflict_prop_get_propvals(
  * Return the MIME-type of the working version of the text-conflicted file
  * described by @a conflict.
  *
+ * ### Really needed? What about base/incoming_old/incoming_new values?
  * @since: New in 1.10.
  */
 const char *
