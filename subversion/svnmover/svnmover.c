@@ -3277,6 +3277,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     non_interactive_opt,
     force_interactive_opt,
     trust_server_cert_opt,
+    trust_server_cert_failures_opt,
     ui_opt
   };
   static const apr_getopt_option_t options[] = {
@@ -3296,6 +3297,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"non-interactive", non_interactive_opt, 0, ""},
     {"force-interactive", force_interactive_opt, 0, ""},
     {"trust-server-cert", trust_server_cert_opt, 0, ""},
+    {"trust-server-cert-failures", trust_server_cert_failures_opt, 1, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
@@ -3313,7 +3315,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t non_interactive = FALSE;
   svn_boolean_t force_interactive = FALSE;
   svn_boolean_t interactive_actions;
-  svn_boolean_t trust_server_cert = FALSE;
+  svn_boolean_t trust_unknown_ca = FALSE;
+  svn_boolean_t trust_cn_mismatch = FALSE;
+  svn_boolean_t trust_expired = FALSE;
+  svn_boolean_t trust_not_yet_valid = FALSE;
+  svn_boolean_t trust_other_failure = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
@@ -3405,7 +3411,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           force_interactive = TRUE;
           break;
         case trust_server_cert_opt:
-          trust_server_cert = TRUE;
+          trust_unknown_ca = TRUE;
+          break;
+        case trust_server_cert_failures_opt:
+          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, arg, pool));
+          SVN_ERR(svn_cmdline__parse_trust_options(
+                      &trust_unknown_ca,
+                      &trust_cn_mismatch,
+                      &trust_expired,
+                      &trust_not_yet_valid,
+                      &trust_other_failure,
+                      opt_arg, pool));
           break;
         case config_dir_opt:
           SVN_ERR(svn_utf_cstring_to_utf8(&config_dir, arg, pool));
@@ -3448,12 +3464,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     non_interactive = !svn_cmdline__be_interactive(non_interactive,
                                                    force_interactive);
 
-  if (trust_server_cert && !non_interactive)
+  if (!non_interactive)
     {
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--trust-server-cert requires "
-                                "--non-interactive"));
+      if (trust_unknown_ca || trust_cn_mismatch || trust_expired
+          || trust_not_yet_valid || trust_other_failure)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--trust-server-cert-failures requires "
+                                  "--non-interactive"));
     }
+
 
   /* Now initialize the client context */
 
@@ -3484,17 +3503,21 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   SVN_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
 
   cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
-  SVN_ERR(svn_cmdline_create_auth_baton(&ctx->auth_baton,
-                                        non_interactive,
-                                        username,
-                                        password,
-                                        config_dir,
-                                        no_auth_cache,
-                                        trust_server_cert,
-                                        cfg_config,
-                                        ctx->cancel_func,
-                                        ctx->cancel_baton,
-                                        pool));
+  SVN_ERR(svn_cmdline_create_auth_baton2(&ctx->auth_baton,
+                                         non_interactive,
+                                         username,
+                                         password,
+                                         config_dir,
+                                         no_auth_cache,
+                                         trust_unknown_ca,
+                                         trust_cn_mismatch,
+                                         trust_expired,
+                                         trust_not_yet_valid,
+                                         trust_other_failure,
+                                         cfg_config,
+                                         ctx->cancel_func,
+                                         ctx->cancel_baton,
+                                         pool));
 
   /* Get the commit log message */
   SVN_ERR(get_log_message(&log_msg, message, revprops, filedata,
