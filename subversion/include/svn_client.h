@@ -4485,9 +4485,6 @@ svn_client_conflict_prop_get_propvals(
 #define svn_client_conflict_get_src_right_version(conflict) \
   ((conflict)->src_right_version)
 
-#define svn_client_conflict_get_prop_reject_abspath(conflict) \
-  ((conflict)->prop_reject_abspath)
-
 /** @} */
 
 /**

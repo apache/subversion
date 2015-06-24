@@ -581,8 +581,8 @@ print_info(void *baton,
 
       if (info->wc_info->conflicts)
         {
-          svn_boolean_t printed_prop_conflict_file = FALSE;
           svn_boolean_t printed_tc = FALSE;
+          svn_stringbuf_t *conflicted_props = NULL;
           int i;
 
           for (i = 0; i < info->wc_info->conflicts->nelts; i++)
@@ -628,15 +628,18 @@ print_info(void *baton,
                   break;
 
                   case svn_wc_conflict_kind_property:
-                    if (! printed_prop_conflict_file)
-                      SVN_ERR(svn_cmdline_printf(pool,
-                                _("Conflict Properties File: %s\n"),
-                                svn_cl__local_style_skip_ancestor(
-                                  receiver_baton->path_prefix,
-                                  svn_client_conflict_get_prop_reject_abspath(
-                                    conflict),
-                                  pool)));
-                    printed_prop_conflict_file = TRUE;
+                    {
+                      const char *name;
+
+                      name = svn_client_conflict_prop_get_propname(conflict);
+                      if (conflicted_props == NULL)
+                        conflicted_props = svn_stringbuf_create(name, pool);
+                      else
+                        {
+                          svn_stringbuf_appendbyte(conflicted_props, ' ');
+                          svn_stringbuf_appendcstr(conflicted_props, name);
+                        }
+                    }
                   break;
 
                   case svn_wc_conflict_kind_tree:
@@ -650,6 +653,10 @@ print_info(void *baton,
                   break;
                 }
             }
+
+          if (conflicted_props)
+            SVN_ERR(svn_cmdline_printf(pool, _("Conflicted Properties: %s\n"),
+                                       conflicted_props->data));
 
           /* We only store one left and right version for all conflicts, which is
              referenced from all conflicts.
