@@ -807,6 +807,45 @@ test_prop_conflicts(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_binary_file_conflict(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  svn_test__sandbox_t sbox;
+  const apr_array_header_t *conflicts;
+  svn_wc_conflict_description2_t *desc;
+
+  SVN_ERR(svn_test__sandbox_create(&sbox, "test_binary_file_conflict", opts, pool));
+
+  /* Create and add a binary file. */
+  sbox_file_write(&sbox, "binary-file", "\xff\xff");
+  SVN_ERR(sbox_wc_add(&sbox, "binary-file"));
+  SVN_ERR(sbox_wc_propset(&sbox, SVN_PROP_MIME_TYPE,
+                          "application/octet-stream", "binary-file"));
+  SVN_ERR(sbox_wc_commit(&sbox, "binary-file")); /* r1 */
+
+  /* Make a change to the binary file. */
+  sbox_file_write(&sbox, "binary-file", "\xfc\xfc\xfc\xfc\xfc\xfc");
+  SVN_ERR(sbox_wc_commit(&sbox, "binary-file")); /* r2 */
+
+  /* Update back to r1, make a conflicting change to binary file. */
+  SVN_ERR(sbox_wc_update(&sbox, "binary-file", 1));
+  sbox_file_write(&sbox, "binary-file", "\xfd\xfd\xfd\xfd");
+
+  /* Update to HEAD and ensure the conflict is marked as binary. */
+  SVN_ERR(sbox_wc_update(&sbox, "binary-file", 2));
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, sbox.wc_ctx->db,
+                                 sbox_wc_path(&sbox, "binary-file"),
+                                 FALSE, /* create_tempfiles */
+                                 pool, pool));
+  SVN_TEST_ASSERT(conflicts->nelts == 1);
+  desc = APR_ARRAY_IDX(conflicts, 0, svn_wc_conflict_description2_t *);
+  SVN_TEST_ASSERT(desc->is_binary);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -826,6 +865,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "read and write a tree conflict"),
     SVN_TEST_OPTS_PASS(test_prop_conflicts,
                        "test prop conflicts"),
+    SVN_TEST_OPTS_PASS(test_binary_file_conflict,
+                       "test binary file conflict"),
     SVN_TEST_NULL
   };
 
