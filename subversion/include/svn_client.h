@@ -4439,7 +4439,11 @@ svn_client_conflict_prop_get_propname(
  * Return the set of property values involved in the property conflict
  * described by @a conflict. If a property value is unavailable the
  * corresponding output argument is set to @c NULL.
- * 
+ *  
+ * A 3-way diff of these property values can be generated with
+ * svn_diff_mem_string_diff3(). A merged version with conflict
+ * markers can be generated with svn_diff_mem_string_output_merge3().
+ *
  * @since New in 1.10.
  */
 svn_error_t *
