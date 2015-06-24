@@ -1053,9 +1053,9 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
   const svn_string_t *my_propval;
   const svn_string_t *their_propval;
 
-  SVN_ERR(svn_client_conflict_prop_get_propvals(&base_propval, &my_propval,
-                                                &their_propval, desc,
-                                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_conflict_prop_get_propvals(NULL, &my_propval,
+                                                &base_propval, &their_propval,
+                                                desc, scratch_pool));
 
   SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
                               _("Conflict for property '%s' discovered"
