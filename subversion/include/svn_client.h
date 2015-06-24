@@ -4460,9 +4460,6 @@ svn_client_conflict_prop_get_propvals(
  * @since New in 1.10. 
  */
 
-#define svn_client_conflict_get_is_binary(conflict) \
-  ((conflict)->is_binary)
-
 #define svn_client_conflict_get_mime_type(conflict) \
   ((conflict)->mime_type)
 
