@@ -160,6 +160,10 @@ svn_min__combine_ranges(apr_getopt_t *os,
       SVN_ERR(svn_min__read_mergeinfo(&wc_mergeinfo, cmd_baton, iterpool,
                                       subpool));
 
+      /* Any mergeinfo at all? */
+      if (wc_mergeinfo->nelts == 0)
+        continue;
+
       /* fetch log */
       svn_pool_clear(subpool);
       common_path = svn_min__common_parent(wc_mergeinfo, subpool, subpool);

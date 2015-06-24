@@ -392,6 +392,10 @@ svn_min__analyze(apr_getopt_t *os,
                                       subpool));
       SVN_ERR(svn_min__print_mergeinfo_stats(wc_mergeinfo, subpool));
 
+      /* Any mergeinfo at all? */
+      if (wc_mergeinfo->nelts == 0)
+        continue;
+
       /* fetch log */
       svn_pool_clear(subpool);
       common_path = svn_min__common_parent(wc_mergeinfo, subpool, subpool);
