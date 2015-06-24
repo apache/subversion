@@ -201,3 +201,67 @@ svn_client_conflict_prop_get_propname(
 
   return conflict->property_name;
 }
+
+static svn_error_t *
+get_propval_from_filepath(const svn_string_t **propval,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *buf;
+
+  SVN_ERR(svn_stringbuf_from_file2(&buf, local_abspath, scratch_pool));
+  *propval = svn_string_create_from_buf(buf, result_pool); 
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_prop_get_propvals(
+  const svn_string_t **base_propval,
+  const svn_string_t **my_propval,
+  const svn_string_t **their_propval,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_client_conflict_get_kind(conflict) ==
+                 svn_wc_conflict_kind_property);
+
+  /* ### Work around a historical bug in the provider: the path to the
+   *     conflict description file was put in the 'theirs' field, and
+   *     'theirs' was put in the 'merged' field. */
+  ((svn_wc_conflict_description2_t *)conflict)->their_abspath =
+    conflict->merged_file;
+  ((svn_wc_conflict_description2_t *)conflict)->merged_file = NULL;
+
+  if (base_propval)
+    {
+      if (conflict->base_abspath)
+        SVN_ERR(get_propval_from_filepath(base_propval, conflict->base_abspath,
+                                          result_pool, scratch_pool));
+      else
+        *base_propval = NULL;
+    }
+
+  if (my_propval)
+    {
+      if (conflict->my_abspath)
+        SVN_ERR(get_propval_from_filepath(my_propval, conflict->my_abspath,
+                                          result_pool, scratch_pool));
+      else
+        *my_propval = NULL;
+    }
+
+  if (their_propval)
+    {
+      if (conflict->their_abspath)
+        SVN_ERR(get_propval_from_filepath(their_propval,
+                                          conflict->their_abspath,
+                                          result_pool, scratch_pool));
+      else
+        *their_propval = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}

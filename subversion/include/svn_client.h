@@ -4436,6 +4436,23 @@ svn_client_conflict_prop_get_propname(
   const svn_wc_conflict_description2_t *conflict);
 
 /**
+ * Return the set of property values involved in the property conflict
+ * described by @a conflict. If a property value is unavailable the
+ * corresponding output argument is set to @c NULL.
+ * 
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_prop_get_propvals(
+  const svn_string_t **base_propval,
+  const svn_string_t **my_propval,
+  const svn_string_t **their_propval,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+
+/**
  * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
  * API for eventually replacing svn_wc_conflict_description2_t with an opaque
  * type and providing improved APIs for conflict resolution.

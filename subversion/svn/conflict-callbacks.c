@@ -245,17 +245,17 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
 /* Perform a 3-way merge of the conflicting values of a property,
  * and write the result to the OUTPUT stream.
  *
- * If MERGED_ABSPATH is non-NULL, use it as 'my' version instead of
+ * If MERGED_PROPVAL is non-NULL, use it as 'my' version instead of
  * MY_ABSPATH.
  *
  * Assume the values are printable UTF-8 text.
  */
 static svn_error_t *
 merge_prop_conflict(svn_stream_t *output,
-                    const char *base_abspath,
-                    const char *my_abspath,
-                    const char *their_abspath,
-                    const char *merged_abspath,
+                    const svn_string_t *base_propval,
+                    const svn_string_t *my_propval,
+                    const svn_string_t *their_propval,
+                    const svn_string_t *merged_propval,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *pool)
@@ -263,42 +263,31 @@ merge_prop_conflict(svn_stream_t *output,
   svn_diff_file_options_t *options = svn_diff_file_options_create(pool);
   svn_diff_t *diff;
 
-  /* If any of the property values is missing, use an empty file instead
+  /* If any of the property values is missing, use an empty value instead
    * for the purpose of showing a diff. */
-  if (! base_abspath || ! my_abspath || ! their_abspath)
-    {
-      const char *empty_file;
-
-      SVN_ERR(svn_io_open_unique_file3(NULL, &empty_file,
-                                       NULL, svn_io_file_del_on_pool_cleanup,
-                                       pool, pool));
-      if (! base_abspath)
-        base_abspath = empty_file;
-      if (! my_abspath)
-        my_abspath = empty_file;
-      if (! their_abspath)
-        their_abspath = empty_file;
-    }
-
+  if (base_propval == NULL)
+    base_propval = svn_string_create_empty(pool);
+  if (my_propval == NULL)
+    my_propval = svn_string_create_empty(pool);
+  if (my_propval == NULL)
+    my_propval = svn_string_create_empty(pool);
+    
   options->ignore_eol_style = TRUE;
-  SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                base_abspath,
-                                merged_abspath ? merged_abspath : my_abspath,
-                                their_abspath,
-                                options, pool));
-  SVN_ERR(svn_diff_file_output_merge3(output, diff,
-                                      base_abspath,
-                                      merged_abspath ? merged_abspath
-                                                     : my_abspath,
-                                      their_abspath,
-                                      _("||||||| ORIGINAL"),
-                                      _("<<<<<<< MINE"),
-                                      _(">>>>>>> THEIRS"),
-                                      "=======",
-                                      svn_diff_conflict_display_modified_original_latest,
-                                      cancel_func,
-                                      cancel_baton,
-                                      pool));
+  SVN_ERR(svn_diff_mem_string_diff3(&diff, base_propval,
+                                    merged_propval ?
+                                      merged_propval : my_propval,
+                                    their_propval, options, pool));
+  SVN_ERR(svn_diff_mem_string_output_merge3(
+            output, diff, base_propval,
+            merged_propval ? merged_propval : my_propval, their_propval,
+            _("||||||| ORIGINAL"),
+            _("<<<<<<< MINE"),
+            _(">>>>>>> THEIRS"),
+            "=======",
+            svn_diff_conflict_display_modified_original_latest,
+            cancel_func,
+            cancel_baton,
+            pool));
 
   return SVN_NO_ERROR;
 }
@@ -311,10 +300,10 @@ merge_prop_conflict(svn_stream_t *output,
  * Assume the values are printable UTF-8 text.
  */
 static svn_error_t *
-show_prop_conflict(const char *base_abspath,
-                   const char *my_abspath,
-                   const char *their_abspath,
-                   const char *merged_abspath,
+show_prop_conflict(const svn_string_t *base_propval,
+                   const svn_string_t *my_propval,
+                   const svn_string_t *their_propval,
+                   const svn_string_t *merged_propval,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
@@ -322,8 +311,8 @@ show_prop_conflict(const char *base_abspath,
   svn_stream_t *output;
 
   SVN_ERR(svn_stream_for_stdout(&output, pool));
-  SVN_ERR(merge_prop_conflict(output, base_abspath, my_abspath, their_abspath,
-                              merged_abspath, cancel_func, cancel_baton, pool));
+  SVN_ERR(merge_prop_conflict(output, base_propval, my_propval, their_propval,
+                              merged_propval, cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -372,14 +361,18 @@ open_editor(svn_boolean_t *performed_edit,
   return SVN_NO_ERROR;
 }
 
-/* Run an external editor, passing it the 'merged' property in DESC.
+/* Run an external editor on the merged property value with conflict markers.
+ * Return the path to a file containing the edited result in *MERGED_FILE_PATH
+ * and also return the resulting property value in *MERGED_RPOPVAL.
+ * If the edit is aborted, set *MERGED_FILE_PATH and *MERGED_PROPVAL to NULL.
  * The tool to use is determined by B->editor_cmd, B->config and
  * environment variables; see svn_cl__edit_file_externally() for details. */
 static svn_error_t *
 edit_prop_conflict(const char **merged_file_path,
-                   const char *base_abspath,
-                   const char *my_abspath,
-                   const char *their_abspath,
+                   const svn_string_t **merged_propval,
+                   const svn_string_t *base_propval,
+                   const svn_string_t *my_propval,
+                   const svn_string_t *their_propval,
                    svn_cl__interactive_conflict_baton_t *b,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
@@ -394,15 +387,28 @@ edit_prop_conflict(const char **merged_file_path,
                                    result_pool, scratch_pool));
   merged_prop = svn_stream_from_aprfile2(file, TRUE /* disown */,
                                          scratch_pool);
-  SVN_ERR(merge_prop_conflict(merged_prop, base_abspath, my_abspath,
-                              their_abspath, NULL,
+  SVN_ERR(merge_prop_conflict(merged_prop, base_propval, my_propval,
+                              their_propval, NULL,
                               b->pb->cancel_func,
                               b->pb->cancel_baton,
                               scratch_pool));
   SVN_ERR(svn_stream_close(merged_prop));
   SVN_ERR(svn_io_file_flush(file, scratch_pool));
   SVN_ERR(open_editor(&performed_edit, file_path, b, scratch_pool));
-  *merged_file_path = (performed_edit ? file_path : NULL);
+  if (performed_edit)
+    {
+      svn_stringbuf_t *buf;
+
+      *merged_file_path = file_path;
+
+      SVN_ERR(svn_stringbuf_from_file2(&buf, file_path, scratch_pool));
+      *merged_propval = svn_string_create_from_buf(buf, result_pool); 
+    }
+  else
+    {
+      *merged_file_path = NULL;
+      *merged_propval = NULL;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1040,23 +1046,15 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
   apr_pool_t *iterpool;
   const char *message;
   const char *merged_file_path = NULL;
+  const svn_string_t *merged_propval = NULL;
   svn_boolean_t resolved_allowed = FALSE;
-  const char *base_abspath;
-  const char *my_abspath;
-  const char *their_abspath;
+  const svn_string_t *base_propval;
+  const svn_string_t *my_propval;
+  const svn_string_t *their_propval;
 
-  /* ### Work around a historical bug in the provider: the path to the
-   *     conflict description file was put in the 'theirs' field, and
-   *     'theirs' was put in the 'merged' field. */
-  ((svn_wc_conflict_description2_t *)desc)->their_abspath = desc->merged_file;
-  ((svn_wc_conflict_description2_t *)desc)->merged_file = NULL;
-
-  base_abspath = svn_client_conflict_get_base_abspath(desc);
-  my_abspath = svn_client_conflict_get_my_abspath(desc);
-  their_abspath = svn_client_conflict_get_their_abspath(desc);
-
-  SVN_ERR_ASSERT(svn_client_conflict_get_kind(desc) ==
-                 svn_wc_conflict_kind_property);
+  SVN_ERR(svn_client_conflict_prop_get_propvals(&base_propval, &my_propval,
+                                                &their_propval, desc,
+                                                scratch_pool, scratch_pool));
 
   SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
                               _("Conflict for property '%s' discovered"
@@ -1105,17 +1103,17 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "dc") == 0)
         {
-          SVN_ERR(show_prop_conflict(base_abspath, my_abspath, their_abspath,
-                                     merged_file_path,
+          SVN_ERR(show_prop_conflict(base_propval, my_propval, their_propval,
+                                     merged_propval,
                                      b->pb->cancel_func, b->pb->cancel_baton,
                                      scratch_pool));
         }
       else if (strcmp(opt->code, "e") == 0)
         {
-          SVN_ERR(edit_prop_conflict(&merged_file_path, base_abspath,
-                                     my_abspath, their_abspath, b,
-                                     result_pool, scratch_pool));
-          resolved_allowed = (merged_file_path != NULL);
+          SVN_ERR(edit_prop_conflict(&merged_file_path, &merged_propval,
+                                     base_propval, my_propval, their_propval,
+                                     b, result_pool, scratch_pool));
+          resolved_allowed = (merged_propval != NULL);
         }
       else if (strcmp(opt->code, "r") == 0)
         {
