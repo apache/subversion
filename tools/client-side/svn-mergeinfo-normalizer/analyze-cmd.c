@@ -44,8 +44,10 @@
 /*** Code. ***/
 
 static svn_error_t *
-remove_obsolete_lines(svn_ra_session_t *session,
+remove_obsolete_lines(svn_mergeinfo_t *obsolete,
+                      svn_ra_session_t *session,
                       svn_mergeinfo_t mergeinfo,
+                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -54,6 +56,8 @@ remove_obsolete_lines(svn_ra_session_t *session,
 
   int i;
   apr_hash_index_t *hi;
+  *obsolete = apr_hash_make(result_pool);
+
   for (hi = apr_hash_first(scratch_pool, mergeinfo);
        hi;
        hi = apr_hash_next(hi))
@@ -65,7 +69,11 @@ remove_obsolete_lines(svn_ra_session_t *session,
       SVN_ERR(svn_ra_check_path(session, path + 1, SVN_INVALID_REVNUM, &kind,
                                 scratch_pool));
       if (kind == svn_node_none)
-        APR_ARRAY_PUSH(to_remove, const char *) = path;
+        {
+          APR_ARRAY_PUSH(to_remove, const char *) = path;
+          apr_hash_set(*obsolete, path, apr_hash_this_key_len(hi),
+                       apr_hash_this_val(hi));
+        }
     }
 
   svn_sort__array(to_remove, svn_sort_compare_paths);
@@ -136,6 +144,7 @@ remove_lines(svn_min__log_t *log,
              const char *relpath,
              svn_mergeinfo_t parent_mergeinfo,
              svn_mergeinfo_t subtree_mergeinfo,
+             const char *title,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
@@ -151,7 +160,7 @@ remove_lines(svn_min__log_t *log,
   processed = apr_hash_make(scratch_pool);
 
   SVN_ERR(svn_cmdline_printf(iterpool,
-                             _("    Try to elide remaining branches:\n")));
+                             _("    Try to elide %s branches:\n"), title));
 
   sorted_mi = svn_sort__hash(parent_mergeinfo,
                              svn_sort_compare_items_lexically,
@@ -284,6 +293,7 @@ analyze(svn_ra_session_t *session,
       const char *relpath;
       svn_mergeinfo_t parent_mergeinfo;
       svn_mergeinfo_t subtree_mergeinfo;
+      svn_mergeinfo_t obsolete;
 
       if (svn_min__get_mergeinfo_pair(&parent_path, &relpath,
                                       &parent_mergeinfo, &subtree_mergeinfo,
@@ -313,15 +323,20 @@ analyze(svn_ra_session_t *session,
       svn_pool_clear(iterpool);
 
       subtree_mergeinfo = svn_mergeinfo_dup(subtree_mergeinfo, iterpool);
-      SVN_ERR(remove_obsolete_lines(session, subtree_mergeinfo, iterpool));
+      SVN_ERR(remove_obsolete_lines(&obsolete, session, subtree_mergeinfo,
+                                    iterpool, iterpool));
 
       if (parent_mergeinfo)
         {
           parent_mergeinfo = svn_mergeinfo_dup(parent_mergeinfo, iterpool);
+          SVN_ERR(remove_lines(log, relpath, parent_mergeinfo, obsolete,
+                               "obsolete", iterpool));
           SVN_ERR(remove_lines(log, relpath, parent_mergeinfo,
-                                subtree_mergeinfo, iterpool));
+                               subtree_mergeinfo, "remaining", iterpool));
         }
 
+      SVN_ERR(svn_mergeinfo_merge2(subtree_mergeinfo, obsolete, iterpool,
+                                   iterpool));
       if (apr_hash_count(subtree_mergeinfo))
         {
           apr_array_header_t *sorted_mi;
