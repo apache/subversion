@@ -591,18 +591,18 @@ print_info(void *baton,
                     APR_ARRAY_IDX(info->wc_info->conflicts, i,
                                   const svn_wc_conflict_description2_t *);
               const char *desc;
-              const char *base_abspath;
-              const char *my_abspath;
-              const char *their_abspath;
+              const char *base_abspath = NULL;
+              const char *my_abspath = NULL;
+              const char *their_abspath = NULL;
 
-              SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
-                                                            &base_abspath,
-                                                            &their_abspath,
-                                                            conflict, pool,
-                                                            pool));
               switch (svn_client_conflict_get_kind(conflict))
                 {
                   case svn_wc_conflict_kind_text:
+
+                    SVN_ERR(svn_client_conflict_text_get_contents(
+                              NULL, &my_abspath, &base_abspath, &their_abspath,
+                              conflict, pool, pool));
+
                     if (base_abspath)
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Previous Base File: %s\n"),
