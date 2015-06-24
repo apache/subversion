@@ -89,14 +89,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1674522
-   Skip the 'upgrade_tests.py 36: automatic SQLite ANALYZE' test on old python
-   Justification:
-     Our testsuite shouldn't fail just because python has an old sqlite
-     version compiled in.
-   Notes:
-     This nomination is partially to just mark this problem as 'known issue'.
-     This patch was already accepted for 1.9.x
-   Votes:
-     +1: rhuijben, stefan2, brane
