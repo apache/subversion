@@ -6623,8 +6623,7 @@ def update_conflict_details(sbox):
     {
       "Path" : re.escape(sbox.ospath('A/B')),
 
-      "Conflict Properties File" :
-            re.escape(sbox.ospath('A/B/dir_conflicts.prej')) + '.*',
+      "Conflicted Properties" : "key",
       "Conflict Details": re.escape(
             'incoming dir edit upon update' +
             ' Source  left: (dir) ^/A/B@1' +

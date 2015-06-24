@@ -2012,9 +2012,7 @@ def merge_conflict_details(sbox):
   expected_info = [
     {
       "Path" : re.escape(sbox.ospath('B')),
-
-      "Conflict Properties File" :
-            re.escape(sbox.ospath('B/dir_conflicts.prej')) + '.*',
+      "Conflicted Properties" : "key",
       "Conflict Details": re.escape(
             'incoming dir edit upon merge' +
             ' Source  left: (dir) ^/A/B@1' +
