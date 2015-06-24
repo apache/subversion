@@ -166,7 +166,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
     if ! test -e $HTTPD ; then
       HTTPD="`$APXS -q bindir`/`$APXS -q PROGNAME`"
     fi
-    HTTPD_VERSION=["`$HTTPD -v | $SED -e 's@^.*/\([0-9.]*\)\(.*$\)@\1@' -e 1q`"]
+    HTTPD_VERSION=["`$HTTPD -v | $SED -e 's/^.*\/\([0-9.]*\).*$/\1/' -e 1q`"]
 
     case $host in
       *-*-cygwin*)
