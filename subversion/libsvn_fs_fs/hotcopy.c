@@ -982,6 +982,10 @@ hotcopy_body(void *baton, apr_pool_t *pool)
       if (kind == svn_node_file)
         {
           SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, pool));
+
+          /* The source might have r/o flags set on it - which would be
+             carried over to the copy. */
+          SVN_ERR(svn_io_set_file_read_write(dst_subdir, FALSE, pool));
           SVN_ERR(svn_fs_fs__del_rep_reference(dst_fs, src_youngest, pool));
         }
     }
@@ -992,21 +996,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                  PATH_TXN_CURRENT, pool));
 
   return SVN_NO_ERROR;
-}
-
-/* Wrapper around hotcopy_body taking out all necessary source repository
- * locks.
- */
-static svn_error_t *
-hotcopy_locking_src_body(void *baton, apr_pool_t *pool)
-{
-  struct hotcopy_body_baton *hbb = baton;
-  fs_fs_data_t *src_ffd = hbb->src_fs->fsap_data;
-
-  return src_ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT
-    ? svn_error_trace(svn_fs_fs__with_pack_lock(hbb->src_fs, hotcopy_body,
-                                                baton, pool))
-    : hotcopy_body(baton, pool);
 }
 
 /* Create an empty filesystem at DST_FS at DST_PATH with the same
@@ -1102,8 +1091,7 @@ svn_fs_fs__hotcopy(svn_fs_t *src_fs,
   hbb.notify_baton = notify_baton;
   hbb.cancel_func = cancel_func;
   hbb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_locking_src_body, &hbb,
-                                    pool));
+  SVN_ERR(svn_fs_fs__with_all_locks(dst_fs, hotcopy_body, &hbb, pool));
 
   return SVN_NO_ERROR;
 }
