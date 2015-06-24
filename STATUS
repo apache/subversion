@@ -131,15 +131,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * ^/subversion/branches/v1.7.x-VS2012-15
-   Support building with Visual Studio 2012, 2013 and 2015
-   Justification:
-     Without this patch building 1.7.x with the last two releases
-     of Visual Studio requires manual upgrade steps. This patch does
-     the minimal amount of work to handle things automatically.
-   Votes:
-     +1: rhuijben, stefan2, brane
-
  * ^/subversion/branches/1.7.x-r1674455
    Make 'svn cp ^/A/D/H@1 ^/A' properly create A
    Justification:

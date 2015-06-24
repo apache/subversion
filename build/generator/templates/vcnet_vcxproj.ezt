@@ -33,6 +33,7 @@
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'" Label="Configuration">
     <ConfigurationType>[config_type]</ConfigurationType>
     <UseDebugLibraries>[is configs.name "Debug"]true[else]false[end]</UseDebugLibraries>
+    <PlatformToolset>[toolset_version]</PlatformToolset>
   </PropertyGroup>
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
