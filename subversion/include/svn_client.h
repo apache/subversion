@@ -4466,21 +4466,31 @@ svn_client_conflict_text_get_mime_type(
   const svn_wc_conflict_description2_t *conflict);
 
 /**
+ * Return absolute paths to the versions of the text-conflicted file 
+ * described by @a conflict.
+ *
+ * If a particular content is not available, it is set to @c NULL.
+ * 
+ * ### Should this be returning svn_stream_t instead of paths?
+ * @since: New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_text_get_contents(
+  const char **base_abspath,
+  const char **working_abspath,
+  const char **incoming_old_abspath,
+  const char **incoming_new_abspath,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
  * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
  * API for eventually replacing svn_wc_conflict_description2_t with an opaque
  * type and providing improved APIs for conflict resolution.
  * 
  * @since New in 1.10. 
  */
-
-#define svn_client_conflict_get_base_abspath(conflict) \
-  ((conflict)->base_abspath)
-
-#define svn_client_conflict_get_their_abspath(conflict) \
-  ((conflict)->their_abspath)
-
-#define svn_client_conflict_get_my_abspath(conflict) \
-  ((conflict)->my_abspath)
 
 #define svn_client_conflict_get_merged_file(conflict) \
   ((conflict)->merged_file)

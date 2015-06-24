@@ -242,3 +242,36 @@ svn_client_conflict_text_get_mime_type(
   return conflict->mime_type;
 }
 
+svn_error_t *
+svn_client_conflict_text_get_contents(
+  const char **base_abspath,
+  const char **working_abspath,
+  const char **incoming_old_abspath,
+  const char **incoming_new_abspath,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_client_conflict_get_kind(conflict)
+      == svn_wc_conflict_kind_text);
+
+  if (base_abspath)
+    {
+      if (svn_client_conflict_get_operation(conflict) ==
+          svn_wc_operation_merge)
+        *base_abspath = NULL; /* ### WC base contents not available yet */
+      else /* update/switch */
+        *base_abspath = conflict->base_abspath;
+    }
+
+  if (working_abspath)
+    *working_abspath = conflict->my_abspath;
+
+  if (incoming_old_abspath)
+    *incoming_old_abspath = conflict->base_abspath;
+
+  if (incoming_new_abspath)
+    *incoming_new_abspath = conflict->their_abspath;
+
+  return SVN_NO_ERROR;
+}
