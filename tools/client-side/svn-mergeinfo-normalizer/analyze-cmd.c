@@ -139,9 +139,10 @@ remove_lines(svn_min__log_t *log,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  apr_hash_index_t *hi;
+  int i;
   apr_hash_t *processed;
   svn_boolean_t needs_header = TRUE;
+  apr_array_header_t *sorted_mi;
 
   if (apr_hash_count(subtree_mergeinfo) == 0)
     return SVN_NO_ERROR;
@@ -152,20 +153,23 @@ remove_lines(svn_min__log_t *log,
   SVN_ERR(svn_cmdline_printf(iterpool,
                              _("    Try to elide remaining branches:\n")));
 
-  for (hi = apr_hash_first(scratch_pool, parent_mergeinfo);
-       hi;
-       hi = apr_hash_next(hi))
+  sorted_mi = svn_sort__hash(parent_mergeinfo,
+                             svn_sort_compare_items_lexically,
+                             scratch_pool);
+  for (i = 0; i < sorted_mi->nelts; ++i)
     {
       const char *parent_path, *subtree_path;
       svn_rangelist_t *parent_ranges, *subtree_ranges, *reverse_ranges;
       svn_rangelist_t *subtree_only, *parent_only;
       svn_rangelist_t *operative_outside_subtree, *operative_in_subtree;
+      const svn_sort__item_t *item;
 
       svn_pool_clear(iterpool);
 
-      parent_path = apr_hash_this_key(hi);
+      item = &APR_ARRAY_IDX(sorted_mi, i, svn_sort__item_t);
+      parent_path = item->key;
       subtree_path = svn_fspath__join(parent_path, relpath, scratch_pool);
-      parent_ranges = apr_hash_this_val(hi);
+      parent_ranges = item->value;
       subtree_ranges = svn_hash_gets(subtree_mergeinfo, subtree_path);
 
       if (!subtree_ranges)
@@ -238,12 +242,12 @@ remove_lines(svn_min__log_t *log,
         }
     }
 
-
-  for (hi = apr_hash_first(scratch_pool, subtree_mergeinfo);
-       hi;
-       hi = apr_hash_next(hi))
+  sorted_mi = svn_sort__hash(subtree_mergeinfo,
+                             svn_sort_compare_items_lexically,
+                             scratch_pool);
+  for (i = 0; i < sorted_mi->nelts; ++i)
     {
-      const char *path = apr_hash_this_key(hi);
+      const char *path = APR_ARRAY_IDX(sorted_mi, i, svn_sort__item_t).key;
       svn_pool_clear(iterpool);
 
       if (!svn_hash_gets(processed, path))
@@ -320,7 +324,8 @@ analyze(svn_ra_session_t *session,
 
       if (apr_hash_count(subtree_mergeinfo))
         {
-          apr_hash_index_t *hi;
+          apr_array_header_t *sorted_mi;
+          int k;
 
           if (parent_mergeinfo)
             SVN_ERR(svn_cmdline_printf(iterpool,
@@ -330,11 +335,13 @@ analyze(svn_ra_session_t *session,
             SVN_ERR(svn_cmdline_printf(iterpool,
                       _("    Merge info kept for the following branches:\n")));
 
-          for (hi = apr_hash_first(scratch_pool, subtree_mergeinfo);
-                hi;
-                hi = apr_hash_next(hi))
+          sorted_mi = svn_sort__hash(subtree_mergeinfo,
+                                     svn_sort_compare_items_lexically,
+                                     iterpool);
+          for (k = 0; k < sorted_mi->nelts; ++k)
             {
-              const char *branch = apr_hash_this_key(hi);
+              const char *branch = APR_ARRAY_IDX(sorted_mi, k,
+                                                 svn_sort__item_t).key;
               SVN_ERR(svn_cmdline_printf(iterpool, _("    %s\n"), branch));
             }
 
