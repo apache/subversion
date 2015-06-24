@@ -47,14 +47,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1685085
-   Install svnbench as part of 'make install'.
-   Justification:
-     svnbench moved from  tools/ to subversion/ so it should be installed
-     by default.
-   Votes:
-     +1: stsp, stefan2, brane
-
  * r1686478, r1686888, r1686984
    Make 'blame -g' work with old clients against new servers.
    Justification:
