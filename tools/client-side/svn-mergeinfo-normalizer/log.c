@@ -255,6 +255,14 @@ is_relevant(const char *changed_path,
 }
 
 static svn_boolean_t
+in_subtree(const char *changed_path,
+           const char *path,
+           const void *baton)
+{
+  return svn_dirent_is_ancestor(path, changed_path);
+}
+
+static svn_boolean_t
 below_path_outside_subtree(const char *changed_path,
                            const char *path,
                            const void *baton)
@@ -328,7 +336,7 @@ svn_min__operative(svn_min__log_t *log,
                    svn_rangelist_t *ranges,
                    apr_pool_t *result_pool)
 {
-  return filter_ranges(log, path, ranges, is_relevant, NULL, result_pool);
+  return filter_ranges(log, path, ranges, in_subtree, NULL, result_pool);
 }
 
 svn_rangelist_t *
