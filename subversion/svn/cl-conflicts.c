@@ -477,6 +477,9 @@ svn_cl__append_conflict_info_xml(svn_stringbuf_t *str,
   const char *kind;
   svn_wc_conflict_kind_t conflict_kind;
   svn_wc_operation_t conflict_operation;
+  const char *base_abspath;
+  const char *my_abspath;
+  const char *their_abspath;
   const svn_wc_conflict_version_t *src_left_version;
   const svn_wc_conflict_version_t *src_right_version;
 
@@ -521,31 +524,31 @@ svn_cl__append_conflict_info_xml(svn_stringbuf_t *str,
                                      src_right_version,
                                      scratch_pool));
 
+  SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
+                                                &base_abspath, &their_abspath,
+                                                conflict, scratch_pool,
+                                                scratch_pool));
   switch (conflict_kind)
     {
       case svn_wc_conflict_kind_text:
         /* "<prev-base-file> xx </prev-base-file>" */
         svn_cl__xml_tagged_cdata(
-          &str, scratch_pool, "prev-base-file",
-          svn_client_conflict_get_base_abspath(conflict));
+          &str, scratch_pool, "prev-base-file", base_abspath);
 
         /* "<prev-wc-file> xx </prev-wc-file>" */
         svn_cl__xml_tagged_cdata(
-          &str, scratch_pool, "prev-wc-file",
-          svn_client_conflict_get_my_abspath(conflict));
+          &str, scratch_pool, "prev-wc-file", my_abspath);
 
         /* "<cur-base-file> xx </cur-base-file>" */
         svn_cl__xml_tagged_cdata(
-          &str, scratch_pool, "cur-base-file",
-          svn_client_conflict_get_their_abspath(conflict));
+          &str, scratch_pool, "cur-base-file", their_abspath);
 
         break;
 
       case svn_wc_conflict_kind_property:
         /* "<prop-file> xx </prop-file>" */
         svn_cl__xml_tagged_cdata(
-          &str, scratch_pool, "prop-file",
-          svn_client_conflict_get_their_abspath(conflict));
+          &str, scratch_pool, "prop-file", their_abspath);
         break;
 
       default:

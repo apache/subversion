@@ -141,8 +141,13 @@ show_diff(const svn_wc_conflict_description2_t *desc,
   svn_diff_t *diff;
   svn_stream_t *output;
   svn_diff_file_options_t *options;
+  const char *my_abspath;
+  const char *their_abspath;
   const char *merged_file;
 
+  SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath, NULL,
+                                                &their_abspath,
+                                                desc, pool, pool));
   merged_file = svn_client_conflict_get_merged_file(desc);
   if (merged_file)
     {
@@ -160,12 +165,12 @@ show_diff(const svn_wc_conflict_description2_t *desc,
        * brought into the working copy by the update/switch/merge operation. */
       if (svn_client_conflict_get_operation(desc) == svn_wc_operation_merge)
         {
-          path1 = svn_client_conflict_get_my_abspath(desc);
+          path1 = my_abspath;
           label1 = _("MINE");
         }
       else
         {
-          path1 = svn_client_conflict_get_their_abspath(desc);
+          path1 = their_abspath;
           label1 = _("THEIRS");
         }
       path2 = merged_file;
@@ -175,9 +180,9 @@ show_diff(const svn_wc_conflict_description2_t *desc,
     {
       /* There's no merged file, but we can show the
          difference between mine and theirs. */
-      path1 = svn_client_conflict_get_their_abspath(desc);
+      path1 = their_abspath;
       label1 = _("THEIRS");
-      path2 = svn_client_conflict_get_my_abspath(desc);
+      path2 = my_abspath;
       label2 = _("MINE");
     }
 
@@ -216,22 +221,22 @@ show_conflicts(const svn_wc_conflict_description2_t *desc,
   svn_diff_t *diff;
   svn_stream_t *output;
   svn_diff_file_options_t *options;
+  const char *base_abspath;
+  const char *my_abspath;
+  const char *their_abspath;
 
+  SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
+                                                &base_abspath, &their_abspath,
+                                                desc, pool, pool));
   options = svn_diff_file_options_create(pool);
   options->ignore_eol_style = TRUE;
   SVN_ERR(svn_stream_for_stdout(&output, pool));
-  SVN_ERR(svn_diff_file_diff3_2(&diff,
-                                svn_client_conflict_get_base_abspath(desc),
-                                svn_client_conflict_get_my_abspath(desc),
-                                svn_client_conflict_get_their_abspath(desc),
+  SVN_ERR(svn_diff_file_diff3_2(&diff, base_abspath, my_abspath, their_abspath,
                                 options, pool));
   /* ### Consider putting the markers/labels from
      ### svn_wc__merge_internal in the conflict description. */
   return svn_diff_file_output_merge3(
-           output, diff,
-           svn_client_conflict_get_base_abspath(desc),
-           svn_client_conflict_get_my_abspath(desc),
-           svn_client_conflict_get_their_abspath(desc),
+           output, diff, base_abspath, my_abspath, their_abspath,
            _("||||||| ORIGINAL"),
            _("<<<<<<< MINE (select with 'mc')"),
            _(">>>>>>> THEIRS (select with 'tc')"),
@@ -728,10 +733,15 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
   const char *local_abspath = svn_client_conflict_get_local_abspath(desc);
   svn_boolean_t is_binary = svn_mime_type_is_binary(
                               svn_client_conflict_text_get_mime_type(desc));
-  const char *base_abspath = svn_client_conflict_get_base_abspath(desc);
-  const char *my_abspath = svn_client_conflict_get_my_abspath(desc);
-  const char *their_abspath = svn_client_conflict_get_their_abspath(desc);
+  const char *base_abspath;
+  const char *my_abspath;
+  const char *their_abspath;
   const char *merged_file = svn_client_conflict_get_merged_file(desc);
+
+  SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
+                                                &base_abspath, &their_abspath,
+                                                desc, scratch_pool,
+                                                scratch_pool));
 
   local_relpath = svn_cl__local_style_skip_ancestor(b->path_prefix,
                                                     local_abspath,
@@ -1242,10 +1252,15 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
 {
   svn_cl__interactive_conflict_baton_t *b = baton;
   svn_error_t *err;
-  const char *base_abspath = svn_client_conflict_get_base_abspath(desc);
-  const char *my_abspath = svn_client_conflict_get_my_abspath(desc);
-  const char *their_abspath = svn_client_conflict_get_their_abspath(desc);
+  const char *base_abspath;
+  const char *my_abspath;
+  const char *their_abspath;
   const char *merged_file = svn_client_conflict_get_merged_file(desc);
+
+  SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
+                                                &base_abspath, &their_abspath,
+                                                desc, scratch_pool,
+                                                scratch_pool));
 
   /* Start out assuming we're going to postpone the conflict. */
   *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,

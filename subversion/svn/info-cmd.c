@@ -595,10 +595,11 @@ print_info(void *baton,
               const char *my_abspath;
               const char *their_abspath;
 
-              base_abspath = svn_client_conflict_get_base_abspath(conflict);
-              my_abspath = svn_client_conflict_get_my_abspath(conflict);
-              their_abspath = svn_client_conflict_get_their_abspath(conflict);
-
+              SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
+                                                            &base_abspath,
+                                                            &their_abspath,
+                                                            conflict, pool,
+                                                            pool));
               switch (svn_client_conflict_get_kind(conflict))
                 {
                   case svn_wc_conflict_kind_text:
