@@ -47,19 +47,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1686478, r1686888, r1686984
-   Make 'blame -g' work with old clients against new servers.
-   Justification:
-     Without this patch, old clients will "lose track" of what changes
-     happened in -g mode and produce wrong / worse blames than against
-     old servers.
-     The output of 'blame -g' is only an approximation.  However, the
-     new server would cause much worse results in old clients especially
-     in simple cases where lines of development are kept in close sync.
-   Votes:
-     +1: stefan2 (without r1686984)
-     +1: brane, philip, rhuijben
-
  * r1682714, r1682854, r1683126, r1683135, r1683290
    Fix segfaults in FSX's directory processing code.
    Justification:
