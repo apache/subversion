@@ -231,3 +231,14 @@ svn_client_conflict_prop_get_propvals(
 
   return SVN_NO_ERROR;
 }
+
+const char *
+svn_client_conflict_text_get_mime_type(
+  const svn_wc_conflict_description2_t *conflict)
+{
+  SVN_ERR_ASSERT_NO_RETURN(svn_client_conflict_get_kind(conflict)
+      == svn_wc_conflict_kind_text);
+
+  return conflict->mime_type;
+}
+

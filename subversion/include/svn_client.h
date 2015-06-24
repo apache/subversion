@@ -4455,6 +4455,15 @@ svn_client_conflict_prop_get_propvals(
   const svn_wc_conflict_description2_t *conflict,
   apr_pool_t *result_pool);
 
+/**
+ * Return the MIME-type of the working version of the text-conflicted file
+ * described by @a conflict.
+ *
+ * @since: New in 1.10.
+ */
+const char *
+svn_client_conflict_text_get_mime_type(
+  const svn_wc_conflict_description2_t *conflict);
 
 /**
  * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
@@ -4463,9 +4472,6 @@ svn_client_conflict_prop_get_propvals(
  * 
  * @since New in 1.10. 
  */
-
-#define svn_client_conflict_get_mime_type(conflict) \
-  ((conflict)->mime_type)
 
 #define svn_client_conflict_get_base_abspath(conflict) \
   ((conflict)->base_abspath)
