@@ -1252,15 +1252,17 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
 {
   svn_cl__interactive_conflict_baton_t *b = baton;
   svn_error_t *err;
-  const char *base_abspath;
-  const char *my_abspath;
-  const char *their_abspath;
+  const char *base_abspath = NULL;
+  const char *my_abspath = NULL;
+  const char *their_abspath = NULL;
   const char *merged_file = svn_client_conflict_get_merged_file(desc);
 
-  SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
-                                                &base_abspath, &their_abspath,
-                                                desc, scratch_pool,
-                                                scratch_pool));
+  if (svn_client_conflict_get_kind(desc) == svn_wc_conflict_kind_text)
+    SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
+                                                  &base_abspath,
+                                                  &their_abspath,
+                                                  desc, scratch_pool,
+                                                  scratch_pool));
 
   /* Start out assuming we're going to postpone the conflict. */
   *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
