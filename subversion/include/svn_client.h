@@ -4449,11 +4449,11 @@ svn_client_conflict_prop_get_propname(
 svn_error_t *
 svn_client_conflict_prop_get_propvals(
   const svn_string_t **base_propval,
-  const svn_string_t **my_propval,
-  const svn_string_t **their_propval,
+  const svn_string_t **working_propval,
+  const svn_string_t **incoming_old_propval,
+  const svn_string_t **incoming_new_propval,
   const svn_wc_conflict_description2_t *conflict,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
+  apr_pool_t *result_pool);
 
 
 /**
