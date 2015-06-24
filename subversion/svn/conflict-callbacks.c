@@ -727,14 +727,11 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
   const char *local_relpath;
   const char *local_abspath = svn_client_conflict_get_local_abspath(desc);
   svn_boolean_t is_binary = svn_mime_type_is_binary(
-                              svn_client_conflict_get_mime_type(desc));
+                              svn_client_conflict_text_get_mime_type(desc));
   const char *base_abspath = svn_client_conflict_get_base_abspath(desc);
   const char *my_abspath = svn_client_conflict_get_my_abspath(desc);
   const char *their_abspath = svn_client_conflict_get_their_abspath(desc);
   const char *merged_file = svn_client_conflict_get_merged_file(desc);
-
-  SVN_ERR_ASSERT(svn_client_conflict_get_kind(desc) ==
-                 svn_wc_conflict_kind_text);
 
   local_relpath = svn_cl__local_style_skip_ancestor(b->path_prefix,
                                                     local_abspath,
