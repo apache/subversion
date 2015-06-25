@@ -391,15 +391,23 @@ print_info_xml(void *baton,
   if (info->wc_info && info->wc_info->conflicts)
     {
       int i;
+      apr_pool_t *iterpool;
 
+      iterpool = svn_pool_create(pool);
       for (i = 0; i < info->wc_info->conflicts->nelts; i++)
         {
-          const svn_wc_conflict_description2_t *conflict =
+          const svn_wc_conflict_description2_t *desc =
                       APR_ARRAY_IDX(info->wc_info->conflicts, i,
                                     const svn_wc_conflict_description2_t *);
+          svn_client_conflict_t *conflict;
 
-          SVN_ERR(svn_cl__append_conflict_info_xml(sb, conflict, pool));
+          svn_pool_clear(iterpool);
+
+          conflict = svn_client_conflict_from_wc_description2_t(desc, iterpool,
+                                                                iterpool);
+          SVN_ERR(svn_cl__append_conflict_info_xml(sb, conflict, iterpool));
         }
+      svn_pool_destroy(iterpool);
     }
 
   if (info->lock)
@@ -584,17 +592,25 @@ print_info(void *baton,
           svn_boolean_t printed_tc = FALSE;
           svn_stringbuf_t *conflicted_props = NULL;
           int i;
+          apr_pool_t *iterpool;
 
+          iterpool = svn_pool_create(pool);
           for (i = 0; i < info->wc_info->conflicts->nelts; i++)
             {
-              const svn_wc_conflict_description2_t *conflict =
+              const svn_wc_conflict_description2_t *desc2 =
                     APR_ARRAY_IDX(info->wc_info->conflicts, i,
                                   const svn_wc_conflict_description2_t *);
               const char *desc;
               const char *base_abspath = NULL;
               const char *my_abspath = NULL;
               const char *their_abspath = NULL;
+              svn_client_conflict_t *conflict;
 
+              svn_pool_clear(iterpool);
+
+              conflict = svn_client_conflict_from_wc_description2_t(desc2,
+                                                                    iterpool,
+                                                                    iterpool);
               switch (svn_client_conflict_get_kind(conflict))
                 {
                   case svn_wc_conflict_kind_text:
@@ -654,6 +670,7 @@ print_info(void *baton,
                   break;
                 }
             }
+          svn_pool_destroy(iterpool);
 
           if (conflicted_props)
             SVN_ERR(svn_cmdline_printf(pool, _("Conflicted Properties: %s\n"),
@@ -670,10 +687,14 @@ print_info(void *baton,
             const char *repos_relpath;
             svn_revnum_t peg_rev;
             svn_node_kind_t node_kind;
-            const svn_wc_conflict_description2_t *conflict =
+            const svn_wc_conflict_description2_t *desc =
                   APR_ARRAY_IDX(info->wc_info->conflicts, 0,
                                 const svn_wc_conflict_description2_t *);
 
+            svn_client_conflict_t *conflict;
+
+            conflict = svn_client_conflict_from_wc_description2_t(desc,
+                                                                  pool, pool);
             if (!printed_tc)
               {
                 const char *desc;

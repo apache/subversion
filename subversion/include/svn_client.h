@@ -4361,6 +4361,29 @@ svn_client_revert(const apr_array_header_t *paths,
  * @{
  */
 
+typedef struct svn_client_conflict_t svn_client_conflict_t;
+
+/**
+ * Return a conflict for the conflicted path @a local_abspath.
+ * 
+ * @since New in 1.10.
+ */
+svn_client_conflict_t *
+svn_client_conflict_get(const char *local_abspath,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/**
+ * Return a conflict corresponding to conflict description @a desc.
+ * 
+ * ### temporary API -- remove before releasing 1.10!
+ */
+svn_client_conflict_t *
+svn_client_conflict_from_wc_description2_t(
+  const svn_wc_conflict_description2_t *desc,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
 /**
  * Return the kind of conflict (text conflict, property conflict,
  * or tree conflict) represented by @a conflict.
@@ -4368,7 +4391,7 @@ svn_client_revert(const apr_array_header_t *paths,
  * New in 1.10.
  */
 svn_wc_conflict_kind_t
-svn_client_conflict_get_kind(const svn_wc_conflict_description2_t *conflict);
+svn_client_conflict_get_kind(const svn_client_conflict_t *conflict);
 
 /**
  * Return the absolute path to the conflicted working copy node described
@@ -4378,7 +4401,7 @@ svn_client_conflict_get_kind(const svn_wc_conflict_description2_t *conflict);
  */
 const char *
 svn_client_conflict_get_local_abspath(
-  const svn_wc_conflict_description2_t *conflict);
+  const svn_client_conflict_t *conflict);
 
 /**
  * Return the operation during which the conflict described by @a
@@ -4388,7 +4411,7 @@ svn_client_conflict_get_local_abspath(
  */
 svn_wc_operation_t
 svn_client_conflict_get_operation(
-  const svn_wc_conflict_description2_t *conflict);
+  const svn_client_conflict_t *conflict);
 
 /**
  * Return the action an update, switch, or merge operation attempted to
@@ -4398,7 +4421,7 @@ svn_client_conflict_get_operation(
  */
 svn_wc_conflict_action_t
 svn_client_conflict_get_incoming_change(
-  const svn_wc_conflict_description2_t *conflict);
+  const svn_client_conflict_t *conflict);
 
 /**
  * Return the reason why the attempted action performed by an update, switch,
@@ -4413,7 +4436,7 @@ svn_client_conflict_get_incoming_change(
  */
 svn_wc_conflict_reason_t
 svn_client_conflict_get_local_change(
-  const svn_wc_conflict_description2_t *conflict);
+  const svn_client_conflict_t *conflict);
 
 /**
  * Return information about the repository associated with @a conflict. 
@@ -4426,7 +4449,7 @@ svn_error_t *
 svn_client_conflict_get_repos_info(
   const char **repos_root_url,
   const char **repos_uuid,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -4461,7 +4484,7 @@ svn_client_conflict_get_incoming_old_repos_location(
   const char **incoming_old_repos_relpath,
   svn_revnum_t *incoming_old_regrev,
   svn_node_kind_t *incoming_old_node_kind,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -4478,7 +4501,7 @@ svn_client_conflict_get_incoming_new_repos_location(
   const char **incoming_new_repos_relpath,
   svn_revnum_t *incoming_new_regrev,
   svn_node_kind_t *incoming_new_node_kind,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -4491,7 +4514,7 @@ svn_client_conflict_get_incoming_new_repos_location(
  */
 svn_node_kind_t
 svn_client_conflict_tree_get_victim_node_kind(
-  const svn_wc_conflict_description2_t *conflict);
+  const svn_client_conflict_t *conflict);
 
 /**
  * Return the name of the conflicted property represented by @a conflict.
@@ -4500,7 +4523,7 @@ svn_client_conflict_tree_get_victim_node_kind(
  */
 const char *
 svn_client_conflict_prop_get_propname(
-  const svn_wc_conflict_description2_t *conflict);
+  const svn_client_conflict_t *conflict);
 
 /**
  * Return the set of property values involved in the property conflict
@@ -4519,7 +4542,7 @@ svn_client_conflict_prop_get_propvals(
   const svn_string_t **working_propval,
   const svn_string_t **incoming_old_propval,
   const svn_string_t **incoming_new_propval,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_client_conflict_t *conflict,
   apr_pool_t *result_pool);
 
 /**
@@ -4531,7 +4554,7 @@ svn_client_conflict_prop_get_propvals(
  */
 const char *
 svn_client_conflict_text_get_mime_type(
-  const svn_wc_conflict_description2_t *conflict);
+  const svn_client_conflict_t *conflict);
 
 /**
  * Return absolute paths to the versions of the text-conflicted file 
@@ -4548,7 +4571,7 @@ svn_client_conflict_text_get_contents(
   const char **working_abspath,
   const char **incoming_old_abspath,
   const char **incoming_new_abspath,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 

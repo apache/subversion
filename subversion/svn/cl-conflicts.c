@@ -229,7 +229,7 @@ operation_str(svn_wc_operation_t operation)
 svn_error_t *
 svn_cl__get_human_readable_prop_conflict_description(
   const char **desc,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_client_conflict_t *conflict,
   apr_pool_t *pool)
 {
   const char *reason_str, *action_str;
@@ -288,7 +288,7 @@ svn_cl__get_human_readable_prop_conflict_description(
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
   const char **desc,
-  const svn_wc_conflict_description2_t *conflict,
+  const svn_client_conflict_t *conflict,
   apr_pool_t *pool)
 {
   const char *action, *reason, *operation;
@@ -411,7 +411,7 @@ add_conflict_version_xml(svn_stringbuf_t **pstr,
 
 static svn_error_t *
 append_tree_conflict_info_xml(svn_stringbuf_t *str,
-                              const svn_wc_conflict_description2_t *conflict,
+                              const svn_client_conflict_t *conflict,
                               apr_pool_t *pool)
 {
   apr_hash_t *att_hash = apr_hash_make(pool);
@@ -479,7 +479,7 @@ append_tree_conflict_info_xml(svn_stringbuf_t *str,
 
 svn_error_t *
 svn_cl__append_conflict_info_xml(svn_stringbuf_t *str,
-                                 const svn_wc_conflict_description2_t *conflict,
+                                 const svn_client_conflict_t *conflict,
                                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *att_hash;
