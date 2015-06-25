@@ -4416,6 +4416,73 @@ svn_client_conflict_get_local_change(
   const svn_wc_conflict_description2_t *conflict);
 
 /**
+ * Return information about the repository associated with @a conflict. 
+ * In case of a foreign-repository merge this will differ from the
+ * repository information associated with the merge target working copy.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_get_repos_info(
+  const char **repos_root_url,
+  const char **repos_uuid,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Return the repository-relative location and the node kind of the incoming
+ * old version of the conflicted node described by @a conflict.
+ *
+ * If the repository-relative path is not available, the @a
+ * *incoming_old_repos_relpath will be set to @c NULL, 
+ *
+ * If the peg revision is not available, @a *incoming_old_regrev will be
+ * set to SVN_INVALID_REVNUM.
+ * 
+ * If the node kind is not available or if the node does not exist at the
+ * specified path and revision, @a *incoming_old_node_kind will be set to
+ * svn_node_none.
+ * ### Should return svn_node_unkown if not available?
+ *
+ * Any output parameter may be set to @c NULL by the caller to indicate that
+ * a particular piece of information should not be returned.
+ *
+ * In case of tree conflicts, this path@revision does not necessarily exist
+ * in the repository, and it does not necessarily represent the incoming
+ * change which is responsible for the occurance of the tree conflict.
+ * The responsible incoming change is generally located somewhere between
+ * the old and new incoming versions.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_get_incoming_old_repos_location(
+  const char **incoming_old_repos_relpath,
+  svn_revnum_t *incoming_old_regrev,
+  svn_node_kind_t *incoming_old_node_kind,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_client_conflict_get_incoming_old_repos_location(), expect this
+ * function returns the same data for the incoming new version.
+ *
+ * The same note about tree conflicts applies.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_get_incoming_new_repos_location(
+  const char **incoming_new_repos_relpath,
+  svn_revnum_t *incoming_new_regrev,
+  svn_node_kind_t *incoming_new_node_kind,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
  * Return the node kind of the tree conflict victim described by @a conflict.
  * The victim is the local node in the working copy which was affected by the
  * tree conflict at the time the conflict was raised.
@@ -4495,12 +4562,6 @@ svn_client_conflict_text_get_contents(
 
 #define svn_client_conflict_get_merged_file(conflict) \
   ((conflict)->merged_file)
-
-#define svn_client_conflict_get_src_left_version(conflict) \
-  ((conflict)->src_left_version)
-
-#define svn_client_conflict_get_src_right_version(conflict) \
-  ((conflict)->src_right_version)
 
 /** @} */
 
