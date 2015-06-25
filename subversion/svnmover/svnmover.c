@@ -720,8 +720,7 @@ flat_branch_get_subbranch_at_eid(flat_branch_t *fb,
                             svn_branch_subtree_get_path_by_eid(fb->s, eid,
                                                                result_pool),
                             result_pool);
-  bid = fb->bid ? apr_psprintf(result_pool, "B%d", eid)
-                : apr_psprintf(result_pool, "%s.%d", fb->bid, eid);
+  bid = apr_psprintf(result_pool, "%s.%d", fb->bid, eid);
   sub_fb = flat_branch_create(s, rrpath, bid, result_pool);
   return sub_fb;
 }
@@ -1428,13 +1427,13 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   SVN_ERR_ASSERT(src->eid == tgt->eid);
   SVN_ERR_ASSERT(src->eid == yca->eid);
 
-  SVN_DBG(("merge src: r%2ld b%s e%3d",
+  SVN_DBG(("merge src: r%2ld %s e%3d",
            src->rev,
            svn_branch_get_id(src->branch, scratch_pool), src->eid));
-  SVN_DBG(("merge tgt: r%2ld b%s e%3d",
+  SVN_DBG(("merge tgt: r%2ld %s e%3d",
            tgt->rev,
            svn_branch_get_id(tgt->branch, scratch_pool), tgt->eid));
-  SVN_DBG(("merge yca: r%2ld b%s e%3d",
+  SVN_DBG(("merge yca: r%2ld %s e%3d",
            yca->rev,
            svn_branch_get_id(yca->branch, scratch_pool), yca->eid));
 
