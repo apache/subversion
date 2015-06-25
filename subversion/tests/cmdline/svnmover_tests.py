@@ -729,32 +729,47 @@ def move_to_related_branch(sbox):
   repo_url = sbox.repo_url
 
   # branch
-  test_svnmover(repo_url, None,
+  test_svnmover2(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('branches/br1'),
                 'branch trunk branches/br1')
 
   # remove all elements from branch so we can try moving them there
-  test_svnmover(repo_url, None,
+  test_svnmover2(sbox, '',
+                 reported_br_diff('branches/br1') +
+                 reported_del('README') +
+                 reported_del('lib') +
+                 reported_del('lib/foo') +
+                 reported_del('lib/foo/file') +
+                 reported_del('lib/foo/x') +
+                 reported_del('lib/foo/y'),
                 'rm branches/br1/README',
                 'rm branches/br1/lib')
 
   # move from trunk to branch 'br1'
-  test_svnmover(repo_url, [
-                 'D /trunk/README',
-                 'D /trunk/lib',
-                 'A /branches/br1/README (from /trunk/README:4)',
-                 'A /branches/br1/subdir',
-                 'A /branches/br1/subdir/lib2 (from /trunk/lib:4)',
-                 'D /branches/br1/subdir/lib2/foo/y',
-                 'A /branches/br1/y2 (from /trunk/lib/foo/y:4)',
-                ],
-                # keeping same relpath
-                'mv trunk/README branches/br1/README',
-                # with a move-within-branch and rename as well
-                'mv trunk/lib/foo/y branches/br1/y2',
-                # dir with children, also renaming and moving within branch
-                'mkdir branches/br1/subdir',
-                'mv trunk/lib branches/br1/subdir/lib2',
-                )
+  test_svnmover2(sbox, '',
+                 reported_br_diff('branches/br1') +
+                 reported_br_diff('trunk') +
+                 reported_del('README') +
+                 reported_del('lib') +
+                 reported_del('lib/foo') +
+                 reported_del('lib/foo/file') +
+                 reported_del('lib/foo/x') +
+                 reported_del('lib/foo/y') +
+                 reported_add('README') +
+                 reported_add('subdir') +
+                 reported_add('subdir/lib2') +
+                 reported_add('subdir/lib2/foo') +
+                 reported_add('subdir/lib2/foo/file') +
+                 reported_add('subdir/lib2/foo/x') +
+                 reported_add('y2'),
+                 # keeping same relpath
+                 'mv trunk/README branches/br1/README',
+                 # with a move-within-branch and rename as well
+                 'mv trunk/lib/foo/y branches/br1/y2',
+                 # dir with children, also renaming and moving within branch
+                 'mkdir branches/br1/subdir',
+                 'mv trunk/lib branches/br1/subdir/lib2')
 
 # Exercise moves from one branch to another. 'svnmover'
 # executes these by branch-and-delete. In this test, there are existing
@@ -800,23 +815,29 @@ def move_to_unrelated_branch(sbox):
   repo_url = sbox.repo_url
 
   # move from trunk to a directory in the root branch
-  test_svnmover(repo_url, [
-                 'D /trunk/README',
-                 'D /trunk/lib',
-                 'A /README (from /trunk/README:2)',
-                 'A /subdir',
-                 'A /subdir/lib2 (from /trunk/lib:2)',
-                 'D /subdir/lib2/foo/y',
-                 'A /y2 (from /trunk/lib/foo/y:2)',
-                ],
-                # keeping same relpath
-                'mv trunk/README README',
-                # with a move-within-branch and rename as well
-                'mv trunk/lib/foo/y y2',
-                # dir with children, also renaming and moving within branch
-                'mkdir subdir',
-                'mv trunk/lib subdir/lib2',
-                )
+  test_svnmover2(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_diff('trunk') +
+                 reported_del('README') +
+                 reported_add('README') +
+                 reported_del('lib') +
+                 reported_del('lib/foo') +
+                 reported_del('lib/foo/file') +
+                 reported_del('lib/foo/x') +
+                 reported_del('lib/foo/y') +
+                 reported_add('y2') +
+                 reported_add('subdir/lib2') +
+                 reported_add('subdir/lib2/foo') +
+                 reported_add('subdir/lib2/foo/file') +
+                 reported_add('subdir/lib2/foo/x') +
+                 reported_add('subdir'),
+                 # keeping same relpath
+                 'mv trunk/README README',
+                 # with a move-within-branch and rename as well
+                 'mv trunk/lib/foo/y y2',
+                 # dir with children, also renaming and moving within branch
+                 'mkdir subdir',
+                 'mv trunk/lib subdir/lib2')
 
 # Move a whole branch within the same parent branch.
 def move_branch_within_same_parent_branch(sbox):
@@ -825,9 +846,10 @@ def move_branch_within_same_parent_branch(sbox):
   repo_url = sbox.repo_url
 
   # make a subbranch
-  test_svnmover(repo_url, None,
-                'mkbranch trunk/sub'
-                )
+  test_svnmover2(sbox, '',
+                 reported_br_diff('trunk') +
+                 reported_br_add('trunk', 'sub'),
+                 'mkbranch trunk/sub')
 
   # move trunk
   test_svnmover2(sbox, '',
