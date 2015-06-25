@@ -321,7 +321,7 @@ show_prop_conflict(const svn_string_t *base_propval,
   return SVN_NO_ERROR;
 }
 
-/* Run an external editor, passing it the MERGED_FILE, or, if the
+/* Run an external editor, passing it the MERGED_ABSPATH, or, if the
  * 'merged' file is null, return an error. The tool to use is determined by
  * B->editor_cmd, B->config and environment variables; see
  * svn_cl__edit_file_externally() for details.
@@ -332,15 +332,15 @@ show_prop_conflict(const svn_string_t *base_propval,
  * return that error. */
 static svn_error_t *
 open_editor(svn_boolean_t *performed_edit,
-            const char *merged_file,
+            const char *merged_abspath,
             svn_cl__interactive_conflict_baton_t *b,
             apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  if (merged_file)
+  if (merged_abspath)
     {
-      err = svn_cmdline__edit_file_externally(merged_file, b->editor_cmd,
+      err = svn_cmdline__edit_file_externally(merged_abspath, b->editor_cmd,
                                               b->config, pool);
       if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR ||
                   err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
