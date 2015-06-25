@@ -131,7 +131,7 @@ svn_cl__accept_from_word(const char *word)
  * corresponding to the conflict described in DESC. */
 static svn_error_t *
 show_diff(const svn_wc_conflict_description2_t *desc,
-          const char *merged_file,
+          const char *merged_abspath,
           const char *path_prefix,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
@@ -148,7 +148,7 @@ show_diff(const svn_wc_conflict_description2_t *desc,
   SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath, NULL,
                                                 &their_abspath,
                                                 desc, pool, pool));
-  if (merged_file)
+  if (merged_abspath)
     {
       /* For conflicts recorded by the 'merge' operation, show a diff between
        * 'mine' (the working version of the file as it appeared before the
@@ -172,7 +172,7 @@ show_diff(const svn_wc_conflict_description2_t *desc,
           path1 = their_abspath;
           label1 = _("THEIRS");
         }
-      path2 = merged_file;
+      path2 = merged_abspath;
       label2 = _("MERGED");
     }
   else
