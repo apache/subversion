@@ -666,6 +666,10 @@ print_info(void *baton,
           {
             const char *src_left_version;
             const char *src_right_version;
+            const char *repos_root_url;
+            const char *repos_relpath;
+            svn_revnum_t peg_rev;
+            svn_node_kind_t node_kind;
             const svn_wc_conflict_description2_t *conflict =
                   APR_ARRAY_IDX(info->wc_info->conflicts, 0,
                                 const svn_wc_conflict_description2_t *);
@@ -684,15 +688,21 @@ print_info(void *baton,
                                                _("Conflict Details"), desc));
               }
 
+            SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
+                                                       conflict, pool, pool));
+            SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+                      &repos_relpath, &peg_rev, &node_kind, conflict,
+                      pool, pool));
             src_left_version =
-                        svn_cl__node_description(
-                          svn_client_conflict_get_src_left_version(conflict),
-                          info->repos_root_URL, pool);
+                        svn_cl__node_description(repos_root_url, repos_relpath,
+                          peg_rev, node_kind, info->repos_root_URL, pool);
 
+            SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+                      &repos_relpath, &peg_rev, &node_kind, conflict,
+                      pool, pool));
             src_right_version =
-                        svn_cl__node_description(
-                          svn_client_conflict_get_src_right_version(conflict),
-                          info->repos_root_URL, pool);
+                        svn_cl__node_description(repos_root_url, repos_relpath,
+                          peg_rev, node_kind, info->repos_root_URL, pool);
 
             if (src_left_version)
               SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",

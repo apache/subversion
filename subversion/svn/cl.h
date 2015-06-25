@@ -777,15 +777,18 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             svn_boolean_t keep_dest_origpath_on_truepath_collision,
                                             apr_pool_t *pool);
 
-/* Return a string showing NODE's kind, URL and revision, to the extent that
- * that information is available in NODE. If NODE itself is NULL, this prints
- * just a 'none' node kind.
+/* Return a string showing a conflicted node's kind, URL and revision,
+ * to the extent that that information is available. If REPOS_ROOT_URL or
+ * REPOS_RELPATH are NULL, this prints just a 'none' node kind.
  * WC_REPOS_ROOT_URL should reflect the target working copy's repository
- * root URL. If NODE is from that same URL, the printed URL is abbreviated
+ * root URL. If the node is from that same URL, the printed URL is abbreviated
  * to caret notation (^/). WC_REPOS_ROOT_URL may be NULL, in which case
  * this function tries to print the conflicted node's complete URL. */
 const char *
-svn_cl__node_description(const svn_wc_conflict_version_t *node,
+svn_cl__node_description(const char *repos_root_url,
+                         const char *repos_relpath,
+                         svn_revnum_t peg_rev,
+                         svn_node_kind_t node_kind,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool);
 

@@ -182,6 +182,110 @@ svn_client_conflict_get_local_change(
   return conflict->reason;
 }
 
+svn_error_t *
+svn_client_conflict_get_repos_info(
+  const char **repos_root_url,
+  const char **repos_uuid,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  if (repos_root_url)
+    {
+      if (conflict->src_left_version)
+        *repos_root_url = conflict->src_left_version->repos_url;
+      else if (conflict->src_right_version)
+        *repos_root_url = conflict->src_right_version->repos_url;
+      else
+        *repos_root_url = NULL;
+    }
+
+  if (repos_uuid)
+    {
+      if (conflict->src_left_version)
+        *repos_uuid = conflict->src_left_version->repos_uuid;
+      else if (conflict->src_right_version)
+        *repos_uuid = conflict->src_right_version->repos_uuid;
+      else
+        *repos_uuid = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_get_incoming_old_repos_location(
+  const char **incoming_old_repos_relpath,
+  svn_revnum_t *incoming_old_pegrev,
+  svn_node_kind_t *incoming_old_node_kind,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  if (incoming_old_repos_relpath)
+    {
+      if (conflict->src_left_version)
+        *incoming_old_repos_relpath = conflict->src_left_version->path_in_repos;
+      else
+        *incoming_old_repos_relpath = NULL;
+    }
+
+  if (incoming_old_pegrev)
+    {
+      if (conflict->src_left_version)
+        *incoming_old_pegrev = conflict->src_left_version->peg_rev;
+      else
+        *incoming_old_pegrev = SVN_INVALID_REVNUM;
+    }
+
+  if (incoming_old_node_kind)
+    {
+      if (conflict->src_left_version)
+        *incoming_old_node_kind = conflict->src_left_version->node_kind;
+      else
+        *incoming_old_node_kind = svn_node_none;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_get_incoming_new_repos_location(
+  const char **incoming_new_repos_relpath,
+  svn_revnum_t *incoming_new_pegrev,
+  svn_node_kind_t *incoming_new_node_kind,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  if (incoming_new_repos_relpath)
+    {
+      if (conflict->src_right_version)
+        *incoming_new_repos_relpath =
+          conflict->src_right_version->path_in_repos;
+      else
+        *incoming_new_repos_relpath = NULL;
+    }
+
+  if (incoming_new_pegrev)
+    {
+      if (conflict->src_right_version)
+        *incoming_new_pegrev = conflict->src_right_version->peg_rev;
+      else
+        *incoming_new_pegrev = SVN_INVALID_REVNUM;
+    }
+
+  if (incoming_new_node_kind)
+    {
+      if (conflict->src_right_version)
+        *incoming_new_node_kind = conflict->src_right_version->node_kind;
+      else
+        *incoming_new_node_kind = svn_node_none;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_node_kind_t
 svn_client_conflict_tree_get_victim_node_kind(
   const svn_wc_conflict_description2_t *conflict)
