@@ -611,12 +611,12 @@ def reported_move(path1, path2, branch_text=''):
   """
   dir1, name1 = os.path.split(path1)
   dir2, name2 = os.path.split(path2)
-  if dir1 == dir2:
-    return ['M r ' + re.escape(path2) + branch_text
-            + r' \(renamed from ' + re.escape('.../' + name1) + r'\)']
-  elif name1 == name2:
+  if name1 == name2:
     return ['Mv  ' + re.escape(path2) + branch_text
             + r' \(moved from ' + re.escape(dir1 + '/...') + r'\)']
+  elif dir1 == dir2:
+    return ['M r ' + re.escape(path2) + branch_text
+            + r' \(renamed from ' + re.escape('.../' + name1) + r'\)']
   else:
     return ['Mvr ' + re.escape(path2) + branch_text
             + r' \(moved\+renamed from ' + re.escape(path1) + r'\)']
@@ -760,29 +760,34 @@ def move_to_related_branch(sbox):
 # executes these by branch-and-delete. In this test, there are existing
 # instances of the same elements in the target branch, which should be
 # overwritten.
-@XFail()  # 'copy-from' information is not quite as expected
 def move_to_related_branch_element_already_exists(sbox):
   "move to related branch; element already exists"
   sbox_build_svnmover(sbox, content=initial_content_in_trunk)
   repo_url = sbox.repo_url
 
   # branch
-  test_svnmover(repo_url, None,
+  test_svnmover2(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('branches/br1'),
                 'branch trunk branches/br1')
 
   # move to a branch where same element already exists: should overwrite
-  test_svnmover(repo_url, [
-                 'D /trunk/README',
-                 'D /branches/br1/README',
-                 'A /branches/br1/README2 (from /trunk/README:3)',
-                ],
+  test_svnmover2(sbox, '',
+                 reported_br_diff('trunk') +
+                 reported_del('README') +
+                 reported_br_diff('branches/br1') +
+                 reported_move('README', 'README2'),
                  # single file: element already exists, at different relpath
                  'mv trunk/README branches/br1/README2')
-  test_svnmover(repo_url, [
-                 'D /trunk/lib',
-                 'D /branches/br1/lib',
-                 'A /branches/br1/lib2 (from /trunk/lib:4)',
-                ],
+  test_svnmover2(sbox, '',
+                 reported_br_diff('branches/br1') +
+                 reported_move('lib', 'lib2') +
+                 reported_br_diff('trunk') +
+                 reported_del('lib') +
+                 reported_del('lib/foo') +
+                 reported_del('lib/foo/file') +
+                 reported_del('lib/foo/x') +
+                 reported_del('lib/foo/y'),
                 # dir: child elements already exist (at different relpaths)
                 'mv branches/br1/lib/foo/x branches/br1/x2',
                 'mv trunk/lib branches/br1/lib2')
@@ -1261,6 +1266,40 @@ def merge_detects_clash_conflicts(sbox):
                  'merge A B A@1')
 
 
+def merge_swap_abc(sbox):
+  "merge swaps A and C in A/B/C"
+  sbox_build_svnmover(sbox)
+
+  test_svnmover2(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('X'),
+                 'mkbranch X ' +
+                 'mkdir X/A ' +
+                 'mkdir X/A/a1 ' +
+                 'mkdir X/A/B ' +
+                 'mkdir X/A/B/C ' +
+                 'mkdir X/A/B/C/c1')
+
+  test_svnmover2(sbox, '', None,
+                 'branch X Y')
+
+  test_svnmover2(sbox, '',
+                 reported_br_diff('X') +
+                 reported_move('A/B/C', 'A') +
+                 reported_move('A/B', 'A/B') +
+                 reported_move('A', 'A/B/C'),
+                 'mv X/A/B/C X/C ' +
+                 'mv X/A/B X/C/B ' +
+                 'mv X/A X/C/B/C ' +
+                 'mv X/C X/A')
+
+  test_svnmover2(sbox, '',
+                 reported_br_diff('Y') +
+                 reported_move('A/B/C', 'A') +
+                 reported_move('A/B', 'A/B') +
+                 reported_move('A', 'A/B/C'),
+                 'merge X Y X@2')
+
 ######################################################################
 
 test_list = [ None,
@@ -1282,6 +1321,7 @@ test_list = [ None,
               merge_from_subbranch_to_subtree,
               modify_payload_of_branch_root_element,
               merge_detects_clash_conflicts,
+              merge_swap_abc,
             ]
 
 if __name__ == '__main__':
