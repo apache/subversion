@@ -735,7 +735,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
   const char *base_abspath;
   const char *my_abspath;
   const char *their_abspath;
-  const char *merged_file = svn_client_conflict_get_merged_file(desc);
+  const char *merged_abspath = svn_client_conflict_get_merged_file(desc);
 
   SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
                                                 &base_abspath, &their_abspath,
@@ -764,7 +764,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
      scenario), or if no base is available, we can show a diff
      between mine and theirs. */
   if (!is_binary &&
-      ((merged_file && base_abspath)
+      ((merged_abspath && base_abspath)
       || (!base_abspath && my_abspath && their_abspath)))
     diff_allowed = TRUE;
 
@@ -867,14 +867,14 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               continue;
             }
 
-          SVN_ERR(show_diff(desc, merged_file, b->path_prefix,
+          SVN_ERR(show_diff(desc, merged_abspath, b->path_prefix,
                             b->pb->cancel_func, b->pb->cancel_baton,
                             iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(opt->code, "e") == 0 || strcmp(opt->code, ":-E") == 0)
         {
-          SVN_ERR(open_editor(&performed_edit, merged_file, b, iterpool));
+          SVN_ERR(open_editor(&performed_edit, merged_abspath, b, iterpool));
           if (performed_edit)
             knows_something = TRUE;
         }
@@ -895,7 +895,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           err = svn_cl__merge_file_externally(base_abspath,
                                               their_abspath,
                                               my_abspath,
-                                              merged_file,
+                                              merged_abspath,
                                               local_abspath, b->config,
                                               NULL, iterpool);
           if (err)
@@ -910,7 +910,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                              base_abspath,
                                              their_abspath,
                                              my_abspath,
-                                             merged_file,
+                                             merged_abspath,
                                              local_abspath,
                                              b->path_prefix,
                                              b->editor_cmd,
@@ -948,9 +948,9 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         {
           /* ### This check should be earlier as it's nasty to offer an option
            *     and then when the user chooses it say 'Invalid option'. */
-          /* ### 'merged_file' shouldn't be necessary *before* we launch the
+          /* ### 'merged_abspath' shouldn't be necessary *before* we launch the
            *     resolver: it should be the *result* of doing so. */
-          if (base_abspath && their_abspath && my_abspath && merged_file)
+          if (base_abspath && their_abspath && my_abspath && merged_abspath)
             {
               svn_error_t *err;
               char buf[1024];
@@ -959,7 +959,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               err = svn_cl__merge_file_externally(base_abspath,
                                                   their_abspath,
                                                   my_abspath,
-                                                  merged_file,
+                                                  merged_abspath,
                                                   local_abspath,
                                                   b->config, NULL, iterpool);
               if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
@@ -990,7 +990,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                      base_abspath,
                                      their_abspath,
                                      my_abspath,
-                                     merged_file,
+                                     merged_abspath,
                                      local_abspath,
                                      b->path_prefix,
                                      b->editor_cmd,
