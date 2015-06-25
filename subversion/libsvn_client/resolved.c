@@ -370,6 +370,17 @@ svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
 }
 
 const char *
+svn_client_conflict_prop_get_reject_abspath(
+  const svn_client_conflict_t *conflict)
+{
+  SVN_ERR_ASSERT_NO_RETURN(svn_client_conflict_get_kind(conflict)
+      == svn_wc_conflict_kind_property);
+
+  /* svn_wc_conflict_description2_t stores this path in 'their_abspath' */
+  return conflict->desc2->their_abspath;
+}
+
+const char *
 svn_client_conflict_text_get_mime_type(const svn_client_conflict_t *conflict)
 {
   SVN_ERR_ASSERT_NO_RETURN(svn_client_conflict_get_kind(conflict)

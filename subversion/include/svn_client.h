@@ -4521,6 +4521,19 @@ const char *
 svn_client_conflict_prop_get_propname(const svn_client_conflict_t *conflict);
 
 /**
+ * Return the path to the legacy property conflicts reject file
+ * for the property conflicts represented by @a conflict.
+ *
+ * This function exists for backwards compatibility only and should not be
+ * used in new code.
+ *
+ * @since New in 1.10.
+ */
+const char *
+svn_client_conflict_prop_get_reject_abspath(
+  const svn_client_conflict_t *conflict);
+
+/**
  * Return the set of property values involved in the property conflict
  * described by @a conflict. If a property value is unavailable the
  * corresponding output argument is set to @c NULL.
