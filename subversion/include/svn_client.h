@@ -4388,6 +4388,25 @@ svn_client_conflict_from_wc_description2_t(
   apr_pool_t *scratch_pool);
 
 /**
+* Indicate the types of conflicts present on the working copy node
+* described by @a conflict. Any output argument may be @c NULL if
+* the caller is not interested in the status of a particular type.
+*
+* The returned @a *props_conflicted array is allocated in @a result_pool.
+* It contains the names of conflicted properties. If no property conflit
+* exists, the array will contain no elements.
+*
+* @since New in 1.10. 
+*/
+svn_error_t *
+svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
+                                   apr_array_header_t **props_conflicted,
+                                   svn_boolean_t *tree_conflicted,
+                                   svn_client_conflict_t *conflict,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
+/**
  * Return the kind of conflict (text conflict, property conflict,
  * or tree conflict) represented by @a conflict.
  *

@@ -276,6 +276,37 @@ svn_client_conflict_get_kind(const svn_client_conflict_t *conflict)
   return get_conflict_desc2_t(conflict)->kind;
 }
 
+svn_error_t *
+svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
+                                   apr_array_header_t **props_conflicted,
+                                   svn_boolean_t *tree_conflicted,
+                                   svn_client_conflict_t *conflict,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  if (text_conflicted)
+    *text_conflicted = (conflict->legacy_text_conflict != NULL);
+
+  if (props_conflicted)
+    {
+      if (conflict->legacy_prop_conflict)
+        {
+          *props_conflicted = apr_array_make(result_pool, 1,
+                                             sizeof(const char*));
+          APR_ARRAY_PUSH((*props_conflicted), const char *) =
+            conflict->legacy_prop_conflict->property_name;
+        }
+      else
+        SVN_ERR(svn_hash_keys(props_conflicted, conflict->prop_conflicts,
+                              result_pool));
+    }
+
+  if (tree_conflicted)
+    *tree_conflicted = (conflict->legacy_tree_conflict != NULL);
+
+  return SVN_NO_ERROR;
+}
+
 const char *
 svn_client_conflict_get_local_abspath(const svn_client_conflict_t *conflict)
 {
