@@ -165,7 +165,7 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
   txn_name = read_txn(pathname, repos->pool);
   if (txn_name == NULL)
     {
-      return dav_svn__new_error(repos->pool, HTTP_NOT_FOUND, 0,
+      return dav_svn__new_error(repos->pool, HTTP_NOT_FOUND, 0, 0,
                                 "could not find activity.");
     }
 

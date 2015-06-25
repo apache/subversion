@@ -881,6 +881,8 @@ def youngest(repos_path):
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
+  """For each node in the OS filesystem tree PATH, subtract MASK from its
+  permissions and add MODE to them."""
   for dirpath, dirs, files in os.walk(path):
     for name in dirs + files:
       fullname = os.path.join(dirpath, name)

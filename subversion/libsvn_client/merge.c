@@ -5398,6 +5398,14 @@ record_skips_in_mergeinfo(const char *mergeinfo_path,
           || obstruction_state == svn_wc_notify_state_missing)
         continue;
 
+      /* Make sure this is not a tree-conflicted path either. We don't
+       * want to add mergeinfo on such nodes since it causes problems down
+       * the line (see issue #4582, "reintegrate complains about missing
+       * ranges from node unrelated to branch") */
+      if (svn_hash_gets(merge_b->tree_conflicted_abspaths,
+                        skipped_abspath) != NULL)
+        continue;
+
       /* Add an empty range list for this path.
 
          ### TODO: This works fine for a file path skipped because it is

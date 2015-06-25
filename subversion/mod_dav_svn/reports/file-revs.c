@@ -255,14 +255,14 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* Sanity check. */
   if (!resource->info->repos_path)
-    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                               "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   /* ### This is done on other places, but the document element is
      in this namespace, so is this necessary at all? */
   if (ns == -1)
     {
-      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
                                     "certain required elements");
@@ -300,7 +300,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* Check that all parameters are present and valid. */
   if (! abs_path)
-    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                   "Not all parameters passed");
 
   frb.bb = apr_brigade_create(resource->pool,
