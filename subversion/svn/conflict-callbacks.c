@@ -1428,8 +1428,9 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
   svn_cl__interactive_conflict_baton_t *b = baton;
   svn_client_conflict_t *conflict;
 
-  conflict = svn_client_conflict_from_wc_description2_t(desc, scratch_pool,
-                                                        scratch_pool);
+  SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict, desc,
+                                                     scratch_pool,
+                                                     scratch_pool));
   SVN_ERR(conflict_func_interactive(result, conflict, baton,
                                     result_pool, scratch_pool));
 

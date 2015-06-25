@@ -4368,19 +4368,21 @@ typedef struct svn_client_conflict_t svn_client_conflict_t;
  * 
  * @since New in 1.10.
  */
-svn_client_conflict_t *
-svn_client_conflict_get(const char *local_abspath,
+svn_error_t *
+svn_client_conflict_get(svn_client_conflict_t **conflict,
+                        const char *local_abspath,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
 /**
- * Return a conflict corresponding to conflict description @a desc.
+ * Return a conflict corresponding to legacy conflict description @a desc.
  * 
- * ### temporary API -- remove before releasing 1.10!
+ * @since New in 1.10.
  */
-svn_client_conflict_t *
+svn_error_t *
 svn_client_conflict_from_wc_description2_t(
+  svn_client_conflict_t **conflict,
   const svn_wc_conflict_description2_t *desc,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);

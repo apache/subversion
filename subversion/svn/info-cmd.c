@@ -403,8 +403,9 @@ print_info_xml(void *baton,
 
           svn_pool_clear(iterpool);
 
-          conflict = svn_client_conflict_from_wc_description2_t(desc, iterpool,
-                                                                iterpool);
+          SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict, desc,
+                                                             iterpool,
+                                                             iterpool));
           SVN_ERR(svn_cl__append_conflict_info_xml(sb, conflict, iterpool));
         }
       svn_pool_destroy(iterpool);
@@ -608,9 +609,10 @@ print_info(void *baton,
 
               svn_pool_clear(iterpool);
 
-              conflict = svn_client_conflict_from_wc_description2_t(desc2,
-                                                                    iterpool,
-                                                                    iterpool);
+              SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict,
+                                                                 desc2,
+                                                                 iterpool,
+                                                                 iterpool));
               switch (svn_client_conflict_get_kind(conflict))
                 {
                   case svn_wc_conflict_kind_text:
@@ -693,8 +695,8 @@ print_info(void *baton,
 
             svn_client_conflict_t *conflict;
 
-            conflict = svn_client_conflict_from_wc_description2_t(desc2,
-                                                                  pool, pool);
+            SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict, desc2,
+                                                               pool, pool));
             if (!printed_tc)
               {
                 const char *desc;
