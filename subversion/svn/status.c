@@ -287,7 +287,7 @@ print_status(const char *target_abspath,
 
           SVN_ERR(svn_wc__get_tree_conflict(&desc2, ctx->wc_ctx,
                                             local_abspath, pool, pool));
-          SVN_ERR_ASSERT(desc != NULL);
+          SVN_ERR_ASSERT(desc2 != NULL);
 
           tree_conflict = svn_client_conflict_from_wc_description2_t(desc2,
                                                                      pool,
