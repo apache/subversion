@@ -1052,7 +1052,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
 {
   apr_pool_t *iterpool;
   const char *message;
-  const char *merged_file_path = NULL;
+  const char *merged_abspath = NULL;
   const svn_string_t *merged_propval = NULL;
   svn_boolean_t resolved_allowed = FALSE;
   const svn_string_t *base_propval;
@@ -1117,7 +1117,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "e") == 0)
         {
-          SVN_ERR(edit_prop_conflict(&merged_file_path, &merged_propval,
+          SVN_ERR(edit_prop_conflict(&merged_abspath, &merged_propval,
                                      base_propval, my_propval, their_propval,
                                      b, result_pool, scratch_pool));
           resolved_allowed = (merged_propval != NULL);
@@ -1132,7 +1132,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
               continue;
             }
 
-          result->merged_file = merged_file_path;
+          result->merged_file = merged_abspath;
           result->choice = svn_wc_conflict_choose_merged;
           break;
         }
