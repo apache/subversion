@@ -730,8 +730,9 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
   svn_boolean_t knows_something = FALSE;
   const char *local_relpath;
   const char *local_abspath = svn_client_conflict_get_local_abspath(desc);
-  svn_boolean_t is_binary = svn_mime_type_is_binary(
-                              svn_client_conflict_text_get_mime_type(desc));
+  const char *mime_type = svn_client_conflict_text_get_mime_type(desc);
+  svn_boolean_t is_binary = mime_type ? svn_mime_type_is_binary(mime_type)
+                                      : FALSE;
   const char *base_abspath;
   const char *my_abspath;
   const char *their_abspath;
