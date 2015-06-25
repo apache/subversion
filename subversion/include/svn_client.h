@@ -4362,6 +4362,15 @@ svn_client_revert(const apr_array_header_t *paths,
  */
 
 /**
+ * Return the kind of conflict (text conflict, property conflict,
+ * or tree conflict) represented by @a conflict.
+ *
+ * New in 1.10.
+ */
+svn_wc_conflict_kind_t
+svn_client_conflict_get_kind(const svn_wc_conflict_description2_t *conflict);
+
+/**
  * Return the absolute path to the conflicted working copy node described
  * by @a conflict.
  *
@@ -4407,6 +4416,143 @@ svn_client_conflict_get_local_change(
   const svn_wc_conflict_description2_t *conflict);
 
 /**
+ * Return information about the repository associated with @a conflict. 
+ * In case of a foreign-repository merge this will differ from the
+ * repository information associated with the merge target working copy.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_get_repos_info(
+  const char **repos_root_url,
+  const char **repos_uuid,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Return the repository-relative location and the node kind of the incoming
+ * old version of the conflicted node described by @a conflict.
+ *
+ * If the repository-relative path is not available, the @a
+ * *incoming_old_repos_relpath will be set to @c NULL, 
+ *
+ * If the peg revision is not available, @a *incoming_old_regrev will be
+ * set to SVN_INVALID_REVNUM.
+ * 
+ * If the node kind is not available or if the node does not exist at the
+ * specified path and revision, @a *incoming_old_node_kind will be set to
+ * svn_node_none.
+ * ### Should return svn_node_unkown if not available?
+ *
+ * Any output parameter may be set to @c NULL by the caller to indicate that
+ * a particular piece of information should not be returned.
+ *
+ * In case of tree conflicts, this path@revision does not necessarily exist
+ * in the repository, and it does not necessarily represent the incoming
+ * change which is responsible for the occurance of the tree conflict.
+ * The responsible incoming change is generally located somewhere between
+ * the old and new incoming versions.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_get_incoming_old_repos_location(
+  const char **incoming_old_repos_relpath,
+  svn_revnum_t *incoming_old_regrev,
+  svn_node_kind_t *incoming_old_node_kind,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_client_conflict_get_incoming_old_repos_location(), expect this
+ * function returns the same data for the incoming new version.
+ *
+ * The same note about tree conflicts applies.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_get_incoming_new_repos_location(
+  const char **incoming_new_repos_relpath,
+  svn_revnum_t *incoming_new_regrev,
+  svn_node_kind_t *incoming_new_node_kind,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Return the node kind of the tree conflict victim described by @a conflict.
+ * The victim is the local node in the working copy which was affected by the
+ * tree conflict at the time the conflict was raised.
+ *
+ * @since New in 1.10.
+ */
+svn_node_kind_t
+svn_client_conflict_tree_get_victim_node_kind(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return the name of the conflicted property represented by @a conflict.
+ *
+ * @since New in 1.10.
+ */
+const char *
+svn_client_conflict_prop_get_propname(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return the set of property values involved in the property conflict
+ * described by @a conflict. If a property value is unavailable the
+ * corresponding output argument is set to @c NULL.
+ *  
+ * A 3-way diff of these property values can be generated with
+ * svn_diff_mem_string_diff3(). A merged version with conflict
+ * markers can be generated with svn_diff_mem_string_output_merge3().
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_prop_get_propvals(
+  const svn_string_t **base_propval,
+  const svn_string_t **working_propval,
+  const svn_string_t **incoming_old_propval,
+  const svn_string_t **incoming_new_propval,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool);
+
+/**
+ * Return the MIME-type of the working version of the text-conflicted file
+ * described by @a conflict.
+ *
+ * ### Really needed? What about base/incoming_old/incoming_new values?
+ * @since: New in 1.10.
+ */
+const char *
+svn_client_conflict_text_get_mime_type(
+  const svn_wc_conflict_description2_t *conflict);
+
+/**
+ * Return absolute paths to the versions of the text-conflicted file 
+ * described by @a conflict.
+ *
+ * If a particular content is not available, it is set to @c NULL.
+ * 
+ * ### Should this be returning svn_stream_t instead of paths?
+ * @since: New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_text_get_contents(
+  const char **base_abspath,
+  const char **working_abspath,
+  const char **incoming_old_abspath,
+  const char **incoming_new_abspath,
+  const svn_wc_conflict_description2_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
  * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
  * API for eventually replacing svn_wc_conflict_description2_t with an opaque
  * type and providing improved APIs for conflict resolution.
@@ -4414,50 +4560,8 @@ svn_client_conflict_get_local_change(
  * @since New in 1.10. 
  */
 
-#define svn_client_conflict_get_node_kind(conflict) \
-  ((conflict)->node_kind)
-
-#define svn_client_conflict_get_kind(conflict) \
-  ((conflict)->kind)
-
-#define svn_client_conflict_get_property_name(conflict) \
-  ((conflict)->property_name)
-
-#define svn_client_conflict_get_is_binary(conflict) \
-  ((conflict)->is_binary)
-
-#define svn_client_conflict_get_mime_type(conflict) \
-  ((conflict)->mime_type)
-
-#define svn_client_conflict_get_base_abspath(conflict) \
-  ((conflict)->base_abspath)
-
-#define svn_client_conflict_get_their_abspath(conflict) \
-  ((conflict)->their_abspath)
-
-#define svn_client_conflict_get_my_abspath(conflict) \
-  ((conflict)->my_abspath)
-
 #define svn_client_conflict_get_merged_file(conflict) \
   ((conflict)->merged_file)
-
-#define svn_client_conflict_get_src_left_version(conflict) \
-  ((conflict)->src_left_version)
-
-#define svn_client_conflict_get_src_right_version(conflict) \
-  ((conflict)->src_right_version)
-
-#define svn_client_conflict_get_prop_reject_abspath(conflict) \
-  ((conflict)->prop_reject_abspath)
-
-#define svn_client_conflict_get_prop_value_working(conflict) \
-  ((conflict)->prop_value_working)
-
-#define svn_client_conflict_get_prop_value_incoming_old(conflict) \
-  ((conflict)->prop_value_incoming_old)
-
-#define svn_client_conflict_get_prop_value_incoming_new(conflict) \
-  ((conflict)->prop_value_incoming_new)
 
 /** @} */
 

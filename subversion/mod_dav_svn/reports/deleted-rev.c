@@ -57,11 +57,11 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
 
   /* Sanity check. */
   if (!resource->info->repos_path)
-    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                               "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
-    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                   "The request does not contain the 'svn:' "
                                   "namespace, so it is not going to have "
                                   "certain required elements");
@@ -102,7 +102,7 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
          && SVN_IS_VALID_REVNUM(peg_rev)
          && SVN_IS_VALID_REVNUM(end_rev)))
     {
-      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "Not all parameters passed");
     }
 
@@ -113,7 +113,8 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
   if (err)
     {
       svn_error_clear(err);
-      return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+      return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                0, 0,
                                 "Could not find revision path was deleted.");
     }
 
