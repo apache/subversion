@@ -366,14 +366,12 @@ open_editor(svn_boolean_t *performed_edit,
 }
 
 /* Run an external editor on the merged property value with conflict markers.
- * Return the path to a file containing the edited result in *MERGED_FILE_PATH
- * and also return the resulting property value in *MERGED_RPOPVAL.
+ * Return the edited result in *MERGED_PROPVAL.
  * If the edit is aborted, set *MERGED_ABSPATH and *MERGED_PROPVAL to NULL.
  * The tool to use is determined by B->editor_cmd, B->config and
  * environment variables; see svn_cl__edit_file_externally() for details. */
 static svn_error_t *
-edit_prop_conflict(const char **merged_abspath,
-                   const svn_string_t **merged_propval,
+edit_prop_conflict(const svn_string_t **merged_propval,
                    const svn_string_t *base_propval,
                    const svn_string_t *my_propval,
                    const svn_string_t *their_propval,
@@ -403,16 +401,11 @@ edit_prop_conflict(const char **merged_abspath,
     {
       svn_stringbuf_t *buf;
 
-      *merged_abspath = file_path;
-
       SVN_ERR(svn_stringbuf_from_file2(&buf, file_path, scratch_pool));
       *merged_propval = svn_string_create_from_buf(buf, result_pool); 
     }
   else
-    {
-      *merged_abspath = NULL;
-      *merged_propval = NULL;
-    }
+    *merged_propval = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -1053,7 +1046,6 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
 {
   apr_pool_t *iterpool;
   const char *message;
-  const char *merged_abspath = NULL;
   const svn_string_t *merged_propval = NULL;
   svn_boolean_t resolved_allowed = FALSE;
   const svn_string_t *base_propval;
@@ -1118,7 +1110,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
         }
       else if (strcmp(opt->code, "e") == 0)
         {
-          SVN_ERR(edit_prop_conflict(&merged_abspath, &merged_propval,
+          SVN_ERR(edit_prop_conflict(&merged_propval,
                                      base_propval, my_propval, their_propval,
                                      b, result_pool, scratch_pool));
           resolved_allowed = (merged_propval != NULL);
@@ -1133,7 +1125,7 @@ handle_prop_conflict(svn_wc_conflict_result_t *result,
               continue;
             }
 
-          result->merged_file = merged_abspath;
+          result->merged_value = merged_propval;
           result->choice = svn_wc_conflict_choose_merged;
           break;
         }
