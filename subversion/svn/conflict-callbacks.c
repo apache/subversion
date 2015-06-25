@@ -368,11 +368,11 @@ open_editor(svn_boolean_t *performed_edit,
 /* Run an external editor on the merged property value with conflict markers.
  * Return the path to a file containing the edited result in *MERGED_FILE_PATH
  * and also return the resulting property value in *MERGED_RPOPVAL.
- * If the edit is aborted, set *MERGED_FILE_PATH and *MERGED_PROPVAL to NULL.
+ * If the edit is aborted, set *MERGED_ABSPATH and *MERGED_PROPVAL to NULL.
  * The tool to use is determined by B->editor_cmd, B->config and
  * environment variables; see svn_cl__edit_file_externally() for details. */
 static svn_error_t *
-edit_prop_conflict(const char **merged_file_path,
+edit_prop_conflict(const char **merged_abspath,
                    const svn_string_t **merged_propval,
                    const svn_string_t *base_propval,
                    const svn_string_t *my_propval,
@@ -403,14 +403,14 @@ edit_prop_conflict(const char **merged_file_path,
     {
       svn_stringbuf_t *buf;
 
-      *merged_file_path = file_path;
+      *merged_abspath = file_path;
 
       SVN_ERR(svn_stringbuf_from_file2(&buf, file_path, scratch_pool));
       *merged_propval = svn_string_create_from_buf(buf, result_pool); 
     }
   else
     {
-      *merged_file_path = NULL;
+      *merged_abspath = NULL;
       *merged_propval = NULL;
     }
 
