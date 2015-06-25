@@ -159,13 +159,9 @@ assert_branch_state_invariants(const svn_branch_state_t *branch,
   assert(branch->rev_root);
   if (branch->outer_branch)
     {
-      assert(branch->outer_eid != -1);
       assert(EID_IS_ALLOCATED(branch, branch->outer_eid));
     }
-  else
-    {
-      assert(branch->outer_eid == -1);
-    }
+  assert(branch->outer_eid != -1);
   assert(branch->e_map);
 
   /* Validate elements in the map */
@@ -981,6 +977,32 @@ parse_element_line(int *eid_p,
   return SVN_NO_ERROR;
 }
 
+/* Set *OUTER_BID to the outer branch's id and *OUTER_EID to this branch's
+ * outer EID.
+ *
+ * For a top-level branch, set *OUTER_BID to NULL and *OUTER_EID to the
+ * top-level branch number.
+ */
+static void
+branch_id_split(const char **outer_bid,
+                int *outer_eid,
+                const char *bid,
+                apr_pool_t *result_pool)
+{
+  char *last_dot = strrchr(bid, '.');
+
+  if (last_dot) /* BID looks like "B3.11" or "B3.11.22" etc. */
+    {
+      *outer_bid = apr_pstrndup(result_pool, bid, last_dot - bid);
+      *outer_eid = atoi(last_dot + 1);
+    }
+  else /* looks like "B0" or B22" (with no dot) */
+    {
+      *outer_bid = NULL;
+      *outer_eid = atoi(bid + 1);
+    }
+}
+
 /* Create a new branch *NEW_BRANCH, initialized
  * with info parsed from STREAM, allocated in RESULT_POOL.
  */
@@ -1004,29 +1026,19 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
                             stream, scratch_pool));
 
   /* Find the outer branch and outer EID */
-  if (strcmp(bid, "B0") != 0)
-    {
-      char *last_dot = strrchr(bid, '.');
-      const char *outer_bid;
+  {
+    const char *outer_bid;
 
-      if (last_dot) /* BID looks like "B3.11" or "B3.11.22" etc. */
-        {
-          outer_bid = apr_pstrndup(scratch_pool, bid, last_dot - bid);
-          outer_eid = atoi(last_dot + 1);
-        }
-      else /* looks like "B22" (non-zero and with no dot) */
-        {
-          outer_bid = "B0";
-          outer_eid = atoi(bid + 1);
-        }
-      outer_branch = svn_branch_revision_root_get_branch_by_id(
-                       rev_root, outer_bid, scratch_pool);
-    }
-  else
-    {
+    branch_id_split(&outer_bid, &outer_eid, bid, scratch_pool);
+    if (outer_bid)
+      {
+        outer_branch
+          = svn_branch_revision_root_get_branch_by_id(rev_root, outer_bid,
+                                                      scratch_pool);
+      }
+    else
       outer_branch = NULL;
-      outer_eid = -1;
-    }
+  }
   branch_state = svn_branch_state_create(root_eid, rev_root,
                                          outer_branch, outer_eid,
                                          result_pool);
@@ -1335,20 +1347,14 @@ const char *
 svn_branch_get_id(svn_branch_state_t *branch,
                   apr_pool_t *result_pool)
 {
-  const char *id = NULL;
-
-  if (! branch->outer_branch)
-    return "B0";
+  const char *id = "";
 
   while (branch->outer_branch)
     {
-      if (id)
-        id = apr_psprintf(result_pool, "%d.%s", branch->outer_eid, id);
-      else
-        id = apr_psprintf(result_pool, "%d", branch->outer_eid);
+      id = apr_psprintf(result_pool, ".%d%s", branch->outer_eid, id);
       branch = branch->outer_branch;
     }
-  id = apr_psprintf(result_pool, "B%s", id);
+  id = apr_psprintf(result_pool, "B%d%s", branch->outer_eid, id);
   return id;
 }
 
