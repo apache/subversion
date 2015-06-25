@@ -131,6 +131,7 @@ svn_cl__accept_from_word(const char *word)
  * corresponding to the conflict described in DESC. */
 static svn_error_t *
 show_diff(const svn_wc_conflict_description2_t *desc,
+          const char *merged_file,
           const char *path_prefix,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
@@ -143,12 +144,10 @@ show_diff(const svn_wc_conflict_description2_t *desc,
   svn_diff_file_options_t *options;
   const char *my_abspath;
   const char *their_abspath;
-  const char *merged_file;
 
   SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath, NULL,
                                                 &their_abspath,
                                                 desc, pool, pool));
-  merged_file = svn_client_conflict_get_merged_file(desc);
   if (merged_file)
     {
       /* For conflicts recorded by the 'merge' operation, show a diff between
@@ -868,7 +867,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               continue;
             }
 
-          SVN_ERR(show_diff(desc, b->path_prefix,
+          SVN_ERR(show_diff(desc, merged_file, b->path_prefix,
                             b->pb->cancel_func, b->pb->cancel_baton,
                             iterpool));
           knows_something = TRUE;
