@@ -278,6 +278,7 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
   if (svn_fs_x__is_txn(id->change_set))
     {
       apr_file_t *file;
+      svn_stream_t *stream;
 
       /* This is a transaction node-rev.  Its storage logic is very
          different from that of rev / pack files. */
@@ -298,11 +299,11 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
           return svn_error_trace(err);
         }
 
-      SVN_ERR(svn_fs_x__read_noderev(noderev_p,
-                                     svn_stream_from_aprfile2(file,
-                                                              FALSE,
-                                                              scratch_pool),
+      /* Be sure to close the file ASAP. */
+      stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
+      SVN_ERR(svn_fs_x__read_noderev(noderev_p, stream,
                                      result_pool, scratch_pool));
+      SVN_ERR(svn_stream_close(stream));
     }
   else
     {
