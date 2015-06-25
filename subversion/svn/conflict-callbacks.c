@@ -1269,7 +1269,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
   const char *base_abspath = NULL;
   const char *my_abspath = NULL;
   const char *their_abspath = NULL;
-  const char *merged_file = svn_client_conflict_get_merged_file(desc);
+  const char *merged_abspath = svn_client_conflict_get_merged_file(desc);
 
   if (svn_client_conflict_get_kind(desc) == svn_wc_conflict_kind_text)
     SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
@@ -1297,7 +1297,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
     case svn_cl__accept_working:
       /* If the caller didn't merge the property values, then I guess
        * 'choose working' means 'choose mine'... */
-      if (! merged_file)
+      if (! merged_abspath)
         (*result)->merged_file = my_abspath;
       (*result)->choice = svn_wc_conflict_choose_merged;
       return SVN_NO_ERROR;
@@ -1314,7 +1314,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
       (*result)->choice = svn_wc_conflict_choose_theirs_full;
       return SVN_NO_ERROR;
     case svn_cl__accept_edit:
-      if (merged_file)
+      if (merged_abspath)
         {
           if (b->external_failed)
             {
@@ -1322,7 +1322,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
               return SVN_NO_ERROR;
             }
 
-          err = svn_cmdline__edit_file_externally(merged_file,
+          err = svn_cmdline__edit_file_externally(merged_abspath,
                                                   b->editor_cmd, b->config,
                                                   scratch_pool);
           if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR ||
@@ -1345,7 +1345,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
       /* else, fall through to prompting. */
       break;
     case svn_cl__accept_launch:
-      if (base_abspath && their_abspath && my_abspath && merged_file)
+      if (base_abspath && their_abspath && my_abspath && merged_abspath)
         {
           svn_boolean_t remains_in_conflict;
           const char *local_abspath;
@@ -1360,7 +1360,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
           err = svn_cl__merge_file_externally(base_abspath,
                                               their_abspath,
                                               my_abspath,
-                                              merged_file,
+                                              merged_abspath,
                                               local_abspath,
                                               b->config,
                                               &remains_in_conflict,
