@@ -638,21 +638,21 @@ def merge_edits_with_move(sbox):
 
   # create initial state in trunk
   # (r2)
-  test_svnmover(repo_url + '/trunk', [
-                 'A /trunk/lib',
-                 'A /trunk/lib/foo',
-                 'A /trunk/lib/foo/x',
-                 'A /trunk/lib/foo/y',
-                ],
+  test_svnmover2(sbox, '/trunk',
+                 reported_br_diff('trunk') +
+                 reported_add('lib') +
+                 reported_add('lib/foo') +
+                 reported_add('lib/foo/x') +
+                 reported_add('lib/foo/y'),
                 'mkdir lib',
                 'mkdir lib/foo',
                 'mkdir lib/foo/x',
                 'mkdir lib/foo/y')
 
   # branch (r3)
-  test_svnmover(repo_url, [
-                 'A /branches/br1 (from /trunk:2)',
-                ],
+  test_svnmover2(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('branches/br1'),
                 'branch trunk branches/br1')
 
   # on trunk: make edits under 'foo' (r4)
@@ -694,26 +694,42 @@ def simple_moves_within_a_branch(sbox):
   repo_url = sbox.repo_url
 
   # rename only, file
-  test_svnmover(repo_url + '/trunk', None,
+  test_svnmover2(sbox, '/trunk',
+                 reported_br_diff('trunk') +
+                 reported_move('README', 'README.txt'),
                 'mv README README.txt')
   # move only, file
-  test_svnmover(repo_url + '/trunk', None,
+  test_svnmover2(sbox, '/trunk',
+                 reported_br_diff('trunk') +
+                 reported_move('README.txt', 'lib/README.txt'),
                 'mv README.txt lib/README.txt')
   # rename only, empty dir
-  test_svnmover(repo_url + '/trunk', None,
+  test_svnmover2(sbox, '/trunk',
+                 reported_br_diff('trunk') +
+                 reported_move('lib/foo/y', 'lib/foo/y2'),
                 'mv lib/foo/y lib/foo/y2')
   # move only, empty dir
-  test_svnmover(repo_url + '/trunk', None,
+  test_svnmover2(sbox, '/trunk',
+                 reported_br_diff('trunk') +
+                 reported_move('lib/foo/y2', 'y2'),
                 'mv lib/foo/y2 y2')
   # move and rename, dir with children
-  test_svnmover(repo_url + '/trunk', None,
+  test_svnmover2(sbox, '/trunk',
+                 reported_br_diff('') +
+                 reported_add('subdir') +
+                 reported_move('lib', 'subdir/lib2'),
                 'mkdir subdir',
                 'mv lib subdir/lib2',
                 )
 
   # moves and renames together
   # (put it all back to how it was, in one commit)
-  test_svnmover(repo_url + '/trunk', None,
+  test_svnmover2(sbox, '/trunk',
+                 reported_br_diff('') +
+                 reported_move('subdir/lib2/README.txt', 'README') +
+                 reported_move('subdir/lib2', 'lib') +
+                 reported_move('y2', 'lib/foo/y') +
+                 reported_del('subdir'),
                 'mv subdir/lib2 lib',
                 'rm subdir',
                 'mv y2 lib/foo/y',
