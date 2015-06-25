@@ -569,9 +569,15 @@ svn_cl__append_conflict_info_xml(svn_stringbuf_t *str,
         break;
 
       case svn_wc_conflict_kind_property:
-        /* "<prop-file> xx </prop-file>" */
-        svn_cl__xml_tagged_cdata(
-          &str, scratch_pool, "prop-file", their_abspath);
+        {
+          const char *reject_abspath;
+
+          /* "<prop-file> xx </prop-file>" */
+          reject_abspath =
+            svn_client_conflict_prop_get_reject_abspath(conflict);
+          svn_cl__xml_tagged_cdata(
+            &str, scratch_pool, "prop-file", reject_abspath);
+        }
         break;
 
       default:
