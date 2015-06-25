@@ -4370,6 +4370,7 @@ typedef struct svn_client_conflict_t svn_client_conflict_t;
  */
 svn_client_conflict_t *
 svn_client_conflict_get(const char *local_abspath,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
