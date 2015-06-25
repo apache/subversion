@@ -190,40 +190,35 @@ svn_client_conflict_get_kind(const svn_client_conflict_t *conflict)
 }
 
 const char *
-svn_client_conflict_get_local_abspath(
-  const svn_client_conflict_t *conflict)
+svn_client_conflict_get_local_abspath(const svn_client_conflict_t *conflict)
 {
   return conflict->local_abspath;
 }
 
 svn_wc_operation_t
-svn_client_conflict_get_operation(
-  const svn_client_conflict_t *conflict)
+svn_client_conflict_get_operation(const svn_client_conflict_t *conflict)
 {
   return conflict->desc2->operation;
 }
 
 svn_wc_conflict_action_t
-svn_client_conflict_get_incoming_change(
-  const svn_client_conflict_t *conflict)
+svn_client_conflict_get_incoming_change(const svn_client_conflict_t *conflict)
 {
   return conflict->desc2->action;
 }
 
 svn_wc_conflict_reason_t
-svn_client_conflict_get_local_change(
-  const svn_client_conflict_t *conflict)
+svn_client_conflict_get_local_change(const svn_client_conflict_t *conflict)
 {
   return conflict->desc2->reason;
 }
 
 svn_error_t *
-svn_client_conflict_get_repos_info(
-  const char **repos_root_url,
-  const char **repos_uuid,
-  const svn_client_conflict_t *conflict,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool)
+svn_client_conflict_get_repos_info(const char **repos_root_url,
+                                   const char **repos_uuid,
+                                   const svn_client_conflict_t *conflict,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
 {
   if (repos_root_url)
     {
@@ -333,8 +328,7 @@ svn_client_conflict_tree_get_victim_node_kind(
 }
 
 const char *
-svn_client_conflict_prop_get_propname(
-  const svn_client_conflict_t *conflict)
+svn_client_conflict_prop_get_propname(const svn_client_conflict_t *conflict)
 {
   SVN_ERR_ASSERT_NO_RETURN(svn_client_conflict_get_kind(conflict)
       == svn_wc_conflict_kind_property);
@@ -343,12 +337,11 @@ svn_client_conflict_prop_get_propname(
 }
 
 svn_error_t *
-svn_client_conflict_prop_get_propvals(
-  const svn_string_t **base_propval,
-  const svn_string_t **working_propval,
-  const svn_string_t **incoming_old_propval,
-  const svn_string_t **incoming_new_propval,
-  const svn_client_conflict_t *conflict,
+svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
+                                      const svn_string_t **working_propval,
+                                      const svn_string_t **incoming_old_propval,
+                                      const svn_string_t **incoming_new_propval,
+                                      const svn_client_conflict_t *conflict,
   apr_pool_t *result_pool)
 {
   SVN_ERR_ASSERT(svn_client_conflict_get_kind(conflict) ==
@@ -374,8 +367,7 @@ svn_client_conflict_prop_get_propvals(
 }
 
 const char *
-svn_client_conflict_text_get_mime_type(
-  const svn_client_conflict_t *conflict)
+svn_client_conflict_text_get_mime_type(const svn_client_conflict_t *conflict)
 {
   SVN_ERR_ASSERT_NO_RETURN(svn_client_conflict_get_kind(conflict)
       == svn_wc_conflict_kind_text);
@@ -384,14 +376,13 @@ svn_client_conflict_text_get_mime_type(
 }
 
 svn_error_t *
-svn_client_conflict_text_get_contents(
-  const char **base_abspath,
-  const char **working_abspath,
-  const char **incoming_old_abspath,
-  const char **incoming_new_abspath,
-  const svn_client_conflict_t *conflict,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool)
+svn_client_conflict_text_get_contents(const char **base_abspath,
+                                      const char **working_abspath,
+                                      const char **incoming_old_abspath,
+                                      const char **incoming_new_abspath,
+                                      const svn_client_conflict_t *conflict,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_client_conflict_get_kind(conflict)
       == svn_wc_conflict_kind_text);

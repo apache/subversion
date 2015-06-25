@@ -4400,8 +4400,7 @@ svn_client_conflict_get_kind(const svn_client_conflict_t *conflict);
  * @since New in 1.10. 
  */
 const char *
-svn_client_conflict_get_local_abspath(
-  const svn_client_conflict_t *conflict);
+svn_client_conflict_get_local_abspath(const svn_client_conflict_t *conflict);
 
 /**
  * Return the operation during which the conflict described by @a
@@ -4410,8 +4409,7 @@ svn_client_conflict_get_local_abspath(
  * @since New in 1.10. 
  */
 svn_wc_operation_t
-svn_client_conflict_get_operation(
-  const svn_client_conflict_t *conflict);
+svn_client_conflict_get_operation(const svn_client_conflict_t *conflict);
 
 /**
  * Return the action an update, switch, or merge operation attempted to
@@ -4420,8 +4418,7 @@ svn_client_conflict_get_operation(
  * @since New in 1.10. 
  */
 svn_wc_conflict_action_t
-svn_client_conflict_get_incoming_change(
-  const svn_client_conflict_t *conflict);
+svn_client_conflict_get_incoming_change(const svn_client_conflict_t *conflict);
 
 /**
  * Return the reason why the attempted action performed by an update, switch,
@@ -4435,8 +4432,7 @@ svn_client_conflict_get_incoming_change(
  * @since New in 1.10. 
  */
 svn_wc_conflict_reason_t
-svn_client_conflict_get_local_change(
-  const svn_client_conflict_t *conflict);
+svn_client_conflict_get_local_change(const svn_client_conflict_t *conflict);
 
 /**
  * Return information about the repository associated with @a conflict. 
@@ -4446,12 +4442,11 @@ svn_client_conflict_get_local_change(
  * @since New in 1.10.
  */
 svn_error_t *
-svn_client_conflict_get_repos_info(
-  const char **repos_root_url,
-  const char **repos_uuid,
-  const svn_client_conflict_t *conflict,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
+svn_client_conflict_get_repos_info(const char **repos_root_url,
+                                   const char **repos_uuid,
+                                   const svn_client_conflict_t *conflict,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 /**
  * Return the repository-relative location and the node kind of the incoming
@@ -4522,8 +4517,7 @@ svn_client_conflict_tree_get_victim_node_kind(
  * @since New in 1.10.
  */
 const char *
-svn_client_conflict_prop_get_propname(
-  const svn_client_conflict_t *conflict);
+svn_client_conflict_prop_get_propname(const svn_client_conflict_t *conflict);
 
 /**
  * Return the set of property values involved in the property conflict
@@ -4537,13 +4531,12 @@ svn_client_conflict_prop_get_propname(
  * @since New in 1.10.
  */
 svn_error_t *
-svn_client_conflict_prop_get_propvals(
-  const svn_string_t **base_propval,
-  const svn_string_t **working_propval,
-  const svn_string_t **incoming_old_propval,
-  const svn_string_t **incoming_new_propval,
-  const svn_client_conflict_t *conflict,
-  apr_pool_t *result_pool);
+svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
+                                      const svn_string_t **working_propval,
+                                      const svn_string_t **incoming_old_propval,
+                                      const svn_string_t **incoming_new_propval,
+                                      const svn_client_conflict_t *conflict,
+                                      apr_pool_t *result_pool);
 
 /**
  * Return the MIME-type of the working version of the text-conflicted file
@@ -4553,8 +4546,7 @@ svn_client_conflict_prop_get_propvals(
  * @since: New in 1.10.
  */
 const char *
-svn_client_conflict_text_get_mime_type(
-  const svn_client_conflict_t *conflict);
+svn_client_conflict_text_get_mime_type(const svn_client_conflict_t *conflict);
 
 /**
  * Return absolute paths to the versions of the text-conflicted file 
@@ -4566,14 +4558,13 @@ svn_client_conflict_text_get_mime_type(
  * @since: New in 1.10.
  */
 svn_error_t *
-svn_client_conflict_text_get_contents(
-  const char **base_abspath,
-  const char **working_abspath,
-  const char **incoming_old_abspath,
-  const char **incoming_new_abspath,
-  const svn_client_conflict_t *conflict,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
+svn_client_conflict_text_get_contents(const char **base_abspath,
+                                      const char **working_abspath,
+                                      const char **incoming_old_abspath,
+                                      const char **incoming_new_abspath,
+                                      const svn_client_conflict_t *conflict,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 /** @} */
 
