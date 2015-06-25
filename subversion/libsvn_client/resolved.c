@@ -151,12 +151,14 @@ svn_client_resolve(const char *path,
 struct svn_client_conflict_t
 {
   const char *local_abspath;
+  svn_client_ctx_t *ctx;
 
   const svn_wc_conflict_description2_t *desc2; /* ### temporary */
 };
 
 svn_client_conflict_t *
 svn_client_conflict_get(const char *local_abspath,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -164,6 +166,7 @@ svn_client_conflict_get(const char *local_abspath,
 
   conflict = apr_pcalloc(result_pool, sizeof(*conflict));
   conflict->local_abspath = apr_pstrdup(result_pool, local_abspath);
+  conflict->ctx = ctx;
 
   return conflict;
 }
@@ -176,7 +179,7 @@ svn_client_conflict_from_wc_description2_t(
 {
   svn_client_conflict_t *conflict;
 
-  conflict = svn_client_conflict_get(desc->local_abspath,
+  conflict = svn_client_conflict_get(desc->local_abspath, NULL,
                                      result_pool, scratch_pool);
   conflict->desc2 = desc;
 
