@@ -729,7 +729,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
   const char *base_abspath;
   const char *my_abspath;
   const char *their_abspath;
-  const char *merged_abspath = svn_client_conflict_get_merged_file(desc);
+  const char *merged_abspath = svn_client_conflict_get_local_abspath(desc);
 
   SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
                                                 &base_abspath, &their_abspath,
@@ -1262,7 +1262,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
   const char *base_abspath = NULL;
   const char *my_abspath = NULL;
   const char *their_abspath = NULL;
-  const char *merged_abspath = svn_client_conflict_get_merged_file(desc);
+  const char *merged_abspath = svn_client_conflict_get_local_abspath(desc);
 
   if (svn_client_conflict_get_kind(desc) == svn_wc_conflict_kind_text)
     SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,

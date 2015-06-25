@@ -4552,17 +4552,6 @@ svn_client_conflict_text_get_contents(
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
-/**
- * Accessor functions for svn_wc_conflict_description2_t. This is a temporary
- * API for eventually replacing svn_wc_conflict_description2_t with an opaque
- * type and providing improved APIs for conflict resolution.
- * 
- * @since New in 1.10. 
- */
-
-#define svn_client_conflict_get_merged_file(conflict) \
-  ((conflict)->merged_file)
-
 /** @} */
 
 /**
