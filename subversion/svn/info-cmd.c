@@ -687,13 +687,13 @@ print_info(void *baton,
             const char *repos_relpath;
             svn_revnum_t peg_rev;
             svn_node_kind_t node_kind;
-            const svn_wc_conflict_description2_t *desc =
+            const svn_wc_conflict_description2_t *desc2 =
                   APR_ARRAY_IDX(info->wc_info->conflicts, 0,
                                 const svn_wc_conflict_description2_t *);
 
             svn_client_conflict_t *conflict;
 
-            conflict = svn_client_conflict_from_wc_description2_t(desc,
+            conflict = svn_client_conflict_from_wc_description2_t(desc2,
                                                                   pool, pool);
             if (!printed_tc)
               {
