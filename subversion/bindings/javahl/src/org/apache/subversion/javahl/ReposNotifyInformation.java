@@ -199,12 +199,6 @@ public class ReposNotifyInformation extends EventObject
         verify_rev_structure,
 
         /**
-         * A revision is found with corruption/errors.
-         * @since 1.9
-         */
-        failure,
-
-        /**
          * A revprop shard got packed. @
          * @since 1.9
          */
