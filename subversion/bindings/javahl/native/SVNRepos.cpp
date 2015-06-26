@@ -594,7 +594,7 @@ SVNRepos::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
 
 void
 SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
-                 bool keepGoing, bool checkNormalization, bool metadataOnly,
+                 bool checkNormalization, bool metadataOnly,
                  ReposNotifyCallback *notifyCallback)
 {
   SVN::Pool requestPool;
@@ -639,13 +639,13 @@ SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
        _("Start revision cannot be higher than end revision")), );
 
   SVN_JNI_ERR(svn_repos_verify_fs3(repos, lower, upper,
-                                   keepGoing,
                                    checkNormalization,
                                    metadataOnly,
                                    notifyCallback != NULL
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                    notifyCallback,
+                                   NULL, NULL, /* verify callback/baton */
                                    checkCancel, this /* cancel callback/baton */,
                                    requestPool.getPool()), );
 }
