@@ -4363,6 +4363,29 @@ svn_client_revert(const apr_array_header_t *paths,
 
 typedef struct svn_client_conflict_t svn_client_conflict_t;
 
+typedef struct svn_client_conflict_option_t svn_client_conflict_option_t;
+
+/**
+ * A public enumuneration of conflict option IDs.
+ *
+ * @since New in 1.10, unless noted otherwise.
+ */
+typedef enum svn_client_conflict_option_id_t {
+
+  /* These values intentionally mirror svn_wc_conflict_choice_t. */
+  svn_client_conflict_option_undefined = -1, /* for private use only */
+  svn_client_conflict_option_postpone = 0,
+  svn_client_conflict_option_base_text,
+  svn_client_conflict_option_incoming_new_text,
+  svn_client_conflict_option_working_text,
+  svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
+  svn_client_conflict_option_working_text_for_conflicted_hunks_only,
+  svn_client_conflict_option_merged_text,
+  svn_client_conflict_option_unspecified
+  /* Values derived from svn_wc_conflict_choice_t end here. */
+
+} svn_client_conflict_option_id_t;
+
 /**
  * Return a conflict for the conflicted path @a local_abspath.
  * 
@@ -4405,6 +4428,92 @@ svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
                                    svn_client_conflict_t *conflict,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *options to an array of pointers to svn_client_conflict_option_t
+ * objects applicable to text conflicts described by @a conflict.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
+                                                svn_client_conflict_t *conflict,
+                                                apr_pool_t *result_pool,
+                                                apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *options to an array of pointers to svn_client_conflict_option_t
+ * objects applicable to property conflicts described by @a conflict.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
+                                                svn_client_conflict_t *conflict,
+                                                apr_pool_t *result_pool,
+                                                apr_pool_t *scratch_pool);
+
+/**
+ * Set @a *options to an array of pointers to svn_client_conflict_option_t
+ * objects applicable to the tree conflict described by @a conflict.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
+                                                svn_client_conflict_t *conflict,
+                                                apr_pool_t *result_pool,
+                                                apr_pool_t *scratch_pool);
+
+/**
+ * Return an ID for @a option. This ID can be used by callers to associate
+ * arbitrary data with a particular conflict resolution option.
+ *
+ * The ID of a particular resolution option will never change in future
+ * revisions of this API.
+ *
+ * @since New in 1.10.
+ */
+svn_client_conflict_option_id_t
+svn_client_conflict_option_get_id(svn_client_conflict_option_t *option);
+
+/**
+ * Return a textual human-readable description of @a option, allocated in
+ * @a result_pool. The description is encoded in UTF-8 and may contain
+ * multiple lines separated by @c APR_EOL_STR.
+ *
+ * Additionally, the description may be localized to the language used
+ * by the current locale.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_describe(const char **description,
+                                    svn_client_conflict_option_t *option,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
+/**
+ * Use contents of the file at @a merged_abspath as merged text for @a option.
+ * Only applicable if the option ID is svn_client_conflict_option_merged_text.
+ *
+ * ### Should accepting svn_stream_t instead of a path?
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_set_merged_text(svn_client_conflict_option_t *option,
+                                           const char *merged_abspath,
+                                           apr_pool_t *scratch_pool);
+
+/**
+ * Resolve @a conflict using resolution option @a option.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_resolve(svn_client_conflict_t *conflict,
+                            svn_client_conflict_option_t *option,
+                            apr_pool_t *scratch_pool);
 
 /**
  * Return the kind of conflict (text conflict, property conflict,
