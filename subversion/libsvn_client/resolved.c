@@ -41,6 +41,9 @@
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
+
+#define ARRAY_LEN(ary) ((sizeof (ary)) / (sizeof ((ary)[0])))
+
 
 /*** Code. ***/
 
@@ -254,14 +257,293 @@ svn_client_conflict_from_wc_description2_t(
                                                result_pool, scratch_pool));
 }
 
+typedef svn_error_t *(*conflict_option_resolve_func_t)(
+  svn_client_conflict_option_t *option,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *scratch_pool);
+
+struct svn_client_conflict_option_t
+{
+  svn_client_conflict_option_id_t id;
+  const char *description;
+
+  svn_client_conflict_t *conflict;
+  conflict_option_resolve_func_t do_resolve_func;
+};
+
+static svn_error_t *
+resolve_postpone(svn_client_conflict_option_t *option,
+                 svn_client_conflict_t *conflict,
+                 apr_pool_t *scratch_pool)
+{
+  /* Nothing to do. */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+resolve_text_conflict(svn_client_conflict_option_t *option,
+                      svn_client_conflict_t *conflict,
+                      apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_option_id_t id;
+  const char *local_abspath;
+
+  id = svn_client_conflict_option_get_id(option);
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  SVN_ERR(svn_wc_resolved_conflict5(conflict->ctx->wc_ctx, local_abspath,
+                                    svn_depth_empty, TRUE, NULL, FALSE,
+                                    id, /* option id is backwards compatible */
+                                    conflict->ctx->cancel_func,
+                                    conflict->ctx->cancel_baton,
+                                    conflict->ctx->notify_func2,
+                                    conflict->ctx->notify_baton2,
+                                    scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+resolve_prop_conflict(svn_client_conflict_option_t *option,
+                      svn_client_conflict_t *conflict,
+                      apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_option_id_t id;
+  const char *local_abspath;
+
+  id = svn_client_conflict_option_get_id(option);
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  SVN_ERR(svn_wc_resolved_conflict5(conflict->ctx->wc_ctx, local_abspath,
+                                    svn_depth_empty, TRUE, "", FALSE,
+                                    id, /* option id is backwards compatible */
+                                    conflict->ctx->cancel_func,
+                                    conflict->ctx->cancel_baton,
+                                    conflict->ctx->notify_func2,
+                                    conflict->ctx->notify_baton2,
+                                    scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+resolve_tree_conflict(svn_client_conflict_option_t *option,
+                      svn_client_conflict_t *conflict,
+                      apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_option_id_t id;
+  const char *local_abspath;
+
+  id = svn_client_conflict_option_get_id(option);
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  SVN_ERR(svn_wc_resolved_conflict5(conflict->ctx->wc_ctx, local_abspath,
+                                    svn_depth_empty, FALSE, NULL, TRUE,
+                                    id, /* option id is backwards compatible */
+                                    conflict->ctx->cancel_func,
+                                    conflict->ctx->cancel_baton,
+                                    conflict->ctx->notify_func2,
+                                    conflict->ctx->notify_baton2,
+                                    scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Resolver options for a text conflict */
+static const svn_client_conflict_option_t text_conflict_options[] =
+{
+  {
+    svn_client_conflict_option_postpone,
+    N_("mark the conflict to be resolved later"),
+    NULL,
+    resolve_postpone
+  },
+
+  {
+    svn_client_conflict_option_incoming_new_text,
+    N_("accept incoming version of entire file"),
+    NULL,
+    resolve_text_conflict
+  },
+
+  {
+    svn_client_conflict_option_working_text,
+    N_("accept working copy version of entire file"),
+    NULL,
+    resolve_text_conflict
+  },
+
+  {
+    svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
+    N_("accept incoming version of all text conflicts in file"),
+    NULL,
+    resolve_text_conflict
+  },
+
+  {
+    svn_client_conflict_option_working_text_for_conflicted_hunks_only,
+    N_("accept working copy version of all text conflicts in file"),
+    NULL,
+    resolve_text_conflict
+  },
+
+#if 0
+  /* ### There seems to be no way to pass merged_abspath to libsvn_wc
+   * ### without using the conflict callback. Do we really need this? */
+  {
+    svn_client_conflict_option_merged_text,
+    N_("accept merged version of file"),
+    NULL,
+    resolve_text_conflict
+  },
+#endif
+
+};
+
+/* Resolver options for a binary file conflict */
+static const svn_client_conflict_option_t binary_conflict_options[] =
+{
+  {
+    svn_client_conflict_option_postpone,
+    N_("mark the conflict to be resolved later"),
+    NULL,
+    resolve_postpone
+  },
+
+  {
+    svn_client_conflict_option_incoming_new_text,
+    N_("accept incoming version of binary file"),
+    NULL,
+    resolve_text_conflict
+  },
+
+  {
+    svn_client_conflict_option_working_text,
+    N_("accept working copy version of binary file"),
+    NULL,
+    resolve_text_conflict
+  },
+
+};
+
+/* Resolver options for a property conflict */
+static const svn_client_conflict_option_t prop_conflict_options[] =
+{
+  {
+    svn_client_conflict_option_postpone,
+    N_("mark the conflict to be resolved later"),
+    NULL,
+    resolve_postpone
+  },
+
+  {
+    svn_client_conflict_option_incoming_new_text,
+    N_("accept incoming version of entire property value"),
+    NULL,
+    resolve_prop_conflict
+  },
+
+  {
+    svn_client_conflict_option_working_text,
+    N_("accept working copy version of entire property value"),
+    NULL,
+    resolve_prop_conflict
+  },
+
+};
+
+/* Resolver options for a tree conflict */
+static const svn_client_conflict_option_t tree_conflict_options[] =
+{
+  {
+    svn_client_conflict_option_postpone,
+    N_("mark the conflict to be resolved later"),
+    NULL,
+    resolve_postpone
+  },
+
+  {
+    /* ### Use 'working text' for now since libsvn_wc does not know another
+     * ### choice to resolve to working yet. */
+    svn_client_conflict_option_working_text,
+    N_("accept working copy version of entire property value"),
+    NULL,
+    resolve_tree_conflict
+  },
+
+};
+
+static svn_error_t *
+assert_text_conflict(svn_client_conflict_t *conflict, apr_pool_t *scratch_pool)
+{
+  svn_boolean_t text_conflicted;
+
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted, NULL, NULL,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+
+  SVN_ERR_ASSERT(text_conflicted); /* ### return proper error? */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+assert_prop_conflict(svn_client_conflict_t *conflict, apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *props_conflicted;
+
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, &props_conflicted, NULL,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+
+  /* ### return proper error? */
+  SVN_ERR_ASSERT(props_conflicted && props_conflicted->nelts > 0);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+assert_tree_conflict(svn_client_conflict_t *conflict, apr_pool_t *scratch_pool)
+{
+  svn_boolean_t tree_conflicted;
+
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+
+  SVN_ERR_ASSERT(tree_conflicted); /* ### return proper error? */
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool)
 {
-  /* TODO */
-  SVN_ERR_ASSERT(FALSE);
+  const char *mime_type;
+  int i;
+
+  SVN_ERR(assert_text_conflict(conflict, scratch_pool));
+
+  *options = apr_array_make(result_pool, ARRAY_LEN(text_conflict_options),
+                            sizeof(svn_client_conflict_option_t *));
+
+  mime_type = svn_client_conflict_text_get_mime_type(conflict);
+  if (mime_type && svn_mime_type_is_binary(mime_type))
+    {
+      for (i = 0; i < ARRAY_LEN(binary_conflict_options); i++)
+        {
+          APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
+            &binary_conflict_options[i];
+        }
+    }
+  else
+    {
+      for (i = 0; i < ARRAY_LEN(text_conflict_options); i++)
+        {
+          APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
+            &text_conflict_options[i];
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -272,8 +554,17 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool)
 {
-  /* TODO */
-  SVN_ERR_ASSERT(FALSE);
+  int i;
+
+  SVN_ERR(assert_prop_conflict(conflict, scratch_pool));
+
+  *options = apr_array_make(result_pool, ARRAY_LEN(prop_conflict_options),
+                            sizeof(svn_client_conflict_option_t *));
+  for (i = 0; i < ARRAY_LEN(prop_conflict_options); i++)
+    {
+      APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
+        &prop_conflict_options[i];
+    }
 
   return SVN_NO_ERROR;
 }
@@ -284,8 +575,17 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool)
 {
-  /* TODO */
-  SVN_ERR_ASSERT(FALSE);
+  int i;
+
+  SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
+
+  *options = apr_array_make(result_pool, ARRAY_LEN(tree_conflict_options),
+                            sizeof(svn_client_conflict_option_t *));
+  for (i = 0; i < ARRAY_LEN(tree_conflict_options); i++)
+    {
+      APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
+        &tree_conflict_options[i];
+    }
 
   return SVN_NO_ERROR;
 }
@@ -293,10 +593,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
 svn_client_conflict_option_id_t
 svn_client_conflict_option_get_id(svn_client_conflict_option_t *option)
 {
-  /* TODO */
-  SVN_ERR_ASSERT_NO_RETURN(FALSE);
-
-  return svn_client_conflict_option_undefined;
+  return option->id;
 }
 
 svn_error_t *
@@ -305,8 +602,7 @@ svn_client_conflict_option_describe(const char **description,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
-  /* TODO */
-  SVN_ERR_ASSERT(FALSE);
+  *description = apr_pstrdup(result_pool, option->description);
 
   return SVN_NO_ERROR;
 }
@@ -327,8 +623,7 @@ svn_client_conflict_resolve(svn_client_conflict_t *conflict,
                             svn_client_conflict_option_t *option,
                             apr_pool_t *scratch_pool)
 {
-  /* TODO */
-  SVN_ERR_ASSERT(FALSE);
+  SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
