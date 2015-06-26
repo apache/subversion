@@ -2824,6 +2824,12 @@ enum svn_repos_load_uuid
  * provided for the convenience of the implementor, who should not
  * expect it to live longer than a single callback call.
  *
+ * @a verify_err will be cleared and becomes invalid after the callback
+ * returns, use svn_error_dup() to preserve the error.  If a callback uses
+ * @a verify_err as the return value or as a part of the return value, it
+ * should also call svn_error_dup() for @a verify_err.  Implementors of this
+ * callback are forbidden to call svn_error_clear() for @a verify_err.
+ *
  * @see svn_repos_verify_fs3
  *
  * @since New in 1.9.
@@ -2898,6 +2904,8 @@ typedef svn_error_t *(*svn_repos_verify_callback_t)(void *baton,
  * verification.
  *
  * Use @a scratch_pool for temporary allocation.
+ *
+ * @see svn_repos_verify_callback_t
  *
  * @since New in 1.9.
  */
