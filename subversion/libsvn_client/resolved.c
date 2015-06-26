@@ -254,6 +254,85 @@ svn_client_conflict_from_wc_description2_t(
                                                result_pool, scratch_pool));
 }
 
+svn_error_t *
+svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
+                                                svn_client_conflict_t *conflict,
+                                                apr_pool_t *result_pool,
+                                                apr_pool_t *scratch_pool)
+{
+  /* TODO */
+  SVN_ERR_ASSERT(FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
+                                                svn_client_conflict_t *conflict,
+                                                apr_pool_t *result_pool,
+                                                apr_pool_t *scratch_pool)
+{
+  /* TODO */
+  SVN_ERR_ASSERT(FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
+                                                svn_client_conflict_t *conflict,
+                                                apr_pool_t *result_pool,
+                                                apr_pool_t *scratch_pool)
+{
+  /* TODO */
+  SVN_ERR_ASSERT(FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+svn_client_conflict_option_id_t
+svn_client_conflict_option_get_id(svn_client_conflict_option_t *option)
+{
+  /* TODO */
+  SVN_ERR_ASSERT_NO_RETURN(FALSE);
+
+  return svn_client_conflict_option_undefined;
+}
+
+svn_error_t *
+svn_client_conflict_option_describe(const char **description,
+                                    svn_client_conflict_option_t *option,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  /* TODO */
+  SVN_ERR_ASSERT(FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_option_set_merged_text(svn_client_conflict_option_t *option,
+                                           const char *merged_abspath,
+                                           apr_pool_t *scratch_pool)
+{
+  /* TODO */
+  SVN_ERR_ASSERT(FALSE);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_resolve(svn_client_conflict_t *conflict,
+                            svn_client_conflict_option_t *option,
+                            apr_pool_t *scratch_pool)
+{
+  /* TODO */
+  SVN_ERR_ASSERT(FALSE);
+
+  return SVN_NO_ERROR;
+}
+
 /* Return the legacy conflict descriptor which is wrapped by CONFLICT. */
 static const svn_wc_conflict_description2_t *
 get_conflict_desc2_t(const svn_client_conflict_t *conflict)
