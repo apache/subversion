@@ -4380,7 +4380,7 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_working_text,
   svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
   svn_client_conflict_option_working_text_for_conflicted_hunks_only,
-  svn_client_conflict_option_merged_text,
+  svn_client_conflict_option_merged_text, /* unsupported */
   svn_client_conflict_option_unspecified
   /* Values derived from svn_wc_conflict_choice_t end here. */
 
@@ -4492,18 +4492,6 @@ svn_client_conflict_option_describe(const char **description,
                                     svn_client_conflict_option_t *option,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
-
-/**
- * Use contents of the file at @a merged_abspath as merged text for @a option.
- * Only applicable if the option ID is svn_client_conflict_option_merged_text.
- *
- * ### Should accepting svn_stream_t instead of a path?
- * @since New in 1.10.
- */
-svn_error_t *
-svn_client_conflict_option_set_merged_text(svn_client_conflict_option_t *option,
-                                           const char *merged_abspath,
-                                           apr_pool_t *scratch_pool);
 
 /**
  * Resolve @a conflict using resolution option @a option.

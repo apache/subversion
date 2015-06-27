@@ -384,17 +384,6 @@ static const svn_client_conflict_option_t text_conflict_options[] =
     resolve_text_conflict
   },
 
-#if 0
-  /* ### There seems to be no way to pass merged_abspath to libsvn_wc
-   * ### without using the conflict callback. Do we really need this? */
-  {
-    svn_client_conflict_option_merged_text,
-    N_("accept merged version of file"),
-    NULL,
-    resolve_text_conflict
-  },
-#endif
-
 };
 
 /* Resolver options for a binary file conflict */
@@ -603,17 +592,6 @@ svn_client_conflict_option_describe(const char **description,
                                     apr_pool_t *scratch_pool)
 {
   *description = apr_pstrdup(result_pool, option->description);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_conflict_option_set_merged_text(svn_client_conflict_option_t *option,
-                                           const char *merged_abspath,
-                                           apr_pool_t *scratch_pool)
-{
-  /* TODO */
-  SVN_ERR_ASSERT(FALSE);
 
   return SVN_NO_ERROR;
 }
