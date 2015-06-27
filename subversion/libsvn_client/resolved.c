@@ -304,7 +304,6 @@ svn_client_conflict_walk(const char *local_abspath,
   b.conflict_walk_func = conflict_walk_func;
   b.conflict_walk_func_baton = conflict_walk_func_baton;
   b.ctx = ctx;
-  b.conflicts_found = 0;
 
   /* ### Re-run the status walk until a walk finds no conflicts at all.
    * ### This is a crude implementation but provides the guarantees we offer
@@ -314,6 +313,7 @@ svn_client_conflict_walk(const char *local_abspath,
    */
   do
     {
+      b.conflicts_found = 0;
       SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath, depth,
                                  FALSE, /* get_all */
                                  FALSE, /* no_ignore, */
