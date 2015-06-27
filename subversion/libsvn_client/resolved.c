@@ -463,7 +463,7 @@ static const svn_client_conflict_option_t tree_conflict_options[] =
     /* ### Use 'working text' for now since libsvn_wc does not know another
      * ### choice to resolve to working yet. */
     svn_client_conflict_option_working_text,
-    N_("accept working copy version of entire property value"),
+    N_("accept current working copy state"),
     NULL,
     resolve_tree_conflict
   },
