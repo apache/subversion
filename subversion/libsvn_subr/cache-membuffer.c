@@ -2233,7 +2233,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
 /* Look for the *ITEM identified by KEY. If no item has been stored
  * for KEY, *ITEM will be NULL. Otherwise, the DESERIALIZER is called
- * re-construct the proper object from the serialized data.
+ * to re-construct the proper object from the serialized data.
  * Allocations will be done in POOL.
  */
 static svn_error_t *
