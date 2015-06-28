@@ -33,7 +33,7 @@ Release blockers for 1.9.0:
      redesign, this is no longer needed.  Full discussion can be found in
      http://svn.haxx.se/dev/archive-2015-05/0141.shtml (Subject: "Possible
      incompatibility of svn_repos_verify_fs2() in 1.9.0-rc1").
-
+     .
      r1684940 and r1685034 contain the initial fix for this problem and the
      test.  r1687769 is the core fix that changes svn_repos_verify_fs3() API
      and supersedes the fix from r1684940.  r1687776 is a documentation-only
