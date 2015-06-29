@@ -40,7 +40,7 @@ Release blockers for 1.9.0:
      follow-up to r1687769.  This is a 1.9.0 blocker due to a change in the
      unreleased API.
    Votes:
-     +1: kotkov
+     +1: kotkov, rhuijben
 
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
