@@ -69,7 +69,7 @@ svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
                               svn_revnum_t revnum)
 {
   assert(revnum < repos->rev_roots->nelts);
-  return svn_array_get(repos->rev_roots, (int)revnum);
+  return svn_array_get(repos->rev_roots, revnum);
 }
 
 struct svn_branch_state_t *
