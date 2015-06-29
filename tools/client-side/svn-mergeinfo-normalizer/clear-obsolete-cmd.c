@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_cmdline.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
@@ -77,18 +78,29 @@ remove_obsolete_lines(svn_ra_session_t *session,
 static svn_error_t *
 remove_obsoletes(apr_array_header_t *wc_mergeinfo,
                  svn_ra_session_t *session,
+                 svn_boolean_t quiet,
                  apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   int i;
+  apr_int64_t removed = 0;
   for (i = 0; i < wc_mergeinfo->nelts; ++i)
     {
       svn_mergeinfo_t mergeinfo = svn_min__get_mergeinfo(wc_mergeinfo, i);
+      unsigned initial_count = apr_hash_count(mergeinfo);
       svn_pool_clear(iterpool);
 
       /* Combine mergeinfo ranges */
       SVN_ERR(remove_obsolete_lines(session, mergeinfo, iterpool));
+      removed += initial_count - apr_hash_count(mergeinfo);
+
+      /* Show progress after every 1000 nodes and after the last one. */
+      if (!quiet && ((i+1) % 1000 == 0 || (i+1) == wc_mergeinfo->nelts))
+        SVN_ERR(svn_cmdline_printf(iterpool,
+                  _("    Processed %d nodes, removed %s branch entries.\n"),
+                  i+1,
+                  apr_psprintf(iterpool, "%" APR_UINT64_T_FMT, removed)));
     }
 
   svn_pool_destroy(iterpool);
@@ -125,12 +137,24 @@ svn_min__clear_obsolete(apr_getopt_t *os,
 
       /* actual normalization */
       svn_pool_clear(subpool);
-      SVN_ERR(remove_obsoletes(wc_mergeinfo, session, subpool));
+      if (!cmd_baton->opt_state->quiet)
+        SVN_ERR(svn_cmdline_printf(subpool,
+                                   _("Remove obsoletes ...\n")));
+
+      SVN_ERR(remove_obsoletes(wc_mergeinfo, session,
+                               cmd_baton->opt_state->quiet, subpool));
 
       /* write results to disk */
       svn_pool_clear(subpool);
       if (!cmd_baton->opt_state->dry_run)
         SVN_ERR(svn_min__write_mergeinfo(cmd_baton, wc_mergeinfo, subpool));
+
+      /* show results */
+      if (!cmd_baton->opt_state->quiet)
+        {
+          SVN_ERR(svn_cmdline_printf(subpool, _("\nRemaining mergeinfo:\n")));
+          SVN_ERR(svn_min__print_mergeinfo_stats(wc_mergeinfo, subpool));
+        }
     }
 
   svn_pool_destroy(subpool);

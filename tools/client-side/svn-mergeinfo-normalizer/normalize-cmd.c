@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_cmdline.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
@@ -120,11 +121,13 @@ remove_lines(svn_min__log_t *log,
 static svn_error_t *
 normalize(apr_array_header_t *wc_mergeinfo,
           svn_min__log_t *log,
+          svn_boolean_t quiet,
           apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   int i;
+  int deleted = 0;
   for (i = wc_mergeinfo->nelts - 1; i >= 0; --i)
     {
       const char *parent_path;
@@ -155,8 +158,14 @@ normalize(apr_array_header_t *wc_mergeinfo,
                                            apr_hash_pool_get(parent_mergeinfo),
                                            iterpool));
               apr_hash_clear(subtree_mergeinfo);
+              ++deleted;
             }
         }
+
+      if (!quiet && i % 1000 == 0)
+        SVN_ERR(svn_cmdline_printf(iterpool,
+                  _("    Processed %d nodes, eliminated mergeinfo on %d.\n"),
+                  wc_mergeinfo->nelts - i, deleted));
     }
 
   svn_pool_destroy(iterpool);
@@ -205,12 +214,24 @@ svn_min__normalize(apr_getopt_t *os,
 
       /* actual normalization */
       svn_pool_clear(subpool);
-      SVN_ERR(normalize(wc_mergeinfo, log, subpool));
+      if (!cmd_baton->opt_state->quiet)
+        SVN_ERR(svn_cmdline_printf(subpool,
+                                   _("Normalizing mergeinfo ...\n")));
+
+      SVN_ERR(normalize(wc_mergeinfo, log, cmd_baton->opt_state->quiet,
+                        subpool));
 
       /* write results to disk */
       svn_pool_clear(subpool);
       if (!cmd_baton->opt_state->dry_run)
         SVN_ERR(svn_min__write_mergeinfo(cmd_baton, wc_mergeinfo, subpool));
+
+      /* show results */
+      if (!cmd_baton->opt_state->quiet)
+        {
+          SVN_ERR(svn_cmdline_printf(subpool, _("\nRemaining mergeinfo:\n")));
+          SVN_ERR(svn_min__print_mergeinfo_stats(wc_mergeinfo, subpool));
+        }
     }
 
   svn_pool_destroy(subpool);
