@@ -94,6 +94,8 @@ Work on this branch:
 
       provide a UI for element-based addressing ('mv e101:foo e103:foo'?)
 
+      "switch" command
+
     Bigger things to do:
 
       "Replay" API: convert committed changes to an edit drive
@@ -134,6 +136,8 @@ Work on this branch:
       Provide a way to create and access branches of the repo root branch
       that are outside the default repository paths name-space.
         - This style of whole-repo branching closely matches most DVCSs.
+
+      Persist WC on disk.
 
     Tidying things to do:
 
