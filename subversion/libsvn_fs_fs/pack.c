@@ -1931,6 +1931,34 @@ pack_shard(struct pack_baton *baton,
   return SVN_NO_ERROR;
 }
 
+/* Read the youngest rev and the first non-packed rev info for FS from disk.
+   Set *FULLY_PACKED when there is no completed unpacked shard.
+   Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+get_pack_status(svn_boolean_t *fully_packed,
+                svn_fs_t *fs,
+                apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_int64_t completed_shards;
+  svn_revnum_t youngest;
+
+  SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs,
+                                           scratch_pool));
+
+  SVN_ERR(svn_fs_fs__youngest_rev(&youngest, fs, scratch_pool));
+  completed_shards = (youngest + 1) / ffd->max_files_per_dir;
+
+  /* See if we've already completed all possible shards thus far. */
+  if (ffd->min_unpacked_rev == (completed_shards * ffd->max_files_per_dir))
+    *fully_packed = TRUE;
+  else
+    *fully_packed = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
 /* The work-horse for svn_fs_fs__pack, called with the FS write lock.
    This implements the svn_fs_fs__with_write_lock() 'body' callback
    type.  BATON is a 'struct pack_baton *'.
@@ -1952,30 +1980,16 @@ pack_body(void *baton,
   struct pack_baton *pb = baton;
   fs_fs_data_t *ffd = pb->fs->fsap_data;
   apr_int64_t completed_shards;
-  svn_revnum_t youngest;
   apr_pool_t *iterpool;
+  svn_boolean_t fully_packed;
 
-  /* If the repository isn't a new enough format, we don't support packing.
-     Return a friendly error to that effect. */
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-      _("FSFS format (%d) too old to pack; please upgrade the filesystem."),
-      ffd->format);
-
-  /* If we aren't using sharding, we can't do any packing, so quit. */
-  if (!ffd->max_files_per_dir)
+  /* Since another process might have already packed the repo,
+     we need to re-read the pack status. */
+  SVN_ERR(get_pack_status(&fully_packed, pb->fs, pool));
+  if (fully_packed)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev, pb->fs,
-                                           pool));
-
-  SVN_ERR(svn_fs_fs__youngest_rev(&youngest, pb->fs, pool));
-  completed_shards = (youngest + 1) / ffd->max_files_per_dir;
-
-  /* See if we've already completed all possible shards thus far. */
-  if (ffd->min_unpacked_rev == (completed_shards * ffd->max_files_per_dir))
-    return SVN_NO_ERROR;
-
+  completed_shards = (ffd->youngest_rev_cache + 1) / ffd->max_files_per_dir;
   pb->revs_dir = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     pb->revsprops_dir = svn_dirent_join(pb->fs->path, PATH_REVPROPS_DIR,
@@ -2009,7 +2023,25 @@ svn_fs_fs__pack(svn_fs_t *fs,
   struct pack_baton pb = { 0 };
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
+  svn_boolean_t fully_packed;
 
+  /* If the repository isn't a new enough format, we don't support packing.
+     Return a friendly error to that effect. */
+  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+      _("FSFS format (%d) too old to pack; please upgrade the filesystem."),
+      ffd->format);
+
+  /* If we aren't using sharding, we can't do any packing, so quit. */
+  if (!ffd->max_files_per_dir)
+    return SVN_NO_ERROR;
+
+  /* Is there we even anything to do?. */
+  SVN_ERR(get_pack_status(&fully_packed, fs, pool));
+  if (fully_packed)
+    return SVN_NO_ERROR;
+
+  /* Lock the repo and start the pack process. */
   pb.fs = fs;
   pb.notify_func = notify_func;
   pb.notify_baton = notify_baton;

@@ -2265,24 +2265,6 @@ verify_close_directory(void *dir_baton, apr_pool_t *pool)
   return close_directory(dir_baton, pool);
 }
 
-static void
-notify_verification_error(svn_revnum_t rev,
-                          svn_error_t *err,
-                          svn_repos_notify_func_t notify_func,
-                          void *notify_baton,
-                          apr_pool_t *pool)
-{
-  svn_repos_notify_t *notify_failure;
-
-  if (notify_func == NULL)
-    return;
-
-  notify_failure = svn_repos_notify_create(svn_repos_notify_failure, pool);
-  notify_failure->err = err;
-  notify_failure->revision = rev;
-  notify_func(notify_baton, notify_failure, pool);
-}
-
 /* Verify revision REV in file system FS. */
 static svn_error_t *
 verify_one_revision(svn_fs_t *fs,
@@ -2359,15 +2341,42 @@ verify_fs_notify_func(svn_revnum_t revision,
                             notify_baton->notify, pool);
 }
 
+static svn_error_t *
+report_error(svn_revnum_t revision,
+             svn_error_t *verify_err,
+             svn_repos_verify_callback_t verify_callback,
+             void *verify_baton,
+             apr_pool_t *pool)
+{
+  if (verify_callback)
+    {
+      svn_error_t *cb_err;
+
+      /* The caller provided us with a callback, so make him responsible
+         for what's going to happen with the error. */
+      cb_err = verify_callback(verify_baton, revision, verify_err, pool);
+      svn_error_clear(verify_err);
+      SVN_ERR(cb_err);
+
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      /* No callback -- no second guessing.  Just return the error. */
+      return svn_error_trace(verify_err);
+    }
+}
+
 svn_error_t *
 svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
-                     svn_boolean_t keep_going,
                      svn_boolean_t check_normalization,
                      svn_boolean_t metadata_only,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
+                     svn_repos_verify_callback_t verify_callback,
+                     void *verify_baton,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *pool)
@@ -2380,8 +2389,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   svn_fs_progress_notify_func_t verify_notify = NULL;
   struct verify_fs_notify_func_baton_t *verify_notify_baton = NULL;
   svn_error_t *err;
-  svn_boolean_t failed_metadata = FALSE;
-  svn_revnum_t failed_revisions = 0;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -2430,20 +2437,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
     }
   else if (err)
     {
-      notify_verification_error(SVN_INVALID_REVNUM, err, notify_func,
-                                notify_baton, iterpool);
-
-      if (!keep_going)
-        {
-          /* Return the error, the caller doesn't want us to continue. */
-          return svn_error_trace(err);
-        }
-      else
-        {
-          /* Clear the error and keep going. */
-          failed_metadata = TRUE;
-          svn_error_clear(err);
-        }
+      SVN_ERR(report_error(SVN_INVALID_REVNUM, err, verify_callback,
+                           verify_baton, iterpool));
     }
 
   if (!metadata_only)
@@ -2463,20 +2458,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
           }
         else if (err)
           {
-            notify_verification_error(rev, err, notify_func, notify_baton,
-                                      iterpool);
-
-            if (!keep_going)
-              {
-                /* Return the error, the caller doesn't want us to continue. */
-                return svn_error_trace(err);
-              }
-            else
-              {
-                /* Clear the error and keep going. */
-                ++failed_revisions;
-                svn_error_clear(err);
-              }
+            SVN_ERR(report_error(rev, err, verify_callback, verify_baton,
+                                 iterpool));
           }
         else if (notify_func)
           {
@@ -2494,41 +2477,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
     }
 
   svn_pool_destroy(iterpool);
-
-  /* Summarize the results. */
-  if (failed_metadata || 0 != failed_revisions)
-    {
-      const char *const repos_path =
-        svn_dirent_local_style(svn_repos_path(repos, pool), pool);
-
-      if (0 == failed_revisions)
-        {
-          return svn_error_createf(
-              SVN_ERR_REPOS_VERIFY_FAILED, NULL,
-              _("Metadata verification failed on repository '%s'"),
-              repos_path);
-        }
-      else
-        {
-          const char* format_string;
-
-          if (failed_metadata)
-            format_string = apr_psprintf(
-                pool, _("Verification of metadata and"
-                        " %%%s out of %%%s revisions"
-                        " failed on repository '%%s'"),
-                SVN_REVNUM_T_FMT, SVN_REVNUM_T_FMT);
-          else
-            format_string = apr_psprintf(
-                pool, _("Verification of %%%s out of %%%s revisions"
-                        " failed on repository '%%s'"),
-                SVN_REVNUM_T_FMT, SVN_REVNUM_T_FMT);
-
-          return svn_error_createf(
-              SVN_ERR_REPOS_VERIFY_FAILED, NULL, format_string,
-              failed_revisions, end_rev - start_rev + 1, repos_path);
-        }
-    }
 
   return SVN_NO_ERROR;
 }

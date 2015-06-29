@@ -2323,6 +2323,17 @@ svn_wc__read_conflicts(const apr_array_header_t **conflicts,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,
+                                      svn_wc_context_t *wc_ctx,
+                                      const char *local_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
+{
+  return svn_wc__read_conflicts(conflicts, NULL, wc_ctx->db, local_abspath, 
+                                FALSE, FALSE, result_pool, scratch_pool);
+}
+
 
 /*** Resolving a conflict automatically ***/
 

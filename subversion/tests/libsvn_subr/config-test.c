@@ -367,6 +367,18 @@ test_expand(const svn_test_opts_t *opts,
      of "c" was not created in a temporary pool when expanding "g". */
   SVN_TEST_STRING_ASSERT(val, "bar");
 
+  /* Get expanded "j" and "k" which have cyclic definitions.
+   * They must return empty values. */
+  svn_config_get(cfg, &val, "section1", "j", NULL);
+  SVN_TEST_STRING_ASSERT(val, "");
+  svn_config_get(cfg, &val, "section1", "k", NULL);
+  SVN_TEST_STRING_ASSERT(val, "");
+
+  /* Get expanded "l" which depends on a cyclic definition.
+   * So, it also considered "undefined" and will be normalized to "". */
+  svn_config_get(cfg, &val, "section1", "l", NULL);
+  SVN_TEST_STRING_ASSERT(val, "");
+
   return SVN_NO_ERROR;
 }
 

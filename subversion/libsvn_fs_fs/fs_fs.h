@@ -39,6 +39,15 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
 
+/* Initialize parts of the FS data that are being shared across multiple
+   filesystem objects.  Use COMMON_POOL for process-wide and POOL for
+   temporary allocations.  Use COMMON_POOL_LOCK to ensure that the
+   initialization is serialized. */
+svn_error_t *svn_fs_fs__initialize_shared_data(svn_fs_t *fs,
+                                               svn_mutex__t *common_pool_lock,
+                                               apr_pool_t *pool,
+                                               apr_pool_t *common_pool);
+
 /* Upgrade the fsfs filesystem FS.  Indicate progress via the optional
  * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
  * will periodically be called with CANCEL_BATON to allow for preemption.
@@ -214,21 +223,6 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
                                                apr_pool_t *pool),
                           void *baton,
                           apr_pool_t *pool);
-
-/* Set *READ_ONLY to TRUE, if we can't write to FS (create txns, commit or
-   pack).  If *READ_ONLY is FALSE, we expect that the on-disk permissions
-   allow for any write operation.
-
-   Note that we check the access rights for the current user and that a
-   read-only repository may still be writable for other users.
-
-   Furthermore, we expect OS access rights to be set consistently on all
-   files and folders.  Therefore, *READ_ONLY==FALSE is no guarantee that
-   a write will actually succeed. */
-svn_error_t *
-svn_fs_fs__is_read_only(svn_boolean_t *read_only,
-                        svn_fs_t *fs,
-                        apr_pool_t *scratch_pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
