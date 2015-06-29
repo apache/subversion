@@ -299,7 +299,6 @@ public interface ISVNRepos {
      * @param path              the path to the repository
      * @param start             the first revision
      * @param end               the last revision
-         * @param keepGoing         continue verification even if a revision is bad
          * @param checkNormalization report directory entry and mergeinfo name collisions
          *                           caused by denormalized Unicode representations
          * @param metadataOnly      check only metadata, not file contents
@@ -308,8 +307,7 @@ public interface ISVNRepos {
          * @since 1.9
      */
     public abstract void verify(File path, Revision start, Revision end,
-                boolean keepGoing, boolean checkNormalization,
-                boolean metadataOnly,
+                boolean checkNormalization, boolean metadataOnly,
                 ReposNotifyCallback callback)
             throws ClientException;
 

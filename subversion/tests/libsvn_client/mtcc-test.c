@@ -543,7 +543,8 @@ handle_rev(void *baton,
   SVN_TEST_ASSERT(apr_hash_count(rev_props) >= 3);
   SVN_TEST_STRING_ASSERT(path, (rev < 5) ? "/iota" : "/mu");
 
-  if (!hrb->first && (rev == (hrb->up ? 8 : 6)))
+  if (!hrb->first
+      && (rev == (hrb->up ? 5 : 4) || rev == (hrb->up ? 8 : 6)))
     SVN_TEST_ASSERT(delta_handler == NULL);
   else
     SVN_TEST_ASSERT(delta_handler != NULL);

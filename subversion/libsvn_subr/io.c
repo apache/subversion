@@ -2301,6 +2301,14 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
                                        apr_pool_t *pool)
 {
   apr_os_file_t filehand;
+  const char *fname;
+  apr_status_t apr_err;
+
+  /* We need this only in case of an error but this is cheap to get -
+   * so we do it here for clarity. */
+  apr_err = apr_file_name_get(&fname, file);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
   /* ### In apr 1.4+ we could delegate most of this function to
          apr_file_sync(). The only major difference is that this doesn't
@@ -2318,7 +2326,8 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 
     if (! FlushFileBuffers(filehand))
         return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file to disk"));
+                                  _("Can't flush file '%s' to disk"),
+                                  try_utf8_from_internal_style(fname, pool));
 
 #else
       int rv;
@@ -2339,7 +2348,8 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 
       if (rv == -1)
         return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file to disk"));
+                                  _("Can't flush file '%s' to disk"),
+                                  try_utf8_from_internal_style(fname, pool));
 
 #endif
   }
@@ -4014,6 +4024,24 @@ svn_io_stat(apr_finfo_t *finfo, const char *fname,
   return SVN_NO_ERROR;
 }
 
+#if defined(WIN32)
+/* Platform specific implementation of apr_file_rename() to workaround
+   APR problems on Windows. */
+static apr_status_t
+win32_file_rename(const WCHAR *from_path_w,
+                  const WCHAR *to_path_w,
+                  apr_pool_t *pool)
+{
+  /* APR calls MoveFileExW() with MOVEFILE_COPY_ALLOWED, while we rely
+   * that rename is atomic operation. Call MoveFileEx directly on Windows
+   * without MOVEFILE_COPY_ALLOWED flag to workaround it.
+   */
+  if (!MoveFileExW(from_path_w, to_path_w, MOVEFILE_REPLACE_EXISTING))
+      return apr_get_os_error();
+
+  return APR_SUCCESS;
+}
+#endif
 
 svn_error_t *
 svn_io_file_rename(const char *from_path, const char *to_path,
@@ -4021,13 +4049,19 @@ svn_io_file_rename(const char *from_path, const char *to_path,
 {
   apr_status_t status = APR_SUCCESS;
   const char *from_path_apr, *to_path_apr;
+#if defined(WIN32)
+  WCHAR *from_path_w;
+  WCHAR *to_path_w;
+#endif
 
   SVN_ERR(cstring_from_utf8(&from_path_apr, from_path, pool));
   SVN_ERR(cstring_from_utf8(&to_path_apr, to_path, pool));
 
-  status = apr_file_rename(from_path_apr, to_path_apr, pool);
+#if defined(WIN32)
+  SVN_ERR(svn_io__utf8_to_unicode_longpath(&from_path_w, from_path_apr, pool));
+  SVN_ERR(svn_io__utf8_to_unicode_longpath(&to_path_w, to_path_apr, pool));
+  status = win32_file_rename(from_path_w, to_path_w, pool);
 
-#if defined(WIN32) || defined(__OS2__)
   /* If the target file is read only NTFS reports EACCESS and
      FAT/FAT32 reports EEXIST */
   if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
@@ -4037,9 +4071,23 @@ svn_io_file_rename(const char *from_path, const char *to_path,
          allow renaming when from_path is read only. */
       SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
 
+      status = win32_file_rename(from_path_w, to_path_w, pool);
+    }
+  WIN32_RETRY_LOOP(status, win32_file_rename(from_path_w, to_path_w, pool));
+#elif defined(__OS2__)
+  /* If the target file is read only NTFS reports EACCESS and
+     FAT/FAT32 reports EEXIST */
+  if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
+    {
+      /* Set the destination file writable because OS/2 will not
+         allow us to rename when to_path is read-only, but will
+         allow renaming when from_path is read only. */
+      SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
+
       status = apr_file_rename(from_path_apr, to_path_apr, pool);
     }
-  WIN32_RETRY_LOOP(status, apr_file_rename(from_path_apr, to_path_apr, pool));
+#else
+  status = apr_file_rename(from_path_apr, to_path_apr, pool);
 #endif /* WIN32 || __OS2__ */
 
   if (status)

@@ -419,7 +419,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNRepos_verify(
     JNIEnv *env, jobject jthis, jobject jpath,
     jobject jrevisionStart, jobject jrevisionEnd,
-    jboolean jkeepGoing, jboolean jcheckNormalization, jboolean jmetadataOnly,
+    jboolean jcheckNormalization, jboolean jmetadataOnly,
     jobject jcallback)
 {
   JNIEntry(SVNRepos, verify);
@@ -447,7 +447,7 @@ Java_org_apache_subversion_javahl_SVNRepos_verify(
     return;
 
   cl->verify(path, revisionStart, revisionEnd,
-             jkeepGoing, jcheckNormalization, jmetadataOnly,
+             jcheckNormalization, jmetadataOnly,
              jcallback != NULL ? &callback : NULL);
 }
 

@@ -922,11 +922,6 @@ SVN_ERROR_START
              SVN_ERR_REPOS_CATEGORY_START + 10,
              "Repository upgrade is not supported")
 
-  /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_REPOS_VERIFY_FAILED,
-             SVN_ERR_REPOS_CATEGORY_START + 11,
-             "Repository verification failed")
-
   /* generic RA errors */
 
   SVN_ERRDEF(SVN_ERR_RA_ILLEGAL_URL,
@@ -1496,6 +1491,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
              SVN_ERR_CL_CATEGORY_START + 11,
              "Failed processing one or more externals definitions")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_CL_REPOS_VERIFY_FAILED,
+             SVN_ERR_CL_CATEGORY_START + 12,
+             "Repository verification failed")
 
   /* ra_svn errors */
 
