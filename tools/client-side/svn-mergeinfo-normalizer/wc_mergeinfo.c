@@ -282,8 +282,9 @@ svn_min__write_mergeinfo(svn_min__cmd_baton_t *baton,
 
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
+  int dest;
 
-  for (i = 0; i < mergeinfo->nelts; ++i)
+  for (i = 0, dest = 0; i < mergeinfo->nelts; ++i)
     {
       mergeinfo_t *entry = APR_ARRAY_IDX(mergeinfo, i, mergeinfo_t *);
       svn_string_t *propval = NULL;
@@ -301,8 +302,15 @@ svn_min__write_mergeinfo(svn_min__cmd_baton_t *baton,
       SVN_ERR(svn_client_propset_local(SVN_PROP_MERGEINFO, propval, targets,
                                        svn_depth_empty, FALSE, NULL, ctx,
                                        iterpool));
+
+      if (apr_hash_count(entry->mergeinfo))
+        {
+          APR_ARRAY_IDX(mergeinfo, dest, mergeinfo_t *) = entry;
+          ++dest;
+        }
     }
 
+  mergeinfo->nelts = dest;
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
