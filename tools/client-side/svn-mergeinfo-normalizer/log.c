@@ -55,6 +55,8 @@ struct svn_min__log_t
   svn_revnum_t first_rev;
   svn_revnum_t head_rev;
   apr_array_header_t *entries;
+
+  svn_boolean_t quiet;
 };
 
 static const char *
@@ -125,6 +127,12 @@ log_entry_receiver(void *baton,
   if (log->head_rev == SVN_INVALID_REVNUM)
     log->head_rev = log_entry->revision;
 
+  if (log->entries->nelts % 1000 == 0 && !log->quiet)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool, "."));
+      SVN_ERR(svn_cmdline_fflush(stdout));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -160,6 +168,15 @@ svn_min__log(svn_min__log_t **log,
   result->first_rev = SVN_INVALID_REVNUM;
   result->head_rev = SVN_INVALID_REVNUM;
   result->entries = apr_array_make(result_pool, 1024, sizeof(log_entry_t *));
+  result->quiet = baton->opt_state->quiet;
+
+  if (!baton->opt_state->quiet)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _("Fetching log for %s ..."),
+                                 url));
+      SVN_ERR(svn_cmdline_fflush(stdout));
+    }
 
   SVN_ERR(svn_client_log5(targets,
                           &peg_revision,
@@ -176,6 +193,12 @@ svn_min__log(svn_min__log_t **log,
 
   svn_sort__array_reverse(result->entries, scratch_pool);
   *log = result;
+
+  if (!baton->opt_state->quiet)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
+      SVN_ERR(svn_min__print_log_stats(result, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }

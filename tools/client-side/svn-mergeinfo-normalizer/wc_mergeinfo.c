@@ -178,6 +178,11 @@ svn_min__read_mergeinfo(apr_array_header_t **result,
 
   const svn_opt_revision_t rev_working = { svn_opt_revision_working };
 
+  if (!baton->opt_state->quiet)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                              _("Scanning working copy %s ...\n"),
+                              baton->local_abspath));
+
   SVN_ERR(svn_client_propget5(&props, NULL, SVN_PROP_MERGEINFO,
                               baton->local_abspath, &rev_working,
                               &rev_working, NULL,
@@ -187,6 +192,9 @@ svn_min__read_mergeinfo(apr_array_header_t **result,
   SVN_ERR(link_parents(*result, baton, scratch_pool));
 
   svn_pool_destroy(props_pool);
+
+  if (!baton->opt_state->quiet)
+    SVN_ERR(svn_min__print_mergeinfo_stats(*result, scratch_pool));
 
   return SVN_NO_ERROR;
 }

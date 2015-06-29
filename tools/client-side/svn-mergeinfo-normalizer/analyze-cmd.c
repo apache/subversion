@@ -401,11 +401,8 @@ svn_min__analyze(apr_getopt_t *os,
 
       /* scan working copy */
       svn_pool_clear(subpool);
-      SVN_ERR(svn_cmdline_printf(subpool, _("Scanning working copy %s ...\n"),
-                                 cmd_baton->local_abspath));
       SVN_ERR(svn_min__read_mergeinfo(&wc_mergeinfo, cmd_baton, iterpool,
                                       subpool));
-      SVN_ERR(svn_min__print_mergeinfo_stats(wc_mergeinfo, subpool));
 
       /* Any mergeinfo at all? */
       if (wc_mergeinfo->nelts == 0)
@@ -419,10 +416,7 @@ svn_min__analyze(apr_getopt_t *os,
       url = svn_path_url_add_component2(cmd_baton->repo_root,
                                         common_path + 1,
                                         subpool);
-      SVN_ERR(svn_cmdline_printf(subpool, _("Fetching log for %s ...\n"),
-                                 url));
       SVN_ERR(svn_min__log(&log, url, cmd_baton, iterpool, subpool));
-      SVN_ERR(svn_min__print_log_stats(log, subpool));
 
       /* actual analysis */
       svn_pool_clear(subpool);
