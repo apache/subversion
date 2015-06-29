@@ -64,12 +64,6 @@ peg_path_str(svn_pathrev_t loc,
 /* #define SHIM_WITH_ADD_ABSENT */
 /* #define SHIM_WITH_UNLOCK */
 
-/* The Ev2 shim ran the accumulated actions during abort... But why?
- * If we don't, then aborting and re-opening a commit txn doesn't find
- * all the previous changes, so tests/libsvn_repos/repos-test 12 fails.
- */
-/* #define SHIM_WITH_ACTIONS_DURING_ABORT */
-
 /* Whether to support switching from relative to absolute paths in the
  * Ev1 methods. */
 /* #define SHIM_WITH_ABS_PATHS */
@@ -1650,26 +1644,10 @@ editor3_abort(void *baton,
               apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  svn_error_t *err;
-  svn_error_t *err2;
 
-#ifdef SHIM_WITH_ACTIONS_DURING_ABORT
-  err = drive_changes_branch(eb, scratch_pool);
-#else
-  err = NULL;
-#endif
+  SVN_ERR(eb->deditor->abort_edit(eb->dedit_baton, scratch_pool));
 
-  err2 = eb->deditor->abort_edit(eb->dedit_baton, scratch_pool);
-
-  if (err2)
-    {
-      if (err)
-        svn_error_clear(err2);
-      else
-        err = err2;
-    }
-
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* An #svn_editor3_t method. */
