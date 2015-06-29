@@ -1126,6 +1126,18 @@ repos_notify_handler(void *baton,
                                _("* Copied revisions from %ld to %ld.\n"),
                                notify->start_revision, notify->end_revision));
         }
+      return;
+
+    case svn_repos_notify_pack_noop:
+      /* For best backward compatibility, we keep silent if there were just
+         no more shards to pack. */
+      if (notify->shard == -1)
+        {
+          svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                  _("Warning: This repository is not sharded."
+                                    " Packing has no effect.\n")));
+        }
+      return;
 
     default:
       return;

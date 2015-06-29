@@ -1987,7 +1987,14 @@ pack_body(void *baton,
      we need to re-read the pack status. */
   SVN_ERR(get_pack_status(&fully_packed, pb->fs, pool));
   if (fully_packed)
-    return SVN_NO_ERROR;
+    {
+      if (pb->notify_func)
+        (*pb->notify_func)(pb->notify_baton,
+                           ffd->min_unpacked_rev / ffd->max_files_per_dir,
+                           svn_fs_pack_notify_noop, pool);
+
+      return SVN_NO_ERROR;
+    }
 
   completed_shards = (ffd->youngest_rev_cache + 1) / ffd->max_files_per_dir;
   pb->revs_dir = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
@@ -2034,12 +2041,24 @@ svn_fs_fs__pack(svn_fs_t *fs,
 
   /* If we aren't using sharding, we can't do any packing, so quit. */
   if (!ffd->max_files_per_dir)
-    return SVN_NO_ERROR;
+    {
+      if (notify_func)
+        (*notify_func)(notify_baton, -1, svn_fs_pack_notify_noop, pool);
+
+      return SVN_NO_ERROR;
+    }
 
   /* Is there we even anything to do?. */
   SVN_ERR(get_pack_status(&fully_packed, fs, pool));
   if (fully_packed)
-    return SVN_NO_ERROR;
+    {
+      if (notify_func)
+        (*notify_func)(notify_baton,
+                       ffd->min_unpacked_rev / ffd->max_files_per_dir,
+                       svn_fs_pack_notify_noop, pool);
+
+      return SVN_NO_ERROR;
+    }
 
   /* Lock the repo and start the pack process. */
   pb.fs = fs;
