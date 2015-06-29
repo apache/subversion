@@ -328,6 +328,21 @@ svn_branch_state_create(int root_eid,
                         int outer_eid,
                         apr_pool_t *result_pool);
 
+/* Get the full id of branch BRANCH.
+ *
+ * Branch id format:
+ *      B<top-level-branch-num>[.<1st-level-eid>[.<2nd-level-eid>[...]]]
+ *
+ * Note: a branch id is, in behavioural terms, an arbitrary token. In the
+ * current implementation it is constructed from the hierarchy of subbranch
+ * root EIDs leading to the branch, but that may be changed in future.
+ *
+ * See also: svn_branch_revision_root_get_branch_by_id().
+ */
+const char *
+svn_branch_get_id(svn_branch_state_t *branch,
+                  apr_pool_t *result_pool);
+
 /* Create a new branch at OUTER_BRANCH:OUTER_EID, with no elements
  * (not even a root element).
  *
@@ -766,18 +781,6 @@ svn_branch_branch(svn_branch_state_t **new_branch_p,
                   svn_branch_eid_t to_outer_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool);
-
-/* Get the full id of branch BRANCH.
- *
- * Note: a branch id is, in behavioural terms, an arbitrary token. In the
- * current implementation it is constructed from the hierarchy of subbranch
- * root EIDs leading to the branch, but that may be changed in future.
- *
- * See also: svn_branch_revision_root_get_branch_by_id().
- */
-const char *
-svn_branch_get_id(svn_branch_state_t *branch,
-                  apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus
