@@ -141,7 +141,8 @@ svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
  */
 struct svn_branch_state_t *
 svn_branch_repos_get_root_branch(const svn_branch_repos_t *repos,
-                                 svn_revnum_t revnum);
+                                 svn_revnum_t revnum,
+                                 int top_branch_num);
 
 /* Set *EL_REV_P to the el-rev-id of the element at branch id BRANCH_ID,
  * element id EID, in revision REVNUM in REPOS.
@@ -177,6 +178,7 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
 svn_error_t *
 svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                 const char *rrpath,
+                                int top_branch_num,
                                 svn_revnum_t revnum,
                                 const svn_branch_repos_t *repos,
                                 apr_pool_t *result_pool,
@@ -200,20 +202,22 @@ typedef struct svn_branch_revision_root_t
   /* The range of element ids assigned. */
   int first_eid, next_eid;
 
-  /* The root branch. */
-  struct svn_branch_state_t *root_branch;
+  /* The root branches, indexed by top-level branch id (0...N). */
+  apr_array_header_t *root_branches;
 
-  /* All branches, including ROOT_BRANCH. */
+  /* All branches, including root branches. */
   apr_array_header_t *branches;
 
 } svn_branch_revision_root_t;
 
-/* Create a new branching revision-info object */
+/* Create a new branching revision-info object.
+ *
+ * It will have no branch-roots.
+ */
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
                                 svn_revnum_t base_rev,
-                                struct svn_branch_state_t *root_branch,
                                 apr_pool_t *result_pool);
 
 /* Return the revision root that represents the base revision (or,
@@ -221,6 +225,14 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
  */
 svn_branch_revision_root_t *
 svn_branch_revision_root_get_base(svn_branch_revision_root_t *rev_root);
+
+/* Return the top-level branch numbered TOP_BRANCH_NUM in REV_ROOT.
+ *
+ * Return null if there is no such branch.
+ */
+svn_branch_state_t *
+svn_branch_revision_root_get_root_branch(svn_branch_revision_root_t *rev_root,
+                                         int top_branch_num);
 
 /* Return all the branches in REV_ROOT.
  *
@@ -288,11 +300,11 @@ struct svn_branch_state_t
   svn_branch_revision_root_t *rev_root;
 
   /* The outer branch state that contains the subbranch
-     root element of this branch. Null if this is the root branch. */
+     root element of this branch. Null if this is a root branch. */
   struct svn_branch_state_t *outer_branch;
 
   /* The subbranch-root element in OUTER_BRANCH of the root of this branch.
-   * -1 if this is the root branch. */
+   * The top branch id if this is a root branch. */
   int outer_eid;
 
   /* --- Contents of this object --- */

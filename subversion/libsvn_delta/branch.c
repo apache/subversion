@@ -74,19 +74,19 @@ svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
 
 struct svn_branch_state_t *
 svn_branch_repos_get_root_branch(const svn_branch_repos_t *repos,
-                                 svn_revnum_t revnum)
+                                 svn_revnum_t revnum,
+                                 int top_branch_num)
 {
   svn_branch_revision_root_t *rev_root
     = svn_branch_repos_get_revision(repos, revnum);
 
-  return rev_root->root_branch;
+  return svn_branch_revision_root_get_root_branch(rev_root, top_branch_num);
 }
 
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
                                 svn_revnum_t base_rev,
-                                struct svn_branch_state_t *root_branch,
                                 apr_pool_t *result_pool)
 {
   svn_branch_revision_root_t *rev_root
@@ -95,7 +95,7 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
   rev_root->repos = repos;
   rev_root->rev = rev;
   rev_root->base_rev = base_rev;
-  rev_root->root_branch = root_branch;
+  rev_root->root_branches = apr_array_make(result_pool, 0, sizeof(void *));
   rev_root->branches = svn_array_make(result_pool);
   return rev_root;
 }
@@ -113,6 +113,16 @@ svn_branch_allocate_new_eid(svn_branch_revision_root_t *rev_root)
   int eid = rev_root->next_eid++;
 
   return eid;
+}
+
+svn_branch_state_t *
+svn_branch_revision_root_get_root_branch(svn_branch_revision_root_t *rev_root,
+                                         int top_branch_num)
+{
+  if (top_branch_num < 0 || top_branch_num >= rev_root->root_branches->nelts)
+    return NULL;
+  return APR_ARRAY_IDX(rev_root->root_branches, top_branch_num, void *);
+
 }
 
 const apr_array_header_t *
@@ -1134,7 +1144,6 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
   SVN_ERR_ASSERT(n == 4);
 
   rev_root = svn_branch_revision_root_create(repos, rev, rev - 1,
-                                             NULL /*root_branch*/,
                                              result_pool);
   rev_root->first_eid = first_eid;
   rev_root->next_eid = next_eid;
@@ -1148,10 +1157,10 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
                                      result_pool, scratch_pool));
       SVN_ARRAY_PUSH(rev_root->branches) = branch;
 
-      /* Note the revision-root branch */
+      /* Note the root branches */
       if (! branch->outer_branch)
         {
-          rev_root->root_branch = branch;
+          APR_ARRAY_PUSH(rev_root->root_branches, void *) = branch;
         }
     }
 
@@ -1314,6 +1323,7 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
 svn_error_t *
 svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                 const char *rrpath,
+                                int top_branch_num,
                                 svn_revnum_t revnum,
                                 const svn_branch_repos_t *repos,
                                 apr_pool_t *result_pool,
@@ -1326,7 +1336,7 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld"), revnum);
 
-  root_branch = svn_branch_repos_get_root_branch(repos, revnum);
+  root_branch = svn_branch_repos_get_root_branch(repos, revnum, top_branch_num);
   el_rev->rev = revnum;
   svn_branch_find_nested_branch_element_by_rrpath(&el_rev->branch, &el_rev->eid,
                                                   root_branch, rrpath,

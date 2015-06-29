@@ -182,8 +182,22 @@ wc_checkout(svnmover_wc_t *wc,
                                       wc->ra_session, branch_info_dir,
                                       wc->base_revision,
                                       wc->pool, scratch_pool));
+
+  /* Check requested root branch exists */
+  {
+    svn_branch_state_t *root_branch
+      = svn_branch_revision_root_get_root_branch(wc->edit_txn,
+                                                 wc->top_branch_num);
+
+    if (! root_branch)
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               "branch B%d not present in r%ld",
+                               wc->top_branch_num, wc->base_revision);
+  }
+
   SVN_ERR(svn_editor3_in_memory(&wc->editor,
                                 wc->edit_txn,
+                                wc->top_branch_num,
                                 fetch_func, fetch_baton,
                                 wc->pool));
 
@@ -197,6 +211,7 @@ wc_checkout(svnmover_wc_t *wc,
  *   repos_root_url
  *   ra_session
  *   made_changes
+ *   top_branch_num
  *   ctx
  *   pool
  *
@@ -206,6 +221,7 @@ static svn_error_t *
 wc_create(svnmover_wc_t **wc_p,
           const char *anchor_url,
           svn_revnum_t base_revision,
+          int top_branch_num,
           svn_client_ctx_t *ctx,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
@@ -213,6 +229,7 @@ wc_create(svnmover_wc_t **wc_p,
   apr_pool_t *wc_pool = svn_pool_create(result_pool);
   svnmover_wc_t *wc = apr_pcalloc(wc_pool, sizeof(*wc));
 
+  wc->top_branch_num = top_branch_num;
   wc->pool = wc_pool;
   wc->ctx = ctx;
 
@@ -375,22 +392,26 @@ svn_branch_replay(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/* Replay differences between LEFT_TXN and RIGHT_TXN into EDIT_ROOT_BRANCH.
+/* Replay differences between LEFT_BRANCH and RIGHT_BRANCH into
+ * EDIT_ROOT_BRANCH.
  * (Recurse into subbranches.)
  */
 static svn_error_t *
 replay(svn_editor3_t *editor,
        svn_branch_state_t *edit_root_branch,
-       svn_branch_revision_root_t *left_txn,
-       svn_branch_revision_root_t *right_txn,
+       svn_branch_state_t *left_branch,
+       svn_branch_state_t *right_branch,
        apr_pool_t *scratch_pool)
 {
   svn_branch_subtree_t *s_left
-    = svn_branch_get_subtree(left_txn->root_branch,
-                             left_txn->root_branch->root_eid, scratch_pool);
+    = left_branch ? svn_branch_get_subtree(left_branch, left_branch->root_eid,
+                                           scratch_pool) : NULL;
   svn_branch_subtree_t *s_right
-    = svn_branch_get_subtree(right_txn->root_branch,
-                             right_txn->root_branch->root_eid, scratch_pool);
+    = right_branch ? svn_branch_get_subtree(right_branch, right_branch->root_eid,
+                                            scratch_pool) : NULL;
+
+  SVN_ERR_ASSERT(editor && edit_root_branch);
+  SVN_ERR_ASSERT(left_branch || right_branch);
 
   SVN_ERR(svn_branch_replay(editor, edit_root_branch,
                             s_left, s_right, scratch_pool));
@@ -406,6 +427,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 typedef struct commit_callback_baton_t
 {
   svn_branch_revision_root_t *edit_txn;
+  int top_branch_num;
   svn_editor3_t *editor;
 
   /* just-committed revision */
@@ -467,12 +489,19 @@ wc_commit(svn_revnum_t *new_rev_p,
                                                commit_editor,
                                                scratch_pool));
   ccbb.edit_txn = commit_txn;
+  ccbb.top_branch_num = wc->top_branch_num;
   ccbb.editor = commit_editor;
   /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
 
-  SVN_ERR(replay(commit_editor, commit_txn->root_branch,
-                 left_txn,
-                 right_txn,
+  /* ### See do_update() for how to choose correct root-branches.
+     Should we replay a whole txn or just the edited branch (and children)? */
+  SVN_ERR(replay(commit_editor,
+                 svn_branch_revision_root_get_root_branch(commit_txn,
+                                                          wc->top_branch_num),
+                 svn_branch_revision_root_get_root_branch(left_txn,
+                                                          wc->top_branch_num),
+                 svn_branch_revision_root_get_root_branch(right_txn,
+                                                          wc->top_branch_num),
                  scratch_pool));
   if (change_detected)
     {
@@ -607,7 +636,9 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
       const svn_branch_repos_t *repos = wc->edit_txn->repos;
 
       SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(el_rev_p,
-                                                       rrpath, revnum, repos,
+                                                       rrpath,
+                                                       wc->top_branch_num,
+                                                       revnum, repos,
                                                        result_pool,
                                                        scratch_pool));
     }
@@ -617,7 +648,8 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
 
       svn_branch_find_nested_branch_element_by_rrpath(
         &el_rev->branch, &el_rev->eid,
-        wc->edit_txn->root_branch, rrpath, scratch_pool);
+        svn_branch_revision_root_get_root_branch(wc->edit_txn, wc->top_branch_num),
+        rrpath, scratch_pool);
       el_rev->rev = SVN_INVALID_REVNUM;
       *el_rev_p = el_rev;
     }
@@ -1617,6 +1649,10 @@ svn_branch_merge(svn_editor3_t *editor,
 /* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
  *
  * Merge any changes in the existing txn into the new txn.
+ *
+ * ### If current WC branch doesn't exist in target rev, should
+ *     'update' follow to a different branch? By following merge graph?
+ *     Presently it would try to update to a state of nonexistence.
  */
 static svn_error_t *
 do_update(svnmover_wc_t *wc,
@@ -1626,7 +1662,13 @@ do_update(svnmover_wc_t *wc,
   /* Keep hold of the previous WC txn */
   svn_branch_revision_root_t *previous_base_state
     = svn_branch_revision_root_get_base(wc->edit_txn);
-  svn_branch_revision_root_t *previous_working_txn = wc->edit_txn;
+  svn_branch_state_t *previous_base_br
+    = svn_branch_revision_root_get_root_branch(previous_base_state,
+                                               wc->top_branch_num);
+  svn_branch_state_t *previous_working_br
+    = svn_branch_revision_root_get_root_branch(wc->edit_txn,
+                                               wc->top_branch_num);
+  svn_branch_state_t *edit_br;
   svn_branch_el_rev_id_t *yca, *src, *tgt;
 
   /* Complete the old edit drive into the 'WC' txn */
@@ -1637,14 +1679,16 @@ do_update(svnmover_wc_t *wc,
                       scratch_pool));
 
   /* Merge changes from the old into the new WC */
-  yca = svn_branch_el_rev_id_create(previous_base_state->root_branch,
-                                    previous_base_state->root_branch->root_eid,
+  yca = svn_branch_el_rev_id_create(previous_base_br,
+                                    previous_base_br->root_eid,
                                     previous_base_state->rev, scratch_pool);
-  src = svn_branch_el_rev_id_create(previous_working_txn->root_branch,
-                                    previous_working_txn->root_branch->root_eid,
-                                    previous_working_txn->rev, scratch_pool);
-  tgt = svn_branch_el_rev_id_create(wc->edit_txn->root_branch,
-                                    wc->edit_txn->root_branch->root_eid,
+  src = svn_branch_el_rev_id_create(previous_working_br,
+                                    previous_working_br->root_eid,
+                                    SVN_INVALID_REVNUM, scratch_pool);
+  edit_br = svn_branch_revision_root_get_root_branch(wc->edit_txn,
+                                                     wc->top_branch_num);
+  tgt = svn_branch_el_rev_id_create(edit_br,
+                                    edit_br->root_eid,
                                     wc->edit_txn->rev, scratch_pool);
   SVN_ERR(svn_branch_merge(wc->editor, src, tgt, yca,
                            scratch_pool));
@@ -2221,11 +2265,13 @@ display_diff_of_commit(const commit_callback_baton_t *ccbb,
 
   SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(&el_rev_left,
                                                    rrpath,
+                                                   ccbb->top_branch_num,
                                                    ccbb->revision - 1,
                                                    repos, scratch_pool,
                                                    scratch_pool));
   SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(&el_rev_right,
                                                    rrpath,
+                                                   ccbb->top_branch_num,
                                                    ccbb->revision,
                                                    repos, scratch_pool,
                                                    scratch_pool));
@@ -2281,9 +2327,13 @@ do_revert(svnmover_wc_t *wc,
     = svn_branch_revision_root_get_base(wc->edit_txn);
 
   /* Replay the inverse of the current edit txn, into the current edit txn */
-  SVN_ERR(replay(wc->editor, wc->edit_txn->root_branch,
-                 wc->edit_txn,
-                 base_txn,
+  SVN_ERR(replay(wc->editor,
+                 svn_branch_revision_root_get_root_branch(wc->edit_txn,
+                                                          wc->top_branch_num),
+                 svn_branch_revision_root_get_root_branch(wc->edit_txn,
+                                                          wc->top_branch_num),
+                 svn_branch_revision_root_get_root_branch(base_txn,
+                                                          wc->top_branch_num),
                  scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2967,6 +3017,7 @@ usage(FILE *stream, apr_pool_t *pool)
       "  -p [--password] ARG    : use ARG as the password\n"
       "  -U [--root-url] ARG    : interpret all action URLs relative to ARG\n"
       "  -r [--revision] ARG    : use revision ARG as baseline for changes\n"
+      "  -B [--branch-id] ARG   : work on the branch identified by ARG\n"
       "  --with-revprop ARG     : set revision property in the following format:\n"
       "                               NAME[=VALUE]\n"
       "  --non-interactive      : do no interactive prompting (default is to\n"
@@ -3289,6 +3340,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"password", 'p', 1, ""},
     {"root-url", 'U', 1, ""},
     {"revision", 'r', 1, ""},
+    {"branch-id", 'B', 1, ""},
     {"with-revprop",  with_revprop_opt, 1, ""},
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
@@ -3321,6 +3373,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t trust_other_failure = FALSE;
   svn_boolean_t no_auth_cache = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
+  const char *branch_id = NULL;
+  int top_branch_num = 0;
   apr_array_header_t *action_args;
   apr_hash_t *revprops = apr_hash_make(pool);
   apr_hash_t *cfg_hash;
@@ -3396,6 +3450,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                        _("Invalid revision number '%s'"),
                                        saved_arg);
           }
+          break;
+        case 'B':
+          branch_id = apr_pstrdup(pool, arg);
           break;
         case with_revprop_opt:
           SVN_ERR(svn_opt_parse_revprop(&revprops, arg, pool));
@@ -3570,9 +3627,26 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       linenoiseSetCompletionCallback(linenoise_completion);
     }
 
+  /* If a branch id was specified, use it to select the top_branch_num;
+     else top_branch_num = 0.
+     ### TODO: Select a nested branch too, from the given id. */
+  if (branch_id)
+    {
+      int n;
+
+      n = sscanf(branch_id, "B%d", &top_branch_num);
+      printf("'%s' %d %d\n", branch_id, n, top_branch_num);
+      if (n != 1)
+        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                 _("invalid branch spec: '%s'"),
+                                 branch_id);
+    }
+
   SVN_ERR(wc_create(&wc,
                     anchor_url, base_revision,
+                    top_branch_num,
                     ctx, pool, pool));
+
   do
     {
       /* Parse arguments -- converting local style to internal style,
