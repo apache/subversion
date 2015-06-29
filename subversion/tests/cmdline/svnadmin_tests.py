@@ -3066,6 +3066,22 @@ def hotcopy_read_only(sbox):
     logger.warn("Error: hotcopy failed")
     raise SVNUnexpectedStderr(errput)
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.fs_has_pack)
+def fsfs_pack_non_sharded(sbox):
+  "'svnadmin pack' on a non-sharded repository"
+
+  # Configure two files per shard to trigger packing.
+  sbox.build(create_wc = False,
+             minor_version = min(svntest.main.options.server_minor_version,3))
+  patch_format(sbox.repo_dir, shard_size=2)
+
+  svntest.actions.run_and_verify_svnadmin(
+      None, [], "upgrade", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnadmin(
+      ['Warning: This repository is not sharded. Packing has no effect.\n'],
+      [], "pack", sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -3123,6 +3139,7 @@ test_list = [ None,
               load_txdelta,
               load_no_svndate_r0,
               hotcopy_read_only,
+              fsfs_pack_non_sharded,
              ]
 
 if __name__ == '__main__':

@@ -975,15 +975,18 @@ pack_notify_func(void *baton,
 {
   struct pack_notify_baton *pnb = baton;
   svn_repos_notify_t *notify;
+  svn_repos_notify_action_t repos_action;
 
   /* Simple conversion works for these values. */
   SVN_ERR_ASSERT(pack_action >= svn_fs_pack_notify_start
-                 && pack_action <= svn_fs_pack_notify_end_revprop);
+                 && pack_action <= svn_fs_pack_notify_noop);
 
-  notify = svn_repos_notify_create(pack_action
-                                   + svn_repos_notify_pack_shard_start
-                                   - svn_fs_pack_notify_start,
-                                   pool);
+  repos_action = pack_action == svn_fs_pack_notify_noop
+               ? svn_repos_notify_pack_noop
+               : pack_action + svn_repos_notify_pack_shard_start
+                             - svn_fs_pack_notify_start;
+
+  notify = svn_repos_notify_create(repos_action, pool);
   notify->shard = shard;
   pnb->notify_func(pnb->notify_baton, notify, pool);
 

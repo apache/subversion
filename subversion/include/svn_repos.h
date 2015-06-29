@@ -244,7 +244,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_format_bumped,
 
   /** A revision range was copied. @since New in 1.9. */
-  svn_repos_notify_hotcopy_rev_range
+  svn_repos_notify_hotcopy_rev_range,
+
+  /** The repository pack did not do anything. @since New in 1.10. */
+  svn_repos_notify_pack_noop
 } svn_repos_notify_action_t;
 
 /** The type of warning occurring.
