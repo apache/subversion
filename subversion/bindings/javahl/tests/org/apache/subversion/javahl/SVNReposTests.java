@@ -26,6 +26,7 @@ import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.FileInputStream;
 import java.io.OutputStream;
 import java.io.InputStream;
@@ -99,12 +100,103 @@ public class SVNReposTests extends SVNTests
     public void testVerify()
         throws SubversionException, IOException
     {
-        OneTest thisTest = new OneTest(false);
+        OneTest thisTest = new OneTest(false, true);
         admin.verify(thisTest.getRepository(), Revision.getInstance(0),
                      Revision.HEAD, null);
     }
 
-    /* This test only tests the call down to the C++ layer. */
+    private class VerifyCallback implements ReposVerifyCallback
+    {
+        public int mderr = 0;
+        public int reverr = 0;
+        public boolean keepGoing = false;
+
+        public void onVerifyError(long revision, ClientException verifyError)
+            throws ClientException
+        {
+            if (revision == Revision.SVN_INVALID_REVNUM)
+                ++mderr;
+            else
+                ++reverr;
+            if (keepGoing)
+                return;
+            else
+                throw verifyError;
+        }
+
+    }
+
+    private boolean trytobreakrepo(OneTest test) throws IOException
+    {
+        File repo = test.getRepository();
+
+        // Check for a sharded repo first
+        File rev1 = new File(repo, "db/revs/0/1");
+        if (!rev1.exists() || !rev1.setWritable(true))
+        {
+            // Try non-sharded
+            rev1 = new File(repo, "db/revs/1");
+        }
+        if (!rev1.exists() || !rev1.setWritable(true))
+            return false;
+            
+        FileWriter fd = new FileWriter(rev1);
+        fd.write("inserting junk to corrupt the rev");
+        fd.close();
+        return true;
+    }
+
+    public void testVerifyBrokenRepo() throws Throwable
+    {
+        OneTest thisTest = new OneTest(false);
+
+        if (!trytobreakrepo(thisTest)) {
+            // We don't support the repos format
+            System.err.print("Cannot break repository for verify test.");
+            return;
+        }
+
+        VerifyCallback cb = new VerifyCallback();
+        cb.keepGoing = false;
+
+        try {
+            admin.verify(thisTest.getRepository(),
+                         Revision.getInstance(0),
+                         Revision.HEAD,
+                         false, false, null, cb);
+        }
+        catch(ClientException ex) {
+            assertEquals(cb.mderr, 1);
+            assertEquals(cb.reverr, 0);
+            return;
+        }
+
+        assert("Verify did not catch repository corruption." == "");
+    }
+
+    public void testVerifyBrokenRepo_KeepGoing() throws Throwable
+    {
+        OneTest thisTest = new OneTest(false);
+
+        if (!trytobreakrepo(thisTest)) {
+            // We don't support the repos format
+            System.err.print("Cannot break repository for verify test.");
+            return;
+        }
+
+        VerifyCallback cb = new VerifyCallback();
+        cb.keepGoing = true;
+
+        admin.verify(thisTest.getRepository(),
+                     Revision.getInstance(0),
+                     Revision.HEAD,
+                     false, false, null, cb);
+
+        assertEquals(cb.mderr, 1);
+        assertEquals(cb.reverr, 1);
+    }
+
+    /* this test only tests the call down to the C++ layer. */
     public void testUpgrade()
         throws SubversionException, IOException
     {

@@ -420,7 +420,7 @@ Java_org_apache_subversion_javahl_SVNRepos_verify(
     JNIEnv *env, jobject jthis, jobject jpath,
     jobject jrevisionStart, jobject jrevisionEnd,
     jboolean jcheckNormalization, jboolean jmetadataOnly,
-    jobject jcallback)
+    jobject jnotifyCallback, jobject jverifyCallback)
 {
   JNIEntry(SVNRepos, verify);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -442,13 +442,18 @@ Java_org_apache_subversion_javahl_SVNRepos_verify(
   if (JNIUtil::isExceptionThrown())
     return;
 
-  ReposNotifyCallback callback(jcallback);
+  ReposNotifyCallback notify_cb(jnotifyCallback);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  ReposVerifyCallback verify_cb(jverifyCallback);
   if (JNIUtil::isExceptionThrown())
     return;
 
   cl->verify(path, revisionStart, revisionEnd,
              jcheckNormalization, jmetadataOnly,
-             jcallback != NULL ? &callback : NULL);
+             jnotifyCallback != NULL ? &notify_cb : NULL,
+             jverifyCallback != NULL ? &verify_cb : NULL);
 }
 
 JNIEXPORT jobject JNICALL
