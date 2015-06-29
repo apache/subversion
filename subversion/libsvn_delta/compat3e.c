@@ -561,6 +561,7 @@ typedef struct ev3_from_delta_baton_t
 
   /* The branching state on which the per-element API is working */
   svn_branch_revision_root_t *edited_rev_root;
+  int top_branch_num;
 
   apr_pool_t *edit_pool;
 } ev3_from_delta_baton_t;
@@ -1372,7 +1373,9 @@ drive_changes_r(const char *rrpath,
 
       SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(
                                             &pred_el_rev,
-                                            pred_loc->relpath, pred_loc->rev,
+                                            pred_loc->relpath,
+                                            eb->top_branch_num,
+                                            pred_loc->rev,
                                             eb->edited_rev_root->repos,
                                             scratch_pool, scratch_pool));
 
@@ -1562,7 +1565,10 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
         3. modify/delete/add/replace as needed at each path.
    */
   paths_final = apr_hash_make(scratch_pool);
-  convert_branch_to_paths_r(paths_final, eb->edited_rev_root->root_branch,
+  /* ### TODO: map paths of non-0 top-level branch to a hidden path space */
+  convert_branch_to_paths_r(paths_final,
+                            svn_branch_revision_root_get_root_branch(
+                              eb->edited_rev_root, eb->top_branch_num),
                             scratch_pool, scratch_pool);
 
   {
@@ -1605,8 +1611,11 @@ editor3_sequence_point(void *baton,
                        apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
+  svn_branch_state_t *b
+    = svn_branch_revision_root_get_root_branch(eb->edited_rev_root,
+                                               eb->top_branch_num);
 
-  svn_branch_purge_r(eb->edited_rev_root->root_branch, scratch_pool);
+  svn_branch_purge_r(b, scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1684,6 +1693,7 @@ editor3_mem_abort(void *baton,
 svn_error_t *
 svn_editor3_in_memory(svn_editor3_t **editor_p,
                       svn_branch_revision_root_t *branching_txn,
+                      int top_branch_num,
                       svn_editor3__shim_fetch_func_t fetch_func,
                       void *fetch_baton,
                       apr_pool_t *result_pool)
@@ -1706,6 +1716,7 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
                                  NULL, NULL /*cancel*/, result_pool);
 
   eb->edited_rev_root = branching_txn;
+  eb->top_branch_num = top_branch_num;
   eb->fetch_func = fetch_func;
   eb->fetch_baton = fetch_baton;
 

@@ -49,6 +49,7 @@ typedef struct svnmover_wc_t
   svn_ra_session_t *ra_session;
   svn_editor3_t *editor;
   svn_branch_revision_root_t *edit_txn;
+  int top_branch_num;
   svn_client_ctx_t *ctx;
 
 } svnmover_wc_t;
