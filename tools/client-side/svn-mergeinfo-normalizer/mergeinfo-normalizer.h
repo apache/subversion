@@ -61,6 +61,11 @@ typedef struct svn_min__opt_state_t
   const char *config_dir;        /* over-riding configuration directory */
   apr_array_header_t *config_options; /* over-riding configuration options */
 
+  /* Selected normalization operations. */
+  svn_boolean_t remove_obsoletes;
+  svn_boolean_t combine_ranges;
+  svn_boolean_t remove_redundants;
+
   /* trust server SSL certs that would otherwise be rejected as "untrusted" */
   svn_boolean_t trust_server_cert_unknown_ca;
   svn_boolean_t trust_server_cert_cn_mismatch;
@@ -175,6 +180,18 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
 svn_error_t *
 svn_min__print_log_stats(svn_min__log_t *log,
                          apr_pool_t *scratch_pool);
+
+typedef svn_error_t *(* svn_min__process_t)(apr_array_header_t *wc_mergeinfo,
+                                            svn_min__log_t *log,
+                                            svn_ra_session_t *session,
+                                            svn_min__opt_state_t *opt_state,
+                                            apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_min__run_command(apr_getopt_t *os,
+                     void *baton,
+                     svn_min__process_t processor,
+                     apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
