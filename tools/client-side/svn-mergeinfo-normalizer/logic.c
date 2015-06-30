@@ -288,11 +288,11 @@ progress_string(const progress_t *progress,
 }
 
 static svn_error_t *
-default_processor(apr_array_header_t *wc_mergeinfo,
-                  svn_min__log_t *log,
-                  svn_ra_session_t *session,
-                  svn_min__opt_state_t *opt_state,
-                  apr_pool_t *scratch_pool)
+normalize(apr_array_header_t *wc_mergeinfo,
+          svn_min__log_t *log,
+          svn_ra_session_t *session,
+          svn_min__opt_state_t *opt_state,
+          apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   progress_t progress = { 0 };
@@ -406,18 +406,14 @@ processing_title(svn_min__opt_state_t *opt_state,
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_min__run_command(apr_getopt_t *os,
-                     void *baton,
-                     svn_min__process_t processor,
-                     apr_pool_t *pool)
+svn_min__run_normalize(apr_getopt_t *os,
+                       void *baton,
+                       apr_pool_t *pool)
 {
   svn_min__cmd_baton_t *cmd_baton = baton;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
-
-  if (processor == NULL)
-    processor = default_processor;
 
   for (i = 0; i < cmd_baton->opt_state->targets->nelts; i++)
     {
@@ -468,8 +464,8 @@ svn_min__run_command(apr_getopt_t *os,
                                                    subpool),
                                   stdout, subpool));
 
-      SVN_ERR((*processor)(wc_mergeinfo, log, session, cmd_baton->opt_state,
-                           subpool));
+      SVN_ERR(normalize(wc_mergeinfo, log, session, cmd_baton->opt_state,
+                        subpool));
 
       /* write results to disk */
       svn_pool_clear(subpool);
