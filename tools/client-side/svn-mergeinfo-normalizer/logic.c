@@ -128,6 +128,49 @@ typedef struct progress_t
   apr_int64_t ranges_removed;
 } progress_t;
 
+static svn_error_t *
+remove_obsolete_lines(svn_ra_session_t *session,
+                      svn_mergeinfo_t mergeinfo,
+                      svn_min__opt_state_t *opt_state,
+                      progress_t *progress,
+                      apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *to_remove;
+  int i;
+  apr_hash_index_t *hi;
+  unsigned initial_count;
+
+  if (!opt_state->remove_obsoletes)
+    return SVN_NO_ERROR;
+
+  initial_count = apr_hash_count(mergeinfo);
+  to_remove = apr_array_make(scratch_pool, 16, sizeof(const char *));
+
+  for (hi = apr_hash_first(scratch_pool, mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      svn_node_kind_t kind;
+
+      SVN_ERR_ASSERT(*path == '/');
+      SVN_ERR(svn_ra_check_path(session, path + 1, SVN_INVALID_REVNUM, &kind,
+                                scratch_pool));
+      if (kind == svn_node_none)
+        APR_ARRAY_PUSH(to_remove, const char *) = path;
+    }
+
+  for (i = 0; i < to_remove->nelts; ++i)
+    {
+      const char *path = APR_ARRAY_IDX(to_remove, i, const char *);
+      svn_hash_sets(mergeinfo, path, NULL);
+    }
+
+  progress->obsoletes_removed += initial_count - apr_hash_count(mergeinfo);
+
+  return SVN_NO_ERROR;
+}
+
 static const char *
 progress_string(const progress_t *progress,
                 svn_min__opt_state_t *opt_state,
@@ -190,16 +233,29 @@ default_processor(apr_array_header_t *wc_mergeinfo,
       const char *relpath;
       svn_mergeinfo_t parent_mergeinfo;
       svn_mergeinfo_t subtree_mergeinfo;
+
+      svn_pool_clear(iterpool);
       progress.nodes_todo = i;
 
-      if (svn_min__get_mergeinfo_pair(&parent_path, &relpath,
+      /* Eliminate entries for deleted branches. */
+      SVN_ERR(remove_obsolete_lines(session,
+                                    svn_min__get_mergeinfo(wc_mergeinfo, i),
+                                    opt_state, &progress, iterpool));
+
+      /* Eliminate redundant sub-node mergeinfo. */
+      if (opt_state->remove_redundants &&
+          svn_min__get_mergeinfo_pair(&parent_path, &relpath,
                                       &parent_mergeinfo, &subtree_mergeinfo,
                                       wc_mergeinfo, i))
         {
           svn_mergeinfo_t parent_mergeinfo_copy;
           svn_mergeinfo_t subtree_mergeinfo_copy;
 
-          svn_pool_clear(iterpool);
+          /* Eliminate entries for deleted branches such that parent and
+             sub-node mergeinfo align again. */
+          SVN_ERR(remove_obsolete_lines(session, parent_mergeinfo,
+                                        opt_state, &progress, iterpool));
+
           parent_mergeinfo_copy = svn_mergeinfo_dup(parent_mergeinfo,
                                                     iterpool);
           subtree_mergeinfo_copy = svn_mergeinfo_dup(subtree_mergeinfo,
@@ -219,6 +275,7 @@ default_processor(apr_array_header_t *wc_mergeinfo,
             }
         }
 
+      /* Print progress info. */
       if (!opt_state->quiet && i % 1000 == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, "    %s.\n",
                                    progress_string(&progress, opt_state,
