@@ -40,7 +40,7 @@ public interface ReposVerifyCallback extends EventListener
 {
     /**
      * This callback method is invoked every time {@link ISVNRepos#verify}
-     * encounters and error.
+     * encounters an error.
      *<p>
      * The implementation can either consume <code>verifyError</code>
      * and return normally to continue verifying the repository after
