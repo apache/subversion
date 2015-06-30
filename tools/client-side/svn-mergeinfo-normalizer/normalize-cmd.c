@@ -46,7 +46,7 @@ svn_min__normalize(apr_getopt_t *os,
       && !cmd_baton->opt_state->combine_ranges)
     cmd_baton->opt_state->remove_redundants = TRUE;
 
-  SVN_ERR(svn_min__run_command(os, baton, NULL, pool));
+  SVN_ERR(svn_min__run_normalize(os, baton, pool));
 
   return SVN_NO_ERROR;
 }

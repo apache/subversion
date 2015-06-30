@@ -179,17 +179,10 @@ svn_error_t *
 svn_min__print_log_stats(svn_min__log_t *log,
                          apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(* svn_min__process_t)(apr_array_header_t *wc_mergeinfo,
-                                            svn_min__log_t *log,
-                                            svn_ra_session_t *session,
-                                            svn_min__opt_state_t *opt_state,
-                                            apr_pool_t *scratch_pool);
-
 svn_error_t *
-svn_min__run_command(apr_getopt_t *os,
-                     void *baton,
-                     svn_min__process_t processor,
-                     apr_pool_t *pool);
+svn_min__run_normalize(apr_getopt_t *os,
+                       void *baton,
+                       apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
