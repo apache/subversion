@@ -269,7 +269,7 @@ progress_string(const progress_t *progress,
   if (opt_state->remove_obsoletes)
     svn_stringbuf_appendcstr(result,
                              apr_psprintf(scratch_pool,
-                                          _(", removed %s obsoletes"),
+                                          _(", removed %s branches"),
                                           obsoletes_str));
 
   if (opt_state->remove_redundants)
@@ -389,7 +389,7 @@ processing_title(svn_min__opt_state_t *opt_state,
       if (svn_stringbuf_isempty(result))
         svn_stringbuf_appendcstr(result, _("Removing redundant mergeinfo"));
       else
-        svn_stringbuf_appendcstr(result, _("and redundant mergeinfo"));
+        svn_stringbuf_appendcstr(result, _(" and redundant mergeinfo"));
     }
 
   if (opt_state->combine_ranges)
