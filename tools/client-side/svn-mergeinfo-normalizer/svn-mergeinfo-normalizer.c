@@ -156,10 +156,6 @@ const apr_getopt_option_t svn_min__options[] =
                        "For example:\n"
                        "                             "
                        "    servers:global:http-library=serf")},
-  {"use-merge-history", 'g', 0,
-                    N_("use/display additional information from merge\n"
-                       "                             "
-                       "history")},
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
                        N_("Allow operation on mixed-revision working copy.\n"
                        "                             "
