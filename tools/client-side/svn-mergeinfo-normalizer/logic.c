@@ -171,6 +171,78 @@ remove_obsolete_lines(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_boolean_t
+inoperative(svn_min__log_t *log,
+            const char *path,
+            svn_revnum_t start,
+            svn_revnum_t end,
+            apr_pool_t *scratch_pool)
+{
+  svn_merge_range_t range = { 0 };
+  apr_array_header_t *ranges = apr_array_make(scratch_pool, 1, sizeof(&range));
+
+  range.start = start - 1;
+  range.end = end;
+  APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = &range;
+
+  return svn_min__operative(log, path, ranges, scratch_pool)->nelts == 0;
+}
+
+static svn_error_t *
+shorten_lines(svn_mergeinfo_t mergeinfo,
+              svn_min__log_t *log,
+              svn_min__opt_state_t *opt_state,
+              progress_t *progress,
+              apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_index_t *hi;
+
+  if (!opt_state->combine_ranges)
+    return SVN_NO_ERROR;
+
+  for (hi = apr_hash_first(scratch_pool, mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      int source, dest;
+      const char *path = apr_hash_this_key(hi);
+      svn_rangelist_t *ranges = apr_hash_this_val(hi);
+
+      if (ranges->nelts < 2 || !all_positive_ranges(ranges))
+        continue;
+
+      for (source = 1, dest = 0; source < ranges->nelts; ++source)
+        {
+          svn_merge_range_t *source_range
+            = APR_ARRAY_IDX(ranges, source, svn_merge_range_t *);
+          svn_merge_range_t *dest_range
+            = APR_ARRAY_IDX(ranges, dest, svn_merge_range_t *);
+
+          svn_pool_clear(iterpool);
+
+          if (   (source_range->inheritable == dest_range->inheritable)
+              && inoperative(log, path, dest_range->end + 1,
+                              source_range->start, iterpool))
+            {
+              dest_range->end = source_range->end;
+            }
+          else
+            {
+              ++dest;
+              APR_ARRAY_IDX(ranges, dest, svn_merge_range_t *)
+                = source_range;
+            }
+        }
+
+      progress->ranges_removed += ranges->nelts - dest - 1;
+      ranges->nelts = dest + 1;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static const char *
 progress_string(const progress_t *progress,
                 svn_min__opt_state_t *opt_state,
@@ -274,6 +346,10 @@ default_processor(apr_array_header_t *wc_mergeinfo,
               ++progress.nodes_removed;
             }
         }
+
+      /* Reduce the number of remaining ranges. */
+      SVN_ERR(shorten_lines(svn_min__get_mergeinfo(wc_mergeinfo, i), log,
+                            opt_state, &progress, iterpool));
 
       /* Print progress info. */
       if (!opt_state->quiet && i % 1000 == 0)
