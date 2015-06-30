@@ -230,16 +230,6 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
     {opt_targets, opt_depth, opt_dry_run, 'q',
      opt_remove_obsoletes, opt_remove_redundant, opt_combine_ranges} },
 
-  { "clear-obsoletes", svn_min__clear_obsolete, { 0 }, N_
-    ("Remove mergeinfo that refers to branches that no longer exist.\n"
-     "usage: clear-obsoletes [WCPATH...]\n"),
-    {opt_targets, opt_depth, opt_dry_run, 'q'} },
-
-  { "combine-ranges", svn_min__combine_ranges, { 0 }, N_
-    ("Combine revision ranges if all revisions in between are inoperative.\n"
-     "usage: remove-ranges [WCPATH...]\n"),
-    {opt_targets, opt_depth, opt_dry_run, 'q'} },
-
   { "analyze", svn_min__analyze, { "analyse" }, N_
     ("Generate a report of which part of the sub-tree mergeinfo\n"
      "can be removed and which part can't.\n"
