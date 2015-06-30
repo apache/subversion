@@ -1134,8 +1134,8 @@ repos_notify_handler(void *baton,
       if (notify->shard == -1)
         {
           svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                  _("Warning: This repository is not sharded."
-                                    " Packing has no effect.\n")));
+                     _("svnadmin: Warning - this repository is not sharded."
+                       " Packing has no effect.\n")));
         }
       return;
 

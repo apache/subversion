@@ -3079,7 +3079,7 @@ def fsfs_pack_non_sharded(sbox):
   svntest.actions.run_and_verify_svnadmin(
       None, [], "upgrade", sbox.repo_dir)
   svntest.actions.run_and_verify_svnadmin(
-      ['Warning: This repository is not sharded. Packing has no effect.\n'],
+      ['svnadmin: Warning - this repository is not sharded. Packing has no effect.\n'],
       [], "pack", sbox.repo_dir)
 
 ########################################################################
