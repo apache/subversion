@@ -40,18 +40,24 @@ class ReposVerifyCallback
   /**
    * The local reference to the Java object.
    */
-  jobject m_verify_cb;
+  jobject m_jverify_cb;
 
  public:
-  ReposVerifyCallback(jobject verify_cb);
+  /**
+   * Create a new object and store the Java object.
+   * @param verify_cb  global reference to the Java object
+   */
+  ReposVerifyCallback(jobject jverify_cb);
+
   ~ReposVerifyCallback();
 
   /**
    * Implementation of the svn_repos_verify_callback_t API.
    *
-   * @param baton notification instance is passed using this parameter
-   * @param notify all the information about the event
-   * @param pool An APR pool from which to allocate memory.
+   * @param baton Notification instance is passed using this parameter
+   * @param revision The revision that the error was emitted for
+   * @param verify_err The emitted error
+   * @param scratch_pool An APR pool from which to allocate memory.
    */
   static svn_error_t * callback(void *baton,
                                 svn_revnum_t revision,

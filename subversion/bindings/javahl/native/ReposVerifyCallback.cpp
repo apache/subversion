@@ -27,12 +27,8 @@
 #include "ReposVerifyCallback.h"
 #include "JNIUtil.h"
 
-/**
- * Create a new object and store the Java object.
- * @param notify    global reference to the Java object
- */
-ReposVerifyCallback::ReposVerifyCallback(jobject verify_cb)
-  : m_verify_cb(verify_cb)
+ReposVerifyCallback::ReposVerifyCallback(jobject jverify_cb)
+  : m_jverify_cb(jverify_cb)
 {}
 
 ReposVerifyCallback::~ReposVerifyCallback()
@@ -86,7 +82,7 @@ ReposVerifyCallback::onVerifyError(svn_revnum_t revision,
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
-  env->CallVoidMethod(m_verify_cb, mid, jlong(revision), jverify_err);
+  env->CallVoidMethod(m_jverify_cb, mid, jlong(revision), jverify_err);
   if (verify_err)
     env->DeleteLocalRef(jverify_err);
 }

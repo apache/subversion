@@ -114,19 +114,23 @@ public class SVNReposTests extends SVNTests
         public void onVerifyError(long revision, ClientException verifyError)
             throws ClientException
         {
-            if (revision == Revision.SVN_INVALID_REVNUM)
+            if (revision == Revision.SVN_INVALID_REVNUM) {
                 ++mderr;
-            else
+            }
+            else {
                 ++reverr;
-            if (keepGoing)
+            }
+            if (keepGoing) {
                 return;
-            else
+            }
+            else {
                 throw verifyError;
+            }
         }
 
     }
 
-    private boolean trytobreakrepo(OneTest test) throws IOException
+    private boolean tryToBreakRepo(OneTest test) throws IOException
     {
         File repo = test.getRepository();
 
@@ -139,7 +143,7 @@ public class SVNReposTests extends SVNTests
         }
         if (!rev1.exists() || !rev1.setWritable(true))
             return false;
-            
+
         FileWriter fd = new FileWriter(rev1);
         fd.write("inserting junk to corrupt the rev");
         fd.close();
@@ -148,9 +152,9 @@ public class SVNReposTests extends SVNTests
 
     public void testVerifyBrokenRepo() throws Throwable
     {
-        OneTest thisTest = new OneTest(false);
+        OneTest thisTest = new OneTest(false, true);
 
-        if (!trytobreakrepo(thisTest)) {
+        if (!tryToBreakRepo(thisTest)) {
             // We don't support the repos format
             System.err.print("Cannot break repository for verify test.");
             return;
@@ -176,9 +180,9 @@ public class SVNReposTests extends SVNTests
 
     public void testVerifyBrokenRepo_KeepGoing() throws Throwable
     {
-        OneTest thisTest = new OneTest(false);
+        OneTest thisTest = new OneTest(false, true);
 
-        if (!trytobreakrepo(thisTest)) {
+        if (!tryToBreakRepo(thisTest)) {
             // We don't support the repos format
             System.err.print("Cannot break repository for verify test.");
             return;
