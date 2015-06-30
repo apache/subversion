@@ -85,6 +85,9 @@ typedef enum svn_min__longopt_t {
   opt_trust_server_cert_not_yet_valid,
   opt_trust_server_cert_other_failure,
   opt_allow_mixed_revisions,
+  opt_remove_obsoletes,
+  opt_remove_redundant,
+  opt_combine_ranges,
 } svn_cl__longopt_t;
 
 
@@ -163,6 +166,17 @@ const apr_getopt_option_t svn_min__options[] =
                        "                             "
                        "Please run 'svn update' instead.")},
 
+  {"remove-obsoletes", opt_remove_obsoletes, 0,
+                       N_("Remove mergeinfo for deleted branches.")},
+  {"remove-redundant", opt_remove_redundant, 0,
+                       N_("Remove mergeinfo on sub-nodes if it is\n"
+                       "                             "
+                       "redundant with the parent mergeinfo.")},
+  {"combine-ranges",   opt_combine_ranges, 0,
+                       N_("Try to combine adjacent revision ranges\n"
+                       "                             "
+                       "to reduce the size of the mergeinfo.")},
+
   {0,               0, 0, 0},
 };
 
@@ -213,7 +227,8 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
   { "normalize", svn_min__normalize, { 0 }, N_
     ("Normalize the mergeinfo throughout the working copy sub-tree.\n"
      "usage: normalize [WCPATH...]\n"),
-    {opt_targets, opt_depth, opt_dry_run, 'q'} },
+    {opt_targets, opt_depth, opt_dry_run, 'q',
+     opt_remove_obsoletes, opt_remove_redundant, opt_combine_ranges} },
 
   { "clear-obsoletes", svn_min__clear_obsolete, { 0 }, N_
     ("Remove mergeinfo that refers to branches that no longer exist.\n"
@@ -449,6 +464,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_allow_mixed_revisions:
         opt_state.allow_mixed_rev = TRUE;
         break;
+
+      case opt_remove_obsoletes:
+        opt_state.remove_obsoletes = TRUE;
+        break;
+      case opt_remove_redundant:
+        opt_state.remove_redundants = TRUE;
+        break;
+      case opt_combine_ranges:
+        opt_state.combine_ranges = TRUE;
+        break;
+
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

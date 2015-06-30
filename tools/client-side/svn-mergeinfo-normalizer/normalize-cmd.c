@@ -39,7 +39,13 @@ svn_min__normalize(apr_getopt_t *os,
                    apr_pool_t *pool)
 {
   svn_min__cmd_baton_t *cmd_baton = baton;
-  cmd_baton->opt_state->remove_redundants = TRUE;
+
+  /* If no option is given, default to "remove redundant sub-node m/i". */
+  if (   !cmd_baton->opt_state->remove_redundants
+      && !cmd_baton->opt_state->remove_obsoletes
+      && !cmd_baton->opt_state->combine_ranges)
+    cmd_baton->opt_state->remove_redundants = TRUE;
+
   SVN_ERR(svn_min__run_command(os, baton, NULL, pool));
 
   return SVN_NO_ERROR;
