@@ -121,7 +121,8 @@ remove_lines(svn_min__log_t *log,
 static svn_error_t *
 normalize(apr_array_header_t *wc_mergeinfo,
           svn_min__log_t *log,
-          svn_boolean_t quiet,
+          svn_ra_session_t *session,
+          svn_min__opt_state_t *opt_state,
           apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -162,7 +163,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
             }
         }
 
-      if (!quiet && i % 1000 == 0)
+      if (!opt_state->quiet && i % 1000 == 0)
         SVN_ERR(svn_cmdline_printf(iterpool,
                   _("    Processed %d nodes, eliminated mergeinfo on %d.\n"),
                   wc_mergeinfo->nelts - i, deleted));
@@ -180,62 +181,8 @@ svn_min__normalize(apr_getopt_t *os,
                    apr_pool_t *pool)
 {
   svn_min__cmd_baton_t *cmd_baton = baton;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  int i;
-  for (i = 0; i < cmd_baton->opt_state->targets->nelts; i++)
-    {
-      apr_array_header_t *wc_mergeinfo;
-      svn_min__log_t *log;
-      const char *url;
-      const char *common_path;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_min__add_wc_info(baton, i, iterpool, subpool));
-
-      /* scan working copy */
-      svn_pool_clear(subpool);
-      SVN_ERR(svn_min__read_mergeinfo(&wc_mergeinfo, cmd_baton, iterpool,
-                                      subpool));
-
-      /* Any mergeinfo at all? */
-      if (wc_mergeinfo->nelts == 0)
-        continue;
-
-      /* fetch log */
-      svn_pool_clear(subpool);
-      common_path = svn_min__common_parent(wc_mergeinfo, subpool, subpool);
-      SVN_ERR_ASSERT(*common_path == '/');
-      url = svn_path_url_add_component2(cmd_baton->repo_root,
-                                        common_path + 1,
-                                        subpool);
-      SVN_ERR(svn_min__log(&log, url, cmd_baton, iterpool, subpool));
-
-      /* actual normalization */
-      svn_pool_clear(subpool);
-      if (!cmd_baton->opt_state->quiet)
-        SVN_ERR(svn_cmdline_printf(subpool,
-                                   _("Normalizing mergeinfo ...\n")));
-
-      SVN_ERR(normalize(wc_mergeinfo, log, cmd_baton->opt_state->quiet,
-                        subpool));
-
-      /* write results to disk */
-      svn_pool_clear(subpool);
-      if (!cmd_baton->opt_state->dry_run)
-        SVN_ERR(svn_min__write_mergeinfo(cmd_baton, wc_mergeinfo, subpool));
-
-      /* show results */
-      if (!cmd_baton->opt_state->quiet)
-        {
-          SVN_ERR(svn_cmdline_printf(subpool, _("\nRemaining mergeinfo:\n")));
-          SVN_ERR(svn_min__print_mergeinfo_stats(wc_mergeinfo, subpool));
-        }
-    }
-
-  svn_pool_destroy(subpool);
-  svn_pool_destroy(iterpool);
+  cmd_baton->opt_state->remove_redundants = TRUE;
+  SVN_ERR(svn_min__run_command(os, baton, normalize, pool));
 
   return SVN_NO_ERROR;
 }
