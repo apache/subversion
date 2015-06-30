@@ -79,6 +79,8 @@ Approved changes:
      This is a follow-up to the changed in the r1684940 group which is
      already approved for backport, and a bindings API change that
      can't be backported after 1.9.0.
+   Depends:
+     Depends on the r1684940, r1685034, r1687769, r1687776 backport.
    Notes:
      r1688273 implements the API semantics; r1688395 contains
      minor spelling and documentation fixes.
