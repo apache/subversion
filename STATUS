@@ -19,20 +19,6 @@ Release blockers for 1.9.0:
 Candidate changes that cannot go into a later 1.9.x:
 ====================================================
 
- * r1688273, r1688395
-   Implement the new semantics of the changed svn_repos_verify_fs3 in JavaHL.
-   Justification:
-     This is a follow-up to the changed in the r1684940 group which is
-     already approved for backport, and a bindings API change that
-     can't be backported after 1.9.0.
-   Notes:
-     r1688273 implements the API semantics; r1688395 contains
-     minor spelling and documentation fixes.
-     .
-     Clean merge depends on merging the r1684940 group first.
-   Votes:
-     +1: brane
-
 Other candidate changes:
 ========================
 
@@ -86,3 +72,17 @@ Approved changes:
      unreleased API.
    Votes:
      +1: kotkov, rhuijben, brane
+
+ * r1688273, r1688395
+   Implement the new semantics of the changed svn_repos_verify_fs3 in JavaHL.
+   Justification:
+     This is a follow-up to the changed in the r1684940 group which is
+     already approved for backport, and a bindings API change that
+     can't be backported after 1.9.0.
+   Notes:
+     r1688273 implements the API semantics; r1688395 contains
+     minor spelling and documentation fixes.
+     .
+     Clean merge depends on merging the r1684940 group first.
+   Votes:
+     +1: brane, rhuijben
