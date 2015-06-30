@@ -92,8 +92,6 @@ typedef struct svn_min__cmd_baton_t
 svn_opt_subcommand_t
   svn_min__help,
   svn_min__normalize,
-  svn_min__clear_obsolete,
-  svn_min__combine_ranges,
   svn_min__analyze;
 
 /* See definition in svn.c for documentation. */
