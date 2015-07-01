@@ -238,12 +238,11 @@ public class SVNRepos implements ISVNRepos
                        ReposNotifyCallback callback)
             throws ClientException
     {
-        verify(path, start, end, false, false, false, callback);
+        verify(path, start, end, false, false, callback);
     }
 
     public native void verify(File path, Revision start, Revision end,
-                              boolean keepGoing, boolean checkNormalization,
-                              boolean metadataOnly,
+                              boolean checkNormalization, boolean metadataOnly,
                               ReposNotifyCallback callback)
             throws ClientException;
 

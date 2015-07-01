@@ -47,32 +47,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1684940, r1685034, r1687769, r1687776
-   Make 'svnadmin verify --keep-going --quiet' print error details to stderr,
-   as documented by 'svnadmin help verify'.
-   Justification:
-     Calling a command with --quiet should not hide important parts of the
-     output, such as verification errors.  Without this fix, 'svnadmin verify
-     --keep-going --quiet' is rather useless in terms that it only gives an
-     indication of whether a particular repository passes the verification or
-     not, but doesn't show the root cause (error details) of what's wrong.
-   Notes:
-     This change features a redesign of the error reporting scheme being used
-     by svn_repos_verify_fs3() API.  At some point we realized that the way
-     API was working previously forced us to write rather hacky code on the
-     calling side in order to achieve the wanted behavior.  With the API
-     redesign, this is no longer needed.  Full discussion can be found in
-     http://svn.haxx.se/dev/archive-2015-05/0141.shtml (Subject: "Possible
-     incompatibility of svn_repos_verify_fs2() in 1.9.0-rc1").
-     .
-     r1684940 and r1685034 contain the initial fix for this problem and the
-     test.  r1687769 is the core fix that changes svn_repos_verify_fs3() API
-     and supersedes the fix from r1684940.  r1687776 is a documentation-only
-     follow-up to r1687769.  This is a 1.9.0 blocker due to a change in the
-     unreleased API.
-   Votes:
-     +1: kotkov, rhuijben, brane
-
  * r1688273, r1688395
    Implement the new semantics of the changed svn_repos_verify_fs3 in JavaHL.
    Justification:
