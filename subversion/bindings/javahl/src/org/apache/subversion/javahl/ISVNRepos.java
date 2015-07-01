@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.File;
 
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
+import org.apache.subversion.javahl.callback.ReposVerifyCallback;
 import org.apache.subversion.javahl.callback.ReposFreezeAction;
 import org.apache.subversion.javahl.types.*;
 
@@ -295,30 +296,44 @@ public interface ISVNRepos {
     /**
      * Verify the repository at <code>path</code> between revisions
      * <code>start</code> and <code>end</code>.
+     *<p>
+     * If <code>verifyCallback</code> is <code>null</code>, verification
+     * will stop at the first encountered error. Otherwise, the verification
+     * process may continue, depending on the value returned from the
+     * invocation of <code>verifyCallback</code>.
      *
      * @param path              the path to the repository
      * @param start             the first revision
      * @param end               the last revision
-         * @param checkNormalization report directory entry and mergeinfo name collisions
-         *                           caused by denormalized Unicode representations
-         * @param metadataOnly      check only metadata, not file contents
-         * @param callback          the callback to receive notifications
+     * @param checkNormalization report directory entry and mergeinfo name collisions
+     *                           caused by denormalized Unicode representations
+     * @param metadataOnly      check only metadata, not file contents
+     * @param notifyCallback    the callback to receive notifications
+     * @param verifyCallback    the callback to receive verification status
      * @throws ClientException If an error occurred.
-         * @since 1.9
+     * @since 1.9
      */
     public abstract void verify(File path, Revision start, Revision end,
-                boolean checkNormalization, boolean metadataOnly,
-                ReposNotifyCallback callback)
+                boolean checkNormalization,
+                boolean metadataOnly,
+                ReposNotifyCallback notifyCallback,
+                ReposVerifyCallback verifyCallback)
             throws ClientException;
 
     /**
      * Verify the repository at <code>path</code> between revisions
      * <code>start</code> and <code>end</code>.
+     *<p>
+     *<b>Note:</b> Behaves like the 1.9 version with
+     *             <code>checkNormailzation</code> and
+     *             <code>metadataOnly</code> set to <code>false</code>
+     *             and <code>verifyCallback</code> set to
+     *             <code>null</code>.
      *
      * @param path              the path to the repository
      * @param start             the first revision
      * @param end               the last revision
-         * @param callback          the callback to receive notifications
+     * @param callback          the callback to receive notifications
      * @throws ClientException If an error occurred.
      */
     public abstract void verify(File path, Revision start, Revision end,
