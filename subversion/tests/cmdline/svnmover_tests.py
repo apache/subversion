@@ -30,6 +30,7 @@ import os, re
 XFail = svntest.testcase.XFail_deco
 Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
+Item = svntest.wc.StateItem
 
 ######################################################################
 
@@ -106,6 +107,21 @@ def sbox_build_svnmover(sbox, content=None):
   if content:
     content(sbox)
 
+def test_svnmover3(sbox, relpath, expected_changes, expected_eids, *varargs):
+
+  test_svnmover2(sbox, relpath, expected_changes, *varargs)
+
+  if expected_eids:
+    exit_code, outlines, errlines = svntest.main.run_svnmover('-U',
+                                                              sbox.repo_url,
+                                                              '--ui=serial',
+                                                              'ls-br-r')
+    eid_tree = svntest.wc.State.from_eids(outlines)
+    try:
+      expected_eids.compare_and_display('eids', eid_tree)
+    except svntest.tree.SVNTreeError:
+      raise
+
 def test_svnmover2(sbox, relpath, expected_changes, *varargs):
   """Run svnmover with the list of SVNMOVER_ARGS arguments.  Verify that
      its run results in a new commit with 'svnmover diff -c HEAD' changes
@@ -144,6 +160,7 @@ def test_svnmover2(sbox, relpath, expected_changes, *varargs):
     expected_changes = svntest.verify.UnorderedRegexListOutput(expected_changes)
     outlines = [l.strip() for l in outlines]
     svntest.verify.verify_outputs(None, outlines, None, expected_changes, None)
+
 
 def test_svnmover(repo_url, expected_path_changes, *varargs):
   """Run svnmover with the list of SVNMOVER_ARGS arguments.  Verify that
@@ -1308,9 +1325,19 @@ def merge_swap_abc(sbox):
   "merge swaps A and C in A/B/C"
   sbox_build_svnmover(sbox)
 
-  test_svnmover2(sbox, '',
+  expected_eids = svntest.wc.State('', {
+    ''           : Item(eid=0),
+    'X'          : Item(eid=2),
+    'X/A'        : Item(eid=3),
+    'X/A/a1'     : Item(eid=4),
+    'X/A/B'      : Item(eid=5),
+    'X/A/B/C'    : Item(eid=6),
+    'X/A/B/C/c1' : Item(eid=7),
+  })
+  test_svnmover3(sbox, '',
                  reported_br_diff('') +
                  reported_br_add('X'),
+                 expected_eids,
                  'mkbranch X ' +
                  'mkdir X/A ' +
                  'mkdir X/A/a1 ' +
@@ -1318,24 +1345,48 @@ def merge_swap_abc(sbox):
                  'mkdir X/A/B/C ' +
                  'mkdir X/A/B/C/c1')
 
-  test_svnmover2(sbox, '', None,
+  expected_eids.add({
+    'Y'          : Item(eid=2),
+    'Y/A'        : Item(eid=3),
+    'Y/A/a1'     : Item(eid=4),
+    'Y/A/B'      : Item(eid=5),
+    'Y/A/B/C'    : Item(eid=6),
+    'Y/A/B/C/c1' : Item(eid=7),
+  })
+  test_svnmover3(sbox, '', None, expected_eids,
                  'branch X Y')
 
-  test_svnmover2(sbox, '',
+  expected_eids.tweak('X/A', eid=6)
+  expected_eids.tweak('X/A/B/C', eid=3)
+  expected_eids.remove('X/A/a1', 'X/A/B/C/c1')
+  expected_eids.add({
+    'X/A/c1'     : Item(eid=7),
+    'X/A/B/C/a1' : Item(eid=4),
+  })
+  test_svnmover3(sbox, '',
                  reported_br_diff('X') +
                  reported_move('A/B/C', 'A') +
                  reported_move('A/B', 'A/B') +
                  reported_move('A', 'A/B/C'),
+                 expected_eids,
                  'mv X/A/B/C X/C ' +
                  'mv X/A/B X/C/B ' +
                  'mv X/A X/C/B/C ' +
                  'mv X/C X/A')
 
-  test_svnmover2(sbox, '',
+  expected_eids.tweak('Y/A', eid=6)
+  expected_eids.tweak('Y/A/B/C', eid=3)
+  expected_eids.remove('Y/A/a1', 'Y/A/B/C/c1')
+  expected_eids.add({
+    'Y/A/c1'     : Item(eid=7),
+    'Y/A/B/C/a1' : Item(eid=4),
+  })
+  test_svnmover3(sbox, '',
                  reported_br_diff('Y') +
                  reported_move('A/B/C', 'A') +
                  reported_move('A/B', 'A/B') +
                  reported_move('A', 'A/B/C'),
+                 expected_eids,
                  'merge X Y X@2')
 
 ######################################################################

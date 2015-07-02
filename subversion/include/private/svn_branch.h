@@ -759,6 +759,13 @@ svn_branch_revision_root_serialize(svn_stream_t *stream,
                                    svn_branch_revision_root_t *rev_root,
                                    apr_pool_t *scratch_pool);
 
+/* Write to STREAM a parseable representation of BRANCH.
+ */
+svn_error_t *
+svn_branch_state_serialize(svn_stream_t *stream,
+                           svn_branch_state_t *branch,
+                           apr_pool_t *scratch_pool);
+  
 /* Branch all or part of an existing branch, making a new branch.
  *
  * Branch the subtree of FROM_BRANCH found at FROM_EID, to create

@@ -1170,7 +1170,7 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
 
 /* Write to STREAM a parseable representation of BRANCH.
  */
-static svn_error_t *
+svn_error_t *
 svn_branch_state_serialize(svn_stream_t *stream,
                            svn_branch_state_t *branch,
                            apr_pool_t *scratch_pool)
