@@ -370,7 +370,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
                             opt_state, &progress, iterpool));
 
       /* Print progress info. */
-      if (!opt_state->quiet && i % 1000 == 0)
+      if (!opt_state->quiet && i % 100 == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, "    %s.\n",
                                    progress_string(&progress, opt_state,
                                                    iterpool, iterpool)));
