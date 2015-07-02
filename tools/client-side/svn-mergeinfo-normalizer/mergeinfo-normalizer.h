@@ -179,10 +179,24 @@ svn_error_t *
 svn_min__print_log_stats(svn_min__log_t *log,
                          apr_pool_t *scratch_pool);
 
+typedef struct svn_min__branch_lookup_t svn_min__branch_lookup_t;
+
+svn_min__branch_lookup_t *
+svn_min__branch_lookup_create(svn_ra_session_t *session,
+                              apr_pool_t *result_pool);
+
+svn_error_t *
+svn_min__branch_lookup(svn_boolean_t *deleted,
+                       svn_min__branch_lookup_t *lookup,
+                       const char *branch,
+                       svn_boolean_t local_only,
+                       apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_min__run_normalize(apr_getopt_t *os,
                        void *baton,
                        apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
