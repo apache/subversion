@@ -133,6 +133,7 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
                       svn_mergeinfo_t mergeinfo,
                       svn_min__opt_state_t *opt_state,
                       progress_t *progress,
+                      svn_boolean_t local_only,
                       apr_pool_t *scratch_pool)
 {
   apr_array_header_t *to_remove;
@@ -153,7 +154,7 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
       const char *path = apr_hash_this_key(hi);
       svn_boolean_t deleted;
 
-      SVN_ERR(svn_min__branch_lookup(&deleted, lookup, path, FALSE,
+      SVN_ERR(svn_min__branch_lookup(&deleted, lookup, path, local_only,
                                      scratch_pool));
       if (deleted)
         APR_ARRAY_PUSH(to_remove, const char *) = path;
@@ -308,10 +309,10 @@ normalize(apr_array_header_t *wc_mergeinfo,
       svn_pool_clear(iterpool);
       progress.nodes_todo = i;
 
-      /* Eliminate entries for deleted branches. */
+      /* Quickly eliminate entries for known deleted branches. */
       SVN_ERR(remove_obsolete_lines(lookup,
                                     svn_min__get_mergeinfo(wc_mergeinfo, i),
-                                    opt_state, &progress, iterpool));
+                                    opt_state, &progress, TRUE, iterpool));
 
       /* Eliminate redundant sub-node mergeinfo. */
       if (opt_state->remove_redundants &&
@@ -322,10 +323,11 @@ normalize(apr_array_header_t *wc_mergeinfo,
           svn_mergeinfo_t parent_mergeinfo_copy;
           svn_mergeinfo_t subtree_mergeinfo_copy;
 
-          /* Eliminate entries for deleted branches such that parent and
-             sub-node mergeinfo align again. */
+          /* Quickly eliminate entries for known deleted branches such that
+             parent and sub-node mergeinfo align again. */
           SVN_ERR(remove_obsolete_lines(lookup, parent_mergeinfo,
-                                        opt_state, &progress, iterpool));
+                                        opt_state, &progress, TRUE,
+                                        iterpool));
 
           parent_mergeinfo_copy = svn_mergeinfo_dup(parent_mergeinfo,
                                                     iterpool);
@@ -335,6 +337,15 @@ normalize(apr_array_header_t *wc_mergeinfo,
           SVN_ERR(remove_lines(log, relpath, parent_mergeinfo_copy,
                                subtree_mergeinfo_copy, iterpool));
 
+          /* If some entries are left, remove those that refer to deleted
+             branches.  This time, contact the server to identify them. */
+          if (apr_hash_count(subtree_mergeinfo_copy) > 0)
+            SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo_copy,
+                                          opt_state, &progress, FALSE, 
+                                          iterpool));
+
+          /* If all sub-tree mergeinfo could be elided, clear it.  Update
+             the parent mergeinfo in case we moved some up the tree. */
           if (apr_hash_count(subtree_mergeinfo_copy) == 0)
             {
               SVN_ERR(svn_mergeinfo_merge2(parent_mergeinfo,
@@ -345,6 +356,14 @@ normalize(apr_array_header_t *wc_mergeinfo,
               ++progress.nodes_removed;
             }
         }
+
+      /* Eliminate deleted branches - in case there are any entries left.
+         Even then, we almost certainly already cached the necessary info
+         in LOOKUP.  Still, because this is the final reduction for this
+         node, we allow repository lookups if need be. */
+      SVN_ERR(remove_obsolete_lines(lookup,
+                                    svn_min__get_mergeinfo(wc_mergeinfo, i),
+                                    opt_state, &progress, FALSE, iterpool));
 
       /* Reduce the number of remaining ranges. */
       SVN_ERR(shorten_lines(svn_min__get_mergeinfo(wc_mergeinfo, i), log,
