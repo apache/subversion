@@ -77,13 +77,15 @@ check_lib_versions(void)
 static svn_boolean_t quiet = FALSE;
 
 /* UI mode: whether to display output in terms of paths or elements */
-enum { UI_MODE_EIDS, UI_MODE_PATHS };
+enum { UI_MODE_EIDS, UI_MODE_PATHS, UI_MODE_SERIAL };
 static int the_ui_mode = UI_MODE_EIDS;
 static const svn_token_map_t ui_mode_map[]
   = { {"eids", UI_MODE_EIDS},
       {"e", UI_MODE_EIDS},
       {"paths", UI_MODE_PATHS},
       {"p", UI_MODE_PATHS},
+      {"serial", UI_MODE_SERIAL},
+      {"s", UI_MODE_SERIAL},
       {NULL, SVN_TOKEN_UNKNOWN} };
 
 /* Is BRANCH1 the same branch as BRANCH2? Compare by full branch-ids; don't
@@ -2645,9 +2647,21 @@ execute(svnmover_wc_t *wc,
 
         case ACTION_LIST_BRANCHES_R:
           {
-            /* (Note: BASE_REVISION is always a real revision number, here) */
-            SVN_ERR(list_all_branches(wc->working_branch->rev_root, TRUE,
-                                      iterpool));
+            if (the_ui_mode == UI_MODE_SERIAL)
+              {
+                svn_stream_t *stream;
+                SVN_ERR(svn_stream_for_stdout(&stream, iterpool));
+                SVN_ERR(svn_branch_revision_root_serialize(
+                          stream,
+                          wc->working_branch->rev_root,
+                          iterpool));
+              }
+            else
+              {
+                /* Note: BASE_REVISION is always a real revision number, here */
+                SVN_ERR(list_all_branches(wc->working_branch->rev_root, TRUE,
+                                          iterpool));
+              }
           }
           break;
 
@@ -2661,8 +2675,19 @@ execute(svnmover_wc_t *wc,
                       arg[0]->el_rev->branch, arg[0]->el_rev->branch->root_eid, iterpool);
                 SVN_ERR(list_branch_elements(fb, iterpool));
               }
+            else if (the_ui_mode == UI_MODE_EIDS)
+              {
+                SVN_ERR(list_branch_elements_by_eid(arg[0]->el_rev->branch,
+                                                    iterpool));
+              }
             else
-              SVN_ERR(list_branch_elements_by_eid(arg[0]->el_rev->branch, iterpool));
+              {
+                svn_stream_t *stream;
+                SVN_ERR(svn_stream_for_stdout(&stream, iterpool));
+                SVN_ERR(svn_branch_state_serialize(stream,
+                                                   arg[0]->el_rev->branch,
+                                                   iterpool));
+              }
           }
           break;
 
