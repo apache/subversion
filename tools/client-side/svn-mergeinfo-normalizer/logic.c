@@ -140,6 +140,7 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
   int i;
   apr_hash_index_t *hi;
   unsigned initial_count;
+  apr_pool_t *iterpool;
 
   if (!opt_state->remove_obsoletes)
     return SVN_NO_ERROR;
@@ -147,6 +148,7 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
   initial_count = apr_hash_count(mergeinfo);
   to_remove = apr_array_make(scratch_pool, 16, sizeof(const char *));
 
+  iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, mergeinfo);
        hi;
        hi = apr_hash_next(hi))
@@ -154,8 +156,9 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
       const char *path = apr_hash_this_key(hi);
       svn_boolean_t deleted;
 
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_min__branch_lookup(&deleted, lookup, path, local_only,
-                                     scratch_pool));
+                                     iterpool));
       if (deleted)
         APR_ARRAY_PUSH(to_remove, const char *) = path;
     }
@@ -167,6 +170,7 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
     }
 
   progress->obsoletes_removed += initial_count - apr_hash_count(mergeinfo);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
