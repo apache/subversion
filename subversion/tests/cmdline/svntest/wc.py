@@ -216,6 +216,30 @@ class State:
       if list(filter(path, item)):
         item.tweak(**kw)
 
+  def rename(self, moves):
+    """Change the path of some items.
+
+    MOVES is a dictionary mapping source path to destination
+    path. Children move with moved parents.  All subtrees are moved in
+    reverse depth order to temporary storage before being moved in
+    depth order to the final location.  This allows nested moves.
+
+    """
+    temp = {}
+    for src, dst in sorted(moves.items(), key=lambda (src, dst): src)[::-1]:
+      temp[src] = {}
+      for path, item in self.desc.items():
+        if path == src or path[:len(src) + 1] == src + '/':
+          temp[src][path] = item;
+          del self.desc[path]
+    for src, dst in sorted(moves.items(), key=lambda (src, dst): dst):
+      for path, item in temp[src].items():
+        if path == src:
+          new_path = dst
+        else:
+          new_path = dst + path[len(src):]
+        self.desc[new_path] = item
+
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
     beneath SUBTREE_PATH (which is assumed to be rooted at the tree of
