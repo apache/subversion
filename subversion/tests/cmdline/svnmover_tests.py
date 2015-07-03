@@ -1356,12 +1356,10 @@ def merge_swap_abc(sbox):
   test_svnmover3(sbox, '', None, expected_eids,
                  'branch X Y')
 
-  expected_eids.tweak('X/A', eid=6)
-  expected_eids.tweak('X/A/B/C', eid=3)
-  expected_eids.remove('X/A/a1', 'X/A/B/C/c1')
-  expected_eids.add({
-    'X/A/c1'     : Item(eid=7),
-    'X/A/B/C/a1' : Item(eid=4),
+  expected_eids.rename({
+    'X/A/B/C' : 'X/A',
+    'X/A/B'   : 'X/A/B',
+    'X/A'     : 'X/A/B/C',
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('X') +
@@ -1374,12 +1372,10 @@ def merge_swap_abc(sbox):
                  'mv X/A X/C/B/C ' +
                  'mv X/C X/A')
 
-  expected_eids.tweak('Y/A', eid=6)
-  expected_eids.tweak('Y/A/B/C', eid=3)
-  expected_eids.remove('Y/A/a1', 'Y/A/B/C/c1')
-  expected_eids.add({
-    'Y/A/c1'     : Item(eid=7),
-    'Y/A/B/C/a1' : Item(eid=4),
+  expected_eids.rename({
+    'Y/A'     : 'Y/A/B/C',
+    'Y/A/B'   : 'Y/A/B',
+    'Y/A/B/C' : 'Y/A',
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('Y') +
