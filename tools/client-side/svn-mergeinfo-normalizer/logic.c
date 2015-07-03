@@ -274,6 +274,20 @@ typedef struct progress_t
 } progress_t;
 
 static svn_error_t *
+show_removed_branch(const char *subtree_path,
+                    svn_boolean_t local_only,
+                    svn_min__opt_state_t *opt_state,
+                    apr_pool_t *scratch_pool)
+{
+  if (opt_state->verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("    remove deleted branch %s\n"),
+                               subtree_path));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
                       svn_mergeinfo_t mergeinfo,
                       svn_min__opt_state_t *opt_state,
@@ -305,7 +319,10 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
       SVN_ERR(svn_min__branch_lookup(&deleted, lookup, path, local_only,
                                      iterpool));
       if (deleted)
-        APR_ARRAY_PUSH(to_remove, const char *) = path;
+        {
+          APR_ARRAY_PUSH(to_remove, const char *) = path;
+          SVN_ERR(show_removed_branch(path, local_only, opt_state, iterpool));
+        }
     }
 
   for (i = 0; i < to_remove->nelts; ++i)
@@ -547,12 +564,6 @@ normalize(apr_array_header_t *wc_mergeinfo,
         {
           svn_mergeinfo_t parent_mergeinfo_copy;
           svn_mergeinfo_t subtree_mergeinfo_copy;
-
-          /* Quickly eliminate entries for known deleted branches such that
-             parent and sub-node mergeinfo align again. */
-          SVN_ERR(remove_obsolete_lines(lookup, parent_mergeinfo,
-                                        opt_state, &progress, TRUE,
-                                        iterpool));
 
           /* Try to elide the mergeinfo for all branches. */
           parent_mergeinfo_copy = svn_mergeinfo_dup(parent_mergeinfo,
