@@ -295,30 +295,25 @@ analyze(svn_ra_session_t *session,
       svn_mergeinfo_t subtree_mergeinfo;
       svn_mergeinfo_t obsolete;
 
-      subtree_mergeinfo = svn_min__get_mergeinfo(wc_mergeinfo, i);
-      if (svn_min__get_parent_mergeinfo(&parent_path, &relpath,
-                                        &parent_mergeinfo, wc_mergeinfo, i))
-        {
-          SVN_ERR(svn_cmdline_printf(iterpool,
-                                     _("Trying to elide mergeinfo from path\n"
-                                       "    %s\n"
-                                       "    into mergeinfo at path\n"
-                                       "    %s\n\n"),
-                                     svn_dirent_join(parent_path, relpath,
-                                                     iterpool),
-                                     parent_path));
-        }
-      else
-        {
-          parent_mergeinfo = NULL;
-          subtree_mergeinfo = svn_min__get_mergeinfo(wc_mergeinfo, i);
+      svn_min__get_mergeinfo_pair(&parent_path, &relpath,
+                                  &parent_mergeinfo, &subtree_mergeinfo,
+                                  wc_mergeinfo, i);
 
-          SVN_ERR(svn_cmdline_printf(iterpool,
-                                     _("Trying to elide mergeinfo at path\n"
-                                       "    %s\n\n"),
-                                     svn_min__get_mergeinfo_path(wc_mergeinfo,
-                                                                 i)));
-        }
+      if (parent_mergeinfo)
+        SVN_ERR(svn_cmdline_printf(iterpool,
+                                    _("Trying to elide mergeinfo from path\n"
+                                      "    %s\n"
+                                      "    into mergeinfo at path\n"
+                                      "    %s\n\n"),
+                                    svn_dirent_join(parent_path, relpath,
+                                                    iterpool),
+                                    parent_path));
+      else
+        SVN_ERR(svn_cmdline_printf(iterpool,
+                                    _("Trying to elide mergeinfo at path\n"
+                                      "    %s\n\n"),
+                                    svn_min__get_mergeinfo_path(wc_mergeinfo,
+                                                                i)));
 
       svn_pool_clear(iterpool);
 
