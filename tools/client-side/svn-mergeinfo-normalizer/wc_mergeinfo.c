@@ -258,7 +258,7 @@ svn_min__get_mergeinfo_pair(const char **parent_path,
 
   if (!entry->parent)
     {
-      *parent_path = "";
+      *parent_path = entry->local_path;
       *subtree_relpath = "";
       *parent_mergeinfo = NULL;
 

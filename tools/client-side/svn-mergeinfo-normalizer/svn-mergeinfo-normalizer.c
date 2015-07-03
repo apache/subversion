@@ -227,7 +227,7 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
   { "normalize", svn_min__normalize, { 0 }, N_
     ("Normalize the mergeinfo throughout the working copy sub-tree.\n"
      "usage: normalize [WCPATH...]\n"),
-    {opt_targets, opt_depth, opt_dry_run, 'q',
+    {opt_targets, opt_depth, opt_dry_run, 'q', 'v',
      opt_remove_obsoletes, opt_remove_redundant, opt_combine_ranges} },
 
   { "analyze", svn_min__analyze, { "analyse" }, N_
@@ -367,6 +367,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case 'q':
         opt_state.quiet = TRUE;
+        break;
+      case 'v':
+        opt_state.verbose = TRUE;
         break;
       case opt_targets:
         {

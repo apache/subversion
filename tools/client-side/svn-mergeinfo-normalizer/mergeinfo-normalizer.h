@@ -52,6 +52,7 @@ typedef struct svn_min__opt_state_t
 
   svn_boolean_t quiet;           /* sssh...avoid unnecessary output */
   svn_boolean_t version;         /* print version information */
+  svn_boolean_t verbose;         /* be verbose */
   svn_boolean_t help;            /* print usage message */
   const char *auth_username;     /* auth username */
   const char *auth_password;     /* auth password */
