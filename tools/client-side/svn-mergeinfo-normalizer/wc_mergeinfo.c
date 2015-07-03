@@ -234,27 +234,41 @@ svn_min__common_parent(apr_array_header_t *mergeinfo,
   return result;
 }
 
-svn_boolean_t
-svn_min__get_parent_mergeinfo(const char **parent_path,
-                              const char **subtree_relpath,
-                              svn_mergeinfo_t *parent_mergeinfo,
-                              apr_array_header_t *mergeinfo,
-                              int idx)
+void
+svn_min__get_mergeinfo_pair(const char **parent_path,
+                            const char **subtree_relpath,
+                            svn_mergeinfo_t *parent_mergeinfo,
+                            svn_mergeinfo_t *subtree_mergeinfo,
+                            apr_array_header_t *mergeinfo,
+                            int idx)
 {
   mergeinfo_t *entry;
   if (idx < 0 || mergeinfo->nelts <= idx)
-    return FALSE;
+    {
+      *parent_path = "";
+      *subtree_relpath = "";
+      *parent_mergeinfo = NULL;
+      *subtree_mergeinfo = NULL;
+
+      return;
+    }
 
   entry = APR_ARRAY_IDX(mergeinfo, idx, mergeinfo_t *);
+  *subtree_mergeinfo = entry->mergeinfo;
+
   if (!entry->parent)
-    return FALSE;
+    {
+      *parent_path = "";
+      *subtree_relpath = "";
+      *parent_mergeinfo = NULL;
+
+      return;
+    }
 
   *parent_path = entry->parent->local_path;
   *subtree_relpath = svn_dirent_skip_ancestor(entry->parent->local_path,
                                               entry->local_path);
   *parent_mergeinfo = entry->parent->mergeinfo;
-
-  return TRUE;
 }
 
 svn_mergeinfo_t

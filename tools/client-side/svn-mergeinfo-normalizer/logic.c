@@ -313,15 +313,17 @@ normalize(apr_array_header_t *wc_mergeinfo,
       svn_pool_clear(iterpool);
       progress.nodes_todo = i;
 
+      /* Get the relevant mergeinfo. */
+      svn_min__get_mergeinfo_pair(&parent_path, &relpath,
+                                  &parent_mergeinfo, &subtree_mergeinfo,
+                                  wc_mergeinfo, i);
+
       /* Quickly eliminate entries for known deleted branches. */
-      subtree_mergeinfo = svn_min__get_mergeinfo(wc_mergeinfo, i);
       SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo, opt_state,
                                     &progress, TRUE, iterpool));
 
       /* Eliminate redundant sub-node mergeinfo. */
-      if (opt_state->remove_redundants &&
-          svn_min__get_parent_mergeinfo(&parent_path, &relpath,
-                                        &parent_mergeinfo, wc_mergeinfo, i))
+      if (opt_state->remove_redundants && parent_mergeinfo)
         {
           svn_mergeinfo_t parent_mergeinfo_copy;
           svn_mergeinfo_t subtree_mergeinfo_copy;

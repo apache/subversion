@@ -136,12 +136,13 @@ const char *
 svn_min__get_mergeinfo_path(apr_array_header_t *mergeinfo,
                             int idx);
 
-svn_boolean_t
-svn_min__get_parent_mergeinfo(const char **parent_path,
-                              const char **subtree_relpath,
-                              svn_mergeinfo_t *parent_mergeinfo,
-                              apr_array_header_t *mergeinfo,
-                              int idx);
+void
+svn_min__get_mergeinfo_pair(const char **parent_path,
+                            const char **subtree_relpath,
+                            svn_mergeinfo_t *parent_mergeinfo,
+                            svn_mergeinfo_t *subtree_mergeinfo,
+                            apr_array_header_t *mergeinfo,
+                            int idx);
 
 svn_error_t *
 svn_min__write_mergeinfo(svn_min__cmd_baton_t *baton,
