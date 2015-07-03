@@ -314,15 +314,14 @@ normalize(apr_array_header_t *wc_mergeinfo,
       progress.nodes_todo = i;
 
       /* Quickly eliminate entries for known deleted branches. */
-      SVN_ERR(remove_obsolete_lines(lookup,
-                                    svn_min__get_mergeinfo(wc_mergeinfo, i),
-                                    opt_state, &progress, TRUE, iterpool));
+      subtree_mergeinfo = svn_min__get_mergeinfo(wc_mergeinfo, i);
+      SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo, opt_state,
+                                    &progress, TRUE, iterpool));
 
       /* Eliminate redundant sub-node mergeinfo. */
       if (opt_state->remove_redundants &&
-          svn_min__get_mergeinfo_pair(&parent_path, &relpath,
-                                      &parent_mergeinfo, &subtree_mergeinfo,
-                                      wc_mergeinfo, i))
+          svn_min__get_parent_mergeinfo(&parent_path, &relpath,
+                                        &parent_mergeinfo, wc_mergeinfo, i))
         {
           svn_mergeinfo_t parent_mergeinfo_copy;
           svn_mergeinfo_t subtree_mergeinfo_copy;
@@ -333,6 +332,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
                                         opt_state, &progress, TRUE,
                                         iterpool));
 
+          /* Try to elide the mergeinfo for all branches. */
           parent_mergeinfo_copy = svn_mergeinfo_dup(parent_mergeinfo,
                                                     iterpool);
           subtree_mergeinfo_copy = svn_mergeinfo_dup(subtree_mergeinfo,
@@ -365,13 +365,12 @@ normalize(apr_array_header_t *wc_mergeinfo,
          Even then, we almost certainly already cached the necessary info
          in LOOKUP.  Still, because this is the final reduction for this
          node, we allow repository lookups if need be. */
-      SVN_ERR(remove_obsolete_lines(lookup,
-                                    svn_min__get_mergeinfo(wc_mergeinfo, i),
-                                    opt_state, &progress, FALSE, iterpool));
+      SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo, opt_state,
+                                    &progress, FALSE, iterpool));
 
       /* Reduce the number of remaining ranges. */
-      SVN_ERR(shorten_lines(svn_min__get_mergeinfo(wc_mergeinfo, i), log,
-                            opt_state, &progress, iterpool));
+      SVN_ERR(shorten_lines(subtree_mergeinfo, log, opt_state, &progress,
+                            iterpool));
 
       /* Print progress info. */
       if (!opt_state->quiet && i % 100 == 0)
