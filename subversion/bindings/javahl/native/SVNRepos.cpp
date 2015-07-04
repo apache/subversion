@@ -26,7 +26,6 @@
 
 #include "SVNRepos.h"
 #include "CreateJ.h"
-#include "ReposNotifyCallback.h"
 #include "JNIUtil.h"
 #include "svn_error_codes.h"
 #include "svn_repos.h"
@@ -595,7 +594,8 @@ SVNRepos::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
 void
 SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
                  bool checkNormalization, bool metadataOnly,
-                 ReposNotifyCallback *notifyCallback)
+                 ReposNotifyCallback *notifyCallback,
+                 ReposVerifyCallback *verifyCallback)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -641,11 +641,12 @@ SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
   SVN_JNI_ERR(svn_repos_verify_fs3(repos, lower, upper,
                                    checkNormalization,
                                    metadataOnly,
-                                   notifyCallback != NULL
-                                    ? ReposNotifyCallback::notify
-                                    : NULL,
+                                   (!notifyCallback ? NULL
+                                    : ReposNotifyCallback::notify),
                                    notifyCallback,
-                                   NULL, NULL, /* verify callback/baton */
+                                   (!verifyCallback ? NULL
+                                    : ReposVerifyCallback::callback),
+                                   verifyCallback,
                                    checkCancel, this /* cancel callback/baton */,
                                    requestPool.getPool()), );
 }

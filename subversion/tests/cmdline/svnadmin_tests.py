@@ -249,6 +249,18 @@ def patch_format(repo_dir, shard_size):
   os.chmod(format_path, 0666)
   open(format_path, 'wb').write(new_contents)
 
+def is_sharded(repo_dir):
+  """Return whether the FSFS repository REPO_DIR is sharded."""
+
+  format_path = os.path.join(repo_dir, "db", "format")
+  contents = open(format_path, 'rb').read()
+
+  for line in contents.split("\n"):
+    if line.startswith("layout sharded"):
+      return True
+
+  return False
+
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                revs, check_props, dump, *varargs):
   """Load the array of lines passed in DUMP into the current tests'
@@ -3066,6 +3078,25 @@ def hotcopy_read_only(sbox):
     logger.warn("Error: hotcopy failed")
     raise SVNUnexpectedStderr(errput)
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.fs_has_pack)
+def fsfs_pack_non_sharded(sbox):
+  "'svnadmin pack' on a non-sharded repository"
+
+  # Configure two files per shard to trigger packing.
+  sbox.build(create_wc = False,
+             minor_version = min(svntest.main.options.server_minor_version,3))
+
+  # Skip for pre-cooked sharded repositories
+  if is_sharded(sbox.repo_dir):
+    raise svntest.Skip('sharded pre-cooked repository')
+
+  svntest.actions.run_and_verify_svnadmin(
+      None, [], "upgrade", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnadmin(
+      ['svnadmin: Warning - this repository is not sharded. Packing has no effect.\n'],
+      [], "pack", sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -3123,6 +3154,7 @@ test_list = [ None,
               load_txdelta,
               load_no_svndate_r0,
               hotcopy_read_only,
+              fsfs_pack_non_sharded,
              ]
 
 if __name__ == '__main__':

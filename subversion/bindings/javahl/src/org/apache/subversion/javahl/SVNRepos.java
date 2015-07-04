@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.File;
 
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
+import org.apache.subversion.javahl.callback.ReposVerifyCallback;
 import org.apache.subversion.javahl.callback.ReposFreezeAction;
 import org.apache.subversion.javahl.types.*;
 
@@ -238,12 +239,14 @@ public class SVNRepos implements ISVNRepos
                        ReposNotifyCallback callback)
             throws ClientException
     {
-        verify(path, start, end, false, false, callback);
+        verify(path, start, end, false, false, callback, null);
     }
 
     public native void verify(File path, Revision start, Revision end,
-                              boolean checkNormalization, boolean metadataOnly,
-                              ReposNotifyCallback callback)
+                       boolean checkNormalization,
+                       boolean metadataOnly,
+                       ReposNotifyCallback notifyCallback,
+                       ReposVerifyCallback verifyCallback)
             throws ClientException;
 
     /**
