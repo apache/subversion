@@ -306,6 +306,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * merge: raise a tree conflict on root of obstructing dir (r1666690)
     * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
     * status: fix incorrect output with file externals (issue #4580)
+    * status: fix crash on platforms that don't support C99 format
+      specifiers for strftime (r1683387)
+    * merge: fix part of issue #4582 (r1686175, r1687029, r1688258)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
@@ -390,6 +393,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: fix 'EOF found' error when reading repo (issue #4577)
     * svnadmin freeze: unlock rep-cache.db as part of unfreezing
       (r1679169, r1679287)
+    * fsfs: improve stability in the presence of power or network
+      disk failures during 'svnadmin pack' (r1683378)
+    * detect invalid svndiff data earlier (r1684077)
 
   - Client-side and server-side bugfixes:
     * use less memory when retrieving extension from filename (r1548480)
@@ -443,6 +449,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * bash_completion: stop offering deprecated options (r1662291)
     * bash_completion: add '--show-item' and '--no-newline' (r1662622)
     * svnbench: add null-blame command (r1673785, r1673803, r1674015)
+    * svnbench: install with default 'make install' (r1685085)
 
  Developer-visible changes:
   - General:
@@ -518,6 +525,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       characters that must be escaped when used in a URL. (r1664997)
     * fix breakage of the serf ra session with svn_ra_get_dir2() and
       svn_ra_get_log2().  (r1665213, r1665259, r1665609)
+    * resolve a race condition in some test suite cleanup code (r1683303)
+    * fix some tests on non-US default locale on Windows (r1684034)
+    * document the meaning of "XFAIL" for users building from source (r1683071)
 
   - API changes:
     * new RA callbacks for managing ra_svn tunnels:
@@ -644,6 +654,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svn_ra_get_file_revs2() now handles SVN_INVALID_REVNUM as HEAD (r1660463)
     * new API svn_error_quick_wrapf() (r1662668)
     * new API svn_fs_node_has_props() (r1673170, r1673172, r1673692, r1673746)
+    * new API svn_repos_verify_fs3() (r1492651 ... r1687769)
 
   - Bindings:
     * javahl: add support for the RA layer (r1494650 et al)
@@ -720,6 +731,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       with newer versions of SWIG (1675149)
     * javahl: requires Java 1.6 (r1677003)
     * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
+    * javahl: allow compiling with a C++11 compiler (r1684412)
 
 
 Version 1.8.13
