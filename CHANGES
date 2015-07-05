@@ -196,6 +196,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * warn when the '--config-option' FILE:SECTION:OPTION combination may
       be invalid. (r1674301 et al)
     * ensure full key matching in membuffer cache (r1678950 et al)
+    * mod_dav_svn: expose cache statistics via HTTP (r1595160)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
@@ -306,8 +307,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * merge: raise a tree conflict on root of obstructing dir (r1666690)
     * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
     * status: fix incorrect output with file externals (issue #4580)
-    * status: fix crash on platforms that don't support C99 format
-      specifiers for strftime (r1683387)
     * merge: fix part of issue #4582 (r1686175, r1687029, r1688258)
 
   - Server-side bugfixes:
