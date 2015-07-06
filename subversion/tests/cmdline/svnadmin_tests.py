@@ -2058,6 +2058,10 @@ def recover_old_empty(sbox):
 def verify_keep_going(sbox):
   "svnadmin verify --keep-going test"
 
+  # No support for modifying pack files
+  if svntest.main.options.fsfs_packing:
+    raise svntest.Skip('fsfs packing set')
+
   sbox.build(create_wc = False)
   repo_url = sbox.repo_url
   B_url = sbox.repo_url + '/B'
@@ -2158,6 +2162,10 @@ def verify_keep_going(sbox):
 def verify_keep_going_quiet(sbox):
   "svnadmin verify --keep-going --quiet test"
 
+  # No support for modifying pack files
+  if svntest.main.options.fsfs_packing:
+    raise svntest.Skip('fsfs packing set')
+
   sbox.build(create_wc = False)
   repo_url = sbox.repo_url
   B_url = sbox.repo_url + '/B'
@@ -2207,6 +2215,10 @@ def verify_keep_going_quiet(sbox):
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_invalid_path_changes(sbox):
   "detect invalid changed path list entries"
+
+  # No support for modifying pack files
+  if svntest.main.options.fsfs_packing:
+    raise svntest.Skip('fsfs packing set')
 
   sbox.build(create_wc = False)
   repo_url = sbox.repo_url
@@ -2297,8 +2309,11 @@ def verify_invalid_path_changes(sbox):
                                            ".*r18: E160013:.*"])
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
-    if svntest.main.is_fs_log_addressing():
-      exp_out.insert(1, ".*Verifying.*metadata.*")
+  if svntest.main.options.fsfs_sharding is not None:
+    for x in range(0, 19 / svntest.main.options.fsfs_sharding):
+      exp_out.insert(0, ".*Verifying.*metadata.*")
+  if svntest.main.is_fs_log_addressing():
+    exp_out.insert(0, ".*Verifying.*metadata.*")
 
   exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
                                             "svnadmin: E160020:.*",
@@ -2341,8 +2356,12 @@ def verify_invalid_path_changes(sbox):
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
-    if svntest.main.is_fs_log_addressing():
-      exp_out.insert(1, ".*Verifying.*metadata.*")
+  if svntest.main.options.fsfs_sharding is not None:
+    for x in range(0, 19 / svntest.main.options.fsfs_sharding):
+      exp_out.insert(0, ".*Verifying.*metadata.*")
+  if svntest.main.is_fs_log_addressing():
+    exp_out.insert(0, ".*Verifying.*metadata.*")
+
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
     raise svntest.Failure
@@ -2397,6 +2416,10 @@ def verify_denormalized_names(sbox):
   # The BDB backend doesn't do global metadata verification.
   if (svntest.main.fs_has_rep_sharing()):
     expected_output_regex_list.insert(0, ".*Verifying repository metadata.*")
+
+  if svntest.main.options.fsfs_sharding is not None:
+    for x in range(0, 7 / svntest.main.options.fsfs_sharding):
+      expected_output_regex_list.insert(0, ".*Verifying.*metadata.*")
 
   if svntest.main.is_fs_log_addressing():
     expected_output_regex_list.insert(0, ".* Verifying metadata at revision 0.*")
