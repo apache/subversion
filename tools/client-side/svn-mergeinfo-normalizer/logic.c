@@ -165,6 +165,88 @@ show_branch_elision(const char *branch,
   return SVN_NO_ERROR;
 }
 
+typedef struct progress_t
+{
+  int nodes_total;
+  int nodes_todo;
+
+  apr_int64_t nodes_removed;
+  apr_int64_t obsoletes_removed;
+  apr_int64_t ranges_removed;
+} progress_t;
+
+static svn_error_t *
+show_removed_branch(const char *subtree_path,
+                    svn_boolean_t local_only,
+                    svn_min__opt_state_t *opt_state,
+                    apr_pool_t *scratch_pool)
+{
+  if (opt_state->verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("    remove deleted branch %s\n"),
+                               subtree_path));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+remove_obsolete_line(svn_boolean_t *deleted,
+                     svn_min__branch_lookup_t *lookup,
+                     svn_mergeinfo_t mergeinfo,
+                     const char *path,
+                     svn_min__opt_state_t *opt_state,
+                     progress_t *progress,
+                     svn_boolean_t local_only,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_min__branch_lookup(deleted, lookup, path, local_only,
+                                 scratch_pool));
+  if (*deleted)
+    {
+      svn_hash_sets(mergeinfo, path, NULL);
+
+      ++progress->obsoletes_removed;
+      SVN_ERR(show_removed_branch(path, local_only, opt_state, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
+                      svn_mergeinfo_t mergeinfo,
+                      svn_min__opt_state_t *opt_state,
+                      progress_t *progress,
+                      svn_boolean_t local_only,
+                      apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_array_header_t *sorted_mi;
+  apr_pool_t *iterpool;
+
+  if (!opt_state->remove_obsoletes)
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
+  sorted_mi = svn_sort__hash(mergeinfo,
+                             svn_sort_compare_items_lexically,
+                             scratch_pool);
+  for (i = 0; i < sorted_mi->nelts; ++i)
+    {
+      const char *path = APR_ARRAY_IDX(sorted_mi, i, svn_sort__item_t).key;
+      svn_boolean_t deleted;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(remove_obsolete_line(&deleted, lookup, mergeinfo, path,
+                                   opt_state, progress, local_only,
+                                   iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 static const char *
 get_parent_path(const char *child,
                 const char *relpath,
@@ -193,20 +275,24 @@ remove_lines(svn_min__log_t *log,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *sorted_mi;
+  int i;
 
-  apr_hash_index_t *hi;
-  for (hi = apr_hash_first(scratch_pool, subtree_mergeinfo);
-       hi;
-       hi = apr_hash_next(hi))
+  sorted_mi = svn_sort__hash(subtree_mergeinfo,
+                             svn_sort_compare_items_lexically,
+                             scratch_pool);
+  for (i = 0; i < sorted_mi->nelts; ++i)
     {
       const char *parent_path, *subtree_path;
       svn_rangelist_t *parent_ranges, *subtree_ranges, *reverse_ranges;
+      const svn_sort__item_t *item;
 
       svn_pool_clear(iterpool);
 
-      subtree_path = apr_hash_this_key(hi);
+      item = &APR_ARRAY_IDX(sorted_mi, i, svn_sort__item_t);
+      subtree_path = item->key;
       parent_path = get_parent_path(subtree_path, relpath, iterpool);
-      subtree_ranges = apr_hash_this_val(hi);
+      subtree_ranges = item->value;
       parent_ranges = svn_hash_gets(parent_mergeinfo, parent_path);
 
       if (!parent_ranges)
@@ -258,80 +344,6 @@ remove_lines(svn_min__log_t *log,
   /* TODO: Move subtree ranges to parent even if the parent has no entry
    * for the respective branches, yet. */
 
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-typedef struct progress_t
-{
-  int nodes_total;
-  int nodes_todo;
-
-  apr_int64_t nodes_removed;
-  apr_int64_t obsoletes_removed;
-  apr_int64_t ranges_removed;
-} progress_t;
-
-static svn_error_t *
-show_removed_branch(const char *subtree_path,
-                    svn_boolean_t local_only,
-                    svn_min__opt_state_t *opt_state,
-                    apr_pool_t *scratch_pool)
-{
-  if (opt_state->verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool,
-                               _("    remove deleted branch %s\n"),
-                               subtree_path));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
-                      svn_mergeinfo_t mergeinfo,
-                      svn_min__opt_state_t *opt_state,
-                      progress_t *progress,
-                      svn_boolean_t local_only,
-                      apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *to_remove;
-  int i;
-  apr_hash_index_t *hi;
-  unsigned initial_count;
-  apr_pool_t *iterpool;
-
-  if (!opt_state->remove_obsoletes)
-    return SVN_NO_ERROR;
-
-  initial_count = apr_hash_count(mergeinfo);
-  to_remove = apr_array_make(scratch_pool, 16, sizeof(const char *));
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, mergeinfo);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *path = apr_hash_this_key(hi);
-      svn_boolean_t deleted;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_min__branch_lookup(&deleted, lookup, path, local_only,
-                                     iterpool));
-      if (deleted)
-        {
-          APR_ARRAY_PUSH(to_remove, const char *) = path;
-          SVN_ERR(show_removed_branch(path, local_only, opt_state, iterpool));
-        }
-    }
-
-  for (i = 0; i < to_remove->nelts; ++i)
-    {
-      const char *path = APR_ARRAY_IDX(to_remove, i, const char *);
-      svn_hash_sets(mergeinfo, path, NULL);
-    }
-
-  progress->obsoletes_removed += initial_count - apr_hash_count(mergeinfo);
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
