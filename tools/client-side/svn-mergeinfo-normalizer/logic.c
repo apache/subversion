@@ -205,7 +205,8 @@ remove_obsolete_line(svn_boolean_t *deleted,
     {
       svn_hash_sets(mergeinfo, path, NULL);
 
-      ++progress->obsoletes_removed;
+      if (progress)
+        ++progress->obsoletes_removed;
       SVN_ERR(show_removed_branch(path, local_only, opt_state, scratch_pool));
     }
 
@@ -273,7 +274,6 @@ remove_lines(svn_min__log_t *log,
              svn_mergeinfo_t parent_mergeinfo,
              svn_mergeinfo_t subtree_mergeinfo,
              svn_min__opt_state_t *opt_state,
-             progress_t *progress,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -300,8 +300,8 @@ remove_lines(svn_min__log_t *log,
       /* Maybe, this branch is known to be obsolete anyway.
          Do a quick check based on previous lookups. */
       SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                   subtree_path, opt_state, progress,
-                                   TRUE, iterpool));
+                                   subtree_path, opt_state, NULL, TRUE,
+                                   iterpool));
       if (deleted)
         continue;
 
@@ -317,8 +317,8 @@ remove_lines(svn_min__log_t *log,
              branch has been deleted after all?  This time contact the
              repository. */
           SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                       subtree_path, opt_state, progress,
-                                       FALSE, iterpool));
+                                       subtree_path, opt_state, NULL, FALSE,
+                                       iterpool));
 
           /* If still relevant, we need to keep the whole m/i on this node.
              Therefore, report the problem. */
@@ -337,8 +337,8 @@ remove_lines(svn_min__log_t *log,
           /* We really found a reverse revision range!?
              Try to get rid of it. */
           SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                       subtree_path, opt_state, progress,
-                                       FALSE, iterpool));
+                                       subtree_path, opt_state, NULL, FALSE,
+                                       iterpool));
           if (!deleted)
             SVN_ERR(show_reverse_ranges(subtree_path, reverse_ranges,
                                         opt_state, iterpool));
@@ -367,8 +367,8 @@ remove_lines(svn_min__log_t *log,
         {
           /* This branch can't be elided.  Maybe, it is obsolete anyway. */
           SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                       subtree_path, opt_state, progress,
-                                       FALSE, iterpool));
+                                       subtree_path, opt_state, NULL, FALSE,
+                                       iterpool));
           if (deleted)
             continue;
         }
@@ -541,6 +541,17 @@ show_elision_header(const char *parent_path,
 }
 
 static svn_error_t *
+show_removing_obsoletes(svn_min__opt_state_t *opt_state,
+                        apr_pool_t *scratch_pool)
+{
+  if (opt_state->remove_obsoletes && opt_state->verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("\n    Removing obsolete entries ...\n")));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 show_elision_result(svn_mergeinfo_t parent_mergeinfo,
                     svn_mergeinfo_t subtree_mergeinfo,
                     svn_min__opt_state_t *opt_state,
@@ -628,7 +639,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
                                                      iterpool);
 
           SVN_ERR(remove_lines(log, lookup, relpath, parent_mergeinfo_copy,
-                               subtree_mergeinfo_copy, opt_state, &progress,
+                               subtree_mergeinfo_copy, opt_state,
                                iterpool));
 
           /* If all sub-tree mergeinfo could be elided, clear it.  Update
@@ -642,14 +653,22 @@ normalize(apr_array_header_t *wc_mergeinfo,
               apr_hash_clear(subtree_mergeinfo);
               ++progress.nodes_removed;
             }
+          else
+            {
+              /* We have to keep the sub-tree m/i but we can remove entries
+                 for deleted branches from it. */
+              SVN_ERR(show_removing_obsoletes(opt_state, iterpool));
+              SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo,
+                                            opt_state, &progress, FALSE,
+                                            iterpool));
+            }
         }
-
-      /* Eliminate deleted branches - in case there are any entries left.
-         Even then, we almost certainly already cached the necessary info
-         in LOOKUP.  Still, because this is the final reduction for this
-         node, we allow repository lookups if need be. */
-      SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo, opt_state,
-                                    &progress, FALSE, iterpool));
+      else
+        {
+          /* Eliminate deleted branches. */
+          SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo, opt_state,
+                                        &progress, FALSE, iterpool));
+        }
 
       /* Reduce the number of remaining ranges. */
       SVN_ERR(shorten_lines(subtree_mergeinfo, log, opt_state, &progress,
