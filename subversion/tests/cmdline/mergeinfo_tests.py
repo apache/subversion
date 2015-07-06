@@ -786,6 +786,166 @@ def mergeinfo_local_move(sbox):
                                      'mergeinfo', sbox.repo_url + '/A',
                                      sbox.ospath('A2'))
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4582)
+def no_mergeinfo_on_tree_conflict_victim(sbox):
+  "do not record mergeinfo on tree conflict victims"
+  sbox.build()
+
+  # Create a branch of A called A_copy
+  sbox.simple_copy('A', 'A_copy')
+  sbox.simple_commit()
+
+  # Add a new directory and file on both branches
+  sbox.simple_mkdir('A/dir')
+  sbox.simple_add_text('new file', 'A/dir/f')
+  sbox.simple_commit()
+
+  sbox.simple_mkdir('A_copy/dir')
+  sbox.simple_add_text('new file', 'A_copy/dir/f')
+  sbox.simple_commit()
+
+  # Run a merge from A to A_copy
+  expected_output = wc.State(sbox.ospath('A_copy'), {
+    'dir'               : Item(status='  ', treeconflict='C'),
+    'dir/f'             : Item(status='  ', treeconflict='A'),
+    })
+  expected_mergeinfo_output = wc.State(sbox.ospath('A_copy'), {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(sbox.ospath('A_copy'), {
+    })
+
+  expected_disk = svntest.wc.State('', {
+    'C'                 : Item(),
+    'B/E/beta'          : Item(contents="This is the file 'beta'.\n"),
+    'B/E/alpha'         : Item(contents="This is the file 'alpha'.\n"),
+    'B/lambda'          : Item(contents="This is the file 'lambda'.\n"),
+    'B/F'               : Item(),
+    'D/H/omega'         : Item(contents="This is the file 'omega'.\n"),
+    'D/H/psi'           : Item(contents="This is the file 'psi'.\n"),
+    'D/H/chi'           : Item(contents="This is the file 'chi'.\n"),
+    'D/G/tau'           : Item(contents="This is the file 'tau'.\n"),
+    'D/G/pi'            : Item(contents="This is the file 'pi'.\n"),
+    'D/G/rho'           : Item(contents="This is the file 'rho'.\n"),
+    'D/gamma'           : Item(contents="This is the file 'gamma'.\n"),
+    'dir/f'             : Item(contents="new file"),
+    'mu'                : Item(contents="This is the file 'mu'.\n"),
+    })
+
+  # The merge will create an add vs add tree conflict on A_copy/dir
+  expected_status = svntest.wc.State(sbox.ospath('A_copy'), {
+    ''                  : Item(status=' M', wc_rev='4'),
+    'D'                 : Item(status='  ', wc_rev='4'),
+    'D/G'               : Item(status='  ', wc_rev='4'),
+    'D/G/pi'            : Item(status='  ', wc_rev='4'),
+    'D/G/rho'           : Item(status='  ', wc_rev='4'),
+    'D/G/tau'           : Item(status='  ', wc_rev='4'),
+    'D/H'               : Item(status='  ', wc_rev='4'),
+    'D/H/psi'           : Item(status='  ', wc_rev='4'),
+    'D/H/omega'         : Item(status='  ', wc_rev='4'),
+    'D/H/chi'           : Item(status='  ', wc_rev='4'),
+    'D/gamma'           : Item(status='  ', wc_rev='4'),
+    'B'                 : Item(status='  ', wc_rev='4'),
+    'B/F'               : Item(status='  ', wc_rev='4'),
+    'B/E'               : Item(status='  ', wc_rev='4'),
+    'B/E/alpha'         : Item(status='  ', wc_rev='4'),
+    'B/E/beta'          : Item(status='  ', wc_rev='4'),
+    'B/lambda'          : Item(status='  ', wc_rev='4'),
+    'C'                 : Item(status='  ', wc_rev='4'),
+    'dir'               : Item(status='  ', treeconflict='C', wc_rev='4'),
+    'dir/f'             : Item(status='  ', wc_rev='4'),
+    'mu'                : Item(status='  ', wc_rev='4'),
+    })
+
+  expected_skip = wc.State('', { })
+
+  sbox.simple_update('A_copy')
+  svntest.actions.run_and_verify_merge(sbox.ospath('A_copy'),
+                                       None, None, # rev1, rev2
+                                       '^/A',
+                                       None, # URL2
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+
+  # Resolve the tree conflict by accepting the working copy state left
+  # behind by the merge. This preserves the line of history of A_copy/dir,
+  # which originated on the branch 'A_copy', rather than replacing it with
+  # Jthe line f history of A/dir which originated on branch 'A'
+  svntest.actions.run_and_verify_resolve([sbox.ospath('A_copy/dir')],
+                                         '--accept', 'working',
+                                         sbox.ospath('A_copy/dir'))
+  sbox.simple_commit('A_copy')
+
+  # Now try to merge the 'A_copy' branch back to 'A"
+  expected_output = wc.State(sbox.ospath('A'), {
+    'dir'               : Item(status='R '), # changes line of history of A/dir
+    'dir/f'             : Item(status='A '),
+    })
+  expected_mergeinfo_output = wc.State(sbox.ospath('A'), {
+    ''                  : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(sbox.ospath('A'), {
+    })
+
+  expected_disk = svntest.wc.State('', {
+    'C'                 : Item(),
+    'B/E/beta'          : Item(contents="This is the file 'beta'.\n"),
+    'B/E/alpha'         : Item(contents="This is the file 'alpha'.\n"),
+    'B/F'               : Item(),
+    'B/lambda'          : Item(contents="This is the file 'lambda'.\n"),
+    'D/H/omega'         : Item(contents="This is the file 'omega'.\n"),
+    'D/H/psi'           : Item(contents="This is the file 'psi'.\n"),
+    'D/H/chi'           : Item(contents="This is the file 'chi'.\n"),
+    'D/G/tau'           : Item(contents="This is the file 'tau'.\n"),
+    'D/G/pi'            : Item(contents="This is the file 'pi'.\n"),
+    'D/G/rho'           : Item(contents="This is the file 'rho'.\n"),
+    'D/gamma'           : Item(contents="This is the file 'gamma'.\n"),
+    'dir/f'             : Item(contents="new file"),
+    'mu'                : Item(contents="This is the file 'mu'.\n"),
+    })
+
+  expected_status = svntest.wc.State(sbox.ospath('A'), {
+    ''                  : Item(status=' M', wc_rev='5'),
+    'dir'               : Item(status='R ', copied='+', wc_rev='-'),
+    'dir/f'             : Item(status='  ', copied='+', wc_rev='-'),
+    'D'                 : Item(status='  ', wc_rev='5'),
+    'D/H'               : Item(status='  ', wc_rev='5'),
+    'D/H/chi'           : Item(status='  ', wc_rev='5'),
+    'D/H/omega'         : Item(status='  ', wc_rev='5'),
+    'D/H/psi'           : Item(status='  ', wc_rev='5'),
+    'D/G'               : Item(status='  ', wc_rev='5'),
+    'D/G/pi'            : Item(status='  ', wc_rev='5'),
+    'D/G/rho'           : Item(status='  ', wc_rev='5'),
+    'D/G/tau'           : Item(status='  ', wc_rev='5'),
+    'D/gamma'           : Item(status='  ', wc_rev='5'),
+    'B'                 : Item(status='  ', wc_rev='5'),
+    'B/E'               : Item(status='  ', wc_rev='5'),
+    'B/E/beta'          : Item(status='  ', wc_rev='5'),
+    'B/E/alpha'         : Item(status='  ', wc_rev='5'),
+    'B/lambda'          : Item(status='  ', wc_rev='5'),
+    'B/F'               : Item(status='  ', wc_rev='5'),
+    'mu'                : Item(status='  ', wc_rev='5'),
+    'C'                 : Item(status='  ', wc_rev='5'),
+    })
+
+  expected_skip = wc.State('', { })
+  sbox.simple_update('A')
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'),
+                                       None, None, # rev1, rev2
+                                       '^/A_copy',
+                                       None, # URL2
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+  sbox.simple_commit('A')
 
 ########################################################################
 # Run the tests
@@ -806,6 +966,7 @@ test_list = [ None,
               natural_history_is_not_eligible_nor_merged,
               noninheritable_mergeinfo_not_always_eligible,
               mergeinfo_local_move,
+              no_mergeinfo_on_tree_conflict_victim,
              ]
 
 if __name__ == '__main__':

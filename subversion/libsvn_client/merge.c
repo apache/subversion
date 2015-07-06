@@ -2794,12 +2794,6 @@ merge_dir_opened(void **new_dir_baton,
 
               db->tree_conflict_reason = added ? svn_wc_conflict_reason_added
                                                : svn_wc_conflict_reason_obstructed;
-
-              if ((merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
-                  && !(pdb && pdb->shadowed))
-                {
-                  store_path(merge_b->skipped_abspaths, local_abspath);
-                }
             }
         }
 

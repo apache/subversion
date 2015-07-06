@@ -37,12 +37,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1686175, r1687029, r1688258
-   Fix part of issue #4582, "reintegrate complains about missing ranges
-   from node unrelated to branch"
-   Justification:
-     Reintegrate merge is impossible after the default conflict resolution
-     option is applied to a particular tree conflict during a sync merge.
-   Votes:
-     +1: stsp, philip, brane
