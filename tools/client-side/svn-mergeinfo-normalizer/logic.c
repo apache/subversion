@@ -268,10 +268,12 @@ get_parent_path(const char *child,
 
 static svn_error_t *
 remove_lines(svn_min__log_t *log,
+             svn_min__branch_lookup_t *lookup,
              const char *relpath,
              svn_mergeinfo_t parent_mergeinfo,
              svn_mergeinfo_t subtree_mergeinfo,
              svn_min__opt_state_t *opt_state,
+             progress_t *progress,
              apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -285,59 +287,105 @@ remove_lines(svn_min__log_t *log,
     {
       const char *parent_path, *subtree_path;
       svn_rangelist_t *parent_ranges, *subtree_ranges, *reverse_ranges;
+      svn_rangelist_t *subtree_only, *parent_only;
+      svn_rangelist_t *operative_outside_subtree, *operative_in_subtree;
       const svn_sort__item_t *item;
+      svn_boolean_t deleted;
 
       svn_pool_clear(iterpool);
 
       item = &APR_ARRAY_IDX(sorted_mi, i, svn_sort__item_t);
       subtree_path = item->key;
+
+      /* Maybe, this branch is known to be obsolete anyway.
+         Do a quick check based on previous lookups. */
+      SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
+                                   subtree_path, opt_state, progress,
+                                   TRUE, iterpool));
+      if (deleted)
+        continue;
+
+      /* Find the parent m/i entry for the same branch. */
       parent_path = get_parent_path(subtree_path, relpath, iterpool);
       subtree_ranges = item->value;
       parent_ranges = svn_hash_gets(parent_mergeinfo, parent_path);
 
+      /* Is there any? */
       if (!parent_ranges)
         {
-          SVN_ERR(show_missing_parent(subtree_path, !*parent_path,
-                                      opt_state, scratch_pool));
+          /* There is none.  Before we flag that as a problem, maybe the
+             branch has been deleted after all?  This time contact the
+             repository. */
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
+                                       subtree_path, opt_state, progress,
+                                       FALSE, iterpool));
+
+          /* If still relevant, we need to keep the whole m/i on this node.
+             Therefore, report the problem. */
+          if (!deleted)
+            SVN_ERR(show_missing_parent(subtree_path, !*parent_path,
+                                        opt_state, scratch_pool));
+
           continue;
         }
 
+      /* We don't know how to handle reverse ranges (there should be none).
+         So, we must check for them - just to be sure. */
       reverse_ranges = find_reverse_ranges(subtree_ranges, iterpool);
-      SVN_ERR(show_reverse_ranges(subtree_path, reverse_ranges, opt_state,
+      if (reverse_ranges->nelts)
+        {
+          /* We really found a reverse revision range!?
+             Try to get rid of it. */
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
+                                       subtree_path, opt_state, progress,
+                                       FALSE, iterpool));
+          if (!deleted)
+            SVN_ERR(show_reverse_ranges(subtree_path, reverse_ranges,
+                                        opt_state, iterpool));
+
+          continue;
+        }
+
+      /* Try the actual elision, i.e. compare parent and sub-tree m/i.
+         Where they don't fit, figure out if they can be aligned. */
+      SVN_ERR(svn_rangelist_diff(&parent_only, &subtree_only,
+                                 parent_ranges, subtree_ranges, FALSE,
+                                 iterpool));
+      subtree_only
+        = svn_min__operative(log, subtree_path, parent_only, iterpool);
+
+      operative_outside_subtree
+        = svn_min__operative_outside_subtree(log, parent_path, subtree_path,
+                                             subtree_only, iterpool);
+      operative_in_subtree
+        = svn_min__operative(log, subtree_path, parent_only, iterpool);
+
+      /* Before we show a branch as "CANNOT elide", make sure it is even
+         still relevant. */
+      if (   operative_outside_subtree->nelts
+          || operative_in_subtree->nelts)
+        {
+          /* This branch can't be elided.  Maybe, it is obsolete anyway. */
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
+                                       subtree_path, opt_state, progress,
+                                       FALSE, iterpool));
+          if (deleted)
+            continue;
+        }
+
+      /* Log whether an elision was possible. */
+      SVN_ERR(show_branch_elision(subtree_path, subtree_only,
+                                  parent_only, operative_outside_subtree,
+                                  operative_in_subtree, opt_state,
                                   iterpool));
 
-      if (!reverse_ranges->nelts)
+      /* This will also work when subtree_only is empty. */
+      if (   !operative_outside_subtree->nelts
+          && !operative_in_subtree->nelts)
         {
-          svn_rangelist_t *subtree_only;
-          svn_rangelist_t *parent_only;
-          svn_rangelist_t *operative_outside_subtree;
-          svn_rangelist_t *operative_in_subtree;
-
-          SVN_ERR(svn_rangelist_diff(&parent_only, &subtree_only,
-                                     parent_ranges, subtree_ranges, FALSE,
-                                     iterpool));
-          subtree_only
-            = svn_min__operative(log, subtree_path, parent_only, iterpool);
-
-          operative_outside_subtree
-            = svn_min__operative_outside_subtree(log, parent_path, subtree_path,
-                                                 subtree_only, iterpool);
-          operative_in_subtree
-            = svn_min__operative(log, subtree_path, parent_only, iterpool);
-
-          SVN_ERR(show_branch_elision(subtree_path, subtree_only,
-                                      parent_only, operative_outside_subtree,
-                                      operative_in_subtree, opt_state,
-                                      iterpool));
-
-          /* This will also work when subtree_only is empty. */
-          if (   !operative_outside_subtree->nelts
-              && !operative_in_subtree->nelts)
-            {
-              SVN_ERR(svn_rangelist_merge2(parent_ranges, subtree_only,
-                                           parent_ranges->pool, iterpool));
-              svn_hash_sets(subtree_mergeinfo, subtree_path, NULL);
-            }
+          SVN_ERR(svn_rangelist_merge2(parent_ranges, subtree_only,
+                                       parent_ranges->pool, iterpool));
+          svn_hash_sets(subtree_mergeinfo, subtree_path, NULL);
         }
     }
 
@@ -567,10 +615,6 @@ normalize(apr_array_header_t *wc_mergeinfo,
       SVN_ERR(show_elision_header(parent_path, relpath, opt_state,
                                   scratch_pool));
 
-      /* Quickly eliminate entries for known deleted branches. */
-      SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo, opt_state,
-                                    &progress, TRUE, iterpool));
-
       /* Eliminate redundant sub-node mergeinfo. */
       if (opt_state->remove_redundants && parent_mergeinfo)
         {
@@ -583,15 +627,9 @@ normalize(apr_array_header_t *wc_mergeinfo,
           subtree_mergeinfo_copy = svn_mergeinfo_dup(subtree_mergeinfo,
                                                      iterpool);
 
-          SVN_ERR(remove_lines(log, relpath, parent_mergeinfo_copy,
-                               subtree_mergeinfo_copy, opt_state, iterpool));
-
-          /* If some entries are left, remove those that refer to deleted
-             branches.  This time, contact the server to identify them. */
-          if (apr_hash_count(subtree_mergeinfo_copy) > 0)
-            SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo_copy,
-                                          opt_state, &progress, FALSE, 
-                                          iterpool));
+          SVN_ERR(remove_lines(log, lookup, relpath, parent_mergeinfo_copy,
+                               subtree_mergeinfo_copy, opt_state, &progress,
+                               iterpool));
 
           /* If all sub-tree mergeinfo could be elided, clear it.  Update
              the parent mergeinfo in case we moved some up the tree. */
