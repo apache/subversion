@@ -46,6 +46,7 @@ typedef struct log_entry_t
   svn_revnum_t revision;
   const char *common_base;
   apr_array_header_t *paths;
+  apr_array_header_t *deletions;
 } log_entry_t;
 
 struct svn_min__log_t
@@ -94,14 +95,26 @@ log_entry_receiver(void *baton,
   entry->paths = apr_array_make(result_pool,
                                 apr_hash_count(log_entry->changed_paths),
                                 sizeof(const char *));
+  entry->deletions = NULL;
 
   for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths);
        hi;
        hi = apr_hash_next(hi))
     {
       const char *path = apr_hash_this_key(hi);
+      svn_log_changed_path_t *change = apr_hash_this_val(hi);
+
       path = internalize(log->unique_paths, path, apr_hash_this_key_len(hi));
       APR_ARRAY_PUSH(entry->paths, const char *) = path;
+
+      if (change->action == 'D')
+        {
+          if (!entry->deletions)
+            entry->deletions = apr_array_make(result_pool, 4,
+                                              sizeof(const char *));
+
+          APR_ARRAY_PUSH(entry->deletions, const char *) = path;
+        }
     }
 
   count = entry->paths->nelts;
@@ -371,6 +384,35 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
 {
   return filter_ranges(log, path, ranges, below_path_outside_subtree,
                        subtree, result_pool);
+}
+
+svn_revnum_t
+svn_min__find_deletion(svn_min__log_t *log,
+                       const char *path,
+                       apr_pool_t *scratch_pool)
+{
+  int i, k;
+  for (i = log->entries->nelts - 1; i >= 0; --i)
+    {
+      const log_entry_t *entry = APR_ARRAY_IDX(log->entries, i,
+                                               const log_entry_t *);
+      if (!entry->deletions)
+        continue;
+
+      if (!is_relevant(entry->common_base, path, NULL))
+        continue;
+
+      for (k = 0; k < entry->deletions->nelts; ++k)
+        {
+          const char *deleted_path
+            = APR_ARRAY_IDX(entry->paths, k, const char *);
+
+          if (in_subtree(deleted_path, path, NULL))
+            return entry->revision;
+        }
+    }
+
+  return SVN_INVALID_REVNUM;
 }
 
 svn_error_t *

@@ -768,6 +768,7 @@ processing_title(svn_min__opt_state_t *opt_state,
 
 static svn_error_t *
 show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
+                       svn_min__log_t *log,
                        svn_min__opt_state_t *opt_state,
                        apr_pool_t *scratch_pool)
 {
@@ -793,10 +794,18 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
                              paths->nelts));
   for (i = 0; i < paths->nelts; ++i)
     {
+      svn_revnum_t deletion_rev; 
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_cmdline_printf(iterpool, _("    %s\n"), path));
+      deletion_rev = log ? svn_min__find_deletion(log, path, iterpool)
+                         : SVN_INVALID_REVNUM;
+
+      if (SVN_IS_VALID_REVNUM(deletion_rev))
+        SVN_ERR(svn_cmdline_printf(iterpool, _("    [r%ld] %s\n"),
+                                   deletion_rev, path));
+      else
+        SVN_ERR(svn_cmdline_printf(iterpool, _("    %s\n"), path));
     }
 
   svn_pool_destroy(iterpool);
@@ -878,7 +887,8 @@ svn_min__run_normalize(apr_getopt_t *os,
       SVN_ERR(svn_min__remove_empty_mergeinfo(wc_mergeinfo));
 
       /* Show a summary of deleted branches. */
-      SVN_ERR(show_obsoletes_summary(lookup, cmd_baton->opt_state, iterpool));
+      SVN_ERR(show_obsoletes_summary(lookup, log, cmd_baton->opt_state,
+                                     iterpool));
 
       /* show results */
       if (!cmd_baton->opt_state->quiet)
