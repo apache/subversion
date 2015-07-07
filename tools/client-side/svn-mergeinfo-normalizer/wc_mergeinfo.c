@@ -295,7 +295,7 @@ svn_min__write_mergeinfo(svn_min__cmd_baton_t *baton,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
-  for (i = 0, dest = 0; i < mergeinfo->nelts; ++i)
+  for (i = 0; i < mergeinfo->nelts; ++i)
     {
       mergeinfo_t *entry = APR_ARRAY_IDX(mergeinfo, i, mergeinfo_t *);
       svn_string_t *propval = NULL;
