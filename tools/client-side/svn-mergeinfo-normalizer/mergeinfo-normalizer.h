@@ -152,6 +152,9 @@ svn_min__write_mergeinfo(svn_min__cmd_baton_t *baton,
                          apr_pool_t *scratch_pool);
 
 svn_error_t *
+svn_min__remove_empty_mergeinfo(apr_array_header_t *mergeinfo);
+
+svn_error_t *
 svn_min__print_mergeinfo_stats(apr_array_header_t *wc_mergeinfo,
                                apr_pool_t *scratch_pool);
 
