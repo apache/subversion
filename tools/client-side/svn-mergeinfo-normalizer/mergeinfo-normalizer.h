@@ -180,6 +180,11 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
                                    svn_rangelist_t *ranges,
                                    apr_pool_t *result_pool);
 
+svn_revnum_t
+svn_min__find_deletion(svn_min__log_t *log,
+                       const char *path,
+                       apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_min__print_log_stats(svn_min__log_t *log,
                          apr_pool_t *scratch_pool);
