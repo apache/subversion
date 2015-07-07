@@ -766,6 +766,44 @@ processing_title(svn_min__opt_state_t *opt_state,
   return result->data;
 }
 
+static svn_error_t *
+show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
+                       svn_min__opt_state_t *opt_state,
+                       apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *paths;
+  apr_pool_t *iterpool;
+  int i;
+
+  if (!opt_state->run_analysis || !opt_state->remove_obsoletes)
+    return SVN_NO_ERROR;
+
+  paths = svn_min__branch_deleted_list(lookup, scratch_pool, scratch_pool);
+  if (!paths->nelts)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                            _("\nNo deleted branches were detected.\n\n")));
+      return SVN_NO_ERROR;
+    }
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_cmdline_printf(iterpool,
+                             _("\nDetected %d deleted branches:\n"),
+                             paths->nelts));
+  for (i = 0; i < paths->nelts; ++i)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_cmdline_printf(iterpool, _("    %s\n"), path));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_min__run_normalize(apr_getopt_t *os,
@@ -834,10 +872,13 @@ svn_min__run_normalize(apr_getopt_t *os,
 
       /* write results to disk */
       svn_pool_clear(subpool);
-      if (cmd_baton->opt_state->dry_run)
-        SVN_ERR(svn_min__remove_empty_mergeinfo(wc_mergeinfo));
-      else
+      if (!cmd_baton->opt_state->dry_run)
         SVN_ERR(svn_min__write_mergeinfo(cmd_baton, wc_mergeinfo, subpool));
+
+      SVN_ERR(svn_min__remove_empty_mergeinfo(wc_mergeinfo));
+
+      /* Show a summary of deleted branches. */
+      SVN_ERR(show_obsoletes_summary(lookup, cmd_baton->opt_state, iterpool));
 
       /* show results */
       if (!cmd_baton->opt_state->quiet)

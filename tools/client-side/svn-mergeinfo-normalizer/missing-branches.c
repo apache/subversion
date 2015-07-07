@@ -31,6 +31,7 @@
 
 #include "svn_hash.h"
 #include "svn_pools.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 
 #include "mergeinfo-normalizer.h"
@@ -264,3 +265,27 @@ svn_min__branch_lookup(svn_boolean_t *deleted,
                                        scratch_pool));
 }
 
+apr_array_header_t *
+svn_min__branch_deleted_list(svn_min__branch_lookup_t *lookup,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *result = apr_array_make(result_pool,
+                                              apr_hash_count(lookup->deleted),
+                                              sizeof(const char *));
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(scratch_pool, lookup->deleted);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      apr_size_t len = apr_hash_this_key_len(hi);
+
+      APR_ARRAY_PUSH(result, const char *) = apr_pstrmemdup(result_pool,
+                                                            path, len);
+    }
+
+  svn_sort__array(result, svn_sort_compare_paths);
+
+  return result;
+}
