@@ -958,9 +958,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not lib_dir:
       return
 
-    # Visual C++ doesn't have a standard compliant snprintf yet
-    # (Will probably be added in VS2013 + 1)
-    defines = ['snprintf=_snprintf']
+    # Visual C++ prior to VS2015 doesn't have a standard compliant snprintf
+    if self.vs_version < '2015':
+      defines = ['snprintf=_snprintf']
+    else:
+      defines = []
 
     ver = ruby_version.split('.')
     ver = tuple(map(int, ver))
