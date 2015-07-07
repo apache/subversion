@@ -197,6 +197,11 @@ svn_min__branch_lookup(svn_boolean_t *deleted,
                        svn_boolean_t local_only,
                        apr_pool_t *scratch_pool);
 
+apr_array_header_t *
+svn_min__branch_deleted_list(svn_min__branch_lookup_t *lookup,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_min__run_normalize(apr_getopt_t *os,
                        void *baton,
