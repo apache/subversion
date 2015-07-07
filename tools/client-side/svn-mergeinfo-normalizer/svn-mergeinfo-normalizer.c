@@ -234,7 +234,8 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
     ("Generate a report of which part of the sub-tree mergeinfo\n"
      "can be removed and which part can't.\n"
      "usage: remove-ranges [WCPATH...]\n"),
-    {opt_targets, opt_depth, opt_dry_run} },
+    {opt_targets, opt_depth, 'v',
+     opt_remove_obsoletes, opt_remove_redundant, opt_combine_ranges} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
