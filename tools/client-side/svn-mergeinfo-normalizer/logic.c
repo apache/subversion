@@ -351,12 +351,19 @@ remove_lines(svn_min__log_t *log,
       SVN_ERR(svn_rangelist_diff(&parent_only, &subtree_only,
                                  parent_ranges, subtree_ranges, FALSE,
                                  iterpool));
-      subtree_only
-        = svn_min__operative(log, subtree_path, parent_only, iterpool);
 
+      /* From the set of revisions missing on the parent, remove those that
+         don't actually affect the sub-tree.  Those can safely be ignored. */
+      subtree_only
+        = svn_min__operative(log, subtree_path, subtree_only, iterpool);
+
+      /* Find revs that are missing in the parent m/i but affect paths
+         outside the sub-tree. */
       operative_outside_subtree
         = svn_min__operative_outside_subtree(log, parent_path, subtree_path,
                                              subtree_only, iterpool);
+
+      /* Find revs that are sub-tree m/i but affect paths in the sub-tree. */
       operative_in_subtree
         = svn_min__operative(log, subtree_path, parent_only, iterpool);
 
