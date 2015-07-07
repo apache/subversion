@@ -925,11 +925,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
     # and deprecated Config." warning if we are using Ruby 1.9.
     fp = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
-                  "puts Config::CONFIG['ruby_version'];"
-                  "puts Config::CONFIG['LIBRUBY'];"
-                  "puts Config::CONFIG['libdir'];"
-                  "puts Config::CONFIG['rubyhdrdir'];"
-                  "puts Config::CONFIG['arch'];"), 'r')
+                  "puts RbConfig::CONFIG['ruby_version'];"
+                  "puts RbConfig::CONFIG['LIBRUBY'];"
+                  "puts RbConfig::CONFIG['libdir'];"
+                  "puts RbConfig::CONFIG['rubyhdrdir'];"
+                  "puts RbConfig::CONFIG['arch'];"), 'r')
     try:
       line = fp.readline()
       if line:
