@@ -81,7 +81,7 @@ show_missing_parent(const char *subtree_path,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
-  if (!opt_state->verbose)
+  if (!opt_state->verbose && !opt_state->run_analysis)
     return SVN_NO_ERROR;
 
   if (misaligned)
@@ -102,7 +102,10 @@ show_reverse_ranges(const char *subtree_path,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
-  if (opt_state->verbose && reverse_ranges->nelts)
+  if (reverse_ranges->nelts)
+    return SVN_NO_ERROR;
+
+  if (opt_state->verbose || opt_state->run_analysis)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                  _("    Reverse range(s) found for %s:\n"),
@@ -122,10 +125,7 @@ show_branch_elision(const char *branch,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
-  if (!opt_state->verbose)
-    return SVN_NO_ERROR;
-
-  if (!subtree_only->nelts && !parent_only->nelts)
+  if (opt_state->verbose && !subtree_only->nelts && !parent_only->nelts)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                               _("    elide redundant branch %s\n"),
@@ -135,19 +135,22 @@ show_branch_elision(const char *branch,
 
   if (operative_outside_subtree->nelts || operative_in_subtree->nelts)
     {
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                  _("    CANNOT elide branch %s\n"),
-                                  branch));
-      if (operative_outside_subtree->nelts)
-        SVN_ERR(print_ranges(operative_outside_subtree,
-                              _("revisions not movable to parent: "),
-                              scratch_pool));
-      if (operative_in_subtree->nelts)
-        SVN_ERR(print_ranges(operative_in_subtree,
-                              _("revisions missing in sub-node: "),
-                              scratch_pool));
+      if (opt_state->verbose || opt_state->run_analysis)
+        {
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                      _("    CANNOT elide branch %s\n"),
+                                      branch));
+          if (operative_outside_subtree->nelts)
+            SVN_ERR(print_ranges(operative_outside_subtree,
+                                  _("revisions not movable to parent: "),
+                                  scratch_pool));
+          if (operative_in_subtree->nelts)
+            SVN_ERR(print_ranges(operative_in_subtree,
+                                  _("revisions missing in sub-node: "),
+                                  scratch_pool));
+        }
     }
-  else
+  else if (opt_state->verbose)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                   _("    elide branch %s\n"),
@@ -526,23 +529,30 @@ show_elision_header(const char *parent_path,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
-  if (!opt_state->verbose)
-    return SVN_NO_ERROR;
-
-  if (*relpath)
-    SVN_ERR(svn_cmdline_printf(scratch_pool,
-                               _("Trying to elide mergeinfo from path\n"
-                                 "    %s\n"
-                                 "    into mergeinfo at path\n"
-                                 "    %s\n\n"),
-                               svn_dirent_join(parent_path, relpath,
-                                               scratch_pool),
-                               parent_path));
-  else
-    SVN_ERR(svn_cmdline_printf(scratch_pool,
-                               _("Trying to elide mergeinfo at path\n"
-                                 "    %s\n\n"),
-                               parent_path));
+  if (opt_state->verbose)
+    {
+      if (*relpath)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                  _("Trying to elide mergeinfo from path\n"
+                                    "    %s\n"
+                                    "    into mergeinfo at path\n"
+                                    "    %s\n\n"),
+                                  svn_dirent_join(parent_path, relpath,
+                                                  scratch_pool),
+                                  parent_path));
+      else
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                  _("Trying to elide mergeinfo at path\n"
+                                    "    %s\n\n"),
+                                  parent_path));
+    }
+  else if (opt_state->run_analysis)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                _("Trying to elide mergeinfo at path %s\n"),
+                                svn_dirent_join(parent_path, relpath,
+                                                scratch_pool)));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -564,41 +574,58 @@ show_elision_result(svn_mergeinfo_t parent_mergeinfo,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
-  if (!opt_state->verbose)
-    return SVN_NO_ERROR;
-
-  if (apr_hash_count(subtree_mergeinfo))
+  if (opt_state->verbose)
     {
-      apr_array_header_t *sorted_mi;
-      int i;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      if (apr_hash_count(subtree_mergeinfo))
+        {
+          apr_array_header_t *sorted_mi;
+          int i;
+          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-      if (parent_mergeinfo)
-        SVN_ERR(svn_cmdline_printf(scratch_pool,
-                  _("\n    Sub-tree merge info cannot be elided due to "
-                    "the following branches:\n")));
-      else
-        SVN_ERR(svn_cmdline_printf(scratch_pool,
+          if (parent_mergeinfo)
+            SVN_ERR(svn_cmdline_printf(scratch_pool,
+                      _("\n    Sub-tree merge info cannot be elided due to "
+                        "the following branches:\n")));
+          else
+            SVN_ERR(svn_cmdline_printf(scratch_pool,
                   _("\n    Merge info kept for the following branches:\n")));
 
-      sorted_mi = svn_sort__hash(subtree_mergeinfo,
-                                 svn_sort_compare_items_lexically,
-                                 scratch_pool);
-      for (i = 0; i < sorted_mi->nelts; ++i)
-        {
-          const char *branch = APR_ARRAY_IDX(sorted_mi, i,
-                                              svn_sort__item_t).key;
-          svn_pool_clear(iterpool);
-          SVN_ERR(svn_cmdline_printf(scratch_pool, _("    %s\n"), branch));
-        }
+          sorted_mi = svn_sort__hash(subtree_mergeinfo,
+                                    svn_sort_compare_items_lexically,
+                                    scratch_pool);
+          for (i = 0; i < sorted_mi->nelts; ++i)
+            {
+              const char *branch = APR_ARRAY_IDX(sorted_mi, i,
+                                                  svn_sort__item_t).key;
+              svn_pool_clear(iterpool);
+              SVN_ERR(svn_cmdline_printf(scratch_pool, _("    %s\n"),
+                                         branch));
+            }
 
-      SVN_ERR(svn_cmdline_printf(scratch_pool, _("\n")));
-      svn_pool_destroy(iterpool);
+          SVN_ERR(svn_cmdline_printf(scratch_pool, _("\n")));
+          svn_pool_destroy(iterpool);
+        }
+      else
+        {
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
+                    _("\n    All sub-tree mergeinfo has been elided.\n\n")));
+        }
     }
-  else
+  else if (opt_state->run_analysis)
     {
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                _("\n    All sub-tree mergeinfo has be elided.\n\n")));
+      if (apr_hash_count(subtree_mergeinfo))
+        {
+          if (parent_mergeinfo)
+            SVN_ERR(svn_cmdline_printf(scratch_pool, _("\n")));
+          else
+            SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                   _("    Keeping top-level mergeinfo.\n")));
+        }
+      else
+        {
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
+                      _("    All sub-tree mergeinfo has been elided.\n\n")));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -686,7 +713,8 @@ normalize(apr_array_header_t *wc_mergeinfo,
                                   opt_state, scratch_pool));
 
       /* Print progress info. */
-      if (!opt_state->verbose && !opt_state->quiet && i % 100 == 0)
+      if (   !opt_state->verbose && !opt_state->run_analysis
+          && !opt_state->quiet && i % 100 == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, "    %s.\n",
                                    progress_string(&progress, opt_state,
                                                    iterpool, iterpool)));
