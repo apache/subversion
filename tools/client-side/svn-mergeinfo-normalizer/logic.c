@@ -834,7 +834,9 @@ svn_min__run_normalize(apr_getopt_t *os,
 
       /* write results to disk */
       svn_pool_clear(subpool);
-      if (!cmd_baton->opt_state->dry_run)
+      if (cmd_baton->opt_state->dry_run)
+        SVN_ERR(svn_min__remove_empty_mergeinfo(wc_mergeinfo));
+      else
         SVN_ERR(svn_min__write_mergeinfo(cmd_baton, wc_mergeinfo, subpool));
 
       /* show results */
