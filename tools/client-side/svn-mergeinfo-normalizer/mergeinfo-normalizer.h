@@ -42,6 +42,8 @@ extern "C" {
 
 /*** Command dispatch. ***/
 
+typedef struct svn_min__branch_lookup_t svn_min__branch_lookup_t;
+
 /* Hold results of option processing that are shared by multiple
    commands. */
 typedef struct svn_min__opt_state_t
@@ -61,6 +63,7 @@ typedef struct svn_min__opt_state_t
   svn_boolean_t dry_run;         /* try operation but make no changes */
   const char *config_dir;        /* over-riding configuration directory */
   apr_array_header_t *config_options; /* over-riding configuration options */
+  svn_stringbuf_t *filedata;     /* contents read from --file argument */
 
   /* Selected normalization operations. */
   svn_boolean_t remove_obsoletes;
@@ -87,6 +90,8 @@ typedef struct svn_min__cmd_baton_t
   const char *local_abspath;
   const char *wc_root;
   const char *repo_root;
+
+  svn_min__branch_lookup_t *lookup;
 } svn_min__cmd_baton_t;
 
 
@@ -94,7 +99,8 @@ typedef struct svn_min__cmd_baton_t
 svn_opt_subcommand_t
   svn_min__help,
   svn_min__normalize,
-  svn_min__analyze;
+  svn_min__analyze,
+  svn_min__remove_branches;
 
 /* See definition in svn.c for documentation. */
 extern const svn_opt_subcommand_desc2_t svn_min__cmd_table[];
@@ -189,11 +195,13 @@ svn_error_t *
 svn_min__print_log_stats(svn_min__log_t *log,
                          apr_pool_t *scratch_pool);
 
-typedef struct svn_min__branch_lookup_t svn_min__branch_lookup_t;
-
 svn_min__branch_lookup_t *
 svn_min__branch_lookup_create(svn_ra_session_t *session,
                               apr_pool_t *result_pool);
+
+svn_min__branch_lookup_t *
+svn_min__branch_lookup_from_paths(apr_array_header_t *paths,
+                                  apr_pool_t *result_pool);
 
 svn_error_t *
 svn_min__branch_lookup(svn_boolean_t *deleted,

@@ -101,6 +101,7 @@ const apr_getopt_option_t svn_min__options[] =
   {NULL,            '?', 0, N_("show help on a subcommand")},
   {"quiet",         'q', 0, N_("print nothing, or only summary information")},
   {"version",       opt_version, 0, N_("show program version information")},
+  {"file",          'F', 1, N_("read log message from file ARG")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
   {"password",      opt_auth_password, 1,
@@ -233,9 +234,15 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
   { "analyze", svn_min__analyze, { "analyse" }, N_
     ("Generate a report of which part of the sub-tree mergeinfo\n"
      "can be removed and which part can't.\n"
-     "usage: remove-ranges [WCPATH...]\n"),
+     "usage: analyze [WCPATH...]\n"),
     {opt_targets, opt_depth, 'v',
      opt_remove_obsoletes, opt_remove_redundant, opt_combine_ranges} },
+
+  { "remove-branches", svn_min__remove_branches, { 0 }, N_
+    ("Read a list of branch names from the given file and remove all\n"
+     "mergeinfo referring to these branches from the given targets.\n"
+     "usage: remove-branches [WCPATH...] --file FILE\n"),
+    {opt_targets, opt_depth, opt_dry_run, 'q', 'v', 'F'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -303,7 +310,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_array_header_t *received_opts;
   int i;
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
-  svn_min__cmd_baton_t command_baton;
+  svn_min__cmd_baton_t command_baton = { 0 };
   svn_auth_baton_t *ab;
   svn_config_t *cfg_config;
   svn_boolean_t interactive_conflicts = FALSE;
@@ -371,6 +378,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case 'v':
         opt_state.verbose = TRUE;
+        break;
+      case 'F':
+        /* We read the raw file content here. */
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
+                                         utf8_opt_arg, pool));
         break;
       case opt_targets:
         {

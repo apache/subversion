@@ -828,7 +828,7 @@ svn_min__run_normalize(apr_getopt_t *os,
     {
       apr_array_header_t *wc_mergeinfo;
       svn_min__log_t *log = NULL;
-      svn_min__branch_lookup_t *lookup = NULL;
+      svn_min__branch_lookup_t *lookup = cmd_baton->lookup;
       const char *url;
       const char *common_path;
 
@@ -857,7 +857,7 @@ svn_min__run_normalize(apr_getopt_t *os,
         }
 
       /* open RA session */
-      if (needs_session(cmd_baton->opt_state))
+      if (!lookup && needs_session(cmd_baton->opt_state))
         {
           svn_ra_session_t *session;
 
