@@ -41,7 +41,8 @@
 
 struct svn_min__branch_lookup_t
 {
-  /* Connection to the repository where we are looking for paths. */
+  /* Connection to the repository where we are looking for paths.
+     If this is NULL, then only local lookups may be performed. */
   svn_ra_session_t *session;
 
   /* Keyed by const char * FS paths that are known not to exist.
@@ -234,6 +235,27 @@ svn_min__branch_lookup_create(svn_ra_session_t *session,
   return result;
 }
 
+svn_min__branch_lookup_t *
+svn_min__branch_lookup_from_paths(apr_array_header_t *paths,
+                                  apr_pool_t *result_pool)
+{
+  svn_min__branch_lookup_t *result
+    = svn_min__branch_lookup_create(NULL, result_pool);
+
+  int i;
+  for (i = 0; i < paths->nelts; ++i)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      if (strlen(path) > 0)
+        {
+          path = apr_pstrdup(result_pool, path);
+          svn_hash_sets(result->deleted, path, path);
+        }
+    }
+
+  return result;
+}
+
 svn_error_t *
 svn_min__branch_lookup(svn_boolean_t *deleted,
                        svn_min__branch_lookup_t *lookup,
@@ -253,8 +275,9 @@ svn_min__branch_lookup(svn_boolean_t *deleted,
 
       default:
         /* If the state is unknown and we are only allowed to do a local
-           lookup, default to a possible false negative. */
-        if (local_only)
+           lookup, default to a possible false negative.  Note that not
+           having the session available implies local-only lookup. */
+        if (local_only || !lookup->session)
           {
             *deleted = FALSE;
             return SVN_NO_ERROR;
