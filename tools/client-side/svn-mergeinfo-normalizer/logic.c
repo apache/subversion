@@ -108,7 +108,7 @@ show_reverse_ranges(const char *subtree_path,
   if (opt_state->verbose || opt_state->run_analysis)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 _("    Reverse range(s) found for %s:\n"),
+                                 _("    REVERSE RANGE(S) found for %s:\n"),
                                  subtree_path));
       SVN_ERR(print_ranges(reverse_ranges, "", scratch_pool));
     }
