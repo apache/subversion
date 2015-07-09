@@ -11,10 +11,7 @@ Features implemented:
   The user may then explicitly merge those sub-tree specific changes
   and retry afterwards.
 
-* clear-obsoletes
-  Removes all mergeinfo for branches that don't exist in HEAD.
-
-* normalize
+* normalize --remove-redundant
   Removes all mergeinfo from a node, if *all* of it is either
   - redundant with the parent contents
     (same ranges for the respective branches)
@@ -28,15 +25,17 @@ Features implemented:
   "parent" means the next higher node in the working copy that also
   has mergeinfo on it.
 
-* combine-ranges
-  Combines neighboring ranges if they are compatible (same "inheritable"
-  flag) and the revisions in between are inoperative on the respective
-  path.
+* normalize --remove-obsolete
+  Remove mergeinfo for branches that no longer exist repo@HEAD.
+
+* normalize --combine-ranges
+  Combine adjacent revision ranges if any separating revisions are
+  inoperative on the respective sub-tree.
+
+* remove-branches
+  Remove mergeinfo referring to the given branches from the working copy.
 
 TODO:
 
-* Proper documentation (docstrings etc.)
-* Progress output
-* Remove redundant code
-* Decide upon sub-command set / granularity
+* Proper docstrings
 * Verify that results are actually equivalent to original state
