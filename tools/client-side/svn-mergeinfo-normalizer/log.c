@@ -52,6 +52,7 @@ typedef struct log_entry_t
 struct svn_min__log_t
 {
   apr_hash_t *unique_paths;
+  apr_pool_t *pool;
 
   svn_revnum_t first_rev;
   svn_revnum_t head_rev;
@@ -63,12 +64,13 @@ struct svn_min__log_t
 static const char *
 internalize(apr_hash_t *unique_paths,
             const char *path,
-            apr_ssize_t path_len)
+            apr_ssize_t path_len,
+            apr_pool_t *result_pool)
 {
   const char *result = apr_hash_get(unique_paths, path, path_len);
   if (result == NULL)
     {
-      result = apr_pstrmemdup(apr_hash_pool_get(unique_paths), path, path_len);
+      result = apr_pstrmemdup(result_pool, path, path_len);
       apr_hash_set(unique_paths, result, path_len, result);
     }
 
@@ -104,7 +106,8 @@ log_entry_receiver(void *baton,
       const char *path = apr_hash_this_key(hi);
       svn_log_changed_path_t *change = apr_hash_this_val(hi);
 
-      path = internalize(log->unique_paths, path, apr_hash_this_key_len(hi));
+      path = internalize(log->unique_paths, path, apr_hash_this_key_len(hi),
+                         log->pool);
       APR_ARRAY_PUSH(entry->paths, const char *) = path;
 
       if (change->action == 'D')
@@ -131,7 +134,7 @@ log_entry_receiver(void *baton,
                       APR_ARRAY_IDX(entry->paths, count - 1, const char *),
                       scratch_pool);
       entry->common_base = internalize(log->unique_paths, common_base,
-                                       strlen(common_base));
+                                       strlen(common_base), log->pool);
     }
 
   APR_ARRAY_PUSH(log->entries, log_entry_t *) = entry;
@@ -177,7 +180,8 @@ svn_min__log(svn_min__log_t **log,
   revprops = apr_array_make(scratch_pool, 0, sizeof(const char *));
 
   result = apr_pcalloc(result_pool, sizeof(*result));
-  result->unique_paths = svn_hash__make(result_pool);
+  result->unique_paths = svn_hash__make(scratch_pool);
+  result->pool = result_pool;
   result->first_rev = SVN_INVALID_REVNUM;
   result->head_rev = SVN_INVALID_REVNUM;
   result->entries = apr_array_make(result_pool, 1024, sizeof(log_entry_t *));
@@ -205,13 +209,15 @@ svn_min__log(svn_min__log_t **log,
                           scratch_pool));
 
   svn_sort__array_reverse(result->entries, scratch_pool);
-  *log = result;
 
   if (!baton->opt_state->quiet)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
       SVN_ERR(svn_min__print_log_stats(result, scratch_pool));
     }
+
+  result->unique_paths = NULL;
+  *log = result;
 
   return SVN_NO_ERROR;
 }
