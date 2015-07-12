@@ -160,7 +160,6 @@ remote_lookup(svn_boolean_t *deleted,
               apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *path = svn_stringbuf_create(branch, scratch_pool);
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* We shall call this function only after the local lookup failed. */
   assert(local_lookup(lookup, branch) == svn_tristate_unknown);
@@ -171,12 +170,65 @@ remote_lookup(svn_boolean_t *deleted,
   /* If the path did not exist, store the furthest non-existent parent. */
   if (*deleted)
     {
-      svn_boolean_t parent_deleted;
+      apr_pool_t *iterpool;
+      svn_boolean_t is_deleted;
       const char *deleted_path;
       apr_size_t len;
 
+      /* Find the closest parent that exists.  Often, that is something like
+         "branches" and the next level already does not exist.  So, use that
+         as a heuristics to minimize the number of lookups. */
+
+      /* Set LEN to the length of the last unknown to exist sub-path. */
+      svn_stringbuf_t *temp = svn_stringbuf_dup(path, scratch_pool);
+      do
+        {
+          len = temp->len;
+          to_parent(temp);
+        }
+      while (local_lookup(lookup, temp->data) != svn_tristate_true);
+
+      /* Check whether that path actually does not exist. */
+      if (len == path->len)
+        {
+          /* We already know that the full PATH does not exist.
+             We get here if the immediate parent of PATH is known to exist. */
+          is_deleted = TRUE;
+        }
+      else
+        {
+          temp = svn_stringbuf_ncreate(branch, len, scratch_pool);
+          SVN_ERR(path_deleted(&is_deleted, lookup->session, temp->data,
+                               scratch_pool));
+        }
+
+      /* Whether or not that path does not exist, we know now and should
+         store that in LOOKUP. */
+      if (is_deleted)
+        {
+          /* We are almost done here. The existing parent is already in
+             LOOKUP and we only need to add the deleted path. */
+          deleted_path = apr_pstrmemdup(apr_hash_pool_get(lookup->deleted),
+                                        branch, len);
+          apr_hash_set(lookup->deleted, deleted_path, len, deleted_path);
+
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* We just learned that TEMP does exist. Remember this fact and
+             later continue the search for the deletion boundary. */
+          const char *hash_path
+            = apr_pstrmemdup(apr_hash_pool_get(lookup->existing), temp->data,
+                             temp->len);
+
+          /* Only add HASH_PATH.  Its parents are already in that hash. */
+          apr_hash_set(lookup->existing, hash_path, path->len, hash_path);
+        }
+
       /* Find the closest parent that does exist.
         "/" exists, hence, this will terminate. */
+      iterpool = svn_pool_create(scratch_pool);
       do
         {
           svn_pool_clear(iterpool);
@@ -184,16 +236,17 @@ remote_lookup(svn_boolean_t *deleted,
           len = path->len;
           to_parent(path);
 
-          /* We often know that "/branches" etc. to exist.  So, we can skip
+          /* We often know that "/branches" etc. exist.  So, we can skip
              the final lookup in that case. */
           if (local_lookup(lookup, path->data) == svn_tristate_true)
             break;
 
           /* Get the info from the repository. */
-          SVN_ERR(path_deleted(&parent_deleted, lookup->session, path->data,
-                               iterpool));
+          SVN_ERR(path_deleted(&is_deleted, lookup->session, path->data,
+                              iterpool));
         }
-      while (parent_deleted);
+      while (is_deleted);
+      svn_pool_destroy(iterpool);
 
       /* PATH exists, it's sub-path of length LEN does not. */
       deleted_path = apr_pstrmemdup(apr_hash_pool_get(lookup->deleted),
@@ -216,8 +269,6 @@ remote_lookup(svn_boolean_t *deleted,
       for (; path->len > 1; to_parent(path))
         apr_hash_set(lookup->existing, hash_path, path->len, hash_path);
     }
-
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
