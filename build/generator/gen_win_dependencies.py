@@ -925,11 +925,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
     # and deprecated Config." warning if we are using Ruby 1.9.
     fp = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
-                  "puts Config::CONFIG['ruby_version'];"
-                  "puts Config::CONFIG['LIBRUBY'];"
-                  "puts Config::CONFIG['libdir'];"
-                  "puts Config::CONFIG['rubyhdrdir'];"
-                  "puts Config::CONFIG['arch'];"), 'r')
+                  "puts RbConfig::CONFIG['ruby_version'];"
+                  "puts RbConfig::CONFIG['LIBRUBY'];"
+                  "puts RbConfig::CONFIG['libdir'];"
+                  "puts RbConfig::CONFIG['rubyhdrdir'];"
+                  "puts RbConfig::CONFIG['arch'];"), 'r')
     try:
       line = fp.readline()
       if line:
@@ -958,9 +958,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not lib_dir:
       return
 
-    # Visual C++ doesn't have a standard compliant snprintf yet
-    # (Will probably be added in VS2013 + 1)
-    defines = ['snprintf=_snprintf']
+    # Visual C++ prior to VS2015 doesn't have a standard compliant snprintf
+    if self.vs_version < '2015':
+      defines = ['snprintf=_snprintf']
+    else:
+      defines = []
 
     ver = ruby_version.split('.')
     ver = tuple(map(int, ver))
