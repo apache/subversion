@@ -2523,7 +2523,12 @@ execute(svnmover_wc_t *wc,
 {
   svn_editor3_t *editor;
   const char *base_relpath;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  /* This pool is passed to svn_branch_merge() and needs to be a
+     subpool of the pool used to allocate the e_map members of the
+     data passed to the function.  The pool relationship is required
+     by apr_hash_overlay() to guarantee the lifetime of the resulting
+     hash. */
+  apr_pool_t *iterpool = svn_pool_create(wc->pool);
   int i;
 
   editor = wc->editor;
