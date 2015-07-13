@@ -62,7 +62,7 @@
 
 /* Default code for all wrapped proxy classes in Python */
 %define %proxy_pythoncode(TYPE)
-%pythoncode %{
+%pythoncode {
   def set_parent_pool(self, parent_pool=None):
     """Create a new proxy object for TYPE"""
     import libsvn.core, weakref
@@ -104,7 +104,7 @@
     self.__dict__.setdefault("_members",{})[name] = value
 
     return _swig_setattr(self, self.__class__, name, value)
-%}
+}
 %enddef
 
 /* Define a proxy for wrapping an existing struct */
