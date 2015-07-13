@@ -81,7 +81,8 @@ def _get_term_width():
   def ioctl_GWINSZ(fd):
     try:
       import fcntl, termios, struct, os
-      cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+      cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
+                                           struct.pack('hh', 0, 0)))
     except:
       return None
     return cr
