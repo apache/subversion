@@ -2083,12 +2083,15 @@ do_move(svn_editor3_t *editor,
   /* Instantiate same elements in another branch */
   if (1 /*###*/)
     {
-      /* Here the elements moved from the source branch will overwrite any
-         corresponding elements that already exist in the target branch.
-         We could instead check and either throw an error or fall back to
-         copy-and-delete in that case. */
-
-      notify_v("mv: moving by branch-and-delete");
+      notify_v(
+        "mv: Moving by branch-and-delete, because the target of the requested "
+        "move is in a different branch.\n"
+        "In the current implementation of this experimental UI, each element "
+        "instance from the source branch subtree will overwrite any instance "
+        "of the same element that already exists in the target branch."
+        );
+      /* We could instead either throw an error or fall back to copy-and-delete
+         if any moved element already exists in target branch. */
 
       SVN_ERR(move_by_branch_and_delete(editor, el_rev,
                                         to_parent_el_rev->branch,
