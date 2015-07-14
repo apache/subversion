@@ -1385,6 +1385,72 @@ def merge_swap_abc(sbox):
                  expected_eids,
                  'merge X Y X@2')
 
+def move_to_related_branch_2(sbox):
+  "move to related branch 2"
+  sbox_build_svnmover(sbox)
+
+  expected_eids = svntest.wc.State('', {
+    ''      : Item(eid=0),
+    'X'     : Item(eid=2),
+    'X/A'   : Item(eid=3),
+    'X/A/B' : Item(eid=4),
+  })
+  test_svnmover3(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('X'),
+                 expected_eids,
+                 'mkbranch X ' +
+                 'mkdir X/A ' +
+                 'mkdir X/A/B')
+
+  expected_eids.add({
+    'Y'     : Item(eid=2),
+    'Y/A'   : Item(eid=3),
+    'Y/A/B' : Item(eid=4),
+  })
+  test_svnmover3(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('Y'),
+                 expected_eids,
+                 'branch X Y')
+
+  expected_eids.add({
+    'X/A/ax'   : Item(eid=6),
+    'X/A/B/bx' : Item(eid=7),
+    'Y/A/ay'   : Item(eid=8),
+    'Y/A/B/by' : Item(eid=9),
+  })
+  test_svnmover3(sbox, '',
+                 reported_br_diff('X') +
+                 reported_add('A/B/bx') +
+                 reported_add('A/ax') +
+                 reported_br_diff('Y') +
+                 reported_add('A/B/by') +
+                 reported_add('A/ay'),
+                 expected_eids,
+                 'mkdir X/A/ax ' +
+                 'mkdir X/A/B/bx ' +
+                 'mkdir Y/A/ay ' +
+                 'mkdir Y/A/B/by ')
+
+  # X and Y are related, X/A/B contains X/A/B/bx, Y/A/B contains Y/A/B/by.
+  # Moving X/A/B to Y/B, i.e. from X to Y, results in Y/B that contains
+  # both bx and by.
+  expected_eids.rename({'X/A/B' : 'Y/B'})
+  expected_eids.remove('Y/A/B', 'Y/A/B/by')
+  expected_eids.add({
+    'Y/B/by' : Item(eid=9),
+  })
+  test_svnmover3(sbox, '',
+                 reported_br_diff('X') +
+                 reported_del('A/B') +
+                 reported_del('A/B/bx') +
+                 reported_br_diff('Y') +
+                 reported_move('A/B', 'B') +
+                 reported_add('B/bx'),
+                 expected_eids,
+                 'mv X/A/B Y/B')
+
 ######################################################################
 
 test_list = [ None,
@@ -1407,6 +1473,7 @@ test_list = [ None,
               modify_payload_of_branch_root_element,
               merge_detects_clash_conflicts,
               merge_swap_abc,
+              move_to_related_branch_2,
             ]
 
 if __name__ == '__main__':
