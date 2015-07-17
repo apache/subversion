@@ -3350,7 +3350,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   static const apr_getopt_option_t options[] = {
     {"verbose", 'v', 0, ""},
     {"quiet", 'q', 0, ""},
-    {"branch", 'b', 1, ""},
     {"message", 'm', 1, ""},
     {"file", 'F', 1, ""},
     {"username", 'u', 1, ""},
@@ -3649,14 +3648,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
      ### TODO: Select a nested branch too, from the given id. */
   if (branch_id)
     {
-      int n;
-
-      n = sscanf(branch_id, "B%d", &top_branch_num);
-      printf("'%s' %d %d\n", branch_id, n, top_branch_num);
-      if (n != 1)
-        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                 _("invalid branch spec: '%s'"),
-                                 branch_id);
+      SVN_ERR_W(svn_cstring_atoi(&top_branch_num, branch_id),
+                _("Argument to the -B [--branch-id] option must be an integer"));
     }
 
   SVN_ERR(wc_create(&wc,
