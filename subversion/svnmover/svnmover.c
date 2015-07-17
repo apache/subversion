@@ -202,7 +202,6 @@ wc_checkout(svnmover_wc_t *wc,
 
   SVN_ERR(svn_editor3_in_memory(&wc->editor,
                                 edit_txn,
-                                wc->top_branch_num,
                                 fetch_func, fetch_baton,
                                 wc->pool));
 

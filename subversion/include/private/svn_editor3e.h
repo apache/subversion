@@ -1260,7 +1260,6 @@ svn_editor3__delta_from_ev3_for_update(
 svn_error_t *
 svn_editor3_in_memory(svn_editor3_t **editor_p,
                       svn_branch_revision_root_t *branching_txn,
-                      int top_branch_num,
                       svn_editor3__shim_fetch_func_t fetch_func,
                       void *fetch_baton,
                       apr_pool_t *result_pool);
