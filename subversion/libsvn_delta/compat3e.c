@@ -555,7 +555,6 @@ typedef struct ev3_from_delta_baton_t
 
   /* The branching state on which the per-element API is working */
   svn_branch_revision_root_t *edited_rev_root;
-  int top_branch_num;
 
   apr_pool_t *edit_pool;
 } ev3_from_delta_baton_t;
@@ -1310,11 +1309,14 @@ get_immediate_children_names(apr_hash_t *paths,
  * recursive add operation.) PRED_LOC identifies the node content that the
  * that the Ev1 edit needs to delete, replace, update or leave unchanged.
  *
+ * Process a single hierarchy of nested branches, rooted in the top-level
+ * branch TOP_BRANCH_NUM.
  */
 static svn_error_t *
 drive_changes_r(const char *rrpath,
                 svn_pathrev_t *pred_loc,
                 apr_hash_t *paths_final,
+                int top_branch_num,
                 ev3_from_delta_baton_t *eb,
                 apr_pool_t *scratch_pool)
 {
@@ -1368,7 +1370,7 @@ drive_changes_r(const char *rrpath,
       SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(
                                             &pred_el_rev,
                                             pred_loc->relpath,
-                                            eb->top_branch_num,
+                                            top_branch_num,
                                             pred_loc->rev,
                                             eb->edited_rev_root->repos,
                                             scratch_pool, scratch_pool));
@@ -1533,7 +1535,8 @@ drive_changes_r(const char *rrpath,
 
               SVN_ERR(drive_changes_r(this_rrpath,
                                       child_pred,
-                                      paths_final, eb, scratch_pool));
+                                      paths_final, top_branch_num,
+                                      eb, scratch_pool));
             }
         }
     }
@@ -1544,9 +1547,13 @@ drive_changes_r(const char *rrpath,
 /*
  * Drive svn_delta_editor_t (actions: add/copy/delete/modify) from
  * a before-and-after element mapping.
+ *
+ * Process a single hierarchy of nested branches, rooted in the top-level
+ * branch ROOT_BRANCH.
  */
 static svn_error_t *
 drive_changes_branch(ev3_from_delta_baton_t *eb,
+                     svn_branch_state_t *root_branch,
                      apr_pool_t *scratch_pool)
 {
   apr_hash_t *paths_final;
@@ -1561,8 +1568,7 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
   paths_final = apr_hash_make(scratch_pool);
   /* ### TODO: map paths of non-0 top-level branch to a hidden path space */
   convert_branch_to_paths_r(paths_final,
-                            svn_branch_revision_root_get_root_branch(
-                              eb->edited_rev_root, eb->top_branch_num),
+                            root_branch,
                             scratch_pool, scratch_pool);
 
   {
@@ -1570,7 +1576,8 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
 
     current.rev = eb->edited_rev_root->base_rev;
     SVN_ERR(drive_changes_r("", &current,
-                            paths_final, eb, scratch_pool));
+                            paths_final, root_branch->outer_eid,
+                            eb, scratch_pool));
   }
 
   /* If the driver has not explicitly opened the root directory via the
@@ -1605,11 +1612,15 @@ editor3_sequence_point(void *baton,
                        apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *b
-    = svn_branch_revision_root_get_root_branch(eb->edited_rev_root,
-                                               eb->top_branch_num);
+  int i;
 
-  svn_branch_purge_r(b, scratch_pool);
+  for (i = 0; i < eb->edited_rev_root->root_branches->nelts; i++)
+    {
+      svn_branch_state_t *b
+        = svn_branch_revision_root_get_root_branch(eb->edited_rev_root, i);
+
+      svn_branch_purge_r(b, scratch_pool);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1619,12 +1630,22 @@ editor3_complete(void *baton,
                  apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
+  int i;
   svn_error_t *err;
 
   SVN_ERR(editor3_sequence_point(baton, scratch_pool));
 
   /* Drive the tree we've created. */
-  err = drive_changes_branch(eb, scratch_pool);
+  for (i = 0; i < eb->edited_rev_root->root_branches->nelts; i++)
+    {
+      svn_branch_state_t *b
+        = svn_branch_revision_root_get_root_branch(eb->edited_rev_root, i);
+
+      err = drive_changes_branch(eb, b, scratch_pool);
+      if (err)
+        break;
+    }
+
   if (!err)
      {
        err = svn_error_compose_create(err, eb->deditor->close_edit(
@@ -1671,7 +1692,6 @@ editor3_mem_abort(void *baton,
 svn_error_t *
 svn_editor3_in_memory(svn_editor3_t **editor_p,
                       svn_branch_revision_root_t *branching_txn,
-                      int top_branch_num,
                       svn_editor3__shim_fetch_func_t fetch_func,
                       void *fetch_baton,
                       apr_pool_t *result_pool)
@@ -1694,7 +1714,6 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
                                  NULL, NULL /*cancel*/, result_pool);
 
   eb->edited_rev_root = branching_txn;
-  eb->top_branch_num = top_branch_num;
   eb->fetch_func = fetch_func;
   eb->fetch_baton = fetch_baton;
 
