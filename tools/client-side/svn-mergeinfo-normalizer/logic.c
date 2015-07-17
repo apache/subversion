@@ -202,6 +202,9 @@ remove_obsolete_line(svn_boolean_t *deleted,
                      svn_boolean_t local_only,
                      apr_pool_t *scratch_pool)
 {
+  if (!opt_state->remove_obsoletes)
+    return SVN_NO_ERROR;
+
   SVN_ERR(svn_min__branch_lookup(deleted, lookup, path, local_only,
                                  scratch_pool));
   if (*deleted)
