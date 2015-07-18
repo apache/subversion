@@ -765,7 +765,7 @@ II.   INSTALLATION
         https://social.msdn.microsoft.com/Forums/windowsdesktop/en-US/e1147034-9b0b-4494-a5bc-6dfebb6b7eb1/download-and-install-microsoft-platform-sdk-febuary-2003-last-version-with-vc6-support?forum=windowssdk
       * Python 2.5 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
-        Note that Python 3.x is not supported.
+        Note that Python 3.x is not supported (yet).
       * Perl 5.8 or higher from http://www.activestate.com/
       * Awk (from http://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe) is
         needed to compile Apache or APR.  Note that this is the actual awk
@@ -1016,7 +1016,7 @@ II.   INSTALLATION
         the APR libraries; the options are --with-apr, --with-apr-util and
         --with-apr-iconv.
       * If you would like a debug build substitute Debug for Release in
-        the msdev/msdbuild commands.
+        the msdev/msbuild commands.
       * There have been rumors that Subversion on Win32 can be built
         using the latest cygwin, you probably don't want the zip file source
         distribution though. ymmv.
