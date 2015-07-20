@@ -91,7 +91,15 @@ Candidate changes:
      Allow administrators to setup configurable limits on the size of
      skel-encoded requests.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
+
+ * ^/subversion/branches/1.8.x-VS2015
+   Allow builing Subversion 1.8.x with VS2015
+   Justification:
+     Allows building Subversion with the latest version of Visual Studio
+     without custom patches.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
