@@ -10,7 +10,7 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   sodipodi:docname="SvnBranches.svg"
+   sodipodi:docname="NestedBranches.svg"
    inkscape:version="0.91 r"
    version="1.1"
    id="svg2"
@@ -729,7 +729,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
         <cc:license
            rdf:resource="" />
       </cc:Work>
@@ -741,6 +741,14 @@
      id="Base"
      style="display:inline"
      transform="translate(0,-452.36)">
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1;stroke-miterlimit:0;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect3853"
+       width="500"
+       height="600"
+       x="0"
+       y="452.36"
+       ry="1.4648e-05" />
     <rect
        style="fill:#eeeeee;fill-opacity:1;stroke:none"
        id="rect4709"

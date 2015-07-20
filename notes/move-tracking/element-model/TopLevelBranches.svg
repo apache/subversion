@@ -505,6 +505,14 @@
      style="display:inline"
      transform="translate(0,-452.36)">
     <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1;stroke-miterlimit:0;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect3737"
+       width="500"
+       height="600"
+       x="0"
+       y="452.36"
+       ry="1.4648e-05" />
+    <rect
        style="fill:#eeeeee;fill-opacity:1;stroke:none"
        id="rect4709"
        width="430"
