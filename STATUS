@@ -32,6 +32,16 @@ Other candidate changes:
      +1: rhuijben, ivan
      +0.9: brane (The change looks trivially correct, but I can't test it)
 
+ * r1691928
+   Fix issue #4584, "Non-canonical $HOME crashes GPG-agent support code".
+   Justification:
+     Regression introduced in 1.8.11. Simple cause; simple fix.
+   Notes:
+     Also nominated for 1.8.x.
+     Trunk has a better fix, but less suitable for backporting, in r1691952.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
