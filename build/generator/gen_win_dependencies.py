@@ -118,9 +118,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'python',
         'ruby',
         'java_sdk',
+        'openssl',
+        'apr_memcache',
 
         # So optional, we don't even have any code to detect them on Windows
-        'apr_memcache',
         'magic',
   ]
 
