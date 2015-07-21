@@ -47,6 +47,14 @@ Other candidate changes:
                    change that can't be backported. I would call it a bugfix
                    that should be backported)
 
+ * r1689721, r1689729, r1691924, r1692091, r1692093, r1692098
+   Improve optional dependency handling in VS project generator.
+   Justification:
+     Fixes compilation with VS2015 when Ruby is found and with all VS versions
+     when serf and openssl are not available.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
