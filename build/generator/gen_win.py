@@ -90,9 +90,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       printed.append(lib.name)
       print('Found %s %s' % (lib.name, lib.version))
 
-    if 'db' not in self._libraries:
-      print('BDB not found, BDB fs will not be built')
-
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it
     ### GJS: don't do this right now
