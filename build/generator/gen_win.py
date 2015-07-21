@@ -615,7 +615,10 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     elif mode == FILTER_EXTERNALLIBS:
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_static or (is_lib and not is_proj):
-          deps.append(dep)
+          # Filter explicit msvc libraries of optional dependencies
+          if (dep.name in self._libraries
+              or dep.name not in self._optional_libraries):
+            deps.append(dep)
     else:
       raise NotImplementedError
 
