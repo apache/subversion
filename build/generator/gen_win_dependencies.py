@@ -746,9 +746,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_bdb(self, show_warnings):
     "Find the Berkeley DB library and version"
 
-    # Default to not found
-    self.bdb_lib = None
-    
     # try default path to detect BDB support, unless different path is
     # specified so to keep pre 1.10-behavior for BDB detection on Windows
     bdb_path = 'db4-win32'
@@ -825,9 +822,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                               dll_name=dll_name,
                                               debug_dll_name=debug_dll_name,
                                               defines=defines)
-
-    # For compatibility with old code
-    self.bdb_lib = self._libraries['db'].lib_name
 
   def _find_openssl(self, show_warnings):
     "Find openssl"

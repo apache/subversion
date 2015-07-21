@@ -605,11 +605,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_proj:
           deps.append(dep)
-    elif mode == FILTER_LIBS:
-      for dep, (is_proj, is_lib, is_static) in dep_dict.items():
-        if is_static or (is_lib and not is_proj):
-          deps.append(dep)
-    elif mode == FILTER_EXTERNALLIBS:
+    elif mode == FILTER_LIBS or mode == FILTER_EXTERNALLIBS:
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_static or (is_lib and not is_proj):
           # Filter explicit msvc libraries of optional dependencies
