@@ -137,7 +137,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
     self.serf_path = None
-    self.bdb_path = 'db4-win32'
+    self.bdb_path = None
     self.httpd_path = None
     self.libintl_path = None
     self.zlib_path = 'zlib'
@@ -748,11 +748,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     # Default to not found
     self.bdb_lib = None
+    
+    # try default path to detect BDB support, unless different path is
+    # specified so to keep pre 1.10-behavior for BDB detection on Windows
+    bdb_path = 'db4-win32'
 
-    inc_path = os.path.join(self.bdb_path, 'include')
+    if self.bdb_path:
+      bdb_path = self.bdb_path
+    
+    inc_path = os.path.join(bdb_path, 'include')
     db_h_path = os.path.join(inc_path, 'db.h')
 
-    if not self.bdb_path or not os.path.isfile(db_h_path):
+    if not os.path.isfile(db_h_path):
       if show_warnings and self.bdb_path:
         print('WARNING: \'%s\' not found' % (db_h_path,))
         print("Use '--with-berkeley-db' to configure BDB location.");
@@ -782,7 +789,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
        ):
       return
 
-    lib_dir = os.path.join(self.bdb_path, 'lib')
+    lib_dir = os.path.join(bdb_path, 'lib')
     lib_name = 'libdb%s.lib' % (versuffix,)
 
     if not os.path.exists(os.path.join(lib_dir, lib_name)):
@@ -793,7 +800,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not os.path.isfile(os.path.join(lib_dir, debug_lib_name)):
       debug_lib_name = None
 
-    dll_dir = os.path.join(self.bdb_path, 'bin')
+    dll_dir = os.path.join(bdb_path, 'bin')
 
     # Are there binaries we should copy for testing?
     dll_name = os.path.splitext(lib_name)[0] + '.dll'
