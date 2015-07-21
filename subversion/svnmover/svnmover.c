@@ -366,30 +366,43 @@ svn_branch_replay(svn_editor3_t *editor,
             = s_right ? svn_int_hash_get(s_right->subbranches, this_eid) : NULL;
           svn_branch_state_t *edit_subbranch;
 
-          /* If the subbranch is to be added, first create a new edit branch;
-             if it is to be edited or deleted, then look up the edit branch */
+          /* If the subbranch is to be edited or deleted, first look up the
+             corresponding edit branch; or, if the subbranch is to be added,
+             create a new edit branch. */
           if (this_s_left)
             {
               edit_subbranch = svn_branch_get_subbranch_at_eid(
                                  edit_branch, this_eid, scratch_pool);
-              /*SVN_DBG(("replaying subbranch: found br %s (left=%s right=%s)",
-                       svn_branch_get_id(edit_subbranch, scratch_pool),
-                       svn_branch_get_id(branch_l, scratch_pool),
-                       branch_r ? svn_branch_get_id(branch_r, scratch_pool) : "<nil>"));*/
+              /* There might not be such a subbranch, for example if we are
+                 replaying into a txn based on an older base revision. Then
+                 what?
+
+                 For now, we leave EDIT_BRANCH as NULL and so drop all the
+                 changes.
+
+                 ### It may be better to create an edit branch and then
+                 attempt to apply the changes into it.
+
+                 ### Ultimately, the editor API should not require us to
+                 'create' a branch here outside the editor. Instead we we
+                 should just pass the subbranch id through to the editor,
+                 along with the changes to the subbranch, and let the editor
+                 decide how to handle it.
+               */
             }
           else
             {
               edit_subbranch = svn_branch_add_new_branch(
                                  edit_branch, this_eid,
                                  this_s_right->root_eid, scratch_pool);
-              /*SVN_DBG(("replaying subbranch: added br %s (right=%s)",
-                       svn_branch_get_id(edit_subbranch, scratch_pool),
-                       branch_r ? svn_branch_get_id(branch_r, scratch_pool) : "<nil>"));*/
             }
 
           /* recurse */
-          SVN_ERR(svn_branch_replay(editor, edit_subbranch,
-                                    this_s_left, this_s_right, scratch_pool));
+          if (edit_subbranch)
+            {
+              SVN_ERR(svn_branch_replay(editor, edit_subbranch,
+                                        this_s_left, this_s_right, scratch_pool));
+            }
         }
     }
 
