@@ -2342,18 +2342,22 @@ test_dirent_from_file_url(apr_pool_t *pool)
     { "file:///A%7Cdir",           "A:dir" },
     { "file:///A%7C%5Cdir",        "A:/dir" },
     { "file:///A%7C%5Cdir%5Cfile", "A:/dir\\file" },
+    { "file:///A:%5Cdir",          "A:/dir" },
+    { "file:///A:%5Cdir%5Cfile",   "A:/dir\\file" },
     { "file://localhost/A:%5Cfile","A:/file"},
     { "file://localhost/A:file",   "A:file"}
 #else
     { "file:///A:",                "/A:" },
     { "file:///A:/dir",            "/A:/dir" },
     { "file:///A:dir",             "/A:dir" },
-    { "file:///A%7C",              "/A:" },
-    { "file:///A%7C/dir",          "/A:/dir" },
-    { "file:///A%7Cdir",           "/A:dir" },
-    { "file:///A%7C%5Cdir",        "/A:\\dir" },
-    { "file:///A%7C%5Cdir%5Cfile", "/A:\\dir\\file" },
-    { "file://localhost/A:%5Cfile","/A:/file" },
+    { "file:///A%7C",              "/A|" },
+    { "file:///A%7C/dir",          "/A|/dir" },
+    { "file:///A%7Cdir",           "/A|dir" },
+    { "file:///A%7C%5Cdir",        "/A|\\dir" },
+    { "file:///A%7C%5Cdir%5Cfile", "/A|\\dir\\file" },
+    { "file:///A:%5Cdir",          "/A:\\dir" },
+    { "file:///A:%5Cdir%5Cfile",   "/A:\\dir\\file" },
+    { "file://localhost/A:%5Cfile","/A|/file" },
     { "file://localhost/A:file",   "/A:file" }
 #endif
   };
