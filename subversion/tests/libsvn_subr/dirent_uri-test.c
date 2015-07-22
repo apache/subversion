@@ -925,7 +925,7 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///c:/",           "file:///c:" },
-    { "file:///c:%2ftemp",     "file:///C:/temp"},
+    { "file:///c:%2ftemp",     "file:///c:/temp"},
     { "file:///C:hi",          "file:///C:hi" },
     { "file:///c:hi",          "file:///c:hi" },
     { "file:///C:hi/Q",        "file:///C:hi/Q" },
@@ -2369,7 +2369,7 @@ test_dirent_from_file_url(apr_pool_t *pool)
     { "file:///A%7C%5Cdir%5Cfile", "/A|\\dir\\file" },
     { "file:///A:%5Cdir",          "/A:\\dir" },
     { "file:///A:%5Cdir%5Cfile",   "/A:\\dir\\file" },
-    { "file://localhost/A:%5Cfile","/A|\\file" },
+    { "file://localhost/A:%5Cfile","/A:\\file" },
     { "file://localhost/A:file",   "/A:file" }
 #endif
   };
