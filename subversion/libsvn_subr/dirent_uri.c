@@ -495,12 +495,18 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 #ifdef SVN_USE_DOS_PATHS
       /* If this is the first path segment of a file:// URI and it contains a
          windows drive letter, convert the drive letter to upper case. */
-      else if (url && canon_segments == 1 && seglen == 2 &&
+      else if (url && canon_segments == 1 && seglen >= 2 &&
                (strncmp(canon, "file:", 5) == 0) &&
                src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
         {
           *(dst++) = canonicalize_to_upper(src[0]);
           *(dst++) = ':';
+          if (seglen > 2) /* drive relative path */
+            {
+              memcpy(dst, src + 2, seglen - 2);
+              dst += seglen - 2;
+            }
+
           if (*next)
             *(dst++) = *next;
           canon_segments++;
