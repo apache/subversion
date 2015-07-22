@@ -909,11 +909,19 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///c:/",           "file:///C:" },
+    { "file:///C:hi",          "file:///C:hi" },
+    { "file:///c:hi",          "file:///C:hi" },
+    { "file:///C:hi/Q",        "file:///C:hi/Q" },
+    { "file:///c:hi/q",        "file:///C:hi/q" },
 #else /* !SVN_USE_DOS_PATHS */
     { "file:///c:/temp/repos", "file:///c:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///c:/",           "file:///c:" },
+    { "file:///C:hi",          "file:///C:hi" },
+    { "file:///c:hi",          "file:///c:hi" },
+    { "file:///C:hi/Q",        "file:///C:hi/Q" },
+    { "file:///c:hi/q",        "file:///c:hi/q" },
 #endif /* SVN_USE_DOS_PATHS */
     /* Hostnames that look like non-canonical paths */
     { "file://./foo",             "file://./foo" },
