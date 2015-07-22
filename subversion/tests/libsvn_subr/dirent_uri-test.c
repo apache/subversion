@@ -931,8 +931,8 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "file:///C:hi/Q",        "file:///C:hi/Q" },
     { "file:///c:hi/q",        "file:///c:hi/q" },
     { "file:///c:hi%2fD",      "file:///c:hi/D" },
-    { "file:///c:hi%25/A",     "file:///c:hi%25/A" }
-    { "file:///c:hi%2E/A",     "file:///c:hi./A"}
+    { "file:///c:hi%25/A",     "file:///c:hi%25/A" },
+    { "file:///c:hi%2E/A",     "file:///c:hi./A"},
     { "file:///c:hi%/A",       "file:///c:hi%25/A"},
 #endif /* SVN_USE_DOS_PATHS */
     /* Hostnames that look like non-canonical paths */
