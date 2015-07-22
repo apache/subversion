@@ -20,7 +20,7 @@
 ]<?xml version="1.0" encoding="utf-8"?>
 [format "xml"]<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-[for configs][for platforms]    <ProjectConfiguration Include="[configs.name]|[platforms]">
+[for platforms][for configs]    <ProjectConfiguration Include="[configs.name]|[platforms]">
       <Configuration>[configs.name]</Configuration>
       <Platform>[platforms]</Platform>
     </ProjectConfiguration>
@@ -38,8 +38,10 @@
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-[for platforms][for configs]  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+[for platforms][for configs]  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
 [end][end]  <PropertyGroup Label="UserMacros" />
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
