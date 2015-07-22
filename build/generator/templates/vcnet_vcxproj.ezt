@@ -65,6 +65,10 @@
       <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4033;4047;4089;4113;4115;4133;4204;4715;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
 [if-any configs.forced_include_files]      <ForcedIncludeFiles>[for configs.forced_include_files][configs.forced_include_files];[end]%(ForcedIncludeFiles)</ForcedIncludeFiles>
 [end]    </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
 [is config_type "Application"]    <Link>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -88,10 +92,7 @@
 [end]    </Lib>
 [end][end][end]  </ItemDefinitionGroup>
 [end][end][if-any target.desc]  <ItemGroup>
-    <ResourceCompile Include="..\svn.rc">
-[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end];%(PreprocessorDefinitions)</PreprocessorDefinitions>
-[end][end]    </ResourceCompile>
+    <ResourceCompile Include="..\svn.rc" />
   </ItemGroup>
 [end]  <ItemGroup>
 [for sources][is sources.extension ".h"][else][is sources.extension ".hpp"][else][if-any sources.custom_build]    <CustomBuild Include="[sources.path]">
