@@ -41,6 +41,8 @@ Other candidate changes:
      Trunk has a better fix, but less suitable for backporting, in r1691952.
    Votes:
      +1: julianfoad
+     +1: danielsh (either with or without r1691952; haven't tried to reproduce,
+                   only reviewed the diff)
      +0: rhuijben (Can't test this part. +1 on the combination with r1691952.
                    I don't see returning a properly canonicalized path
                    instead of a potentially non canonical path as a breaking
