@@ -2398,8 +2398,11 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
         if (dup_path[1] == '|')
           dup_path[1] = ':';
 
-        if (dup_path[2] == '/' || dup_path[2] == '\0')
+        if (dup_path[2] == '/' || dup_path[2] == '\\' || dup_path[2] == '\0')
           {
+            /* Dirents have upper case drive letters in their canonical form */
+            dup_path[0] = canonicalize_to_upper(dup_path[0]);
+
             if (dup_path[2] == '\0')
               {
                 /* A valid dirent for the driveroot must be like "C:/" instead of
@@ -2412,6 +2415,8 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
                 new_path[3] = '\0';
                 dup_path = new_path;
               }
+            else
+              dup_path[2] = '/'; /* Ensure not relative for '\' after drive! */
           }
       }
     if (hostname)
