@@ -119,8 +119,8 @@ _re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
 #rN: eids 0 15 branches 4
 _re_parse_eid_header = re.compile('^r(-1|[0-9]+): eids ([0-9]+) ([0-9]+) '
                                   'branches ([0-9]+)$')
-# B0.2 root-eid 3 at X
-_re_parse_eid_branch = re.compile('^B([0-9.]+) root-eid ([0-9]+) at (.*)$')
+# B0.2 root-eid 3  # at /X
+_re_parse_eid_branch = re.compile('^B([0-9.]+) root-eid ([0-9]+)  # at /(.*)$')
 # e4: normal 6 C
 _re_parse_eid_ele = re.compile('^e([0-9]+): (none|normal|subbranch) '
                                '(-1|[0-9]+) (.*)$')
@@ -839,8 +839,6 @@ class State:
           parent_branch_eid = branches[match2.group(1)]
         root_eid = match.group(2)
         path = match.group(3)
-        if path == '.':
-          path = ''
         branch = [branch_eid, parent_branch_eid, root_eid, path]
 
     branches[branch[0]] = branch

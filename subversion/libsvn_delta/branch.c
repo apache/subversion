@@ -916,7 +916,7 @@ svn_branch_get_default_r0_metadata(apr_pool_t *result_pool)
 {
   static const char *default_repos_info
     = "r0: eids 0 1 branches 1\n"
-      "B0 root-eid 0 at .\n"
+      "B0 root-eid 0  # at /\n"
       "e0: normal -1 .\n";
 
   return svn_string_create(default_repos_info, result_pool);
@@ -926,27 +926,20 @@ svn_branch_get_default_r0_metadata(apr_pool_t *result_pool)
 static svn_error_t *
 parse_branch_line(char *bid_p,
                   int *root_eid_p,
-                  const char **path_p,
                   svn_stream_t *stream,
                   apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *line;
   svn_boolean_t eof;
   int n;
-  int offset;
 
   /* Read a line */
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(!eof);
 
-  n = sscanf(line->data, "%s root-eid %d at%n",
-             bid_p, root_eid_p, &offset);
+  n = sscanf(line->data, "%s root-eid %d",
+             bid_p, root_eid_p);
   SVN_ERR_ASSERT(n >= 2);  /* C std is unclear on whether '%n' counts */
-  SVN_ERR_ASSERT(line->data[offset] == ' ');
-  *path_p = line->data + offset + 1;
-
-  if (strcmp(*path_p, ".") == 0)
-    *path_p = "";
 
   return SVN_NO_ERROR;
 }
@@ -1026,13 +1019,12 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   char bid[1000];
   int root_eid;
   svn_branch_state_t *branch_state;
-  const char *branch_root_rrpath;
   svn_branch_state_t *outer_branch;
   int outer_eid;
   int eid;
   svn_branch_subtree_t *tree;
 
-  SVN_ERR(parse_branch_line(bid, &root_eid, &branch_root_rrpath,
+  SVN_ERR(parse_branch_line(bid, &root_eid,
                             stream, scratch_pool));
 
   /* Find the outer branch and outer EID */
@@ -1181,10 +1173,10 @@ svn_branch_state_serialize(svn_stream_t *stream,
   int eid;
 
   SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "%s root-eid %d at %s\n",
+                            "%s root-eid %d  # at /%s\n",
                             svn_branch_get_id(branch, scratch_pool),
                             branch->root_eid,
-                            branch_root_rrpath[0] ? branch_root_rrpath : "."));
+                            branch_root_rrpath));
 
   map_purge_orphans(branch->e_map, branch->root_eid, scratch_pool);
   for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
