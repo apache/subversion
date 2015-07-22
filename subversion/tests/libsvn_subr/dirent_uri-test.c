@@ -2332,6 +2332,21 @@ test_dirent_from_file_url(apr_pool_t *pool)
     { "file:///A%7C",              "A:/" },
     { "file:///A%7C/dir",          "A:/dir" },
     { "file:///A%7Cdir",           "A:dir" },
+    { "file:///A%7C%5Cdir",        "A:/dir" },
+    { "file:///A%7C%5Cdir%5Cfile", "A:/dir\\file" },
+    { "file://localhost/A:%5Cfile","A:/file"},
+    { "file://localhost/A:file",   "A:file"}
+#else
+    { "file:///A:",                "/A:" },
+    { "file:///A:/dir",            "/A:/dir" },
+    { "file:///A:dir",             "/A:dir" },
+    { "file:///A%7C",              "/A:" },
+    { "file:///A%7C/dir",          "/A:/dir" },
+    { "file:///A%7Cdir",           "/A:dir" },
+    { "file:///A%7C%5Cdir",        "/A:\\dir" },
+    { "file:///A%7C%5Cdir%5Cfile", "/A:\\dir\\file" },
+    { "file://localhost/A:%5Cfile","/A:/file" },
+    { "file://localhost/A:file",   "/A:file" }
 #endif
   };
   int i;
@@ -2347,6 +2362,11 @@ test_dirent_from_file_url(apr_pool_t *pool)
                                  "svn_uri_get_dirent_from_file_url(\"%s\") "
                                  "returned \"%s\" expected \"%s\"",
                                  tests[i].url, result, tests[i].result);
+      if (!svn_dirent_is_canonical(result, pool))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+          "svn_uri_get_dirent_from_file_url(\"%s\") "
+          "returned \"%s\", which is not canonical.",
+          tests[i].url, result);
     }
 
   return SVN_NO_ERROR;
