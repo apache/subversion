@@ -904,24 +904,36 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "https://[::1]:443",     "https://[::1]" },
     { "http://[FACE:B00C::]/s","http://[face:b00c::]/s" },
     { "svn+ssh://b@[1:2::3]/s","svn+ssh://b@[1:2::3]/s" },
+    { "file:///A%2f%2Fb%2fc",  "file:///A/b/c"},
+    { "file:///A%2fb%2f%2Fc",  "file:///A/b/c"},
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///c:/",           "file:///C:" },
+    { "file:///c:%2ftemp",     "file:///C:/temp"},
     { "file:///C:hi",          "file:///C:hi" },
     { "file:///c:hi",          "file:///C:hi" },
     { "file:///C:hi/Q",        "file:///C:hi/Q" },
     { "file:///c:hi/q",        "file:///C:hi/q" },
+    { "file:///c:hi%2fD",      "file:///C:hi/D" },
+    { "file:///c:hi%25/A",     "file:///C:hi%25/A"},
+    { "file:///c:hi%2E/A",     "file:///C:hi./A"},
+    { "file:///c:hi%/A",       "file:///C:hi%25/A"},
 #else /* !SVN_USE_DOS_PATHS */
     { "file:///c:/temp/repos", "file:///c:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///c:/",           "file:///c:" },
+    { "file:///c:%2ftemp",     "file:///C:/temp"},
     { "file:///C:hi",          "file:///C:hi" },
     { "file:///c:hi",          "file:///c:hi" },
     { "file:///C:hi/Q",        "file:///C:hi/Q" },
     { "file:///c:hi/q",        "file:///c:hi/q" },
+    { "file:///c:hi%2fD",      "file:///c:hi/D" },
+    { "file:///c:hi%25/A",     "file:///c:hi%25/A" }
+    { "file:///c:hi%2E/A",     "file:///c:hi./A"}
+    { "file:///c:hi%/A",       "file:///c:hi%25/A"},
 #endif /* SVN_USE_DOS_PATHS */
     /* Hostnames that look like non-canonical paths */
     { "file://./foo",             "file://./foo" },
