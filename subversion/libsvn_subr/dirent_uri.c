@@ -507,8 +507,8 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
               dst += seglen - 2;
             }
 
-          if (*next)
-            *(dst++) = *next;
+          if (slash_len)
+            *(dst++) = '/';
           canon_segments++;
         }
 #endif /* SVN_USE_DOS_PATHS */
