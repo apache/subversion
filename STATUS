@@ -57,6 +57,18 @@ Other candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1692448
+   Require Python ≥2.7 for Subversion 1.9, part 1: documentation and dependency
+   version checks.
+   Justification:
+     Python 2.6 is EOL; makes adding Python 3 support easier.
+   Notes:
+     The follow-up, r1692449, is not nominated.
+     If this nomination is not accepted, r1692446 (release notes patch) should
+     be reverted.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
