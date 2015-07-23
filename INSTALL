@@ -446,13 +446,14 @@ I.    INTRODUCTION
       is done: See section III for details.
 
 
-      10.  Python 2.5 or newer (http://www.python.org/)  (OPTIONAL)
+      10.  Python 2.7 or newer (http://www.python.org/)  (OPTIONAL)
 
       If you want to run "make check" or build from the latest source
       under Unix/Windows as described in section II.B, II.E and III.D,
-      install Python 2.5 or higher on your system. The majority of the
+      install Python 2.7 or higher on your system. The majority of the
       test suite is written in Python, as is part of Subversion's build
       system.
+
       Note that Python 3.x is not supported and most likely won't work.
 
 
@@ -763,7 +764,7 @@ II.   INSTALLATION
         is compatible with VC6, which is the one from February 2003.
         You can get it from MSDN:
         https://social.msdn.microsoft.com/Forums/windowsdesktop/en-US/e1147034-9b0b-4494-a5bc-6dfebb6b7eb1/download-and-install-microsoft-platform-sdk-febuary-2003-last-version-with-vc6-support?forum=windowssdk
-      * Python 2.5 or higher, downloaded from http://www.python.org/ which is
+      * Python 2.7 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
         Note that Python 3.x is not supported (yet).
       * Perl 5.8 or higher from http://www.activestate.com/
