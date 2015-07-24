@@ -191,6 +191,11 @@ svn_min__find_deletion(svn_min__log_t *log,
                        const char *path);
 
 apr_array_header_t *
+svn_min__find_deletions(svn_min__log_t *log,
+                        const char *path,
+                        apr_pool_t *result_pool);
+
+apr_array_header_t *
 svn_min__get_history(svn_min__log_t *log,
                      const char *path,
                      svn_revnum_t start_rev,

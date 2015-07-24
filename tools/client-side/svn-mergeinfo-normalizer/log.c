@@ -465,6 +465,37 @@ svn_min__find_deletion(svn_min__log_t *log,
   return SVN_INVALID_REVNUM;
 }
 
+apr_array_header_t *
+svn_min__find_deletions(svn_min__log_t *log,
+                        const char *path,
+                        apr_pool_t *result_pool)
+{
+  apr_array_header_t *result = apr_array_make(result_pool, 0,
+                                              sizeof(svn_revnum_t));
+  int i, k;
+  for (i = log->entries->nelts - 1; i >= 0; --i)
+    {
+      const log_entry_t *entry = APR_ARRAY_IDX(log->entries, i,
+                                               const log_entry_t *);
+      if (!entry->deletions)
+        continue;
+
+      if (!is_relevant(entry->common_base, path, NULL))
+        continue;
+
+      for (k = 0; k < entry->deletions->nelts; ++k)
+        {
+          const char *deleted_path
+            = APR_ARRAY_IDX(entry->paths, k, const char *);
+
+          if (in_subtree(path, deleted_path, NULL))
+            APR_ARRAY_PUSH(result, svn_revnum_t) = entry->revision;
+        }
+    }
+
+  return result;
+}
+
 typedef struct segment_t
 {
   const char *path;
