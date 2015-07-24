@@ -413,7 +413,7 @@ svn_min__find_deletion(svn_min__log_t *log,
           const char *deleted_path
             = APR_ARRAY_IDX(entry->paths, k, const char *);
 
-          if (in_subtree(deleted_path, path, NULL))
+          if (in_subtree(path, deleted_path, NULL))
             return entry->revision;
         }
     }
