@@ -298,10 +298,10 @@ is_relevant(const char *changed_path,
 
 static svn_boolean_t
 in_subtree(const char *changed_path,
-           const char *path,
+           const char *sub_tree,
            const void *baton)
 {
-  return svn_dirent_is_ancestor(path, changed_path);
+  return svn_dirent_is_ancestor(sub_tree, changed_path);
 }
 
 static svn_boolean_t
