@@ -85,6 +85,11 @@ typedef unsigned __int64   uint64_t;
 #undef HAVE_INTTYPES_H
 #endif
 
+/* Visual Studio >= 2015 has timespec defined */
+#if _MSC_VER >= 1900
+#define HAVE_STRUCT_TIMESPEC
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(disable: 4702) /* warning C4702: unreachable code */
 #endif
