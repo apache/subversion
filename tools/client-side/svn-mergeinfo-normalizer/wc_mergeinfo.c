@@ -241,7 +241,8 @@ svn_min__common_parent(apr_array_header_t *mergeinfo,
 }
 
 void
-svn_min__get_mergeinfo_pair(const char **parent_path,
+svn_min__get_mergeinfo_pair(const char **fs_path,
+                            const char **parent_path,
                             const char **subtree_relpath,
                             svn_mergeinfo_t *parent_mergeinfo,
                             svn_mergeinfo_t *subtree_mergeinfo,
@@ -251,6 +252,7 @@ svn_min__get_mergeinfo_pair(const char **parent_path,
   mergeinfo_t *entry;
   if (idx < 0 || mergeinfo->nelts <= idx)
     {
+      *fs_path = "";
       *parent_path = "";
       *subtree_relpath = "";
       *parent_mergeinfo = NULL;
@@ -260,6 +262,7 @@ svn_min__get_mergeinfo_pair(const char **parent_path,
     }
 
   entry = APR_ARRAY_IDX(mergeinfo, idx, mergeinfo_t *);
+  *fs_path = entry->fs_path;
   *subtree_mergeinfo = entry->mergeinfo;
 
   if (!entry->parent)
