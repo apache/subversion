@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "svn_hash.h"
 
+#include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_sorts_private.h"
 
@@ -49,6 +50,15 @@ typedef struct log_entry_t
   apr_array_header_t *deletions;
 } log_entry_t;
 
+typedef struct copy_t
+{
+  const char *path;
+  svn_revnum_t revision;
+
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_revision;
+} copy_t;
+
 struct svn_min__log_t
 {
   apr_hash_t *unique_paths;
@@ -58,8 +68,27 @@ struct svn_min__log_t
   svn_revnum_t head_rev;
   apr_array_header_t *entries;
 
+  apr_array_header_t *copies;
+
   svn_boolean_t quiet;
 };
+
+static int
+copy_order(const void *lhs,
+           const void *rhs)
+{
+  const copy_t *lhs_copy = *(const copy_t * const *)lhs;
+  const copy_t *rhs_copy = *(const copy_t * const *)rhs;
+
+  int diff = strcmp(lhs_copy->path, rhs_copy->path);
+  if (diff)
+    return diff;
+
+  if (lhs_copy->revision < rhs_copy->revision)
+    return -1;
+
+  return lhs_copy->revision == rhs_copy->revision ? 0 : 1;
+}
 
 static const char *
 internalize(apr_hash_t *unique_paths,
@@ -117,6 +146,20 @@ log_entry_receiver(void *baton,
                                               sizeof(const char *));
 
           APR_ARRAY_PUSH(entry->deletions, const char *) = path;
+        }
+
+      if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
+        {
+          copy_t *copy = apr_pcalloc(log->pool, sizeof(*copy));
+          copy->path = path;
+          copy->revision = log_entry->revision;
+          copy->copyfrom_path = internalize(log->unique_paths,
+                                            change->copyfrom_path,
+                                            strlen(change->copyfrom_path),
+                                            log->pool);
+          copy->copyfrom_revision = change->copyfrom_rev;
+
+          APR_ARRAY_PUSH(log->copies, copy_t *) = copy;
         }
     }
 
@@ -185,6 +228,7 @@ svn_min__log(svn_min__log_t **log,
   result->first_rev = SVN_INVALID_REVNUM;
   result->head_rev = SVN_INVALID_REVNUM;
   result->entries = apr_array_make(result_pool, 1024, sizeof(log_entry_t *));
+  result->copies = apr_array_make(result_pool, 1024, sizeof(copy_t *));
   result->quiet = baton->opt_state->quiet;
 
   if (!baton->opt_state->quiet)
@@ -209,6 +253,7 @@ svn_min__log(svn_min__log_t **log,
                           scratch_pool));
 
   svn_sort__array_reverse(result->entries, scratch_pool);
+  svn_sort__array(result->copies, copy_order);
 
   if (!baton->opt_state->quiet)
     {
@@ -418,6 +463,196 @@ svn_min__find_deletion(svn_min__log_t *log,
     }
 
   return SVN_INVALID_REVNUM;
+}
+
+typedef struct segment_t
+{
+  const char *path;
+  svn_revnum_t start;
+  svn_revnum_t end;
+} segment_t;
+
+static const copy_t *
+next_copy(svn_min__log_t *log,
+          const char *path,
+          svn_revnum_t revision,
+          apr_pool_t *scratch_pool)
+{
+  const copy_t *copy = NULL;
+  int idx;
+
+  copy_t *to_find = apr_pcalloc(scratch_pool, sizeof(*to_find));
+  to_find->path = path;
+  to_find->revision = revision;
+ 
+  idx = svn_sort__bsearch_lower_bound(log->copies, &to_find, copy_order);
+  if (idx < log->copies->nelts)
+    {
+      /* Found an exact match? */
+      copy = APR_ARRAY_IDX(log->copies, idx, const copy_t *);
+      if (copy->revision != revision || strcmp(copy->path, path))
+        copy = NULL;
+    }
+
+  if (!copy && idx > 0)
+    {
+      /* No exact match. The predecessor may be the closest copy. */
+      copy = APR_ARRAY_IDX(log->copies, idx - 1, const copy_t *);
+      if (strcmp(copy->path, path))
+        copy = NULL;
+    }
+
+  /* Mabye, the parent folder got copied later, i.e. is the closest copy.
+     We implicitly recurse up the tree. */
+  if (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
+    {
+      const copy_t *parent_copy;
+      to_find->path = svn_fspath__dirname(to_find->path, scratch_pool);
+
+      parent_copy = next_copy(log, to_find->path, revision, scratch_pool);
+      if (!copy)
+        copy = parent_copy;
+      else if (parent_copy && parent_copy->revision > copy->revision)
+        copy = parent_copy;
+    }
+
+  return copy;
+}
+
+apr_array_header_t *
+svn_min__get_history(svn_min__log_t *log,
+                     const char *path,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  segment_t *segment;
+  const copy_t *copy;
+  apr_array_header_t *result = apr_array_make(result_pool, 16,
+                                              sizeof(segment_t *));
+
+  if (!SVN_IS_VALID_REVNUM(start_rev))
+    start_rev = log->head_rev;
+
+  for (copy = next_copy(log, path, start_rev, scratch_pool);
+       copy && start_rev >= end_rev;
+       copy = next_copy(log, path, start_rev, scratch_pool))
+    {
+      segment = apr_pcalloc(result_pool, sizeof(*segment));
+      segment->start = MAX(end_rev, copy->revision);
+      segment->end = start_rev;
+      segment->path = apr_pstrdup(result_pool, path);
+
+      APR_ARRAY_PUSH(result, segment_t *) = segment;
+
+      start_rev = copy->copyfrom_revision;
+      path = svn_fspath__join(copy->copyfrom_path,
+                              svn_fspath__skip_ancestor(copy->path, path),
+                              scratch_pool);
+    }
+
+  if (start_rev >= end_rev)
+    {
+      segment = apr_pcalloc(result_pool, sizeof(*segment));
+      segment->start = end_rev;
+      segment->end = start_rev;
+      segment->path = apr_pstrdup(result_pool, path);
+
+      APR_ARRAY_PUSH(result, segment_t *) = segment;
+    }
+
+  return result;
+}
+
+static int
+compare_history_revision(const void *lhs,
+                         const void *rhs)
+{
+  const segment_t *segment = *(const segment_t * const *)lhs;
+  svn_revnum_t revision = *(const svn_revnum_t *)rhs;
+
+  if (segment->start < revision)
+    return -1;
+
+  return segment->start == revision ? 0 : 1;
+}
+
+apr_array_header_t *
+svn_min__intersect_history(apr_array_header_t *lhs,
+                           apr_array_header_t *rhs,
+                           apr_pool_t *result_pool)
+{
+  apr_array_header_t *result = apr_array_make(result_pool, 16,
+                                              sizeof(segment_t *));
+
+  int lhs_idx = 0;
+  int rhs_idx = 0;
+
+  /* Careful: the segments are ordered latest to oldest. */
+  while (lhs_idx < lhs->nelts && rhs_idx < rhs->nelts)
+    {
+      segment_t *lhs_segment = APR_ARRAY_IDX(lhs, lhs_idx, segment_t *);
+      segment_t *rhs_segment = APR_ARRAY_IDX(rhs, rhs_idx, segment_t *);
+
+      /* Skip non-overlapping revision segments */
+      if (lhs_segment->start > rhs_segment->end)
+        {
+          ++lhs_idx;
+          continue;
+        }
+      else if (lhs_segment->end < rhs_segment->start)
+        {
+          ++rhs_idx;
+          continue;
+        }
+
+      /* Revision ranges overlap. Also the same path? */
+      if (!strcmp(lhs_segment->path, rhs_segment->path))
+        {
+          segment_t *segment = apr_pcalloc(result_pool, sizeof(*segment));
+          segment->start = MAX(lhs_segment->start, rhs_segment->start);
+          segment->end = MIN(lhs_segment->end, rhs_segment->end);
+          segment->path = apr_pstrdup(result_pool, lhs_segment->path);
+
+          APR_ARRAY_PUSH(result, segment_t *) = segment;
+        }
+
+      /* The segment that starts earlier may overlap with another one.
+         If they should start at the same rev, the next iteration will
+         skip the respective other segment. */
+      if (lhs_segment->start > rhs_segment->start)
+        ++lhs_idx;
+      else
+        ++rhs_idx;
+    }
+
+   return result;
+}
+
+svn_rangelist_t *
+svn_min__history_ranges(apr_array_header_t *history,
+                        apr_pool_t *result_pool)
+{
+  svn_rangelist_t *result = apr_array_make(result_pool, history->nelts,
+                                           sizeof(svn_merge_range_t *));
+
+  int i;
+  for (i = 0; i < history->nelts; ++i)
+    {
+      const segment_t *segment = APR_ARRAY_IDX(history, i, segment_t *);
+
+      /* Convert to merge ranges.  Note that start+1 is the first rev
+         actually in that range. */
+      svn_merge_range_t *range = apr_pcalloc(result_pool, sizeof(*range));
+      range->start = MAX(0, segment->start - 1);
+      range->end = segment->end;
+      range->inheritable = TRUE;
+
+      APR_ARRAY_PUSH(result, svn_merge_range_t *) = range;
+    }
+
+  return result;
 }
 
 svn_error_t *
