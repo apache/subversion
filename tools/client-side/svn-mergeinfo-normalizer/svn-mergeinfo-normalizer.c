@@ -287,6 +287,10 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
      "      revisions missing in sub-node\n"
      "                             ... these revisions affect current sub-tree\n"
      "                             but are only listed as merged for the parent.\n"
+     "    NON-RECURSIVE RANGE(S) found\n"
+     "                           - Those revisions had been merged into a sparse\n
+     "                             working copy resulting in incomplete merges.\n"
+     "                             The sub-tree mergeinfo cannot be elided.\n"
      "    MISSING in parent      - The branch for the parent node exists in the\n"
      "                             repository but is not in its mergeinfo.\n"
      "                             The sub-tree mergeinfo will not be elided.\n"

@@ -61,6 +61,25 @@ find_reverse_ranges(svn_rangelist_t *ranges,
   return result;
 }
 
+static svn_rangelist_t *
+find_non_recursive_ranges(svn_rangelist_t *ranges,
+                          apr_pool_t *result_pool)
+{
+  svn_rangelist_t *result = apr_array_make(result_pool, 0, ranges->elt_size);
+
+  int i;
+  for (i = 0; i < ranges->nelts; ++i)
+    {
+      const svn_merge_range_t *range
+        = APR_ARRAY_IDX(ranges, i, const svn_merge_range_t *);
+
+      if (!range->inheritable)
+        APR_ARRAY_PUSH(result, const svn_merge_range_t *) = range;
+    }
+
+  return result;
+}
+
 static svn_error_t *
 print_ranges(svn_rangelist_t *ranges,
              const char *title,
@@ -111,6 +130,26 @@ show_reverse_ranges(const char *subtree_path,
                                  _("    REVERSE RANGE(S) found for %s:\n"),
                                  subtree_path));
       SVN_ERR(print_ranges(reverse_ranges, "", scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+show_non_recursive_ranges(const char *subtree_path,
+                          svn_rangelist_t *non_recursive_ranges,
+                          svn_min__opt_state_t *opt_state,
+                          apr_pool_t *scratch_pool)
+{
+  if (non_recursive_ranges->nelts)
+    return SVN_NO_ERROR;
+
+  if (opt_state->verbose || opt_state->run_analysis)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                            _("    NON-RECURSIVE RANGE(S) found for %s:\n"),
+                            subtree_path));
+      SVN_ERR(print_ranges(non_recursive_ranges, "", scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -400,7 +439,8 @@ remove_lines(svn_min__log_t *log,
   for (i = 0; i < sorted_mi->nelts; ++i)
     {
       const char *parent_path, *subtree_path, *parent_fs_path;
-      svn_rangelist_t *parent_ranges, *subtree_ranges, *reverse_ranges;
+      svn_rangelist_t *parent_ranges, *subtree_ranges;
+      svn_rangelist_t *reverse_ranges, *non_recursive_ranges;
       svn_rangelist_t *subtree_only, *parent_only;
       svn_rangelist_t *operative_outside_subtree, *operative_in_subtree;
       svn_rangelist_t *implied_in_subtree, *implied_in_parent;
@@ -462,10 +502,50 @@ remove_lines(svn_min__log_t *log,
           continue;
         }
 
+      /* We don't know how to handle reverse ranges (there should be none).
+         So, we must check for them - just to be sure. */
+      non_recursive_ranges = find_non_recursive_ranges(subtree_ranges,
+                                                       iterpool);
+      if (non_recursive_ranges->nelts)
+        {
+          /* We really found non-recursive merges?
+             Try to get rid of them. */
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
+                                       subtree_path, opt_state, NULL, FALSE,
+                                       iterpool));
+          if (!deleted)
+            SVN_ERR(show_non_recursive_ranges(subtree_path,
+                                              non_recursive_ranges,
+                                              opt_state, iterpool));
+
+          continue;
+        }
+
+      non_recursive_ranges = find_non_recursive_ranges(parent_ranges,
+                                                       iterpool);
+      if (non_recursive_ranges->nelts)
+        {
+          /* We really found non-recursive merges at the parent?
+             Try to get rid of them at the parent and sub-node alike. */
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
+                                       parent_path, opt_state, NULL, FALSE,
+                                       iterpool));
+          if (deleted)
+            SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
+                                        subtree_path, opt_state, NULL, FALSE,
+                                        iterpool));
+          if (!deleted)
+            SVN_ERR(show_non_recursive_ranges(parent_path,
+                                              non_recursive_ranges,
+                                              opt_state, iterpool));
+
+          continue;
+        }
+
       /* Try the actual elision, i.e. compare parent and sub-tree m/i.
          Where they don't fit, figure out if they can be aligned. */
       SVN_ERR(svn_rangelist_diff(&parent_only, &subtree_only,
-                                 parent_ranges, subtree_ranges, FALSE,
+                                 parent_ranges, subtree_ranges, TRUE,
                                  iterpool));
 
       /* From the set of revisions missing on the parent, remove those that
