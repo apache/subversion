@@ -805,7 +805,7 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(iterpool);
-      deletion_rev = log ? svn_min__find_deletion(log, path, iterpool)
+      deletion_rev = log ? svn_min__find_deletion(log, path)
                          : SVN_INVALID_REVNUM;
 
       if (SVN_IS_VALID_REVNUM(deletion_rev))

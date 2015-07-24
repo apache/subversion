@@ -394,8 +394,7 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
 
 svn_revnum_t
 svn_min__find_deletion(svn_min__log_t *log,
-                       const char *path,
-                       apr_pool_t *scratch_pool)
+                       const char *path)
 {
   int i, k;
   for (i = log->entries->nelts - 1; i >= 0; --i)
