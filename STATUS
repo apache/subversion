@@ -66,9 +66,10 @@ Other candidate changes:
      The follow-up, r1692449, is not nominated.
      If this nomination is not accepted, r1692446 (release notes patch) should
      be reverted.
+   Depends: the r1691712 group
    Votes:
      +1: danielsh
-     +0.5: rhuijben (Concept; patch review; untested)
+     +0.5: rhuijben (Concept; patch review; untested) [before "Depends:"]
 
  * r1692469, r1692470
    Fix digest argument typemap in swig-ruby binding to avoid segfault
@@ -78,6 +79,15 @@ Other candidate changes:
      VS compiler.
    Votes:
      +1: rhuijben
+
+ * r1691712, r1691713
+   Update INSTALL.
+   Justification:
+     The updated text is applicable to 1.9.
+   Notes:
+     This requires one vote, and blocks the "Python 2.7 is required" patch.
+   Votes:
+     +0: danielsh
 
 Veto-blocked changes:
 =====================
