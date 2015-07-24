@@ -145,7 +145,8 @@ svn_min__get_mergeinfo_path(apr_array_header_t *mergeinfo,
                             int idx);
 
 void
-svn_min__get_mergeinfo_pair(const char **parent_path,
+svn_min__get_mergeinfo_pair(const char **fs_path,
+                            const char **parent_path,
                             const char **subtree_relpath,
                             svn_mergeinfo_t *parent_mergeinfo,
                             svn_mergeinfo_t *subtree_mergeinfo,

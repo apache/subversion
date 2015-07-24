@@ -279,6 +279,7 @@ get_parent_path(const char *child,
 static svn_error_t *
 remove_lines(svn_min__log_t *log,
              svn_min__branch_lookup_t *lookup,
+             const char *fs_path,
              const char *relpath,
              svn_mergeinfo_t parent_mergeinfo,
              svn_mergeinfo_t subtree_mergeinfo,
@@ -294,7 +295,7 @@ remove_lines(svn_min__log_t *log,
                              scratch_pool);
   for (i = 0; i < sorted_mi->nelts; ++i)
     {
-      const char *parent_path, *subtree_path;
+      const char *parent_path, *subtree_path, *parent_fs_path;
       svn_rangelist_t *parent_ranges, *subtree_ranges, *reverse_ranges;
       svn_rangelist_t *subtree_only, *parent_only;
       svn_rangelist_t *operative_outside_subtree, *operative_in_subtree;
@@ -316,6 +317,7 @@ remove_lines(svn_min__log_t *log,
 
       /* Find the parent m/i entry for the same branch. */
       parent_path = get_parent_path(subtree_path, relpath, iterpool);
+      parent_fs_path = get_parent_path(fs_path, relpath, iterpool);
       subtree_ranges = item->value;
       parent_ranges = svn_hash_gets(parent_mergeinfo, parent_path);
 
@@ -661,7 +663,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
       progress.nodes_todo = i;
 
       /* Get the relevant mergeinfo. */
-      svn_min__get_mergeinfo_pair(&parent_path, &relpath,
+      svn_min__get_mergeinfo_pair(&fs_path, &parent_path, &relpath,
                                   &parent_mergeinfo, &subtree_mergeinfo,
                                   wc_mergeinfo, i);
       SVN_ERR(show_elision_header(parent_path, relpath, opt_state,
@@ -679,9 +681,9 @@ normalize(apr_array_header_t *wc_mergeinfo,
           subtree_mergeinfo_copy = svn_mergeinfo_dup(subtree_mergeinfo,
                                                      iterpool);
 
-          SVN_ERR(remove_lines(log, lookup, relpath, parent_mergeinfo_copy,
-                               subtree_mergeinfo_copy, opt_state,
-                               iterpool));
+          SVN_ERR(remove_lines(log, lookup, fs_path, relpath,
+                               parent_mergeinfo_copy, subtree_mergeinfo_copy,
+                               opt_state, iterpool));
 
           /* If all sub-tree mergeinfo could be elided, clear it.  Update
              the parent mergeinfo in case we moved some up the tree. */
