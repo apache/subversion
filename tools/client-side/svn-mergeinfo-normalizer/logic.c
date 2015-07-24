@@ -372,7 +372,8 @@ remove_lines(svn_min__log_t *log,
         = svn_min__operative_outside_subtree(log, parent_path, subtree_path,
                                              subtree_only, iterpool);
 
-      /* Find revs that are sub-tree m/i but affect paths in the sub-tree. */
+      /* Find revs that are missing in the sub-tree- m/i but affect paths in
+         the sub-tree. */
       operative_in_subtree
         = svn_min__operative(log, subtree_path, parent_only, iterpool);
 
