@@ -37,6 +37,7 @@
 
 #include "mergeinfo-normalizer.h"
 
+#include "private/svn_fspath.h"
 #include "private/svn_opt_private.h"
 #include "private/svn_sorts_private.h"
 #include "svn_private_config.h"
@@ -46,6 +47,8 @@
 typedef struct mergeinfo_t
 {
   const char *local_path;
+  const char *fs_path;
+  const char *url;
   struct mergeinfo_t *parent;
   svn_mergeinfo_t mergeinfo;
 } mergeinfo_t;
@@ -94,13 +97,18 @@ compare_mergeinfo(const void *lhs,
 }
 
 static svn_error_t *
-get_url(void *baton,
-        const char *target,
-        const svn_client_info2_t *info,
-        apr_pool_t *pool)
+get_urls(void *baton,
+         const char *target,
+         const svn_client_info2_t *info,
+         apr_pool_t *pool)
 {
-  svn_stringbuf_t *url = baton;
-  svn_stringbuf_set(url, info->URL);
+  mergeinfo_t *mi = baton;
+  apr_pool_t *target_pool = apr_hash_pool_get(mi->mergeinfo);
+  const char *rel_path = svn_dirent_skip_ancestor(info->repos_root_URL,
+                                                  info->URL);
+ 
+  mi->url = apr_pstrdup(target_pool, info->URL);
+  mi->fs_path = svn_fspath__canonicalize(rel_path, target_pool);
 
   return SVN_NO_ERROR;
 }
@@ -120,6 +128,19 @@ link_parents(apr_array_header_t *mergeinfo,
   /* sort mergeinfo by path */
   svn_sort__array(mergeinfo, compare_mergeinfo);
 
+  /* add URL info */
+  for (i = 0; i < mergeinfo->nelts; ++i)
+    {
+      mergeinfo_t *entry = APR_ARRAY_IDX(mergeinfo, i, mergeinfo_t *);
+      const svn_opt_revision_t rev_working = { svn_opt_revision_working };
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_client_info4(entry->local_path, &rev_working,
+                               &rev_working, svn_depth_empty, FALSE,
+                               TRUE, FALSE, NULL, get_urls, entry,
+                               baton->ctx, iterpool));
+    }
+
   /* link all mergeinfo to their parent merge info - if that exists */
   for (i = 1; i < mergeinfo->nelts; ++i)
     {
@@ -138,23 +159,7 @@ link_parents(apr_array_header_t *mergeinfo,
       mergeinfo_t *entry = APR_ARRAY_IDX(mergeinfo, i, mergeinfo_t *);
       if (entry->parent)
         {
-          const svn_opt_revision_t rev_working = { svn_opt_revision_working };
-          svn_stringbuf_t *entry_url, *parent_url;
-
-          svn_pool_clear(iterpool);
-          entry_url = svn_stringbuf_create_empty(iterpool);
-          parent_url = svn_stringbuf_create_empty(iterpool);
-
-          SVN_ERR(svn_client_info4(entry->local_path, &rev_working,
-                                   &rev_working, svn_depth_empty, FALSE,
-                                   TRUE, FALSE, NULL, get_url, entry_url,
-                                   baton->ctx, iterpool));
-          SVN_ERR(svn_client_info4(entry->parent->local_path, &rev_working,
-                                   &rev_working, svn_depth_empty, FALSE,
-                                   TRUE, FALSE, NULL, get_url, parent_url,
-                                   baton->ctx, iterpool));
-
-          if (!svn_uri__is_ancestor(parent_url->data, entry_url->data))
+          if (!svn_uri__is_ancestor(entry->parent->url, entry->url))
             entry->parent = NULL;
         }
     }
@@ -214,20 +219,21 @@ svn_min__common_parent(apr_array_header_t *mergeinfo,
       mergeinfo_t *entry = APR_ARRAY_IDX(mergeinfo, i, mergeinfo_t *);
 
       svn_pool_clear(iterpool);
+      if (result == NULL)
+        result = apr_pstrdup(result_pool, entry->fs_path);
+      else if (!svn_dirent_is_ancestor(result, entry->fs_path))
+        result = svn_dirent_get_longest_ancestor(result, entry->fs_path,
+                                                 result_pool);
+
       for (hi = apr_hash_first(scratch_pool, entry->mergeinfo);
            hi;
            hi = apr_hash_next(hi))
-        if (result == NULL)
-          {
-            result = apr_pstrdup(result_pool, apr_hash_this_key(hi));
-          }
-        else
-          {
-            const char * path = apr_hash_this_key(hi);
-            if (!svn_dirent_is_ancestor(result, path))
-              result = svn_dirent_get_longest_ancestor(result, path,
-                                                       result_pool);
-          }
+        {
+          const char * path = apr_hash_this_key(hi);
+          if (!svn_dirent_is_ancestor(result, path))
+            result = svn_dirent_get_longest_ancestor(result, path,
+                                                     result_pool);
+        }
     }
 
   svn_pool_destroy(iterpool);
