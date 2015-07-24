@@ -122,6 +122,8 @@ show_branch_elision(const char *branch,
                     svn_rangelist_t *parent_only,
                     svn_rangelist_t *operative_outside_subtree,
                     svn_rangelist_t *operative_in_subtree,
+                    svn_rangelist_t *implied_in_parent,
+                    svn_rangelist_t *implied_in_subtree,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
@@ -152,12 +154,25 @@ show_branch_elision(const char *branch,
     }
   else if (opt_state->verbose)
     {
+      SVN_ERR(svn_rangelist_remove(&subtree_only, implied_in_parent,
+                                   subtree_only, TRUE, scratch_pool));
+      SVN_ERR(svn_rangelist_remove(&parent_only, implied_in_subtree,
+                                   parent_only, TRUE, scratch_pool));
+
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                   _("    elide branch %s\n"),
                                   branch));
+      if (implied_in_parent->nelts)
+        SVN_ERR(print_ranges(implied_in_parent,
+                              _("revisions implied in parent: "),
+                              scratch_pool));
       if (subtree_only->nelts)
         SVN_ERR(print_ranges(subtree_only,
                               _("revisions moved to parent: "),
+                              scratch_pool));
+      if (implied_in_subtree->nelts)
+        SVN_ERR(print_ranges(implied_in_subtree,
+                              _("revisions implied in sub-node: "),
                               scratch_pool));
       if (parent_only->nelts)
         SVN_ERR(print_ranges(parent_only,
@@ -276,6 +291,95 @@ get_parent_path(const char *child,
   return "";
 }
 
+/* Remove all ranges from RANGES where the history of SOURCE_PATH@RANGE and
+   TARGET_PATH@HEAD overlap.  Return the list of removed ranges.
+
+   Note that SOURCE_PATH@RANGE may actually refer to different branches
+   created or re-created and then deleted at different points in time.
+ */
+static svn_error_t *
+remove_overlapping_history(svn_rangelist_t **removed,
+                           svn_rangelist_t **ranges,
+                           svn_min__log_t *log,
+                           const char *source_path,
+                           const char *target_path,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *target_history;
+  apr_array_header_t *source_history;
+  apr_array_header_t *deletions;
+  svn_revnum_t source_rev, next_deletion;
+  apr_pool_t *iterpool;
+  int i;
+
+  svn_rangelist_t *result = apr_array_make(result_pool, 0,
+                                           sizeof(svn_merge_range_t *));
+
+  /* In most cases, there is nothing to do. */
+  if (!(*ranges)->nelts)
+    {
+      *removed = result;
+      return SVN_NO_ERROR;
+    }
+
+  /* The history of the working copy branch ("target") is always the same. */
+  iterpool = svn_pool_create(scratch_pool);
+  target_history = svn_min__get_history(log, target_path, SVN_INVALID_REVNUM,
+                                        0, scratch_pool, scratch_pool);
+
+  /* Collect the deletion revisions, i.e. the revisons separating different
+     branches with the same name. */
+  deletions = svn_min__find_deletions(log, source_path, scratch_pool);
+  next_deletion = SVN_INVALID_REVNUM;
+
+  /* Get the history of each of these branches up to the point where the
+     respective previous branch was deleted (or r0). Intersect with the
+     target history and RANGES. */
+  for (i = 0; i <= deletions->nelts; ++i)
+    {
+      apr_array_header_t *common_history;
+      apr_array_header_t *common_ranges;
+      apr_array_header_t *removable_ranges;
+      svn_pool_clear(iterpool);
+
+      /* First iteration: HEAD to whatever latest deletion or r0.
+
+         NEXT_DELETION points to the last revision that may contain
+         changes of the previous branch at SOURCE_PATH.  The deletion
+         rev itself is not relevant but may instead contains the modyfing
+         creation of the next incarnation of that branch. */
+      source_rev = next_deletion;
+      next_deletion = i <  deletions->nelts
+                    ? APR_ARRAY_IDX(deletions, i, svn_revnum_t) - 1
+                    : 0;
+
+      /* Determine the overlapping history of merge source & target. */
+      source_history = svn_min__get_history(log, source_path,
+                                            source_rev, next_deletion,
+                                            iterpool, iterpool);
+      common_history = svn_min__intersect_history(source_history,
+                                                  target_history, iterpool);
+
+      /* Remove that overlap from RANGES. */
+      common_ranges = svn_min__history_ranges(common_history, iterpool);
+      if (!common_ranges->nelts)
+        continue;
+
+      SVN_ERR(svn_rangelist_intersect(&removable_ranges, common_ranges,
+                                      *ranges, TRUE, iterpool));
+      SVN_ERR(svn_rangelist_remove(ranges, removable_ranges, *ranges, TRUE,
+                                   (*ranges)->pool));
+      SVN_ERR(svn_rangelist_merge2(result, removable_ranges, result_pool,
+                                   result_pool));
+    }
+
+  svn_pool_destroy(iterpool);
+  *removed = result;
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 remove_lines(svn_min__log_t *log,
              svn_min__branch_lookup_t *lookup,
@@ -299,6 +403,7 @@ remove_lines(svn_min__log_t *log,
       svn_rangelist_t *parent_ranges, *subtree_ranges, *reverse_ranges;
       svn_rangelist_t *subtree_only, *parent_only;
       svn_rangelist_t *operative_outside_subtree, *operative_in_subtree;
+      svn_rangelist_t *implied_in_subtree, *implied_in_parent;
       const svn_sort__item_t *item;
       svn_boolean_t deleted;
 
@@ -379,6 +484,17 @@ remove_lines(svn_min__log_t *log,
       operative_in_subtree
         = svn_min__operative(log, subtree_path, parent_only, iterpool);
 
+      /* Remove revision ranges that are implied by the "natural" history
+         of the merged branch vs. the current branch. */
+      SVN_ERR(remove_overlapping_history(&implied_in_subtree,
+                                         &operative_in_subtree, log,
+                                         subtree_path, fs_path,
+                                         iterpool, iterpool));
+      SVN_ERR(remove_overlapping_history(&implied_in_parent,
+                                         &operative_outside_subtree, log,
+                                         parent_path, parent_fs_path,
+                                         iterpool, iterpool));
+
       /* Before we show a branch as "CANNOT elide", make sure it is even
          still relevant. */
       if (   operative_outside_subtree->nelts
@@ -395,8 +511,8 @@ remove_lines(svn_min__log_t *log,
       /* Log whether an elision was possible. */
       SVN_ERR(show_branch_elision(subtree_path, subtree_only,
                                   parent_only, operative_outside_subtree,
-                                  operative_in_subtree, opt_state,
-                                  iterpool));
+                                  operative_in_subtree, implied_in_parent,
+                                  implied_in_subtree, opt_state, iterpool));
 
       /* This will also work when subtree_only is empty. */
       if (   !operative_outside_subtree->nelts
@@ -656,6 +772,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
     {
       const char *parent_path;
       const char *relpath;
+      const char *fs_path;
       svn_mergeinfo_t parent_mergeinfo;
       svn_mergeinfo_t subtree_mergeinfo;
 
