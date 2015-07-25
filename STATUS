@@ -91,6 +91,19 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
+ * r1542765, r1571214
+   Add Sqlite index information.
+   Justification:
+     Adding this information explains to Sqlite how we use our indexes. While
+     Subversion 1.7 doesn't depend on this as much as 1.8 as we didn't tune the
+     queries as much at that time, this information will make several queries
+     use indexes instead of table scans.
+   Branch:
+     ^/subversion/branches/1.7.x-r1542765
+   Votes:
+     +1: rhuijben, stefan2, brane
+     -1: brane (breaks working copy with SQLite 3.7.5)
+
  * r1409804
    Add a delimiter between the two chains in svn_error_compose_create().
    Justification:

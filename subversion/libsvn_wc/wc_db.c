@@ -1373,14 +1373,6 @@ does_node_exist(svn_boolean_t *exists,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
-svn_error_t *
-svn_wc__db_install_schema_statistics(svn_sqlite__db_t *sdb,
-                                     apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_INSTALL_SCHEMA_STATISTICS));
-
-  return SVN_NO_ERROR;
-}
 
 /* Create an sqlite database at DIR_ABSPATH/SDB_FNAME and insert
    records for REPOS_ID (using REPOS_ROOT_URL and REPOS_UUID) into
@@ -1409,8 +1401,6 @@ create_db(svn_sqlite__db_t **sdb,
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODES));
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODES_TRIGGERS));
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_EXTERNALS));
-  
-  SVN_ERR(svn_wc__db_install_schema_statistics(*sdb, scratch_pool));
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,

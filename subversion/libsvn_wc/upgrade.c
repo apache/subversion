@@ -1364,14 +1364,7 @@ bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-/* Wrapper around svn_wc__db_install_schema_statistics for transaction */
-static svn_error_t *
-install_stats(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_install_schema_statistics(sdb, scratch_pool));
-  return SVN_NO_ERROR;
-}
-            
+
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
   const char *root_abspath;
@@ -1652,12 +1645,6 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = XXX;
         /* FALLTHROUGH  */
 #endif
-      case SVN_WC__VERSION:
-        /* already upgraded */
-        *result_format = SVN_WC__VERSION;
-
-        SVN_ERR(svn_sqlite__with_transaction(sdb, install_stats, NULL,
-                                             scratch_pool));
     }
 
 #ifdef SVN_DEBUG
