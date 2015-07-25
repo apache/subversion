@@ -71,6 +71,7 @@ enum svnsync__opt {
   svnsync_opt_trust_server_cert_failures_src,
   svnsync_opt_trust_server_cert_failures_dst,
   svnsync_opt_allow_non_empty,
+  svnsync_opt_skip_unchanged,
   svnsync_opt_steal_lock
 };
 
@@ -150,7 +151,8 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "\n"
          "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"),
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q', 'r',
-        svnsync_opt_disable_locking, svnsync_opt_steal_lock, 'M' } },
+        svnsync_opt_disable_locking, svnsync_opt_steal_lock,
+        svnsync_opt_skip_unchanged, 'M' } },
     { "info", info_cmd, { 0 },
       N_("usage: svnsync info DEST_URL\n"
          "\n"
@@ -179,6 +181,8 @@ static const apr_getopt_option_t svnsync_options[] =
                           "    'HEAD'       latest in repository") },
     {"allow-non-empty", svnsync_opt_allow_non_empty, 0,
                        N_("allow a non-empty destination repository") },
+    {"skip-unchanged", svnsync_opt_skip_unchanged, 0,
+                       N_("don't copy unchanged revision properties") },
     {"non-interactive", svnsync_opt_non_interactive, 0,
                        N_("do no interactive prompting (default is to prompt\n"
                           "                             "
@@ -303,6 +307,7 @@ typedef struct opt_baton_t {
   svn_boolean_t steal_lock;
   svn_boolean_t quiet;
   svn_boolean_t allow_non_empty;
+  svn_boolean_t skip_unchanged;
   svn_boolean_t version;
   svn_boolean_t help;
   svn_opt_revision_t start_rev;
@@ -422,6 +427,7 @@ typedef struct subcommand_baton_t {
   svn_ra_callbacks2_t sync_callbacks;
   svn_boolean_t quiet;
   svn_boolean_t allow_non_empty;
+  svn_boolean_t skip_unchanged; /* Enable optimization for revprop changes. */
   const char *to_url;
 
   /* initialize, synchronize, and copy-revprops only */
@@ -592,6 +598,10 @@ filter_props(int *filtered_count, apr_hash_t *props,
  * and set *FILTERED_COUNT to the number of properties thus omitted.
  * REV_PROPS is a hash mapping (char *)propname to (svn_string_t *)propval.
  *
+ * If OLD_REV_PROPS is not NULL, skip all properties that did not change.
+ * Note that this implies that hook scripts won't be triggered anymore for
+ * those revprops that did not change.
+ *
  * All allocations will be done in a subpool of POOL.
  */
 static svn_error_t *
@@ -599,6 +609,7 @@ write_revprops(int *filtered_count,
                svn_ra_session_t *session,
                svn_revnum_t rev,
                apr_hash_t *rev_props,
+               apr_hash_t *old_rev_props,
                apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -616,6 +627,17 @@ write_revprops(int *filtered_count,
       if (strncmp(propname, SVNSYNC_PROP_PREFIX,
                   sizeof(SVNSYNC_PROP_PREFIX) - 1) != 0)
         {
+          if (old_rev_props)
+            {
+              /* Skip the RA call for any no-op propset. */
+              const svn_string_t *old_value = svn_hash_gets(old_rev_props,
+                                                            propname);
+              if ((!old_value && !propval)
+                  || (old_value && propval
+                      && svn_string_compare(old_value, propval)))
+                continue;
+            }
+
           SVN_ERR(svn_ra_change_rev_prop2(session, rev, propname, NULL,
                                           propval, subpool));
         }
@@ -677,6 +699,10 @@ log_properties_normalized(int normalized_rev_props_count,
  * If SYNC is TRUE, then properties on the destination revision that
  * do not exist on the source revision will be removed.
  *
+ * If SKIP_UNCHANGED is TRUE, skip any no-op revprop changes. This also
+ * prevents hook scripts from firing for those unchanged revprops.  Has
+ * no effect if SYNC is FALSE.
+ *
  * If QUIET is FALSE, then log_properties_copied() is called to log that
  * properties were copied for revision REV.
  *
@@ -689,6 +715,7 @@ copy_revprops(svn_ra_session_t *from_session,
               svn_ra_session_t *to_session,
               svn_revnum_t rev,
               svn_boolean_t sync,
+              svn_boolean_t skip_unchanged,
               svn_boolean_t quiet,
               const char *source_prop_encoding,
               int *normalized_count,
@@ -714,7 +741,8 @@ copy_revprops(svn_ra_session_t *from_session,
                                      source_prop_encoding, pool));
 
   /* Copy all but the svn:svnsync properties. */
-  SVN_ERR(write_revprops(&filtered_count, to_session, rev, rev_props, pool));
+  SVN_ERR(write_revprops(&filtered_count, to_session, rev, rev_props,
+                         skip_unchanged ? existing_props : NULL, pool));
 
   /* Delete those properties that were in TARGET but not in SOURCE */
   if (sync)
@@ -750,6 +778,7 @@ make_subcommand_baton(opt_baton_t *opt_baton,
   b->sync_callbacks.open_tmp_file = open_tmp_file;
   b->sync_callbacks.auth_baton = opt_baton->sync_auth_baton;
   b->quiet = opt_baton->quiet;
+  b->skip_unchanged = opt_baton->skip_unchanged;
   b->allow_non_empty = opt_baton->allow_non_empty;
   b->to_url = to_url;
   b->source_prop_encoding = opt_baton->source_prop_encoding;
@@ -859,9 +888,9 @@ do_initialize(svn_ra_session_t *to_session,
      LATEST is not 0, this really serves merely aesthetic and
      informational purposes, keeping the output of this command
      consistent while allowing folks to see what the latest revision is.  */
-  SVN_ERR(copy_revprops(from_session, to_session, latest, FALSE, baton->quiet,
-                        baton->source_prop_encoding, &normalized_rev_props_count,
-                        pool));
+  SVN_ERR(copy_revprops(from_session, to_session, latest, FALSE, FALSE,
+                        baton->quiet, baton->source_prop_encoding,
+                        &normalized_rev_props_count, pool));
 
   SVN_ERR(log_properties_normalized(normalized_rev_props_count, 0, pool));
 
@@ -1372,7 +1401,7 @@ replay_rev_finished(svn_revnum_t revision,
   rb->normalized_rev_props_count += normalized_count;
 
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered,
-                         subpool));
+                         NULL, subpool));
 
   /* Remove all extra properties in TARGET. */
   SVN_ERR(remove_props_not_in_source(rb->to_session, revision,
@@ -1478,7 +1507,8 @@ do_synchronize(svn_ra_session_t *to_session,
           if (copying > last_merged)
             {
               SVN_ERR(copy_revprops(from_session, to_session, to_latest, TRUE,
-                                    baton->quiet, baton->source_prop_encoding,
+                                    baton->skip_unchanged, baton->quiet,
+                                    baton->source_prop_encoding,
                                     &normalized_rev_props_count, pool));
               last_merged = copying;
               last_merged_rev = svn_string_create
@@ -1649,7 +1679,8 @@ do_copy_revprops(svn_ra_session_t *to_session,
     {
       int normalized_count;
       SVN_ERR(check_cancel(NULL));
-      SVN_ERR(copy_revprops(from_session, to_session, i, TRUE, baton->quiet,
+      SVN_ERR(copy_revprops(from_session, to_session, i, TRUE,
+                            baton->skip_unchanged, baton->quiet,
                             baton->source_prop_encoding, &normalized_count,
                             pool));
       normalized_rev_props_count += normalized_count;
@@ -2106,6 +2137,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           case svnsync_opt_allow_non_empty:
             opt_baton.allow_non_empty = TRUE;
+            break;
+
+          case svnsync_opt_skip_unchanged:
+            opt_baton.skip_unchanged = TRUE;
             break;
 
           case 'q':
