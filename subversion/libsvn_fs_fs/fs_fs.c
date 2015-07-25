@@ -6958,10 +6958,13 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
                               "representation"));
 
   /* Now create a stream that's allowed to read only as much data as is
-     stored in the representation. */
+     stored in the representation.  Note that this is a directory, i.e. 
+     represented using the hash format on disk and can never have 0 length. */
   baton.file = rev_file;
   baton.pool = pool;
-  baton.remaining = data_rep->expanded_size;
+  baton.remaining = data_rep->expanded_size
+                  ? data_rep->expanded_size
+                  : data_rep->size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 

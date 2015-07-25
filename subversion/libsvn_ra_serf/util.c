@@ -28,7 +28,6 @@
 #define APR_WANT_STRFUNC
 #include <apr.h>
 #include <apr_want.h>
-#include <apr_fnmatch.h>
 
 #include <serf.h>
 #include <serf_bucket_types.h>
@@ -40,6 +39,7 @@
 #include "svn_xml.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
+#include "private/svn_cert.h"
 
 #include "ra_serf.h"
 
@@ -202,7 +202,10 @@ ssl_server_cert(void *baton, int failures,
   apr_hash_t *issuer, *subject, *serf_cert;
   apr_array_header_t *san;
   void *creds;
-  int found_matching_hostname = 0;
+  svn_boolean_t found_matching_hostname = FALSE;
+  svn_boolean_t found_san_entry = FALSE;
+  svn_string_t *actual_hostname =
+      svn_string_create(conn->hostname, scratch_pool);
 
   /* Implicitly approve any non-server certs. */
   if (serf_ssl_cert_depth(cert) > 0)
@@ -237,29 +240,41 @@ ssl_server_cert(void *baton, int failures,
                   | conn->server_cert_failures);
 
   /* Try to find matching server name via subjectAltName first... */
-  if (san) {
+  if (san)
+    {
       int i;
-      for (i = 0; i < san->nelts; i++) {
+      found_san_entry = san->nelts > 0;
+      for (i = 0; i < san->nelts; i++)
+        {
           char *s = APR_ARRAY_IDX(san, i, char*);
-          if (apr_fnmatch(s, conn->hostname,
-                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+          svn_string_t *cert_hostname = svn_string_create(s, scratch_pool);
+
+          if (svn_cert__match_dns_identity(cert_hostname, actual_hostname))
             {
-              found_matching_hostname = 1;
+              found_matching_hostname = TRUE;
               cert_info.hostname = s;
               break;
             }
-      }
-  }
-
-  /* Match server certificate CN with the hostname of the server */
-  if (!found_matching_hostname && cert_info.hostname)
-    {
-      if (apr_fnmatch(cert_info.hostname, conn->hostname,
-                      APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
-        {
-          svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
         }
     }
+
+  /* Match server certificate CN with the hostname of the server iff
+   * we didn't find any subjectAltName fields and try to match them.
+   * Per RFC 2818 they are authoritative if present and CommonName
+   * should be ignored. */
+  if (!found_matching_hostname && !found_san_entry && cert_info.hostname)
+    {
+      svn_string_t *cert_hostname = svn_string_create(cert_info.hostname,
+                                                      scratch_pool);
+
+      if (svn_cert__match_dns_identity(cert_hostname, actual_hostname))
+        {
+          found_matching_hostname = TRUE;
+        }
+    }
+
+  if (!found_matching_hostname)
+    svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
 
   svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,

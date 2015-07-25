@@ -1,3 +1,103 @@
+Version 1.7.20
+(31 Mar 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.20
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * fix 'svn patch' output for reordered hunks (issue #4533)
+
+  - Server-side bugfixes:
+    * reject invalid get-location-segments requests in mod_dav_svn and
+      svnserve (r1667233)
+    * mod_dav_svn: reject invalid txnprop change requests (r1667235)
+
+  - Client-side and server-side bugfixes:
+    * properly duplicate svn error objects (r1651759)
+    * fix use-after-free in config parser (1646785, r1646786, r1646797)
+
+ Developer-visible changes:
+  * add lock file config for testing against HTTPD 2.4+ (r1544302, r1544303)
+  * fix build with absolute path to neon install (r1664789)
+
+
+Version 1.7.19
+(15 Dec 2014, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.19
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * rm: display the proper URL in commit log editor (r1591123)
+    * diff: fix invalid read during suffix scanning (issue #4339)
+    * fix crash in eclipse IDE with GNOME Keyring (issue #3498)
+    * checkout/update: fix file externals failing to follow history and
+      subsequently silently failing (issue #4185)
+
+  - Server-side bugfixes:
+    * svnadmin dump: don't let invalid mergeinfo prevent a dump (issue #4476)
+    * mod_dav_svn: reject requests with missing repository paths (r1643409)
+    * mod_dav_svn: reject requests with invalid virtual transaction names
+      (r1643437)
+    * mod_dav_svn: avoid unneeded memory growth in resource walking
+      (issue #4531)
+
+ Developer-visible changes:
+  - General:
+    * properly generate a version resource when building on Windows (r1542610,
+      r1564576, r1568180)
+    * fix a problem with the unix build that could result in linking to the
+      wrong Subversion libraries at build or at run time (r1594157)
+    * use a proper intermediate directory when building with Visual Studio
+      2003-2008 (r1595431)
+    * fix LIBTOOL_M4 and LIBTOOL_CONFIG variable not be evaluated properly
+      during a unix build (r1637826)
+    * allow the use of libtool 2.4.3 (r1640862, r1640873, r1643793)
+
+
+Version 1.7.18
+(11 Aug 2014, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.18
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * guard against md5 hash collisions when finding cached credentials
+        (r1550691, r1550772, r1600909)
+    * ra_serf: properly match wildcards in SSL certs. (r1615211, 1615219)
+    * ra_serf: ignore the CommonName in SSL certs where there are Subject Alt
+        Names (r1565531, r1566503, r1568349)
+
+ Developer-visible changes:
+  - General:
+    * fix ocassional failure in checkout_tests.py test 12. (r1496127)
+    * disable building ZLib's assembly optimizations on Windows.
+
+
+Version 1.7.17
+(07 May 2014, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.17
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * log: use proper peg revision over DAV (r1568872)
+    * move: fix errors when moving files between an external and the parent
+      working copy (r1551579)
+    * copy: fix 'svn copy URL WC' on relocated working copies
+      (r1580626, r1580650)
+
+  - Server-side bugfixes:
+    * mod_dav_svn: blacklist building with broken versions of httpd; 2.2.25,
+      2.4.5 and 2.4.6 (r1545835)
+    * mod_dav_svn: detect out of dateness correctly during commit (issue #4480)
+
+ Developer-visible changes:
+  - General:
+    * fix libmagic detection with custom LDFLAGS (r1577200)
+    * fix a missing null byte when handling old pre-1.4 deltas (r1587968)
+    * support building with Serf 1.3.x (r1517123, r1535139)
+
+  - Bindings:
+    * javahl: fix crash from resolve callback throwing an exception (r1586439)
+
+
 Version 1.7.16
 (26 Feb 2014, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.16
@@ -266,7 +366,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.6
     * fix ra_serf against Subversion 1.2 servers (r1349367)
     * fix 'svn upgrade' on working copies with certain tree conflicts (r1345482)
     * avoid workqueue references to system temp dir (r1367854)
-    * allow non-existant canonical paths (r1367853)
+    * allow non-existent canonical paths (r1367853)
     * fix 'svn revert --depth files' to operate on files (r1365554)
     * fix ra_serf XML namespace handling against malicious server (r1337441)
     * fix relocate with server-relative externals (issue 4216)
@@ -618,7 +718,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: rm -> ci -> cp = missing directory (issue #2763)
     * fixed: 'svn info' returns parent info on missing dirs (issue #3178)
     * fixed: spurious prop conflict with 'merge --reintegrate' (issue #3919)
-    * fixed: 'svn --version' fails with non-existant $HOME (issue #3947)
+    * fixed: 'svn --version' fails with non-existent $HOME (issue #3947)
     * fixed: unforced export silently overwites existing file (issue #3799)
     * fixed: reverse merge which adds subtree mergeinfo fails (issue #3978)
     * fixed: 'svn up -r{R>HEAD}' hangs client over ra_svn (issue #3963)
@@ -793,7 +893,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * fix crash in mod_dav_svn with GETs of baselined resources (r1104126)
             See CVE-2011-1752, and descriptive advisory at
             http://subversion.apache.org/security/CVE-2011-1752-advisory.txt
-    * fixed: write-through proxy could direcly commit to slave (r917523)
+    * fixed: write-through proxy could directly commit to slave (r917523)
     * detect a particular corruption condition in FSFS (r1100213)
     * improve error message when clients refer to unknown revisions (r939000)
     * bugfixes and optimizations to the DAV mirroring code (r878607)

@@ -721,7 +721,7 @@ AC_ARG_WITH(libmagic,AS_HELP_STRING([--with-libmagic=PREFIX],
     CPPFLAGS="$CPPFLAGS -I$libmagic_prefix/include"
     AC_CHECK_HEADERS(magic.h,[
       save_ldflags="$LDFLAGS"
-      LDFLAGS="-L$libmagic_prefix/lib"
+      LDFLAGS="-L$libmagic_prefix/lib $LDFLAGS"
       AC_CHECK_LIB(magic, magic_open, [libmagic_found="yes"])
       LDFLAGS="$save_ldflags"
     ])

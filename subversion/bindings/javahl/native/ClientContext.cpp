@@ -422,6 +422,7 @@ ClientContext::resolve(svn_wc_conflict_result_t **result,
 {
   jobject jctx = (jobject) baton;
   JNIEnv *env = JNIUtil::getEnv();
+  *result = NULL;
 
   // Create a local frame for our references
   env->PushLocalFrame(LOCAL_FRAME_SIZE);

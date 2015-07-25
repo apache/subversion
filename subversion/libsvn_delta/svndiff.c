@@ -647,7 +647,13 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
     }
   else
     {
-      new_data->data = (const char *) insend;
+      /* Copy the data because an svn_string_t must have the invariant
+         data[len]=='\0'. */
+      char *buf = apr_palloc(pool, newlen + 1);
+
+      memcpy(buf, insend, newlen);
+      buf[newlen] = '\0';
+      new_data->data = buf;
       new_data->len = newlen;
     }
 

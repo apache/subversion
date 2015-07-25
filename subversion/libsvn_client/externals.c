@@ -464,7 +464,10 @@ switch_file_external(const char *local_abspath,
        ### information into the wrong working copy */
     const char *definition_abspath = svn_dirent_dirname(local_abspath,subpool);
 
-    /* Open an RA session to 'source' URL */
+    /* ### Why do we open a new session?  RA_SESSION is a valid
+       ### session -- the caller used it to call svn_ra_check_path on
+       ### this very URL, the caller also did the resolving and
+       ### reparenting that is repeated here. */
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                              &switch_rev_url,
                                              url, dir_abspath,
@@ -497,7 +500,7 @@ switch_file_external(const char *local_abspath,
     /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
   SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
-                            target, svn_depth_unknown, url,
+                            target, svn_depth_unknown, switch_rev_url,
                             switch_editor, switch_baton, subpool));
 
   SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,

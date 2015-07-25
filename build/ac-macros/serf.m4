@@ -85,7 +85,7 @@ AC_DEFUN(SVN_LIB_SERF,
       SVN_SERF_LIBS="$serf_prefix/lib/lib$serf_major.la"
     else
       SVN_SERF_LIBS="-l$serf_major"
-      LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
+      LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$serf_prefix/lib)`"
     fi
   elif test $serf_found = "reconfig"; then
     serf_found=yes
