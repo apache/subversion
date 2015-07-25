@@ -149,6 +149,10 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "if untrusted users/administrators may have write access to the\n"
          "DEST_URL repository.\n"
          "\n"
+         "Unless you need to trigger the destination repositoy's revprop\n"
+         "change hooks for all revision properties, it is recommended to use\n"
+         "the --skip-unchanged option for best performance.\n"
+         "\n"
          "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"),
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q', 'r',
         svnsync_opt_disable_locking, svnsync_opt_steal_lock,
