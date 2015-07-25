@@ -818,6 +818,7 @@ WHERE wc_id = ?1
        OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = ?3
   AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
+ORDER BY local_relpath
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
@@ -1213,6 +1214,7 @@ WHERE wc_id = ?1
   AND op_depth = (SELECT MAX(op_depth) FROM nodes s
                   WHERE s.wc_id = n.wc_id 
                     AND s.local_relpath = n.local_relpath)
+ORDER BY local_relpath
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list
