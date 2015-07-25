@@ -247,8 +247,10 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
 {
   transaction_t *txn;
   const char *txn_id;
+  const svn_string_t *present_value;
 
   SVN_ERR(get_rev_txn(&txn, &txn_id, fs, rev, trail, pool));
+  present_value = svn_hash_gets(txn->proplist, name);
 
   /* If there's no proplist, but we're just deleting a property, exit now. */
   if ((! txn->proplist) && (! value))
@@ -262,7 +264,6 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
   if (old_value_p)
     {
       const svn_string_t *wanted_value = *old_value_p;
-      const svn_string_t *present_value = svn_hash_gets(txn->proplist, name);
       if ((!wanted_value != !present_value)
           || (wanted_value && present_value
               && !svn_string_compare(wanted_value, present_value)))
@@ -275,6 +276,13 @@ svn_fs_base__set_rev_prop(svn_fs_t *fs,
         }
       /* Fall through. */
     }
+
+  /* If the prop-set is a no-op, skip the actual write. */
+  if ((!present_value && !value)
+      || (present_value && value
+          && svn_string_compare(present_value, value)))
+    return SVN_NO_ERROR;
+
   svn_hash_sets(txn->proplist, name, value);
 
   /* Overwrite the revision. */
