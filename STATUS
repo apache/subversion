@@ -88,10 +88,7 @@ Candidate changes:
    Votes:
      +1: rhuijben.
 
-Veto-blocked changes:
-=====================
-
- * r1542765, r1571214
+ * r1542765, r1567080, r1571214
    Add Sqlite index information.
    Justification:
      Adding this information explains to Sqlite how we use our indexes. While
@@ -101,8 +98,11 @@ Veto-blocked changes:
    Branch:
      ^/subversion/branches/1.7.x-r1542765
    Votes:
-     +1: rhuijben, stefan2, brane
-     -1: brane (breaks working copy with SQLite 3.7.5)
+     +1: brane
+     +1: rhuijben, stefan2 (without r1567080)
+
+Veto-blocked changes:
+=====================
 
  * r1409804
    Add a delimiter between the two chains in svn_error_compose_create().
