@@ -922,6 +922,7 @@ enum parse_state
    state_git_tree_seen,   /* a tree operation, rather then content change */
    state_git_minus_seen,  /* --- /dev/null; or --- a/ */
    state_git_plus_seen,   /* +++ /dev/null; or +++ a/ */
+   state_old_mode_seen,   /* old mode 100644 */
    state_move_from_seen,  /* rename from foo.c */
    state_copy_from_seen,  /* copy from foo.c */
    state_minus_seen,      /* --- foo.c */
@@ -1153,6 +1154,72 @@ git_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
+/* Helper for git_old_mode() and git_new_mode().  Translate the git
+ * file mode MODE_STR into a binary "executable?" notion EXECUTABLE_P. */
+static svn_error_t *
+parse_bits_into_executability(svn_tristate_t *executable_p,
+                              const char *mode_str)
+{
+  apr_uint64_t mode;
+  SVN_ERR(svn_cstring_strtoui64(&mode, mode_str,
+                                0 /* min */,
+                                0777777 /* max: six octal digits */,
+                                010 /* radix (octal) */));
+  switch (mode & 0777)
+    {
+      case 0644:
+        *executable_p = svn_tristate_false;
+        break;
+
+      case 0755:
+        *executable_p = svn_tristate_true;
+        break;
+
+      default:
+        /* Ignore unknown values. */
+        *executable_p = svn_tristate_unknown;
+        break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'old mode ' line of a git extended unidiff. */
+static svn_error_t *
+git_old_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
+             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(parse_bits_into_executability(&patch->old_executable_p,
+                                        line + STRLEN_LITERAL("old mode ")));
+
+#ifdef SVN_DEBUG
+  /* If this assert trips, the "old mode" is neither ...644 nor ...755 . */
+  SVN_ERR_ASSERT(patch->old_executable_p != svn_tristate_unknown);
+#endif
+
+  *new_state = state_old_mode_seen;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'new mode ' line of a git extended unidiff. */
+static svn_error_t *
+git_new_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
+             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(parse_bits_into_executability(&patch->new_executable_p,
+                                        line + STRLEN_LITERAL("new mode ")));
+
+#ifdef SVN_DEBUG
+  /* If this assert trips, the "old mode" is neither ...644 nor ...755 . */
+  SVN_ERR_ASSERT(patch->new_executable_p != svn_tristate_unknown);
+#endif
+
+  /* Don't touch patch->operation. */
+
+  *new_state = state_git_tree_seen;
+  return SVN_NO_ERROR;
+}
+
 /* Parse the 'rename from ' line of a git extended unidiff. */
 static svn_error_t *
 git_move_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
@@ -1213,6 +1280,10 @@ static svn_error_t *
 git_new_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
+  SVN_ERR(
+    parse_bits_into_executability(&patch->new_executable_p,
+                                  line + STRLEN_LITERAL("new file mode ")));
+
   patch->operation = svn_diff_op_added;
 
   /* Filename already retrieved from diff --git header. */
@@ -1226,6 +1297,10 @@ static svn_error_t *
 git_deleted_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
+  SVN_ERR(
+    parse_bits_into_executability(&patch->old_executable_p,
+                                  line + STRLEN_LITERAL("deleted file mode ")));
+
   patch->operation = svn_diff_op_deleted;
 
   /* Filename already retrieved from diff --git header. */
@@ -1360,6 +1435,9 @@ static struct transition transitions[] =
   {"+++ b/",        state_git_minus_seen,   git_plus},
   {"+++ /dev/null", state_git_minus_seen,   git_plus},
 
+  {"old mode ",     state_git_diff_seen,    git_old_mode},
+  {"new mode ",     state_old_mode_seen,    git_new_mode},
+
   {"rename from ",  state_git_diff_seen,    git_move_from},
   {"rename to ",    state_move_from_seen,   git_move_to},
 
@@ -1394,6 +1472,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
     }
 
   patch = apr_pcalloc(result_pool, sizeof(*patch));
+  patch->old_executable_p = svn_tristate_unknown;
+  patch->new_executable_p = svn_tristate_unknown;
 
   pos = patch_file->next_patch_offset;
   SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &pos, scratch_pool));

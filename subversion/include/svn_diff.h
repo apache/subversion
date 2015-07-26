@@ -1249,6 +1249,17 @@ typedef struct svn_patch_t {
    * @since New in 1.9. */
   svn_mergeinfo_t mergeinfo;
   svn_mergeinfo_t reverse_mergeinfo;
+
+  /** The old and new executability bits, as retrieved from the patch file.
+   *
+   * #svn_tristate_unknown indicates the patch does not specify the
+   * corresponding bit.
+   */
+  /* ### This is currently not parsed out of "index" lines (where it
+   * ### serves as an assertion of the executability state, without
+   * ### changing it).  */
+  svn_tristate_t old_executable_p; 
+  svn_tristate_t new_executable_p; 
 } svn_patch_t;
 
 /** An opaque type representing an open patch file.
