@@ -167,6 +167,15 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       HTTPD="`$APXS -q bindir`/`$APXS -q PROGNAME`"
     fi
     HTTPD_VERSION=["`$HTTPD -v | $SED -e 's/^.*\/\([0-9.]*\).*$/\1/' -e 1q`"]
+    AC_ARG_ENABLE(broken-httpd-auth,
+      AS_HELP_STRING([--enable-broken-httpd-auth],
+                     [Allow building against httpd 2.4 with broken auth]),
+      [broken_httpd_auth=$enableval],[broken_httpd_auth=no])
+    if test "$enable_broken_httpd_auth" = "yes"; then
+      AC_MSG_NOTICE([Building with broken httpd auth])
+      AC_DEFINE(SVN_ALLOW_BROKEN_HTTPD_AUTH, 1,
+                [Defined to allow building against httpd 2.4 with broken auth])
+    fi
 
     case $host in
       *-*-cygwin*)

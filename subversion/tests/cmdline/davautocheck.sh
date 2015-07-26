@@ -296,8 +296,6 @@ LOAD_MOD_AUTHN_CORE="$(get_loadmodule_config mod_authn_core)" \
     || fail "Authn_Core module not found."
 LOAD_MOD_AUTHZ_CORE="$(get_loadmodule_config mod_authz_core)" \
     || fail "Authz_Core module not found."
-LOAD_MOD_AUTHZ_HOST="$(get_loadmodule_config mod_authz_host)" \
-    || fail "Authz_Host module not found."
 LOAD_MOD_UNIXD=$(get_loadmodule_config mod_unixd) \
     || fail "UnixD module not found"
 }
@@ -305,6 +303,10 @@ LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
     || fail "Authn_File module not found."
 LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
+LOAD_MOD_AUTHZ_GROUPFILE="$(get_loadmodule_config mod_authz_groupfile)" \
+    || fail "Authz_GroupFile module not found."
+LOAD_MOD_AUTHZ_HOST="$(get_loadmodule_config mod_authz_host)" \
+    || fail "Authz_Host module not found."
 }
 if [ ${APACHE_MPM:+set} ]; then
     LOAD_MOD_MPM=$(get_loadmodule_config mod_mpm_$APACHE_MPM) \
@@ -347,6 +349,7 @@ else
   BASE_URL="$BASE_URL:$HTTPD_PORT"
 fi
 HTTPD_USERS="$HTTPD_ROOT/users"
+HTTPD_GROUPS="$HTTPD_ROOT/groups"
 
 mkdir "$HTTPD_ROOT" \
   || fail "couldn't create temporary directory '$HTTPD_ROOT'"
@@ -408,6 +411,14 @@ say "Adding users for lock authentication"
 $HTPASSWD -bc $HTTPD_USERS jrandom   rayjandom
 $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 $HTPASSWD -b  $HTTPD_USERS __dumpster__ __loadster__
+$HTPASSWD -b  $HTTPD_USERS JRANDOM   rayjandom
+$HTPASSWD -b  $HTTPD_USERS JCONSTANT rayjandom
+
+say "Adding groups for mod_authz_svn tests"
+cat > "$HTTPD_GROUPS" <<__EOF__
+random: jrandom
+constant: jconstant
+__EOF__
 
 touch $HTTPD_MIME_TYPES
 
@@ -431,7 +442,9 @@ $LOAD_MOD_AUTHN_CORE
 $LOAD_MOD_AUTHN_FILE
 $LOAD_MOD_AUTHZ_CORE
 $LOAD_MOD_AUTHZ_USER
+$LOAD_MOD_AUTHZ_GROUPFILE
 $LOAD_MOD_AUTHZ_HOST
+$LOAD_MOD_ACCESS_COMPAT
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 LoadModule          dontdothat_module "$MOD_DONTDOTHAT"
 
@@ -537,6 +550,161 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
+<Location /authz-test-work/anon>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  # This may seem unnecessary but granting access to everyone here is necessary
+  # to exercise a bug with httpd 2.3.x+.  The "Require all granted" syntax is
+  # new to 2.3.x+ which we can detect with the mod_authz_core.c module
+  # signature.  Use the "Allow from all" syntax with older versions for symmetry.
+  <IfModule mod_authz_core.c>
+    Require all granted
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Allow from all
+  </IfMOdule>
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/mixed>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  Require           valid-user
+  Satisfy Any
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/mixed-noauthwhenanon>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  Require           valid-user
+  AuthzSVNNoAuthWhenAnonymousAllowed On
+  SVNPathAuthz On
+</Location>
+<Location /authz-test-work/authn>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  Require           valid-user
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/authn-anonoff>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  Require           valid-user
+  AuthzSVNAnonymous Off
+  SVNPathAuthz On
+</Location>
+<Location /authz-test-work/authn-lcuser>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  Require           valid-user
+  AuthzForceUsernameCase Lower
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/authn-lcuser>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  Require           valid-user
+  AuthzForceUsernameCase Lower
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/authn-group>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  AuthGroupFile     $HTTPD_GROUPS
+  Require           group random
+  AuthzSVNAuthoritative Off
+  SVNPathAuthz On
+</Location>
+<IfModule mod_authz_core.c>
+  <Location /authz-test-work/sallrany>
+    DAV               svn
+    SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+    AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+    SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+    SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+    SVNListParentPath On
+    AuthType          Basic
+    AuthName          "Subversion Repository"
+    AuthUserFile      $HTTPD_USERS
+    AuthzSendForbiddenOnFailure On
+    Satisfy All
+    <RequireAny>
+      Require valid-user
+      Require expr req('ALLOW') == '1'
+    </RequireAny>
+    ${SVN_PATH_AUTHZ_LINE}
+  </Location>
+  <Location /authz-test-work/sallrall>
+    DAV               svn
+    SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+    AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+    SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+    SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+    SVNListParentPath On
+    AuthType          Basic
+    AuthName          "Subversion Repository"
+    AuthUserFile      $HTTPD_USERS
+    AuthzSendForbiddenOnFailure On
+    Satisfy All
+    <RequireAll>
+      Require valid-user
+      Require expr req('ALLOW') == '1'
+    </RequireAll>
+    ${SVN_PATH_AUTHZ_LINE}
+  </Location>
+</IfModule>
 RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)\$ /svn-test-work/repositories/\$1
 RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-test-work/repositories/\$1
 __EOF__
