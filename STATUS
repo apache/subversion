@@ -13,14 +13,8 @@ delay a release, etc.
 
 Status of 1.9.0:
 
-Release blockers for 1.9.0:
-===========================
-
-Candidate changes that cannot go into a later 1.9.x:
-====================================================
-
-Other candidate changes:
-========================
+Candidate changes:
+==================
 
  * r1674626, r1674785
    On Windows: Enable memcached support in libsvn_subr on apr-util 1.3+
