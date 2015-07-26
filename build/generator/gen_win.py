@@ -194,6 +194,11 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.sln_version = '12.00'
           self.vcproj_version = '12.0'
           self.vcproj_extension = '.vcxproj'
+        elif val == '2015' or val == '14':
+          self.vs_version = '2015'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.0'
+          self.vcproj_extension = '.vcxproj'
         elif re.match('^1\d+$', val):
           self.vs_version = val
           self.sln_version = '12.00'
@@ -873,7 +878,7 @@ class WinGeneratorBase(GeneratorBase):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
 
-    if target.name.find('ruby') == -1:
+    if target.name.find('ruby') == -1 and float(self.vcproj_version) < 14.0:
       fakedefines.append("snprintf=_snprintf")
 
     if isinstance(target, gen_base.TargetSWIG):
