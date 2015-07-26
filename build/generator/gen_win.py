@@ -90,9 +90,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       printed.append(lib.name)
       print('Found %s %s' % (lib.name, lib.version))
 
-    if 'db' not in self._libraries:
-      print('BDB not found, BDB fs will not be built')
-
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it
     ### GJS: don't do this right now
@@ -608,14 +605,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_proj:
           deps.append(dep)
-    elif mode == FILTER_LIBS:
+    elif mode == FILTER_LIBS or mode == FILTER_EXTERNALLIBS:
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_static or (is_lib and not is_proj):
-          deps.append(dep)
-    elif mode == FILTER_EXTERNALLIBS:
-      for dep, (is_proj, is_lib, is_static) in dep_dict.items():
-        if is_static or (is_lib and not is_proj):
-          deps.append(dep)
+          # Filter explicit msvc libraries of optional dependencies
+          if (dep.name in self._libraries
+              or dep.name not in self._optional_libraries):
+            deps.append(dep)
     else:
       raise NotImplementedError
 
