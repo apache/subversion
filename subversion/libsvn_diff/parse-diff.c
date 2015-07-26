@@ -40,6 +40,7 @@
 
 #include "private/svn_eol_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_diff_private.h"
 #include "private/svn_sorts_private.h"
 
 /* Helper macro for readability */
@@ -81,6 +82,60 @@ struct svn_diff_hunk_t {
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
 };
+
+svn_error_t *
+svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
+                                       const char *line,
+                                       svn_patch_t *patch,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_diff_hunk_t *hunk = apr_palloc(result_pool, sizeof(*hunk));
+  static const char hunk_header[] = "@@ -0,0 +1 @@\n";
+  const unsigned len = strlen(line);
+  /* The +1 is for the 'plus' start-of-line character. */
+  const apr_off_t end = STRLEN_LITERAL(hunk_header) + (1 + len);
+  /* The +1 is for the second \n. */
+  svn_stringbuf_t *buf = svn_stringbuf_create_ensure(end + 1, scratch_pool);
+
+  hunk->patch = patch;
+
+  /* hunk->apr_file is created below. */
+
+  hunk->diff_text_range.start = STRLEN_LITERAL(hunk_header);
+  hunk->diff_text_range.current = STRLEN_LITERAL(hunk_header);
+  hunk->diff_text_range.end = end;
+
+  hunk->original_text_range.start = 0; /* There's no "original" text. */
+  hunk->original_text_range.current = 0;
+  hunk->original_text_range.end = 0;
+
+  hunk->modified_text_range.start = STRLEN_LITERAL(hunk_header);
+  hunk->modified_text_range.current = STRLEN_LITERAL(hunk_header);
+  hunk->modified_text_range.end = end;
+
+  hunk->leading_context = 0;
+  hunk->trailing_context = 0;
+
+  /* Create APR_FILE and put just a hunk in it (without a diff header).
+   * Save the offset of the last byte of the diff line. */
+  svn_stringbuf_appendbytes(buf, hunk_header, STRLEN_LITERAL(hunk_header));
+  svn_stringbuf_appendbyte(buf, '+');
+  svn_stringbuf_appendbytes(buf, line, len);
+  svn_stringbuf_appendbyte(buf, '\n');
+
+  SVN_ERR(svn_io_open_unique_file3(&hunk->apr_file, NULL /* filename */,
+                                   NULL /* system tempdir */,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   result_pool, scratch_pool));
+  SVN_ERR(svn_io_file_write_full(hunk->apr_file,
+                                 buf->data, buf->len,
+                                 NULL, scratch_pool));
+  /* No need to seek. */
+
+  *hunk_out = hunk;
+  return SVN_NO_ERROR;
+}
 
 void
 svn_diff_hunk_reset_diff_text(svn_diff_hunk_t *hunk)
