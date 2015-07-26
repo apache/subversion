@@ -49,13 +49,29 @@ Other candidate changes:
                    change that can't be backported. I would call it a bugfix
                    that should be backported)
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1689721, r1689729, r1691924, r1692091, r1692093, r1692098
    Improve optional dependency handling in VS project generator.
    Justification:
      Fixes compilation with VS2015 when Ruby is found and with all VS versions
      when serf and openssl are not available.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
+
+ * r1691712, r1691713
+   Update INSTALL.
+   Justification:
+     The updated text is applicable to 1.9.
+   Notes:
+     This requires one vote, and blocks the "Python 2.7 is required" patch.
+   Votes:
+     +1: brane
+     +0: danielsh
 
  * r1692448
    Require Python ≥2.7 for Subversion 1.9, part 1: documentation and dependency
@@ -68,7 +84,7 @@ Other candidate changes:
      be reverted.
    Depends: the r1691712 group
    Votes:
-     +1: danielsh
+     +1: danielsh, brane
      +0.5: rhuijben (Concept; patch review; untested) [before "Depends:"]
 
  * r1692469, r1692470
@@ -78,19 +94,4 @@ Other candidate changes:
      value. r1692469 makes it easier to test this with the most recent
      VS compiler.
    Votes:
-     +1: rhuijben
-
- * r1691712, r1691713
-   Update INSTALL.
-   Justification:
-     The updated text is applicable to 1.9.
-   Notes:
-     This requires one vote, and blocks the "Python 2.7 is required" patch.
-   Votes:
-     +0: danielsh
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: rhuijben, brane
