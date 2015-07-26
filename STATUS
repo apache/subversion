@@ -143,11 +143,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * ^/subversion/branches/1.7.x-VS2015
-   Fix compilation with VS2015 when ruby is found
-   Justification:
-     Avoid overriding 'snprintf' on Visual Studio version(s) that define
-     this function directly, avoids compilation errors.
-   Votes:
-     +1: rhuijben, brane

@@ -875,7 +875,7 @@ class WinGeneratorBase(GeneratorBase):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
 
-    if target.name.find('ruby') == -1:
+    if target.name.find('ruby') == -1 and float(self.vcproj_version) < 14.0:
       fakedefines.append("snprintf=_snprintf")
 
     if isinstance(target, gen_base.TargetSWIG):
