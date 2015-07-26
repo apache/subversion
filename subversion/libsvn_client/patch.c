@@ -46,6 +46,7 @@
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_diff_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_sorts_private.h"
@@ -1013,6 +1014,9 @@ init_patch_target(patch_target_t **patch_target,
       }
   }
 
+  if (patch->new_executable_p != svn_tristate_unknown)
+    has_prop_changes = TRUE;
+
   prop_changes_only = has_prop_changes && patch->hunks->nelts == 0;
 
   content = apr_pcalloc(result_pool, sizeof(*content));
@@ -1219,6 +1223,56 @@ init_patch_target(patch_target_t **patch_target,
                                        wc_ctx, target->local_abspath,
                                        result_pool, scratch_pool));
               svn_hash_sets(target->prop_targets, prop_name, prop_target);
+            }
+
+          if (patch->new_executable_p != svn_tristate_unknown
+              && !svn_hash_gets(target->prop_targets, SVN_PROP_EXECUTABLE))
+            {
+              svn_diff_operation_kind_t operation;
+              svn_boolean_t nothing_to_do = FALSE;
+              prop_patch_target_t *prop_target;
+
+              if (patch->old_executable_p == patch->new_executable_p)
+                {
+                    /* Noop change. */
+                    operation = svn_diff_op_unchanged;
+                }
+              else switch (patch->old_executable_p)
+                {
+                  case svn_tristate_false:
+                    /* Made executable. */
+                    operation = svn_diff_op_added;
+                    break;
+
+                  case svn_tristate_true:
+                    /* Made non-executable. */
+                    operation = svn_diff_op_deleted;
+                    break;
+
+                  case svn_tristate_unknown:
+                    if (patch->new_executable_p == svn_tristate_true)
+                      /* New, executable file. */
+                      operation = svn_diff_op_added;
+                    else
+                      /* New, non-executable file. That's not a change. */
+                      nothing_to_do = TRUE;
+                    break;
+
+                  default:
+                    /* NOTREACHED */
+                    abort();
+                }
+
+              if (! nothing_to_do)
+                {
+                  SVN_ERR(init_prop_target(&prop_target,
+                                           SVN_PROP_EXECUTABLE,
+                                           operation,
+                                           wc_ctx, target->local_abspath,
+                                           result_pool, scratch_pool));
+                  svn_hash_sets(target->prop_targets, SVN_PROP_EXECUTABLE,
+                                prop_target);
+                }
             }
         }
     }
@@ -2375,6 +2429,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
   /* Match property hunks. */
   for (hash_index = apr_hash_first(scratch_pool, patch->prop_patches);
+       /* ### will be skipped for SVN_PROP_EXECUTABLE; okay? */
        hash_index;
        hash_index = apr_hash_next(hash_index))
     {
@@ -2420,6 +2475,46 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
           APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
         }
+    }
+
+  /* Match implied property hunks. */
+  if (patch->new_executable_p != svn_tristate_unknown
+      && svn_hash_gets(target->prop_targets, SVN_PROP_EXECUTABLE))
+    {
+      hunk_info_t *hi;
+      svn_diff_hunk_t *hunk;
+      prop_patch_target_t *prop_target = svn_hash_gets(target->prop_targets,
+                                                       SVN_PROP_EXECUTABLE);
+      const char *const value = SVN_PROP_EXECUTABLE_VALUE;
+
+      switch (prop_target->operation)
+        {
+          case svn_diff_op_added:
+            SVN_ERR(svn_diff_hunk__create_adds_single_line(&hunk, value, patch,
+                                                           result_pool,
+                                                           iterpool));
+            break;
+
+          case svn_diff_op_deleted:
+            SVN__NOT_IMPLEMENTED();
+
+          case svn_diff_op_unchanged:
+            /* ### What to do? */
+            break;
+
+          default:
+            SVN_ERR_MALFUNCTION();
+        }
+
+      /* Derive a hunk_info from hunk. */
+      SVN_ERR(get_hunk_info(&hi, target, prop_target->content,
+                            hunk, 0 /* fuzz */, 0 /* previous_offset */,
+                            ignore_whitespace,
+                            TRUE /* is_prop_hunk */,
+                            cancel_func, cancel_baton,
+                            result_pool, iterpool));
+      if (! hi->already_applied)
+        APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
     }
 
   /* Apply or reject property hunks. */

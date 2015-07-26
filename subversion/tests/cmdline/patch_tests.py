@@ -5620,6 +5620,82 @@ def patch_obstructing_symlink_traversal(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+def patch_adds_executability_nocontents(sbox):
+  """patch adds svn:executable, without contents"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  unidiff_patch = (
+    "diff --git a/iota b/iota\n"
+    "old mode 100644\n"
+    "new mode 100755\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  ### Patch applies through the unversioned symlink
+  expected_output = [
+    ' U        %s\n' % sbox.ospath('iota'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  # "*" is SVN_PROP_EXECUTABLE_VALUE aka SVN_PROP_BOOLEAN_TRUE
+  expected_disk.tweak('iota', props={'svn:executable': '*'})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       check_props=True)
+
+def patch_adds_executability_yescontents(sbox):
+  """patch adds svn:executable, with contents"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  mu_new_contents = (
+    "This is the file 'mu'.\n"
+    "with text mods too\n"
+    )
+
+  unidiff_patch = (
+    "diff --git a/A/mu b/A/mu\n"
+    "old mode 100644\n"
+    "new mode 100755\n"
+    "index 8a0f01c..dfad3ac\n"
+    "--- a/A/mu\n"
+    "+++ b/A/mu\n"
+    "@@ -1 +1,2 @@\n"
+    " This is the file 'mu'.\n"
+    "+with text mods too\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  ### Patch applies through the unversioned symlink
+  expected_output = [
+    'UU        %s\n' % sbox.ospath('A/mu'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  # "*" is SVN_PROP_EXECUTABLE_VALUE aka SVN_PROP_BOOLEAN_TRUE
+  expected_disk.tweak('A/mu', props={'svn:executable': '*'})
+  expected_disk.tweak('A/mu', contents=mu_new_contents)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='MM')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       check_props=True)
+
 ########################################################################
 #Run the tests
 
@@ -5681,6 +5757,8 @@ test_list = [ None,
               patch_closest,
               patch_symlink_traversal,
               patch_obstructing_symlink_traversal,
+              patch_adds_executability_nocontents,
+              patch_adds_executability_yescontents,
             ]
 
 if __name__ == '__main__':
