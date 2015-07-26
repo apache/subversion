@@ -1,3 +1,23 @@
+Version 1.7.21
+(5 Aug 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.21
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
+    * fix issue #4551: svnrdump load commits wrong properties, or fails, on a
+      non-deltas dumpfile (r1652182 et al.)
+
+  - Server-side bugfixes:
+    * fix 'svnadmin recover' for pre-1.4 FSFS repositories (r1561419)
+
+ Developer-visible changes:
+  - General:
+    * support building on Windows with Visual Studio 2012, 2013 and 2015 (r1687158, r1692783)
+
+  - Bindings:
+    * swig-pl: fix some stack memory problems (r1668618, 1671388)
+
 Version 1.7.20
 (31 Mar 2015, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.20
