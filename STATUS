@@ -55,16 +55,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1691712, r1691713
-   Update INSTALL.
-   Justification:
-     The updated text is applicable to 1.9.
-   Notes:
-     This requires one vote, and blocks the "Python 2.7 is required" patch.
-   Votes:
-     +1: brane
-     +0: danielsh
-
  * r1692448
    Require Python ≥2.7 for Subversion 1.9, part 1: documentation and dependency
    version checks.
