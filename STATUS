@@ -54,12 +54,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1692469, r1692470
-   Fix digest argument typemap in swig-ruby binding to avoid segfault
-   Justification:
-     Somehow we triggered a typeconversion that didn't set an actual
-     value. r1692469 makes it easier to test this with the most recent
-     VS compiler.
-   Votes:
-     +1: rhuijben, brane
