@@ -29,6 +29,20 @@ Candidate changes:
      +1: stefan2, breser
      -0: julianfoad (test is missing from branch -- how do we know it works?)
 
+ * r1618472, r1618841, r1632635, r1640832
+   Fix a segfault with old style text delta.
+   Justification:
+     Compiling with -O3 in GCC 4.9 produces code that segfaults.  The newer
+     1.9 / trunk code is simpler and compiles just fine.  Also, that code
+     section is no longer performance critical.
+   Notes:
+     The branch code in text_delta is now the same as 1.9 / trunk, except for
+     a stream API usage and an unused function.
+   Branch:
+     ^/subversion/branches/1.8.x-r1618472
+   Votes:
+     +1: stefan2
+
  * r1654932, r1654933, r1654934, r1654937
    Fix issue #4554, "0 file length reported in FSFS".
    Justification:
