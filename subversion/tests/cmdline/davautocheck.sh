@@ -638,20 +638,6 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthzForceUsernameCase Lower
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
-<Location /authz-test-work/authn-lcuser>
-  DAV               svn
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-  SVNListParentPath On
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
-  Require           valid-user
-  AuthzForceUsernameCase Lower
-  ${SVN_PATH_AUTHZ_LINE}
-</Location>
 <Location /authz-test-work/authn-group>
   DAV               svn
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
