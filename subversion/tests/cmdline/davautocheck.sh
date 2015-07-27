@@ -566,7 +566,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   </IfModule>
   <IfModule !mod_authz_core.c>
     Allow from all
-  </IfMOdule>
+  </IfModule>
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /authz-test-work/mixed>
