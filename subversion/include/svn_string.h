@@ -541,7 +541,17 @@ svn_cstring_casecmp(const char *str1, const char *str2);
  * Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ *
  * Leading whitespace in @a str is skipped in a locale-dependent way.
+ * After that, the string may contain an optional '+' (positive, default)
+ * or '-' (negative) character, followed by an optional '0x' prefix if
+ * @a base is 0 or 16, followed by numeric digits appropriate for the base.
+ * If there are any more characters after the numeric digits, an error is
+ * returned.
+ *
+ * If @a base is zero, then a leading '0x' or '0X' prefix means hexadecimal,
+ * else a leading '0' means octal (implemented, though not documented, in
+ * apr_strtoi64() in APR 0.9.0 through 1.5.0), else use base ten.
  *
  * @since New in 1.7.
  */
@@ -554,7 +564,8 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
  * Parse the C string @a str into a 64 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoi64().
  *
  * @since New in 1.7.
  */
@@ -565,7 +576,8 @@ svn_cstring_atoi64(apr_int64_t *n, const char *str);
  * Parse the C string @a str into a 32 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoi64().
  *
  * @since New in 1.7.
  */
@@ -577,7 +589,21 @@ svn_cstring_atoi(int *n, const char *str);
  * it in @a *n. Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ *
  * Leading whitespace in @a str is skipped in a locale-dependent way.
+ * After that, the string may contain an optional '+' (positive, default)
+ * or '-' (negative) character, followed by an optional '0x' prefix if
+ * @a base is 0 or 16, followed by numeric digits appropriate for the base.
+ * If there are any more characters after the numeric digits, an error is
+ * returned.
+ *
+ * If @a base is zero, then a leading '0x' or '0X' prefix means hexadecimal,
+ * else a leading '0' means octal (implemented, though not documented, in
+ * apr_strtoi64() in APR 0.9.0 through 1.5.0), else use base ten.
+ *
+ * @warning The implementation used since version 1.7 returns an error
+ * if the parsed number is greater than APR_INT64_MAX, even if it is not
+ * greater than @a maxval.
  *
  * @since New in 1.7.
  */
@@ -590,7 +616,9 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
  * Parse the C string @a str into an unsigned 64 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoui64(),
+ * including the upper limit of APR_INT64_MAX.
  *
  * @since New in 1.7.
  */
@@ -601,7 +629,9 @@ svn_cstring_atoui64(apr_uint64_t *n, const char *str);
  * Parse the C string @a str into an unsigned 32 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoui64(),
+ * including the upper limit of APR_INT64_MAX.
  *
  * @since New in 1.7.
  */

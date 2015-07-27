@@ -48,6 +48,23 @@
 #include "svn_dirent_uri.h"
 #include "private/svn_fspath.h"
 
+/* The apache headers define these and they conflict with our definitions. */
+#ifdef PACKAGE_BUGREPORT
+#undef PACKAGE_BUGREPORT
+#endif
+#ifdef PACKAGE_NAME
+#undef PACKAGE_NAME
+#endif
+#ifdef PACKAGE_STRING
+#undef PACKAGE_STRING
+#endif
+#ifdef PACKAGE_TARNAME
+#undef PACKAGE_TARNAME
+#endif
+#ifdef PACKAGE_VERSION
+#undef PACKAGE_VERSION
+#endif
+#include "svn_private_config.h"
 
 #ifdef APLOG_USE_MODULE
 APLOG_USE_MODULE(authz_svn);
@@ -66,6 +83,30 @@ typedef struct authz_svn_config_rec {
   const char *groups_file;
   const char *force_username_case;
 } authz_svn_config_rec;
+
+#if AP_MODULE_MAGIC_AT_LEAST(20060110,0) /* version where
+                                            ap_some_auth_required breaks */
+#  if AP_MODULE_MAGIC_AT_LEAST(20120211,47) /* first version with
+                                               force_authn hook and
+                                               ap_some_authn_required() which
+                                               allows us to work without
+                                               ap_some_auth_required() */
+#    define USE_FORCE_AUTHN 1
+#    define IN_SOME_AUTHN_NOTE "authz_svn-in-some-authn"
+#    define FORCE_AUTHN_NOTE "authz_svn-force-authn"
+#  else 
+     /* ap_some_auth_required() is busted and no viable alternative exists */
+#    ifndef SVN_ALLOW_BROKEN_HTTPD_AUTH
+#      error This version of httpd has a security hole with mod_authz_svn
+#    else
+       /* user wants to build anyway */
+#      define USE_FORCE_AUTHN 0
+#    endif
+#  endif
+#else
+   /* old enough that ap_some_auth_required() still works */
+#  define USE_FORCE_AUTHN 0
+#endif
 
 /*
  * Configuration
@@ -832,6 +873,48 @@ access_checker(request_rec *r)
   const char *dest_repos_path = NULL;
   int status, authn_required;
 
+#if USE_FORCE_AUTHN
+  /* Use the force_authn() hook available in 2.4.x to work securely
+   * given that ap_some_auth_required() is no longer functional for our
+   * purposes in 2.4.x.
+   */
+  int authn_configured;
+
+  /* We are not configured to run */
+  if (!conf->anonymous || apr_table_get(r->notes, IN_SOME_AUTHN_NOTE)
+      || (! (conf->access_file || conf->repo_relative_access_file)))
+    return DECLINED;
+
+  /* Authentication is configured */
+  authn_configured = ap_auth_type(r) != NULL;
+  if (authn_configured)
+    {
+      /* If the user is trying to authenticate, let him.  It doesn't
+       * make much sense to grant anonymous access but deny authenticated
+       * users access, even though you can do that with '$anon' in the
+       * access file.
+       */
+      if (apr_table_get(r->headers_in,
+                        (PROXYREQ_PROXY == r->proxyreq)
+                        ? "Proxy-Authorization" : "Authorization"))
+        {
+          /* Set the note to force authn regardless of what access_checker_ex
+             hook requires */
+          apr_table_setn(r->notes, FORCE_AUTHN_NOTE, (const char*)1);
+
+          /* provide the proper return so the access_checker hook doesn't
+           * prevent the code from continuing on to the other auth hooks */
+          if (ap_satisfies(r) != SATISFY_ANY)
+            return OK;
+          else
+            return HTTP_FORBIDDEN;
+        }
+    }    
+
+#else
+  /* Support for older versions of httpd that have a working
+   * ap_some_auth_required() */
+
   /* We are not configured to run */
   if (!conf->anonymous
       || (! (conf->access_file || conf->repo_relative_access_file)))
@@ -846,9 +929,10 @@ access_checker(request_rec *r)
       if (ap_satisfies(r) != SATISFY_ANY)
         return DECLINED;
 
-      /* If the user is trying to authenticate, let him.  If anonymous
-       * access is allowed, so is authenticated access, by definition
-       * of the meaning of '*' in the access file.
+      /* If the user is trying to authenticate, let him.  It doesn't
+       * make much sense to grant anonymous access but deny authenticated
+       * users access, even though you can do that with '$anon' in the
+       * access file.
        */
       if (apr_table_get(r->headers_in,
                         (PROXYREQ_PROXY == r->proxyreq)
@@ -860,6 +944,7 @@ access_checker(request_rec *r)
           return HTTP_FORBIDDEN;
         }
     }
+#endif
 
   /* If anon access is allowed, return OK */
   status = req_check_access(r, conf, &repos_path, &dest_repos_path);
@@ -868,7 +953,26 @@ access_checker(request_rec *r)
       if (!conf->authoritative)
         return DECLINED;
 
+#if USE_FORCE_AUTHN
+      if (authn_configured) {
+          /* We have to check to see if authn is required because if so we must
+           * return UNAUTHORIZED (401) rather than FORBIDDEN (403) since returning
+           * the 403 leaks information about what paths may exist to
+           * unauthenticated users.  We must set a note here in order
+           * to use ap_some_authn_rquired() without triggering an infinite
+           * loop since the call will trigger this function to be called again. */
+          apr_table_setn(r->notes, IN_SOME_AUTHN_NOTE, (const char*)1);
+          authn_required = ap_some_authn_required(r);
+          apr_table_unset(r->notes, IN_SOME_AUTHN_NOTE);
+          if (authn_required)
+            {
+              ap_note_auth_failure(r);
+              return HTTP_UNAUTHORIZED;
+            }
+      }
+#else
       if (!authn_required)
+#endif
         log_access_verdict(APLOG_MARK, r, 0, FALSE, repos_path, dest_repos_path);
 
       return HTTP_FORBIDDEN;
@@ -949,6 +1053,17 @@ auth_checker(request_rec *r)
   return OK;
 }
 
+#if USE_FORCE_AUTHN
+static int
+force_authn(request_rec *r)
+{
+  if (apr_table_get(r->notes, FORCE_AUTHN_NOTE))
+    return OK;
+
+  return DECLINED;
+}
+#endif
+
 /*
  * Module flesh
  */
@@ -965,6 +1080,9 @@ register_hooks(apr_pool_t *p)
    * give SSLOptions +FakeBasicAuth a chance to work. */
   ap_hook_check_user_id(check_user_id, mod_ssl, NULL, APR_HOOK_FIRST);
   ap_hook_auth_checker(auth_checker, NULL, NULL, APR_HOOK_FIRST);
+#if USE_FORCE_AUTHN
+  ap_hook_force_authn(force_authn, NULL, NULL, APR_HOOK_FIRST);
+#endif
   ap_register_provider(p,
                        AUTHZ_SVN__SUBREQ_BYPASS_PROV_GRP,
                        AUTHZ_SVN__SUBREQ_BYPASS_PROV_NAME,

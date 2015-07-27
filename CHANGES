@@ -1,5 +1,5 @@
 Version 1.9.0
-(?? ??? 2015, from /branches/1.9.x)
+(5 Aug 2015, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
  User-visible changes:
@@ -452,6 +452,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
  Developer-visible changes:
   - General:
+    * require Python 2.7+ for development and testing (r1691712, r1691713, r1692448)
     * include symbolic names for error codes in maintainer mode (r1467643)
     * include symbolic names for warning codes in maintainer mode (r1469855)
     * support YouCompleteMe vim plugin (r1476374 et al)
@@ -519,7 +520,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fix bugs and performance issues using svn_wc_walk_entries3() (r1661110)
     * support using Python 3 for building (r1661247)
     * don't add -lstdc++ on FreeBSD 10 (r1662329)
-    * add build support for Visual Studio 2015 (r1663183, r1663184)
+    * add build support for Visual Studio 2015 (r1663183, r1663184, r1689721 et al.)
     * fix test failures when running from a directory whose name contains
       characters that must be escaped when used in a URL. (r1664997)
     * fix breakage of the serf ra session with svn_ra_get_dir2() and
@@ -732,6 +733,38 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
     * javahl: allow compiling with a C++11 compiler (r1684412)
 
+
+Version 1.8.14
+(5 Aug 2015, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.14
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * document svn:autoprops (r1678494 et al.)
+    * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
+    * resolve: improve conflict prompts for binary files (r1667228 et al.)
+    * ls: improve performance of '-v' on tag directories (r1673153)
+    * improved Sqlite 3.8.9 query performance regression on externals (r1672295 et al.)
+    * fixed issue #4580: 'svn -v st' on file externals reports "?" instead
+      of user and revision after 'svn up' (r1680242)
+
+  - Server-side bugfixes:
+    * mod_dav_svn: do not ignore skel parsing errors (r1658168)
+    * detect invalid svndiff data earlier (r1684077)
+    * prevent possible repository corruption on power/disk failures (r1680819)
+    * fixed issue #4577: Read error with nodes whose DELTA chain starts with
+      a PLAIN rep (r1676667, r1677267)
+    * fixed issue #4531: server-side copy (over dav) is slow and uses
+      too much memory (r1674627)
+
+ Developer-visible changes:
+  - General:
+    * support building on Windows with Visual Studio 2015 (r1692785)
+    * avoid failing some tests on versions of Python with a very old sqlite (r1674522)
+    * fix Ruby tests so they don't use the users real configuration (r1597884)
+
+  - Bindings:
+    * swig-pl: fix some stack memory problems (r1668618, 1671388)
 
 Version 1.8.13
 (31 Mar 2015, from /branches/1.8.x)
@@ -1566,6 +1599,26 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * add missing API functions to JavaHL bindings (issue #4326)
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
+
+Version 1.7.21
+(5 Aug 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.21
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
+    * fix issue #4551: svnrdump load commits wrong properties, or fails, on a
+      non-deltas dumpfile (r1652182 et al.)
+
+  - Server-side bugfixes:
+    * fix 'svnadmin recover' for pre-1.4 FSFS repositories (r1561419)
+
+ Developer-visible changes:
+  - General:
+    * support building on Windows with Visual Studio 2012, 2013 and 2015 (r1687158, r1692783)
+
+  - Bindings:
+    * swig-pl: fix some stack memory problems (r1668618, 1671388)
 
 Version 1.7.20
 (31 Mar 2015, from /branches/1.7.x)

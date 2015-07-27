@@ -587,7 +587,10 @@ def authz_log_and_tracing_test(sbox):
   ## cat
 
   # now see if we can look at the older version of rho
-  svntest.actions.run_and_verify_svn(None, expected_err,
+
+  expected_err2 = ".*svn: E195012: Unable to find repository location.*"
+
+  svntest.actions.run_and_verify_svn(None, expected_err2,
                                      'cat', '-r', '2', D_url+'/rho')
 
   if sbox.repo_url.startswith('http'):
@@ -604,10 +607,11 @@ def authz_log_and_tracing_test(sbox):
   svntest.actions.run_and_verify_svn(None, expected_err,
                                      'diff', '-r', 'HEAD', G_url+'/rho')
 
-  svntest.actions.run_and_verify_svn(None, expected_err,
+  # diff treats the unreadable path as indicating an add so no error
+  svntest.actions.run_and_verify_svn(None, [],
                                      'diff', '-r', '2', D_url+'/rho')
 
-  svntest.actions.run_and_verify_svn(None, expected_err,
+  svntest.actions.run_and_verify_svn(None, [],
                                      'diff', '-r', '2:4', D_url+'/rho')
 
 # test whether read access is correctly granted and denied
