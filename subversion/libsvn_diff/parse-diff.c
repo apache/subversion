@@ -1352,17 +1352,22 @@ static struct transition transitions[] =
 {
   {"--- ",          state_start,            diff_minus},
   {"+++ ",          state_minus_seen,       diff_plus},
+
   {"diff --git",    state_start,            git_start},
   {"--- a/",        state_git_diff_seen,    git_minus},
   {"--- a/",        state_git_tree_seen,    git_minus},
   {"--- /dev/null", state_git_tree_seen,    git_minus},
   {"+++ b/",        state_git_minus_seen,   git_plus},
   {"+++ /dev/null", state_git_minus_seen,   git_plus},
+
   {"rename from ",  state_git_diff_seen,    git_move_from},
   {"rename to ",    state_move_from_seen,   git_move_to},
+
   {"copy from ",    state_git_diff_seen,    git_copy_from},
   {"copy to ",      state_copy_from_seen,   git_copy_to},
+
   {"new file ",     state_git_diff_seen,    git_new_file},
+
   {"deleted file ", state_git_diff_seen,    git_deleted_file},
 };
 

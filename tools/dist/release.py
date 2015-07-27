@@ -34,9 +34,6 @@
 # It'd be kind of nice to use the Subversion python bindings in this script,
 # but people.apache.org doesn't currently have them installed
 
-# Futures (Python 2.5 compatibility)
-from __future__ import with_statement
-
 # Stuff we need
 import os
 import re

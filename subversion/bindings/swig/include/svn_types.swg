@@ -1152,6 +1152,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 #ifdef SWIGPYTHON
+/* ### Verify if this should use '[]' like perl and ruby */
 %typemap(in) const unsigned char *digest {
     if ($input == Py_None) {
         $1 = NULL;
@@ -1163,7 +1164,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in) const unsigned char *digest
+%typemap(in) const unsigned char digest[]
 {
   if (NIL_P($input)) {
     $1 = NULL;
