@@ -29,6 +29,7 @@
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>] [--http-proxy=<host>:<port>]
+            [--httpd-version=<version>]
             [--config-file=<file>] [--ssl-cert=<file>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
@@ -125,7 +126,7 @@ class TestHarness:
                fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None, mode_filter=None,
                milestone_filter=None, set_log_level=None, ssl_cert=None,
-               http_proxy=None):
+               http_proxy=None, httpd_version=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -178,6 +179,7 @@ class TestHarness:
     self.log = None
     self.ssl_cert = ssl_cert
     self.http_proxy = http_proxy
+    self.httpd_version = httpd_version
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
 
@@ -481,6 +483,8 @@ class TestHarness:
       svntest.main.options.ssl_cert = self.ssl_cert
     if self.http_proxy is not None:
       svntest.main.options.http_proxy = self.http_proxy
+    if self.httpd_version is not None:
+      svntest.main.options.httpd_version = self.httpd_version
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -645,7 +649,7 @@ def main():
                             'enable-sasl', 'parallel', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
                             'mode-filter=', 'set-log-level=', 'ssl-cert=',
-                            'http-proxy='])
+                            'http-proxy=', 'httpd-version='])
   except getopt.GetoptError:
     args = []
 
@@ -656,9 +660,9 @@ def main():
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
     config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
-    set_log_level, ssl_cert, http_proxy = \
+    set_log_level, ssl_cert, http_proxy, httpd_version = \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -696,6 +700,8 @@ def main():
       ssl_cert = val
     elif opt in ['--http-proxy']:
       http_proxy = val
+    elif opt in ['--httpd-version']:
+      httpd_version = val
     else:
       raise getopt.GetoptError
 
@@ -712,7 +718,7 @@ def main():
                    fsfs_sharding, fsfs_packing, list_tests,
                    mode_filter=mode_filter, milestone_filter=milestone_filter,
                    set_log_level=set_log_level, ssl_cert=ssl_cert,
-                   http_proxy=http_proxy)
+                   http_proxy=http_proxy, httpd_version=httpd_version)
 
   failed = th.run(args[2:])
   if failed:
