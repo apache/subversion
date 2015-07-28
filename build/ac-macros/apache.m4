@@ -162,11 +162,10 @@ if test -n "$APXS" && test "$APXS" != "no"; then
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
     INSTALL_APACHE_MODS=true
-    HTTPD="`$APXS -q sbindir`/`$APXS -q PROGNAME`"
-    if ! test -e $HTTPD ; then
-      HTTPD="`$APXS -q bindir`/`$APXS -q PROGNAME`"
-    fi
-    HTTPD_VERSION=["`$HTTPD -v | $SED -e 's/^.*\/\([0-9.]*\).*$/\1/' -e 1q`"]
+    HTTPD_MAJOR=`$SED -ne '/^#define AP_SERVER_MAJORVERSION_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
+    HTTPD_MINOR=`$SED -ne '/^#define AP_SERVER_MINORVERSION_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
+    HTTPD_PATCH=`$SED -ne '/^#define AP_SERVER_PATCHLEVEL_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
+    HTTPD_VERSION="${HTTPD_MAJOR}.${HTTPD_MINOR}.${HTTPD_PATCH}"
     AC_ARG_ENABLE(broken-httpd-auth,
       AS_HELP_STRING([--enable-broken-httpd-auth],
                      [Allow building against httpd 2.4 with broken auth]),
