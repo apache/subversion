@@ -97,9 +97,9 @@ fi
 # PR 55397: https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
 if test -n "$APXS" && test "$APXS" != "no"; then
   AC_MSG_CHECKING([mod_dav version])
-  HTTPD_MAJOR=`$SED -ne '/^#define AP_SERVER_MAJORVERSION_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
-  HTTPD_MINOR=`$SED -ne '/^#define AP_SERVER_MINORVERSION_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
-  HTTPD_PATCH=`$SED -ne '/^#define AP_SERVER_PATCHLEVEL_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
+  HTTPD_MAJOR=`$SED -ne '/^#define AP_SERVER_MAJORVERSION_NUMBER/p' "$APXS_INCLUDE/ap_release.h" | $SED -e 's/^.*NUMBER *//'`
+  HTTPD_MINOR=`$SED -ne '/^#define AP_SERVER_MINORVERSION_NUMBER/p' "$APXS_INCLUDE/ap_release.h" | $SED -e 's/^.*NUMBER *//'`
+  HTTPD_PATCH=`$SED -ne '/^#define AP_SERVER_PATCHLEVEL_NUMBER/p' "$APXS_INCLUDE/ap_release.h" | $SED -e 's/^.*NUMBER *//'`
   HTTPD_VERSION="${HTTPD_MAJOR}.${HTTPD_MINOR}.${HTTPD_PATCH}"
   case "$HTTPD_VERSION" in
     2.2.25 | 2.4.[[5-6]])
