@@ -89,6 +89,33 @@ else
     AC_MSG_RESULT(no)
 fi
 
+# check for some busted versions of mod_dav
+# in particular 2.2.25, 2.4.5, and 2.4.6 had the following bugs which are
+# troublesome for Subversion:
+# PR 55304: https://issues.apache.org/bugzilla/show_bug.cgi?id=55304
+# PR 55306: https://issues.apache.org/bugzilla/show_bug.cgi?id=55306
+# PR 55397: https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
+if test -n "$APXS" && test "$APXS" != "no"; then
+  AC_MSG_CHECKING([mod_dav version])
+  HTTPD_MAJOR=`$SED -ne '/^#define AP_SERVER_MAJORVERSION_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
+  HTTPD_MINOR=`$SED -ne '/^#define AP_SERVER_MINORVERSION_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
+  HTTPD_PATCH=`$SED -ne '/^#define AP_SERVER_PATCHLEVEL_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
+  HTTPD_VERSION="${HTTPD_MAJOR}.${HTTPD_MINOR}.${HTTPD_PATCH}"
+  case "$HTTPD_VERSION" in
+    2.2.25 | 2.4.[[5-6]])
+      AC_MSG_RESULT([broken])
+      AC_MSG_ERROR([Apache httpd version $HTTPD_VERSION includes a broken mod_dav; use a newer version of httpd])
+      ;;
+    2.[[0-9]]*.[[0-9]]*)
+      AC_MSG_RESULT([acceptable])
+      ;;
+    *)
+      AC_MSG_RESULT([unrecognised])
+      AC_MSG_ERROR([Apache httpd version $HTTPD_VERSION not recognised])
+      ;;
+  esac
+fi
+
 if test -n "$APXS" && test "$APXS" != "no"; then
   AC_MSG_CHECKING([whether Apache version is compatible with APR version])
   apr_major_version="${apr_version%%.*}"
@@ -106,37 +133,15 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       AC_MSG_ERROR([unknown APR version])
       ;;
   esac
-  old_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-  AC_EGREP_CPP([apache_minor_version= *\"$apache_minor_version_wanted_regex\"],
-               [
-#include "$APXS_INCLUDE/ap_release.h"
-apache_minor_version=AP_SERVER_MINORVERSION],
-               [AC_MSG_RESULT([yes])],
-               [AC_MSG_RESULT([no])
-                AC_MSG_ERROR([Apache version incompatible with APR version])])
-  CPPFLAGS="$old_CPPFLAGS"
-fi
-
-# check for some busted versions of mod_dav
-# in particular 2.2.25, 2.4.5, and 2.4.6 had the following bugs which are
-# troublesome for Subversion:
-# PR 55304: https://issues.apache.org/bugzilla/show_bug.cgi?id=55304
-# PR 55306: https://issues.apache.org/bugzilla/show_bug.cgi?id=55306
-# PR 55397: https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
-if test -n "$APXS" && test "$APXS" != "no"; then
-  AC_MSG_CHECKING([mod_dav version])
-  old_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-  blacklisted_versions_regex=["\"2\" \"\.\" (\"2\" \"\.\" \"25\"|\"4\" \"\.\" \"[56]\")"]
-  AC_EGREP_CPP([apache_version= *$blacklisted_versions_regex],
-               [
-#include "$APXS_INCLUDE/ap_release.h"
-apache_version=AP_SERVER_BASEREVISION],
-               [AC_MSG_RESULT([broken])
-                AC_MSG_ERROR([Apache httpd version includes a broken mod_dav; use a newer version of httpd])],
-               [AC_MSG_RESULT([acceptable])])
-  CPPFLAGS="$old_CPPFLAGS"
+  case $HTTPD_MINOR in
+    $apache_minor_version_wanted_regex)
+      AC_MSG_RESULT([yes])
+      ;;
+    *)
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([Apache version $HTTPD_VERSION incompatible with APR version $apr_version])
+      ;;
+  esac
 fi
 
 AC_ARG_WITH(apache-libexecdir,
@@ -162,10 +167,6 @@ if test -n "$APXS" && test "$APXS" != "no"; then
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
     INSTALL_APACHE_MODS=true
-    HTTPD_MAJOR=`$SED -ne '/^#define AP_SERVER_MAJORVERSION_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
-    HTTPD_MINOR=`$SED -ne '/^#define AP_SERVER_MINORVERSION_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
-    HTTPD_PATCH=`$SED -ne '/^#define AP_SERVER_PATCHLEVEL_NUMBER/{s/^.*NUMBER *//;p}' "$APXS_INCLUDE/ap_release.h"`
-    HTTPD_VERSION="${HTTPD_MAJOR}.${HTTPD_MINOR}.${HTTPD_PATCH}"
     AC_ARG_ENABLE(broken-httpd-auth,
       AS_HELP_STRING([--enable-broken-httpd-auth],
                      [Allow building against httpd 2.4 with broken auth]),
