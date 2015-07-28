@@ -41,7 +41,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1618472
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
  * r1654932, r1654933, r1654934, r1654937
    Fix issue #4554, "0 file length reported in FSFS".
