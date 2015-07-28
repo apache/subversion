@@ -10,7 +10,7 @@ See http://subversion.apache.org/docs/community-guide/releasing.html#release-sta
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.7.20:
+Status of 1.7.22:
 
 Candidate changes:
 ==================
@@ -27,7 +27,7 @@ Candidate changes:
      +0: rhuijben (Shouldn't we provide a three way diff instead of guessing
                    a base to show a one way diff against based on the
                    operation?
-                   
+                   .
                    I would prefer to have show-diff always work against
                    the local pristine version, instead of sometimes against
                    their or their-old (src-left) version, as that is the final
@@ -52,7 +52,35 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1542765, r1571214
+ * r1654932, r1654933, r1654934, r1654937
+   Fix issue #4554, "0 file length reported in FSFS".
+   Justification:
+     We want 1.7 to cope with repositories that have been touched by 1.8.
+     The issue causes 'svnadmin dump' to create corrupted output that fails
+     to load and we provide no way to detect that problem other than loading
+     the respective dump.  We also want to prevent further instances of that
+     issue to be added to the repository.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4554
+   Votes:
+     +1: stefan2, brane
+
+ * r1659867
+   Make editor-aborts after close edit safe.
+   Justification:
+     A SIGPIPE caused by cancelling a commit at the wrong time may cause
+     the commit editor to return an error from editor->close_edit() which
+     makes most code paths call editor->abort_edit(), causing a double
+     free() of the txnroot pool.  This branch contains
+     the 1.7.x equivalent of the 1.8.x and trunk patch including a similar
+     fix for ra-neon.
+   Branch:
+     ^/subversion/branches/1.7.x-r1659867
+   Votes:
+     +1: rhuijben, brane
+     +1: danielsh (libsvn_repos part only)
+
+ * r1542765, r1567080, r1571214
    Add Sqlite index information.
    Justification:
      Adding this information explains to Sqlite how we use our indexes. While
@@ -62,16 +90,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1542765
    Votes:
-     +1: rhuijben
-
- * r1644158, r1644530, r1644595, r1644599
-   Fix patch output for reordered hunks, part of issue 4533.
-   Justification:
-     Output is invalid.
-   Branch:
-     ^/subversion/branches/1.8.x-r1644595
-   Votes:
-     +1: philip
+     +1: brane
+     +1: rhuijben, stefan2 (without r1567080)
 
 Veto-blocked changes:
 =====================
@@ -88,7 +108,23 @@ Veto-blocked changes:
                    this is about err->message which is valid in all builds)
      -1: stsp (not a bug fix, changes output in a patch release)
 
- * r1643074
+
+ * r1646230, r1646250, r1646253, r1656893, r1657182, r1657195, r1657401
+   Make svnsync strip any r0 references from mergeinfo -- issue #4476.
+   Justification:
+     Without this is was not possible to svnsync a repository that contained
+     this kind of mergeinfo that is now considered invalid but previously
+     could be committed.
+   Branch:
+     ^/subversion/branches/1.7.x-r1646250
+   Notes:
+     r1643074 (nominated separately) is required for the test to work.
+     I would recommend not backporting r1646250 without r1643074.
+     This is also nominated for 1.8.x.
+   Votes:
+     -1: julianfoad (the test is failing; not essential for 1.7.x)
+
+* r1643074
    Don't let invalid mergeinfo stop 'svnadmin load' from working.
      Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
      dump fail".
@@ -102,10 +138,8 @@ Veto-blocked changes:
    Branch:
      ^/subversion/branches/1.7.x-r1643074
    Votes:
-     +1: julianfoad
-     -1: breser (no changes on branch, attempt to merge something for this
-                 was mismerged on release branch in r1643189, the merge that
-                 was made broke swig-rb)
+     -1: julianfoad (I think the fix is right but the branch doesn't merge
+           properly with a plain automatic merge)
 
 Approved changes:
 =================

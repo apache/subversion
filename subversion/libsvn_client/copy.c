@@ -992,7 +992,10 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                 pair->src_abspath_or_url, pool) != NULL))
         {
           info->resurrection = TRUE;
-          top_url = svn_uri_dirname(top_url, pool);
+          top_url = svn_uri_get_longest_ancestor(
+                            top_url,
+                            svn_uri_dirname(pair->dst_abspath_or_url, pool),
+                            pool);
           SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
         }
     }

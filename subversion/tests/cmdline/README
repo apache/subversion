@@ -83,6 +83,133 @@ paths adjusted appropriately:
      Require valid-user
    </Location>
 
+   <Location /authz-test-work/anon>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     # This may seem unnecessary but granting access to everyone here is necessary
+     # to exercise a bug with httpd 2.3.x+.  The "Require all granted" syntax is
+     # new to 2.3.x+ which we can detect with the mod_authz_core.c module
+     # signature.  Use the "Allow from all" syntax with older versions for symmetry.
+     <IfModule mod_authz_core.c>
+       Require all granted
+     </IfModule>
+     <IfModule !mod_authz_core.c>
+       Allow from all
+     </IfMOdule>
+   </Location>
+   <Location /authz-test-work/mixed>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     Satisfy Any
+   </Location>
+   <Location /authz-test-work/mixed-noauthwhenanon>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     AuthzSVNNoAuthWhenAnonymousAllowed On
+   </Location>
+   <Location /authz-test-work/authn>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+   </Location>
+   <Location /authz-test-work/authn-anonoff>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     AuthzSVNAnonymous Off
+   </Location>
+   <Location /authz-test-work/authn-lcuser>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     AuthzForceUsernameCase Lower
+   </Location>
+   <Location /authz-test-work/authn-lcuser>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     AuthzForceUsernameCase Lower
+   </Location>
+   <Location /authz-test-work/authn-group>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     AuthGroupFile /usr/local/apache2/conf/groups
+     Require           group random
+     AuthzSVNAuthoritative Off
+   </Location>
+   <IfModule mod_authz_core.c>
+     <Location /authz-test-work/sallrany>
+       DAV               svn
+       SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+       AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+       SVNListParentPath On
+       AuthType          Basic
+       AuthName          "Subversion Repository"
+       AuthUserFile /usr/local/apache2/conf/users
+       AuthzSendForbiddenOnFailure On
+       Satisfy All
+       <RequireAny>
+         Require valid-user
+         Require expr req('ALLOW') == '1'
+       </RequireAny>
+     </Location>
+     <Location /authz-test-work/sallrall>
+       DAV               svn
+       SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+       AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+       SVNListParentPath On
+       AuthType          Basic
+       AuthName          "Subversion Repository"
+       AuthUserFile /usr/local/apache2/conf/users
+       AuthzSendForbiddenOnFailure On
+       Satisfy All
+       <RequireAll>
+         Require valid-user
+         Require expr req('ALLOW') == '1'
+       </RequireAll>
+     </Location>
+   </IfModule>
+
+
    RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$ /svn-test-work/repositories/$1
    RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$ /svn-test-work/repositories/$1
 
@@ -101,6 +228,15 @@ just drop the following 2-line snippet into the
 ----------------------------
 jrandom:xCGl35kV9oWCY
 jconstant:xCGl35kV9oWCY
+JRANDOM:xCGl35kV9oWCY
+JCONSTANT:xCGl35kV9oWCY
+----------------------------
+
+and these lines into the
+/usr/local/apache/conf/groups file:
+----------------------------
+random: jrandom
+constant: jconstant
 ----------------------------
 
 Now, (re)start Apache and run the tests over mod_dav_svn.
@@ -138,6 +274,8 @@ Note [1]: It would be quite too much to expect those password entries
           ----------------------------
           jrandom:$apr1$3p1.....$FQW6RceW5QhJ2blWDQgKn0
           jconstant:$apr1$jp1.....$Usrqji1c9H6AbOxOGAzzb0
+          JRANDOM:$apr1$3p1.....$FQW6RceW5QhJ2blWDQgKn0
+          JCONSTANT:$apr1$jp1.....$Usrqji1c9H6AbOxOGAzzb0
           ----------------------------
 
 

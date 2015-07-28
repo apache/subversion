@@ -85,6 +85,20 @@ VERSION_OKAY
         AC_MSG_RESULT(no - Unable to locate $APXS_INCLUDE/mod_dav.h)
         APXS=""
     fi
+    HTTPD="`$APXS -q sbindir`/`$APXS -q PROGNAME`"
+    if ! test -e $HTTPD ; then
+      HTTPD="`$APXS -q bindir`/`$APXS -q PROGNAME`"
+    fi
+    HTTPD_VERSION=["`$HTTPD -v | $SED -e 's@^.*/\([0-9.]*\)\(.*$\)@\1@ ; 1q'`"]
+    AC_ARG_ENABLE(broken-httpd-auth,
+      AS_HELP_STRING([--enable-broken-httpd-auth],
+                     [Allow building against httpd 2.4 with broken auth]),
+      [broken_httpd_auth=$enableval],[broken_httpd_auth=no])
+    if test "$enable_broken_httpd_auth" = "yes"; then
+      AC_MSG_NOTICE([Building with broken httpd auth])
+      AC_DEFINE(SVN_ALLOW_BROKEN_HTTPD_AUTH, 1,
+                [Defined to allow building against httpd 2.4 with broken auth])
+    fi
 else
     AC_MSG_RESULT(no)
 fi
@@ -178,6 +192,7 @@ AC_SUBST(APXS)
 AC_SUBST(APACHE_LDFLAGS)
 AC_SUBST(APACHE_INCLUDES)
 AC_SUBST(APACHE_LIBEXECDIR)
+AC_SUBST(HTTPD_VERSION)
 
 # there aren't any flags that interest us ...
 #if test -n "$APXS" && test "$APXS" != "no"; then

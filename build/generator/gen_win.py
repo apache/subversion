@@ -188,6 +188,26 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.sln_version = '11.00'
           self.vcproj_version = '10.0'
           self.vcproj_extension = '.vcxproj'
+        elif val == '2010':
+          self.vs_version = '2010'
+          self.sln_version = '11.00'
+          self.vcproj_version = '10.0'
+          self.vcproj_extension = '.vcxproj'
+        elif val == '2012' or val == '11':
+          self.vs_version = '2012'
+          self.sln_version = '12.00'
+          self.vcproj_version = '11.0'
+          self.vcproj_extension = '.vcxproj'
+        elif val == '2013' or val == '12':
+          self.vs_version = '2013'
+          self.sln_version = '12.00'
+          self.vcproj_version = '12.0'
+          self.vcproj_extension = '.vcxproj'
+        elif val == '2015' or val == '14':
+          self.vs_version = '2015'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.0'
+          self.vcproj_extension = '.vcxproj'
         else:
           print('WARNING: Unknown VS.NET version "%s",'
                  ' assuming "%s"\n' % (val, '7.00'))
@@ -855,7 +875,7 @@ class WinGeneratorBase(GeneratorBase):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
 
-    if target.name.find('ruby') == -1:
+    if target.name.find('ruby') == -1 and float(self.vcproj_version) < 14.0:
       fakedefines.append("snprintf=_snprintf")
 
     if isinstance(target, gen_base.TargetSWIG):
@@ -1253,7 +1273,8 @@ class WinGeneratorBase(GeneratorBase):
     data = {
       'version' : self.vcproj_version,
       'configs' : self.configs,
-      'platforms' : self.platforms
+      'platforms' : self.platforms,
+      'toolset_version' : 'v' + self.vcproj_version.replace('.',''),
       }
     for key, val in params:
       data[key] = val

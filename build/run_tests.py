@@ -29,6 +29,7 @@
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>]
+            [--httpd-version=<version>]
             [--config-file=<file>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
@@ -81,7 +82,7 @@ class TestHarness:
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None, mode_filter=None,
-               milestone_filter=None):
+               milestone_filter=None, httpd_version=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -130,6 +131,7 @@ class TestHarness:
     self.svn_bin = svn_bin
     self.mode_filter = mode_filter
     self.log = None
+    self.httpd_version = httpd_version
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
 
@@ -414,6 +416,8 @@ class TestHarness:
       svntest.main.options.fsfs_packing = self.fsfs_packing
     if self.mode_filter is not None:
       svntest.main.options.mode_filter = self.mode_filter
+    if self.httpd_version is not None:
+      svntest.main.options.httpd_version = self.httpd_version
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -562,7 +566,7 @@ def main():
                             'fsfs-packing', 'fsfs-sharding=',
                             'enable-sasl', 'parallel', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
-                            'mode-filter='])
+                            'mode-filter=', 'httpd-version='])
   except getopt.GetoptError:
     args = []
 
@@ -572,9 +576,10 @@ def main():
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
-    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter= \
+    config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
+    httpd_version = \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None
+            None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -606,6 +611,8 @@ def main():
       milestone_filter = val
     elif opt in ['--mode-filter']:
       mode_filter = val
+    elif opt in ['--httpd-version']:
+      httpd_version = val
     else:
       raise getopt.GetoptError
 
@@ -620,7 +627,8 @@ def main():
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing, list_tests,
-                   mode_filter=mode_filter, milestone_filter=milestone_filter)
+                   mode_filter=mode_filter, milestone_filter=milestone_filter,
+                   httpd_version=httpd_version)
 
   failed = th.run(args[2:])
   if failed:
