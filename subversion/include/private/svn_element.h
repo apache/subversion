@@ -137,8 +137,7 @@ svn_element_payload_equal(const svn_element_payload_t *left,
  *
  * Set the node kind to 'unknown'.
  *
- * Allocate the result in @a result_pool, but only shallow-copy the
- * given arguments.
+ * Allocate the result in @a result_pool.
  */
 svn_element_payload_t *
 svn_element_payload_create_ref(svn_pathrev_t ref,
@@ -146,8 +145,7 @@ svn_element_payload_create_ref(svn_pathrev_t ref,
 
 /** Create a new node-payload object for a directory node.
  *
- * Allocate the result in @a result_pool, but only shallow-copy the
- * given arguments.
+ * Allocate the result in @a result_pool.
  */
 svn_element_payload_t *
 svn_element_payload_create_dir(apr_hash_t *props,
@@ -155,8 +153,7 @@ svn_element_payload_create_dir(apr_hash_t *props,
 
 /** Create a new node-payload object for a file node.
  *
- * Allocate the result in @a result_pool, but only shallow-copy the
- * given arguments.
+ * Allocate the result in @a result_pool.
  */
 svn_element_payload_t *
 svn_element_payload_create_file(apr_hash_t *props,
@@ -165,8 +162,7 @@ svn_element_payload_create_file(apr_hash_t *props,
 
 /** Create a new node-payload object for a symlink node.
  *
- * Allocate the result in @a result_pool, but only shallow-copy the
- * given arguments.
+ * Allocate the result in @a result_pool.
  */
 svn_element_payload_t *
 svn_element_payload_create_symlink(apr_hash_t *props,
