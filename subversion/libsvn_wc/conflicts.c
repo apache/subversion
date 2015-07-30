@@ -2598,9 +2598,11 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
  *
  * It is not an error if there is no tree conflict.
  *
- * If the conflict can't be resolved yet because another tree conflict is
- * blocking a storage location, store the tree conflict in the RESOLVE_LATER
- * hash.
+ * If the conflict can't be resolved yet (e.g. because another tree conflict
+ * is blocking a storage location), and RESOLVE_LATER is not NULL, store the
+ * tree conflict in RESOLVE_LATER and do not mark the conflict resolved.
+ * Else if RESOLVE_LATER is NULL, do not mark the conflict resolved and
+ * return the error which prevented the conflict from being marked resolved.
  */
 static svn_error_t *
 resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
