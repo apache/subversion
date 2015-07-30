@@ -280,6 +280,44 @@ resolve_postpone(svn_client_conflict_option_t *option,
   return SVN_NO_ERROR;
 }
 
+/* 
+ * Resolve the conflict at LOCAL_ABSPATH. Currently only supports
+ * an OPTION_ID which can be mapped to svn_wc_conflict_choice_t and
+ * maps a single option_id to text, prop, and/or tree conflicts.
+ */
+static svn_error_t *
+resolve_conflict(svn_client_conflict_option_id_t option_id,
+                 const char *local_abspath,
+                 svn_boolean_t resolve_text,
+                 const char * resolve_prop,
+                 svn_boolean_t resolve_tree,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool)
+{
+  const char *lock_abspath;
+  svn_error_t *err;
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                    svn_depth_empty,
+                                    resolve_text, resolve_prop, resolve_tree,
+                                    option_id, /* id is backwards compatible */
+                                    NULL, NULL, /* legacy conflict_func/baton */
+                                    ctx->cancel_func,
+                                    ctx->cancel_baton,
+                                    ctx->notify_func2,
+                                    ctx->notify_baton2,
+                                    scratch_pool));
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 resolve_text_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
@@ -290,15 +328,9 @@ resolve_text_conflict(svn_client_conflict_option_t *option,
 
   id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
+  SVN_ERR(resolve_conflict(id, local_abspath, TRUE, NULL, FALSE,
+                           conflict->ctx, scratch_pool));
 
-  SVN_ERR(svn_wc_resolved_conflict5(conflict->ctx->wc_ctx, local_abspath,
-                                    svn_depth_empty, TRUE, NULL, FALSE,
-                                    id, /* option id is backwards compatible */
-                                    conflict->ctx->cancel_func,
-                                    conflict->ctx->cancel_baton,
-                                    conflict->ctx->notify_func2,
-                                    conflict->ctx->notify_baton2,
-                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -312,15 +344,9 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
 
   id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
+  SVN_ERR(resolve_conflict(id, local_abspath, FALSE, "", FALSE,
+                           conflict->ctx, scratch_pool));
 
-  SVN_ERR(svn_wc_resolved_conflict5(conflict->ctx->wc_ctx, local_abspath,
-                                    svn_depth_empty, TRUE, "", FALSE,
-                                    id, /* option id is backwards compatible */
-                                    conflict->ctx->cancel_func,
-                                    conflict->ctx->cancel_baton,
-                                    conflict->ctx->notify_func2,
-                                    conflict->ctx->notify_baton2,
-                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -334,15 +360,9 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
 
   id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
+  SVN_ERR(resolve_conflict(id, local_abspath, FALSE, NULL, TRUE,
+                           conflict->ctx, scratch_pool));
 
-  SVN_ERR(svn_wc_resolved_conflict5(conflict->ctx->wc_ctx, local_abspath,
-                                    svn_depth_empty, FALSE, NULL, TRUE,
-                                    id, /* option id is backwards compatible */
-                                    conflict->ctx->cancel_func,
-                                    conflict->ctx->cancel_baton,
-                                    conflict->ctx->notify_func2,
-                                    conflict->ctx->notify_baton2,
-                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
