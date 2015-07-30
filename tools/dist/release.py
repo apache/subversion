@@ -803,7 +803,7 @@ def get_siginfo(args, quiet=False):
     try:
         import gnupg
     except ImportError:
-        import _gnupg as gnupg
+        import security._gnupg as gnupg
     gpg = gnupg.GPG()
 
     target = get_target(args)
