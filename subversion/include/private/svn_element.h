@@ -105,6 +105,11 @@ struct svn_element_payload_t
    * The 'null' value is (SVN_INVALID_REVNUM, NULL). */
   svn_pathrev_t ref;
 
+  /* The pool in which the payload's content is allocated. Used when
+   * resolving (populating the props/text/target in) a payload that was
+   * originally defined by reference. */
+  apr_pool_t *pool;
+
   /* Properties (for kind != unknown).
    * Maps (const char *) name -> (svn_string_t) value.
    * An empty hash means no properties. (SHOULD NOT be NULL.)

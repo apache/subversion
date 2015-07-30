@@ -177,6 +177,7 @@ svn_element_payload_create_ref(svn_pathrev_t ref,
   svn_element_payload_t *new_payload
     = apr_pcalloc(result_pool, sizeof(*new_payload));
 
+  new_payload->pool = result_pool;
   new_payload->kind = svn_node_unknown;
   new_payload->ref = svn_pathrev_dup(ref, result_pool);
   assert(svn_element_payload_invariants(new_payload));
@@ -190,6 +191,7 @@ svn_element_payload_create_dir(apr_hash_t *props,
   svn_element_payload_t *new_payload
     = apr_pcalloc(result_pool, sizeof(*new_payload));
 
+  new_payload->pool = result_pool;
   new_payload->kind = svn_node_dir;
   new_payload->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
   assert(svn_element_payload_invariants(new_payload));
@@ -206,6 +208,7 @@ svn_element_payload_create_file(apr_hash_t *props,
 
   SVN_ERR_ASSERT_NO_RETURN(text);
 
+  new_payload->pool = result_pool;
   new_payload->kind = svn_node_file;
   new_payload->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
   new_payload->text = svn_stringbuf_dup(text, result_pool);
@@ -223,6 +226,7 @@ svn_element_payload_create_symlink(apr_hash_t *props,
 
   SVN_ERR_ASSERT_NO_RETURN(target);
 
+  new_payload->pool = result_pool;
   new_payload->kind = svn_node_symlink;
   new_payload->props = props ? svn_prop_hash_dup(props, result_pool) : NULL;
   new_payload->target = apr_pstrdup(result_pool, target);

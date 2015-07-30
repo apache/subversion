@@ -317,17 +317,13 @@ svn_editor3_alter(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_payload_resolve(svn_editor3_t *editor,
-                            svn_element_payload_t **payload_p,
-                            const svn_branch_el_rev_content_t *element,
-                            apr_pool_t *result_pool)
+                            svn_branch_el_rev_content_t *element)
 {
   SVN_ERR_ASSERT(!element->payload
                  || svn_element_payload_invariants(element->payload));
 
   DO_CALLBACK(editor, cb_payload_resolve,
-              3(payload_p,
-                element,
-                result_pool));
+              1(element));
 
   SVN_ERR_ASSERT(!element->payload
                  || svn_element_payload_invariants(element->payload));
@@ -542,17 +538,13 @@ wrap_alter(void *baton,
 
 static svn_error_t *
 wrap_payload_resolve(void *baton,
-                     svn_element_payload_t **payload_p,
-                     const svn_branch_el_rev_content_t *element,
-                     apr_pool_t *result_pool,
+                     svn_branch_el_rev_content_t *element,
                      apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
 
   SVN_ERR(svn_editor3_payload_resolve(eb->wrapped_editor,
-                                  payload_p,
-                                  element,
-                                  result_pool));
+                                      element));
   return SVN_NO_ERROR;
 }
 
@@ -745,17 +737,13 @@ change_detection_alter(void *baton,
 
 static svn_error_t *
 change_detection_payload_resolve(void *baton,
-                     svn_element_payload_t **payload_p,
-                     const svn_branch_el_rev_content_t *element,
-                     apr_pool_t *result_pool,
+                     svn_branch_el_rev_content_t *element,
                      apr_pool_t *scratch_pool)
 {
   change_detection_baton_t *eb = baton;
 
   SVN_ERR(svn_editor3_payload_resolve(eb->wrapped_editor,
-                                      payload_p,
-                                      element,
-                                      result_pool));
+                                      element));
   return SVN_NO_ERROR;
 }
 
@@ -854,25 +842,11 @@ svn_branch_subtree_differences(apr_hash_t **diff_p,
       /* If node payload is given by reference, resolve it to full payload */
       if (element_left)
         {
-          svn_element_payload_t *payload;
-
-          SVN_ERR(svn_editor3_payload_resolve(editor, &payload, element_left,
-                                          result_pool));
-          element_left
-            = svn_branch_el_rev_content_create(element_left->parent_eid,
-                                               element_left->name,
-                                               payload, result_pool);
+          SVN_ERR(svn_editor3_payload_resolve(editor, element_left));
         }
       if (element_right)
         {
-          svn_element_payload_t *payload;
-
-          SVN_ERR(svn_editor3_payload_resolve(editor, &payload, element_right,
-                                          result_pool));
-          element_right
-            = svn_branch_el_rev_content_create(element_right->parent_eid,
-                                               element_right->name,
-                                               payload, result_pool);
+          SVN_ERR(svn_editor3_payload_resolve(editor, element_right));
         }
 
       if (! svn_branch_el_rev_content_equal(element_left, element_right,
