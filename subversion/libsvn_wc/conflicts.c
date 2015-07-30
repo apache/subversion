@@ -2589,6 +2589,35 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
   return SVN_NO_ERROR;
 }
 
+/* 
+ * Record a tree conflict resolution failure due to error condition ERR
+ * in the RESOLVE_LATER hash table. If the hash table is not available
+ * (meaning the caller does not wish to retry resolution later), or if
+ * the error condition does not indicate circumstances where another
+ * existing tree conflict is blocking the resolution attempt, then
+ * return the error ERR itself.
+ */
+static svn_error_t *
+handle_tree_conflict_resolution_failure(const char *local_abspath,
+                                        svn_error_t *err,
+                                        apr_hash_t *resolve_later)
+{
+  const char *dup_abspath;
+
+  if (!resolve_later
+      || (err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE
+          && err->apr_err != SVN_ERR_WC_FOUND_CONFLICT))
+    return svn_error_trace(err); /* Give up. Do not retry resolution later. */
+
+  svn_error_clear(err);
+  dup_abspath = apr_pstrdup(apr_hash_pool_get(resolve_later),
+                            local_abspath);
+
+  svn_hash_sets(resolve_later, dup_abspath, dup_abspath);
+
+  return SVN_NO_ERROR; /* Caller may retry after resolving other conflicts. */
+}
+
 /*
  * Resolve the tree conflict found in DB/LOCAL_ABSPATH according to
  * CONFLICT_CHOICE.
@@ -2677,22 +2706,8 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                         scratch_pool);
 
               if (err)
-                {
-                  const char *dup_abspath;
-
-                  if (!resolve_later
-                      || (err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE
-                          && err->apr_err != SVN_ERR_WC_FOUND_CONFLICT))
-                    return svn_error_trace(err);
-
-                  svn_error_clear(err);
-                  dup_abspath = apr_pstrdup(apr_hash_pool_get(resolve_later),
-                                            local_abspath);
-
-                  svn_hash_sets(resolve_later, dup_abspath, dup_abspath);
-
-                  return SVN_NO_ERROR; /* Retry after other conflicts */
-                }
+                SVN_ERR(handle_tree_conflict_resolution_failure(
+                          local_abspath, err, resolve_later));
 
               /* We might now have a moved-away on *this* path, let's
                  try to resolve that directly if that is the case */
@@ -2759,22 +2774,8 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
                         scratch_pool);
 
               if (err)
-                {
-                  const char *dup_abspath;
-
-                  if (!resolve_later
-                      || (err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE
-                          && err->apr_err != SVN_ERR_WC_FOUND_CONFLICT))
-                    return svn_error_trace(err);
-
-                  svn_error_clear(err);
-                  dup_abspath = apr_pstrdup(apr_hash_pool_get(resolve_later),
-                                            local_abspath);
-
-                  svn_hash_sets(resolve_later, dup_abspath, dup_abspath);
-
-                  return SVN_NO_ERROR; /* Retry after other conflicts */
-                }
+                SVN_ERR(handle_tree_conflict_resolution_failure(
+                          local_abspath, err, resolve_later));
               else
                 *did_resolve = TRUE;
             }
