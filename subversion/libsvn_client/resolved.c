@@ -300,16 +300,16 @@ resolve_conflict(svn_client_conflict_option_id_t option_id,
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                    svn_depth_empty,
-                                    resolve_text, resolve_prop, resolve_tree,
-                                    option_id, /* id is backwards compatible */
-                                    NULL, NULL, /* legacy conflict_func/baton */
-                                    ctx->cancel_func,
-                                    ctx->cancel_baton,
-                                    ctx->notify_func2,
-                                    ctx->notify_baton2,
-                                    scratch_pool));
+  err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                  svn_depth_empty,
+                                  resolve_text, resolve_prop, resolve_tree,
+                                  option_id, /* id is backwards compatible */
+                                  NULL, NULL, /* legacy conflict_func/baton */
+                                  ctx->cancel_func,
+                                  ctx->cancel_baton,
+                                  ctx->notify_func2,
+                                  ctx->notify_baton2,
+                                  scratch_pool);
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
                                                                  scratch_pool));
