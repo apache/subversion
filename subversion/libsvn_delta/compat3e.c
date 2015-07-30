@@ -988,9 +988,7 @@ payload_fetch(svn_element_payload_t **payload_p,
 
 static svn_error_t *
 editor3_payload_resolve(void *baton,
-                        svn_element_payload_t **payload_p,
-                        const svn_branch_el_rev_content_t *element,
-                        apr_pool_t *result_pool,
+                        svn_branch_el_rev_content_t *element,
                         apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
@@ -1002,13 +1000,15 @@ editor3_payload_resolve(void *baton,
   /* If payload is only by reference, fetch full payload. */
   if (element->payload && PAYLOAD_IS_ONLY_BY_REFERENCE(element->payload))
     {
-      SVN_ERR(payload_fetch(payload_p, NULL,
+      svn_element_payload_t *new_payload;
+
+      SVN_ERR(payload_fetch(&new_payload, NULL,
                             eb, &element->payload->ref,
-                            result_pool, scratch_pool));
-    }
-  else
-    {
-      *payload_p = svn_element_payload_dup(element->payload, result_pool);
+                            element->payload->pool, scratch_pool));
+      element->payload->kind = new_payload->kind;
+      element->payload->props = new_payload->props;
+      element->payload->text = new_payload->text;
+      element->payload->target = new_payload->target;
     }
   return SVN_NO_ERROR;
 }
