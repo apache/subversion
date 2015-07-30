@@ -4416,7 +4416,7 @@ svn_client_conflict_from_wc_description2_t(
 * the caller is not interested in the status of a particular type.
 *
 * The returned @a *props_conflicted array is allocated in @a result_pool.
-* It contains the names of conflicted properties. If no property conflit
+* It contains the names of conflicted properties. If no property conflict
 * exists, the array will contain no elements.
 *
 * @since New in 1.10. 
