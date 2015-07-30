@@ -48,18 +48,19 @@ class Notification(object):
 
         CULPRIT_SERVER = 'server'
         CULPRIT_CLIENT = 'client'
-        CULPRIT_BOTH = 'both'
 
-        __culprits = frozenset((CULPRIT_SERVER, CULPRIT_CLIENT, CULPRIT_BOTH))
+        __culprits = ((CULPRIT_SERVER, CULPRIT_CLIENT,
+                      (CULPRIT_SERVER, CULPRIT_CLIENT),
+                      (CULPRIT_CLIENT, CULPRIT_SERVER)))
 
         def __init__(self, basedir, tracking_id,
                      title, culprit, advisory, patches):
             if culprit not in self.__culprits:
                 raise ValueError('Culprit should be one of: '
-                                 + ', '.join(self.__culprits))
+                                 + ', '.join(repr(x) for x in self.__culprits))
             self.tracking_id = tracking_id
             self.title = title
-            self.culprit = culprit
+            self.culprit = frozenset(tuple(culprit))
             self.advisory = Advisory(os.path.join(basedir, advisory))
             self.patches = []
             for base_version, patchfile in patches.items():
