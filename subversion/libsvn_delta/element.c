@@ -74,9 +74,9 @@ svn_element_payload_invariants(const svn_element_payload_t *payload)
   /* If kind is unknown, it's a reference; otherwise it has content
      specified and may also have a reference. */
   if (payload->kind == svn_node_unknown)
-    if ((payload->ref.relpath
-         && svn_relpath_is_canonical(payload->ref.relpath)
-         && SVN_IS_VALID_REVNUM(payload->ref.rev)))
+    if (SVN_IS_VALID_REVNUM(payload->branch_ref.rev)
+        && payload->branch_ref.branch_id
+        && payload->branch_ref.eid >= 0)
       return TRUE;
   if ((payload->kind == svn_node_dir
        || payload->kind == svn_node_file
@@ -100,8 +100,9 @@ svn_element_payload_dup(const svn_element_payload_t *old,
     return NULL;
 
   new_payload = apr_pmemdup(result_pool, old, sizeof(*new_payload));
-  if (old->ref.relpath)
-    new_payload->ref = svn_pathrev_dup(old->ref, result_pool);
+  if (old->branch_ref.branch_id)
+    new_payload->branch_ref.branch_id
+      = apr_pstrdup(result_pool, old->branch_ref.branch_id);
   if (old->props)
     new_payload->props = svn_prop_hash_dup(old->props, result_pool);
   if (old->kind == svn_node_file && old->text)
@@ -171,7 +172,9 @@ svn_element_payload_equal(const svn_element_payload_t *left,
 }
 
 svn_element_payload_t *
-svn_element_payload_create_ref(svn_pathrev_t ref,
+svn_element_payload_create_ref(svn_revnum_t rev,
+                               const char *branch_id,
+                               int eid,
                                apr_pool_t *result_pool)
 {
   svn_element_payload_t *new_payload
@@ -179,7 +182,9 @@ svn_element_payload_create_ref(svn_pathrev_t ref,
 
   new_payload->pool = result_pool;
   new_payload->kind = svn_node_unknown;
-  new_payload->ref = svn_pathrev_dup(ref, result_pool);
+  new_payload->branch_ref.rev = rev;
+  new_payload->branch_ref.branch_id = apr_pstrdup(result_pool, branch_id);
+  new_payload->branch_ref.eid = eid;
   assert(svn_element_payload_invariants(new_payload));
   return new_payload;
 }

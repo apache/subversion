@@ -48,6 +48,15 @@ typedef struct svn_pathrev_t
   const char *relpath;
 } svn_pathrev_t;
 
+/**
+ */
+typedef struct svn_element_branch_ref_t
+{
+  svn_revnum_t rev;
+  const char *branch_id;
+  int eid;
+} svn_element_branch_ref_t;
+
 /* Return a duplicate of OLD, allocated in RESULT_POOL. */
 svn_pathrev_t
 svn_pathrev_dup(svn_pathrev_t old,
@@ -101,9 +110,10 @@ struct svn_element_payload_t
   /* The node kind for this payload: dir, file, symlink, or unknown. */
   svn_node_kind_t kind;
 
-  /* Reference existing, committed payload at REF (for kind=unknown).
-   * The 'null' value is (SVN_INVALID_REVNUM, NULL). */
-  svn_pathrev_t ref;
+  /* Reference an existing, committed payload. (Use with kind=unknown if
+   * there is no content in props/text/targe fields.)
+   * The 'null' value is (SVN_INVALID_REVNUM, NULL, *). */
+  svn_element_branch_ref_t branch_ref;
 
   /* The pool in which the payload's content is allocated. Used when
    * resolving (populating the props/text/target in) a payload that was
@@ -143,14 +153,16 @@ svn_element_payload_equal(const svn_element_payload_t *left,
                           const svn_element_payload_t *right,
                           apr_pool_t *scratch_pool);
 
-/** Create a new node-payload object by reference to an existing node.
+/** Create a new node-payload object by reference to an existing payload.
  *
  * Set the node kind to 'unknown'.
  *
  * Allocate the result in @a result_pool.
  */
 svn_element_payload_t *
-svn_element_payload_create_ref(svn_pathrev_t ref,
+svn_element_payload_create_ref(svn_revnum_t rev,
+                               const char *branch_id,
+                               int eid,
                                apr_pool_t *result_pool);
 
 /** Create a new node-payload object for a directory node.

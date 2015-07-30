@@ -1019,7 +1019,6 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   svn_branch_state_t *outer_branch;
   int outer_eid;
   int eid;
-  svn_branch_subtree_t *tree;
 
   SVN_ERR(parse_branch_line(bid, &root_eid,
                             stream, scratch_pool));
@@ -1042,8 +1041,8 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
                                          outer_branch, outer_eid,
                                          result_pool);
 
-  /* Read in the structure, leaving the payload of each element as null */
-  tree = svn_branch_subtree_create(NULL, root_eid, scratch_pool);
+  /* Read in the structure. Set the payload of each normal element to a
+     (branch-relative) reference. */
   for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
     {
       int this_eid, this_parent_eid;
@@ -1056,49 +1055,18 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
 
       if (this_name)
         {
-          svn_branch_el_rev_content_t *element
-            = svn_branch_el_rev_content_create(this_parent_eid, this_name,
-                                               NULL /*payload*/, scratch_pool);
           if (! is_subbranch)
-            element->payload = (void *)1;
-
-          svn_int_hash_set(tree->e_map, this_eid, element);
-        }
-    }
-
-  /* Populate the payload reference for each element, now that we have
-     enough info to calculate full paths */
-  /* Subbranch root elements should have payload=null */
-  for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
-    {
-      svn_branch_el_rev_content_t *element = svn_int_hash_get(tree->e_map, eid);
-
-      if (element)
-        {
-          if (element->payload == (void *)1)
             {
-              /* ### need to get path within temp hash tree */
-              const char *relpath
-                = svn_branch_subtree_get_path_by_eid(tree, eid, scratch_pool);
-              const char *rrpath
-                = svn_relpath_join(svn_branch_get_root_rrpath(branch_state,
-                                                              result_pool),
-                                   relpath, scratch_pool);
-              svn_pathrev_t peg;
-              svn_element_payload_t *payload;
-
-              /* Specify the payload by reference */
-              peg.rev = rev_root->rev;
-              peg.relpath = rrpath;
-              payload = svn_element_payload_create_ref(peg, scratch_pool);
-
+              svn_element_payload_t *payload
+                = svn_element_payload_create_ref(rev_root->rev, bid, eid,
+                                                 result_pool);
               svn_branch_update_element(
-                branch_state, eid, element->parent_eid, element->name, payload);
+                branch_state, eid, this_parent_eid, this_name, payload);
             }
           else
             {
               svn_branch_update_subbranch_root_element(
-                branch_state, eid, element->parent_eid, element->name);
+                branch_state, eid, this_parent_eid, this_name);
             }
         }
     }

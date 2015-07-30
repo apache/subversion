@@ -949,6 +949,89 @@ apply_change(void **dir_baton,
 
 /*
  * ========================================================================
+ * Old-repository storage paths for branch elements
+ * ========================================================================
+ *
+ *   B0    e0   =>  ^/
+ *   B0    e9   =>  ^/.../foo
+ *   B0.12 e12  =>  ^/.../trunk
+ *   B0.12 e13  =>  ^/.../trunk/.../bar
+ *
+ * TODO: To support top-level branches, this needs to return disjoint sets
+ * of paths for different top-level branches:
+ *
+ *   B0  =>  ^/top0/...
+ *           ^/top0/.../trunk/...  <= B0.12
+ *   B1  =>  ^/top1/...
+ *
+ * Ultimately it may be better to put each branch in a separate top-level dir:
+ *
+ *   B0     =>  ^/B0/...
+ *   B0.12  =>  ^/B0.12/...
+ *   B1     =>  ^/B1/...
+ */
+
+/* Get the old-repository path for the storage of the root element of BRANCH.
+ *
+ * Currently, this is the same as the nested-branching hierarchical path
+ * (and thus assumes there is only one top-level branch).
+ */
+static const char *
+branch_get_storage_root_rrpath(const svn_branch_state_t *branch,
+                               apr_pool_t *result_pool)
+{
+  return svn_branch_get_root_rrpath(branch, result_pool);
+}
+
+/* Get the old-repository path for the storage of element EID of BRANCH.
+ *
+ * If the element EID doesn't exist in BRANCH, return NULL.
+ */
+static const char *
+branch_get_storage_rrpath_by_eid(const svn_branch_state_t *branch,
+                                 int eid,
+                                 apr_pool_t *result_pool)
+{
+  const char *path = svn_branch_get_path_by_eid(branch, eid, result_pool);
+  const char *rrpath = NULL;
+
+  if (path)
+    {
+      rrpath = svn_relpath_join(branch_get_storage_root_rrpath(branch,
+                                                               result_pool),
+                                path, result_pool);
+    }
+  return rrpath;
+}
+
+/* Return, in *STORAGE_PATHREV_P, the storage-rrpath-rev for BRANCH_REF.
+ */
+static svn_error_t *
+storage_pathrev_from_branch_ref(svn_pathrev_t *storage_pathrev_p,
+                                svn_element_branch_ref_t branch_ref,
+                                svn_branch_repos_t *repos,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  svn_branch_el_rev_id_t *el_rev;
+
+  SVN_ERR(svn_branch_repos_find_el_rev_by_id(&el_rev,
+                                             repos,
+                                             branch_ref.rev,
+                                             branch_ref.branch_id,
+                                             branch_ref.eid,
+                                             scratch_pool, scratch_pool));
+
+  storage_pathrev_p->rev = el_rev->rev;
+  storage_pathrev_p->relpath
+    = branch_get_storage_rrpath_by_eid(el_rev->branch, el_rev->eid,
+                                       result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * ========================================================================
  * Editor for Commit (independent per-element changes; element-id addressing)
  * ========================================================================
  */
@@ -957,7 +1040,10 @@ apply_change(void **dir_baton,
 #define PAYLOAD_IS_ONLY_BY_REFERENCE(payload) \
     ((payload)->kind == svn_node_unknown)
 
-/*  */
+/* Fetch a payload as *PAYLOAD_P from its storage-pathrev PATH_REV.
+ * Fetch names of immediate children of PATH_REV as *CHILDREN_NAMES.
+ * Either of the outputs may be null if not wanted.
+ */
 static svn_error_t *
 payload_fetch(svn_element_payload_t **payload_p,
               apr_hash_t **children_names,
@@ -969,7 +1055,6 @@ payload_fetch(svn_element_payload_t **payload_p,
   svn_element_payload_t *payload
     = apr_pcalloc(result_pool, sizeof (*payload));
 
-  payload->ref = *path_rev;
   SVN_ERR(eb->fetch_func(&payload->kind,
                          &payload->props,
                          &payload->text,
@@ -983,6 +1068,55 @@ payload_fetch(svn_element_payload_t **payload_p,
                  || payload->kind == svn_node_file);
   if (payload_p)
     *payload_p = payload;
+  return SVN_NO_ERROR;
+}
+
+/* Return the storage-pathrev of PAYLOAD as *STORAGE_PATHREV_P.
+ *
+ * Find the storage-pathrev from PAYLOAD->branch_ref.
+ */
+static svn_error_t *
+payload_get_storage_pathrev(svn_pathrev_t *storage_pathrev_p,
+                            svn_element_payload_t *payload,
+                            svn_branch_repos_t *repos,
+                            apr_pool_t *result_pool)
+{
+  SVN_ERR_ASSERT(payload->branch_ref.branch_id /* && ... */);
+
+  SVN_ERR(storage_pathrev_from_branch_ref(storage_pathrev_p,
+                                          payload->branch_ref, repos,
+                                          result_pool, result_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Fill in the actual payload, from its reference, if not already done.
+ */
+static svn_error_t *
+payload_resolve(svn_element_payload_t *payload,
+                ev3_from_delta_baton_t *eb,
+                apr_pool_t *scratch_pool)
+{
+  svn_pathrev_t storage;
+
+  SVN_ERR_ASSERT(svn_element_payload_invariants(payload));
+
+  if (! PAYLOAD_IS_ONLY_BY_REFERENCE(payload))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(payload_get_storage_pathrev(&storage, payload,
+                                      eb->edited_rev_root->repos,
+                                      scratch_pool));
+
+  SVN_ERR(eb->fetch_func(&payload->kind,
+                         &payload->props,
+                         &payload->text,
+                         NULL,
+                         eb->fetch_baton,
+                         storage.relpath, storage.rev,
+                         payload->pool, scratch_pool));
+
+  SVN_ERR_ASSERT(svn_element_payload_invariants(payload));
+  SVN_ERR_ASSERT(! PAYLOAD_IS_ONLY_BY_REFERENCE(payload));
   return SVN_NO_ERROR;
 }
 
@@ -1000,15 +1134,7 @@ editor3_payload_resolve(void *baton,
   /* If payload is only by reference, fetch full payload. */
   if (element->payload && PAYLOAD_IS_ONLY_BY_REFERENCE(element->payload))
     {
-      svn_element_payload_t *new_payload;
-
-      SVN_ERR(payload_fetch(&new_payload, NULL,
-                            eb, &element->payload->ref,
-                            element->payload->pool, scratch_pool));
-      element->payload->kind = new_payload->kind;
-      element->payload->props = new_payload->props;
-      element->payload->text = new_payload->text;
-      element->payload->target = new_payload->target;
+      SVN_ERR(payload_resolve(element->payload, eb, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1138,7 +1264,7 @@ editor3_alter(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Update *PATHS, a hash of (rrpath -> svn_branch_el_rev_id_t),
+/* Update *PATHS, a hash of (storage_rrpath -> svn_branch_el_rev_id_t),
  * creating or filling in entries for all elements in BRANCH.
  */
 static void
@@ -1155,11 +1281,8 @@ convert_branch_to_paths(apr_hash_t *paths,
        hi; hi = apr_hash_next(hi))
     {
       int eid = *(const int *)apr_hash_this_key(hi);
-      const char *relpath = svn_branch_get_path_by_eid(branch, eid,
-                                                       result_pool);
       const char *rrpath
-        = svn_relpath_join(svn_branch_get_root_rrpath(branch, scratch_pool),
-                           relpath, result_pool);
+        = branch_get_storage_rrpath_by_eid(branch, eid, result_pool);
       svn_branch_el_rev_id_t *ba = svn_hash_gets(paths, rrpath);
 
       /* Fill in the details. If it's already been filled in, then let a
@@ -1187,7 +1310,7 @@ convert_branch_to_paths(apr_hash_t *paths,
 /* Produce a mapping from paths to element ids, covering all elements in
  * BRANCH and all its sub-branches, recursively.
  *
- * Update *PATHS_UNION, a hash of (rrpath -> svn_branch_el_rev_id_t),
+ * Update *PATHS_UNION, a hash of (storage_rrpath -> svn_branch_el_rev_id_t),
  * creating or filling in entries for all elements in all branches at and
  * under BRANCH, recursively.
  */
@@ -1257,14 +1380,25 @@ text_equal(svn_element_payload_t *initial_payload,
  * ### Currently this is indicated by payload-by-reference, which is
  *     an inadequate indication.
  */
-static svn_pathrev_t *
-get_copy_from(svn_element_payload_t *final_payload)
+static svn_error_t *
+get_copy_from(svn_pathrev_t *copyfrom_pathrev_p,
+              svn_element_payload_t *final_payload,
+              ev3_from_delta_baton_t *eb,
+              apr_pool_t *result_pool)
 {
-  if (final_payload->ref.relpath)
+  if (final_payload->branch_ref.branch_id)
     {
-      return &final_payload->ref;
+      SVN_ERR(payload_get_storage_pathrev(copyfrom_pathrev_p, final_payload,
+                                          eb->edited_rev_root->repos,
+                                          result_pool));
     }
-  return NULL;
+  else
+    {
+      copyfrom_pathrev_p->relpath = NULL;
+      copyfrom_pathrev_p->rev = SVN_INVALID_REVNUM;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* Return a hash whose keys are the names of the immediate children of
@@ -1326,7 +1460,7 @@ drive_changes_r(const char *rrpath,
   /* The el-rev-id of the element that will finally exist at RRPATH. */
   svn_branch_el_rev_id_t *final_el_rev = svn_hash_gets(paths_final, rrpath);
   svn_element_payload_t *final_payload;
-  svn_pathrev_t *final_copy_from;
+  svn_pathrev_t final_copy_from;
   svn_boolean_t succession;
 
   SVN_DBG(("rrpath '%s' current=%s, final=e%d)",
@@ -1348,23 +1482,23 @@ drive_changes_r(const char *rrpath,
 
       /* Decide whether the state at this path should be a copy (incl. a
          copy-child) */
-      final_copy_from = get_copy_from(final_payload);
+      SVN_ERR(get_copy_from(&final_copy_from, final_payload, eb, scratch_pool));
       /* It doesn't make sense to have a non-copy inside a copy */
       /*SVN_ERR_ASSERT(!(parent_is_copy && !final_copy_from));*/
    }
   else
     {
       final_payload = NULL;
-      final_copy_from = NULL;
+      final_copy_from.relpath = NULL;
     }
 
   /* Succession means:
        for a copy (inc. child)  -- copy-from same place as natural predecessor
        otherwise                -- it's succession if it's the same element
                                    (which also implies the same kind) */
-  if (pred_loc && final_copy_from)
+  if (pred_loc && final_copy_from.relpath)
     {
-      succession = svn_pathrev_equal(pred_loc, final_copy_from);
+      succession = svn_pathrev_equal(pred_loc, &final_copy_from);
     }
   else if (pred_loc && final_el_rev)
     {
@@ -1414,13 +1548,7 @@ drive_changes_r(const char *rrpath,
       /* Get the full payload of the final node. If we have
          only a reference to the payload, fetch it in full. */
       SVN_ERR_ASSERT(final_payload);
-      if (PAYLOAD_IS_ONLY_BY_REFERENCE(final_payload))
-        {
-          /* Get payload by reference. */
-          SVN_ERR(payload_fetch(&final_payload, NULL,
-                                eb, &final_payload->ref,
-                                scratch_pool, scratch_pool));
-        }
+      SVN_ERR(payload_resolve(final_payload, eb, scratch_pool));
 
       /* If the final node was also the initial node, it's being
          modified, otherwise it's being added (perhaps a replacement). */
@@ -1452,14 +1580,14 @@ drive_changes_r(const char *rrpath,
                                 RESTRUCTURE_ADD));
 
           /* If the node is to be copied (and possibly modified) ... */
-          if (final_copy_from)
+          if (final_copy_from.relpath)
             {
-              change->copyfrom_rev = final_copy_from->rev;
-              change->copyfrom_path = final_copy_from->relpath;
+              change->copyfrom_rev = final_copy_from.rev;
+              change->copyfrom_path = final_copy_from.relpath;
 
               /* Get full payload of the copy source node */
               SVN_ERR(payload_fetch(&current_payload, &current_children,
-                                    eb, final_copy_from,
+                                    eb, &final_copy_from,
                                     scratch_pool, scratch_pool));
             }
         }
@@ -1513,11 +1641,11 @@ drive_changes_r(const char *rrpath,
                     copied along with it: predecessor is parent's copy-from
                     location extended by the child's name. */
                   child_pred = apr_palloc(scratch_pool, sizeof(*child_pred));
-                  if (final_copy_from)
+                  if (final_copy_from.relpath)
                     {
-                      child_pred->rev = final_copy_from->rev;
+                      child_pred->rev = final_copy_from.rev;
                       child_pred->relpath
-                        = svn_relpath_join(final_copy_from->relpath, name,
+                        = svn_relpath_join(final_copy_from.relpath, name,
                                            scratch_pool);
                     }
                   else
@@ -1531,10 +1659,10 @@ drive_changes_r(const char *rrpath,
                        child_pred ? peg_path_str(*child_pred, scratch_pool)
                                   : "<nil>",
                        (svn_hash_gets(final_children, name) != NULL),
-                       final_copy_from
+                       final_copy_from.relpath
                          ? apr_psprintf(scratch_pool, " parent-cp-from=%s@%ld",
-                                        final_copy_from->relpath,
-                                        final_copy_from->rev) : ""));
+                                        final_copy_from.relpath,
+                                        final_copy_from.rev) : ""));
 
               SVN_ERR(drive_changes_r(this_rrpath,
                                       child_pred,
