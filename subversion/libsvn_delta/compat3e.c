@@ -978,6 +978,7 @@ payload_fetch(svn_element_payload_t **payload_p,
                          path_rev->relpath, path_rev->rev,
                          result_pool, scratch_pool));
 
+  SVN_ERR_ASSERT(svn_element_payload_invariants(payload));
   SVN_ERR_ASSERT(payload->kind == svn_node_dir
                  || payload->kind == svn_node_file);
   if (payload_p)
@@ -995,6 +996,8 @@ editor3_payload_resolve(void *baton,
   ev3_from_delta_baton_t *eb = baton;
 
   SVN_ERR_ASSERT(element);
+  SVN_ERR_ASSERT(!element->payload
+                 || svn_element_payload_invariants(element->payload));
 
   /* If payload is only by reference, fetch full payload. */
   if (element->payload && PAYLOAD_IS_ONLY_BY_REFERENCE(element->payload))

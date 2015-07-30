@@ -119,6 +119,11 @@ struct svn_element_payload_t
 
 };
 
+/* Return true iff PAYLOAD satisfies all its invariants.
+ */
+svn_boolean_t
+svn_element_payload_invariants(const svn_element_payload_t *payload);
+
 /** Duplicate a node-payload @a old into @a result_pool.
  */
 svn_element_payload_t *
