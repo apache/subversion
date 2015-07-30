@@ -330,10 +330,7 @@ branch_validate_element(const svn_branch_state_t *branch,
   /* Payload, if specified, must be in full or by reference. */
   if (element->payload)
     {
-      SVN_ERR_ASSERT_NO_RETURN((SVN_IS_VALID_REVNUM(element->payload->ref.rev)
-                                && element->payload->ref.relpath)
-                               || (element->payload->kind != svn_node_unknown
-                                   && element->payload->kind != svn_node_none));
+      SVN_ERR_ASSERT_NO_RETURN(svn_element_payload_invariants(element->payload));
     }
   else /* it's a subbranch root */
     {

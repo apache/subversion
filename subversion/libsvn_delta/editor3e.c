@@ -326,11 +326,16 @@ svn_editor3_payload_resolve(svn_editor3_t *editor,
                             const svn_branch_el_rev_content_t *element,
                             apr_pool_t *result_pool)
 {
+  SVN_ERR_ASSERT(!element->payload
+                 || svn_element_payload_invariants(element->payload));
+
   DO_CALLBACK(editor, cb_payload_resolve,
               3(payload_p,
                 element,
                 result_pool));
 
+  SVN_ERR_ASSERT(!element->payload
+                 || svn_element_payload_invariants(element->payload));
   return SVN_NO_ERROR;
 }
 

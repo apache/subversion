@@ -284,6 +284,10 @@ subtree_replay(svn_editor3_t *editor,
       svn_branch_el_rev_content_t **e_pair = apr_hash_this_val(hi);
       svn_branch_el_rev_content_t *e0 = e_pair[0], *e1 = e_pair[1];
 
+      SVN_ERR_ASSERT(!e0 || !e0->payload
+                     || svn_element_payload_invariants(e0->payload));
+      SVN_ERR_ASSERT(!e1 || !e1->payload
+                     || svn_element_payload_invariants(e1->payload));
       if (e0 || e1)
         {
           if (e0 && e1)
