@@ -35,7 +35,7 @@ class Notification(object):
     The complete security notification, containing multiple advisories.
     """
 
-    class __Metadata(object):
+    class Metadata(object):
         """
         The metadata for one advisory, with the following fields:
             tracking_id - the CVE/CAN number
@@ -58,9 +58,12 @@ class Notification(object):
             if culprit not in self.__culprits:
                 raise ValueError('Culprit should be one of: '
                                  + ', '.join(repr(x) for x in self.__culprits))
+            if not isinstance(culprit, tuple):
+                culprit = (culprit,)
+
             self.tracking_id = tracking_id
             self.title = title
-            self.culprit = frozenset(tuple(culprit))
+            self.culprit = frozenset(culprit)
             self.advisory = Advisory(os.path.join(basedir, advisory))
             self.patches = []
             for base_version, patchfile in patches.items():
@@ -84,16 +87,19 @@ class Notification(object):
     def __iter__(self):
         return self.__advisories.__iter__()
 
+    def __len__(self):
+        return len(self.__advisories)
+
     def __parse_advisory(self, rootdir, tracking_id):
         basedir = os.path.join(rootdir, tracking_id)
         with open(os.path.join(basedir, 'metadata'), 'rt') as md:
             metadata = ast.literal_eval(md.read())
 
-        return self.__Metadata(basedir, tracking_id,
-                               metadata['title'],
-                               metadata['culprit'],
-                               metadata['advisory'],
-                               metadata['patches'])
+        return self.Metadata(basedir, tracking_id,
+                             metadata['title'],
+                             metadata['culprit'],
+                             metadata['advisory'],
+                             metadata['patches'])
 
 
 class __Part(object):
