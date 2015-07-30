@@ -773,15 +773,10 @@ svn_editor3_alter(svn_editor3_t *editor,
  * path@rev location in the repository), fetch the full payload.
  * That is, leave the 'ref' field as it is and also fill in the
  * 'kind', 'props', and other fields as appropriate.
- *
- * In all cases, return a copy of the full payload in @a *payload_p,
- * allocated in @a result_pool.
  */
 svn_error_t *
 svn_editor3_payload_resolve(svn_editor3_t *editor,
-                            svn_element_payload_t **payload_p,
-                            const svn_branch_el_rev_content_t *element,
-                            apr_pool_t *result_pool);
+                            svn_branch_el_rev_content_t *element);
 
 /** Register a sequence point.
  *
@@ -920,9 +915,7 @@ typedef svn_error_t *(*svn_editor3_cb_alter_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_payload_resolve_t)(
   void *baton,
-  svn_element_payload_t **payload_p,
-  const svn_branch_el_rev_content_t *element,
-  apr_pool_t *result_pool,
+  svn_branch_el_rev_content_t *element,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_sequence_point(), #svn_editor3_t
