@@ -847,6 +847,63 @@ svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
   return SVN_NO_ERROR;
 }
 
+/* Find an *OPTION in RESOLUTION_OPTIONS which matches the desired
+ * RESOLUTION option ID. If no matching option exists, raise an
+ * error using LOCAL_ABSPATH as part of the error message. */
+static svn_error_t *
+match_resolution_option(svn_client_conflict_option_t **option,
+                        apr_array_header_t *resolution_options,
+                        svn_client_conflict_option_id_t resolution,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool)
+{
+  int i;
+
+  *option = NULL;
+  for (i = 0; i < resolution_options->nelts; i++)
+    {
+      svn_client_conflict_option_t *this_option;
+      svn_client_conflict_option_id_t this_option_id;
+      
+      this_option = APR_ARRAY_IDX(resolution_options, i,
+                                  svn_client_conflict_option_t *);
+      this_option_id = svn_client_conflict_option_get_id(this_option);
+
+      if (this_option_id == resolution)
+        *option = this_option;
+        break;
+    }
+
+  if (*option == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                               _("Inapplicable conflict resolution option "
+                                 "ID '%d' given for conflicted path '%s'"),
+                               resolution,
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_text_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *resolution_options;
+  svn_client_conflict_option_t *option;
+
+  SVN_ERR(svn_client_conflict_text_get_resolution_options(
+            &resolution_options, conflict,
+            scratch_pool, scratch_pool));
+  SVN_ERR(match_resolution_option(&option, resolution_options,
+                                  option_id, conflict->local_abspath,
+                                  scratch_pool));
+  SVN_ERR(svn_client_conflict_text_resolve(conflict, option, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_client_conflict_option_id_t
 svn_client_conflict_text_get_resolution(const svn_client_conflict_t *conflict)
 {
@@ -862,6 +919,28 @@ svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
   SVN_ERR(assert_prop_conflict(conflict, scratch_pool));
   option->propname = propname;
   SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_prop_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  const char *propname,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *resolution_options;
+  svn_client_conflict_option_t *option;
+
+  SVN_ERR(svn_client_conflict_prop_get_resolution_options(
+            &resolution_options, conflict,
+            scratch_pool, scratch_pool));
+  SVN_ERR(match_resolution_option(&option, resolution_options,
+                                  option_id, conflict->local_abspath,
+                                  scratch_pool));
+  SVN_ERR(svn_client_conflict_prop_resolve(conflict, propname, option,
+                                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -886,6 +965,26 @@ svn_client_conflict_tree_resolve(svn_client_conflict_t *conflict,
 {
   SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
   SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_tree_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *resolution_options;
+  svn_client_conflict_option_t *option;
+
+  SVN_ERR(svn_client_conflict_tree_get_resolution_options(
+            &resolution_options, conflict,
+            scratch_pool, scratch_pool));
+  SVN_ERR(match_resolution_option(&option, resolution_options,
+                                  option_id, conflict->local_abspath,
+                                  scratch_pool));
+  SVN_ERR(svn_client_conflict_tree_resolve(conflict, option, scratch_pool));
 
   return SVN_NO_ERROR;
 }

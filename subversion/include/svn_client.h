@@ -4672,6 +4672,19 @@ svn_client_conflict_tree_resolve(svn_client_conflict_t *conflict,
                                  apr_pool_t *scratch_pool);
 
 /**
+ * If the provided @a option_id is the ID of an option which resolves
+ * @a conflict, resolve the tree conflict using that option.
+ * Else, return an error.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_tree_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool);
+
+/**
  * Return the ID of the option this tree @a conflict has been resolved to.
  * If the conflict has not been resolved yet, then return
  * @c svn_client_conflict_option_undefined.
@@ -4734,6 +4747,19 @@ svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
                                  const char *propname,
                                  svn_client_conflict_option_t *option,
                                  apr_pool_t *scratch_pool);
+/**
+ * If the provided @a option_id is the ID of an option which resolves
+ * @a conflict, resolve the property conflict in property @a propname
+ * using that option. Else, return an error.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_prop_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  const char *propname,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool);
 
 /**
  * Return the ID of the option this property @a conflict in property
@@ -4784,6 +4810,19 @@ svn_error_t *
 svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
                                  svn_client_conflict_option_t *option,
                                  apr_pool_t *scratch_pool);
+
+/**
+ * If the provided @a option_id is the ID of an option which resolves
+ * @a conflict, resolve the text conflict using that option.
+ * Else, return an error.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_text_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool);
 
 /**
  * Return the ID of the option this text @a conflict has been resolved to.
