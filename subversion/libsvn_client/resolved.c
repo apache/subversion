@@ -859,41 +859,25 @@ svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
   return SVN_NO_ERROR;
 }
 
-/* Find an *OPTION in RESOLUTION_OPTIONS which matches the desired
- * RESOLUTION option ID. If no matching option exists, raise an
- * error using LOCAL_ABSPATH as part of the error message. */
-static svn_error_t *
-match_resolution_option(svn_client_conflict_option_t **option,
-                        apr_array_header_t *resolution_options,
-                        svn_client_conflict_option_id_t resolution,
-                        const char *local_abspath,
-                        apr_pool_t *scratch_pool)
+svn_client_conflict_option_t *
+svn_client_conflict_option_find_by_id(apr_array_header_t *options,
+                                      svn_client_conflict_option_id_t option_id)
 {
   int i;
 
-  *option = NULL;
-  for (i = 0; i < resolution_options->nelts; i++)
+  for (i = 0; i < options->nelts; i++)
     {
       svn_client_conflict_option_t *this_option;
       svn_client_conflict_option_id_t this_option_id;
       
-      this_option = APR_ARRAY_IDX(resolution_options, i,
-                                  svn_client_conflict_option_t *);
+      this_option = APR_ARRAY_IDX(options, i, svn_client_conflict_option_t *);
       this_option_id = svn_client_conflict_option_get_id(this_option);
 
-      if (this_option_id == resolution)
-        *option = this_option;
-        break;
+      if (this_option_id == option_id)
+        return this_option;
     }
 
-  if (*option == NULL)
-    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                               _("Inapplicable conflict resolution option "
-                                 "ID '%d' given for conflicted path '%s'"),
-                               resolution,
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 svn_error_t *
@@ -908,9 +892,15 @@ svn_client_conflict_text_resolve_by_id(
   SVN_ERR(svn_client_conflict_text_get_resolution_options(
             &resolution_options, conflict,
             scratch_pool, scratch_pool));
-  SVN_ERR(match_resolution_option(&option, resolution_options,
-                                  option_id, conflict->local_abspath,
-                                  scratch_pool));
+  option = svn_client_conflict_option_find_by_id(resolution_options,
+                                                 option_id);
+  if (option == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                               _("Inapplicable conflict resolution option "
+                                 "ID '%d' given for conflicted path '%s'"),
+                               option_id,
+                               svn_dirent_local_style(conflict->local_abspath,
+                                                      scratch_pool));
   SVN_ERR(svn_client_conflict_text_resolve(conflict, option, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -948,9 +938,15 @@ svn_client_conflict_prop_resolve_by_id(
   SVN_ERR(svn_client_conflict_prop_get_resolution_options(
             &resolution_options, conflict,
             scratch_pool, scratch_pool));
-  SVN_ERR(match_resolution_option(&option, resolution_options,
-                                  option_id, conflict->local_abspath,
-                                  scratch_pool));
+  option = svn_client_conflict_option_find_by_id(resolution_options,
+                                                 option_id);
+  if (option == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                               _("Inapplicable conflict resolution option "
+                                 "ID '%d' given for conflicted path '%s'"),
+                               option_id,
+                               svn_dirent_local_style(conflict->local_abspath,
+                                                      scratch_pool));
   SVN_ERR(svn_client_conflict_prop_resolve(conflict, propname, option,
                                            scratch_pool));
 
@@ -993,9 +989,15 @@ svn_client_conflict_tree_resolve_by_id(
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(
             &resolution_options, conflict,
             scratch_pool, scratch_pool));
-  SVN_ERR(match_resolution_option(&option, resolution_options,
-                                  option_id, conflict->local_abspath,
-                                  scratch_pool));
+  option = svn_client_conflict_option_find_by_id(resolution_options,
+                                                 option_id);
+  if (option == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                               _("Inapplicable conflict resolution option "
+                                 "ID '%d' given for conflicted path '%s'"),
+                               option_id,
+                               svn_dirent_local_style(conflict->local_abspath,
+                                                      scratch_pool));
   SVN_ERR(svn_client_conflict_tree_resolve(conflict, option, scratch_pool));
 
   return SVN_NO_ERROR;

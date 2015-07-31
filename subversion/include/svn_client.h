@@ -4414,6 +4414,19 @@ svn_client_conflict_option_set_merged_propval(
   const svn_string_t *merged_propval);
 
 /**
+ * Given an @a option_id, try to find the corresponding option in @a options,
+ * which is an array of svn_client_conflict_option_t * elements.
+ *
+ * Return NULL if no corresponding option can be be found.
+ *
+ * @since New in 1.10.
+ */
+svn_client_conflict_option_t *
+svn_client_conflict_option_find_by_id(
+  apr_array_header_t *options,
+  svn_client_conflict_option_id_t option_id);
+
+/**
  * Return a conflict for the conflicted path @a local_abspath.
  * 
  * @since New in 1.10.
