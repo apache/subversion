@@ -280,6 +280,52 @@ resolve_postpone(svn_client_conflict_option_t *option,
   return SVN_NO_ERROR;
 }
 
+/*
+ * Return a legacy conflict choice corresponding to OPTION_ID.
+ * Return svn_wc_conflict_choose_undefined if no corresponding
+ * legacy conflict choice exists.
+ */
+static svn_wc_conflict_choice_t
+conflict_option_id_to_wc_conflict_choice(
+  svn_client_conflict_option_id_t option_id)
+{
+
+  switch (option_id)
+    {
+      case svn_client_conflict_option_undefined:
+        return svn_wc_conflict_choose_undefined;
+
+      case svn_client_conflict_option_postpone:
+        return svn_wc_conflict_choose_postpone;
+
+      case svn_client_conflict_option_base_text:
+        return svn_wc_conflict_choose_base;
+
+      case svn_client_conflict_option_incoming_new_text:
+        return svn_wc_conflict_choose_theirs_full;
+
+      case svn_client_conflict_option_working_text:
+        return svn_wc_conflict_choose_mine_full;
+
+      case svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only:
+        return svn_wc_conflict_choose_theirs_conflict;
+
+      case svn_client_conflict_option_working_text_for_conflicted_hunks_only:
+        return svn_wc_conflict_choose_mine_conflict;
+
+      case svn_client_conflict_option_merged_text:
+        return svn_wc_conflict_choose_merged;
+
+      case svn_client_conflict_option_unspecified:
+        return svn_wc_conflict_choose_unspecified;
+
+      default:
+        break;
+    }
+
+  return svn_wc_conflict_choose_undefined;
+}
+
 /* 
  * Resolve the conflict at LOCAL_ABSPATH. Currently only supports
  * an OPTION_ID which can be mapped to svn_wc_conflict_choice_t and
@@ -294,16 +340,18 @@ resolve_conflict(svn_client_conflict_option_id_t option_id,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool)
 {
+  svn_wc_conflict_choice_t conflict_choice;
   const char *lock_abspath;
   svn_error_t *err;
 
+  conflict_choice = conflict_option_id_to_wc_conflict_choice(option_id);
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
   err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
                                   svn_depth_empty,
                                   resolve_text, resolve_prop, resolve_tree,
-                                  option_id, /* id is backwards compatible */
+                                  conflict_choice,
                                   NULL, NULL, /* legacy conflict_func/baton */
                                   ctx->cancel_func,
                                   ctx->cancel_baton,
