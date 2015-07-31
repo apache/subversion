@@ -458,14 +458,14 @@ resolve_text_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
                       apr_pool_t *scratch_pool)
 {
-  svn_client_conflict_option_id_t id;
+  svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
 
-  id = svn_client_conflict_option_get_id(option);
+  option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  SVN_ERR(resolve_conflict(id, local_abspath, TRUE, NULL, FALSE,
+  SVN_ERR(resolve_conflict(option_id, local_abspath, TRUE, NULL, FALSE,
                            conflict->ctx, scratch_pool));
-  conflict->resolution = id;
+  conflict->resolution = option_id;
 
   return SVN_NO_ERROR;
 }
@@ -475,14 +475,14 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
                       apr_pool_t *scratch_pool)
 {
-  svn_client_conflict_option_id_t id;
+  svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
 
-  id = svn_client_conflict_option_get_id(option);
+  option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  SVN_ERR(resolve_conflict(id, local_abspath, FALSE, "", FALSE,
+  SVN_ERR(resolve_conflict(option_id, local_abspath, FALSE, "", FALSE,
                            conflict->ctx, scratch_pool));
-  conflict->resolution = id;
+  conflict->resolution = option_id;
 
   return SVN_NO_ERROR;
 }
@@ -492,14 +492,14 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
                       apr_pool_t *scratch_pool)
 {
-  svn_client_conflict_option_id_t id;
+  svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
 
-  id = svn_client_conflict_option_get_id(option);
+  option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  SVN_ERR(resolve_conflict(id, local_abspath, FALSE, NULL, TRUE,
+  SVN_ERR(resolve_conflict(option_id, local_abspath, FALSE, NULL, TRUE,
                            conflict->ctx, scratch_pool));
-  conflict->resolution = id;
+  conflict->resolution = option_id;
 
   return SVN_NO_ERROR;
 }
