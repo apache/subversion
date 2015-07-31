@@ -4651,6 +4651,16 @@ svn_client_conflict_get_incoming_new_repos_location(
   apr_pool_t *scratch_pool);
 
 /**
+ * Return the ID of the option this conflict has been resolved to.
+ * If the conflict has not been resolved yet, then return
+ * @c svn_client_conflict_option_undefined.
+ *
+ * @since New in 1.10.
+ */
+svn_client_conflict_option_id_t
+svn_client_conflict_get_resolution(const svn_client_conflict_t *conflict);
+
+/**
  * Return the node kind of the tree conflict victim described by @a conflict.
  * The victim is the local node in the working copy which was affected by the
  * tree conflict at the time the conflict was raised.
