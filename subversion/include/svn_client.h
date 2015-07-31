@@ -4411,6 +4411,37 @@ svn_client_conflict_from_wc_description2_t(
   apr_pool_t *scratch_pool);
 
 /**
+ * Callback for svn_client_conflict_walk_conflicts();
+ * 
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(svn_client_conflict_walk_func_t)(
+  void *baton,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Walk all conflicts within the specified @a depth of @a local_abspath.
+ * Pass each conflict found during the walk to the @conflict_walk_func
+ * callback, along with @a conflict_walk_func_baton.
+ * Use cancellation and notification support provided by client context @a ctx.
+ * 
+ * This callback may choose to resolve the conflict. If the act of resolving
+ * a conflict creates new conflicts within the walked working copy (as might
+ * be the case for some tree conflicts), the callback will be invoked for each
+ * such new conflict as well.
+ * 
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_walk(const char *local_abspath,
+                         svn_depth_t depth,
+                         svn_client_conflict_walk_func_t conflict_walk_func,
+                         void *conflict_walk_func_baton,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
+
+/**
 * Indicate the types of conflicts present on the working copy node
 * described by @a conflict. Any output argument may be @c NULL if
 * the caller is not interested in the status of a particular type.

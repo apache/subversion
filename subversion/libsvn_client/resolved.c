@@ -157,128 +157,14 @@ struct svn_client_conflict_t
   svn_client_ctx_t *ctx;
   apr_hash_t *prop_conflicts;
 
+  /* Indicates which option was chosen to resolve this conflict. */
+  svn_client_conflict_option_id_t resolution;
+
   /* For backwards compat. */
   const svn_wc_conflict_description2_t *legacy_text_conflict;
   const svn_wc_conflict_description2_t *legacy_prop_conflict;
   const svn_wc_conflict_description2_t *legacy_tree_conflict;
 };
-
-static void
-add_legacy_desc_to_conflict(const svn_wc_conflict_description2_t *desc,
-                            svn_client_conflict_t *conflict,
-                            apr_pool_t *result_pool)
-{
-  switch (desc->kind)
-    {
-      case svn_wc_conflict_kind_text:
-        conflict->legacy_text_conflict = desc;
-        break;
-
-      case svn_wc_conflict_kind_property:
-        conflict->legacy_prop_conflict = desc;
-        break;
-
-      case svn_wc_conflict_kind_tree:
-        conflict->legacy_tree_conflict = desc;
-        break;
-
-      default:
-        SVN_ERR_ASSERT_NO_RETURN(FALSE); /* unknown kind of conflict */
-    }
-}
-
-/* Set up a conflict object. If legacy conflict descriptor DESC is not NULL,
- * set up the conflict object for backwards compatibility. */
-static svn_error_t *
-conflict_get_internal(svn_client_conflict_t **conflict,
-                      const char *local_abspath,
-                      const svn_wc_conflict_description2_t *desc,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  const apr_array_header_t *descs;
-  int i;
-
-  *conflict = apr_pcalloc(result_pool, sizeof(**conflict));
-
-  if (desc)
-    {
-      /* Add a single legacy conflict descriptor. */
-      (*conflict)->local_abspath = desc->local_abspath;
-      add_legacy_desc_to_conflict(desc, *conflict, result_pool);
-
-      return SVN_NO_ERROR;
-    }
-
-  (*conflict)->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  (*conflict)->ctx = ctx;
-
-  /* Add all legacy conflict descriptors we can find. Eventually, this code
-   * path should stop relying on svn_wc_conflict_description2_t entirely. */
-  SVN_ERR(svn_wc__read_conflict_descriptions2_t(&descs, ctx->wc_ctx,
-                                                local_abspath,
-                                                result_pool, scratch_pool));
-  for (i = 0; i < descs->nelts; i++)
-    {
-      desc = APR_ARRAY_IDX(descs, i, const svn_wc_conflict_description2_t *);
-      if (desc->kind == svn_wc_conflict_kind_property)
-        {
-          if ((*conflict)->prop_conflicts == NULL)
-            (*conflict)->prop_conflicts = apr_hash_make(result_pool);
-          svn_hash_sets((*conflict)->prop_conflicts, desc->property_name, desc);
-        }
-      else
-        add_legacy_desc_to_conflict(desc, *conflict, result_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_conflict_get(svn_client_conflict_t **conflict,
-                        const char *local_abspath,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(conflict_get_internal(conflict, local_abspath, NULL,
-                                               ctx, result_pool, scratch_pool));
-}
-
-svn_error_t *
-svn_client_conflict_from_wc_description2_t(
-  svn_client_conflict_t **conflict,
-  const svn_wc_conflict_description2_t *desc,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(conflict_get_internal(conflict, NULL, desc, NULL,
-                                               result_pool, scratch_pool));
-}
-
-typedef svn_error_t *(*conflict_option_resolve_func_t)(
-  svn_client_conflict_option_t *option,
-  svn_client_conflict_t *conflict,
-  apr_pool_t *scratch_pool);
-
-struct svn_client_conflict_option_t
-{
-  svn_client_conflict_option_id_t id;
-  const char *description;
-
-  svn_client_conflict_t *conflict;
-  conflict_option_resolve_func_t do_resolve_func;
-};
-
-static svn_error_t *
-resolve_postpone(svn_client_conflict_option_t *option,
-                 svn_client_conflict_t *conflict,
-                 apr_pool_t *scratch_pool)
-{
-  /* Nothing to do. */
-  return SVN_NO_ERROR;
-}
 
 /*
  * Return a legacy conflict choice corresponding to OPTION_ID.
@@ -324,6 +210,207 @@ conflict_option_id_to_wc_conflict_choice(
     }
 
   return svn_wc_conflict_choose_undefined;
+}
+
+static void
+add_legacy_desc_to_conflict(const svn_wc_conflict_description2_t *desc,
+                            svn_client_conflict_t *conflict,
+                            apr_pool_t *result_pool)
+{
+  switch (desc->kind)
+    {
+      case svn_wc_conflict_kind_text:
+        conflict->legacy_text_conflict = desc;
+        break;
+
+      case svn_wc_conflict_kind_property:
+        conflict->legacy_prop_conflict = desc;
+        break;
+
+      case svn_wc_conflict_kind_tree:
+        conflict->legacy_tree_conflict = desc;
+        break;
+
+      default:
+        SVN_ERR_ASSERT_NO_RETURN(FALSE); /* unknown kind of conflict */
+    }
+}
+
+/* Set up a conflict object. If legacy conflict descriptor DESC is not NULL,
+ * set up the conflict object for backwards compatibility. */
+static svn_error_t *
+conflict_get_internal(svn_client_conflict_t **conflict,
+                      const char *local_abspath,
+                      const svn_wc_conflict_description2_t *desc,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *descs;
+  int i;
+
+  *conflict = apr_pcalloc(result_pool, sizeof(**conflict));
+
+  if (desc)
+    {
+      /* Add a single legacy conflict descriptor. */
+      (*conflict)->local_abspath = desc->local_abspath;
+      (*conflict)->resolution = svn_client_conflict_option_undefined;
+      add_legacy_desc_to_conflict(desc, *conflict, result_pool);
+
+      return SVN_NO_ERROR;
+    }
+
+  (*conflict)->local_abspath = apr_pstrdup(result_pool, local_abspath);
+  (*conflict)->resolution = svn_client_conflict_option_undefined;
+  (*conflict)->ctx = ctx;
+
+  /* Add all legacy conflict descriptors we can find. Eventually, this code
+   * path should stop relying on svn_wc_conflict_description2_t entirely. */
+  SVN_ERR(svn_wc__read_conflict_descriptions2_t(&descs, ctx->wc_ctx,
+                                                local_abspath,
+                                                result_pool, scratch_pool));
+  for (i = 0; i < descs->nelts; i++)
+    {
+      desc = APR_ARRAY_IDX(descs, i, const svn_wc_conflict_description2_t *);
+      if (desc->kind == svn_wc_conflict_kind_property)
+        {
+          if ((*conflict)->prop_conflicts == NULL)
+            (*conflict)->prop_conflicts = apr_hash_make(result_pool);
+          svn_hash_sets((*conflict)->prop_conflicts, desc->property_name, desc);
+        }
+      else
+        add_legacy_desc_to_conflict(desc, *conflict, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_get(svn_client_conflict_t **conflict,
+                        const char *local_abspath,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(conflict_get_internal(conflict, local_abspath, NULL,
+                                               ctx, result_pool, scratch_pool));
+}
+
+svn_error_t *
+svn_client_conflict_from_wc_description2_t(
+  svn_client_conflict_t **conflict,
+  const svn_wc_conflict_description2_t *desc,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(conflict_get_internal(conflict, NULL, desc, NULL,
+                                               result_pool, scratch_pool));
+}
+
+/* Baton type for conflict_resolver_func(). */
+struct conflict_resolver_baton_t {
+
+  svn_client_conflict_walk_func_t *conflict_walk_func;
+  void *conflict_walk_func_baton;
+  svn_client_ctx_t *ctx;
+  
+} conflict_walk_baton_t;
+
+/* Implements svn_wc_conflict_resolver_func2_t for now because
+ * libsvn_wc does not support our new conflict type yet. */
+static svn_error_t *
+conflict_resolver_func(svn_wc_conflict_result_t **result,
+                       const svn_wc_conflict_description2_t *description,
+                       void *baton,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  struct conflict_resolver_baton_t *b = baton;
+  svn_client_conflict_t *conflict;
+  const char *local_abspath;
+  svn_wc_conflict_choice_t conflict_choice;
+
+  local_abspath = description->local_abspath;
+  SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, b->ctx,
+                                  scratch_pool, scratch_pool));
+
+  SVN_ERR(b->conflict_walk_func(b->conflict_walk_func_baton,
+                                conflict, scratch_pool));
+
+  conflict_choice = conflict_option_id_to_wc_conflict_choice(
+                      conflict->resolution);
+  *result = svn_wc_create_conflict_result(conflict_choice, NULL,
+                                          result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_walk(const char *local_abspath,
+                         svn_depth_t depth,
+                         svn_client_conflict_walk_func_t conflict_walk_func,
+                         void *conflict_walk_func_baton,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  struct conflict_resolver_baton_t b;
+  const char *lock_abspath;
+  svn_error_t *err;
+
+  b.conflict_walk_func = conflict_walk_func;
+  b.conflict_walk_func_baton = conflict_walk_func_baton;
+  b.ctx = ctx;
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+  /* ### TODO: svn_wc__resolve_conflicts() should be changed to support
+   * ### iteration without relying on svn_wc_conflict_resolver_func2_t */
+  err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                  depth,
+                                  TRUE /* resolve_text */,
+                                  "" /* resolve_prop (ALL props) */,
+                                  TRUE /* resolve_tree */,
+                                  svn_wc_conflict_choose_unspecified,
+                                  conflict_resolver_func, &b,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  ctx->notify_func2, ctx->notify_baton2,
+                                  scratch_pool);
+
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+
+  
+
+  return SVN_NO_ERROR;
+}
+
+/* Resolves conflict to OPTION and sets CONFLICT->RESOLUTION accordingly. */
+typedef svn_error_t *(*conflict_option_resolve_func_t)(
+  svn_client_conflict_option_t *option,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *scratch_pool);
+
+struct svn_client_conflict_option_t
+{
+  svn_client_conflict_option_id_t id;
+  const char *description;
+
+  svn_client_conflict_t *conflict;
+  conflict_option_resolve_func_t do_resolve_func;
+};
+
+static svn_error_t *
+resolve_postpone(svn_client_conflict_option_t *option,
+                 svn_client_conflict_t *conflict,
+                 apr_pool_t *scratch_pool)
+{
+  /* Nothing to do. */
+  conflict->resolution = svn_client_conflict_option_postpone;
+  return SVN_NO_ERROR;
 }
 
 /* 
@@ -378,6 +465,7 @@ resolve_text_conflict(svn_client_conflict_option_t *option,
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   SVN_ERR(resolve_conflict(id, local_abspath, TRUE, NULL, FALSE,
                            conflict->ctx, scratch_pool));
+  conflict->resolution = id;
 
   return SVN_NO_ERROR;
 }
@@ -394,6 +482,7 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   SVN_ERR(resolve_conflict(id, local_abspath, FALSE, "", FALSE,
                            conflict->ctx, scratch_pool));
+  conflict->resolution = id;
 
   return SVN_NO_ERROR;
 }
@@ -410,6 +499,7 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   SVN_ERR(resolve_conflict(id, local_abspath, FALSE, NULL, TRUE,
                            conflict->ctx, scratch_pool));
+  conflict->resolution = id;
 
   return SVN_NO_ERROR;
 }
