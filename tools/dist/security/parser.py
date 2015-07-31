@@ -37,11 +37,11 @@ class Notification(object):
 
     class Metadata(object):
         """
-        The metadata for one advisory, with the following fields:
+        The metadata for one advisory, with the following properties:
             tracking_id - the CVE/CAN number
             title       - a short description of the issue
             culprit     - server, client or both
-            advisory    - an Advisory object
+            advisory    - a Text object with the text of the advisory
             patches     - a list of Patch objects, sorted in descending
                           order by the base version
         """
@@ -61,17 +61,38 @@ class Notification(object):
             if not isinstance(culprit, tuple):
                 culprit = (culprit,)
 
-            self.tracking_id = tracking_id
-            self.title = title
-            self.culprit = frozenset(culprit)
-            self.advisory = Advisory(os.path.join(basedir, advisory))
-            self.patches = []
+            self.__tracking_id = tracking_id
+            self.__title = title
+            self.__culprit = frozenset(culprit)
+            self.__advisory = Text(os.path.join(basedir, advisory))
+            self.__patches = []
             for base_version, patchfile in patches.items():
                 patch = Patch(base_version, os.path.join(basedir, patchfile))
-                self.patches.append(patch)
-            self.patches.sort(reverse=True,
-                              key=lambda x: tuple(
-                                  int(q) for q in x.base_version.split('.')))
+                self.__patches.append(patch)
+            self.__patches.sort(reverse=True,
+                                key=lambda x: tuple(
+                                    int(q) for q in x.base_version.split('.')))
+
+        @property
+        def tracking_id(self):
+            return self.__tracking_id
+
+        @property
+        def title(self):
+            return self.__title
+
+        @property
+        def culprit(self):
+            return self.__culprit
+
+        @property
+        def advisory(self):
+            return self.__advisory
+
+        @property
+        def patches(self):
+            return tuple(self.__patches)
+
 
     def __init__(self, rootdir, *tracking_ids):
         """
@@ -127,14 +148,16 @@ class __Part(object):
 
         return b''.join(text)
 
-    def get_text(self):
+    @property
+    def text(self):
         """
         Return the raw contents.
         """
 
         return self.__text.decode('UTF-8')
 
-    def get_quoted_printable(self):
+    @property
+    def quoted_printable(self):
         """
         Return contents encoded as quoted-printable.
         """
@@ -142,7 +165,9 @@ class __Part(object):
         return quopri.encodestring(self.__text).decode('ascii')
 
     BASE64_LINE_LENGTH = 64
-    def get_base64(self):
+
+    @property
+    def base64(self):
         """
         Return multi-line Base64-encoded contents with the lenght
         of the lines limited to BASE64_LINE_LENGTH.
@@ -161,7 +186,7 @@ class __Part(object):
         return b''.join(text).decode('ascii')
 
 
-class Advisory(__Part):
+class Text(__Part):
     """
     In-memory container for the text of the advisory.
     """
@@ -178,7 +203,12 @@ class Patch(__Part):
 
     def __init__(self, base_version, path):
         super(Patch, self).__init__(path)
-        self.base_version = base_version
+        self.__base_version = base_version
 
-    def get_quoted_printable(self):
+    @property
+    def base_version(self):
+        return self.__base_version
+
+    @property
+    def quoted_printable(self):
         raise NotImplementedError('Quoted-printable patches? Really?')

@@ -33,16 +33,16 @@ def __write_advisory(metadata, fd):
     by METADATA and write it to the file descriptor FD.
     """
 
-    fd.write(metadata.advisory.get_text())
+    fd.write(metadata.advisory.text)
     if not metadata.patches:
         return
 
     fd.write('\nPatches:'
              '\n========\n')
     for patch in metadata.patches:
-        fd.write('\n  Patch against ' + patch.base_version + ':\n'
+        fd.write('\n  Patch for Subversion ' + patch.base_version + ':\n'
                  '[[[\n')
-        fd.write(patch.get_text())
+        fd.write(patch.text)
         fd.write(']]]\n')
 
 def generate(notification, target_dir):
