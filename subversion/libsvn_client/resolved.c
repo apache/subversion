@@ -953,6 +953,12 @@ svn_client_conflict_get_incoming_new_repos_location(
   return SVN_NO_ERROR;
 }
 
+svn_client_conflict_option_id_t
+svn_client_conflict_get_resolution(const svn_client_conflict_t *conflict)
+{
+  return conflict->resolution;
+}
+
 svn_node_kind_t
 svn_client_conflict_tree_get_victim_node_kind(
   const svn_client_conflict_t *conflict)
