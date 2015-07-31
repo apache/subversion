@@ -1051,9 +1051,11 @@ svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
           APR_ARRAY_PUSH((*props_conflicted), const char *) =
             conflict->legacy_prop_conflict->property_name;
         }
-      else
+      else if (conflict->prop_conflicts)
         SVN_ERR(svn_hash_keys(props_conflicted, conflict->prop_conflicts,
                               result_pool));
+      else
+        *props_conflicted = NULL;
     }
 
   if (tree_conflicted)
