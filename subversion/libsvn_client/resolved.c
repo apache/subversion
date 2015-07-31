@@ -174,6 +174,31 @@ struct svn_client_conflict_t
   const svn_wc_conflict_description2_t *legacy_tree_conflict;
 };
 
+/* Resolves conflict to OPTION and sets CONFLICT->RESOLUTION accordingly. */
+typedef svn_error_t *(*conflict_option_resolve_func_t)(
+  svn_client_conflict_option_t *option,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *scratch_pool);
+
+struct svn_client_conflict_option_t
+{
+  svn_client_conflict_option_id_t id;
+  const char *description;
+
+  svn_client_conflict_t *conflict;
+  conflict_option_resolve_func_t do_resolve_func;
+
+  /* Data which is specific to particular conflicts and options. */
+  union {
+    struct {
+      /* Indicates the property to resolve in case of a property conflict.
+       * If set to "", all properties are resolved to this option. */
+      const char *propname;
+    } prop;
+  } type_data;
+
+};
+
 /*
  * Return a legacy conflict choice corresponding to OPTION_ID.
  * Return svn_wc_conflict_choose_undefined if no corresponding
@@ -432,31 +457,6 @@ svn_client_conflict_walk(const char *local_abspath,
 
   return SVN_NO_ERROR;
 }
-
-/* Resolves conflict to OPTION and sets CONFLICT->RESOLUTION accordingly. */
-typedef svn_error_t *(*conflict_option_resolve_func_t)(
-  svn_client_conflict_option_t *option,
-  svn_client_conflict_t *conflict,
-  apr_pool_t *scratch_pool);
-
-struct svn_client_conflict_option_t
-{
-  svn_client_conflict_option_id_t id;
-  const char *description;
-
-  svn_client_conflict_t *conflict;
-  conflict_option_resolve_func_t do_resolve_func;
-
-  /* Data which is specific to particular conflicts and options. */
-  union {
-    struct {
-      /* Indicates the property to resolve in case of a property conflict.
-       * If set to "", all properties are resolved to this option. */
-      const char *propname;
-    } prop;
-  } type_data;
-
-};
 
 /* 
  * Resolve the conflict at LOCAL_ABSPATH. Currently only supports
