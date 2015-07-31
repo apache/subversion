@@ -23,6 +23,16 @@ Generator of signed advisory mails
 
 from __future__ import absolute_import
 
+import email.utils
+
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+try:
+    import gnupg
+except ImportError:
+    import security._gnupg as gnupg
+
 
 class Mailer(object):
     """
@@ -46,8 +56,8 @@ class Mailer(object):
         # appropriate value; for mixed server/client advisories, use
         # an empty string.
         culprit = set()
-        for advisory in self.__notification:
-            culprit |= advisory.culprit
+        for metadata in self.__notification:
+            culprit |= metadata.culprit
         assert len(culprit) > 0
         if len(culprit) > 1:
             culprit = ''
@@ -63,7 +73,105 @@ class Mailer(object):
             kwargs = dict(multiple='multiple ', culprit=culprit,
                           vulnerability='vulnerabilities')
         else:
-            kwargs = dict(multiple='', culprit=culprit,
+            kwargs = dict(multiple='a ', culprit=culprit,
                           vulnerability='vulnerability')
 
         return template.format(**kwargs)
+
+    def __attachments(self):
+        filenames = set()
+
+        def attachment(filename, description, encoding, content):
+            if filename in filenames:
+                raise ValueError('Named attachment already exists: '
+                                 + filename)
+            filenames.add(filename)
+
+            att = MIMEText('', 'plain', 'utf-8')
+            att.set_param('name', filename)
+            att.replace_header('Content-Transfer-Encoding', encoding)
+            att.add_header('Content-Description', description)
+            att.add_header('Content-Disposition',
+                            'attachment', filename=filename)
+            att.set_payload(content)
+            return att
+
+        for metadata in self.__notification:
+            filename = metadata.tracking_id + '-advisory.txt'
+            description = metadata.tracking_id + ' Advisory'
+            yield attachment(filename, description, 'quoted-printable',
+                             metadata.advisory.quoted_printable)
+
+            for patch in metadata.patches:
+                filename = (metadata.tracking_id +
+                            '-' + patch.base_version + '.patch')
+                description = (metadata.tracking_id
+                               + ' Patch for Subversion ' + patch.base_version)
+                yield attachment(filename, description, 'base64', patch.base64)
+
+
+class SignedMessage(MIMEMultipart):
+    """
+    The signed PGP/MIME message.
+    """
+
+    def __init__(self, message, attachments,
+                 gpgbinary='gpg', gnupghome=None, use_agent=True,
+                 keyring=None, keyid=None):
+
+        # Hack around the fact that the Pyton 2.x MIMEMultipart is not
+        # a new-style class.
+        try:
+            unicode                       # Doesn't exist in Python 3
+            MIMEMultipart.__init__(self, 'signed')
+        except NameError:
+            super(SignedMessage, self).__init__('signed')
+
+        payload = self.__payload(message, attachments)
+        signature = self.__signature(
+            payload, gpgbinary, gnupghome, use_agent, keyring, keyid)
+
+        self.set_param('protocol', 'application/pgp-signature')
+        self.set_param('micalg', 'pgp-sha512')   ####!!!
+        self.preamble = 'This is an OpenPGP/MIME signed message.'
+        self.attach(payload)
+        self.attach(signature)
+
+    def __payload(self, message, attachments):
+        """
+        Create the payload from the given MESSAGE and a
+        set of pre-cooked ATTACHMENTS.
+        """
+
+        payload = MIMEMultipart()
+        payload.preamble = 'This is a multi-part message in MIME format.'
+
+        msg = MIMEText('', 'plain', 'utf-8')
+        msg.replace_header('Content-Transfer-Encoding', 'quoted-printable')
+        msg.set_payload(message.quoted_printable)
+        payload.attach(msg)
+
+        for att in attachments:
+            payload.attach(att)
+        return payload
+
+    def __signature(self, payload,
+                    gpgbinary, gnupghome, use_agent, keyring, keyid):
+        """
+        Sign the PAYLOAD and return the detached signature as
+        a MIME attachment.
+        """
+
+        gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gnupghome,
+                        use_agent=use_agent, keyring=keyring)
+        signature = gpg.sign(payload.as_string(),
+                             keyid=keyid, detach=True, clearsign=False)
+        sig = MIMEText('')
+        sig.set_type('application/pgp-signature')
+        sig.set_charset(None)
+        sig.set_param('name', 'signature.asc')
+        sig.add_header('Content-Description', 'OpenPGP digital signature')
+        sig.add_header('Content-Disposition',
+                       'attachment', filename='signature.asc')
+        sig.set_payload(str(signature))
+        return sig
