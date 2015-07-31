@@ -4361,8 +4361,18 @@ svn_client_revert(const apr_array_header_t *paths,
  * @{
  */
 
+/**
+ * An opaque type which represents a conflicted node in the working copy.
+ *
+ * @since New in 1.10.
+ */
 typedef struct svn_client_conflict_t svn_client_conflict_t;
 
+/**
+ * An opaque type which represents a resolution option for a conflict.
+ *
+ * @since New in 1.10.
+ */
 typedef struct svn_client_conflict_option_t svn_client_conflict_option_t;
 
 /**
