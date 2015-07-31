@@ -157,8 +157,16 @@ struct svn_client_conflict_t
   svn_client_ctx_t *ctx;
   apr_hash_t *prop_conflicts;
 
-  /* Indicates which option was chosen to resolve this conflict. */
-  svn_client_conflict_option_id_t resolution;
+  /* Indicate which options were chosen to resolve a text or tree conflict
+   * on the conflited node. */
+  svn_client_conflict_option_id_t resolution_text;
+  svn_client_conflict_option_id_t resolution_tree;
+
+  /* A mapping from const char* property name to pointers to
+   * svn_client_conflict_option_t for all properties which had their
+   * conflicts resolved. Indicates which options were chosen to resolve
+   * the property conflicts. */
+  apr_hash_t *resolved_props;
 
   /* For backwards compat. */
   const svn_wc_conflict_description2_t *legacy_text_conflict;
@@ -255,14 +263,18 @@ conflict_get_internal(svn_client_conflict_t **conflict,
     {
       /* Add a single legacy conflict descriptor. */
       (*conflict)->local_abspath = desc->local_abspath;
-      (*conflict)->resolution = svn_client_conflict_option_undefined;
+      (*conflict)->resolution_text = svn_client_conflict_option_undefined;
+      (*conflict)->resolution_tree = svn_client_conflict_option_undefined;
+      (*conflict)->resolved_props = apr_hash_make(result_pool);
       add_legacy_desc_to_conflict(desc, *conflict, result_pool);
 
       return SVN_NO_ERROR;
     }
 
   (*conflict)->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  (*conflict)->resolution = svn_client_conflict_option_undefined;
+  (*conflict)->resolution_text = svn_client_conflict_option_undefined;
+  (*conflict)->resolution_tree = svn_client_conflict_option_undefined;
+  (*conflict)->resolved_props = apr_hash_make(result_pool);
   (*conflict)->ctx = ctx;
 
   /* Add all legacy conflict descriptors we can find. Eventually, this code
@@ -329,6 +341,7 @@ conflict_resolver_func(svn_wc_conflict_result_t **result,
   struct conflict_resolver_baton_t *b = baton;
   svn_client_conflict_t *conflict;
   const char *local_abspath;
+  svn_client_conflict_option_id_t resolution;
   svn_wc_conflict_choice_t conflict_choice;
 
   local_abspath = description->local_abspath;
@@ -338,10 +351,42 @@ conflict_resolver_func(svn_wc_conflict_result_t **result,
   SVN_ERR(b->conflict_walk_func(b->conflict_walk_func_baton,
                                 conflict, scratch_pool));
 
-  conflict_choice = conflict_option_id_to_wc_conflict_choice(
-                      conflict->resolution);
-  *result = svn_wc_create_conflict_result(conflict_choice, NULL,
-                                          result_pool);
+  /* Evaluate the conflict callback result based on which kind
+   * of conflict libsvn_wc has given us. */
+  resolution = svn_client_conflict_option_undefined;
+  if (description->kind == svn_wc_conflict_kind_text)
+    resolution = conflict->resolution_text;
+  else if (description->kind == svn_wc_conflict_kind_tree)
+    resolution = conflict->resolution_tree;
+  else if (description->kind == svn_wc_conflict_kind_property)
+    {
+      svn_client_conflict_option_t *option;
+
+      option = svn_hash_gets(conflict->resolved_props,
+                             description->property_name);
+      if (option == NULL)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("No resolution provided for conflicted "
+                                   "property '%s' on path '%s'"),
+                                 description->property_name,
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+
+      resolution = svn_client_conflict_option_get_id(option);
+    }
+  else
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Unknown legacy conflict kind '%d'"),
+                             description->kind);
+
+  if (resolution == svn_client_conflict_option_undefined)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("No resolution for conflicted path '%s'"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+    
+  conflict_choice = conflict_option_id_to_wc_conflict_choice(resolution);
+  *result = svn_wc_create_conflict_result(conflict_choice, NULL, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -399,19 +444,13 @@ struct svn_client_conflict_option_t
   svn_client_conflict_option_id_t id;
   const char *description;
 
+  /* Indicates the property to resolve in case of a property conflict.
+   * If set to "", all properties are resolved to this option. */
+  const char *propname;
+
   svn_client_conflict_t *conflict;
   conflict_option_resolve_func_t do_resolve_func;
 };
-
-static svn_error_t *
-resolve_postpone(svn_client_conflict_option_t *option,
-                 svn_client_conflict_t *conflict,
-                 apr_pool_t *scratch_pool)
-{
-  /* Nothing to do. */
-  conflict->resolution = svn_client_conflict_option_postpone;
-  return SVN_NO_ERROR;
-}
 
 /* 
  * Resolve the conflict at LOCAL_ABSPATH. Currently only supports
@@ -453,6 +492,7 @@ resolve_conflict(svn_client_conflict_option_id_t option_id,
   return SVN_NO_ERROR;
 }
 
+/* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_text_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
@@ -465,11 +505,12 @@ resolve_text_conflict(svn_client_conflict_option_t *option,
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   SVN_ERR(resolve_conflict(option_id, local_abspath, TRUE, NULL, FALSE,
                            conflict->ctx, scratch_pool));
-  conflict->resolution = option_id;
+  conflict->resolution_text = option_id;
 
   return SVN_NO_ERROR;
 }
 
+/* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_prop_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
@@ -480,14 +521,42 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
 
   option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  SVN_ERR(resolve_conflict(option_id, local_abspath, FALSE, "", FALSE,
+  SVN_ERR(resolve_conflict(option_id, local_abspath,
+                           FALSE, option->propname, FALSE,
                            conflict->ctx, scratch_pool));
-  conflict->resolution = option_id;
+
+  if (option->propname[0] == '\0')
+    {
+      apr_hash_index_t *hi;
+
+      /* All properties have been resolved to the same option. */
+      for (hi = apr_hash_first(scratch_pool, conflict->prop_conflicts);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *propname = apr_hash_this_key(hi);
+
+          svn_hash_sets(conflict->resolved_props,
+                        apr_pstrdup(apr_hash_pool_get(conflict->resolved_props),
+                                    propname),
+                        option);
+          svn_hash_sets(conflict->prop_conflicts, propname, NULL);
+        }
+    }
+  else
+    {
+      svn_hash_sets(conflict->resolved_props,
+                    apr_pstrdup(apr_hash_pool_get(conflict->resolved_props),
+                                option->propname),
+                   option);
+      svn_hash_sets(conflict->prop_conflicts, option->propname, NULL);
+    }
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
+/* Implements conflict_option_resolve_func_t. */
 resolve_tree_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
                       apr_pool_t *scratch_pool)
@@ -499,7 +568,7 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   SVN_ERR(resolve_conflict(option_id, local_abspath, FALSE, NULL, TRUE,
                            conflict->ctx, scratch_pool));
-  conflict->resolution = option_id;
+  conflict->resolution_tree = option_id;
 
   return SVN_NO_ERROR;
 }
@@ -511,12 +580,14 @@ static const svn_client_conflict_option_t text_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("mark the conflict to be resolved later"),
     NULL,
-    resolve_postpone
+    NULL,
+    resolve_text_conflict
   },
 
   {
     svn_client_conflict_option_incoming_new_text,
     N_("accept incoming version of entire file"),
+    NULL,
     NULL,
     resolve_text_conflict
   },
@@ -525,6 +596,7 @@ static const svn_client_conflict_option_t text_conflict_options[] =
     svn_client_conflict_option_working_text,
     N_("accept working copy version of entire file"),
     NULL,
+    NULL,
     resolve_text_conflict
   },
 
@@ -532,12 +604,14 @@ static const svn_client_conflict_option_t text_conflict_options[] =
     svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
     N_("accept incoming version of all text conflicts in file"),
     NULL,
+    NULL,
     resolve_text_conflict
   },
 
   {
     svn_client_conflict_option_working_text_for_conflicted_hunks_only,
     N_("accept working copy version of all text conflicts in file"),
+    NULL,
     NULL,
     resolve_text_conflict
   },
@@ -551,12 +625,14 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("mark the conflict to be resolved later"),
     NULL,
-    resolve_postpone
+    NULL,
+    resolve_text_conflict,
   },
 
   {
     svn_client_conflict_option_incoming_new_text,
     N_("accept incoming version of binary file"),
+    NULL,
     NULL,
     resolve_text_conflict
   },
@@ -564,6 +640,7 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
   {
     svn_client_conflict_option_working_text,
     N_("accept working copy version of binary file"),
+    NULL,
     NULL,
     resolve_text_conflict
   },
@@ -577,12 +654,14 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("mark the conflict to be resolved later"),
     NULL,
-    resolve_postpone
+    NULL,
+    resolve_prop_conflict
   },
 
   {
     svn_client_conflict_option_incoming_new_text,
     N_("accept incoming version of entire property value"),
+    NULL,
     NULL,
     resolve_prop_conflict
   },
@@ -590,6 +669,7 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
   {
     svn_client_conflict_option_working_text,
     N_("accept working copy version of entire property value"),
+    NULL,
     NULL,
     resolve_prop_conflict
   },
@@ -603,7 +683,8 @@ static const svn_client_conflict_option_t tree_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("mark the conflict to be resolved later"),
     NULL,
-    resolve_postpone
+    NULL,
+    resolve_tree_conflict
   },
 
   {
@@ -611,6 +692,7 @@ static const svn_client_conflict_option_t tree_conflict_options[] =
      * ### choice to resolve to working yet. */
     svn_client_conflict_option_working_text,
     N_("accept current working copy state"),
+    NULL,
     NULL,
     resolve_tree_conflict
   },
@@ -755,13 +837,63 @@ svn_client_conflict_option_describe(const char **description,
 }
 
 svn_error_t *
-svn_client_conflict_resolve(svn_client_conflict_t *conflict,
-                            svn_client_conflict_option_t *option,
-                            apr_pool_t *scratch_pool)
+svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
+                                 svn_client_conflict_option_t *option,
+                                 apr_pool_t *scratch_pool)
 {
+  SVN_ERR(assert_text_conflict(conflict, scratch_pool));
   SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_client_conflict_option_id_t
+svn_client_conflict_text_get_resolution(const svn_client_conflict_t *conflict)
+{
+  return conflict->resolution_text;
+}
+
+svn_error_t *
+svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
+                                 const char *propname,
+                                 svn_client_conflict_option_t *option,
+                                 apr_pool_t *scratch_pool)
+{
+  SVN_ERR(assert_prop_conflict(conflict, scratch_pool));
+  option->propname = propname;
+  SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_client_conflict_option_id_t
+svn_client_conflict_prop_get_resolution(const svn_client_conflict_t *conflict,
+                                        const char *propname)
+{
+  svn_client_conflict_option_t *option;
+
+  option = svn_hash_gets(conflict->resolved_props, propname);
+  if (option == NULL)
+    return svn_client_conflict_option_undefined;
+
+  return svn_client_conflict_option_get_id(option);
+}
+
+svn_error_t *
+svn_client_conflict_tree_resolve(svn_client_conflict_t *conflict,
+                                 svn_client_conflict_option_t *option,
+                                 apr_pool_t *scratch_pool)
+{
+  SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
+  SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_client_conflict_option_id_t
+svn_client_conflict_tree_get_resolution(const svn_client_conflict_t *conflict)
+{
+  return conflict->resolution_tree;
 }
 
 /* Return the legacy conflict descriptor which is wrapped by CONFLICT. */
@@ -951,12 +1083,6 @@ svn_client_conflict_get_incoming_new_repos_location(
     }
 
   return SVN_NO_ERROR;
-}
-
-svn_client_conflict_option_id_t
-svn_client_conflict_get_resolution(const svn_client_conflict_t *conflict)
-{
-  return conflict->resolution;
 }
 
 svn_node_kind_t
