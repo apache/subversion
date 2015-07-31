@@ -444,12 +444,18 @@ struct svn_client_conflict_option_t
   svn_client_conflict_option_id_t id;
   const char *description;
 
-  /* Indicates the property to resolve in case of a property conflict.
-   * If set to "", all properties are resolved to this option. */
-  const char *propname;
-
   svn_client_conflict_t *conflict;
   conflict_option_resolve_func_t do_resolve_func;
+
+  /* Data which is specific to particular conflicts and options. */
+  union {
+    struct {
+      /* Indicates the property to resolve in case of a property conflict.
+       * If set to "", all properties are resolved to this option. */
+      const char *propname;
+    } prop;
+  } type_data;
+
 };
 
 /* 
@@ -518,14 +524,15 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
+  const char *propname = option->type_data.prop.propname;
 
   option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   SVN_ERR(resolve_conflict(option_id, local_abspath,
-                           FALSE, option->propname, FALSE,
+                           FALSE, propname, FALSE,
                            conflict->ctx, scratch_pool));
 
-  if (option->propname[0] == '\0')
+  if (propname[0] == '\0')
     {
       apr_hash_index_t *hi;
 
@@ -534,22 +541,22 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *propname = apr_hash_this_key(hi);
+          const char *this_propname = apr_hash_this_key(hi);
 
           svn_hash_sets(conflict->resolved_props,
                         apr_pstrdup(apr_hash_pool_get(conflict->resolved_props),
-                                    propname),
+                                    this_propname),
                         option);
-          svn_hash_sets(conflict->prop_conflicts, propname, NULL);
+          svn_hash_sets(conflict->prop_conflicts, this_propname, NULL);
         }
     }
   else
     {
       svn_hash_sets(conflict->resolved_props,
                     apr_pstrdup(apr_hash_pool_get(conflict->resolved_props),
-                                option->propname),
+                                propname),
                    option);
-      svn_hash_sets(conflict->prop_conflicts, option->propname, NULL);
+      svn_hash_sets(conflict->prop_conflicts, propname, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -580,14 +587,12 @@ static const svn_client_conflict_option_t text_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("mark the conflict to be resolved later"),
     NULL,
-    NULL,
     resolve_text_conflict
   },
 
   {
     svn_client_conflict_option_incoming_new_text,
     N_("accept incoming version of entire file"),
-    NULL,
     NULL,
     resolve_text_conflict
   },
@@ -596,7 +601,6 @@ static const svn_client_conflict_option_t text_conflict_options[] =
     svn_client_conflict_option_working_text,
     N_("accept working copy version of entire file"),
     NULL,
-    NULL,
     resolve_text_conflict
   },
 
@@ -604,14 +608,12 @@ static const svn_client_conflict_option_t text_conflict_options[] =
     svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
     N_("accept incoming version of all text conflicts in file"),
     NULL,
-    NULL,
     resolve_text_conflict
   },
 
   {
     svn_client_conflict_option_working_text_for_conflicted_hunks_only,
     N_("accept working copy version of all text conflicts in file"),
-    NULL,
     NULL,
     resolve_text_conflict
   },
@@ -625,7 +627,6 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("mark the conflict to be resolved later"),
     NULL,
-    NULL,
     resolve_text_conflict,
   },
 
@@ -633,14 +634,12 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
     svn_client_conflict_option_incoming_new_text,
     N_("accept incoming version of binary file"),
     NULL,
-    NULL,
     resolve_text_conflict
   },
 
   {
     svn_client_conflict_option_working_text,
     N_("accept working copy version of binary file"),
-    NULL,
     NULL,
     resolve_text_conflict
   },
@@ -654,7 +653,6 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("mark the conflict to be resolved later"),
     NULL,
-    NULL,
     resolve_prop_conflict
   },
 
@@ -662,14 +660,12 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
     svn_client_conflict_option_incoming_new_text,
     N_("accept incoming version of entire property value"),
     NULL,
-    NULL,
     resolve_prop_conflict
   },
 
   {
     svn_client_conflict_option_working_text,
     N_("accept working copy version of entire property value"),
-    NULL,
     NULL,
     resolve_prop_conflict
   },
@@ -683,7 +679,6 @@ static const svn_client_conflict_option_t tree_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("mark the conflict to be resolved later"),
     NULL,
-    NULL,
     resolve_tree_conflict
   },
 
@@ -692,7 +687,6 @@ static const svn_client_conflict_option_t tree_conflict_options[] =
      * ### choice to resolve to working yet. */
     svn_client_conflict_option_working_text,
     N_("accept current working copy state"),
-    NULL,
     NULL,
     resolve_tree_conflict
   },
@@ -917,7 +911,7 @@ svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
                                  apr_pool_t *scratch_pool)
 {
   SVN_ERR(assert_prop_conflict(conflict, scratch_pool));
-  option->propname = propname;
+  option->type_data.prop.propname = propname;
   SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
 
   return SVN_NO_ERROR;
