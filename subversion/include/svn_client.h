@@ -4390,11 +4390,28 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_working_text,
   svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
   svn_client_conflict_option_working_text_for_conflicted_hunks_only,
-  svn_client_conflict_option_merged_text, /* unsupported */
+  svn_client_conflict_option_merged_text,
   svn_client_conflict_option_unspecified
   /* Values derived from svn_wc_conflict_choice_t end here. */
 
 } svn_client_conflict_option_id_t;
+
+/**
+ * Set a merged property value on @a option to @a merged_propval.
+ * 
+ * Setting the merged value is required before resolving the property
+ * conflict using an option with ID svn_client_conflict_option_merged_text.
+ *
+ * The contents of @a merged_propval are not copied, so the storage it
+ * points to needs to remain valid until svn_client_conflict_prop_resolve()
+ * has been called with @a option.
+ *
+ * @since New in 1.10.
+ */
+void
+svn_client_conflict_option_set_merged_propval(
+  svn_client_conflict_option_t *option,
+  const svn_string_t *merged_propval);
 
 /**
  * Return a conflict for the conflicted path @a local_abspath.

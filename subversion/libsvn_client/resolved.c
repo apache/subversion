@@ -194,6 +194,9 @@ struct svn_client_conflict_option_t
       /* Indicates the property to resolve in case of a property conflict.
        * If set to "", all properties are resolved to this option. */
       const char *propname;
+
+      /* A merged property value, if supplied by the API user, else NULL. */
+      const svn_string_t *merged_propval;
     } prop;
   } type_data;
 
@@ -398,6 +401,13 @@ conflict_resolver_func(svn_wc_conflict_result_t **result,
                                                         scratch_pool));
 
       resolution = svn_client_conflict_option_get_id(option);
+      conflict_choice = conflict_option_id_to_wc_conflict_choice(resolution);
+      *result = svn_wc_create_conflict_result(conflict_choice, NULL,
+                                              result_pool);
+      if (resolution == svn_client_conflict_option_merged_text)
+        (*result)->merged_value = option->type_data.prop.merged_propval;
+        
+      return SVN_NO_ERROR;
     }
   else
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
@@ -409,7 +419,7 @@ conflict_resolver_func(svn_wc_conflict_result_t **result,
                              _("No resolution for conflicted path '%s'"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-    
+
   conflict_choice = conflict_option_id_to_wc_conflict_choice(resolution);
   *result = svn_wc_create_conflict_result(conflict_choice, NULL, result_pool);
 
@@ -456,6 +466,14 @@ svn_client_conflict_walk(const char *local_abspath,
   
 
   return SVN_NO_ERROR;
+}
+
+void
+svn_client_conflict_option_set_merged_propval(
+  svn_client_conflict_option_t *option,
+  const svn_string_t *merged_propval)
+{
+  option->type_data.prop.merged_propval = merged_propval;
 }
 
 /* 
