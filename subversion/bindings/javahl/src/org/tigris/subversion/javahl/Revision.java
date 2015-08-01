@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004,2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -48,10 +53,7 @@ public class Revision implements java.io.Serializable
      */
     public Revision(int kind)
     {
-        if (kind < RevisionKind.unspecified || kind > RevisionKind.head)
-            throw new IllegalArgumentException(
-                    kind+" is not a legal revision kind");
-        revKind = kind;
+        this(kind, true);
     }
 
     /**
@@ -153,8 +155,29 @@ public class Revision implements java.io.Serializable
         return new Revision.DateSpec(revisionDate);
     }
 
+    public org.apache.subversion.javahl.types.Revision toApache()
+    {
+        return new org.apache.subversion.javahl.types.Revision(Kind.toAKind(revKind));
+    }
+
+    public static Revision createFromApache(
+                                    org.apache.subversion.javahl.types.Revision aRev)
+    {
+        org.apache.subversion.javahl.types.Revision.Kind kind = aRev.getKind();
+
+        switch (kind)
+        {
+            case number:
+                return getInstance(((org.apache.subversion.javahl.types.Revision.Number) aRev).getNumber());
+            case date:
+                return getInstance(((org.apache.subversion.javahl.types.Revision.DateSpec) aRev).getDate());
+            default:
+                return getInstance(Kind.fromAKind(kind));
+        }
+    }
+
     /**
-     * last commited revision
+     * last committed revision
      */
     public static final Revision HEAD = new Revision(Kind.head, true);
 
@@ -254,6 +277,11 @@ public class Revision implements java.io.Serializable
         {
             return (int)(revNumber ^ (revNumber >>> 32));
         }
+
+        public org.apache.subversion.javahl.types.Revision toApache()
+        {
+            return org.apache.subversion.javahl.types.Revision.getInstance(revNumber);
+        }
     }
 
     /**
@@ -321,6 +349,10 @@ public class Revision implements java.io.Serializable
             return revDate.hashCode();
         }
 
+        public org.apache.subversion.javahl.types.Revision toApache()
+        {
+            return org.apache.subversion.javahl.types.Revision.getInstance(revDate);
+        }
     }
 
     /**
@@ -336,5 +368,52 @@ public class Revision implements java.io.Serializable
      */
     public static final class Kind implements RevisionKind
     {
+       public static int fromAKind(org.apache.subversion.javahl.types.Revision.Kind aKind)
+       {
+           switch (aKind)
+           {
+           default:
+           case unspecified:
+               return RevisionKind.unspecified;
+           case number:
+               return RevisionKind.number;
+           case date:
+               return RevisionKind.date;
+           case committed:
+               return RevisionKind.committed;
+           case previous:
+               return RevisionKind.previous;
+           case base:
+               return RevisionKind.base;
+           case head:
+               return RevisionKind.head;
+           case working:
+               return RevisionKind.working;
+           }
+       }
+
+       public static org.apache.subversion.javahl.types.Revision.Kind toAKind(int kind)
+       {
+           switch (kind)
+           {
+           default:
+           case RevisionKind.unspecified:
+               return org.apache.subversion.javahl.types.Revision.Kind.unspecified;
+           case RevisionKind.number:
+               return org.apache.subversion.javahl.types.Revision.Kind.number;
+           case RevisionKind.date:
+               return org.apache.subversion.javahl.types.Revision.Kind.date;
+           case RevisionKind.committed:
+               return org.apache.subversion.javahl.types.Revision.Kind.committed;
+           case RevisionKind.previous:
+               return org.apache.subversion.javahl.types.Revision.Kind.previous;
+           case RevisionKind.base:
+               return org.apache.subversion.javahl.types.Revision.Kind.base;
+           case RevisionKind.head:
+               return org.apache.subversion.javahl.types.Revision.Kind.head;
+           case RevisionKind.working:
+               return org.apache.subversion.javahl.types.Revision.Kind.working;
+           }
+       }
     }
 }

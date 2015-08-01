@@ -1,19 +1,54 @@
 #!/usr/bin/env python
 #
-# svnlook.py : a Python-based replacement for svnlook
+# svnlook.py : alternative svnlook in Python with library API
 #
 ######################################################################
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
-#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 #
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedRevision$
+
+"""
+svnlook.py can also be used as a Python module::
+
+  >>> import svnlook
+  >>> svnlook = svnlook.SVNLook("/testrepo")
+  >>> svnlook.get_author()
+  'randomjoe'
+
+
+Accessible API::
+
+[x] author
+[x] changed
+[x] date
+[ ] diff
+[x] dirs-changed
+[ ] ids
+[x] info
+[x] log
+[ ] tree
+---
+[ ] generator API to avoid passing lists
+"""
+
 
 import sys
 import time
@@ -21,86 +56,155 @@ import os
 
 from svn import core, fs, delta, repos
 
-class SVNLook:
-  def __init__(self, path, cmd, rev, txn):
+class SVNLook(object):
+  def __init__(self, path, rev=None, txn=None, cmd=None):
+    """
+    path  - path to repository
+    rev   - revision number
+    txn   - name of transaction (usually the one about to be committed)
+    cmd   - if set, specifies cmd_* method to execute
+
+    txn takes precedence over rev; if both are None, inspect the head revision
+    """
     path = core.svn_path_canonicalize(path)
     repos_ptr = repos.open(path)
     self.fs_ptr = repos.fs(repos_ptr)
 
+    # if set, txn takes precendence
     if txn:
       self.txn_ptr = fs.open_txn(self.fs_ptr, txn)
     else:
       self.txn_ptr = None
       if rev is None:
         rev = fs.youngest_rev(self.fs_ptr)
+      else:
+        rev = int(rev)
     self.rev = rev
 
-    getattr(self, 'cmd_' + cmd)()
+    if cmd != None:
+      getattr(self, 'cmd_' + cmd)()
 
   def cmd_default(self):
     self.cmd_info()
     self.cmd_tree()
 
   def cmd_author(self):
-    # get the author property, or empty string if the property is not present
-    author = self._get_property(core.SVN_PROP_REVISION_AUTHOR) or ''
-    print author
+    print(self.get_author() or '')
 
   def cmd_changed(self):
-    self._print_tree(ChangedEditor, pass_root=1)
+    for status, path in self.get_changed():
+      print("%-3s %s" % (status, path))
 
   def cmd_date(self):
-    if self.txn_ptr:
-      print
+    # duplicate original svnlook format, which is
+    # 2010-02-08 21:53:15 +0200 (Mon, 08 Feb 2010)
+    secs = self.get_date(unixtime=True)
+    if secs is None:
+      print("")
     else:
-      date = self._get_property(core.SVN_PROP_REVISION_DATE)
-      if date:
-        aprtime = core.svn_time_from_cstring(date)
-        # ### convert to a time_t; this requires intimate knowledge of
-        # ### the apr_time_t type
-        secs = aprtime / 1000000  # aprtime is microseconds; make seconds
+      # convert to tuple, detect time zone and format
+      stamp = time.localtime(secs)
+      isdst = stamp.tm_isdst
+      utcoffset = -(time.altzone if (time.daylight and isdst) else time.timezone) // 60
 
-        # assume secs in local TZ, convert to tuple, and format
-        ### we don't really know the TZ, do we?
-        print time.strftime('%Y-%m-%d %H:%M', time.localtime(secs))
-      else:
-        print
+      suffix = "%+03d%02d" % (utcoffset // 60, abs(utcoffset) % 60)
+      outstr = time.strftime('%Y-%m-%d %H:%M:%S ', stamp) + suffix
+      outstr += time.strftime(' (%a, %d %b %Y)', stamp)
+      print(outstr)
+
 
   def cmd_diff(self):
     self._print_tree(DiffEditor, pass_root=1)
 
   def cmd_dirs_changed(self):
-    self._print_tree(DirsChangedEditor)
+    for dir in self.get_changed_dirs():
+      print(dir)
 
   def cmd_ids(self):
     self._print_tree(Editor, base_rev=0, pass_root=1)
 
   def cmd_info(self):
+    """print the author, data, log_size, and log message"""
     self.cmd_author()
     self.cmd_date()
-    self.cmd_log(1)
+    log = self.get_log() or ''
+    print(len(log))
+    print(log)
 
-  def cmd_log(self, print_size=0):
-    # get the log property, or empty string if the property is not present
-    log = self._get_property(core.SVN_PROP_REVISION_LOG) or ''
-    if print_size:
-      print len(log)
-    print log
+  def cmd_log(self):
+    print(self.get_log() or '')
 
   def cmd_tree(self):
     self._print_tree(Editor, base_rev=0)
 
+
+  # --- API getters
+  def get_author(self):
+    """return string with the author name or None"""
+    return self._get_property(core.SVN_PROP_REVISION_AUTHOR)
+
+  def get_changed(self):
+    """return list of tuples (status, path)"""
+    ret = []
+    def list_callback(status, path):
+      ret.append( (status, path) )
+    self._walk_tree(ChangedEditor, pass_root=1, callback=list_callback)
+    return ret
+
+  def get_date(self, unixtime=False):
+    """return commit timestamp in RFC 3339 format (2010-02-08T20:37:25.195000Z)
+       if unixtime is True, return unix timestamp
+       return None for a txn, or if date property is not set
+    """
+    if self.txn_ptr:
+      return None
+
+    date = self._get_property(core.SVN_PROP_REVISION_DATE)
+    if not unixtime or date == None:
+      return date
+
+    # convert to unix time
+    aprtime = core.svn_time_from_cstring(date)
+    # ### convert to a time_t; this requires intimate knowledge of
+    # ### the apr_time_t type
+    secs = aprtime / 1000000  # aprtime is microseconds; make seconds
+    return secs
+
+  def get_changed_dirs(self):
+    """return list of changed dirs
+       dir names end with trailing forward slash even on windows
+    """
+    dirlist = []
+    def list_callback(item):
+      dirlist.append(item)
+    self._walk_tree(DirsChangedEditor, callback=list_callback)
+    return dirlist
+
+  def get_log(self):
+    """return log message string or None if not present"""
+    return self._get_property(core.SVN_PROP_REVISION_LOG)
+
+
+  # --- Internal helpers
   def _get_property(self, name):
     if self.txn_ptr:
       return fs.txn_prop(self.txn_ptr, name)
     return fs.revision_prop(self.fs_ptr, self.rev, name)
 
   def _print_tree(self, e_factory, base_rev=None, pass_root=0):
+    def print_callback(msg):
+       print(msg)
+    self._walk_tree(e_factory, base_rev, pass_root, callback=print_callback)
+
+  # svn fs, delta, repos calls needs review according to DeltaEditor documentation
+  def _walk_tree(self, e_factory, base_rev=None, pass_root=0, callback=None):
     if base_rev is None:
       # a specific base rev was not provided. use the transaction base,
       # or the previous revision
       if self.txn_ptr:
         base_rev = fs.txn_base_revision(self.txn_ptr)
+      elif self.rev == 0:
+        base_rev = 0
       else:
         base_rev = self.rev - 1
 
@@ -113,10 +217,13 @@ class SVNLook:
     # the base of the comparison
     base_root = fs.revision_root(self.fs_ptr, base_rev)
 
+    if callback == None:
+      callback = lambda msg: None
+
     if pass_root:
-      editor = e_factory(root, base_root)
+      editor = e_factory(root, base_root, callback)
     else:
-      editor = e_factory()
+      editor = e_factory(callback=callback)
 
     # construct the editor for printing these things out
     e_ptr, e_baton = delta.make_editor(editor)
@@ -128,20 +235,29 @@ class SVNLook:
 		    e_ptr, e_baton, authz_cb, 0, 1, 0, 0)
 
 
+# ---------------------------------------------------------
+# Delta Editors. For documentation see:
+# http://subversion.apache.org/docs/community-guide/#docs
+
+# this one doesn't process delete_entry, change_dir_prop, apply_text_delta,
+# change_file_prop, close_file, close_edit, abort_edit
+# ?set_target_revision
+# need review
 class Editor(delta.Editor):
-  def __init__(self, root=None, base_root=None):
+  def __init__(self, root=None, base_root=None, callback=None):
+    """callback argument is unused for this editor"""
     self.root = root
     # base_root ignored
 
     self.indent = ''
 
   def open_root(self, base_revision, dir_pool):
-    print '/' + self._get_id('/')
+    print('/' + self._get_id('/'))
     self.indent = self.indent + ' '    # indent one space
 
   def add_directory(self, path, *args):
     id = self._get_id(path)
-    print self.indent + _basename(path) + '/' + id
+    print(self.indent + _basename(path) + '/' + id)
     self.indent = self.indent + ' '    # indent one space
 
   # we cheat. one method implementation for two entry points.
@@ -154,7 +270,7 @@ class Editor(delta.Editor):
 
   def add_file(self, path, *args):
     id = self._get_id(path)
-    print self.indent + _basename(path) + id
+    print(self.indent + _basename(path) + id)
 
   # we cheat. one method implementation for two entry points.
   open_file = add_file
@@ -165,8 +281,14 @@ class Editor(delta.Editor):
       return ' <%s>' % fs.unparse_id(id)
     return ''
 
-
+# doesn't process close_directory, apply_text_delta,
+# change_file_prop, close_file, close_edit, abort_edit
+# ?set_target_revision
 class DirsChangedEditor(delta.Editor):
+  """print names of changed dirs, callback(dir) is a printer function"""
+  def __init__(self, callback):
+    self.callback = callback
+
   def open_root(self, base_revision, dir_pool):
     return [ 1, '' ]
 
@@ -195,14 +317,15 @@ class DirsChangedEditor(delta.Editor):
   def _dir_changed(self, baton):
     if baton[0]:
       # the directory hasn't been printed yet. do it.
-      print baton[1] + '/'
+      self.callback(baton[1] + '/')
       baton[0] = 0
 
-
 class ChangedEditor(delta.Editor):
-  def __init__(self, root, base_root):
+  def __init__(self, root, base_root, callback):
+    """callback(status, path) is a printer function"""
     self.root = root
     self.base_root = base_root
+    self.callback = callback
 
   def open_root(self, base_revision, dir_pool):
     return [ 1, '' ]
@@ -210,13 +333,13 @@ class ChangedEditor(delta.Editor):
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
     if fs.is_dir(self.base_root, '/' + path):
-      print 'D   ' + path + '/'
+      self.callback('D', path + '/')
     else:
-      print 'D   ' + path
+      self.callback('D', path)
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
-    print 'A   ' + path + '/'
+    self.callback('A', path + '/')
     return [ 0, path ]
 
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
@@ -225,12 +348,12 @@ class ChangedEditor(delta.Editor):
   def change_dir_prop(self, dir_baton, name, value, pool):
     if dir_baton[0]:
       # the directory hasn't been printed yet. do it.
-      print '_U  ' + dir_baton[1] + '/'
+      self.callback('_U', dir_baton[1] + '/')
       dir_baton[0] = 0
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    print 'A   ' + path
+    self.callback('A', path)
     return [ '_', ' ', None ]
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
@@ -252,26 +375,28 @@ class ChangedEditor(delta.Editor):
       status = text_mod + prop_mod
       # was there some kind of change?
       if status != '_ ':
-        print status + '  ' + path
+        self.callback(status.rstrip(), path)
 
 
 class DiffEditor(delta.Editor):
-  def __init__(self, root, base_root):
+  def __init__(self, root, base_root, callback=None):
+    """callback argument is unused for this editor"""
     self.root = root
     self.base_root = base_root
+    self.target_revision = 0
 
   def _do_diff(self, base_path, path):
     if base_path is None:
-      print "Added: " + path
+      print("Added: " + path)
       label = path
     elif path is None:
-      print "Removed: " + path
+      print("Removed: " + base_path)
       label = base_path
     else:
-      print "Modified: " + path
+      print("Modified: " + path)
       label = path
-    print "===============================================================" + \
-          "==============="
+    print("===============================================================" + \
+          "===============")
     args = []
     args.append("-L")
     args.append(label + "\t(original)")
@@ -281,30 +406,79 @@ class DiffEditor(delta.Editor):
     differ = fs.FileDiff(self.base_root, base_path, self.root,
                          path, diffoptions=args)
     pobj = differ.get_pipe()
-    while 1:
+    while True:
       line = pobj.readline()
       if not line:
         break
-      print line,
-    print ""
-    
+      sys.stdout.write("%s " % line)
+    print("")
+
+  def _do_prop_diff(self, path, prop_name, prop_val, pool):
+    print("Property changes on: " + path)
+    print("_______________________________________________________________" + \
+          "_______________")
+
+    old_prop_val = None
+
+    try:
+      old_prop_val = fs.node_prop(self.base_root, path, prop_name, pool)
+    except core.SubversionException:
+      pass # Must be a new path
+
+    if old_prop_val:
+      if prop_val:
+        print("Modified: " + prop_name)
+        print("   - " + str(old_prop_val))
+        print("   + " + str(prop_val))
+      else:
+        print("Deleted: " + prop_name)
+        print("   - " + str(old_prop_val))
+    else:
+      print("Added: " + prop_name)
+      print("   + " + str(prop_val))
+
+    print("")
+
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
     if not fs.is_dir(self.base_root, '/' + path):
       self._do_diff(path, None)
+
+  def add_directory(self, path, parent_baton, copyfrom_path,
+                    copyfrom_revision, dir_pool):
+    return [ 1, path ]
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
     self._do_diff(None, path)
     return [ '_', ' ', None ]
 
+  def open_root(self, base_revision, dir_pool):
+    return [ 1, '' ]
+
+  def open_directory(self, path, parent_baton, base_revision, dir_pool):
+    return [ 1, path ]
+
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return [ '_', ' ', path ]
 
   def apply_textdelta(self, file_baton, base_checksum):
     if file_baton[2] is not None:
-      self._do_diff(file_baton[2], file_baton[2], file_baton[3])
+      self._do_diff(file_baton[2], file_baton[2])
     return None
+
+  def change_file_prop(self, file_baton, name, value, pool):
+    if file_baton[2] is not None:
+      self._do_prop_diff(file_baton[2], name, value, pool)
+    return None
+
+  def change_dir_prop(self, dir_baton, name, value, pool):
+    if dir_baton[1] is not None:
+      self._do_prop_diff(dir_baton[1], name, value, pool)
+    return None
+
+  def set_target_revision(self, target_revision):
+    self.target_revision = target_revision
 
 def _basename(path):
   "Return the basename for a '/'-separated path."
@@ -344,7 +518,7 @@ def usage(exit):
      "   tree:          print the tree.\n"
      "\n"
      % (sys.argv[0], sys.argv[0], sys.argv[0]))
-  
+
   sys.exit(exit)
 
 def main():
@@ -380,7 +554,7 @@ def main():
   if not hasattr(SVNLook, 'cmd_' + cmd):
     usage(1)
 
-  SVNLook(sys.argv[1], cmd, rev, txn)
+  SVNLook(sys.argv[1], rev, txn, cmd)
 
 if __name__ == '__main__':
   main()

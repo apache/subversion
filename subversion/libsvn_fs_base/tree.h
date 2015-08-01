@@ -1,17 +1,22 @@
 /* tree.h : internal interface to tree node functions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -23,10 +28,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "svn_props.h"
-
-/* A transaction property which maps to a skel form of apr_hash_t
-   (target wc path char * -> actual mergeinfo). */
-#define SVN_FS_PROP_TXN_MERGEINFO     SVN_PROP_PREFIX "txn-mergeinfo"
 
 
 
@@ -45,6 +46,32 @@ svn_error_t *svn_fs_base__commit_txn(const char **conflict_p,
 
 svn_error_t *svn_fs_base__txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                                    apr_pool_t *pool);
+
+
+
+/* Inserting and retrieving miscellany records in the fs */
+
+/* Set the value of miscellaneous records KEY to VAL in FS.  To remove
+   a value altogether, pass NULL for VAL.
+
+   KEY and VAL should be NULL-terminated strings. */
+svn_error_t *
+svn_fs_base__miscellaneous_set(svn_fs_t *fs,
+                               const char *key,
+                               const char *val,
+                               apr_pool_t *pool);
+
+/* Retrieve the miscellany records for KEY into *VAL for FS, allocated
+   in POOL.  If the fs doesn't support miscellany storage, or the value
+   does not exist, *VAL is set to NULL.
+
+   KEY should be a NULL-terminated string. */
+svn_error_t *
+svn_fs_base__miscellaneous_get(const char **val,
+                               svn_fs_t *fs,
+                               const char *key,
+                               apr_pool_t *pool);
+
 
 
 

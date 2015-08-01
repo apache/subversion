@@ -16,10 +16,6 @@ Revision-number: 1
 Prop-content-length: 115
 Content-length: 115
 
-K 7
-svn:log
-V 14
-initial layout
 K 10
 svn:author
 V 6
@@ -28,6 +24,10 @@ K 8
 svn:date
 V 27
 2005-11-07T20:22:08.601650Z
+K 7
+svn:log
+V 14
+initial layout
 PROPS-END
 
 Node-path: branches
@@ -61,10 +61,6 @@ Revision-number: 2
 Prop-content-length: 111
 Content-length: 111
 
-K 7
-svn:log
-V 10
-add a file
 K 10
 svn:author
 V 6
@@ -73,6 +69,10 @@ K 8
 svn:date
 V 27
 2005-11-07T20:22:25.607033Z
+K 7
+svn:log
+V 10
+add a file
 PROPS-END
 
 Node-path: trunk/foo.txt
@@ -81,6 +81,7 @@ Node-action: add
 Prop-content-length: 10
 Text-content-length: 16
 Text-content-md5: 0bebeeefa6853d064099b54a81a627e8
+Text-content-sha1: b78087338d3daf51e667056c78fd8089bb51d5ec
 Content-length: 26
 
 PROPS-END
@@ -91,11 +92,6 @@ Revision-number: 3
 Prop-content-length: 113
 Content-length: 113
 
-K 7
-svn:log
-V 12
-make a tag.
-
 K 10
 svn:author
 V 6
@@ -104,6 +100,11 @@ K 8
 svn:date
 V 27
 2005-11-07T20:22:46.490796Z
+K 7
+svn:log
+V 12
+make a tag.
+
 PROPS-END
 
 Node-path: tags/a-tag-with-file-contents
@@ -118,5 +119,7 @@ Node-kind: file
 Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/foo.txt
+Text-copy-source-md5: 0bebeeefa6853d064099b54a81a627e8
+Text-copy-source-sha1: b78087338d3daf51e667056c78fd8089bb51d5ec
 
 

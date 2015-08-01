@@ -2,17 +2,22 @@
  * lock-cmd.c -- LOck a working copy path in the repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,6 +31,7 @@
 #include "svn_client.h"
 #include "svn_subst.h"
 #include "svn_path.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_cmdline.h"
 #include "cl.h"
@@ -66,8 +72,9 @@ get_comment(const char **comment, svn_client_ctx_t *ctx,
     }
 
   /* Translate to UTF8/LF. */
-  SVN_ERR(svn_subst_translate_string(&comment_string, comment_string,
-                                     opt_state->encoding, pool));
+  SVN_ERR(svn_subst_translate_string2(&comment_string, NULL, NULL,
+                                      comment_string, opt_state->encoding,
+                                      FALSE, pool, pool));
   *comment = comment_string->data;
 
   return SVN_NO_ERROR;
@@ -82,48 +89,22 @@ svn_cl__lock(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   const char *comment;
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
-     all the targets, we need to build a list of targets made of both
-     ones the user typed, as well as any specified by --changelist.  */
-  if (opt_state->changelist)
-    {
-      SVN_ERR(svn_client_get_changelist(&changelist_targets,
-                                        opt_state->changelist,
-                                        "",
-                                        ctx,
-                                        pool));
-      if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
-                                 opt_state->changelist);
-    }
-
-  if (opt_state->targets && changelist_targets)
-    combined_targets = apr_array_append(pool, opt_state->targets,
-                                        changelist_targets);
-  else if (opt_state->targets)
-    combined_targets = opt_state->targets;
-  else if (changelist_targets)
-    combined_targets = changelist_targets;
-
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        combined_targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, FALSE, pool));
 
   /* We only support locking files, so '.' is not valid. */
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
+  SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
+
   /* Get comment. */
   SVN_ERR(get_comment(&comment, ctx, opt_state, pool));
 
-  svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                       FALSE, FALSE, pool);
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  SVN_ERR(svn_client_lock(targets, comment, opt_state->force,
-                          ctx, pool));
-
-  return SVN_NO_ERROR;
+  return svn_client_lock(targets, comment, opt_state->force, ctx, pool);
 }

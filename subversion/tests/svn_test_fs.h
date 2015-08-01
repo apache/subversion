@@ -1,22 +1,27 @@
-/* fs-helpers.c --- tests for the filesystem
+/* svn_test_fs.h --- test helpers for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
-#ifndef SVN_TEST__FS_HELPERS_H
-#define SVN_TEST__FS_HELPERS_H
+#ifndef SVN_TEST_FS_H
+#define SVN_TEST_FS_H
 
 #include <apr_pools.h>
 #include "svn_error.h"
@@ -41,32 +46,61 @@ svn_error_t *
 svn_test__fs_new(svn_fs_t **fs_p, apr_pool_t *pool);
 
 
-/* Create a filesystem of FS_TYPE in a subdir NAME and return a new FS
-   object which points to it.  FS_TYPE should be either "bdb" or
-   "fsfs".  Filesystem tests that are backend-specific should use
-   svn_test__create_fs instead of this. */
+/* Creates a filesystem which is always of type "bdb" in a subdir NAME
+   and return a new FS object which points to it.  (Ignores any
+   fs-type declaration in OPTS.)  */
+svn_error_t *
+svn_test__create_bdb_fs(svn_fs_t **fs_p,
+                        const char *name,
+                        const svn_test_opts_t *opts,
+                        apr_pool_t *pool);
+
+
+/* Create a filesystem based on OPTS in a subdir NAME and return a new
+   FS object which points to it.  Override the default test filesystem
+   config with values from FS_CONFIG. */
+svn_error_t *
+svn_test__create_fs2(svn_fs_t **fs_p,
+                     const char *name,
+                     const svn_test_opts_t *opts,
+                     apr_hash_t *fs_config,
+                     apr_pool_t *pool);
+
+/* The same as svn_test__create_fs2() but with FS_CONFIG set to NULL. */
 svn_error_t *
 svn_test__create_fs(svn_fs_t **fs_p,
-                    const char *name, 
-                    const char *fs_type,
+                    const char *name,
+                    const svn_test_opts_t *opts,
                     apr_pool_t *pool);
 
 
-/* Create a repository with a filesystem of FS_TYPE in a subdir NAME
+/* Create a repository with a filesystem based on OPTS in a subdir NAME
    and return a new REPOS object which points to it.  */
 svn_error_t *
 svn_test__create_repos(svn_repos_t **repos_p,
                        const char *name,
-                       const char *fs_type,
+                       const svn_test_opts_t *opts,
                        apr_pool_t *pool);
+
+/* Create a repository with a filesystem based on OPTS in a subdir NAME
+   and return optionally new REPOS object, the directory it was created in
+   and/or the url of the repository .  */
+svn_error_t *
+svn_test__create_repos2(svn_repos_t **repos_p,
+                        const char **repos_url,
+                        const char **repos_dirent,
+                        const char *name,
+                        const svn_test_opts_t *opts,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 
 /* Read all data from a generic read STREAM, and return it in STRING.
-   Allocate the svn_stringbuf_t in APRPOOL.  (All data in STRING will be
-   dup'ed from STREAM using APRPOOL too.) */
+   Allocate the svn_stringbuf_t in POOL.  (All data in STRING will be
+   dup'ed from STREAM using POOL too.) */
 svn_error_t *
 svn_test__stream_to_string(svn_stringbuf_t **string,
-                           svn_stream_t *stream, 
+                           svn_stream_t *stream,
                            apr_pool_t *pool);
 
 
@@ -74,7 +108,7 @@ svn_test__stream_to_string(svn_stringbuf_t **string,
 svn_error_t *
 svn_test__set_file_contents(svn_fs_root_t *root,
                             const char *path,
-                            const char *contents, 
+                            const char *contents,
                             apr_pool_t *pool);
 
 
@@ -83,47 +117,36 @@ svn_test__set_file_contents(svn_fs_root_t *root,
 svn_error_t *
 svn_test__get_file_contents(svn_fs_root_t *root,
                             const char *path,
-                            svn_stringbuf_t **str, 
+                            svn_stringbuf_t **str,
                             apr_pool_t *pool);
 
 
 
 /* The Helper Functions to End All Helper Functions */
 
-/* Structure used for testing integrity of the filesystem's revision
-   using validate_tree(). */
-typedef struct svn_test__tree_entry_t
-{
-  const char *path;     /* full path of this node */
-  const char *contents; /* text contents (NULL for directories) */
-}
-svn_test__tree_entry_t;
-  
-
-/* Wrapper for an array of the above svn_test__tree_entry_t's.  */
-typedef struct svn_test__tree_t
-{
-  svn_test__tree_entry_t *entries;
-  int num_entries;
-}
-svn_test__tree_t;
-
-
 /* Given a transaction or revision root (ROOT), check to see if the
    tree that grows from that root has all the path entries, and only
    those entries, passed in the array ENTRIES (which is an array of
-   NUM_ENTRIES tree_test_entry_t's).  */
+   NUM_ENTRIES svn_test__tree_entry_t's).  */
 svn_error_t *
 svn_test__validate_tree(svn_fs_root_t *root,
                         svn_test__tree_entry_t *entries,
-                        int num_entries, 
+                        int num_entries,
                         apr_pool_t *pool);
+
+/* Verify that svn_fs_paths_changed2(ROOT) returns a hash with exactly
+   the same keys as EXPECTED_KEYS.  Values are not currently verified.
+ */
+svn_error_t *
+svn_test__validate_changes(svn_fs_root_t *root,
+                           apr_hash_t *expected_keys,
+                           apr_pool_t *pool);
 
 /* Structure for describing script-ish commands to perform on a
    transaction using svn_test__txn_script_exec().  */
 typedef struct svn_test__txn_script_command_t
 {
-  /* command: 
+  /* command:
 
      'a' -- add (PARAM1 is file contents, or NULL for directories)
      'c' -- copy (PARAM1 is target path, copy source is youngest rev)
@@ -133,7 +156,7 @@ typedef struct svn_test__txn_script_command_t
   int cmd;
   const char *path; /* path to resource in the filesystem */
   const char *param1; /* command parameter (see above) */
-} 
+}
 svn_test__txn_script_command_t;
 
 
@@ -141,7 +164,7 @@ svn_test__txn_script_command_t;
 svn_error_t *
 svn_test__txn_script_exec(svn_fs_root_t *txn_root,
                           svn_test__txn_script_command_t *script,
-                          int num_edits, 
+                          int num_edits,
                           apr_pool_t *pool);
 
 /* Verify that the tree that exists under ROOT is exactly the Greek
@@ -156,9 +179,25 @@ svn_error_t *
 svn_test__create_greek_tree(svn_fs_root_t *txn_root,
                             apr_pool_t *pool);
 
+/* Create the Greek Tree under TXN_ROOT at dir ROOT_DIR.
+ * ROOT_DIR should be created by the caller.
+ *
+ * Note: this function will not commit the transaction.  */
+svn_error_t *
+svn_test__create_greek_tree_at(svn_fs_root_t *txn_root,
+                               const char *root_dir,
+                               apr_pool_t *pool);
+
+/* Create a new repository with a greek tree, trunk, branch and some
+   merges between them. */
+svn_error_t *
+svn_test__create_blame_repository(svn_repos_t **out_repos,
+                                  const char *test_name,
+                                  const svn_test_opts_t *opts,
+                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif  /* SVN_TEST__FS_HELPERS_H */
+#endif  /* SVN_TEST_FS_H */

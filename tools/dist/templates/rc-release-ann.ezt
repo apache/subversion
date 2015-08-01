@@ -1,0 +1,58 @@
+I'm happy to announce the release of Apache Subversion [version].
+Please choose the mirror closest to you by visiting:
+
+    http://subversion.apache.org/download/#[anchor]
+
+The SHA1 checksums are:
+
+[for sha1info]    [sha1info.sha1] [sha1info.filename]
+[end]
+PGP Signatures are available at:
+
+    http://www.apache.org/dist/subversion/subversion-[version].tar.bz2.asc
+    http://www.apache.org/dist/subversion/subversion-[version].tar.gz.asc
+    http://www.apache.org/dist/subversion/subversion-[version].zip.asc
+
+For this release, the following people have provided PGP signatures:
+
+[siginfo]
+This is a pre-release for what will eventually become Apache Subversion
+[major-minor-patch].  It may contain known issues, a complete list of
+[major-minor-patch]-blocking issues can be found here:
+
+    http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&target_milestone=[major-minor-patch]
+
+A pre-release means the Subversion developers feel that this release
+is ready for widespread testing by the community.  There are known issues
+(and unknown ones!), so please use it at your own risk, though we do
+encourage people to test this release thoroughly.  Of particular note, please
+remember than persistent data, such as the working copy or repository
+formats may change before the final release, and there may not be an
+upgrade path from the pre-releases to the final.
+
+As a note to operating system distro packagers: while we wish to have this
+release candidate widely tested, we do not feel that it is ready for packaging
+and providing to end-users through a distro package system.  Packaging a
+release candidate poses many problems, the biggest being that our policy lets
+us break compatibility between the release candidate and the final release, if
+we find something serious enough.  Having many users depending on a release
+candidate through their distro would cause no end of pain and frustration that
+we do not want to have to deal with.  However, if your distro has a branch that
+is clearly labeled as containing experimental and often broken software, and
+explicitly destined to consenting developers and integrators only, then we're
+okay with packaging the release candidate there.  Just don't let it near the
+end users please.
+
+
+Release notes for the [major-minor].x release series may be found at:
+
+    http://subversion.apache.org/docs/release-notes/[major-minor].html
+
+You can find the list of changes between [version] and earlier versions at:
+
+    http://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES
+
+Questions, comments, and bug reports to users@subversion.apache.org.
+
+Thanks,
+- The Subversion Team

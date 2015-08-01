@@ -3,34 +3,47 @@
 #  svneditor.py: a mock $SVN_EDITOR for the Subversion test suite
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.tigris.org for more information.
+#  See http://subversion.apache.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2006 CollabNet.  All rights reserved.
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 import sys
 import os
 
 def main():
-    if len(sys.argv) != 2:
-        print "usage: svneditor.py file"
+    if len(sys.argv) not in [2, 6]:
+        print("usage: svneditor.py file")
+        print("       svneditor.py base theirs mine merged wc_path")
+        print("arguments passed were: %s" % sys.argv)
         sys.exit(1)
 
-    filename = sys.argv[1]
+    if len(sys.argv) == 2:
+      filename = sys.argv[1]
+    elif len(sys.argv) == 6:
+      filename = sys.argv[4]
 
     # Read in the input file.
     f = open(filename)
     contents = f.read()
     f.close()
-    
+
     funcname = os.environ['SVNTEST_EDITOR_FUNC']
     func = sys.modules['__main__'].__dict__[funcname]
 
@@ -41,6 +54,16 @@ def main():
     f = open(filename, 'w')
     f.write(contents)
     f.close()
+    return check_conflicts(contents)
+
+def check_conflicts(contents):
+    markers = ['<<<<<<<', '=======', '>>>>>>>']
+    found = 0
+    for line in contents.split('\n'):
+      for marker in markers:
+        if line.startswith(marker):
+          found = found + 1
+    return found >= 3
 
 def foo_to_bar(m):
     return m.replace('foo', 'bar')
@@ -51,5 +74,5 @@ def append_foo(m):
 def identity(m):
     return m
 
-main()
-sys.exit(0)
+exitcode = main()
+sys.exit(exitcode)

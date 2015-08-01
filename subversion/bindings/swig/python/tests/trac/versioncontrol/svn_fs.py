@@ -1,15 +1,51 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
 #
 # Copyright (C) 2005 Edgewall Software
 # Copyright (C) 2005 Christopher Lenz <cmlenz@gmx.de>
 #
-# This software is licensed as described in the file
-# LICENSE_FOR_PYTHON_BINDINGS, which you should have received as part
-# of this distribution.  The terms are also available at
-# < http://subversion.tigris.org/license-for-python-bindings.html >.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+# All rights reserved.
 #
-# Author: Christopher Lenz <cmlenz@gmx.de>
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. The name of the author may not be used to endorse or promote
+#    products derived from this software without specific prior written
+#    permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS
+# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+# IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import generators
 
@@ -56,9 +92,8 @@ class SubversionRepository(Repository):
         Repository.__init__(self, authz)
 
         if core.SVN_VER_MAJOR < 1:
-            raise TracError, \
-                  "Subversion >= 1.0 required: Found %d.%d.%d" % \
-                  (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO)
+            raise TracError("Subversion >= 1.0 required: Found %d.%d.%d" % \
+                  (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO))
 
         self.repos = None
         self.fs_ptr = None
@@ -69,7 +104,7 @@ class SubversionRepository(Repository):
             path = os.path.split(path)[0]
         self.path = repos.svn_repos_find_root_path(path)
         if self.path is None:
-            raise TracError, "%s does not appear to be a Subversion repository." % (path, )
+            raise TracError("%s does not appear to be a Subversion repository." % (path, ))
         if self.path != path:
             self.scope = path[len(self.path):]
             if not self.scope[-1] == '/':
@@ -107,7 +142,7 @@ class SubversionRepository(Repository):
         if rev is None:
             rev = self.youngest_rev
         elif rev > self.youngest_rev:
-            raise TracError, "Revision %s doesn't exist yet" % rev
+            raise TracError("Revision %s doesn't exist yet" % rev)
         return rev
 
     def close(self):
@@ -205,17 +240,17 @@ class SubversionRepository(Repository):
         if self.has_node(old_path, old_rev):
             old_node = self.get_node(old_path, old_rev)
         else:
-            raise TracError, ('The Base for Diff is invalid: path %s'
+            raise TracError('The Base for Diff is invalid: path %s'
                               ' doesn\'t exist in revision %s' \
                               % (old_path, old_rev))
         if self.has_node(new_path, new_rev):
             new_node = self.get_node(new_path, new_rev)
         else:
-            raise TracError, ('The Target for Diff is invalid: path %s'
+            raise TracError('The Target for Diff is invalid: path %s'
                               ' doesn\'t exist in revision %s' \
                               % (new_path, new_rev))
         if new_node.kind != old_node.kind:
-            raise TracError, ('Diff mismatch: Base is a %s (%s in revision %s) '
+            raise TracError('Diff mismatch: Base is a %s (%s in revision %s) '
                               'and Target is a %s (%s in revision %s).' \
                               % (old_node.kind, old_path, old_rev,
                                  new_node.kind, new_path, new_rev))
@@ -265,7 +300,7 @@ class SubversionNode(Node):
         self.root = fs.revision_root(fs_ptr, rev)
         node_type = fs.check_path(self.root, self.scoped_path)
         if not node_type in _kindmap:
-            raise TracError, "No node at %s in revision %s" % (path, rev)
+            raise TracError("No node at %s in revision %s" % (path, rev))
         self.created_rev = fs.node_created_rev(self.root, self.scoped_path)
         self.created_path = fs.node_created_path(self.root, self.scoped_path)
         # Note: 'created_path' differs from 'path' if the last change was a copy,
@@ -275,7 +310,7 @@ class SubversionNode(Node):
         #          * the node existed at (created_path,created_rev)
         # TODO: check node id
         self.rev = self.created_rev
-        
+
         Node.__init__(self, path, self.rev, _kindmap[node_type])
 
     def get_content(self):
@@ -372,7 +407,7 @@ class SubversionChangeset(Changeset):
                 else:
                     base_path = None
             action = ''
-            if not change.path:
+            if change.action == repos.CHANGE_ACTION_DELETE:
                 action = Changeset.DELETE
                 deletions[change.base_path] = idx
             elif change.added:
@@ -414,11 +449,11 @@ class SubversionChangeset(Changeset):
 # Note 2: the 'dir_baton' is the path of the parent directory
 #
 
-class DiffChangeEditor(delta.Editor): 
+class DiffChangeEditor(delta.Editor):
 
     def __init__(self):
         self.deltas = []
-    
+
     # -- svn.delta.Editor callbacks
 
     def open_root(self, base_revision, dir_pool):

@@ -1,0 +1,101 @@
+[define COPYRIGHT]
+<!--
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+-->
+[end]<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="__CONFIG__"
+	ProjectGUID="[project_guid]"
+	Keyword="MakeFileProj">
+	<Platforms>
+[for platforms]		<Platform
+			Name="[platforms]"/>
+[end]	</Platforms>
+	<Configurations>
+[for platforms][for configs]		<Configuration
+			Name="[configs]|[platforms]"
+			OutputDirectory="."
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
+			IntermediateDirectory="..\..\..\[configs]"
+			ConfigurationType="10"
+			UseOfMFC="0"
+			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName="./svn_config.tlb"
+				HeaderFileName=""/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+		</Configuration>
+[end][end]
+	</Configurations>
+	<Files>
+		<File
+			RelativePath="$(IntDir)\svn_private_config.h">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+[end][end]		</File>
+		<File
+			RelativePath="..\..\..\subversion\svn_private_config.hw">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Creating svn_private_config.h from svn_private_config.hw."
+					CommandLine="&quot;[svn_python]&quot; &quot;$(SolutionDir)\build\transform_config_hw.py&quot; [platforms] &quot;$(InputPath)&quot; &quot;$(IntDir)\svn_private_config.h&quot;"
+					Outputs="$(IntDir)\svn_private_config.h"/>
+			</FileConfiguration>
+[end][end]		</File>
+[for sql]		<File
+			RelativePath="$(SolutionDir)\[sql.header]">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+[end][end]		</File>
+		<File
+			RelativePath="../../../[sql.source]">
+[for platforms][for configs]			<FileConfiguration
+				Name="[configs]|[platforms]">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Generating [sql.header]"
+					CommandLine="&quot;[svn_python]&quot; &quot;$(SolutionDir)\build\transform_sql.py&quot; &quot;$(InputPath)&quot; &quot;$(SolutionDir)\[sql.header]&quot;"
+					AdditionalDependencies="[for sql.dependencies]$(SolutionDir)\[sql.dependencies];[end]"
+					Outputs="$(SolutionDir)\[sql.header]"
+				/>
+			</FileConfiguration>
+[end][end]		</File>
+[end]
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

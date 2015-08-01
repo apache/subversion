@@ -1,0 +1,41 @@
+-*- coding: utf-8 -*-
+
+This is the source of the test data used by the normalized unicode
+string comparison tests.
+
+
+Whole word: Ṩůḇṽḝȑšḯờṋ
+
+Individual letters:
+
+char    name                            NFC UCS-4      NFC UTF-8      NFD UCS-4      NFD UTF-8
+
+Ṩ       S with dot above and below      \u1E68         \xe1\xb9\xa8   S\u0323\u0307  S\xcc\xa3\xcc\x87
+ů       u with ring                     \u016F         \xc5\xaf       u\u030A        u\xcc\x8a
+ḇ       b with macron below             \u1E07         \xe1\xb8\x87   b\u0331        b\xcc\xb1
+ṽ       v with tilde                    \u1E7D         \xe1\xb9\xbd   v\u0303        v\xcc\x83
+ḝ       e with breve and cedilla        \u1E1D         \xe1\xb8\x9d   e\u0327\u0306  e\xcc\xa7\xcc\x86
+ȑ       r with double grave             \u0211         \xc8\x91       r\u030F        r\xcc\x8f
+š       s with caron                    \u0161         \xc5\xa1       s\u030C        s\xcc\x8c
+ḯ       i with diaeresis and acute      \u1E2F         \xe1\xb8\xaf   i\u0308\u0301  i\xcc\x88\xcc\x81
+ờ       o with grave and hook           \u1EDD         \xe1\xbb\x9d   o\u031B\u0300  o\xcc\x9b\xcc\x80
+ṋ       n with circumflex below         \u1E4B         \xe1\xb9\x8b   n\u032D        n\xcc\xad
+
+Combining diacriticals:
+
+char    name                            UCS-4          UTF-8
+
+ ̇       dot                             \u0307         \xcc\x87
+ ̣       dot below                       \u0323         \xcc\xa3
+ ̊       ring                            \u030A         \xcc\x8a
+ ̱       macron below                    \u0331         \xcc\xb1
+ ̃       tilde                           \u0303         \xcc\x83
+ ̆       breve                           \u0306         \xcc\x86
+ ̧       cedilla                         \u0327         \xcc\xa7
+ ̏       double grave                    \u030F         \xcc\x8f
+ ̌       caron                           \u030C         \xcc\x8c
+ ̈       diaeresis                       \u0308         \xcc\x88
+ ́       acute                           \u0301         \xcc\x81
+ ̀       grave                           \u0300         \xcc\x80
+ ̛       horn                            \u031B         \xcc\x9b
+ ̭       circumflex below                \u032D         \xcc\xad

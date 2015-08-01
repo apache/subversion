@@ -1,0 +1,172 @@
+[#
+<!--
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+-->
+]<?xml version="1.0" encoding = "Windows-1252"?>
+[format "xml"]<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="[target.proj_name]"
+	ProjectGUID="[project_guid]">
+	<Platforms>
+[for platforms]		<Platform
+			Name="[platforms]"/>
+[end]	</Platforms>
+	<Configurations>
+[for platforms][for configs]		<Configuration
+			Name="[configs.name]|[platforms]"
+			OutputDirectory="..\..\..\[configs.name]\[target.output_dir]"
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
+			IntermediateDirectory="..\..\..\[configs.name]\[target.intermediate_dir]\[target.proj_name]"
+			ConfigurationType="[target_type]"[is configs.name "Release"]
+			WholeProgramOptimization="FALSE"[end]>
+			<Tool
+				Name="VCCLCompilerTool"
+[is configs.name "Debug"]				Optimization="0"
+				GlobalOptimizations="FALSE"
+[else]				Optimization="2"
+				GlobalOptimizations="TRUE"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="TRUE"
+				FavorSizeOrSpeed="1"
+				OmitFramePointers="TRUE"
+[end]				AdditionalIncludeDirectories="..\..\..\[configs.name];[for configs.includes][configs.includes][if-index configs.includes last][else];[end][end]"
+				PreprocessorDefinitions="[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][for configs.defines][configs.defines][if-index configs.defines last][else];[end][end];_CRT_SECURE_NO_WARNINGS"
+[is configs.name "Debug"]				MinimalRebuild="TRUE"
+				RuntimeLibrary="3"
+				BasicRuntimeChecks="3"
+				BufferSecurityCheck="TRUE"
+				EnableFunctionLevelLinking="TRUE"
+[else]				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				BufferSecurityCheck="FALSE"
+[end]				WarningLevel="4"
+				DisableSpecificWarnings="4100;4127;4206;4512;4701;4706;4800"
+				Detect64BitPortabilityProblems="FALSE"
+				AdditionalOptions="
+				/we4002 /we4003 /we4013 /we4020 /we4022 /we4024 /we4028 /we4029 /we4030 /we4031 /we4033 /we4047 /we4089 /we4113 /we4115 /we4204 /we4715"
+				DebugInformationFormat="3"
+				ProgramDataBaseFileName="$(IntDir)\[target.output_pdb]"
+				[if-any configs.forced_include_files]ForcedIncludeFiles="[for configs.forced_include_files][configs.forced_include_files][if-index configs.forced_include_files last][else];[end][end]"
+				[end]CompileAsManaged="0"
+				CompileAs="0"[if-any is_exe][is configs.name "Release"]
+				OptimizeForWindowsApplication="TRUE"[end][end]/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+[is target_type "1"][if-any instrument_purify_quantify]				AdditionalOptions="/fixed:no"[end][end]
+				AdditionalDependencies="[for configs.libs][configs.libs] [end]"
+[is target_type "4"][else]				OutputFile="$(OutDir)\[target.output_name]"
+[end][is configs.name "Debug"]				LinkIncremental="2"
+[else]				LinkIncremental="1"
+[end]				AdditionalLibraryDirectories="[for configs.libdirs][configs.libdirs];[end]"
+				TargetMachine="[is platforms "Win32"]1[end][is platforms "x64"]17[end]"
+				IgnoreDefaultLibraryNames="libc.lib[is configs.name "debug"];msvcrt.lib[end]"
+[if-any def_file]				ModuleDefinitionFile="[def_file]"
+[end]				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)\$(TargetName).pdb"[is configs.name "Debug"]
+				OptimizeReferences="0"[else]
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"[end][is target_type "2"]
+				ImportLibrary="$(OutDir)\$(TargetName).lib"[end]
+[is target_type "1"]				Subsystem="1"[end]/>
+[is target_type "4"]
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions="[is platforms "win32"]/MACHINE:X86[end][is platforms "x64"]/MACHINE:X64[end]"
+				OutputFile="$(OutDir)\[target.output_name]"[is configs.name "debug"]
+				IgnoreDefaultLibraryNames="msvcrt.lib"[end]/>
+[end]			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+		</Configuration>
+[end][end]	</Configurations>
+	<Files>[if-any target.desc]
+		<File
+			RelativePath="..\svn.rc">[for platforms][for configs]
+			<FileConfiguration
+				Name="[configs.name]|[platforms]">
+				<Tool
+					Name="VCResourceCompilerTool"
+					AdditionalIncludeDirectories="[for configs.includes][configs.includes][if-index configs.includes last][else];[end][end]"
+					PreprocessorDefinitions="SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end]"/>
+			</FileConfiguration>[end][end]
+		</File>[end]
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+[for sources][is sources.extension ".h"][else][is sources.extension ".hpp"][else]		<File
+			RelativePath="[sources.path]">
+[if-any sources.ignored][for platforms][for configs]			<FileConfiguration
+				Name="[configs.name]|[platforms]"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+[end][end][else][if-any sources.custom_build][for platforms][for configs]
+			<FileConfiguration
+				Name="[configs.name]|[platforms]">
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="[sources.custom_build]"
+[if-any sources.custom_desc]					Description="[sources.custom_desc]"
+[end]					AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
+					Outputs="&quot;[sources.custom_target]&quot;"/>
+			</FileConfiguration>
+[end][end][end]
+[if-any sources.reldir][for platforms][for configs]
+			<FileConfiguration
+				Name="[configs.name]|[platforms]">
+				<Tool
+					Name="VCCLCompilerTool"
+					ObjectFile="$(IntDir)/[sources.reldir]/"
+					ProgramDataBaseFileName="$(IntDir)/[sources.reldir]/[target.proj_name]-[sources.reldir].pdb"/>
+			</FileConfiguration>
+[end][end][end][end]
+		</File>
+[end][end][end]
+[is target_type "2"]		<File RelativePath="..\empty.c"/>[end]
+        </Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+[for sources][is sources.extension ".h"]
+		<File
+			RelativePath="[sources.path]" />
+[else][is sources.extension ".hpp"]
+		<File
+			RelativePath="[sources.path]" />
+[end][end][end]
+        </Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
+[end]

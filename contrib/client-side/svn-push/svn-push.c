@@ -1,8 +1,8 @@
-/* svn-push.c --- propagate changesets from one (networked) repository to 
+/* svn-push.c --- propagate changesets from one (networked) repository to
  * a different (networked) repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007, 2009 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,12 +17,13 @@
  */
 #include <stdio.h>
 
-#include "svn_pools.h"
-#include "svn_path.h"
-#include "svn_ra.h"
 #include "svn_delta.h"
-#include "svn_config.h"
 #include "svn_cmdline.h"
+#include "svn_config.h"
+#include "svn_path.h"
+#include "svn_pools.h"
+#include "svn_props.h"
+#include "svn_ra.h"
 
 /* Implements svn_commit_callback2_t. */
 static svn_error_t *
@@ -48,7 +49,7 @@ open_tmp_file (apr_file_t **fp, void *callback_baton, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-  
+
 
 svn_error_t *(*old_change_file_prop) (void *file_baton,
                                       const char *name,
@@ -146,8 +147,8 @@ check_lib_versions (void)
       { "svn_ra",     svn_ra_version },
       { NULL, NULL }
     };
-
   SVN_VERSION_DEFINE (my_version);
+
   return svn_ver_check_list (&my_version, checklist);
 }
 

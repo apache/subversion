@@ -5,17 +5,22 @@
  *                something via these interfaces, something's wrong.)
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,249 +31,103 @@
 #include <apr_pools.h>
 #include "svn_types.h"
 
+#include "props.h"
+#include "wc_db.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
 
-/* Return a path to something in PATH's administrative area.
- * Return path to the thing in the tmp area if TMP is non-zero.
- * Varargs are (const char *)'s, the final one must be NULL.
- */
-const char * svn_wc__adm_path(const char *path,
-                              svn_boolean_t tmp,
-                              apr_pool_t *pool,
-                              ...);
+/* Return a path to CHILD in the administrative area of PATH. If CHILD is
+   NULL, then the path to the admin area is returned. The result is
+   allocated in RESULT_POOL. */
+const char *svn_wc__adm_child(const char *path,
+                              const char *child,
+                              apr_pool_t *result_pool);
 
-
-/* Return TRUE if a thing in the administrative area exists, FALSE
-   otherwise. */
-svn_boolean_t svn_wc__adm_path_exists(const char *path,
-                                      svn_boolean_t tmp,
-                                      apr_pool_t *pool,
-                                      ...);
-
-
-/* Make `PATH/<adminstrative_subdir>/THING'. */
-svn_error_t *svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
-                                    const char *thing,
-                                    svn_node_kind_t type,
-                                    apr_fileperms_t perms,
-                                    svn_boolean_t tmp,
-                                    apr_pool_t *pool);
-
-/* Create a killme file in the administrative area, indicating that the
-   directory containing the administrative area should be removed.
-
-   If ADM_ONLY is true then remove only the administrative areas for the
-   directory and subdirectories. */
-svn_error_t *svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t adm_only,
-                                 apr_pool_t *pool);
-
-/* Set EXISTS to TRUE if a killme file exists in the administrative area,
-   FALSE otherwise.
-
-   If EXISTS is true, set KILL_ADM_ONLY to the value passed to
-   svn_wc__make_killme() above. */
-svn_error_t *svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t *exists,
-                                  svn_boolean_t *kill_adm_only,
-                                  apr_pool_t *pool);
-
-/* Atomically rename a temporary text-base file to its canonical
-   location.  The tmp file should be closed already. */
-svn_error_t *
-svn_wc__sync_text_base(const char *path, apr_pool_t *pool);
-
-
-/* Return a path to PATH's text-base file.
-   If TMP is set, return a path to the tmp text-base file. */
-const char *svn_wc__text_base_path(const char *path,
-                                   svn_boolean_t tmp,
-                                   apr_pool_t *pool);
-
-
-/* Return a path to PATH's revert file.
-   If TMP is set, return a path to the tmp revert file. */
-const char *
-svn_wc__text_revert_path(const char *path,
-                         svn_boolean_t tmp,
-                         apr_pool_t *pool);
-
-
-/* Return a path to the 'wcprop' file for PATH, possibly in TMP area.
-   Valid values for KIND are svn_node_dir and svn_node_file. */
-svn_error_t *svn_wc__wcprop_path(const char **wcprop_path,
-                                 const char *path,
-                                 svn_node_kind_t kind,
-                                 svn_boolean_t tmp,
-                                 apr_pool_t *pool);
-
-
-/* Set *PROP_PATH to PATH's working properties file.
-   If TMP is set, return a path to the tmp working property file. 
-   PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for KIND are svn_node_dir
-   and svn_node_file. */
-svn_error_t *svn_wc__prop_path(const char **prop_path,
-                               const char *path,
-                               svn_node_kind_t kind,
-                               svn_boolean_t tmp,
-                               apr_pool_t *pool);
-
-
-/* Set *PROP_PATH to PATH's `pristine' properties file.
-   If TMP is set, return a path to the tmp working property file. 
-   PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for KIND are svn_node_dir
-   and svn_node_file. */
-svn_error_t *svn_wc__prop_base_path(const char **prop_path,
-                                    const char *path,
-                                    svn_node_kind_t kind,
-                                    svn_boolean_t tmp,
-                                    apr_pool_t *pool);
-
-
-/* Set *PROP_PATH to PATH's revert properties file.
-   If TMP is set, return a path to the tmp working property file. 
-   PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. Valid values for KIND are svn_node_dir
-   and svn_node_file. */
-svn_error_t *svn_wc__prop_revert_path(const char **prop_path,
-                                      const char *path,
-                                      svn_node_kind_t kind,
-                                      svn_boolean_t tmp,
+/* Return TRUE if the administrative area exists for this directory. */
+svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
                                       apr_pool_t *pool);
+
+
+/* Set *CONTENTS to a readonly stream on the pristine text of the working
+ * version of the file LOCAL_ABSPATH in DB.  If the file is locally copied
+ * or moved to this path, this means the pristine text of the copy source,
+ * even if the file replaces a previously existing base node at this path.
+ *
+ * Set *CONTENTS to NULL if there is no pristine text because the file is
+ * locally added (even if it replaces an existing base node).  Return an
+ * error if there is no pristine text for any other reason.
+ *
+ * If SIZE is not NULL, set *SIZE to the length of the pristine stream in
+ * BYTES or to SVN_INVALID_FILESIZE if no pristine is available for this
+ * file.
+ *
+ * For more detail, see the description of svn_wc_get_pristine_contents2().
+ */
+svn_error_t *
+svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_filesize_t *size,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/* Set *RESULT_ABSPATH to the absolute path to a readable file containing
+   the WC-1 "normal text-base" of LOCAL_ABSPATH in DB.
+
+   "Normal text-base" means the same as in svn_wc__text_base_path().
+   ### May want to check the callers' exact requirements and replace this
+       definition with something easier to comprehend.
+
+   What the callers want:
+     A path to a file that will remain available and unchanged as long as
+     the caller wants it - such as for the lifetime of RESULT_POOL.
+
+   What the current implementation provides:
+     A path to the file in the pristine store.  This file will be removed or
+     replaced the next time this or another Subversion client updates the WC.
+
+   If the node LOCAL_ABSPATH has no such pristine text, return an error of
+   type SVN_ERR_WC_PATH_UNEXPECTED_STATUS.
+
+   Allocate *RESULT_PATH in RESULT_POOL.  */
+svn_error_t *
+svn_wc__text_base_path_to_read(const char **result_abspath,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 
 /*** Opening all kinds of adm files ***/
 
-/* Yo, read this if you open and close files in the adm area:
- *
- * When you open a file for writing with svn_wc__open_foo(), the file
- * is actually opened in the corresponding location in the tmp/
- * directory.  Opening with APR_APPEND is not supported.  You are
- * guaranteed to be the owner of the new file.
- *
- * Somehow, this tmp file must eventually get renamed to its real
- * destination in the adm area.  You can do it either by passing the
- * SYNC flag to svn_wc__close_foo(), or by calling
- * svn_wc__sync_foo() (though of course you should still have
- * called svn_wc__close_foo() first, just without the SYNC flag).
- *
- * In other words, the adm area is only capable of modifying files
- * atomically, but you get some control over when the rename happens.
- */
-
 /* Open `PATH/<adminstrative_subdir>/FNAME'. */
-svn_error_t *svn_wc__open_adm_file(apr_file_t **handle,
-                                   const char *path,
-                                   const char *fname,
-                                   apr_int32_t flags,
-                                   apr_pool_t *pool);
+svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
+                                     const char *dir_abspath,
+                                     const char *fname,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 
 
-/* Close `PATH/<adminstrative_subdir>/FNAME'. */
-svn_error_t *svn_wc__close_adm_file(apr_file_t *fp,
-                                    const char *path,
-                                    const char *fname,
-                                    int sync,
-                                    apr_pool_t *pool);
-
-/* Remove `PATH/<adminstrative_subdir>/THING'. */
-svn_error_t *svn_wc__remove_adm_file(const char *path,
-                                     apr_pool_t *pool,
-                                     ...);
-
-/* Open the text-base for FILE.
- * FILE can be any kind of path ending with a filename.
- * Behaves like svn_wc__open_adm_file(), which see.
+/* Blow away the admistrative directory associated with DIR_ABSPATH.
+   For single-db this doesn't perform actual work unless the wcroot is passed.
  */
-svn_error_t *svn_wc__open_text_base(apr_file_t **handle,
-                                    const char *file,
-                                    apr_int32_t flags,
-                                    apr_pool_t *pool);
-
-/* Open the revert-base for FILE.
- * FILE can be any kind of path ending with a filename.
- * Behaves like svn_wc__open_adm_file(), which see.
- */
-svn_error_t *svn_wc__open_revert_base(apr_file_t **handle,
-                                      const char *file,
-                                      apr_int32_t flags,
-                                      apr_pool_t *pool);
-
-/* Close the text-base for FILE.
- * FP was obtained from svn_wc__open_text_base().
- * Behaves like svn_wc__close_adm_file(), which see.
- */
-svn_error_t *svn_wc__close_text_base(apr_file_t *fp,
-                                     const char *file,
-                                     int sync,
-                                     apr_pool_t *pool);
-
-/* Close the revert-base for FILE.
- * FP was obtained from svn_wc__open_revert_base().
- * Behaves like svn_wc__close_adm_file(), which see.
- */
-svn_error_t *svn_wc__close_revert_base(apr_file_t *fp,
-                                       const char *file,
-                                       int sync,
-                                       apr_pool_t *pool);
-
-/* Open the property file for PATH.
- * PATH can be any kind of path, either file or dir.
- *
- * If BASE is set, then the "pristine" property file will be opened.
- * If WCPROPS is set, then the "wc" property file will be opened.
- *
- * (Don't set BASE and WCPROPS at the same time; this is meaningless.)
- */
-svn_error_t *svn_wc__open_props(apr_file_t **handle,
-                                const char *path,
-                                apr_int32_t flags,
-                                svn_boolean_t base,
-                                svn_boolean_t wcprops,
-                                apr_pool_t *pool);
-
-/* Close the property file for PATH.
- * FP was obtained from svn_wc__open_props().
- *
- * The BASE and WCPROPS must have the same state used to open the file!
- *
- * Like svn_wc__close_adm_file(), SYNC indicates the file should be
- * atomically written.
- */
-svn_error_t *svn_wc__close_props(apr_file_t *fp,
-                                 const char *path,
-                                 svn_boolean_t base,
-                                 svn_boolean_t wcprops,
-                                 int sync,
-                                 apr_pool_t *pool);
-
-/* Atomically rename a temporary property file to its canonical
-   location.  The tmp file should be closed already. 
-
-   Again, BASE and WCPROPS flags should be identical to those used to
-   open the file. */
-svn_error_t *svn_wc__sync_props(const char *path, 
-                                svn_boolean_t base,
-                                svn_boolean_t wcprops,
-                                apr_pool_t *pool);
-
-/* Blow away the admistrative directory associated with the access baton
-   ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
-   again, after calling this function. */
-svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
-                                 apr_pool_t *pool);
+svn_error_t *svn_wc__adm_destroy(svn_wc__db_t *db,
+                                 const char *dir_abspath,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 apr_pool_t *scratch_pool);
 
 
 /* Cleanup the temporary storage area of the administrative
-   directory. */
-svn_error_t *svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
-                                          apr_pool_t *pool);
+   directory (assuming temp and admin areas exist). */
+svn_error_t *
+svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
+                             const char *adm_abspath,
+                             apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

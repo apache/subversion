@@ -1,0 +1,31 @@
+#!/bin/sh
+USAGE="Fix some kinds of corruption in a Subversion FSFS repository.
+This script runs './fixer/fix-rev.py' on each revision.
+Usage: $0 REPO-DIR START-REV
+
+Backup your repository before running these scripts."
+
+THIS_DIR=`dirname "$0"`
+REPO_DIR="$1"
+START_REV="$2"
+
+if [ ! -d "$REPO_DIR" ] || [ "$START_REV" = "" ]; then
+  echo "$USAGE" >&2
+  exit 1
+fi
+
+YOUNGEST=`svnlook youngest "$REPO_DIR"`
+
+if [ "$YOUNGEST" = "" ]; then
+  echo "$0: error running 'svnlook youngest $REPO_DIR'"
+  exit 1
+fi
+
+echo "Verifying revisions $START_REV through $YOUNGEST."
+
+REV=$START_REV
+while [ $REV -le $YOUNGEST ]; do
+  echo "=== r$REV"
+  "$THIS_DIR"/fixer/fix-rev.py "$REPO_DIR" "$REV"
+  REV=`expr $REV + 1`
+done

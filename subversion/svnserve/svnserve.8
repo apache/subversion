@@ -1,3 +1,23 @@
+.\"
+.\"
+.\"     Licensed to the Apache Software Foundation (ASF) under one
+.\"     or more contributor license agreements.  See the NOTICE file
+.\"     distributed with this work for additional information
+.\"     regarding copyright ownership.  The ASF licenses this file
+.\"     to you under the Apache License, Version 2.0 (the
+.\"     "License"); you may not use this file except in compliance
+.\"     with the License.  You may obtain a copy of the License at
+.\"    
+.\"       http://www.apache.org/licenses/LICENSE-2.0
+.\"    
+.\"     Unless required by applicable law or agreed to in writing,
+.\"     software distributed under the License is distributed on an
+.\"     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+.\"     KIND, either express or implied.  See the License for the
+.\"     specific language governing permissions and limitations
+.\"     under the License.
+.\"
+.\"
 .\" You can view this file with:
 .\" nroff -man [filename]
 .\"
@@ -90,12 +110,12 @@ still backgrounds itself at startup time.
 .TP 5
 \fB\-\-config\-file\fP=\fIfilename\fP
 When specified, \fBsvnserve\fP reads \fIfilename\fP once at program
-startup and caches the \fBsvnserve\fP configuration and any passwords
-and authorization configuration referenced from \fIfilename\fP.
-\fBsvnserve\fP will not read any per-repository
-\fBconf/svnserve.conf\fP files when this option is used.  See the
-\fBsvnserve.conf\fP(5) man page for details of the file format for
-this option.
+startup and caches the \fBsvnserve\fP configuration.  The password
+and authorization configurations referenced from \fIfilename\fP will
+be loaded on each connection.  \fBsvnserve\fP will not read any
+per-repository \fBconf/svnserve.conf\fP files when this option is
+used.  See the \fBsvnserve.conf\fP(5) man page for details of the
+file format for this option.
 .PP
 .TP 5
 \fB\-\-pid\-file\fP=\fIfilename\fP

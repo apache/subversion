@@ -2,17 +2,22 @@
  * config_win.c :  parsing configuration data from the registry
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -21,26 +26,33 @@
 #include "svn_private_config.h"
 
 #ifdef WIN32
+/* We must include windows.h ourselves or apr.h includes it for us with
+   many ignore options set. Including Winsock is required to resolve IPv6
+   compilation errors. APR_HAVE_IPV6 is only defined after including
+   apr.h, so we can't detect this case here. */
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+/* winsock2.h includes windows.h */
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+
 #include <shlobj.h>
 
 #include <apr_file_info.h>
-/* FIXME: We're using an internal APR header here, which means we
-   have to build Subversion with APR sources. This being Win32-only,
-   that should be fine for now, but a better solution must be found in
-   combination with issue #850. */
-#include <arch/win32/apr_arch_utf8.h>
 
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
+#include "private/svn_utf_private.h"
+
+#include "config_impl.h"
 
 svn_error_t *
-svn_config__win_config_path(const char **folder, int system_path,
-                            apr_pool_t *pool)
+svn_config__win_config_path(const char **folder,
+                            svn_boolean_t system_path,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   /* ### Adding CSIDL_FLAG_CREATE here, because those folders really
      must exist.  I'm not too sure about the SHGFP_TYPE_CURRENT
@@ -48,139 +60,55 @@ svn_config__win_config_path(const char **folder, int system_path,
   const int csidl = ((system_path ? CSIDL_COMMON_APPDATA : CSIDL_APPDATA)
                      | CSIDL_FLAG_CREATE);
 
-  int style;
-  apr_status_t apr_err = apr_filepath_encoding(&style, pool);
+  WCHAR folder_ucs2[MAX_PATH];
+  const char *folder_utf8;
 
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err,
-                              "Can't determine the native path encoding");
-
-  if (style == APR_FILEPATH_ENCODING_UTF8)
+  if (! system_path)
     {
-      WCHAR folder_ucs2[MAX_PATH];
-      apr_size_t inwords, outbytes, outlength;
-      char *folder_utf8;
+      HKEY hkey_tmp;
 
-      if (S_OK != SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
-                                   folder_ucs2))
-        goto no_folder_path;
+      /* Verify if we actually have a *per user* profile to read from */
+      if (ERROR_SUCCESS == RegOpenCurrentUser(KEY_SET_VALUE, &hkey_tmp))
+        RegCloseKey(hkey_tmp); /* We have a profile */
+      else
+        {
+          /* The user is not properly logged in. (Most likely we are running
+             in a service process). In this case Windows will return a default
+             read only 'roaming profile' directory, which we assume to be
+             writable. We will then spend many seconds trying to create a
+             configuration and then fail, because we are not allowed to write
+             there, but the retry loop in io.c doesn't know that.
 
-      /* ### When mapping from UCS-2 to UTF-8, we need at most 3 bytes
-             per wide char, plus extra space for the nul terminator. */
-      inwords = lstrlenW(folder_ucs2);
-      outbytes = outlength = 3 * (inwords + 1);
-      folder_utf8 = apr_palloc(pool, outlength);
+             We just answer that there is no user configuration directory. */
 
-      apr_err = apr_conv_ucs2_to_utf8(folder_ucs2, &inwords,
-                                      folder_utf8, &outbytes);
-      if (!apr_err && (inwords > 0 || outbytes == 0))
-        apr_err = APR_INCOMPLETE;
-      if (apr_err)
-        return svn_error_wrap_apr(apr_err,
-                                  "Can't convert config path to UTF-8");
-
-      /* Note that apr_conv_ucs2_to_utf8 does _not_ terminate the
-         outgoing buffer. */
-      folder_utf8[outlength - outbytes] = '\0';
-      *folder = folder_utf8;
-    }
-  else if (style == APR_FILEPATH_ENCODING_LOCALE)
-    {
-      char folder_ansi[MAX_PATH];
-      if (S_OK != SHGetFolderPathA(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
-                                   folder_ansi))
-        goto no_folder_path;
-      SVN_ERR(svn_utf_cstring_to_utf8(folder, folder_ansi, pool));
-    }
-  else
-    {
-      /* There is no third option on Windows; we should never get here. */
-      return svn_error_createf(APR_EINVAL, NULL,
-                               "Unknown native path encoding (%d)", style);
+          *folder = NULL;
+          return SVN_NO_ERROR;
+        }
     }
 
-  *folder = svn_path_internal_style(*folder, pool);
-  return SVN_NO_ERROR;
-
- no_folder_path:
-  return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
+  if (S_OK != SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
+                               folder_ucs2))
+    return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
                           (system_path
-                           ? "Can't determine the system config path"
-                           : "Can't determine the user's config path"));
-}
+                           ? _("Can't determine the system config path")
+                           : _("Can't determine the user's config path")));
 
-/* Convert UTF8, a UTF-8 encoded string, to UCS2, a UCS-2 encoded
-   string, using POOL for temporary allocations. */
-static svn_error_t *
-utf8_to_ucs2(WCHAR **ucs2, const char *utf8, apr_pool_t *pool)
-{
-  apr_size_t inbytes, outwords, outlength;
-  apr_status_t apr_err;
+  SVN_ERR(svn_utf__win32_utf16_to_utf8(&folder_utf8, folder_ucs2,
+                                       NULL, scratch_pool));
+  *folder = svn_dirent_internal_style(folder_utf8, result_pool);
 
-  inbytes = lstrlenA(utf8);
-  outwords = outlength = inbytes + 1; /* Include terminating null. */
-  *ucs2 = apr_palloc(pool, outwords * sizeof(WCHAR));
-  apr_err = apr_conv_utf8_to_ucs2(utf8, &inbytes, *ucs2, &outwords);
-
-  if (!apr_err && (inbytes > 0 || outwords == 0))
-    apr_err = APR_INCOMPLETE;
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, "Can't convert config path to UCS-2");
-
-  /* Note that apr_conv_utf8_to_ucs2 does _not_ terminate the
-     outgoing buffer. */
-  (*ucs2)[outlength - outwords] = L'\0';
   return SVN_NO_ERROR;
 }
-
 
 
-#include "config_impl.h"
 
-svn_error_t *
-svn_config__open_file(FILE **pfile,
-                      const char *filename,
-                      const char *mode,
-                      apr_pool_t *pool)
-{
-  int style;
-  apr_status_t apr_err = apr_filepath_encoding(&style, pool);
-
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err,
-                              "Can't determine the native path encoding");
-
-  if (style == APR_FILEPATH_ENCODING_UTF8)
-    {
-      WCHAR *filename_ucs2;
-      WCHAR *mode_ucs2;
-
-      SVN_ERR(utf8_to_ucs2(&filename_ucs2, filename, pool));
-      SVN_ERR(utf8_to_ucs2(&mode_ucs2, mode, pool));
-      *pfile = _wfopen(filename_ucs2, mode_ucs2);
-    }
-  else if (style == APR_FILEPATH_ENCODING_LOCALE)
-    {
-      const char *filename_native;
-      SVN_ERR(svn_utf_cstring_from_utf8(&filename_native, filename, pool));
-      *pfile = fopen(filename_native, mode);
-    }
-  else
-    {
-      /* There is no third option on Windows; we should never get here. */
-      return svn_error_createf(APR_EINVAL, NULL,
-                               "Unknown native path encoding (%d)", style);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* ### These constants are insanely large, but (a) we want to avoid
-   reallocating strings if possible, and (b) the realloc logic might
-   not actually work -- you never know with Win32 ... */
+/* ### These constants are insanely large, but we want to avoid
+   reallocating strings if possible. */
 #define SVN_REG_DEFAULT_NAME_SIZE  2048
 #define SVN_REG_DEFAULT_VALUE_SIZE 8192
 
+/* ### This function should be converted to use the unicode functions
+   ### instead of the ansi functions */
 static svn_error_t *
 parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
               svn_stringbuf_t *option, svn_stringbuf_t *value)
@@ -193,7 +121,7 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
   svn_stringbuf_ensure(value, SVN_REG_DEFAULT_VALUE_SIZE);
   for (index = 0; ; ++index)
     {
-      option_len = option->blocksize;
+      option_len = (DWORD)option->blocksize;
       err = RegEnumValue(hkey, index, option->data, &option_len,
                          NULL, &type, NULL, NULL);
       if (err == ERROR_NO_MORE_ITEMS)
@@ -206,24 +134,24 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
         }
       if (err != ERROR_SUCCESS)
         return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                "Can't enumerate registry values");
+                                _("Can't enumerate registry values"));
 
       /* Ignore option names that start with '#', see
          http://subversion.tigris.org/issues/show_bug.cgi?id=671 */
       if (type == REG_SZ && option->data[0] != '#')
         {
-          DWORD value_len = value->blocksize;
+          DWORD value_len = (DWORD)value->blocksize;
           err = RegQueryValueEx(hkey, option->data, NULL, NULL,
-                                value->data, &value_len);
+                                (LPBYTE)value->data, &value_len);
           if (err == ERROR_MORE_DATA)
             {
               svn_stringbuf_ensure(value, value_len);
               err = RegQueryValueEx(hkey, option->data, NULL, NULL,
-                                    value->data, &value_len);
+                                    (LPBYTE)value->data, &value_len);
             }
           if (err != ERROR_SUCCESS)
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                    "Can't read registry value data");
+                                    _("Can't read registry value data"));
 
           svn_config_set(cfg, section, option->data, value->data);
         }
@@ -260,8 +188,8 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
   else
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                               "Unrecognised registry path '%s'",
-                               svn_path_local_style(file, pool));
+                               _("Unrecognised registry path '%s'"),
+                               svn_dirent_local_style(file, pool));
     }
 
   err = RegOpenKeyEx(base_hkey, file, 0,
@@ -269,24 +197,29 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
                      &hkey);
   if (err != ERROR_SUCCESS)
     {
-      const int is_enoent = APR_STATUS_IS_ENOENT(APR_FROM_OS_ERROR(err));
+      apr_status_t apr_err = APR_FROM_OS_ERROR(err);
+      svn_boolean_t is_enoent = APR_STATUS_IS_ENOENT(apr_err)
+                                || (err == ERROR_INVALID_HANDLE);
+
       if (!is_enoent)
-        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 "Can't open registry key '%s'",
-                                 svn_path_local_style(file, pool));
-      else if (must_exist && is_enoent)
-        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 "Can't find registry key '%s'",
-                                 svn_path_local_style(file, pool));
+        return svn_error_createf(SVN_ERR_BAD_FILENAME,
+                                 svn_error_wrap_apr(apr_err, NULL),
+                                 _("Can't open registry key '%s'"),
+                                 svn_dirent_local_style(file, pool));
+      else if (must_exist)
+        return svn_error_createf(SVN_ERR_BAD_FILENAME,
+                                 NULL,
+                                 _("Can't open registry key '%s'"),
+                                 svn_dirent_local_style(file, pool));
       else
         return SVN_NO_ERROR;
     }
 
 
   subpool = svn_pool_create(pool);
-  section = svn_stringbuf_create("", subpool);
-  option = svn_stringbuf_create("", subpool);
-  value = svn_stringbuf_create("", subpool);
+  section = svn_stringbuf_create_empty(subpool);
+  option = svn_stringbuf_create_empty(subpool);
+  value = svn_stringbuf_create_empty(subpool);
 
   /* The top-level values belong to the [DEFAULT] section */
   svn_err = parse_section(cfg, hkey, SVN_CONFIG__DEFAULT_SECTION,
@@ -298,24 +231,23 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
   svn_stringbuf_ensure(section, SVN_REG_DEFAULT_NAME_SIZE);
   for (index = 0; ; ++index)
     {
-      DWORD section_len = section->blocksize;
-      FILETIME last_write_time;
+      DWORD section_len = (DWORD)section->blocksize;
       HKEY sub_hkey;
 
       err = RegEnumKeyEx(hkey, index, section->data, &section_len,
-                         NULL, NULL, NULL, &last_write_time);
+                         NULL, NULL, NULL, NULL);
       if (err == ERROR_NO_MORE_ITEMS)
           break;
       if (err == ERROR_MORE_DATA)
         {
           svn_stringbuf_ensure(section, section_len);
           err = RegEnumKeyEx(hkey, index, section->data, &section_len,
-                             NULL, NULL, NULL, &last_write_time);
+                             NULL, NULL, NULL, NULL);
         }
       if (err != ERROR_SUCCESS)
         {
           svn_err =  svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                      "Can't enumerate registry keys");
+                                      _("Can't enumerate registry keys"));
           goto cleanup;
         }
 
@@ -325,7 +257,7 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
       if (err != ERROR_SUCCESS)
         {
           svn_err =  svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                      "Can't open existing subkey");
+                                      _("Can't open existing subkey"));
           goto cleanup;
         }
 

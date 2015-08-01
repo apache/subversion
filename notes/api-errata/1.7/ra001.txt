@@ -1,0 +1,47 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: 
+ Library(s) Affected: libsvn_ra, RA servers (svnserve, mod_dav_svn)
+Function(s) Affected: svn_delta_editor_t
+     New Behavior in: 1.8 (default), 1.4 (client optional)
+      Related Issues: #2932, #3628
+
+
+== Details of Previous Behavior ==
+
+The ra_neon (formerly, ra_dav) drives delta editors (svn_delta_editor_t) in
+accordance with the constraints of that API [1].
+
+[1] ../../../subversion/include/svn_delta.h:svn_delta_editor_t 
+[1] http://subversion.apache.org/docs/api/latest/structsvn__delta__editor__t.html#_details
+
+
+== Details of New Behavior ==
+
+The ra_serf client-side HTTP/DAV layer (introduced in Subversion 1.4, and
+made the only DAV layer in Subversion 1.8) does not respect all the
+ordering constraints of the delta editor API: it may open two sibling
+directores at the same time, which the delta editor API does not permit.
+
+
+== Rationale for Change ==
+
+The ra_serf layer operates on sibling directores simultaneously in order to
+improve overall speed by using the HTTP protocol more efficiently: for
+example, by sending more requests without having to wait for the server's
+responses in all cases.  
+
+### other reasons? caching? httpv2?
+
+
+== Impact on API Users ==
+
+Server-side editor implementors cannot both depend upon being driven in
+the documented directory-depth-first order and support ra_serf clients.
+Server-side editors that will only be accessed over ra_neon/ra_svn/ra_local,
+or that do not depend upon the depth-first restriction, are not affected.
+
+Editors shipped with Subversion itself are not affected.
+
+It is expected that this issue will be revisited as part of the "Editor v2"
+effort (see issue #3628).

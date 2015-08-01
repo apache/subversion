@@ -3,17 +3,22 @@
  * Cyrus SASL isn't available.
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -32,7 +37,8 @@
 
 #include "ra_svn.h"
 
-static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
+svn_boolean_t svn_ra_svn__find_mech(const apr_array_header_t *mechlist,
+                                    const char *mech)
 {
   int i;
   svn_ra_svn_item_t *elt;
@@ -51,7 +57,7 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
   const char *status, *arg;
 
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &status, &arg));
+  SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "w(?c)", &status, &arg));
   if (strcmp(status, "failure") == 0 && arg)
     return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                              _("Authentication error from server: %s"), arg);
@@ -63,7 +69,7 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 
 svn_error_t *
 svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
-                             apr_array_header_t *mechlist,
+                             const apr_array_header_t *mechlist,
                              const char *realm, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess->conn;
@@ -73,23 +79,23 @@ svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
 
   realmstring = apr_psprintf(pool, "%s %s", sess->realm_prefix, realm);
 
-  if (sess->is_tunneled && find_mech(mechlist, "EXTERNAL"))
+  if (sess->is_tunneled && svn_ra_svn__find_mech(mechlist, "EXTERNAL"))
     {
         /* Ask the server to use the tunnel connection environment (on
         * Unix, that means uid) to determine the authentication name. */
       SVN_ERR(svn_ra_svn__auth_response(conn, pool, "EXTERNAL", ""));
       return read_success(conn, pool);
     }
-  else if (find_mech(mechlist, "ANONYMOUS"))
+  else if (svn_ra_svn__find_mech(mechlist, "ANONYMOUS"))
     {
       SVN_ERR(svn_ra_svn__auth_response(conn, pool, "ANONYMOUS", ""));
       return read_success(conn, pool);
     }
-  else if (find_mech(mechlist, "CRAM-MD5"))
+  else if (svn_ra_svn__find_mech(mechlist, "CRAM-MD5"))
     {
       SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
-                                        SVN_AUTH_CRED_SIMPLE, realmstring,
-                                        sess->callbacks->auth_baton, pool));
+                                         SVN_AUTH_CRED_SIMPLE, realmstring,
+                                         sess->auth_baton, pool));
       if (!creds)
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                 _("Can't get password"));

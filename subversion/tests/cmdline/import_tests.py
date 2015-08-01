@@ -2,32 +2,46 @@
 #
 #  import_tests.py:  import tests
 #
-#  Subversion is a tool for revision control. 
-#  See http://subversion.tigris.org for more information.
-#    
+#  Subversion is a tool for revision control.
+#  See http://subversion.apache.org for more information.
+#
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
-import re, os.path
+import re, os.path, sys
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
+from prop_tests import create_inherited_ignores_config
+from svntest.main import SVN_PROP_INHERITABLE_IGNORES
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
+exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 ######################################################################
 # Tests
@@ -36,6 +50,7 @@ Item = wc.StateItem
 
 #----------------------------------------------------------------------
 # this test should be SKIPped on systems without the executable bit
+@SkipUnless(svntest.main.is_posix_os)
 def import_executable(sbox):
   "import of executable files"
 
@@ -63,10 +78,8 @@ def import_executable(sbox):
 
   # import new files into repository
   url = sbox.repo_url
-  output, errput =   svntest.actions.run_and_verify_svn(
-    None, None, [], 'import',
-    '--username', svntest.main.wc_author,
-    '--password', svntest.main.wc_passwd,
+  exit_code, output, errput =   svntest.actions.run_and_verify_svn(
+    None, [], 'import',
     '-m', 'Log message for new import', xt_path, url)
 
   lastline = output.pop().strip()
@@ -113,8 +126,7 @@ def import_executable(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 def import_ignores(sbox):
@@ -144,10 +156,8 @@ def import_ignores(sbox):
   # import new dir into repository
   url = sbox.repo_url + '/dir'
 
-  output, errput = svntest.actions.run_and_verify_svn(
-    None, None, [], 'import',
-    '--username', svntest.main.wc_author,
-    '--password', svntest.main.wc_passwd,
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+    None, [], 'import',
     '-m', 'Log message for new import',
     dir_path, url)
 
@@ -156,7 +166,7 @@ def import_ignores(sbox):
   match = cm.search (lastline)
   if not match:
     ### we should raise a less generic error here. which?
-    raise svntest.actions.SVNUnexpectedOutput
+    raise svntest.verify.SVNUnexpectedOutput
 
   # remove (uncontrolled) local dir
   svntest.main.safe_rmtree(dir_path)
@@ -186,8 +196,7 @@ def import_ignores(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 def import_no_ignores(sbox):
@@ -213,11 +222,9 @@ def import_no_ignores(sbox):
   # import new dir into repository
   url = sbox.repo_url + '/dir'
 
-  output, errput = svntest.actions.run_and_verify_svn(
-    None, None, [], 'import',
-    '--username', svntest.main.wc_author,
-    '--password', svntest.main.wc_passwd,
-    '-m', 'Log message for new import', '--no-ignore', 
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+    None, [], 'import',
+    '-m', 'Log message for new import', '--no-ignore',
     dir_path, url)
 
   lastline = output.pop().strip()
@@ -263,50 +270,51 @@ def import_no_ignores(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 #----------------------------------------------------------------------
 def import_avoid_empty_revision(sbox):
   "avoid creating empty revisions with import"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # create a new directory 
+  # create a new directory
   empty_dir = os.path.join(wc_dir, "empty_dir")
   os.makedirs(empty_dir)
 
-  url = sbox.repo_url  
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     '-m', 'Log message for new import', 
+  url = sbox.repo_url
+  svntest.actions.run_and_verify_svn(None, [], 'import',
+                                     '-m', 'Log message for new import',
                                      empty_dir, url)
 
-  svntest.main.safe_rmtree(empty_dir) 
+  svntest.main.safe_rmtree(empty_dir)
 
   # Verify that an empty revision has not been created
-  svntest.actions.run_and_verify_svn(None, [ "At revision 1.\n"], 
-                                     [], "update", 
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     empty_dir) 
+  svntest.actions.run_and_verify_svn(exp_noop_up_out(1),
+                                     [], "update",
+                                     empty_dir)
 #----------------------------------------------------------------------
 
 # test for issue 2433: "import" does not handle eol-style correctly
+# and for normalising files with mixed line-endings upon import (r1205193)
+@Issue(2433)
 def import_eol_style(sbox):
   "import should honor the eol-style property"
 
   sbox.build()
-  wc_dir = sbox.wc_dir
+  os.chdir(sbox.wc_dir)
 
   # setup a custom config, we need autoprops
   config_contents = '''\
+[auth]
+password-stores =
+
 [miscellany]
 enable-auto-props = yes
 
 [auto-props]
 *.dsp = svn:eol-style=CRLF
+*.txt = svn:eol-style=native
 '''
   tmp_dir = os.path.abspath(svntest.main.temp_dir)
   config_dir = os.path.join(tmp_dir, 'autoprops_config')
@@ -314,22 +322,20 @@ enable-auto-props = yes
 
   # create a new file and import it
   file_name = "test.dsp"
-  file_path = os.path.join(wc_dir, file_name)
-  imp_dir_path = os.path.join(wc_dir, 'dir')
+  file_path = file_name
+  imp_dir_path = 'dir'
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
   os.mkdir(imp_dir_path, 0755)
   svntest.main.file_write(imp_file_path, "This is file test.dsp.\n")
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'import',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     '-m', 'Log message for new import', 
-                                     imp_dir_path, 
-                                     sbox.repo_url, 
+  svntest.actions.run_and_verify_svn(None, [], 'import',
+                                     '-m', 'Log message for new import',
+                                     imp_dir_path,
+                                     sbox.repo_url,
                                      '--config-dir', config_dir)
 
-  svntest.main.run_svn(None, 'update', wc_dir, '--config-dir', config_dir)
+  svntest.main.run_svn(None, 'update', '.', '--config-dir', config_dir)
 
   # change part of the file
   svntest.main.file_append(file_path, "Extra line\n")
@@ -341,40 +347,242 @@ enable-auto-props = yes
   # -This is file test.dsp.
   # +This is file test.dsp.
   # +Extra line
-  
-  # eol styl of test.dsp is CRLF, so diff will use that too. Make sure we 
+
+  # eol styl of test.dsp is CRLF, so diff will use that too. Make sure we
   # define CRLF in a platform independent way.
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
     crlf = '\r\n'
+
   expected_output = [
-  "Index: svn-test-work/working_copies/import_tests-5/test.dsp\n",
+  "Index: test.dsp\n",
   "===================================================================\n",
-  "--- svn-test-work/working_copies/import_tests-5/test.dsp\t(revision 2)\n",
-  "+++ svn-test-work/working_copies/import_tests-5/test.dsp\t(working copy)\n",
+  "--- test.dsp\t(revision 2)\n",
+  "+++ test.dsp\t(working copy)\n",
   "@@ -1 +1,2 @@\n",
   " This is file test.dsp." + crlf,
   "+Extra line" + crlf
   ]
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'diff', 
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'diff',
                                      file_path,
                                      '--config-dir', config_dir)
 
+  # create a file with inconsistent EOLs and eol-style=native, and import it
+  file_name = "test.txt"
+  file_path = file_name
+  imp_dir_path = 'dir2'
+  imp_file_path = os.path.join(imp_dir_path, file_name)
+
+  os.mkdir(imp_dir_path, 0755)
+  svntest.main.file_append_binary(imp_file_path,
+                                  "This is file test.txt.\n" + \
+                                  "The second line.\r\n" + \
+                                  "The third line.\r")
+
+  # The import should succeed and not error out
+  svntest.actions.run_and_verify_svn(None, [], 'import',
+                                     '-m', 'Log message for new import',
+                                     imp_dir_path,
+                                     sbox.repo_url,
+                                     '--config-dir', config_dir)
+
+
 #----------------------------------------------------------------------
+@Issue(3983)
+def import_into_foreign_repo(sbox):
+  "import into a foreign repo"
+
+  sbox.build(read_only=True)
+
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.safe_rmtree(other_repo_dir, 1)
+  svntest.main.create_repos(other_repo_dir)
+
+  svntest.actions.run_and_verify_svn(None, [], 'import',
+                                     '-m', 'Log message for new import',
+                                     sbox.ospath('A/mu'), other_repo_url + '/f')
+
+#----------------------------------------------------------------------
+def import_inherited_ignores(sbox):
+  'import and inherited ignores'
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create this config file:
+  #
+  #   [miscellany]
+  #   global-ignores = *.boo *.goo
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
+  create_inherited_ignores_config(config_dir)
+
+  # Set some ignore properties.
+  sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.voo *.noo *.loo', '.')
+  sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.yoo\t*.doo', 'A/B')
+  sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.moo', 'A/D')
+  sbox.simple_propset('svn:ignore', '*.zoo\n*.foo\n*.poo', 'A/B/E')
+  sbox.simple_commit()
+
+  # Use this tree for importing:
+  #
+  # DIR1.noo
+  # DIR2.doo
+  #   file1.txt
+  # DIR3.foo
+  #   file2.txt
+  # DIR4.goo
+  #   file3.txt
+  #   file4.noo
+  # DIR5.moo
+  #   file5.txt
+  # DIR6
+  #   file6.foo
+  #   DIR7
+  #     file7.foo
+  #     DIR8.noo
+  import_tree_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                 'import_tests_data', 'import_tree')
+
+  # Relative WC paths of the imported tree.
+  dir1_path  = os.path.join('DIR1.noo')
+  dir2_path  = os.path.join('DIR2.doo')
+  file1_path = os.path.join('DIR2.doo', 'file1.txt')
+  dir3_path  = os.path.join('DIR3.foo')
+  file2_path = os.path.join('DIR3.foo', 'file2.txt')
+  dir4_path  = os.path.join('DIR4.goo')
+  file3_path = os.path.join('DIR4.goo', 'file3.txt')
+  file4_path = os.path.join('DIR4.goo', 'file4.noo')
+  dir5_path  = os.path.join('DIR5.moo')
+  file5_path = os.path.join('DIR5.moo', 'file5.txt')
+  dir6_path  = os.path.join('DIR6')
+  file6_path = os.path.join('DIR6', 'file6.foo')
+  dir7_path  = os.path.join('DIR6', 'DIR7')
+  file7_path = os.path.join('DIR6', 'DIR7', 'file7.foo')
+  dir8_path  = os.path.join('DIR6', 'DIR7', 'DIR8.noo')
+
+  # Import the tree to ^/A/B/E.
+  # We should not see any *.noo paths because those are blocked at the
+  # root of the repository by the svn:global-ignores property.  Likewise
+  # *.doo paths are blocked by the svn:global-ignores on ^/A/B.  Nor
+  # should we see and *.boo or *.goo paths, as those are blocked by the
+  # global-ignores config. Lastly, ^/A/B/E should not get any *.foo paths
+  # because of the svn:ignore property on ^/A/B/E, but non-immediate children
+  # of ^/A/B/E are permitted *.foo paths.
+  svntest.actions.run_and_verify_svn(None, [], 'import',
+                                     '--config-dir', config_dir,
+                                     import_tree_dir,
+                                     sbox.repo_url + '/A/B/E',
+                                     '-m', 'import')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(E_path, dir5_path)  + '\n',
+     'A    ' + os.path.join(E_path, file5_path) + '\n',
+     'A    ' + os.path.join(E_path, dir6_path)  + '\n',
+     'A    ' + os.path.join(E_path, file6_path) + '\n',
+     'A    ' + os.path.join(E_path, dir7_path)  + '\n',
+     'A    ' + os.path.join(E_path, file7_path) + '\n',
+     'Updated to revision 3.\n'])
+  svntest.actions.run_and_verify_svn(expected_output, [], 'up', wc_dir)
+
+  # Import the tree to ^/A/B/E/Z.  The only difference from above is that
+  # DIR3.foo and its child file2.txt are also imported.  Why? Because now
+  # we are creating a new directory in ^/A/B/E, so the svn:ignore property
+  # set on ^/A/B/E doesn't apply.
+  svntest.actions.run_and_verify_svn(None, [], 'import',
+                                     '--config-dir', config_dir,
+                                     import_tree_dir,
+                                     sbox.repo_url + '/A/B/E/Z',
+                                     '-m', 'import')
+  Z_path = os.path.join(wc_dir, 'A', 'B', 'E', 'Z')
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(Z_path)             + '\n',
+     'A    ' + os.path.join(Z_path, dir5_path)  + '\n',
+     'A    ' + os.path.join(Z_path, file5_path) + '\n',
+     'A    ' + os.path.join(Z_path, dir6_path)  + '\n',
+     'A    ' + os.path.join(Z_path, file6_path) + '\n',
+     'A    ' + os.path.join(Z_path, dir7_path)  + '\n',
+     'A    ' + os.path.join(Z_path, file7_path) + '\n',
+     'A    ' + os.path.join(Z_path, dir3_path)  + '\n',
+     'A    ' + os.path.join(Z_path, file2_path) + '\n',
+     'Updated to revision 4.\n'])
+  svntest.actions.run_and_verify_svn(expected_output, [], 'up', wc_dir)
+
+  # Import the tree to ^/A/B/F with the --no-ignore option.
+  # No ignores should be considered and the whole tree should
+  # be imported.
+  svntest.actions.run_and_verify_svn(None, [], 'import',
+                                     '--config-dir', config_dir,
+                                     '--no-ignore', import_tree_dir,
+                                     sbox.repo_url + '/A/B/F',
+                                     '-m', 'import')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(F_path, dir1_path)  + '\n',
+     'A    ' + os.path.join(F_path, dir2_path)  + '\n',
+     'A    ' + os.path.join(F_path, file1_path) + '\n',
+     'A    ' + os.path.join(F_path, dir3_path)  + '\n',
+     'A    ' + os.path.join(F_path, file2_path) + '\n',
+     'A    ' + os.path.join(F_path, dir4_path)  + '\n',
+     'A    ' + os.path.join(F_path, file3_path) + '\n',
+     'A    ' + os.path.join(F_path, file4_path) + '\n',
+     'A    ' + os.path.join(F_path, dir5_path)  + '\n',
+     'A    ' + os.path.join(F_path, file5_path) + '\n',
+     'A    ' + os.path.join(F_path, dir6_path)  + '\n',
+     'A    ' + os.path.join(F_path, file6_path) + '\n',
+     'A    ' + os.path.join(F_path, dir7_path)  + '\n',
+     'A    ' + os.path.join(F_path, file7_path) + '\n',
+     'A    ' + os.path.join(F_path, dir8_path)  + '\n',
+     'Updated to revision 5.\n'])
+  svntest.actions.run_and_verify_svn(expected_output, [], 'up', wc_dir)
+
+  # Try importing a single file into a directory which has svn:ignore set
+  # on it with a matching pattern of the imported file.  The import should
+  # be a no-op.
+  svntest.actions.run_and_verify_svn([], [], 'import',
+                                     '--config-dir', config_dir,
+                                     os.path.join(import_tree_dir,
+                                                  'DIR6', 'file6.foo'),
+                                     sbox.repo_url + '/A/B/E/file6.foo',
+                                     '-m', 'This import should fail!')
+
+  # Try the above, but this time with --no-ignore, this time the import
+  # should succeed.
+  svntest.actions.run_and_verify_svn(None, [], 'import', '--no-ignore',
+                                     '--config-dir', config_dir,
+                                     os.path.join(import_tree_dir,
+                                                  'DIR6', 'file6.foo'),
+                                     sbox.repo_url + '/A/B/E/file6.foo',
+                                     '-m', 'import')
+  expected_output = svntest.verify.UnorderedOutput(
+    ["Updating '" + wc_dir + "':\n",
+     'A    ' + os.path.join(E_path, 'file6.foo') + '\n',
+     'Updated to revision 6.\n'])
+  svntest.actions.run_and_verify_svn(expected_output, [], 'up', wc_dir)
+
+#----------------------------------------------------------------------
+
 ########################################################################
 # Run the tests
 
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(import_executable, svntest.main.is_posix_os),
+              import_executable,
               import_ignores,
               import_avoid_empty_revision,
               import_no_ignores,
               import_eol_style,
+              import_into_foreign_repo,
+              import_inherited_ignores,
              ]
 
 if __name__ == '__main__':

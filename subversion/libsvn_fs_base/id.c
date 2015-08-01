@@ -1,17 +1,22 @@
 /* id.c : operations on node-revision IDs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -23,7 +28,7 @@
 
 
 
-typedef struct {
+typedef struct id_private_t {
   const char *node_id;
   const char *copy_id;
   const char *txn_id;
@@ -99,17 +104,18 @@ svn_fs_base__id_check_related(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return (strcmp(pvta->node_id, pvtb->node_id) == 0) ? TRUE : FALSE;
+  return (strcmp(pvta->node_id, pvtb->node_id) == 0);
 }
 
 
-int
+svn_fs_node_relation_t
 svn_fs_base__id_compare(const svn_fs_id_t *a,
                         const svn_fs_id_t *b)
 {
   if (svn_fs_base__id_eq(a, b))
-    return 0;
-  return (svn_fs_base__id_check_related(a, b) ? 1 : -1);
+    return svn_fs_node_unchanged;
+  return (svn_fs_base__id_check_related(a, b) ? svn_fs_node_common_ancestor
+                                              : svn_fs_node_unrelated);
 }
 
 
@@ -163,7 +169,7 @@ svn_fs_base__id_parse(const char *data,
 {
   svn_fs_id_t *id;
   id_private_t *pvt;
-  char *data_copy, *str, *last_str;
+  char *data_copy, *str;
 
   /* Dup the ID data into POOL.  Our returned ID will have references
      into this memory. */
@@ -176,24 +182,25 @@ svn_fs_base__id_parse(const char *data,
   id->fsap_data = pvt;
 
   /* Now, we basically just need to "split" this data on `.'
-     characters.  We will use apr_strtok, which will put terminators
-     where each of the '.'s used to be.  Then our new id field will
-     reference string locations inside our duplicate string.*/
+     characters.  We will use svn_cstring_tokenize, which will put
+     terminators where each of the '.'s used to be.  Then our new
+     id field will reference string locations inside our duplicate
+     string.*/
 
   /* Node Id */
-  str = apr_strtok(data_copy, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
   pvt->node_id = str;
 
   /* Copy Id */
-  str = apr_strtok(NULL, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
   pvt->copy_id = str;
 
   /* Txn Id */
-  str = apr_strtok(NULL, ".", &last_str);
+  str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
   pvt->txn_id = str;

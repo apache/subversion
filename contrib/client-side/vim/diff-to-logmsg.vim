@@ -1,9 +1,9 @@
 " diff-to-logmsg.vim by Ph. Marek <philipp.marek@bmlv.gv.at>
-" 
+"
 " Usage is as follows:
 "
 "   diff -urp subversion.orig subversion.mine > patch
-" or 
+" or
 "   svn diff --diff-cmd=diff --extensions="-up" [TARGET...] > patch
 "
 " (the -p tells diff to output the function names), then
@@ -16,7 +16,7 @@
 " Note from Julian Foad:
 "   It ought to be noted that the generated list of function names
 "   is only as accurate as the output of "diff -p", which is not very
-"   accurate - e.g. for changes to a doc string appearing before a 
+"   accurate - e.g. for changes to a doc string appearing before a
 "   function, it generally outputs the name of the _previous_ function.
 
 

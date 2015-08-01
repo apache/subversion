@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * svn_wc.i: SWIG interface file for svn_wc.h
@@ -37,11 +42,14 @@
 */
 %ignore svn_wc_set_auth_file;
 
-/* ### ignore this structure because the accessors will need a pool */
+/* ### ignore these structures because the accessors will need a pool */
 %ignore svn_wc_keywords_t;
+%ignore svn_wc_conflict_description2_t;
+%ignore svn_wc_conflict_result_t;
 
 #ifdef SWIGRUBY
 %ignore svn_wc_external_item_create;
+%ignore svn_wc_external_item2_create;
 %ignore svn_wc_external_item_dup;
 %ignore svn_wc_external_item2_dup;
 %ignore svn_wc_revision_status;
@@ -50,7 +58,6 @@
 %ignore svn_wc_entry;
 %ignore svn_wc_notify;
 
-%ignore svn_wc_set_changelist;
 #endif
 
 #ifdef SWIGMZSCHEME
@@ -100,7 +107,17 @@
 /* svn_wc_match_ignore_list() */
 %apply const apr_array_header_t *STRINGLIST {
   apr_array_header_t *list
-};
+}
+
+#ifdef SWIGRUBY
+%apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+  apr_array_header_t *changelists
+}
+#else
+%apply const apr_array_header_t *STRINGLIST {
+  apr_array_header_t *changelists
+}
+#endif
 
 /* svn_wc_cleanup2() */
 %apply const char *MAY_BE_NULL {
@@ -152,23 +169,31 @@
 #endif
 #endif
 
-#ifndef SWIGPERL
 /* Bad idea */
 #ifndef SWIGMZSCHEME
 %callback_typemap(svn_wc_status_func2_t status_func, void *status_baton,
                   svn_swig_py_status_func2,
+                  svn_swig_pl_status_func2,
+                  svn_swig_rb_wc_status_func)
+
+#ifdef SWIGPERL
+%callback_typemap(svn_wc_status_func3_t status_func, void *status_baton,
                   ,
-                  svn_swig_rb_wc_status_func,,,)
+                  svn_swig_pl_status_func3,
+                  ) 
 #endif
+#endif
+
+#ifndef SWIGPERL
+%callback_typemap(const svn_wc_diff_callbacks2_t *callbacks,
+                  void *callback_baton,
+                  svn_swig_py_setup_wc_diff_callbacks2(&$2, $input,
+                                                       _global_pool),
+                  ,
+                  svn_swig_rb_wc_diff_callbacks2(),,,)
 #endif
 
 #ifdef SWIGRUBY
-%callback_typemap(const svn_wc_diff_callbacks2_t *callbacks,
-                  void *callback_baton,
-                  ,
-                  ,
-                  svn_swig_rb_wc_diff_callbacks2(),,,)
-
 %callback_typemap(svn_wc_relocation_validator3_t validator,
                   void *validator_baton,
                   ,
@@ -212,7 +237,11 @@
 %typemap(in) svn_revnum_t *target_revision
 {
   $1 = apr_palloc(_global_pool, sizeof(svn_revnum_t));
-  *$1 = NUM2LONG($input);
+  if (NIL_P($input)) {
+    *$1 = SVN_INVALID_REVNUM;
+  } else {
+    *$1 = NUM2LONG($input);
+  }
 }
 
 %typemap(argout) svn_revnum_t *target_revision
@@ -233,31 +262,11 @@
 /* ----------------------------------------------------------------------- */
 
 %{
+#include <apr_md5.h>
 #include "svn_md5.h"
 %}
 
 %include svn_wc_h.swg
-
-
-#ifdef SWIGRUBY
-%header %{
-#define _svn_wc_set_changelist svn_wc_set_changelist
-%}
-%rename(svn_wc_set_changelist) _svn_wc_set_changelist;
-%apply const char *MAY_BE_NULL {
-  const char *changelist_may_be_null,
-  const char *matching_changelist_may_be_null
-}
-svn_error_t *
-_svn_wc_set_changelist(const apr_array_header_t *paths,
-                       const char *changelist_may_be_null,
-                       const char *matching_changelist_may_be_null,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
-                       svn_wc_notify_func2_t notify_func,
-                       void *notify_baton,
-                       apr_pool_t *pool);
-#endif
 
 
 
@@ -282,11 +291,11 @@ svn_wc_swig_init_asp_dot_net_hack (apr_pool_t *pool)
 {
   svn_wc_external_item2_t(apr_pool_t *pool) {
     svn_error_t *err;
-    const svn_wc_external_item2_t *self;
-    err = svn_wc_external_item_create(&self, pool);
+    svn_wc_external_item2_t *self;
+    err = svn_wc_external_item2_create(&self, pool);
     if (err)
       svn_swig_rb_handle_svn_error(err);
-    return (svn_wc_external_item2_t *)self;
+    return self;
   };
 
   ~svn_wc_external_item2_t() {

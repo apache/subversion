@@ -101,11 +101,11 @@ structure summary" section of this document.
 
 
 
-NODE-REVISION and HEADER: how we represent a node revision
+NODE-REVISION: how we represent a node revision
 
 We represent a given revision of a file or directory node using a list
-skel (see skel.h for an explanation of skels).  A node revision skel
-has the form:
+skel (see include/private/svn_skel.h for an explanation of skels).
+A node revision skel has the form:
 
     (HEADER PROP-KEY KIND-SPECIFIC ...)
 
@@ -116,7 +116,7 @@ on what kind of node this is --- file, directory, etc.
 
 HEADER has the form:
 
-    (KIND CREATED-PATH PRED-ID PRED-COUNT)
+    (KIND CREATED-PATH [PRED-ID [PRED-COUNT [HAS-MERGEINFO MERGEINFO-COUNT]]])
 
 where:
 
@@ -134,11 +134,14 @@ where:
    * PRED-COUNT, if present, indicates the number of predecessors the
      node revision has (recursively).
 
+   * HAS-MERGEINFO and MERGEINFO-COUNT, if present, indicate ...
+     ### TODO
+
 Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;
 etc.  The fact that the node's kind is stored in each node revision,
 rather than in some revision-independent place, might suggest that
-it's possible for a node change kinds from revision to revision, but
+it's possible for a node to change kinds from revision to revision, but
 Subversion does not allow this.
 
 PROP-KEY is a key into the `representations' table (see REPRESENTATIONS 
@@ -164,11 +167,18 @@ FILE: how files are represented.
 If a NODE-REVISION's header's KIND is "file", then the node-revision
 skel represents a file, and has the form:
 
-    (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY])
+    (HEADER PROP-KEY DATA-INFO [EDIT-DATA-KEY])
 
-where DATA-KEY identifies the representation for the file's current
+where
+
+    DATA-INFO ::= DATA-KEY | (DATA-KEY DATA-KEY-UNIQID)
+
+and DATA-KEY identifies the representation for the file's current
 contents, and EDIT-DATA-KEY identifies the representation currently
 available for receiving new contents for the file.
+
+DATA-KEY-UNIQID ...
+### TODO
 
 See discussion of representations later.
 
@@ -257,15 +267,17 @@ and parse it appropriately.  A representation has the form:
 
 where HEADER is
 
-   (KIND TXN [CHECKSUM])
+   (KIND TXN [MD5 [SHA1]])
 
 The KIND is "fulltext" or "delta".  TXN is the txn ID for the txn in
-which this representation was created.  CHECKSUM is a checksum of the
+which this representation was created.  MD5 is a checksum of the
 representation's contents, that is, what the representation produces,
 regardless of whether it is stored deltified or as fulltext.  (For
-compatibility with older versions of Subversion, CHECKSUM may be
+compatibility with older versions of Subversion, MD5 may be
 absent, in which case the filesystem behaves as though the checksum is
-there and is correct.)
+there and is correct.) An additional kind of checksum, SHA1, is present
+in newer formats, starting with version ...
+### TODO
 
 The TXN also serves as a kind of mutability flag: if txn T tries to
 change a representation's contents, but the rep's TXN is not T, then
@@ -278,10 +290,10 @@ count as a change, since that wouldn't affect what the rep produces.
 KIND-SPECIFIC varies considerably depending on the kind of
 representation.  Here are the two forms currently recognized:
 
-   (("fulltext" TXN CHECKSUM) KEY)
-       The data is at KEY in the `strings' table.
+   (("fulltext" TXN [MD5 [SHA1]]) STRING-KEY)
+       The data is at STRING-KEY in the `strings' table.
 
-   (("delta" TXN CHECKSUM) (OFFSET WINDOW) ...)
+   (("delta" TXN [MD5 [SHA1]]) (OFFSET WINDOW) ...)
        Each OFFSET indicates the point in the fulltext that this
        element reconstructs, and WINDOW says how to reconstruct it:
 
@@ -480,7 +492,7 @@ where:
    * ROOT-ID is the node revision ID of the committed transaction's (or
      revision's) root node.
 
-   * REVISION represents the revision that was created when the
+   * REV represents the revision that was created when the
      transaction was committed.
 
    * PROPLIST is a skel giving the revision properties for the
@@ -573,6 +585,12 @@ following forms:
 
 where:
 
+   * "copy" indicates an explicitly requested copy, and "soft-copy"
+     indicates a node that was cloned internally as part of an
+     explicitly requested copy of some parent directory. See the
+     section "Copies and Copy IDs" in the file <fs-history> for
+     details.
+
    * SRC-PATH and SRC-TXN are the canonicalized absolute path and
      transaction ID, respectively, of the source of the copy.
 
@@ -593,17 +611,17 @@ Locks
 When a caller locks a file -- reserving an exclusive right to modify
 or delete it -- an lock object is created in a `locks' table.
 
-The `locks' table is a btree whose key is a UUID string (also known as
-a "lock-token"), and whose value is a skel representing a lock.  The
+The `locks' table is a btree whose key is a UUID string known as
+a "lock-token", and whose value is a skel representing a lock.  The
 fields in the skel mirror those of an svn_lock__t (see svn_types.h):
 
-    ("lock" PATH UUID OWNER COMMENT XML-P CREATION-DATE EXPIRATION-DATE)
+    ("lock" PATH TOKEN OWNER COMMENT XML-P CREATION-DATE EXPIRATION-DATE)
 
 where:
 
    * PATH is the absolute filesystem path reserved by the lock.
 
-   * UUID is the universally unique identifier of the lock, also known
+   * TOKEN is the universally unique identifier of the lock, known
      as the lock-token.  This is the same as the row's key.
 
    * OWNER is the authenticated username that "owns" the lock.
@@ -682,7 +700,8 @@ Merging algorithm:
        must be merged or declared to be in conflict.
   
        If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
-       double delete; flag a conflict.
+       double delete; if one of them is null, that's a delete versus
+       a modification. In any of these cases, flag a conflict.
   
        If any of the three entries is of type file, declare a conflict.
   
@@ -861,6 +880,9 @@ Berkeley DB tables
                 "uuids" : recno(UUID)
                 "locks" : btree(TOKEN -> LOCK)
           "lock-tokens" : btree(PATH -> TOKEN)
+         "node-origins" : btree(NODE-ID -> ID)
+        "checksum-reps" : btree(SHA1SUM -> REP, "next-key" -> number-36)
+        "miscellaneous" : btree(STRING -> STRING)
 
 Syntactic elements
 ------------------
@@ -911,7 +933,7 @@ Copies:
               REAL-COPY ::= ("copy" SRC-PATH SRC-TXN DST-NODE-ID)
               SOFT-COPY ::= ("soft-copy" SRC-PATH SRC-TXN DST-NODE-ID)
                SRC-PATH ::= atom ;
-                SRC-REV ::= TXN ;
+                SRC-TXN ::= TXN ;
             DST-NODE-ID ::= NODE-REV-ID ;
 
 
@@ -925,16 +947,22 @@ Entries lists:
 Node revisions:
 
           NODE-REVISION ::= FILE | DIR ;
-                   FILE ::= (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
-                    DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
-
-                 HEADER ::= (KIND CREATED-PATH [PRED-ID [PRED-COUNT]]) ;
+                   FILE ::= (HEADER PROP-KEY DATA-INFO [EDIT-DATA-KEY]) ;
+                    DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ; 
+                 HEADER ::= (KIND CREATED-PATH 
+                             [PRED-ID [PRED-COUNT 
+                              [HAS-MERGEINFO MERGEINFO-COUNT]]]) ;
                    KIND ::= "file" | "dir" ;
-                PRED-ID ::= NODE-REV-ID ;
-             PRED-COUNT ::= number ;
+                PRED-ID ::= NODE-REV-ID | "";
+             PRED-COUNT ::= number | "" ;
            CREATED-PATH ::= atom ;
                PROP-KEY ::= atom ;
-                REP-KEY ::= atom ;
+              DATA-INFO ::= DATA-KEY | (DATA-KEY DATA-KEY-UNIQID)
+               DATA-KEY ::= atom ;
+        DATA-KEY-UNIQID ::= atom ;
+          EDIT-DATA-KEY ::= atom ;
+          HAS-MERGEINFO ::= "0" | "1" ;
+        MERGEINFO-COUNT ::= number ;
 
 
 Representations:
@@ -950,12 +978,14 @@ Representations:
                  OFFSET ::= number ;
              REP-OFFSET ::= number ;
 
-                 HEADER ::= (KIND TXN [CHECKSUM]) ;
+                 HEADER ::= (KIND TXN [MD5 [SHA1]]) ;
                    KIND ::= "fulltext" | "delta" ;
              
                    SIZE ::= number ;
-               CHECKSUM ::= ("md5" BYTES) ;
-                  BYTES ::= atom ;
+                    MD5 ::= ("md5" MD5SUM) ;
+                   SHA1 ::= ("sha1" SHA1SUM) ;
+                 MD5SUM ::= atom ;
+                SHA1SUM ::= atom ;
 
 
 Strings:
@@ -991,7 +1021,11 @@ Lock tokens:
                (the value is just a lock-token, which is a uuid)
 
 
-        
+Node origins:
+
+                NODE-ID ::= NODE-REV-ID ;
+
+
 Lexical elements
 ----------------
 
@@ -1007,7 +1041,6 @@ Numbers:
               hexits-32 ::= /{base16.class}{8}/ ;
               hexits-16 ::= /{base16.class}{4}/ ;
               hexits-48 ::= /{base16.class}{12}/ ;
-
 
 (Note: the following are described in skel.h)
 Skels:
@@ -1035,3 +1068,19 @@ Character classes:
            base16.class ::= [0-9a-f]
            base36.class ::= [a-z0-9]
          anything.class ::= anything at all ;
+
+
+
+Appendix: 'miscellaneous' table contents
+======================================
+
+The 'miscellaneous' table contains string keys mapped to string
+values.  Here is a table of the supported keys, the descriptions of
+their values, and the filesystem format version in which they were
+introduced.
+
+   Fmt   Key                  Value
+   ---   ------------------   ------------------------------------
+    4    forward-delta-rev    Youngest revision in the repository as of
+                              the moment when it was upgraded to support
+                              forward deltas.

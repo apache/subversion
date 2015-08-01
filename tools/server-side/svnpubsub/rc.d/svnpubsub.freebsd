@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# PROVIDE: svnpubsub
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="svnpubsub"
+rcvar=`set_rcvar`
+
+load_rc_config $name
+
+#
+# DO NOT CHANGE THESE DEFAULT VALUES HERE
+# SET THEM IN THE /etc/rc.conf FILE
+#
+svnpubsub_enable=${svnpubsub_enable-"NO"}
+svnpubsub_user=${svnpubsub_user-"svn"}
+svnpubsub_group=${svnpubsub_group-"svn"}
+svnpubsub_reactor=${svnpubsub_reactor-"poll"}
+svnpubsub_pidfile=${svnpubsub_pidfile-"/var/run/svnpubsub/svnpubsub.pid"}
+svnpubsub_cmd_int=${svnpubsub_cmd_int-"python"}
+pidfile="${svnpubsub_pidfile}"
+
+export PYTHON_EGG_CACHE="/home/svn/.python-eggs"
+
+command="/usr/local/bin/twistd"
+command_interpreter="/usr/local/bin/${svnpubsub_cmd_int}"
+command_args="-y /usr/local/svnpubsub/svnpubsub.tac \
+            --logfile=/var/log/vc/svnpubsub.log \
+            --pidfile=${pidfile} \
+            --uid=${svnpubsub_user} --gid=${svnpubsub_user} \
+            -r${svnpubsub_reactor}"
+
+
+run_rc_command "$1"

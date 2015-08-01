@@ -57,7 +57,7 @@ slavedir/[botname] folder.
 
 You can copy and reuse the scripts the other buildbot slave owners use for 
 Windows, Linux or Mac buildslaves. You can find them here: 
-http://svn.collab.net/repos/svn/trunk/tools/buildbot/slaves
+http://svn.apache.org/repos/asf/subversion/trunk/tools/buildbot/slaves
 
 4. Builds
 ---------

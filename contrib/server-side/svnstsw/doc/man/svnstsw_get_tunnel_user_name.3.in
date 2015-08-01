@@ -1,0 +1,137 @@
+.\" Process this file with
+.\" groff -man -Tascii <file>
+.\"
+.TH @PACKAGE@_get_tunnel_user_name 3 "2008-04-18" "version @PACKAGE_VERSION@" Subversion
+.SH NAME
+@PACKAGE@_get_tunnel_user_name \- get the username of the current user
+.SH SYNOPSIS
+.B #include <@PACKAGE@/get_tunnel_user_name.h>
+
+.BI "int @PACKAGE@_get_tunnel_user_name(char* " buf ,
+.br
+.BI "                                 size_t " bufsize ");"
+.SH DESCRIPTION
+Fetches the username that should be passed to
+.BR svnserve (8)
+via the
+.B \-\-tunnel\-user
+argument.
+
+This function uses the
+.BR getlogin_r (3)
+function to fetch the username of the user that invoked this
+process.  If
+.B getlogin_r
+is unavailable or returns an error,
+.BR getpwuid_r (3)
+is used instead.  Note that if multiple users share the same user ID,
+this function may return the wrong username.
+
+This function is thread-safe if the user's C POSIX library is
+thread-safe.
+.SH ARGUMENTS
+.TP
+.I buf
+Pointer to a buffer of length
+.I bufsize
+where the null-terminated username will be written.  This may be the
+null pointer if
+.I bufsize
+is 0.  This function will not write beyond the end of the buffer
+.RI ( buf " + " bufsize
+\- 1).
+.TP
+.I bufsize
+Size of the buffer at
+.IR buf .
+If 0,
+.I buf
+will not be written to and may be the null pointer.  If the buffer
+size is less than the length of the null-terminated login name, then
+.I buf
+will be filled with a truncated, null-terminated version of the login
+name.
+.SH RETURN VALUE
+On success, returns the length of the username (not including the null
+terminator) to use with the
+.B \-\-tunnel\-user
+argument to
+.BR svnserve .
+Thus, if the return value is less than
+.IR bufsize ,
+the buffer at
+.I buf
+contains the full username.  If the return value is greater than or
+equal to
+.IR bufsize ,
+the username was truncated to fit in
+.IR buf .
+
+On error, a negative value is returned and
+.I errno
+(see
+.BR errno (3))
+is set.
+.SH ERRORS
+Error conditions and
+.I errno
+(see
+.BR errno (3))
+values are described in the specifications for
+.BR getpwuid_r "(3) and " snprintf "(3), "
+with the addition that
+.B EINVAL
+may indicate that no username is associated with the UID of the
+invoking user.
+.SH SECURITY CONSIDERATIONS
+This function uses
+.BR getlogin_r (3)
+to determine the login name.  Since users might be able to trick
+.B getlogin_r
+into returning an arbitrary username on some systems, the results are
+verified using
+.BR getpwnam_r (3).
+This verification does not prevent a user from imitating another user
+if the two users share the same user ID.  If verification fails, or if
+.B getlogin_r
+fails for any reason,
+.BR getpwuid_r (3)
+is used instead.
+
+This function may return the incorrect username if multiple users
+share the same user ID.
+.SH SEE ALSO
+.BR lib@PACKAGE@ "(3), " @PACKAGE@_exec_svnserve "(3), " @PACKAGE@ "(8), " svnserve "(8), " getlogin_r "(3), " getpwuid_r "(3)"
+.SH AUTHOR
+Richard Hansen <svnstsw@ir.bbn.com>
+.SH COPYING
+Copyright (c) 2008 BBN Technologies Corp.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+.RS 0
+.IP 1. 4
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+.IP 2. 4
+Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+.IP 3. 4
+Neither the name of BBN Technologies nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+.RE
+
+THIS SOFTWARE IS PROVIDED BY BBN TECHNOLOGIES AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL BBN TECHNOLOGIES OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

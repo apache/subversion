@@ -1,29 +1,33 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #ifndef SVN_LIBSVN_FS_BASE_H
 #define SVN_LIBSVN_FS_BASE_H
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 #include "svn_fs.h"
 
 #include "bdb/env.h"
@@ -33,17 +37,57 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*** The filesystem structure.  ***/
+/*** Filesystem schema versions ***/
 
-/* The format number of this filesystem.
-   This is independent of the repository format number, and
-   independent of any other FS back ends. */
-#define SVN_FS_BASE__FORMAT_NUMBER   2
+/* The format number of this filesystem.  This is independent of the
+   repository format number, and independent of any other FS back
+   ends.  See the SVN_FS_BASE__MIN_*_FORMAT defines to get a sense of
+   what changes and features were added in which versions of this
+   back-end's format.
+
+   Note: If you bump this, please update the switch statement in
+         base_create() as well.
+ */
+#define SVN_FS_BASE__FORMAT_NUMBER                4
+
+/* Minimum format number that supports representation sharing.  This
+   also brings in the support for storing SHA1 checksums.   */
+#define SVN_FS_BASE__MIN_REP_SHARING_FORMAT       4
+
+/* Minimum format number that supports the 'miscellaneous' table */
+#define SVN_FS_BASE__MIN_MISCELLANY_FORMAT        4
+
+/* Minimum format number that supports forward deltas */
+#define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT    4
+
+/* Minimum format number that supports node-origins tracking */
+#define SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT      3
+
+/* Minimum format number that supports mergeinfo */
+#define SVN_FS_BASE__MIN_MERGEINFO_FORMAT         3
 
 /* Minimum format number that supports svndiff version 1.  */
-#define SVN_FS_BASE__MIN_SVNDIFF1_FORMAT 2
+#define SVN_FS_BASE__MIN_SVNDIFF1_FORMAT          2
 
-typedef struct
+/* Return SVN_ERR_UNSUPPORTED_FEATURE if the version of filesystem FS does
+   not indicate support for FEATURE (which REQUIRES a newer version). */
+svn_error_t *
+svn_fs_base__test_required_feature_format(svn_fs_t *fs,
+                                          const char *feature,
+                                          int requires);
+
+
+
+/*** Miscellany keys. ***/
+
+/* Revision at which the repo started using forward deltas. */
+#define SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
+
+
+
+/*** The filesystem structure.  ***/
+
+typedef struct base_fs_data_t
 {
   /* A Berkeley DB environment for all the filesystem's databases.
      This establishes the scope of the filesystem's transactions.  */
@@ -60,13 +104,13 @@ typedef struct
   DB *uuids;
   DB *locks;
   DB *lock_tokens;
+  DB *node_origins;
+  DB *miscellaneous;
+  DB *checksum_reps;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */
   svn_boolean_t in_txn_trail;
-
-  /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
-  const char *uuid;
 
   /* The format number of this FS. */
   int format;
@@ -75,7 +119,7 @@ typedef struct
 
 
 /*** Filesystem Revision ***/
-typedef struct
+typedef struct revision_t
 {
   /* id of the transaction that was committed to create this
      revision. */
@@ -85,7 +129,7 @@ typedef struct
 
 
 /*** Transaction Kind ***/
-typedef enum
+typedef enum transaction_kind_t
 {
   transaction_kind_normal = 1,  /* normal, uncommitted */
   transaction_kind_committed,   /* committed */
@@ -95,7 +139,7 @@ typedef enum
 
 
 /*** Filesystem Transaction ***/
-typedef struct
+typedef struct transaction_t
 {
   /* kind of transaction. */
   transaction_kind_t kind;
@@ -123,7 +167,7 @@ typedef struct
 
 
 /*** Node-Revision ***/
-typedef struct
+typedef struct node_revision_t
 {
   /* node kind */
   svn_node_kind_t kind;
@@ -144,6 +188,20 @@ typedef struct
      list (dirs).  may be NULL if there are no contents.  */
   const char *data_key;
 
+  /* data representation instance identifier.  Sounds fancy, but is
+     really just a way to distinguish between "I use the same rep key
+     as another node because we share ancestry and haven't had our
+     text touched at all" and "I use the same rep key as another node
+     only because one or both of us decided to pick up a shared
+     representation after-the-fact."  May be NULL (if this node
+     revision isn't using a shared rep, or isn't the original
+     "assignee" of a shared rep).
+
+     This is no longer used by the 1.9 code but we have to keep
+     reading and writing it to remain compatible with 1.8, and
+     earlier, that require it. */
+  const char *data_key_uniquifier;
+
   /* representation key for this node's text-data-in-progess (files
      only).  NULL if no edits are currently in-progress.  This field
      is always NULL for kinds other than "file".  */
@@ -152,11 +210,19 @@ typedef struct
   /* path at which this node first came into existence.  */
   const char *created_path;
 
+  /* does this node revision have the mergeinfo tracking property set
+     on it?  (only valid for FS schema 3 and newer) */
+  svn_boolean_t has_mergeinfo;
+
+  /* number of children of this node which have the mergeinfo tracking
+     property set  (0 for files; valid only for FS schema 3 and newer). */
+  apr_int64_t mergeinfo_count;
+
 } node_revision_t;
 
 
 /*** Representation Kind ***/
-typedef enum
+typedef enum rep_kind_t
 {
   rep_kind_fulltext = 1, /* fulltext */
   rep_kind_delta         /* delta */
@@ -165,7 +231,7 @@ typedef enum
 
 
 /*** "Delta" Offset/Window Chunk ***/
-typedef struct
+typedef struct rep_delta_chunk_t
 {
   /* diff format version number ### at this point, "svndiff" is the
      only format used. */
@@ -190,7 +256,7 @@ typedef struct
 
 
 /*** Representation ***/
-typedef struct
+typedef struct representation_t
 {
   /* representation kind */
   rep_kind_t kind;
@@ -200,14 +266,15 @@ typedef struct
      transaction). */
   const char *txn_id;
 
-  /* MD5 checksum for the contents produced by this representation.
-     This checksum is for the contents the rep shows to consumers,
+  /* Checksums for the contents produced by this representation.
+     These checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
-     If all the bytes are 0, then for compatibility behave as though
+     If this is NULL, then for compatibility behave as though
      this checksum matches the expected checksum. */
-  unsigned char checksum[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *md5_checksum;
+  svn_checksum_t *sha1_checksum;
 
   /* kind-specific stuff */
   union
@@ -233,7 +300,7 @@ typedef struct
 
 
 /*** Copy Kind ***/
-typedef enum
+typedef enum copy_kind_t
 {
   copy_kind_real = 1, /* real copy */
   copy_kind_soft      /* soft copy */
@@ -242,7 +309,7 @@ typedef enum
 
 
 /*** Copy ***/
-typedef struct
+typedef struct copy_t
 {
   /* What kind of copy occurred. */
   copy_kind_t kind;
@@ -260,7 +327,7 @@ typedef struct
 
 
 /*** Change ***/
-typedef struct
+typedef struct change_t
 {
   /* Path of the change. */
   const char *path;
@@ -279,7 +346,7 @@ typedef struct
 
 
 /*** Lock node ***/
-typedef struct
+typedef struct lock_node_t
 {
   /* entries list, maps (const char *) name --> (const char *) lock-node-id */
   apr_hash_t *entries;

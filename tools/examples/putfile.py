@@ -1,6 +1,26 @@
 #!/usr/bin/env python
 #
-# USAGE: putfile.py [-m commitmsg] [-u username] file repos-path 
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+#
+# USAGE: putfile.py [-m commitmsg] [-u username] file repos-path
 #
 # put a file into an SVN repository
 #
@@ -30,13 +50,13 @@ def putfile(fname, rpath, uname="", commitmsg=""):
 
   kind = fs.check_path(root, fname)
   if kind == core.svn_node_none:
-    print "file '%s' does not exist, creating..." % fname
+    print("file '%s' does not exist, creating..." % fname)
     fs.make_file(root, fname)
   elif kind == core.svn_node_dir:
-    print "File '%s' is a dir." % fname
-    return 
+    print("File '%s' is a dir." % fname)
+    return
   else:
-    print "Updating file '%s'" % fname
+    print("Updating file '%s'" % fname)
 
   handler, baton = fs.apply_textdelta(root, fname, None, None)
 
@@ -44,12 +64,12 @@ def putfile(fname, rpath, uname="", commitmsg=""):
   ### whole file and shove it into the FS.
   delta.svn_txdelta_send_string(open(fname, 'rb').read(),
                                 handler, baton)
-  
+
   newrev = repos.fs_commit_txn(repos_ptr, txn)
-  print "revision: ", newrev
+  print("revision: %s" % newrev)
 
 def usage():
-  print "USAGE: putfile.py [-m commitmsg] [-u username] file repos-path"
+  print("USAGE: putfile.py [-m commitmsg] [-u username] file repos-path")
   sys.exit(1)
 
 def main():

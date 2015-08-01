@@ -1,11 +1,31 @@
 #!/usr/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 #
 # header_wrappers.py: Generates SWIG proxy wrappers around Subversion
 #                     header files
 #
 
-import os, re, string, sys, glob, shutil
+import os, re, sys, glob, shutil, tempfile
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
@@ -20,11 +40,13 @@ class Generator(generator.swig.Generator):
     generator.swig.Generator.__init__(self, conf, swig_path)
 
     # Build list of header files
-    self.header_files = map(native_path, self.includes)
-    self.header_basenames = map(os.path.basename, self.header_files)
+    self.header_files = list(map(native_path, self.includes))
+    self.header_basenames = list(map(os.path.basename, self.header_files))
 
   # Ignore svn_repos_parse_fns_t because SWIG can't parse it
-  _ignores = ["svn_repos_parse_fns_t"]
+  _ignores = ["svn_repos_parse_fns_t",
+              "svn_auth_gnome_keyring_unlock_prompt_func_t",
+              ]
 
   def write_makefile_rules(self, makefile):
     """Write makefile rules for generating SWIG wrappers for Subversion
@@ -41,14 +63,20 @@ class Generator(generator.swig.Generator):
         '%s: %s %s\n' % (wrapper_fname, fname, python_script) +
         '\t$(GEN_SWIG_WRAPPER) %s\n\n' % fname
       )
-    makefile.write('SWIG_WRAPPERS = %s\n\n' % string.join(wrapper_fnames))
+    makefile.write('SWIG_WRAPPERS = %s\n\n' % ' '.join(wrapper_fnames))
     for short_name in self.short.values():
-      makefile.write('autogen-swig-%s: $(SWIG_WRAPPERS)\n' % short_name)
+      # swig-pl needs the '.swig_checked' target here; swig-rb and swig-py
+      # already reach it via a different dependency chain:
+      #
+      #    In build-outputs.mk, swig-py and swig-rb targets depend on *.la
+      #    targets, which depend on *.lo targets, which depend on *.c targets,
+      #    which depend on .swig_checked target.
+      makefile.write('autogen-swig-%s: .swig_checked $(SWIG_WRAPPERS)\n' % short_name)
     makefile.write('\n\n')
 
   def proxy_filename(self, include_filename):
     """Convert a .h filename into a _h.swg filename"""
-    return string.replace(include_filename,".h","_h.swg")
+    return include_filename.replace(".h","_h.swg")
 
   def _write_nodefault_calls(self, structs):
     """Write proxy definitions to a SWIG interface file"""
@@ -73,15 +101,15 @@ class Generator(generator.swig.Generator):
     """Write out an individual callback"""
 
     # Get rid of any extra spaces or newlines
-    return_type = string.join(string.split(return_type))
-    params = string.join(string.split(params))
+    return_type = ' '.join(return_type.split())
+    params = ' '.join(params.split())
 
     # Calculate parameters
     if params == "void":
       param_names = ""
       params = "%s _obj" % type
     else:
-      param_names = string.join(self._re_param_names.findall(params), ", ")
+      param_names = ", ".join(self._re_param_names.findall(params))
       params = "%s _obj, %s" % (type, params)
 
     invoke_callback = "%s(%s)" % (callee, param_names)
@@ -143,7 +171,6 @@ class Generator(generator.swig.Generator):
 
     struct = None
     for match in callbacks:
-
       if match[0] and not match[1]:
         # Struct definitions
         struct = match[0]
@@ -153,16 +180,15 @@ class Generator(generator.swig.Generator):
         type = "%s *" % struct
 
         self._write_callback(type, return_type, struct[:-2], name, params,
-                             "_obj->%s" % name)
-
+                             "(_obj->%s)" % name)
       elif match[0] and match[1]:
         # Callbacks declared as a typedef
         return_type, module, function, params = match
         type = "%s_%s_t" % (module, function)
 
-        self._write_callback(type, return_type, module, function, params,
-                             "_obj")
-
+        if type not in self._ignores:
+          self._write_callback(type, return_type, module, function, params,
+                               "_obj")
 
     self.ofile.write("%}\n")
 
@@ -238,10 +264,11 @@ class Generator(generator.swig.Generator):
     output_fname = os.path.join(self.proxy_dir,
       self.proxy_filename(base_fname))
 
-    # Open the output file
-    self.ofile = open(output_fname, 'w')
+    # Open a temporary output file
+    self.ofile = tempfile.TemporaryFile(dir=self.proxy_dir)
     self.ofile.write('/* Proxy classes for %s\n' % base_fname)
-    self.ofile.write(' * DO NOT EDIT -- AUTOMATICALLY GENERATED */\n')
+    self.ofile.write(' * DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
+    self.ofile.write(' * BY build/generator/swig/header_wrappers.py */\n')
 
     # Write list of structs for which we shouldn't define constructors
     # by default
@@ -262,8 +289,21 @@ class Generator(generator.swig.Generator):
     # Write callback definitions into the SWIG interface file
     self._write_callbacks(callbacks)
 
-    # Close our output file
+    # Copy the temporary file over to the result file.
+    # Ideally we'd simply rename the temporary file to output_fname,
+    # but NamedTemporaryFile() only supports its 'delete' parameter
+    # in python 2.6 and above, and renaming the file while it's opened
+    # exclusively is probably not a good idea.
+    outputfile = open(output_fname, 'w')
+    self.ofile.seek(0)
+    shutil.copyfileobj(self.ofile, outputfile)
+
+    # Close our temporary file.
+    # It will also be deleted automatically.
     self.ofile.close()
+
+    # Close our output file, too.
+    outputfile.close()
 
   def process_header_file(self, fname):
     """Generate a wrapper around a header file"""
@@ -302,10 +342,10 @@ class Generator(generator.swig.Generator):
 
 if __name__ == "__main__":
   if len(sys.argv) < 3:
-    print """Usage: %s build.conf swig [ subversion/include/header_file.h ]
+    print("""Usage: %s build.conf swig [ subversion/include/header_file.h ]
 Generates SWIG proxy wrappers around Subversion header files. If no header
 files are specified, generate wrappers for subversion/include/*.h. """ % \
-    os.path.basename(sys.argv[0])
+    os.path.basename(sys.argv[0]))
   else:
     gen = Generator(sys.argv[1], sys.argv[2])
     if len(sys.argv) > 3:

@@ -3,38 +3,42 @@
 # svn-backup-dumps.py -- Create dumpfiles to backup a subversion repository.
 #
 # ====================================================================
-# Copyright (c) 2006 CollabNet.  All rights reserved.
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software consists of voluntary contributions made by many
-# individuals.  For exact contribution history, see the revision
-# history and logs, available at http://subversion.tigris.org/.
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 # ====================================================================
 #
 # This script creates dump files from a subversion repository.
 # It is intended for use in cron jobs and post-commit hooks.
 #
-# Tested on UNIX with python 2.3 and 2.4, on Windows with python 2.4.
-#
 # The basic operation modes are:
 #    1. Create a full dump (revisions 0 to HEAD).
 #    2. Create incremental dumps containing at most N revisions.
 #    3. Create incremental single revision dumps (for use in post-commit).
+#    4. Create incremental dumps containing everything since last dump.
 #
 # All dump files are prefixed with the basename of the repository. All
 # examples below assume that the repository '/srv/svn/repos/src' is
 # dumped so all dumpfiles start with 'src'.
 #
 # Optional functionality:
-#    4. Create gzipped dump files.
-#    5. Create bzipped dump files.
-#    6. Transfer the dumpfile to another host using ftp.
-#    7. Transfer the dumpfile to another host using smb.
+#    5. Create gzipped dump files.
+#    6. Create bzipped dump files.
+#    7. Transfer the dumpfile to another host using ftp.
+#    8. Transfer the dumpfile to another host using smb.
 #
 # See also 'svn-backup-dumps.py -h'.
 #
@@ -48,6 +52,7 @@
 #
 #    This creates a dump file named 'src.000000-NNNNNN.svndmp.gz'
 #    where NNNNNN is the revision number of HEAD.
+#
 #
 # 2. Create incremental dumps containing at most N revisions.
 #
@@ -82,21 +87,35 @@
 #    NNNNNN is the revision number of HEAD.
 #
 #
-# 4. Create gzipped dump files.
+# 4. Create incremental dumps relative to last dump
+#
+#    svn-backup-dumps.py -i <repos> <dumpdir>
+#
+#    <repos>      Path to the repository.
+#    <dumpdir>    Directory for storing the dump file.
+#
+#    When if dumps are performed when HEAD is 2923,
+#    then when HEAD is 3045, is creates these files:
+#
+#    src.000000-002923.svndmp.gz
+#    src.002924-003045.svndmp.gz
+#
+#
+# 5. Create gzipped dump files.
 #
 #    svn-backup-dumps.py -z ...
 #
-#    ...          More options, see 1-3, 6, 7.
+#    ...          More options, see 1-4, 7, 8.
 #
 #
-# 5. Create bzipped dump files.
+# 6. Create bzipped dump files.
 #
 #    svn-backup-dumps.py -b ...
 #
-#    ...          More options, see 1-3, 6, 7.
+#    ...          More options, see 1-4, 7, 8.
 #
 #
-# 6. Transfer the dumpfile to another host using ftp.
+# 7. Transfer the dumpfile to another host using ftp.
 #
 #    svn-backup-dumps.py -t ftp:<host>:<user>:<password>:<path> ...
 #
@@ -104,13 +123,13 @@
 #    <user>       Username on the remote host.
 #    <password>   Password for the user.
 #    <path>       Subdirectory on the remote host.
-#    ...          More options, see 1-5.
+#    ...          More options, see 1-6.
 #
 #    If <path> contains the string '%r' it is replaced by the
 #    repository name (basename of the repository path).
 #
 #
-# 7. Transfer the dumpfile to another host using smb.
+# 8. Transfer the dumpfile to another host using smb.
 #
 #    svn-backup-dumps.py -t smb:<share>:<user>:<password>:<path> ...
 #
@@ -118,7 +137,7 @@
 #    <user>       Username on the remote host.
 #    <password>   Password for the user.
 #    <path>       Subdirectory of the share.
-#    ...          More options, see 1-5.
+#    ...          More options, see 1-6.
 #
 #    If <path> contains the string '%r' it is replaced by the
 #    repository name (basename of the repository path).
@@ -130,7 +149,7 @@
 #  - improve documentation
 #
 
-__version = "0.5"
+__version = "0.6"
 
 import sys
 import os
@@ -139,8 +158,10 @@ if os.name != "nt":
     import select
 import gzip
 import os.path
+import re
 from optparse import OptionParser
 from ftplib import FTP
+from subprocess import Popen, PIPE
 
 try:
     import bz2
@@ -148,133 +169,6 @@ try:
 except ImportError:
     have_bz2 = False
 
-
-class Popen24Compat:
-
-    def __init__(self, args, bufsize=0, executable=None, stdin=None,
-            stdout=None, stderr=None, preexec_fn=None, close_fds=False,
-            shell=False, cwd=None, env=None, universal_newlines=False,
-            startupinfo=None, creationflags=0):
-
-        if isinstance(args, list):
-            args = tuple(args)
-        elif not isinstance(args, tuple):
-            raise RipperException, "Popen24Compat: args is not tuple or list"
-
-        self.stdin = None
-        self.stdout = None
-        self.stderr = None
-        self.returncode = None
-
-        if executable == None:
-            executable = args[0]
-
-        if stdin == PIPE:
-            stdin, stdin_fd = os.pipe()
-            self.stdin = os.fdopen(stdin_fd)
-        elif stdin == None:
-            stdin = 0
-        else:
-            stdin = stdin.fileno()
-        if stdout == PIPE:
-            stdout_fd, stdout = os.pipe()
-            self.stdout = os.fdopen(stdout_fd)
-        elif stdout == None:
-            stdout = 1
-        else:
-            stdout = stdout.fileno()
-        if stderr == PIPE:
-            stderr_fd, stderr = os.pipe()
-            self.stderr = os.fdopen(stderr_fd)
-        elif stderr == None:
-            stderr = 2
-        else:
-            stderr = stderr.fileno()
-
-        # error pipe
-        err_read, err_write = os.pipe()
-        fcntl.fcntl(err_write, fcntl.F_SETFD, fcntl.FD_CLOEXEC)
-
-        self.pid = os.fork()
-        if self.pid < 0:
-            raise Exception, "Popen24Compat: fork"
-        if self.pid == 0:
-            # child
-            os.close(err_read)
-            fcntl.fcntl(err_write, fcntl.F_SETFD, fcntl.FD_CLOEXEC)
-            if self.stdin:
-                self.stdin.close()
-            if self.stdout:
-                self.stdout.close()
-            if self.stderr:
-                self.stderr.close()
-            if stdin != 0:
-                os.dup2(stdin, 0)
-                os.close(stdin)
-            if stdout != 1:
-                os.dup2(stdout, 1)
-                os.close(stdout)
-            if stderr != 2:
-                os.dup2(stderr, 2)
-                os.close(stderr)
-            try:
-                if shell:
-                    # should spawn a shell here...
-                    os.execvp(executable, args)
-                else:
-                    os.execvp(executable, args)
-            except:
-                err = sys.exc_info()[1]
-            # exec error
-            os.write(err_write, str(err))
-            os._exit(255)
-        else:
-            # parent
-            os.close(err_write)
-            if stdin != 0:
-                os.close(stdin)
-            if stdout != 0:
-                os.close(stdout)
-            if stderr != 0:
-                os.close(stderr)
-            sr, sw, se = select.select([ err_read ], [], [ err_read ])
-            if len(se) == 1:
-                os.close(err_read)
-                raise Exception, "Popen24Compat: err pipe read error"
-            if len(sr) == 1:
-                err = os.read(err_read, 1024)
-            os.close(err_read)
-            if len(err) != 0:
-                raise Exception, "Popen24Compat: exec error: " + err
-
-    def poll(self):
-        self.__wait(os.WNOHANG)
-        return self.returncode
-
-    def wait(self):
-        self.__wait(0)
-        return self.returncode
-
-    def __wait(self, options):
-        pid, rc = os.waitpid(self.pid, options)
-        if pid != 0:
-            self.returncode = rc
-
-def PopenConstr(args, bufsize=0, executable=None, stdin=None, stdout=None,
-            stderr=None, preexec_fn=None, close_fds=False, shell=False,
-            cwd=None, env=None, universal_newlines=False, startupinfo=None,
-            creationflags=0):
-    return Popen24Compat(args, bufsize=bufsize, executable=executable,
-                stdin=stdin, stdout=stdout, stderr=stderr,
-                preexec_fn=preexec_fn, close_fds=close_fds, shell=shell,
-                cwd=cwd, env=env, universal_newlines=universal_newlines,
-                startupinfo=startupinfo, creationflags=creationflags)
-
-try:
-    from subprocess import Popen, PIPE
-except ImportError:
-    Popen = PopenConstr
-    PIPE = -1
 
 class SvnBackupOutput:
 
@@ -346,6 +240,34 @@ class SvnBackupOutputBzip2(SvnBackupOutput):
         self.__ofd.write(self.__compressor.flush())
         self.__ofd.close()
 
+class SvnBackupOutputCommand(SvnBackupOutput):
+
+    def __init__(self, abspath, filename, file_extension, cmd_path,
+                 cmd_options):
+        SvnBackupOutput.__init__(self, abspath, filename + file_extension)
+        self.__cmd_path    = cmd_path
+        self.__cmd_options = cmd_options
+
+    def open(self):
+        cmd = [ self.__cmd_path, self.__cmd_options ]
+
+        self.__ofd = open(self.get_absfilename(), "wb")
+        try:
+            proc = Popen(cmd, stdin=PIPE, stdout=self.__ofd, shell=False)
+        except:
+            print (256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
+                    str(sys.exc_info()[1])))
+            sys.exit(256)
+        self.__proc  = proc
+        self.__stdin = proc.stdin
+
+    def write(self, data):
+        self.__stdin.write(data)
+
+    def close(self):
+        self.__stdin.close()
+        rc = self.__proc.wait()
+        self.__ofd.close()
 
 class SvnBackupException(Exception):
 
@@ -361,11 +283,13 @@ class SvnBackup:
         # need 3 args: progname, reposname, dumpdir
         if len(args) != 3:
             if len(args) < 3:
-                raise SvnBackupException, \
-                    "too few arguments, specify repospath and dumpdir."
+                raise SvnBackupException("too few arguments, specify"
+                                         " repospath and dumpdir.\nuse -h or"
+                                         " --help option to see help.")
             else:
-                raise SvnBackupException, \
-                    "too many arguments, specify repospath and dumpdir only."
+                raise SvnBackupException("too many arguments, specify"
+                                         " repospath and dumpdir only.\nuse"
+                                         " -h or --help option to see help.")
         self.__repospath = args[1]
         self.__dumpdir = args[2]
         # check repospath
@@ -374,34 +298,56 @@ class SvnBackup:
             # repospath without trailing slash
             self.__repospath = rpathparts[0]
         if not os.path.exists(self.__repospath):
-            raise SvnBackupException, \
-                "repos '%s' does not exist." % self.__repospath
+            raise SvnBackupException("repos '%s' does not exist." % self.__repospath)
         if not os.path.isdir(self.__repospath):
-            raise SvnBackupException, \
-                "repos '%s' is not a directory." % self.__repospath
+            raise SvnBackupException("repos '%s' is not a directory." % self.__repospath)
         for subdir in [ "db", "conf", "hooks" ]:
-            dir = os.path.join(self.__repospath, "db")
+            dir = os.path.join(self.__repospath, subdir)
             if not os.path.isdir(dir):
-                raise SvnBackupException, \
-                    "repos '%s' is not a repository." % self.__repospath
+                raise SvnBackupException("repos '%s' is not a repository." % self.__repospath)
         rpathparts = os.path.split(self.__repospath)
         self.__reposname = rpathparts[1]
         if self.__reposname in [ "", ".", ".." ]:
-            raise SvnBackupException, \
-                "couldn't extract repos name from '%s'." % self.__repospath
+            raise SvnBackupException("couldn't extract repos name from '%s'." % self.__repospath)
         # check dumpdir
         if not os.path.exists(self.__dumpdir):
-            raise SvnBackupException, \
-                "dumpdir '%s' does not exist." % self.__dumpdir
+            raise SvnBackupException("dumpdir '%s' does not exist." % self.__dumpdir)
         elif not os.path.isdir(self.__dumpdir):
-            raise SvnBackupException, \
-                "dumpdir '%s' is not a directory." % self.__dumpdir
+            raise SvnBackupException("dumpdir '%s' is not a directory." % self.__dumpdir)
         # set options
         self.__rev_nr = options.rev
         self.__count = options.cnt
         self.__quiet = options.quiet
         self.__deltas = options.deltas
-        self.__zip = options.zip
+        self.__relative_incremental = options.relative_incremental
+
+        # svnadmin/svnlook path
+        self.__svnadmin_path = "svnadmin"
+        if options.svnadmin_path:
+           self.__svnadmin_path = options.svnadmin_path
+        self.__svnlook_path = "svnlook"
+        if options.svnlook_path:
+           self.__svnlook_path = options.svnlook_path
+
+        # check compress option
+        self.__gzip_path  = options.gzip_path
+        self.__bzip2_path = options.bzip2_path
+        self.__zip        = None
+        compress_options  = 0
+        if options.gzip_path  != None:
+            compress_options = compress_options + 1
+        if options.bzip2_path != None:
+            compress_options = compress_options + 1
+        if options.bzip2:
+            compress_options = compress_options + 1
+            self.__zip = "bzip2"
+        if options.gzip:
+            compress_options = compress_options + 1
+            self.__zip = "gzip"
+        if compress_options > 1:
+            raise SvnBackupException("--bzip2-path, --gzip-path, -b, -z are "
+                                     "mutually exclusive.")
+
         self.__overwrite = False
         self.__overwrite_all = False
         if options.overwrite > 0:
@@ -413,14 +359,11 @@ class SvnBackup:
             self.__transfer = options.transfer.split(":")
             if len(self.__transfer) != 5:
                 if len(self.__transfer) < 5:
-                    raise SvnBackupException, \
-                        "too few fields for transfer '%s'." % self.__transfer
+                    raise SvnBackupException("too few fields for transfer '%s'." % self.__transfer)
                 else:
-                    raise SvnBackupException, \
-                        "too many fields for transfer '%s'." % self.__transfer
+                    raise SvnBackupException("too many fields for transfer '%s'." % self.__transfer)
             if self.__transfer[0] not in [ "ftp", "smb" ]:
-                raise SvnBackupException, \
-                    "unknown transfer method '%s'." % self.__transfer[0]
+                raise SvnBackupException("unknown transfer method '%s'." % self.__transfer[0])
 
     def set_nonblock(self, fileobj):
         fd = fileobj.fileno()
@@ -459,7 +402,7 @@ class SvnBackup:
                         bufout += buf
                 else:
                     if printerr:
-                        print buf,
+                        sys.stdout.write("%s " % buf)
                     else:
                         buferr += buf
             if len(readfds) == 0:
@@ -467,7 +410,7 @@ class SvnBackup:
             selres = select.select(readfds, [], [])
         rc = proc.wait()
         if printerr:
-            print ""
+            print("")
         return (rc, bufout, buferr)
 
     def exec_cmd_nt(self, cmd, output=None, printerr=False):
@@ -490,13 +433,29 @@ class SvnBackup:
         return (rc, bufout, buferr)
 
     def get_head_rev(self):
-        cmd = [ "svnlook", "youngest", self.__repospath ]
+        cmd = [ self.__svnlook_path, "youngest", self.__repospath ]
         r = self.exec_cmd(cmd)
         if r[0] == 0 and len(r[2]) == 0:
             return int(r[1].strip())
         else:
-            print r[2]
+            print(r[2])
         return -1
+
+    def get_last_dumped_rev(self):
+        filename_regex = re.compile("(.+)\.\d+-(\d+)\.svndmp.*")
+        # start with -1 so the next one will be rev 0
+        highest_rev = -1
+
+        for filename in os.listdir(self.__dumpdir):
+            m = filename_regex.match( filename )
+            if m and (m.group(1) == self.__reposname):
+                rev_end = int(m.group(2))
+
+                if rev_end > highest_rev:
+                    # determine the latest revision dumped
+                    highest_rev = rev_end
+
+        return highest_rev
 
     def transfer_ftp(self, absfilename, filename):
         rc = False
@@ -513,9 +472,8 @@ class SvnBackup:
             rc = len(ifd.read(1)) == 0
             ifd.close()
         except Exception, e:
-            raise SvnBackupException, \
-                "ftp transfer failed:\n  file:  '%s'\n  error: %s" % \
-                    (absfilename, str(e))
+            raise SvnBackupException("ftp transfer failed:\n  file:  '%s'\n  error: %s" % \
+                    (absfilename, str(e)))
         return rc
 
     def transfer_smb(self, absfilename, filename):
@@ -530,7 +488,7 @@ class SvnBackup:
         r = self.exec_cmd(cmd)
         rc = r[0] == 0
         if not rc:
-            print r[2]
+            print(r[2])
         return rc
 
     def transfer(self, absfilename, filename):
@@ -541,7 +499,7 @@ class SvnBackup:
         elif self.__transfer[0] == "smb":
             self.transfer_smb(absfilename, filename)
         else:
-            print "unknown transfer method '%s'." % self.__transfer[0]
+            print("unknown transfer method '%s'." % self.__transfer[0])
 
     def create_dump(self, checkonly, overwrite, fromrev, torev=None):
         revparam = "%d" % fromrev
@@ -551,7 +509,13 @@ class SvnBackup:
             r += "-%06d" % torev
         filename = "%s.%s.svndmp" % (self.__reposname, r)
         output = None
-        if self.__zip:
+        if self.__bzip2_path:
+             output = SvnBackupOutputCommand(self.__dumpdir, filename, ".bz2",
+                                             self.__bzip2_path, "-cz" )
+        elif self.__gzip_path:
+             output = SvnBackupOutputCommand(self.__dumpdir, filename, ".gz",
+                                             self.__gzip_path, "-cf" )
+        elif self.__zip:
             if self.__zip == "gzip":
                 output = SvnBackupOutputGzip(self.__dumpdir, filename)
             else:
@@ -564,13 +528,13 @@ class SvnBackup:
             return os.path.exists(absfilename)
         elif os.path.exists(absfilename):
             if overwrite:
-                print "overwriting " + absfilename
+                print("overwriting " + absfilename)
             else:
-                print "%s already exists." % absfilename
+                print("%s already exists." % absfilename)
                 return True
         else:
-            print "writing " + absfilename
-        cmd = [ "svnadmin", "dump",
+            print("writing " + absfilename)
+        cmd = [ self.__svnadmin_path, "dump",
                 "--incremental", "-r", revparam, self.__repospath ]
         if self.__quiet:
             cmd[2:2] = [ "-q" ]
@@ -611,21 +575,43 @@ class SvnBackup:
             rc = self.create_dump(False, self.__overwrite, baserev, headrev)
         return rc
 
+    def export_relative_incremental(self):
+        headrev = self.get_head_rev()
+        if headrev == -1:
+            return False
+
+        last_dumped_rev = self.get_last_dumped_rev();
+        if headrev < last_dumped_rev:
+            # that should not happen...
+            return False
+
+        if headrev == last_dumped_rev:
+            # already up-to-date
+            return True
+
+        return self.create_dump(False, False, last_dumped_rev + 1, headrev)
+
     def execute(self):
         if self.__rev_nr != None:
             return self.export_single_rev()
+        elif self.__relative_incremental:
+            return self.export_relative_incremental()
         else:
             return self.export()
 
 
 if __name__ == "__main__":
-    usage = "usage: svnbackup.py [options] repospath dumpdir"
+    usage = "usage: svn-backup-dumps.py [options] repospath dumpdir"
     parser = OptionParser(usage=usage, version="%prog "+__version)
     if have_bz2:
         parser.add_option("-b",
-                       action="store_const", const="bzip2",
-                       dest="zip", default=None,
-                       help="compress the dump using bzip2.")
+                       action="store_true",
+                       dest="bzip2", default=False,
+                       help="compress the dump using python bzip2 library.")
+    parser.add_option("-i",
+                       action="store_true",
+                       dest="relative_incremental", default=False,
+                       help="perform incremental relative to last dump.")
     parser.add_option("--deltas",
                        action="store_true",
                        dest="deltas", default=False,
@@ -656,35 +642,51 @@ if __name__ == "__main__":
                        help="transfer dumps to another machine "+
                             "(s.a. --help-transfer).")
     parser.add_option("-z",
-                       action="store_const", const="gzip",
-                       dest="zip",
-                       help="compress the dump using gzip.")
+                       action="store_true",
+                       dest="gzip", default=False,
+                       help="compress the dump using python gzip library.")
+    parser.add_option("--bzip2-path",
+                       action="store", type="string",
+                       dest="bzip2_path", default=None,
+                       help="compress the dump using bzip2 custom command.")
+    parser.add_option("--gzip-path",
+                       action="store", type="string",
+                       dest="gzip_path", default=None,
+                       help="compress the dump using gzip custom command.")
+    parser.add_option("--svnadmin-path",
+                       action="store", type="string",
+                       dest="svnadmin_path", default=None,
+                       help="svnadmin command path.")
+    parser.add_option("--svnlook-path",
+                       action="store", type="string",
+                       dest="svnlook_path", default=None,
+                       help="svnlook command path.")
     parser.add_option("--help-transfer",
                        action="store_true",
                        dest="help_transfer", default=False,
                        help="shows detailed help for the transfer option.")
     (options, args) = parser.parse_args(sys.argv)
     if options.help_transfer:
-        print "Transfer help:"
-        print ""
-        print "  FTP:"
-        print "    -t ftp:<host>:<user>:<password>:<dest-path>"
-        print ""
-        print "  SMB (using smbclient):"
-        print "    -t smb:<share>:<user>:<password>:<dest-path>"
-        print ""
+        print("Transfer help:")
+        print("")
+        print("  FTP:")
+        print("    -t ftp:<host>:<user>:<password>:<dest-path>")
+        print("")
+        print("  SMB (using smbclient):")
+        print("    -t smb:<share>:<user>:<password>:<dest-path>")
+        print("")
         sys.exit(0)
     rc = False
     try:
         backup = SvnBackup(options, args)
         rc = backup.execute()
     except SvnBackupException, e:
-        print "svn-backup-dumps.py:", e
+        print("svn-backup-dumps.py: %s" % e)
     if rc:
-        print "Everything OK."
+        print("Everything OK.")
         sys.exit(0)
     else:
-        print "An error occured!"
+        print("An error occurred!")
         sys.exit(1)
 
 # vim:et:ts=4:sw=4

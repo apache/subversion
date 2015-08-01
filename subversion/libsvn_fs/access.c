@@ -2,27 +2,33 @@
  * access.c:  shared code to manipulate svn_fs_access_t objects
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 
-#include <assert.h>
 #include <apr_hash.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
+#include "private/svn_fs_private.h"
 
 #include "fs-loader.h"
 
@@ -35,7 +41,7 @@ svn_fs_create_access(svn_fs_access_t **access_ctx,
 {
   svn_fs_access_t *ac;
 
-  assert(username != NULL);
+  SVN_ERR_ASSERT(username != NULL);
 
   ac = apr_pcalloc(pool, sizeof(*ac));
   ac->username = apr_pstrdup(pool, username);
@@ -77,11 +83,16 @@ svn_fs_access_get_username(const char **username,
 
 
 svn_error_t *
-svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
-                             const char *token)
+svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
+                              const char *path,
+                              const char *token)
 {
-  apr_hash_set(access_ctx->lock_tokens,
-               token, APR_HASH_KEY_STRING, (void *) 1);
-
+  svn_hash_sets(access_ctx->lock_tokens, token, path);
   return SVN_NO_ERROR;
+}
+
+apr_hash_t *
+svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx)
+{
+  return access_ctx->lock_tokens;
 }

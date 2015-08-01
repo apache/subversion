@@ -18,19 +18,28 @@
 
 import sys, os, re
 
+# Note: Right now, OLD_LICENSE and NEW_LICENSE are the same, because
+# r878444 updated all the license blocks.  In the future, if we update
+# the license block again, change just NEW_LICENSE and use this script.
+
 OLD_LICENSE = '''\
  \* ====================================================================
- \* Copyright \(c\) (200[0-9]|200[0-9]-200[0-9]) CollabNet.  All rights reserved.
+ \*    Licensed to the Subversion Corporation \(SVN Corp\.\) under one
+ \*    or more contributor license agreements\.  See the NOTICE file
+ \*    distributed with this work for additional information
+ \*    regarding copyright ownership\.  The SVN Corp\. licenses this file
+ \*    to you under the Apache License, Version 2\.0 \(the
+ \*    "License"\); you may not use this file except in compliance
+ \*    with the License\.  You may obtain a copy of the License at
  \*
- \* This software is licensed as described in the file COPYING, which
- \* you should have received as part of this distribution\.  The terms
- \* are also available at http://subversion.tigris.org/license-1\.html\.
- \* If newer versions of this license are posted there, you may use a
- \* newer version instead, at your option\.
+ \*      http://www\.apache\.org/licenses/LICENSE-2\.0
  \*
- \* This software consists of voluntary contributions made by many
- \* individuals\.  For exact contribution history, see the revision
- \* history and logs, available at http://subversion.tigris.org/\.
+ \*    Unless required by applicable law or agreed to in writing,
+ \*    software distributed under the License is distributed on an
+ \*    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ \*    KIND, either express or implied\.  See the License for the
+ \*    specific language governing permissions and limitations
+ \*    under the License\.
  \* ====================================================================
 '''
 
@@ -40,17 +49,22 @@ SH_OLD_LICENSE = re.subn(r'(?m)^ \\\*', '#', OLD_LICENSE)[0]
 # is used for matching; NEW_LICENSE is inserted as-is.
 NEW_LICENSE = '''\
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ *    Licensed to the Subversion Corporation (SVN Corp.) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The SVN Corp. licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
 '''
 
@@ -76,17 +90,17 @@ def check_file(fname, old_re, new_lic):
   s = open(fname).read()
   if (not old_re.search(s)
       and not re_EXCLUDE.search(s)):
-    print fname
+    print(fname)
 
 def change_license(fname, old_re, new_lic):
   s = open(fname).read()
   m = old_re.search(s)
   if not m:
-    print 'ERROR: missing old license:', fname
+    print('ERROR: missing old license: %s' % fname)
   else:
     s = s[:m.start()] + new_lic + s[m.end():]
     open(fname, 'w').write(s)
-    print 'Changed:', fname
+    print('Changed: %s' % fname)
 
 def visit(baton, dirname, dircontents):
   file_func = baton
@@ -110,14 +124,15 @@ def visit(baton, dirname, dircontents):
 def main():
   file_func = check_file
   if sys.argv[1] == '-C':
-    print 'Changing license text...'
+    print('Changing license text...')
     del sys.argv[1]
     file_func = change_license
 
   for f in sys.argv[1:]:
     if os.path.isdir(f):
       baton = file_func
-      os.path.walk(f, visit, baton)
+      for dirpath, dirs, files in os.walk(f):
+        visit(baton, dirpath, dirs + files)
     else:
       baton = file_func
       dir, i = os.path.split(f)

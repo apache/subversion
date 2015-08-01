@@ -20,7 +20,7 @@ sub-tests it can run.  It has a standard interface:
 
 1.  If run with a numeric argument N, the program runs sub-test N.
 
-2.  If run with the argument `list', it will list the names of all sub-tests.
+2.  If run with the argument `--list', it will list the names of all sub-tests.
 
 3.  If run with no arguments, the program runs *all* sub-tests.
 
@@ -86,7 +86,7 @@ correctly, nor as a place-holder for a test that is not yet written.
 
 Each test function conforms to the svn_test_driver_t prototype:
 
-	svn_error_t *f (const char **MSG,
+        svn_error_t *f (const char **MSG,
                         svn_boolean_t MSG_ONLY
                         apr_pool_t *POOL);
 
@@ -128,6 +128,47 @@ suite.
 
 This same rule applies to Subversion development: ** If you fix a
 bug, write a test for it. **
+
+
+When to file a related issue
+----------------------------
+
+By definition, if you write a new test which is set to XFail, then it
+assumed that the test is for a known bug.  In these cases it is
+recommended that you associate an issue in the issue tracker with the
+XFailing test.  This ensures that the issue tracker is the authoritative
+list of known bugs -- see http://subversion.tigris.org/issue-tracker.html.
+You may need to create a new issue if one doesn't already exist.
+
+For C tests simply add a comment noting any associated issue:
+
+    /* This is for issue #3234. */
+    static svn_error_t *
+    test_copy_crash(const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+    {
+      apr_array_header_t *sources;
+      svn_opt_revision_t rev;
+      .
+      .
+
+For Python tests use the @Issue() decorator (a summary comment of the
+issue never hurts either):
+
+    #---------------------------------------------------------------------
+    # Test for issue #3657 'dav update report handler in skelta mode can
+    # cause spurious conflicts'.
+    @Issue(3657)
+    @XFail()
+    def dav_skelta_mode_causes_spurious_conflicts(sbox):
+      "dav skelta mode can cause spurious conflicts"
+      .
+      .
+
+Of course it isn't *always* necessary to create an associated issue.
+If a the fix for an new XFailing test is imminent, you are probably
+better off simply fixing the bug and moving on.  Use common sense, but
+when in doubt associate a new issue.
 
 
 What not to test

@@ -1,18 +1,24 @@
 /*
- * version.c: mod_dav_svn versioning provider functions for Subversion
+ * get-locations.c: mod_dav_svn REPORT handler for finding repos locations
+ *                  (path/revision pairs) in an object's history.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -32,6 +38,8 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+
+#include "private/svn_fspath.h"
 
 #include "../dav_svn.h"
 
@@ -84,8 +92,7 @@ dav_svn__get_locations_report(const dav_resource *resource,
   dav_svn__authz_read_baton arb;
 
   /* The parameters to do the operation on. */
-  const char *relative_path = NULL;
-  const char *abs_path;
+  const char *abs_path = NULL;
   svn_revnum_t peg_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *location_revisions;
 
@@ -99,15 +106,16 @@ dav_svn__get_locations_report(const dav_resource *resource,
                                       sizeof(svn_revnum_t));
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
-                                    "certain required elements.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "certain required elements");
     }
 
   /* Gather the parameters. */
@@ -128,26 +136,24 @@ dav_svn__get_locations_report(const dav_resource *resource,
         }
       else if (strcmp(child->name, "path") == 0)
         {
-          relative_path = dav_xml_get_cdata(child, resource->pool, 0);
-          if ((derr = dav_svn__test_canonical(relative_path, resource->pool)))
+          const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
+          if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an absolute
+             repository path. */
+          abs_path = svn_fspath__join(resource->info->repos_path, rel_path,
+                                      resource->pool);
         }
     }
 
-  /* Now we should have the parameters ready - let's
-     check if they are all present. */
-  if (! (relative_path && SVN_IS_VALID_REVNUM(peg_revision)))
-    {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                                    "Not all parameters passed.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);       
-    }
-
-  /* Append the relative path to the base FS path to get an absolute
-     repository path. */
-  abs_path = svn_path_join(resource->info->repos_path, relative_path,
-                           resource->pool);
+  /* Check that all parameters are present and valid. */
+  if (! (abs_path && SVN_IS_VALID_REVNUM(peg_revision)))
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                                  "Not all parameters passed");
 
   /* Build an authz read baton */
   arb.r = resource->info->r;
@@ -161,8 +167,8 @@ dav_svn__get_locations_report(const dav_resource *resource,
 
   if (serr)
     {
-      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  serr->message, resource->pool);
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR, NULL,
+                                  resource->pool);
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
@@ -175,13 +181,6 @@ dav_svn__get_locations_report(const dav_resource *resource,
                                 "Error writing REPORT response.",
                                 resource->pool);
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if (((apr_err = ap_fflush(output, bb))) && (! derr))
-    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
-
-  return derr;
+  return dav_svn__final_flush_or_error(resource->info->r, bb, output,
+                                       derr, resource->pool);
 }

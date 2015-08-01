@@ -1,16 +1,22 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software consists of voluntary contributions made by many
-# individuals.  For exact contribution history, see the revision
-# history and logs, available at http://subversion.tigris.org/.
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 # ====================================================================
 
 """Usage: svn2feed.py [OPTION...] REPOS-PATH
@@ -71,15 +77,21 @@ Options:
 
 import sys
 
-# Python 2.3 is required for datetime
-if sys.version_info < (2, 3):
-    sys.stderr.write("Error: Python 2.3 or higher required.\n")
+# Python 2.4 is required for subprocess
+if sys.version_info < (2, 4):
+    sys.stderr.write("Error: Python 2.4 or higher required.\n")
+    sys.stderr.flush()
     sys.exit(1)
 
 import getopt
 import os
-import popen2
-import cPickle as pickle
+import subprocess
+try:
+  # Python <3.0
+  import cPickle as pickle
+except ImportError:
+  # Python >=3.0
+  import pickle
 import datetime
 import time
 
@@ -93,9 +105,11 @@ def usage_and_exit(errmsg=None):
         stream = sys.stdout
     else:
         stream = sys.stderr
-    print >> stream, __doc__
+    stream.write("%s\n" % __doc__)
+    stream.flush()
     if errmsg:
-        print >> stream, "\nError: %s" % (errmsg)
+        stream.write("\nError: %s\n" % errmsg)
+	stream.flush()
         sys.exit(2)
     sys.exit(0)
 
@@ -127,18 +141,14 @@ class Svn2Feed:
         revision = str(revision)
 
         cmd = [self.svnlook_cmd, 'info', '-r', revision, self.repos_path]
-        child_out, child_in, child_err = popen2.popen3(cmd)
-        info_lines = child_out.readlines()
-        child_out.close()
-        child_in.close()
-        child_err.close()
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        proc.wait()
+        info_lines = proc.stdout.readlines()
 
         cmd = [self.svnlook_cmd, 'changed', '-r', revision, self.repos_path]
-        child_out, child_in, child_err = popen2.popen3(cmd)
-        changed_data = child_out.read()
-        child_out.close()
-        child_in.close()
-        child_err.close()
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        proc.wait()
+        changed_data = proc.stdout.readlines()
 
         desc = ("\nRevision: %s\nLog: %sModified: \n%s"
                 % (revision, info_lines[3], changed_data))
@@ -155,7 +165,7 @@ class Svn2Feed:
 
     def _format_updated_ts(self, revision_ts):
 
-        # Get "2006-08-10 20:17:08" from 
+        # Get "2006-08-10 20:17:08" from
         # "2006-07-28 20:17:18 +0530 (Fri, 28 Jul 2006)
         date = revision_ts[0:19]
         epoch = time.mktime(time.strptime(date, "%Y-%m-%d %H:%M:%S"))
@@ -192,9 +202,9 @@ module from:
                     lastBuildDate = datetime.datetime.now(),
                     items = [])
 
+    @staticmethod
     def get_default_file_extension():
         return ".rss"
-    get_default_file_extension = staticmethod(get_default_file_extension)
 
     def add_revision_item(self, revision):
         rss_item = self._make_rss_item(revision)
@@ -240,9 +250,9 @@ class Svn2Atom(Svn2Feed):
         else:
             self._init_atom_document()
 
+    @staticmethod
     def get_default_file_extension():
         return ".atom"
-    get_default_file_extension = staticmethod(get_default_file_extension)
 
     def add_revision_item(self, revision):
         item = self._make_atom_item(revision)
@@ -411,14 +421,15 @@ def main():
         svnlook_cmd = 'svnlook'
         if svn_path is not None:
             svnlook_cmd = os.path.join(svn_path, 'svnlook')
-        child_out, child_in, child_err = popen2.popen3([svnlook_cmd,
-                                                        'youngest',
-                                                        repos_path])
-        cmd_out = child_out.readlines()
-        child_out.close()
-        child_in.close()
-        child_err.close()
-        revisions = [int(cmd_out[0])]
+        cmd = [svnlook_cmd, 'youngest', repos_path]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        proc.wait()
+        cmd_out = proc.stdout.readlines()
+        try:
+            revisions = [int(cmd_out[0])]
+        except IndexError, msg:
+            usage_and_exit("svn2feed.py: Invalid value '%s' for " \
+                           "REPOS-PATH" % (repos_path))
     else:
         try:
             rev_range = commit_rev.split(':')
@@ -433,7 +444,7 @@ def main():
                     tmp = start
                     start = end
                     end = tmp
-                revisions = range(start, end + 1)[-max_items:]
+                revisions = list(range(start, end + 1)[-max_items:])
             else:
                 raise ValueError()
         except ValueError, msg:

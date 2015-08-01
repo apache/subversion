@@ -1,4 +1,24 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
 #
 # mailer.py: send email describing a commit
 #
@@ -26,16 +46,25 @@
 
 import os
 import sys
-import string
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+  from urllib.parse import quote as urllib_parse_quote
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
+  from urllib import quote as urllib_parse_quote
 import time
-import popen2
-import cStringIO
+import subprocess
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  from cStringIO import StringIO
 import smtplib
 import re
 import tempfile
-import types
-import urllib
 
 # Minimal version of Subversion's bindings required
 _MIN_SVN_VERSION = [1, 5, 0]
@@ -50,14 +79,14 @@ try:
 except ImportError:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
   sys.exit(1)
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
                        svn.core.SVN_VER_PATCH]:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
   sys.exit(1)
 
 
@@ -69,7 +98,10 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   if cmd == 'commit':
     revision = int(cmd_args[0])
     repos = Repository(repos_dir, revision, pool)
-    cfg = Config(config_fname, repos, { 'author' : repos.author })
+    cfg = Config(config_fname, repos,
+                 {'author': repos.author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange' or cmd == 'propchange2':
     revision = int(cmd_args[0])
@@ -79,55 +111,26 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
     repos = Repository(repos_dir, revision, pool)
     # Override the repos revision author with the author of the propchange
     repos.author = author
-    cfg = Config(config_fname, repos, { 'author' : author })
+    cfg = Config(config_fname, repos,
+                 {'author': author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
   elif cmd == 'lock' or cmd == 'unlock':
     author = cmd_args[0]
     repos = Repository(repos_dir, 0, pool) ### any old revision will do
     # Override the repos revision author with the author of the lock/unlock
     repos.author = author
-    cfg = Config(config_fname, repos, { 'author' : author })
+    cfg = Config(config_fname, repos,
+                 {'author': author,
+                  'repos_basename': os.path.basename(repos.repos_dir)
+                 })
     messenger = Lock(pool, cfg, repos, author, cmd == 'lock')
   else:
     raise UnknownSubcommand(cmd)
 
   messenger.generate()
 
-
-# Minimal, incomplete, versions of popen2.Popen[34] for those platforms
-# for which popen2 does not provide them.
-try:
-  Popen3 = popen2.Popen3
-  Popen4 = popen2.Popen4
-except AttributeError:
-  class Popen3:
-    def __init__(self, cmd, capturestderr = False):
-      if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
-      if capturestderr:
-        self.fromchild, self.tochild, self.childerr \
-            = popen2.popen3(cmd, mode='b')
-      else:
-        self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
-        self.childerr = None
-
-    def wait(self):
-      rv = self.fromchild.close()
-      rv = self.tochild.close() or rv
-      if self.childerr is not None:
-        rv = self.childerr.close() or rv
-      return rv
-
-  class Popen4:
-    def __init__(self, cmd):
-      if type(cmd) != types.StringType:
-        cmd = svn.core.argv_to_command_string(cmd)
-      self.fromchild, self.tochild = popen2.popen4(cmd, mode='b')
-
-    def wait(self):
-      rv = self.fromchild.close()
-      rv = self.tochild.close() or rv
-      return rv
 
 def remove_leading_slashes(path):
   while path and path[0] == '/':
@@ -136,7 +139,7 @@ def remove_leading_slashes(path):
 
 
 class OutputBase:
-  "Abstract base class to formalize the inteface of output methods"
+  "Abstract base class to formalize the interface of output methods"
 
   def __init__(self, cfg, repos, prefix_param):
     self.cfg = cfg
@@ -189,12 +192,14 @@ class OutputBase:
     """Override this method, if the default implementation is not sufficient.
     Execute CMD, writing the stdout produced to the output representation."""
     # By default we choose to incorporate child stderr into the output
-    pipe_ob = Popen4(cmd)
+    pipe_ob = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT,
+                               close_fds=sys.platform != "win32")
 
-    buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+    buf = pipe_ob.stdout.read(self._CHUNKSIZE)
     while buf:
       self.write(buf)
-      buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+      buf = pipe_ob.stdout.read(self._CHUNKSIZE)
 
     # wait on the child so we don't end up with a billion zombies
     pipe_ob.wait()
@@ -214,9 +219,9 @@ class MailedOutput(OutputBase):
     if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
                             and to_addr_in[2] == ']':
       self.to_addrs = \
-        filter(None, string.split(to_addr_in[3:], to_addr_in[1]))
+        [_f for _f in to_addr_in[3:].split(to_addr_in[1]) if _f]
     else:
-      self.to_addrs = filter(None, string.split(to_addr_in))
+      self.to_addrs = [_f for _f in to_addr_in.split() if _f]
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     # if the from_addr (also) starts with '[.]' (may happen if one
@@ -231,20 +236,44 @@ class MailedOutput(OutputBase):
                                and self.reply_to[2] == ']':
       self.reply_to = self.reply_to[3:]
 
+  def _rfc2047_encode(self, hdr):
+    # Return the result of splitting HDR into tokens (on space
+    # characters), encoding (per RFC2047) each token as necessary, and
+    # slapping 'em back to together again.
+    from email.Header import Header
+
+    def _maybe_encode_header(hdr_token):
+      try:
+        hdr_token.encode('ascii')
+        return hdr_token
+      except UnicodeError:
+        return Header(hdr_token, 'utf-8').encode()
+
+    return ' '.join(map(_maybe_encode_header, hdr.split()))
+
   def mail_headers(self, group, params):
-    subject = self.make_subject(group, params)
-    try:
-      subject.encode('ascii')
-    except UnicodeError:
-      from email.Header import Header
-      subject = Header(subject, 'utf-8').encode()
-    hdrs = 'From: %s\n'    \
-           'To: %s\n'      \
+    from email import Utils
+
+    subject  = self._rfc2047_encode(self.make_subject(group, params))
+    from_hdr = self._rfc2047_encode(self.from_addr)
+    to_hdr   = self._rfc2047_encode(', '.join(self.to_addrs))
+
+    hdrs = 'From: %s\n' \
+           'To: %s\n' \
            'Subject: %s\n' \
+           'Date: %s\n' \
+           'Message-ID: %s\n' \
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
            'Content-Transfer-Encoding: 8bit\n' \
-           % (self.from_addr, string.join(self.to_addrs, ', '), subject)
+           'X-Svn-Commit-Project: %s\n' \
+           'X-Svn-Commit-Author: %s\n' \
+           'X-Svn-Commit-Revision: %d\n' \
+           'X-Svn-Commit-Repository: %s\n' \
+           % (from_hdr, to_hdr, subject,
+              Utils.formatdate(), Utils.make_msgid(), group,
+              self.repos.author or 'no_author', self.repos.rev,
+              os.path.basename(self.repos.repos_dir))
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
     return hdrs + '\n'
@@ -256,7 +285,7 @@ class SMTPOutput(MailedOutput):
   def start(self, group, params):
     MailedOutput.start(self, group, params)
 
-    self.buffer = cStringIO.StringIO()
+    self.buffer = StringIO()
     self.write = self.buffer.write
 
     self.write(self.mail_headers(group, params))
@@ -292,7 +321,7 @@ class PipeOutput(MailedOutput):
     MailedOutput.__init__(self, cfg, repos, prefix_param)
 
     # figure out the command for delivery
-    self.cmd = string.split(cfg.general.mail_command)
+    self.cmd = cfg.general.mail_command.split()
 
   def start(self, group, params):
     MailedOutput.start(self, group, params)
@@ -302,18 +331,16 @@ class PipeOutput(MailedOutput):
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
-    self.pipe = Popen3(cmd)
-    self.write = self.pipe.tochild.write
-
-    # we don't need the read-from-mailer descriptor, so close it
-    self.pipe.fromchild.close()
+    self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                 close_fds=sys.platform != "win32")
+    self.write = self.pipe.stdin.write
 
     # start writing out the mail message
     self.write(self.mail_headers(group, params))
 
   def finish(self):
     # signal that we're done sending content
-    self.pipe.tochild.close()
+    self.pipe.stdin.close()
 
     # wait to avoid zombies
     self.pipe.wait()
@@ -343,20 +370,20 @@ class Commit(Messenger):
     editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
                                        self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
-    svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
+    svn.repos.replay2(repos.root_this, "", svn.core.SVN_INVALID_REVNUM, 1, e_ptr, e_baton, None, self.pool)
 
-    self.changelist = editor.get_changes().items()
-    self.changelist.sort()
+    self.changelist = sorted(editor.get_changes().items())
+
+    log = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or ''
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path, change in self.changelist:
-      for (group, params) in self.cfg.which_groups(path):
+      for (group, params) in self.cfg.which_groups(path, log):
         # turn the params into a hashable object and stash it away
-        param_list = params.items()
-        param_list.sort()
+        param_list = sorted(params.items())
         # collect the set of paths belonging to this group
-        if self.groups.has_key( (group, tuple(param_list)) ):
+        if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
         else:
           paths = { }
@@ -369,19 +396,19 @@ class Commit(Messenger):
       if change.item_kind == svn.core.svn_node_dir:
         dirs[path] = None
       else:
-        idx = string.rfind(path, '/')
+        idx = path.rfind('/')
         if idx == -1:
           dirs[''] = None
         else:
           dirs[path[:idx]] = None
 
-    dirlist = dirs.keys()
+    dirlist = list(dirs.keys())
 
     commondir, dirlist = get_commondir(dirlist)
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
-    dirlist = string.join(dirlist)
+    dirlist = ' '.join(dirlist)
     if commondir:
       self.output.subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
     else:
@@ -414,23 +441,6 @@ class Commit(Messenger):
     svn.core.svn_pool_destroy(subpool)
 
 
-try:
-  from tempfile import NamedTemporaryFile
-except ImportError:
-  # NamedTemporaryFile was added in Python 2.3, so we need to emulate it
-  # for older Pythons.
-  class NamedTemporaryFile:
-    def __init__(self):
-      self.name = tempfile.mktemp()
-      self.file = open(self.name, 'w+b')
-    def __del__(self):
-      os.remove(self.name)
-    def write(self, data):
-      self.file.write(data)
-    def flush(self):
-      self.file.flush()
-
-
 class PropChange(Messenger):
   def __init__(self, pool, cfg, repos, author, propname, action):
     Messenger.__init__(self, pool, cfg, repos, 'propchange_subject_prefix')
@@ -440,10 +450,9 @@ class PropChange(Messenger):
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
-    for (group, params) in self.cfg.which_groups(''):
+    for (group, params) in self.cfg.which_groups('', None):
       # turn the params into a hashable object and stash it away
-      param_list = params.items()
-      param_list.sort()
+      param_list = sorted(params.items())
       self.groups[group, tuple(param_list)] = params
 
     self.output.subject = 'r%d - %s' % (repos.rev, propname)
@@ -460,16 +469,16 @@ class PropChange(Messenger):
                         % (self.author, self.repos.rev, self.propname,
                            actions.get(self.action, 'Unknown (\'%s\')' \
                                        % self.action)))
-      if self.action == 'A' or not actions.has_key(self.action):
+      if self.action == 'A' or self.action not in actions:
         self.output.write('Property value:\n')
         propvalue = self.repos.get_rev_prop(self.propname)
         self.output.write(propvalue)
       elif self.action == 'M':
         self.output.write('Property diff:\n')
-        tempfile1 = NamedTemporaryFile()
+        tempfile1 = tempfile.NamedTemporaryFile()
         tempfile1.write(sys.stdin.read())
         tempfile1.flush()
-        tempfile2 = NamedTemporaryFile()
+        tempfile2 = tempfile.NamedTemporaryFile()
         tempfile2.write(self.repos.get_rev_prop(self.propname))
         tempfile2.flush()
         self.output.run(self.cfg.get_diff_cmd(group, {
@@ -491,15 +500,15 @@ def get_commondir(dirlist):
     commondir = ''
     newdirs = dirlist
   else:
-    common = string.split(dirlist[0], '/')
+    common = dirlist[0].split('/')
     for j in range(1, len(dirlist)):
       d = dirlist[j]
-      parts = string.split(d, '/')
+      parts = d.split('/')
       for i in range(len(common)):
         if i == len(parts) or common[i] != parts[i]:
           del common[i:]
           break
-    commondir = string.join(common, '/')
+    commondir = '/'.join(common)
     if commondir:
       # strip the common portion from each directory
       l = len(commondir) + 1
@@ -526,17 +535,16 @@ class Lock(Messenger):
                         or 'unlock_subject_prefix'))
 
     # read all the locked paths from STDIN and strip off the trailing newlines
-    self.dirlist = map(lambda x: x.rstrip(), sys.stdin.readlines())
+    self.dirlist = [x.rstrip() for x in sys.stdin.readlines()]
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path in self.dirlist:
-      for (group, params) in self.cfg.which_groups(path):
+      for (group, params) in self.cfg.which_groups(path, None):
         # turn the params into a hashable object and stash it away
-        param_list = params.items()
-        param_list.sort()
+        param_list = sorted(params.items())
         # collect the set of paths belonging to this group
-        if self.groups.has_key( (group, tuple(param_list)) ):
+        if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
         else:
           paths = { }
@@ -547,7 +555,7 @@ class Lock(Messenger):
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
-    dirlist = string.join(dirlist)
+    dirlist = ' '.join(dirlist)
     if commondir:
       self.output.subject = '%s: %s' % (commondir, dirlist)
     else:
@@ -589,7 +597,7 @@ class DiffSelections:
     ### don't have an option anywhere in your configuration file, it
     ### still gets returned as non-None.
     if len(gen_diffs):
-      list = string.split(gen_diffs, " ")
+      list = gen_diffs.split(" ")
       for item in list:
         if item == 'add':
           self.add = True
@@ -613,62 +621,6 @@ class DiffSelections:
         self.add = False
 
 
-class PropSelections:
-  def __init__(self, cfg, group, params):
-    self.add_path = False
-    self.add = False
-    self.copy_path = False
-    self.delete_path = False
-    self.delete = False
-    self.modify = False
-
-    show_props = cfg.get('show_props', group, params)
-
-    if len(show_props):
-      list = string.split(show_props, " ")
-      for item in list:
-        if item == 'add_path':
-          self.add_path = True
-        if item == 'add':
-          self.add = True
-        if item == 'copy_path':
-          self.copy_path = True
-        if item == 'delete_path':
-          self.delete_path = True
-        if item == 'delete':
-          self.delete = True
-        if item == 'modify':
-          self.modify = True
-
-
-class PropDiffSelections:
-  def __init__(self, cfg, group, params):
-    self.add_path = False
-    self.add = False
-    self.copy_path = False
-    self.delete_path = False
-    self.delete = False
-    self.modify = False
-
-    gen_propdiffs = cfg.get('generate_propdiffs', group, params)
-
-    if len(gen_propdiffs):
-      list = string.split(gen_propdiffs, " ")
-      for item in list:
-        if item == 'add_path':
-          self.add_path = True
-        if item == 'add':
-          self.add = True
-        if item == 'copy_path':
-          self.copy_path = True
-        if item == 'delete_path':
-          self.delete_path = True
-        if item == 'delete':
-          self.delete = True
-        if item == 'modify':
-          self.modify = True
-
-
 class DiffURLSelections:
   def __init__(self, cfg, group, params):
     self.cfg = cfg
@@ -680,8 +632,8 @@ class DiffURLSelections:
     # parameters for the configuration module, otherwise we may get
     # KeyError exceptions.
     params = self.params.copy()
-    params['path'] = change.path and urllib.quote(change.path) or None
-    params['base_path'] = change.base_path and urllib.quote(change.base_path) \
+    params['path'] = change.path and urllib_parse_quote(change.path) or None
+    params['base_path'] = change.base_path and urllib_parse_quote(change.base_path) \
                           or None
     params['rev'] = repos_rev
     params['base_rev'] = change.base_rev
@@ -708,11 +660,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
   diffsels = DiffSelections(cfg, group, params)
-  propsels = PropSelections(cfg, group, params)
-  propdiffsels = PropDiffSelections(cfg, group, params)
   diffurls = DiffURLSelections(cfg, group, params)
-  ignore_props = cfg.get('ignore_props', group, params)
-  ignore_propdiffs = cfg.get('ignore_propdiffs', group, params)
 
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
@@ -733,13 +681,8 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
                                 group, params, diffsels, diffurls, pool)
-    other_props = PropDiffGenerator(changelist, paths, False, cfg, repos, date,
-                                    group, propsels, ignore_props,
-                                    propdiffsels, ignore_propdiffs, pool)
   else:
     other_diffs = None
-    other_props = None
-    other_propdiffs = None
 
   data = _data(
     author=repos.author,
@@ -758,11 +701,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
                         params, diffsels, diffurls, pool),
-    props=PropDiffGenerator(changelist, paths, True, cfg, repos, date,
-                            group, propsels, ignore_props,
-                            propdiffsels, ignore_propdiffs, pool),
     other_diffs=other_diffs,
-    other_props=other_props,
     )
   renderer.render(data)
 
@@ -779,7 +718,7 @@ def generate_list(changekind, changelist, paths, in_paths):
 
   items = [ ]
   for path, change in changelist:
-    if selection(change) and paths.has_key(path) == in_paths:
+    if selection(change) and (path in paths) == in_paths:
       item = _data(
         path=path,
         is_dir=change.item_kind == svn.core.svn_node_dir,
@@ -822,7 +761,7 @@ class DiffGenerator:
     return True
 
   def __getitem__(self, idx):
-    while 1:
+    while True:
       if self.idx == len(self.changelist):
         raise IndexError
 
@@ -844,7 +783,7 @@ class DiffGenerator:
         continue
 
       # is this change in (or out of) the set of matched paths?
-      if self.paths.has_key(path) != self.in_paths:
+      if (path in self.paths) != self.in_paths:
         continue
 
       if change.base_rev != -1:
@@ -871,7 +810,7 @@ class DiffGenerator:
                                  base_path, None, None, self.pool)
 
           label1 = '%s\t%s\t(r%s)' % (base_path, self.date, change.base_rev)
-          label2 = '/dev/null\tThu Jan  1 00:00:00 1970\t(deleted)'
+          label2 = '/dev/null\t00:00:00 1970\t(deleted)'
           singular = True
 
       elif change.action == svn.repos.CHANGE_ACTION_ADD \
@@ -903,7 +842,7 @@ class DiffGenerator:
             if self.diffsels.copy:
               diff = svn.fs.FileDiff(None, None, self.repos.root_this,
                                      change.path, self.pool)
-              label1 = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
+              label1 = '/dev/null\t00:00:00 1970\t' \
                        '(empty, because file is newly added)'
               label2 = '%s\t%s\t(r%s, copy of r%s, %s)' \
                        % (change.path, self.date, self.repos.rev, \
@@ -920,7 +859,7 @@ class DiffGenerator:
           if self.diffsels.add:
             diff = svn.fs.FileDiff(None, None, self.repos.root_this,
                                    change.path, self.pool)
-            label1 = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
+            label1 = '/dev/null\t00:00:00 1970\t' \
                      '(empty, because file is newly added)'
             label2 = '%s\t%s\t(r%s)' \
                      % (change.path, self.date, self.repos.rev)
@@ -954,12 +893,16 @@ class DiffGenerator:
           content = src_fname = dst_fname = None
         else:
           src_fname, dst_fname = diff.get_files()
-          content = DiffContent(self.cfg.get_diff_cmd(self.group, {
-            'label_from' : label1,
-            'label_to' : label2,
-            'from' : src_fname,
-            'to' : dst_fname,
-            }))
+          try:
+            content = DiffContent(self.cfg.get_diff_cmd(self.group, {
+              'label_from' : label1,
+              'label_to' : label2,
+              'from' : src_fname,
+              'to' : dst_fname,
+              }))
+          except OSError:
+            # diff command does not exist, try difflib.unified_diff()
+            content = DifflibDiffContent(label1, label2, src_fname, dst_fname)
 
       # return a data item for this diff
       return _data(
@@ -978,253 +921,32 @@ class DiffGenerator:
         content=content,
         )
 
+def _classify_diff_line(line, seen_change):
+  # classify the type of line.
+  first = line[:1]
+  ltype = ''
+  if first == '@':
+    seen_change = True
+    ltype = 'H'
+  elif first == '-':
+    if seen_change:
+      ltype = 'D'
+    else:
+      ltype = 'F'
+  elif first == '+':
+    if seen_change:
+      ltype = 'A'
+    else:
+      ltype = 'T'
+  elif first == ' ':
+    ltype = 'C'
+  else:
+    ltype = 'U'
 
-class PropDiffGenerator:
-  "This is a generator-like object returning changed properties."
+  if line[-2] == '\r':
+    line=line[0:-2] + '\n' # remove carriage return
 
-  def __init__(self, changelist, paths, in_paths, cfg, repos, date,
-               group, propsels, ignore_props,
-               propdiffsels, ignore_propdiffs, pool):
-    self.changelist = changelist
-    self.paths = paths
-    self.in_paths = in_paths
-    self.cfg = cfg
-    self.repos = repos
-    self.date = date
-    self.group = group
-    self.propsels = propsels
-    self.ignore_props = ignore_props
-    self.propdiffsels = propdiffsels
-    self.ignore_propdiffs = ignore_propdiffs
-    self.pool = pool
-
-    self.idx = 0
-
-  def __getitem__(self, idx):
-    while 1:
-      if self.idx == len(self.changelist):
-        raise IndexError
-
-      path, change = self.changelist[self.idx]
-      self.idx = self.idx + 1
-
-      # is this change in (or out of) the set of matched paths?
-      if self.paths.has_key(path) != self.in_paths:
-        continue
-
-      if change.base_rev != -1:
-        svndate = self.repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE,
-                                          change.base_rev)
-        ### pick a different date format?
-        base_date = time.ctime(svn.core.secs_from_timestr(svndate, self.pool))
-      else:
-        base_date = ''
-
-      src_props = { }
-      dst_props = { }
-      path = change.path
-      base_rev = change.base_rev
-      if change.base_rev != -1:
-        base_path = remove_leading_slashes(change.base_path)
-        src_props = svn.fs.node_proplist(self.repos.get_root(base_rev), base_path, self.pool)
-      else:
-        base_path = None
-      if change.path:
-        dst_props = svn.fs.node_proplist(self.repos.root_this, change.path, self.pool)
-      else:
-        path = base_path
-      added_path_props_tmp = { }
-      added_props_tmp = { }
-      copied_path_props_tmp = { }
-      deleted_path_props_tmp = { }
-      deleted_props_tmp = { }
-      modified_props_tmp = { }
-
-      if not change.path:
-      # it was delete.
-        if self.propsels.delete_path or self.propdiffsels.delete_path:
-          for src_prop in src_props:
-            deleted_path_props_tmp[src_prop]=(src_props[src_prop], None)
-      elif change.added and base_rev == -1:
-      # it was add (no copy)
-        if self.propsels.add_path or self.propdiffsels.add_path:
-          for dst_prop in dst_props:
-            added_path_props_tmp[dst_prop]=(None, dst_props[dst_prop])
-      else:
-        if dst_props:
-          for dst_prop in dst_props:
-            if src_props.has_key(dst_prop):
-              if src_props[dst_prop] != dst_props[dst_prop]:
-                if self.propsels.modify or self.propdiffsels.modify:
-                  modified_props_tmp[dst_prop]=(src_props[dst_prop], dst_props[dst_prop])
-              else:
-                if (change.added and base_rev != -1) \
-                   and (self.propsels.copy_path or self.propdiffsels.copy_path):
-                  copied_path_props_tmp[dst_prop]=(None, dst_props[dst_prop])
-            elif self.propsels.add or self.propdiffsels.add:
-              added_props_tmp[dst_prop]=(None, dst_props[dst_prop])
-        if src_props:
-          for src_prop in src_props:
-            if not dst_props.has_key(src_prop) \
-               and (self.propsels.delete or self.propdiffsels.delete):
-              deleted_props_tmp[src_prop]=(src_props[src_prop], None)
-
-      added_path_props = self._get_sorted_list(added_path_props_tmp)
-      added_props = self._get_sorted_list(added_props_tmp)
-      copied_path_props = self._get_sorted_list(copied_path_props_tmp)
-      deleted_path_props = self._get_sorted_list(deleted_path_props_tmp)
-      deleted_props = self._get_sorted_list(deleted_props_tmp)
-      modified_props = self._get_sorted_list(modified_props_tmp)
-
-      if self.propdiffsels.add_path:
-        added_path_content, added_path_count = self._get_diff(path, self.repos.rev, self.date,
-                                                 base_path, base_rev, base_date,
-                                                 added_path_props, self.ignore_propdiffs, 'A')
-      else:
-        added_path_content, added_path_count = [ ], 0
-      if self.propdiffsels.add:
-        added_content, added_count = self._get_diff(path, self.repos.rev, self.date,
-                                       base_path, base_rev, base_date,
-                                       added_props, self.ignore_propdiffs, 'A')
-      else:
-        added_content, added_count = [ ], 0
-      if self.propdiffsels.copy_path:
-        copied_path_content, copied_path_count = self._get_diff(path, self.repos.rev, self.date,
-                                                   base_path, base_rev, base_date,
-                                                   copied_path_props, self.ignore_propdiffs, 'C')
-      else:
-        copied_path_content, copied_path_count = [ ], 0
-      if self.propdiffsels.delete:
-        deleted_path_content, deleted_path_count = self._get_diff(path, self.repos.rev, self.date,
-                                                     base_path, base_rev, base_date,
-                                                     deleted_path_props, self.ignore_propdiffs, 'D')
-      else:
-        deleted_path_content, deleted_path_count = [ ], 0
-      if self.propdiffsels.delete:
-        deleted_content, deleted_count = self._get_diff(path, self.repos.rev, self.date,
-                                           base_path, base_rev, base_date,
-                                           deleted_props, self.ignore_propdiffs, 'D')
-      else:
-        deleted_content, deleted_count = [ ], 0
-      if self.propdiffsels.modify:
-        if change.added and base_rev != -1:
-          action_type = 'W'
-        else:
-          action_type = 'M'
-        modified_content, modified_count = self._get_diff(path, self.repos.rev, self.date,
-                                             base_path, base_rev, base_date,
-                                             modified_props, self.ignore_propdiffs, action_type)
-      else:
-        modified_content, modified_count = [ ], 0
-
-      added_path_props = self._get_final_list(added_path_props, self.propsels.add_path, self.ignore_props)
-      added_props = self._get_final_list(added_props, self.propsels.add, self.ignore_props)
-      copied_path_props = self._get_final_list(copied_path_props, self.propsels.copy_path, self.ignore_props)
-      deleted_path_props = self._get_final_list(deleted_path_props, self.propsels.delete_path, self.ignore_props)
-      deleted_props = self._get_final_list(deleted_props, self.propsels.delete, self.ignore_props)
-      modified_props = self._get_final_list(modified_props, self.propsels.modify, self.ignore_props)
-
-      return _data(
-        path=path,
-        base_path=base_path,
-        base_rev=base_rev,
-        item_kind=change.item_kind,
-        added_path_props=added_path_props,
-        added_props=added_props,
-        copied_path_props=copied_path_props,
-        deleted_path_props=deleted_path_props,
-        deleted_props=deleted_props,
-        modified_props=modified_props,
-        added_path_content=added_path_content,
-        added_path_count=added_path_count,
-        added_content=added_content,
-        added_count=added_count,
-        copied_path_content=copied_path_content,
-        copied_path_count=copied_path_count,
-        deleted_path_content=deleted_path_content,
-        deleted_path_count=deleted_path_count,
-        deleted_content=deleted_content,
-        deleted_count=deleted_count,
-        modified_content=modified_content,
-        modified_count=modified_count,
-        )
-
-  def _get_sorted_list(self, props):
-    list=[ ]
-    if not props:
-      return list
-    keys=props.keys()
-    keys.sort()
-    for prop in keys:
-      src_val, dst_val = props[prop]
-      list.append((prop, src_val, dst_val))
-    return list
-
-  def _get_final_list(self, props, propsel, ignore_props):
-    list=[ ]
-    if not props or not propsel:
-      return list
-    for prop, src_val, dst_val in props:
-      if ignore_props and re.match(ignore_props, prop):
-        continue
-      list.append((prop, src_val, dst_val))
-    return list
-
-  def _get_diff(self, path, rev, date, base_path, base_rev, base_date,
-                props, ignore_propdiffs, action_type):
-    content = ''
-    count = 0
-    for prop, src_val, dst_val in props:
-      if ignore_propdiffs and re.match(ignore_propdiffs, prop):
-        continue
-      src_fname = tempfile.mktemp()
-      dst_fname = tempfile.mktemp()
-      fp = open(src_fname, 'w+')
-      if src_val:
-        fp.write(src_val)
-        fp.write('\n')
-      fp.close()
-      fp = open(dst_fname, 'w+')
-      if dst_val:
-        fp.write(dst_val)
-        fp.write('\n')
-      fp.close()
-      if action_type == 'A' or action_type == 'C':
-        label_from = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
-                     '(empty, because property is newly added)'
-      elif action_type == 'W':
-        label_from = '%s|%s\t%s\t(r%s, copy source)' \
-                     % (base_path, prop, base_date, base_rev)
-      else:
-        label_from = '%s|%s\t%s\t(r%s)' \
-                     % (path, prop, base_date, base_rev)
-      if action_type == 'C':
-        label_to = '%s|%s\t%s\t(r%s, copy of r%s, %s)' % \
-                   (path, prop, date, rev, base_rev, base_path)
-      elif action_type == 'D':
-        label_to = '/dev/null\tThu Jan  1 00:00:00 1970\t(deleted)'
-      else:
-        label_to = '%s|%s\t%s\t(r%s)' % (path, prop, date, rev)
-      diff = DiffContent(self.cfg.get_diff_cmd(self.group, {
-        'label_from' : label_from,
-        'label_to' : label_to,
-        'from' : src_fname,
-        'to' : dst_fname,
-        }))
-      if diff:
-        count += 1
-        line = diff[0]
-        if line.type == 'B':
-          if src_val and dst_val:
-            content += '\nBinary property (source and/or target). ' + \
-                       'No diff available.\n'
-          else:
-            content += '\nBinary property. No diff available.\n'
-        else:
-          content += line.raw
-      for line in diff:
-        content += line.raw
-    return content, count
+  return line, ltype, seen_change
 
 
 class DiffContent:
@@ -1234,7 +956,9 @@ class DiffContent:
     self.seen_change = False
 
     # By default we choose to incorporate child stderr into the output
-    self.pipe = Popen4(cmd)
+    self.pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 close_fds=sys.platform != "win32")
 
   def __nonzero__(self):
     # we always have some items
@@ -1244,51 +968,54 @@ class DiffContent:
     if self.pipe is None:
       raise IndexError
 
-    line = self.pipe.fromchild.readline()
+    line = self.pipe.stdout.readline()
     if not line:
       # wait on the child so we don't end up with a billion zombies
       self.pipe.wait()
       self.pipe = None
       raise IndexError
 
-    # classify the type of line.
-    first = line[:1]
-    if first == '@':
-      self.seen_change = True
-      ltype = 'H'
-    elif first == '-':
-      if self.seen_change:
-        ltype = 'D'
-      else:
-        ltype = 'F'
-    elif first == '+':
-      if self.seen_change:
-        ltype = 'A'
-      else:
-        ltype = 'T'
-    elif first == ' ':
-      ltype = 'C'
-    elif line.startswith('File ') or line.startswith('Files '):
-      ltype = 'B'
-    else:
-      ltype = 'U'
-
-    if line[-2] == '\r':
-      line=line[0:-2] + '\n' # remove carriage return
-
+    line, ltype, self.seen_change = _classify_diff_line(line, self.seen_change)
     return _data(
       raw=line,
       text=line[1:-1],  # remove indicator and newline
       type=ltype,
       )
 
+class DifflibDiffContent():
+  "This is a generator-like object returning annotated lines of a diff."
+
+  def __init__(self, label_from, label_to, from_file, to_file):
+    import difflib
+    self.seen_change = False
+    fromlines = open(from_file, 'U').readlines()
+    tolines = open(to_file, 'U').readlines()
+    self.diff = difflib.unified_diff(fromlines, tolines,
+                                     label_from, label_to)
+
+  def __nonzero__(self):
+    # we always have some items
+    return True
+
+  def __getitem__(self, idx):
+
+    try:
+      line = self.diff.next()
+    except StopIteration:
+      raise IndexError
+
+    line, ltype, self.seen_change = _classify_diff_line(line, self.seen_change)
+    return _data(
+      raw=line,
+      text=line[1:-1],  # remove indicator and newline
+      type=ltype,
+      )
 
 class TextCommitRenderer:
   "This class will render the commit mail in plain text."
 
   def __init__(self, output):
     self.output = output
-    self.other_areas_written = False
 
   def render(self, data):
     "Render the commit defined by 'data'."
@@ -1323,57 +1050,11 @@ class TextCommitRenderer:
       else:
         w('and changes in other areas\n')
 
-    data_props = self._get_prop_list(data.props)
-    data_other_props = self._get_prop_list(data.other_props)
-    if data_props:
-      self._render_props(data_props, 'Property Changes')
-    if data_other_props:
-      self._render_props(data_other_props, 'Property Changes in other areas '
-                                           'also in this revision')
-    if data.diffs:
-      self._render_diffs(data.diffs, None)
-    if data_props:
-      self._render_propdiffs(data_props, None)
+    self._render_diffs(data.diffs, '')
     if data.other_diffs:
       self._render_diffs(data.other_diffs,
-                         'Diffs of changes in other areas also '
-                         'in this revision')
-    if data_other_props:
-      self._render_propdiffs(data_other_props,
-                             'Diffs of changes in other areas also '
-                             'in this revision')
-
-  def _get_prop_list(self, props):
-    if not props:
-      return [ ]
-    prop_list = [ ]
-    for prop in props:
-      prop_list.append(_data(
-        path=prop.path,
-        base_path=prop.base_path,
-        base_rev=prop.base_rev,
-        item_kind=prop.item_kind,
-        added_path_props=prop.added_path_props,
-        added_props=prop.added_props,
-        copied_path_props=prop.copied_path_props,
-        deleted_path_props=prop.deleted_path_props,
-        deleted_props=prop.deleted_props,
-        modified_props=prop.modified_props,
-        added_path_content=prop.added_path_content,
-        added_path_count=prop.added_path_count,
-        added_content=prop.added_content,
-        added_count=prop.added_count,
-        copied_path_content=prop.copied_path_content,
-        copied_path_count=prop.copied_path_count,
-        deleted_path_content=prop.deleted_path_content,
-        deleted_path_count=prop.deleted_path_count,
-        deleted_content=prop.deleted_content,
-        deleted_count=prop.deleted_count,
-        modified_content=prop.modified_content,
-        modified_count=prop.modified_count,
-        ))
-    return prop_list
-
+                         '\nDiffs of changes in other areas also'
+                         ' in this revision:\n')
 
   def _render_list(self, header, data_list):
     if not data_list:
@@ -1404,36 +1085,6 @@ class TextCommitRenderer:
         w('      - copied%s from r%d, %s%s\n'
           % (text, d.base_rev, d.base_path, is_dir))
 
-  def _render_props(self, props, section_header):
-    if not props:
-      return
-    w = self.output.write
-    section_header_printed = False
-
-    for prop in props:
-      if prop.item_kind == svn.core.svn_node_dir:
-        prop.path += '/'
-      if prop.added_path_props or prop.added_props \
-         or prop.copied_path_props or prop.deleted_path_props \
-         or prop.deleted_props or prop.modified_props:
-        if not section_header_printed:
-          w('\n%s:\n' % section_header)
-          section_header_printed = True
-        w('   %s\n' % prop.path)
-        self.__render_props('Added path', prop.added_path_props)
-        self.__render_props('Added', prop.added_props)
-        self.__render_props('Copied path', prop.copied_path_props)
-        self.__render_props('Deleted path', prop.deleted_path_props)
-        self.__render_props('Deleted', prop.deleted_props)
-        self.__render_props('Modified', prop.modified_props)
-
-  def __render_props(self, header, props):
-    w = self.output.write
-    if props:
-      w('      %s:\n' % header)
-      for prop, src_val, dst_val in props:
-        w('         %s\n' % prop)
-
   def _render_diffs(self, diffs, section_header):
     """Render diffs. Write the SECTION_HEADER if there are actually
     any diffs to render."""
@@ -1441,16 +1092,13 @@ class TextCommitRenderer:
       return
     w = self.output.write
     section_header_printed = False
-    if not section_header:
-      section_header_printed = True
 
     for diff in diffs:
       if not diff.diff and not diff.diff_url:
         continue
-      if not section_header_printed and not self.other_areas_written:
-        w('\n%s:\n' % section_header)
-        self.other_areas_written = True
-        section_header_printed = False
+      if not section_header_printed:
+        w(section_header)
+        section_header_printed = True
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
       elif diff.kind == 'A':
@@ -1483,57 +1131,6 @@ class TextCommitRenderer:
       for line in diff.content:
         w(line.raw)
 
-  def _render_propdiffs(self, props, section_header):
-    """Render property diffs. Write the SECTION_HEADER if there are
-    actually any diffs to render."""
-    if not props:
-      return
-    w = self.output.write
-    section_header_printed = False
-
-    for prop in props:
-      if prop.added_path_count+prop.added_count+prop.copied_path_count \
-         +prop.deleted_path_count+prop.deleted_count+prop.modified_count > 0:
-        if not section_header_printed and not self.other_areas_written \
-          and section_header:
-          w('\n%s:\n' % section_header)
-          self.other_areas_written = True
-          section_header_printed = True
-      self.__render_propdiffs(prop.path, 'Added path', prop.base_path, prop.base_rev,
-                              prop.added_path_content, prop.added_path_count)
-      self.__render_propdiffs(prop.path, 'Added', prop.base_path, prop.base_rev,
-                              prop.added_content, prop.added_count)
-      self.__render_propdiffs(prop.path, 'Copied path', prop.base_path, prop.base_rev,
-                              prop.copied_path_content, prop.copied_path_count)
-      self.__render_propdiffs(prop.path, 'Deleted path', prop.base_path, prop.base_rev,
-                              prop.deleted_path_content, prop.deleted_path_count)
-      self.__render_propdiffs(prop.path, 'Deleted', prop.base_path, prop.base_rev,
-                              prop.deleted_content, prop.deleted_count)
-      if prop.base_rev == -1:
-        type = 'Modified'
-      else:
-        type = 'Copied path and modified'
-      self.__render_propdiffs(prop.path, type, prop.base_path, prop.base_rev,
-                              prop.modified_content, prop.modified_count)
-
-  def __render_propdiffs(self, path, type, base_path, base_rev,
-                         content, count):
-    if count == 0:
-      return
-
-    w = self.output.write
-    if count == 1:
-      prophead = "property"
-    else:
-      prophead = "properties"
-    w('\n')
-    if not base_path:
-      w('%s %s for: %s\n' % (type, prophead, path))
-    else:
-      w('%s %s for: %s (from r%s, %s)\n' % (type, prophead, path,
-                                            base_rev, base_path))
-    w(SEPARATOR + '\n')
-    w('%s' % content)
 
 class Repository:
   "Hold roots and other information about the repository."
@@ -1573,7 +1170,7 @@ class Config:
   _predefined = ('general', 'defaults', 'maps')
 
   def __init__(self, fname, repos, global_params):
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     cp.read(fname)
 
     # record the (non-default) groups that we find
@@ -1613,7 +1210,7 @@ class Config:
     The option is specified as a dotted symbol, such as 'general.mail_command'
     """
     ob = self
-    for part in string.split(option, '.'):
+    for part in option.split('.'):
       if not hasattr(ob, part):
         return None
       ob = getattr(ob, part)
@@ -1649,7 +1246,7 @@ class Config:
   def get_diff_cmd(self, group, args):
     "Get a diff command as a list of argv elements."
     ### do some better splitting to enable quoting of spaces
-    diff_cmd = string.split(self.get('diff', group, None))
+    diff_cmd = self.get('diff', group, None).split()
 
     cmd = [ ]
     for part in diff_cmd:
@@ -1731,32 +1328,56 @@ class Config:
       else:
         exclude_paths_re = None
 
-      self._group_re.append((group, re.compile(for_paths),
-                             exclude_paths_re, params))
+      # check search_logmsg re
+      search_logmsg = getattr(sub, 'search_logmsg', None)
+      if search_logmsg is not None:
+        search_logmsg_re = re.compile(search_logmsg)
+      else:
+        search_logmsg_re = None
+
+      self._group_re.append((group,
+                             re.compile(for_paths),
+                             exclude_paths_re,
+                             params,
+                             search_logmsg_re))
 
     # after all the groups are done, add in the default group
     try:
       self._group_re.append((None,
                              re.compile(self.defaults.for_paths),
                              None,
-                             self._default_params))
+                             self._default_params,
+                             None))
     except AttributeError:
       # there is no self.defaults.for_paths
       pass
 
-  def which_groups(self, path):
+  def which_groups(self, path, logmsg):
     "Return the path's associated groups."
     groups = []
-    for group, pattern, exclude_pattern, repos_params in self._group_re:
+    for group, pattern, exclude_pattern, repos_params, search_logmsg_re in self._group_re:
       match = pattern.match(path)
       if match:
         if exclude_pattern and exclude_pattern.match(path):
           continue
         params = repos_params.copy()
         params.update(match.groupdict())
-        groups.append((group, params))
+
+        if search_logmsg_re is None:
+          groups.append((group, params))
+        else:
+          if logmsg is None:
+            logmsg = ''
+
+          for match in search_logmsg_re.finditer(logmsg):
+            # Add captured variables to (a copy of) params
+            msg_params = params.copy()
+            msg_params.update(match.groupdict())
+            groups.append((group, msg_params))
+
     if not groups:
       groups.append((None, self._default_params))
+
     return groups
 
 
@@ -1776,14 +1397,6 @@ class UnknownMappingSpec(Exception):
   pass
 class UnknownSubcommand(Exception):
   pass
-
-
-# enable True/False in older vsns of Python
-try:
-  _unused = True
-except NameError:
-  True = 1
-  False = 0
 
 
 if __name__ == '__main__':

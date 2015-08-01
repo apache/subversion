@@ -18,7 +18,7 @@ Problem: old clients and servers will not be looking for this
 
 The current plan from issue 1015:
 ---------------
-Okay, I've decided to propogate this functionality in three stages,
+Okay, I've decided to propagate this functionality in three stages,
 with a couple of milestones between each stage:
 
    (1) server and client learn to recognize and handle the new

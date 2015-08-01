@@ -1,17 +1,22 @@
 /* strings-table.c : operations on the `strings' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -47,9 +52,9 @@ svn_fs_bdb__open_strings_table(DB **strings_p,
      multiple records. Note: this must occur before ->open().  */
   BDB_ERR(strings->set_flags(strings, DB_DUP));
 
-  BDB_ERR(strings->open(SVN_BDB_OPEN_PARAMS(strings, NULL),
-                        "strings", 0, DB_BTREE,
-                        open_flags, 0666));
+  BDB_ERR((strings->open)(SVN_BDB_OPEN_PARAMS(strings, NULL),
+                          "strings", 0, DB_BTREE,
+                          open_flags, 0666));
 
   if (create)
     {
@@ -86,7 +91,7 @@ locate_key(apr_size_t *length,
   DBT result;
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
-  SVN_ERR(BDB_WRAP(fs, _("creating cursor for reading a string"),
+  SVN_ERR(BDB_WRAP(fs, N_("creating cursor for reading a string"),
                    bfd->strings->cursor(bfd->strings, trail->db_txn,
                                         cursor, 0)));
 
@@ -96,7 +101,7 @@ locate_key(apr_size_t *length,
   result.flags |= DB_DBT_USERMEM;
 
   /* Advance the cursor to the key that we're looking for. */
-  db_err = (*cursor)->c_get(*cursor, query, &result, DB_SET);
+  db_err = svn_bdb_dbc_get(*cursor, query, &result, DB_SET);
 
   /* We don't need to svn_fs_base__track_dbt() the result, because nothing
      was allocated in it. */
@@ -104,7 +109,7 @@ locate_key(apr_size_t *length,
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
     {
-      (*cursor)->c_close(*cursor);
+      svn_bdb_dbc_close(*cursor);
       return svn_error_createf
         (SVN_ERR_FS_NO_SUCH_STRING, 0,
          "No such string '%s'", (const char *)query->data);
@@ -115,8 +120,8 @@ locate_key(apr_size_t *length,
 
       if (db_err != SVN_BDB_DB_BUFFER_SMALL)
         {
-          (*cursor)->c_close(*cursor);
-          return BDB_WRAP(fs, "moving cursor", db_err);
+          svn_bdb_dbc_close(*cursor);
+          return BDB_WRAP(fs, N_("moving cursor"), db_err);
         }
 
       /* We got an SVN_BDB_DB_BUFFER_SMALL (typical since we have a
@@ -124,11 +129,11 @@ locate_key(apr_size_t *length,
          it happen. */
       svn_fs_base__clear_dbt(&rerun);
       rerun.flags |= DB_DBT_USERMEM | DB_DBT_PARTIAL;
-      db_err = (*cursor)->c_get(*cursor, query, &rerun, DB_SET);
+      db_err = svn_bdb_dbc_get(*cursor, query, &rerun, DB_SET);
       if (db_err)
         {
-          (*cursor)->c_close(*cursor);
-          return BDB_WRAP(fs, "rerunning cursor move", db_err);
+          svn_bdb_dbc_close(*cursor);
+          return BDB_WRAP(fs, N_("rerunning cursor move"), db_err);
         }
     }
 
@@ -155,7 +160,7 @@ get_next_length(apr_size_t *length, DBC *cursor, DBT *query)
 
   /* Note: this may change the QUERY DBT, but that's okay: we're going
      to be sticking with the same key anyways.  */
-  db_err = cursor->c_get(cursor, query, &result, DB_NEXT_DUP);
+  db_err = svn_bdb_dbc_get(cursor, query, &result, DB_NEXT_DUP);
 
   /* Note that we exit on DB_NOTFOUND. The caller uses that to end a loop. */
   if (db_err)
@@ -164,7 +169,7 @@ get_next_length(apr_size_t *length, DBC *cursor, DBT *query)
 
       if (db_err != SVN_BDB_DB_BUFFER_SMALL)
         {
-          cursor->c_close(cursor);
+          svn_bdb_dbc_close(cursor);
           return db_err;
         }
 
@@ -173,9 +178,9 @@ get_next_length(apr_size_t *length, DBC *cursor, DBT *query)
          it happen. */
       svn_fs_base__clear_dbt(&rerun);
       rerun.flags |= DB_DBT_USERMEM | DB_DBT_PARTIAL;
-      db_err = cursor->c_get(cursor, query, &rerun, DB_NEXT_DUP);
+      db_err = svn_bdb_dbc_get(cursor, query, &rerun, DB_NEXT_DUP);
       if (db_err)
-        cursor->c_close(cursor);
+        svn_bdb_dbc_close(cursor);
     }
 
   /* ### this cast might not be safe? */
@@ -220,7 +225,7 @@ svn_fs_bdb__string_read(svn_fs_t *fs,
           return SVN_NO_ERROR;
         }
       if (db_err)
-        return BDB_WRAP(fs, "reading string", db_err);
+        return BDB_WRAP(fs, N_("reading string"), db_err);
     }
 
   /* The current record contains OFFSET. Fetch the contents now. Note that
@@ -231,23 +236,23 @@ svn_fs_bdb__string_read(svn_fs_t *fs,
     {
       svn_fs_base__clear_dbt(&result);
       result.data = buf + bytes_read;
-      result.ulen = *len - bytes_read;
+      result.ulen = (u_int32_t)(*len - bytes_read);
       result.doff = (u_int32_t)offset;
-      result.dlen = *len - bytes_read;
+      result.dlen = result.ulen;
       result.flags |= (DB_DBT_USERMEM | DB_DBT_PARTIAL);
-      db_err = cursor->c_get(cursor, &query, &result, DB_CURRENT);
+      db_err = svn_bdb_dbc_get(cursor, &query, &result, DB_CURRENT);
       if (db_err)
         {
-          cursor->c_close(cursor);
-          return BDB_WRAP(fs, "reading string", db_err);
+          svn_bdb_dbc_close(cursor);
+          return BDB_WRAP(fs, N_("reading string"), db_err);
         }
 
       bytes_read += result.size;
       if (bytes_read == *len)
         {
           /* Done with the cursor. */
-          SVN_ERR(BDB_WRAP(fs, "closing string-reading cursor",
-                           cursor->c_close(cursor)));
+          SVN_ERR(BDB_WRAP(fs, N_("closing string-reading cursor"),
+                           svn_bdb_dbc_close(cursor)));
           break;
         }
 
@@ -257,7 +262,7 @@ svn_fs_bdb__string_read(svn_fs_t *fs,
       if (db_err == DB_NOTFOUND)
         break;
       if (db_err)
-        return BDB_WRAP(fs, "reading string", db_err);
+        return BDB_WRAP(fs, N_("reading string"), db_err);
 
       /* We'll be reading from the beginning of the next record */
       offset = 0;
@@ -270,8 +275,8 @@ svn_fs_bdb__string_read(svn_fs_t *fs,
 
 /* Get the current 'next-key' value and bump the record. */
 static svn_error_t *
-get_key_and_bump(svn_fs_t *fs, 
-                 const char **key, 
+get_key_and_bump(svn_fs_t *fs,
+                 const char **key,
                  trail_t *trail,
                  apr_pool_t *pool)
 {
@@ -292,20 +297,20 @@ get_key_and_bump(svn_fs_t *fs,
      write the new value -- that would append, not overwrite.  */
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
-  SVN_ERR(BDB_WRAP(fs, "creating cursor for reading a string",
+  SVN_ERR(BDB_WRAP(fs, N_("creating cursor for reading a string"),
                    bfd->strings->cursor(bfd->strings, trail->db_txn,
                                         &cursor, 0)));
 
   /* Advance the cursor to 'next-key' and read it. */
 
-  db_err = cursor->c_get(cursor,
-                         svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY),
-                         svn_fs_base__result_dbt(&result),
-                         DB_SET);
+  db_err = svn_bdb_dbc_get(cursor,
+                           svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY),
+                           svn_fs_base__result_dbt(&result),
+                           DB_SET);
   if (db_err)
     {
-      cursor->c_close(cursor);
-      return BDB_WRAP(fs, "getting next-key value", db_err);
+      svn_bdb_dbc_close(cursor);
+      return BDB_WRAP(fs, N_("getting next-key value"), db_err);
     }
 
   svn_fs_base__track_dbt(&result, pool);
@@ -316,18 +321,18 @@ get_key_and_bump(svn_fs_t *fs,
   svn_fs_base__next_key(result.data, &key_len, next_key);
 
   /* Shove the new key back into the database, at the cursor position. */
-  db_err = cursor->c_put(cursor, &query,
-                         svn_fs_base__str_to_dbt(&result, next_key),
-                         DB_CURRENT);
+  db_err = svn_bdb_dbc_put(cursor, &query,
+                           svn_fs_base__str_to_dbt(&result, next_key),
+                           DB_CURRENT);
   if (db_err)
     {
-      cursor->c_close(cursor); /* ignore the error, the original is
-                                   more important. */
-      return BDB_WRAP(fs, "bumping next string key", db_err);
+      svn_bdb_dbc_close(cursor); /* ignore the error, the original is
+                                    more important. */
+      return BDB_WRAP(fs, N_("bumping next string key"), db_err);
     }
 
-  return BDB_WRAP(fs, "closing string-reading cursor",
-                  cursor->c_close(cursor));
+  return BDB_WRAP(fs, N_("closing string-reading cursor"),
+                  svn_bdb_dbc_close(cursor));
 }
 
 svn_error_t *
@@ -350,14 +355,12 @@ svn_fs_bdb__string_append(svn_fs_t *fs,
 
   /* Store a new record into the database. */
   svn_fs_base__trail_debug(trail, "strings", "put");
-  SVN_ERR(BDB_WRAP(fs, "appending string",
-                   bfd->strings->put
-                   (bfd->strings, trail->db_txn,
-                    svn_fs_base__str_to_dbt(&query, *key),
-                    svn_fs_base__set_dbt(&result, buf, len),
-                    0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, N_("appending string"),
+                  bfd->strings->put
+                  (bfd->strings, trail->db_txn,
+                   svn_fs_base__str_to_dbt(&query, *key),
+                   svn_fs_base__set_dbt(&result, buf, len),
+                   0));
 }
 
 
@@ -384,7 +387,7 @@ svn_fs_bdb__string_clear(svn_fs_t *fs,
        "No such string '%s'", key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR(BDB_WRAP(fs, "clearing string", db_err));
+  SVN_ERR(BDB_WRAP(fs, N_("clearing string"), db_err));
 
   /* Shove empty data back in for this key. */
   svn_fs_base__clear_dbt(&result);
@@ -393,7 +396,7 @@ svn_fs_bdb__string_clear(svn_fs_t *fs,
   result.flags |= DB_DBT_USERMEM;
 
   svn_fs_base__trail_debug(trail, "strings", "put");
-  return BDB_WRAP(fs, "storing empty contents",
+  return BDB_WRAP(fs, N_("storing empty contents"),
                   bfd->strings->put(bfd->strings, trail->db_txn,
                                     &query, &result, 0));
 }
@@ -430,7 +433,7 @@ svn_fs_bdb__string_size(svn_filesize_t *size,
           return SVN_NO_ERROR;
         }
       if (db_err)
-        return BDB_WRAP(fs, "fetching string length", db_err);
+        return BDB_WRAP(fs, N_("fetching string length"), db_err);
 
       total += length;
     }
@@ -460,9 +463,7 @@ svn_fs_bdb__string_delete(svn_fs_t *fs,
        "No such string '%s'", key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR(BDB_WRAP(fs, "deleting string", db_err));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, N_("deleting string"), db_err);
 }
 
 
@@ -487,7 +488,7 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
   SVN_ERR(get_key_and_bump(fs, new_key, trail, pool));
 
   svn_fs_base__trail_debug(trail, "strings", "cursor");
-  SVN_ERR(BDB_WRAP(fs, "creating cursor for reading a string",
+  SVN_ERR(BDB_WRAP(fs, N_("creating cursor for reading a string"),
                    bfd->strings->cursor(bfd->strings, trail->db_txn,
                                         &cursor, 0)));
 
@@ -497,11 +498,11 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
   svn_fs_base__clear_dbt(&result);
 
   /* Move to the first record and fetch its data (under BDB's mem mgmt). */
-  db_err = cursor->c_get(cursor, &query, &result, DB_SET);
+  db_err = svn_bdb_dbc_get(cursor, &query, &result, DB_SET);
   if (db_err)
     {
-      cursor->c_close(cursor);
-      return BDB_WRAP(fs, "getting next-key value", db_err);
+      svn_bdb_dbc_close(cursor);
+      return BDB_WRAP(fs, N_("getting next-key value"), db_err);
     }
 
   while (1)
@@ -519,22 +520,22 @@ svn_fs_bdb__string_copy(svn_fs_t *fs,
                                  &copykey, &result, 0);
       if (db_err)
         {
-          cursor->c_close(cursor);
-          return BDB_WRAP(fs, "writing copied data", db_err);
+          svn_bdb_dbc_close(cursor);
+          return BDB_WRAP(fs, N_("writing copied data"), db_err);
         }
 
       /* Read the next chunk. Terminate loop if we're done. */
       svn_fs_base__clear_dbt(&result);
-      db_err = cursor->c_get(cursor, &query, &result, DB_NEXT_DUP);
+      db_err = svn_bdb_dbc_get(cursor, &query, &result, DB_NEXT_DUP);
       if (db_err == DB_NOTFOUND)
         break;
       if (db_err)
         {
-          cursor->c_close(cursor);
-          return BDB_WRAP(fs, "fetching string data for a copy", db_err);
+          svn_bdb_dbc_close(cursor);
+          return BDB_WRAP(fs, N_("fetching string data for a copy"), db_err);
         }
     }
 
-  return BDB_WRAP(fs, "closing string-reading cursor",
-                  cursor->c_close(cursor));
+  return BDB_WRAP(fs, N_("closing string-reading cursor"),
+                  svn_bdb_dbc_close(cursor));
 }

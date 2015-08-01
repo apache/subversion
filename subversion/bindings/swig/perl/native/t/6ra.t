@@ -1,4 +1,24 @@
 #!/usr/bin/perl -w
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 use Test::More tests => 40;
 use File::Temp qw(tempdir);
@@ -16,6 +36,7 @@ my $BINARY_DATA = "foo\0\n\t\x1F\x7F\x80\xA0\x{FF}bar";
 my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repos;
+# TEST
 ok($repos = SVN::Repos::create("$repospath", undef, undef, undef, undef),
    "create repository at $repospath");
 
@@ -41,25 +62,36 @@ $uri = "file://$uri";
 
 {
     my $ra = SVN::Ra->new($uri);
+    # TEST
     isa_ok($ra, 'SVN::Ra', 'create with only one argument');
 }
 my $ra = SVN::Ra->new(url => $uri);
+# TEST
 isa_ok($ra, 'SVN::Ra', 'create with hash param');
 
+# TEST
 is($ra->get_uuid, $fs->get_uuid, 'get_uuid');
+# TEST
 is($ra->get_latest_revnum, 2, 'get_latest_revnum');
+# TEST
 is($ra->get_repos_root, $uri, 'get_repos_root');
 
 # get_dir
 {
-    my ($dirents, $revnum, $props) = $ra->get_dir('/trunk',
+    my ($dirents, $revnum, $props) = $ra->get_dir('trunk',
                                                   $SVN::Core::INVALID_REVNUM);
+    # TEST
     isa_ok($dirents, 'HASH', 'get_dir: dirents');
+    # TEST
     is(scalar(keys %$dirents), 2, 'get_dir: num dirents');
+    # TEST+2
     isa_ok($dirents->{$_}, '_p_svn_dirent_t', "get_dir: dirent $_")
         for qw( filea fileb );
+    # TEST
     is($revnum, $ra->get_latest_revnum, 'get_dir: revnum');
+    # TEST
     isa_ok($props, 'HASH', 'get_dir: props');
+    # TEST
     is($props->{'dir-prop'}, 'frob', 'get_dir: property dir-prop');
 }
 
@@ -67,15 +99,22 @@ is($ra->get_repos_root, $uri, 'get_repos_root');
 {
     my ($revnum, $props) = $ra->get_file('trunk/filea',
                                          $SVN::Core::INVALID_REVNUM, undef);
+    # TEST
     is($revnum, $ra->get_latest_revnum, 'get_file: revnum');
+    # TEST
     isa_ok($props, 'HASH', 'get_file: props');
+    # TEST
     ok(!exists $props->{'test-prop'}, 'get_file: property test-prop deleted');
+    # TEST
     is($props->{'binary-prop'}, $BINARY_DATA, 'get_file: property binary-prop');
 }
 
 # Revision properties
+# TEST
 isa_ok($ra->rev_proplist(1), 'HASH', 'rev_proplist: object');
+# TEST
 is($ra->rev_prop(1, 'nonexistent'), undef, 'rev_prop: nonexistent');
+# TEST
 like($ra->rev_prop(1, 'svn:date'), qr/^\d+-\d+-\d+T\d+:\d+:\d+\.\d+Z$/,
      'rev_prop: svn:date');
 
@@ -95,59 +134,73 @@ SKIP: {
         or die "error making hook script '$script_filename' executable: $!";
 
     $ra->change_rev_prop(1, 'test-prop', 'foo');
+    # TEST
     is($ra->rev_prop(1, 'test-prop'), 'foo', 'change_rev_prop');
 
     $ra->change_rev_prop(1, 'test-prop', undef);
+    # TEST
     is($ra->rev_prop(1, 'test-prop'), undef, 'change_rev_prop: deleted');
 
     $ra->change_rev_prop(1, 'binary-prop', $BINARY_DATA);
+    # TEST
     is($ra->rev_prop(1, 'binary-prop'), $BINARY_DATA,
        'change_rev_prop with binary data');
 }
 
 # Information about nodes in the filesystem.
-is($ra->check_path('/trunk', 1), $SVN::Node::dir, 'check_path');
+# TEST
+is($ra->check_path('trunk', 1), $SVN::Node::dir, 'check_path');
 {
-    my $dirent = $ra->stat('/trunk', 1);
+    my $dirent = $ra->stat('trunk', 1);
+    # TEST
     isa_ok($dirent, '_p_svn_dirent_t', 'stat dir: dirent object');
+    # TEST
     is($dirent->kind, $SVN::Node::dir, 'stat dir: kind');
-    is($dirent->size, 0, 'stat dir: size');
+    # TEST
+    is($dirent->size, -1, 'stat dir: size');
+    # TEST
     is($dirent->created_rev, 1, 'stat dir: created_rev');
+    # TEST
     ok($dirent->has_props, 'stat dir: has_props');
 
-    $dirent = $ra->stat('/trunk/fileb', 1);
+    $dirent = $ra->stat('trunk/fileb', 1);
+    # TEST
     is($dirent->kind, $SVN::Node::file, 'stat file: kind');
+    # TEST
     ok(!$dirent->has_props, 'stat file: has_props');
 }
 
 # do_update
 my $ed = MockEditor->new;
 my $reporter = $ra->do_update(2, '', 1, $ed);
+# TEST
 isa_ok($reporter, 'SVN::Ra::Reporter');
 $reporter->set_path('', 0, 1, undef);
 $reporter->finish_report;
 
+# TEST
 is($ed->{_base_revnum}, 0, 'do_update: base_revision');
+# TEST
 is($ed->{_target_revnum}, 2, 'do_update: target_revnum');
+# TEST
 is($ed->{trunk}{props}{'dir-prop'}, 'frob', 'do_update: dir-prop');
+# TEST
 ok(!exists $ed->{'trunk/filea'}{props}{'test-prop'},
    'do_update: deleted property');
+# TEST
 is($ed->{'trunk/filea'}{props}{'binary-prop'}, $BINARY_DATA,
    'do_update: binary-prop');
 
 # replay
 $ed = MockEditor->new;
 $ra->replay(1, 0, 1, $ed);
+# TEST
 is($ed->{trunk}{type}, 'dir', "replay: got trunk");
+# TEST
 is($ed->{trunk}{props}{'dir-prop'}, 'frob', 'replay: dir-prop');
+# TEST
 is($ed->{'trunk/filea'}{props}{'binary-prop'}, $BINARY_DATA,
    'replay: binary-prop');
-
-END {
-diag "cleanup";
-rmtree($repospath);
-}
-
 
 package MockEditor;
 
@@ -221,8 +274,7 @@ sub add_file {
 
 sub apply_textdelta {
     my ($self, $baton, $base_checksum, $pool) = @_;
-    my $data = $baton->{data} = \'';
-    open my $out_fh, '>', $data
+    open my $out_fh, '>', \$baton->{data}
         or die "error opening in-memory file to store Subversion update: $!";
     open my $in_fh, '<', \''
         or die "error opening in-memory file for delta source: $!";

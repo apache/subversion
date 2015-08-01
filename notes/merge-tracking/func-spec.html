@@ -1,0 +1,1076 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Merge Tracking Functional Specification</title>
+</head>
+
+<body>
+<div class="h1">
+<h1>Merge Tracking Functional Specification</h1>
+
+<p><a href="index.html">Merge tracking</a> functional specification.
+Describes Subversion 1.5.0, except where noted as
+<i>unimplemented</i>.  This is a living specification, which will
+change as features are added or refined.</p>
+
+<div class="h2" id="merge">
+<h2>Merge operations</h2>
+
+<p>Merge operations involving a single source URL (e.g. <code>svn
+merge -cN URL</code>) allow the revision range and source URL
+parameters to be optional.  The revision range defaults to "all
+unmerged revisions", while the source URL is inferred using a
+combination of merge info and copy history.  When a revision range is
+not provided, merge operations are not able to "revert" changes
+(e.g. a la <code>svn merge -c -7 URL</code>).</p>
+
+<p>See the <a href="#repeated-merge">repeated merge</a> section below
+for discussion of various merge algorithms, and details on the merge
+algorithm used.</p>
+
+<p>Merge info is <em>not taken into consideration for three-way
+merges</em>, merge operations which do not specify identical "from"
+and "to" URLs (e.g. <code>svn merge FROM_URL@REV1 TO_URL@REV2</code>).
+In the future, Subversion will likely support this, but currently
+lacks sufficient history and merge info between the repository and
+client to perform this operation in a reasonable manner.  The primary
+use case this will impact is vendor branches.</p>
+
+</div>  <!-- merge -->
+
+<div class="h2" id="diff-status">
+<h2>Diff/Status operations</h2>
+
+<p>Output is shown the same as pre-Merge Tracking, except for:</p>
+
+<ul>
+  <li>Diffs pretty-print changes to merge info in an easily
+    human-readable form.</li>
+
+  <li>Diffs sometimes report spurious property changes from merge info
+    (bug?).</li>
+
+  <li>Status represents changes to the merge info for the root of a
+    tree as a property change.</li>
+</ul>
+
+</div>  <!-- diff-status -->
+
+
+<div class="h2" id="copy-move">
+<h2>Copy/Move operations</h2>
+
+<p>Copy and move operations handle two types of merge info:</p>
+
+<dl>
+  <dt>Explicit</dt>
+  <dd>The pre-existing value of the <code>svn:mergeinfo</code>
+    property on the source path.</dd>
+
+  <dt>Implicit</dt>
+  <dd>All revisions represented by the object at the source path (from
+    its "appeared in" revision to its current revision).</dd>
+</dl>
+
+<div class="h3" id="ra-copy-move">
+<h3>Repository Access operation</h3>
+
+<p>Copy/move operations which contact the repository include:</p>
+
+<ul>
+  <li>WC to URL</li>
+  <li>URL to WC</li>
+  <li>URL to URL</li>
+</ul>
+
+<p>These operations always propagate both explicit and implicit merge
+info.  Other than the inclusion of merge info, operation is
+effectively the same as pre-Merge Tracking.</p>
+
+</div>  <!-- ra-copy-move -->
+
+<div class="h3" id="wc-wc-copy-move">
+<h3>Working Copy to Working Copy operation</h3>
+
+<p>Pre-Merge Tracking, WC to WC operations occurred offline (e.g. with
+no repository access).  This is a typical behavior of refactoring
+tools (e.g. IDEs like Eclipse), and is very useful when offline
+(e.g. on an airplane or subway, or at a cafe).</p>
+
+<p>However, to propagate merge info during copy/move operations,
+access to both a path's comprehensive merge info and its history is
+necessary.  To preserve offline operation, the Merge Tracking
+implementation supports two modes:</p>
+
+<ul>
+  <li>A compatibility mode, which neither contacts the repository, nor
+    does any merge info propagation (unless a copy source's merge info
+    has been locally modified, in which its value is propagated the as
+    any Subversion revision property).  This is the default mode of
+    operation.</li>
+
+  <li>A mode which requires repository access (e.g. isn't offline),
+    but which propagates all merge info from source path to
+    destination.  This mode is activated via the
+    <code>--use-merge-history</code> option.</li>
+</ul>
+
+<p>This behavior is comparable to the difference between <code>svn
+status</code> and <code>svn status -u</code>.</p>
+
+<p>While some state indicating delayed merge info retrieval and
+handling could instead be stored in WC to preserve offline operation,
+there are complications with this when subsequent uncommitted revert
+operations should change the merge info (we'd have to store negative
+merge info in the WC).</p>
+
+</div>  <!-- wc-wc-copy-move -->
+
+</div>  <!-- copy-move -->
+
+<div class="h2" id="sparse-checkouts">
+<h2>Sparse Checkouts</h2>
+
+<p>When merging to a WC with sparsely populated directories, non-inheritable
+mergeinfo for the merge is set on the deepest directories present.</p>
+
+<ul>
+ <li>Directories with depth == empty: The directory gets non-inheritable
+ mergeinfo.</li>
+
+ <li>Directories with depth == files: The directory gets non-inheritable
+ mergeinfo.  Any child files present get inheritable mergeinfo (not to imply
+ files ever have anything but inheritable mergeinfo, they shouldn't!).</li>
+
+ <li>Directories with depth == imediates: The directory and any child files
+ present get inheritable mergeinfo.  And directory children present get
+ non-inheritable mergeinfo.</li>
+
+</ul>
+
+<h3>Rationale</h3>
+
+<p><em>[JAF] The above may be the actual behaviour but sounds too simplistic
+  to be the desired behaviour.  Although a simple depth attribute is
+  recorded for each dir in the WC, the ambient depth of a dir in the WC is
+  not simply one of empty/files/immediates/infinity, but rather is a tree in
+  which different branches are populated to different depths.  Surely the
+  merge ought to respond to the ambient depth rather than the simple depth
+  attribute.</em></p>
+
+<p><em>[JAF] It's not clear whether an incoming addition should be honoured
+  if the added node would fall outside the ambient depth.  The sparse-
+  directories design doesn't seem to address this case for updates, let
+  alone merges.  It would be silly if a merge could delete such a node (that
+  was present in the WC despite being outside its parent's 'depth'
+  attribute) and could not then re-add a node of the same name in order to
+  perform both halves of an incoming replacement.  <a
+  href="http://subversion.tigris.org/issues/show_bug.cgi?id=4164" >Issue
+  #4164 "inconsistencies in merge handling of adds vs. edits in shallow
+  targets"</a> is related.</em></p>
+
+<p>See <a href="../sparse-directories.txt">sparse-directories design</a>.</p>
+
+</div>  <!-- sparse-checkouts -->
+
+<div class="h2" id="switched-paths">
+<h2>Switched Paths</h2>
+
+<p>Switched paths are treated as the root of a working copy regarding
+mergeinfo inheritance, recording, and elision.  Specifically, for a
+merge target with an arbitrary switched subtree:</p>
+
+<pre>
+  WC-Root
+     |
+  Target
+     |
+    SSP
+     | \
+     |  \
+    SS   SSS
+
+  Target - The WC target of the merge operation (may be same as WC-Root)
+  SSP    - Switched Subtree Parent (may be same as Target)
+  SSPS   - Switched Subtree Sibling (zero or more)
+  SS     - Switched Subtree</pre>
+
+<p>Note: If SS is itself the target of the merge, then the no special
+handling is needed, the merge takes place as if SS is the root of the WC.</p>
+
+<ul>
+ <li><strong>Inheritance:</strong> If SS has no explicit mergeinfo of its
+   own, it inherits mergeinfo not from its WC parent (SSP) but from its
+   repository parent:</li>
+
+<pre>
+      WC-Root
+         |
+      Target
+         |
+         V
+        SSP
+SSRP..   | \
+      \  |  \
+       V x   V
+        SS  SSS
+
+SSRP - Switched subtree's repository parent
+-->    Mergeinfo inheritance
+--x    No mergeinfo inheritance</pre>
+
+ <li><strong>Recording a Merge:</strong> If we merge revision N from ^/SRC,
+   mergeinfo is recorded like so (note that mergeinfo source '/SRC' is not
+   literal for children of 'Target' but would be adjusted for the path-wise
+   differences between the root of the merge target and the subtree in
+   question):</li>
+
+<pre>
+  WC-Root
+     |
+  Target ('/SRC:N')
+     |
+    SSP('/SRC:N*')
+     | \
+     |  \
+     |   SSS('/SRC:N')
+     |
+    SS('/SRC:N' and possibly the mergeinfo
+                inherited from SSRP if SS
+                had no pre-existing explicit
+                mergeinfo)</pre>
+
+ <li><strong>Elision:</strong> Mergeinfo on switched paths never elides to
+   its working copy parents:</li>
+
+<pre>
+      WC-Root
+         ^
+         |
+      Target
+         ^
+         |
+        SSP
+         x ^
+         |  \
+         |   \
+        SS   SSS
+
+-->    Mergeinfo elision possible
+--x    No mergeinfo elision possible</pre>
+
+</ul>
+
+<h3>Delete</h3>
+
+<p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=4163"
+  >Issue #4163 "merged deletion of switched subtrees records non-inheritable
+  mergeinfo"</a>: If a merge deletes the path SS, the desired behaviour
+  is currently undefined and the actual behaviour is that a commit will
+  delete <strong>both</strong> SS (from SSRP) and SS@BASE (from SSP).</p>
+
+<h3>Rationale</h3>
+
+<p>Why does merging work this way with switched subtrees?</p>
+
+<p>If a subtree (SS) is switched, that means the user has chosen for
+  the time being to work with a substitute for the original subtree
+  (SS@BASE), knowing that any modifications made in SS can be
+  committed only to the repository location of SS and the original
+  subtree SS@BASE remains hidden and unaffected.</p>
+
+<p>The general semantics of a merge is to apply local modifications
+  to the working copy and record the merge as having been applied
+  to the tree that is represented by the working copy.</p>
+
+<p>Merge tracking should ensure that the subtree of the merge that
+  goes into SS is recorded as being applied to SS, while the
+  subtree SS@BASE should be recorded as not having received that
+  merge.</p>
+
+<p>Since the working copy represents parts of two different branches,
+  two parts of the merge are thus applied to the two different
+  branches, and recorded as such when the user commits the result.</p>
+
+<p>If the user is doing a merge that may affect SS, it is reasonable
+  to assume that SS is an alternative variant of SS@BASE rather than
+  some totally unrelated item.  So, in terms of Subversion's loose
+  branching semantics, SS is a 'branch' of SS@BASE.  If the user
+  chooses to merge when the assumption is false and SS doesn't have
+  a sensible branching relationship with SS@BASE, the result will be
+  nonsensical or, in concrete terms, there will be merge conflicts.</p>
+
+<p>Note:  Many typical branching policies would forbid committing to
+  two branches at once, let alone committing merges to two branches
+  at once.  However, the user may have reasons for doing this merge
+  without intending to commit the result as-is.</p>
+
+</div>  <!-- switched-paths -->
+
+<div class="h2" id="prop-change">
+<h2>Property change operations</h2>
+
+<p>Property changes from <code>propedit</code>, <code>propset</code>,
+and <code>propdel</code> operations can be used to change merge info.
+However, as these operations do not attempt to address merge info
+inheritance, changes to merge info on a directory affects merge info
+on any child paths.</p>
+
+</div>  <!-- prop-change -->
+
+<div class="h2" id="mergeinfo-elision">
+<h2>Merge Info Elision</h2>
+
+<p>Merge info set on a working copy "child" path as a result of a merge,
+switch, or update, may fully/partially elide to the path's nearest working
+copy or repository ancestor with fully/partially equivalent merge info.
+Elision is attempted as part of any merge/switch/update:</p>
+
+<div class="h3" id="full-elision">
+<h3>Full Elision</h3>
+
+<ul>
+ <li><b>Simple Equivalency</b>: The merge info on a child path and the merge
+ info on its nearest ancestor both map the same set of source paths to the
+ same revision ranges.  The "same" source path is taken to mean that the only
+ differences between the two are relative path differences which are exactly
+ the same as the relative path differences between the child and the ancestor,
+ e.g.:<pre>
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-9
+  /A_COPY:3
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:4-9
+  /A_COPY/B/E:3</pre>
+  The merge info on 'A_COPY_2/B/E' elides to 'A_COPY_2' because the only
+  differences between the merge source paths on each is 'B/E' which is the same
+  as the relative path difference between 'A_COPY_2/B/E' and 'A_COPY_2'.
+ </li>
+</ul>
+
+<ul><li><b>Semantic Equivalency</b>: Excepting paths <i>unique</i> to the child
+ or ancestor which map to empty revision ranges, the merge info between the
+ child and ancestor is otherwise equivalent per the definition of simple
+ equivalency, e.g.:<pre>
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-9
+  /A_COPY:
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:4-9
+
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-9
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:4-9
+  /A_COPY/B/E:</pre>
+  In both of the above examples the merge info on 'A_COPY_2/B/E' elides to
+  'A_COPY_2'.
+ </li>
+</ul>
+
+<ul><li><b>Empty Revision Range Equivalency</b>: If the merge info on a path is
+ made up entirely of paths mapped to empty revision ranges and the path has no
+ ancestor with merge info then the merge info fully elides.
+ </li>
+</ul>
+
+</div>  <!-- full-elision -->
+
+<div class="h3" id="partial-elision">
+<h3>Partial Elision</h3>
+
+<ul>
+ <li><b>Partial Equivalency</b>: Only the merge source paths <i>unique</i> to
+ the child which map to empty revision ranges will elide if the merge info
+ between the  child and ancestor is otherwise non-equivalent, e.g.:<pre>
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-6
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:5
+  /A_COPY/B/E:</pre>
+  The empty revision range merge info from 'A_COPY/B/E' on 'A_COPY_2/B/E'
+  elides, leaving:<pre>
+  Properties on '/A_COPY_2':
+    svn:mergeinfo : /A:4-6
+  Properties on '/A_COPY_2/B/E':
+    svn:mergeinfo : /A/B/E:5</pre>
+</li>
+</ul>
+
+</div>  <!-- partial-elision -->
+
+<div class="h3" id="non-inheritable-elision">
+<h3>Elision and Non-Inheritable Revision Ranges</h3>
+
+<p>
+The above rules apply only to mergeinfo without non-inheritable revision
+ranges.  Mergeinfo with non-inheritable revision ranges cannot elide or be
+elided to.
+</p>
+
+</div>  <!-- non-inheritable-elision -->
+
+</div>  <!-- mergeinfo-elision -->
+
+<div class="h2" id="merge-history">
+<h2>Merge History</h2>
+
+<p>Merge Tracking meta data is stored in housekeeping properties
+(e.g. <code>svn:mergeinfo</code>).</p>
+
+<div class="h3" id="merge-history-mainpulation">
+<h3>Merge History Manipulation</h3>
+
+<p>While direct manipulation of housekeeping properties can be used to
+change merge info, commands to manipulate this information have been
+provided.  Either style of operation supports adjustment of merge info
+when <a href="requirements.html#manual-merge">manual merges</a> occur,
+and can also be used to fulfill <a
+href="requirements.html#revision-blocking">block changes undesired for
+merge</a> (later, this might be better-addressed by a separate
+housekeeping property).</p>
+
+<ul>
+  <li><code>merge --record-only</code> adds (or subtracts, if a
+    reversed revision range is supplied) merge info for a path
+    <i>without performing the actual merge</i>.</li>
+
+  <li><code>propedit</code>/<code>propset</code> changes merge info
+    for a path.</li>
+
+  <li><code>propdel</code> removes merge info for a path.</li>
+</ul>
+
+</div>  <!-- meta-data-mainpulation -->
+
+<div class="h3" id="merge-history-audit">
+<h3>Merge History Audit and Query</h3>
+
+<p>The <a href="#commutative-author-and-rev">Commutative Author and Revision
+Reporting</a> feature has been implemented, and will be included in 1.5.0.</p>
+
+<p>These features may or may not be completed for 1.5.0.</p>
+
+<ul>
+  <li><a href="#show-changesets-available">Changeset Merge
+    Availability</a> (<i>unimplemented</i>)</li>
+
+  <li><a href="#find-changeset">Find Changeset</a>
+    (<i>unimplemented</i>)</li>
+</ul>
+
+<div class="h4" id="show-changesets-available">
+<h4>Changeset Merge Availability</h4>
+
+<p>Show changesets available for merge/already merged from one or more
+merge source(s).  The command-line client's default output format
+should be equivalent to that of <code>svn log</code>, and allow for
+XML-formatted output (for machine parsing).  Blue sky, the
+command-line could also produce an output format equivalent to that of
+<code>svn diff</code>.</p>
+
+<p>Recent discussion can be found <a
+href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=128233"
+>here</a>.  Development is tracked <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2820">here</a>.</p>
+
+<p>The <a href="requirements.html#change-set-availability">Show
+Changesets Blocked from Merging</a> portion of this feature is
+scheduled for implementation post-1.5, and is dependent upon the <a
+href="requirements.html#revision-blocking">revision blocking</a>
+feature slated for the same timeframe.</p>
+
+</div>  <!-- show-changesets-available -->
+
+<div class="h4" id="find-changeset">
+<h4>Find Changeset</h4>
+
+<p>Show where a changeset has been merged from/merged to, providing
+merging revision, URL, and rangelist.  The command-line client should
+allow for XML-formatted output (for machine parsing).</p>
+
+<p>Recent discussion can be found <a
+href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=128233"
+>here</a>.  Development is tracked <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2835">here</a>.</p>
+
+<p>The <a href="requirements.html#find-changeset">Find Paths
+containing Specific Incarnation of Versioned Resource</a> portion of
+this feature is not yet scheduled for implementation.</p>
+
+</div>  <!-- find-changeset -->
+
+<div class="h4" id="commutative-author-and-rev">
+<h4>Commutative Author and Revision Reporting</h4>
+
+<div class="h5" id="auditing-scope">
+<h5>Scope</h5>
+
+<p>The following commands which show username and merge information should
+respect merge information and support <a
+href="requirements.html#commutative-author-and-rev">Commutative
+Reporting</a>.  These commands are:</p>
+
+<ul>
+  <li><code>svn log</code></li>
+  <li><code>svn blame</code></li>
+</ul>
+
+<p><code>svn info</code>, <code>svn ls --verbose</code> and <code>svn
+status --show-updates</code> are purposely not included in this list.
+While one would typically need more information than they can
+reasonably provide alone, adding more output to these commands would
+clutter their command-line interface, reducing their utility.  Merge
+Tracking-aware API support for the underlying functionality provided
+by these commands may be added at some point in the future (e.g. for
+use by third-party clients like <a href="http://tortoisesvn.tigris.org/"
+>TortoiseSVN</a>).</p>
+
+<p>A new switch, <code>--use-merge-history</code>, along with a
+corresponding single-character shortcut (<code>-g</code>), will be
+introduced for the toggle merge information.  Using it will enable these
+commands to show the additional information gleaned from parsing and
+processing the merge info on the targets in question.  This switch will
+also work with <code>--xml</code> to include additional merge
+information.  The new functionality added by
+<code>--use-merge-history</code> is as follows.</p>
+
+<dl>
+  <dt><code>svn log</code></dt>
+  <dd><p>The original log message(s), in the current format, with the
+  addition of a list of revisions and merge source paths that have
+  been merged into the target.  The output for <code>log</code> should
+  be consistent with the <code>diff</code> output for the
+  <code>svn:mergeinfo</code> property.</p>
+
+  <p>The <code>--verbose</code> switch will output the log information
+  for the merged revisions in place of the information for the revision
+  in which the merge occurred.  Each of the original message(s) will have an
+  additional line indicating that it is the result of a merge, and which
+  revision the merge occurred in.</p>
+
+  <p>For instance, if Alice was the original author of r12, Bob was the
+  orginial author of r14, and Chuck merged them both r12 and r14 as part
+  of r24, the output of <code>svn log --use-merge-history</code>
+  will look like this:</p>
+  <pre>
+------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+  </pre>
+
+  <p>Using the same example, the output of <code>svn log
+  --use-merge-history --verbose</code> will look like:</p>
+
+  <pre>
+------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /trunk/death-ray.c
+   M /trunk/frobnicator/frapnalyzer.c
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /branches/world-domination/death-ray.c
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Changed paths:
+   M /branches/world-domination/frobnicator/frapnalyzer.c
+   M /branches/world-domination/death-ray.c
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+  </pre>
+
+  <p>If r12 was itself a merge of r9 and r10, <code>svn log
+  --use-merge-history</code> for r24 will look like this:</p>
+
+  <pre>
+------------------------------------------------------------------------
+r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
+ 
+Merge r12 and r14 from branch to trunk.
+------------------------------------------------------------------------
+r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r24
+
+Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
+------------------------------------------------------------------------
+r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r24
+
+Fix frapnalyzer bug in frobnicator.
+------------------------------------------------------------------------
+r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r12, r24
+
+Fix frapnalyzer documentation.
+------------------------------------------------------------------------
+r9 | bob | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 1 line
+Result of a merge from: r12, r24
+
+Whitespace fixes.  No functional change.
+  </pre>
+
+  <p>In each case, merged revisions will be grouped together under the merging
+  revisions, and sorted by revision number.  This may mean that not all log
+  messages will be in revision number order, but changes will be presented in
+  the order they were actually made.</p>
+  
+  <p>Output for <code>svn log -g --xml</code> will exploit the tree structure
+  of XML to include child messages as subelements of the corresponding parent
+  log messages.  Consumers can use the location of a particular log message in
+  the tree to determine its ancestry.</p>
+
+  <p>This output may be useful for auditing purposes to those migrating from
+  <a href="http://www.orcaware.com/svn/wiki/Svnmerge.py">svnmerge.py</a>, as
+  a replacement for repeating the entirety of the merged ranges' log
+  messages in the log message for the commit of a merge (e.g. svnmerge.py's
+  generated <em>svnmerge-commit-message.txt</em> file).</p>
+
+  </dd>
+
+  <dt><code>svn blame</code></dt>
+  <dd>
+  <p>Reuse the existing author and revision columns.  Instead of listing
+  the merging author and revision, list the original author and revision of
+  that line.  Unlike other commands, we do not need to worry about multiple
+  source revisions, because each line can have at most one author.</p>
+  
+  <p>The output of <code>svn blame</code> may be the following:</p>
+  <pre>
+     2    alice   This is the file 'iota'.
+    14    bob     'A' has changed a bit, with 'upsilon', and 'xi'.  
+  </pre>
+  
+  <p>Using the <code>-g</code> switch will show the author who most recently
+  changed the line, independent of which branch it was changed on (so long as
+  the changes have been merged).  If Chuck made changes to the file in r11,
+  which was then merged in r14, the output of <code>svn blame -g</code> for the
+  same file may look like this:</p>
+  <pre>
+     2    alice   This is the file 'iota'.
+    11    chuck   'A' has changed a bit, with 'upsilon', and 'xi'.  
+  </pre>
+
+  <p>The <code>--verbose</code> flag also triggers additional information.
+  In addition to the date of the revision, <code>--verbose</code>, in
+  combination with <code>-g</code>, also displays the original path, relative
+  to the repository root, where the modifications were made.  Given the above
+  example, <code>svn blame -g --verbose</code> will be something like this:</p>
+  <pre>
+     2    alice   2007-06-07 10:16:49 -0500 (Thu, 07 Jun 2007) /trunk/iota       This is the file 'iota'.
+    11    chuck   2007-06-07 12:29:48 -0500 (Thu, 07 Jun 2007) /branches/a/iota  'A' has changed a bit, with 'upsilon', and 'xi'.  
+  </pre>
+
+  <p>The output of <code>svn blame -g --xml</code> is not limited by size, and
+  will include all available information.</p>
+
+  </dd>
+</dl>
+
+<p>For commits which remove merge info (e.g. reverts),
+<code>--use-merge-history</code> will trace back to the original author.  For
+example if Alice makes a commit to code previously modified by Bob (committed
+with no merge history), and Alice's commit is subsequently reverted by Chris,
+we should show Bob as the author.  If Bob's commit was itself the result of a
+merge, we should recurse until we find a commit which did not add merge info
+(the leaf node), and assume its author.</p>
+
+</div>  <!-- auditing-scope -->
+
+<div class="h5" id="auditing-questions">
+<h5>Pending Questions</h5>
+
+</div>  <!-- auditing-questions -->
+
+<div class="h5" id="auditing-extra-credit">
+<h5>Additional Features</h5>
+
+<p>Although not part of the initial implementation, additional features have
+been suggested:</p>
+
+<ul>
+  <li>A configuration option to always enable
+  <code>--use-merge-history</code>.
+  </li>
+</ul>
+
+</div>  <!-- auditing-extra-credit -->
+
+</div>  <!-- commutative-author-and-rev -->
+
+</div>  <!-- meta-data-audit -->
+
+</div>  <!-- meta-data -->
+
+<div class="h2" id="repeated-merge">
+<h2>Repeated Merge</h2>
+
+<p>There are two general schemes for solving the <a
+href="requirements.html#repeated-merge">repeated merge</a> problem.
+Subversion 1.5 uses the <a href="#mrca-merge">Most Recent Common
+Ancestor (MRCA)</a> approach.  If a later version of Subversion
+(e.g. 2.0) overhauls the Merge Tracking implementation, it'll likely
+use the <a href="#as-merge">Ancestry Set (AS)</a> approach.</p>
+
+<p>Either solution also supports the <a
+href="requirements.html#cherry-picking">cherry picking</a>, <a
+href="requirements.html#rollback-merge">rollback</a>, and <a
+href="requirements.html#properties">property merging</a> use cases.  A
+<a href="requirements.html#merge-previews">merge preview</a> which is
+lighter-weight than an uncommitted merge into a WC is not
+supported.</p>
+
+<div class="h3" id="mrca-merge">
+<h3>The Most Recent Common Ancestor approach</h3>
+
+<p>In this scheme, An optional set of merge sources in each
+node-revision.  When asked to do a merge with only one source (that
+is, just <code>svn merge URL</code>, with no second argument), you
+compute the most recent ancestor and do a three-way merge between the
+common ancestor, the given URL, and the WC.</p>
+
+<p>To compute the most recent ancestor, you chain off the immediate
+predecessors of each node-revision.  The immediate predecessors are
+the direct predecessor (the most recent node-revision within the node)
+and the merge sources.  An interleaved breadth-first search should
+find the most recent common ancestor.</p>
+
+</div>  <!-- mrca-merge -->
+
+<div class="h3" id="as-merge">
+<h3>The Ancestry Set approach</h3>
+
+<p>In this scheme, you record the full ancestry set for each
+node-revision -- that is, the set of all changes which are accounted
+for in that node-revision.  (How you store this ancestry set is
+unimportant; the point is, you need a reasonably efficient way of
+determining it when asked.)  If you are asked to "svn merge URL", you
+apply the changes present in URL's ancestry but absent in WC's
+ancestry.  Note that this is not a single three-way merge; you may
+have to apply a large number of disjoint changes to the WC.</p>
+
+<p>For a longer description of this approach, see the <a
+href="design.html#model.merging-and-ancestry">"Merging and Ancestry"
+section</a> of the original <a href="design.html">design doc</a>.</p>
+
+<div class="h4" id="aslb-merge">
+<h4>Ancestry-Sensitive Line-Based Merge</h4>
+
+<p>Make 'hunks' of contextually-merged text sensitive to ancestry.</p>
+
+<p>A high-resolution version of <a
+href="requirements.html#repeated-merge">repeated merge</a>.  Rather
+than tracking whole changesets, we track the lineage of specific lines
+of code within a file.  The basic idea is that when re-merging a
+particular hunk of code, the contextual-merging process is aware that
+certain lines of code already represent the merging of particular
+lines of development.  Jack Repenning has a great example of this from
+ClearCase (see ASCII diagram below).</p>
+
+<p>See the <a href="../variance-adjusted-patching.html">variance
+adjusted patching</a> document for an extended discussion of how to
+implement this by composing diffs; see <a
+href="http://svn.collab.net/svn-doxygen/svn__diff_8h.html#a11"
+><code>svn_diff_diff4()</code></a> for an implementation of same.  We
+may be closer to ancestry-sensitive merging than we think.</p>
+
+<p>Here's an example demonstrating how individual lines of code can be
+tracked.  In this diagram, we're drawing the lineage of a single file,
+with time flowing downwards.  The file begins life with three lines of
+text, "1\n2\n\3\n".  The file then splits into two lines of
+development.</p>
+
+<pre>
+                    1     
+                    2     
+                    3     
+                  /   \   
+                 /     \  
+                /       \ 
+            one           1   
+            two           2.5 
+            three         3   
+             |     \      |
+             |      \     |   
+             |       \    |            
+             |        \   |            
+             |         \ one                ## This node is a human's
+             |           two-point-five     ## merge of two sides.
+             |           three        
+             |            |
+             |            |
+             |            |
+            one          one
+            Two          two-point-five
+            three        newline       
+               \         three  
+                \         |   
+                 \        |
+                  \       |
+                   \      |
+                    \     |
+                     \    |
+                      \   |
+                       \  |
+                         one                ## This node is a human's
+                         Two-point-five     ## merge of the changes
+                         newline            ## since the last merge.
+                         three
+</pre>
+
+<p>It's the second merge that's important here.</p>
+
+<p>In a system like Subversion, the second merge of the left branch to
+the right will fail miserably: the whole file's contents will be
+placed within conflict markers.  That's because it's trying to dumbly
+apply a patch that changes "1\n2\n3" to "one\nTwo\nthree", and the
+target file has no matching lines at all.</p>
+
+<p>A smarter system (like Clearcase) would remember that the previous
+merge had happened, and specifically notice that the lines "one" and
+"three" are the results of that previous merge.  Therefore, it would
+ask the human only to deal with the "Two" versus "two-point-five"
+conflict; the earlier changes ("1\n2\n3" to "one\ntwo\nthree") would
+already be accounted for.</p>
+
+</div>  <!-- aslb-merge -->
+
+</div>  <!-- as-merge -->
+
+<div class="h3">
+<h3>Comparisons, Arguments, and Questions</h3>
+
+<p>AS allows you to merge changes from a branch out of order, without
+doing any bookkeeping.  MRCA requires you to merge changes from a
+branch in order.</p>
+
+<p>MRCA is simpler to implement, since it results in a three-way merge
+(which is well-understood by Subversion).  However, it may not handle
+all edge cases.  For instance, it may break down faster if the merging
+topology is not hierarchical.</p>
+
+<p>MRCA may be easier for users to understand, even though AS is
+probably simpler to a mathematician.</p>
+
+<p>Consistency with other modern version controls systems is
+desirable.</p>
+
+<p>If a user asks to merge a directory, should we apply MRCA or AS to
+each subdirectory and file to determine what ancestor(s) to use?  Or
+should we apply MRCA or AS just once, to the directory itself?  The
+latter approach seems simpler and more efficient, but will break down
+quickly if the user wants to merge subdirectories of a branch in
+advance of merging in the whole thing.</p>
+
+</div>  <!-- h3 -->
+
+</div>  <!-- repeated-merge -->
+
+
+<div class="h2" id="conflict-resolution">
+<h2>Merge Conflict Resolution</h2>
+
+<p>Merging inevitably produces conflicts which cannot be resolved by
+an algorithm alone.  In such a case, human intervention is required to
+resolve the conflicts.  The merge algorithm used by Subversion's Merge
+Tracking implementation makes this problem worse, since it breaks a
+requested merge range into several merges to avoid <a
+href="requirements.html#repeated-merge">repeating merges</a> which
+have already been applied to a merge target or its children.  After a
+conflict is encountered, merges of subsequent revision ranges must be
+aborted, since <a
+href="http://svn.apache.org/repos/asf/subversion/trunk/notes/tree-conflicts.txt"
+>tree conflicts</a> or previous content conflicts cannot be reliably
+merged into (e.g. you can't merge into a file that either isn't there
+or which you could potentially merge inside one side of a conflict
+marker).</p>
+
+<p>To help alleviate the pain of conflict resolution, a merge <a
+href="design.html#conflict-resolution">conflict resolution
+callback</a> can be employed by Subversion clients.  This callback is
+invoked whenever merge conflicts are encountered, and can takes steps
+like launching a graphical merge tool (for interactive conflict
+resolution), or following a pre-specified directive like "always use
+the version from my merge source".  This last implementation can be
+used to support the <a href="requirements.html#automated-merge">SCM
+automated merge</a> use case.</p>
+
+<p>The command-line client includes a merge conflict resolution
+callback which behaves much like <em>svk</em>, when in interactive
+mode prompting for how to resolve each conflicted file or property
+value.  When in non-interactive mode (or configured to disallow
+interactive conflict resolution via <code>[miscellany]
+interactive-conflicts = no</code>), conflict resolution is postponed
+until post-merge (as in pre-1.5 releases).  See the <a
+href="../svn_1.5_releasenotes.html">1.5 release notes</a> for an
+example.</p>
+
+<p>In a post-1.5 release, the command-line client will provide an
+interactive conflict resolution option to display some context for
+each conflict in a path or property value, and prompt for how to
+resolve it.  The merge algorithm will attempt to continue applying
+more of the requested merge after conflict is encountered, merging
+what it can around the conflicted area of the WC, and possibly
+supporting an option to complete the remainder of an unfinished merge
+operation after conflicts have been resolved manually.</p>
+
+<p>Related discussion from the dev@ mailing list can be found
+here:</p>
+
+<ul>
+  <li><a
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=128091"
+  >First draft of interactive conflict resolution callback API and
+  command-line client implementation</a></li>
+
+  <li><a
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=121756"
+  >Feedback solicited from IDE developers</a></li>
+
+  <li><a
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=121263"
+  >Original API proposal</a></li>
+</ul>
+
+<p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2022"
+>Issue #2022</a> is loosely related.</p>
+
+<div class="h3" id="distributable-resolution">
+<h3>Distribution of Conflict Resolution</h3>
+
+<p>No explicit facility is provided for distribution of conflict
+resolution.  To support this use case, developers can co-ordinate with
+each other to resolve merge conflicts on portions of a tree, and trade
+patches.</p>
+
+</div>  <!-- distributable-resolution -->
+
+</div>  <!-- conflict-resolution -->
+
+
+<div class="h2" id="migration-and-interoperability">
+<h2>Migration and Interoperability</h2>
+
+<div class="h3" id="migration">
+<h3>Migration</h3>
+
+<p>No explicit steps are necessary to migrate the content of a
+pre-Merge Tracking repository.  Only an upgrade to Subversion 1.5.0 is
+necessary.</p>
+
+<p>TODO: Merge meta data from svnmerge.py.  Dan Berlin has written
+Python code to perform this migration; it needs to be made available
+in the <code>tools/server-side/</code> area of the distribution .</p>
+
+</div>  <!-- migration -->
+
+<div class="h3" id="interoperability">
+<h3>Interoperability</h3>
+
+<p>Executive summary for client/repository inter-op:</p>
+
+<ul>
+  <li>Older Subversion clients may <a href="requirements.html#compatibility"
+  >interact with a 1.5.x+ Subversion repository</a>, but will continue
+  to lack Merge Tracking functionality for:
+
+  <ul>
+    <li>Recording meta data about any merges performed.</li>
+    <li>Using merge meta data to avoid <a
+    href="requirements.html#repeated-merge">repeated merging</a>.</li>
+  </ul>
+  </li>
+
+  <li>1.5.x+ Subversion clients may interact with a older Subversion
+  repositories, with Merge Tracking functionality effectively
+  neutralized.</li>
+</ul>
+
+<p>Gory detail for client/repository inter-op:</p>
+
+<ul>
+  <li>A repository 1.4.x- doesn't provide any way to retrieve
+  inherited merge info for a path (regardless of client version).  For
+  a 1.5.x+ client which could theoretically make use of any merge info
+  available to it, this will typically neutralize its Merge Tracking
+  functionality.  The one case where merge info might come into play
+  is when the merge info for a path is available locally (e.g. in the
+  client's WC); in this case, repeated merges may be avoided.</li>
+ 
+  <li>A 1.5.x client will record merge tracking meta data for merges
+  performed, regardless of repository version.  However, a repository
+  1.4.x- won't know to do anything special with this merge info.  When
+  the repository is upgraded to 1.5.x+, we'll retain this merge info
+  in the svn:mergeinfo property, but I'm not yet clear on what'll
+  happen to the sqlite merge info index.  We may need some sort of
+  upgrade path here, but don't have one yet, and aren't promising
+  one.</li>
+</ul>
+
+<p>Subversion <a href="requirements.html#dump-load">dump files
+continue to be fully portable</a> between pre- and post-Merge Tracking
+versions of Subversion.</p>
+
+</div>  <!-- interoperability -->
+
+</div>  <!-- migration-and-interoperability -->
+
+
+<div class="h2" id="related-documents">
+<h2>Related Documents and Discussion</h2>
+
+<ul>
+  <li><a href="summit.html"
+  >CollabNet customer Merge Tracking Summit</a></li>
+
+  <li><a href="http://www.codeville.org/">Codeville</a> is reputed to
+  excel both in its usefulness of storage of line-history in the
+  <em>weave</em> format, and a corresponding merge algorithm:
+
+  <ul>
+    <li><a href="http://revctrl.org/PreciseCodevilleMerge">"Precise
+    Codeville merge"</a> algorithm and Python implementation.  The
+    algorithm takes into account line history, history points where
+    they came from, the ability to retrieve ancestors' text as needed,
+    and a snapshot of the current file.  It purports accuracy where
+    <a href="http://revctrl.org/CodevilleMerge">other algorithms fall
+    down</a>.</li>
+
+    <li>Bram Cohen describes <a
+    href="http://thread.gmane.org/gmane.comp.version-control.revctrl/2"
+    >the merge algorithm</a> (May 2005)</li>
+  </ul>
+  </li>
+
+  <li><a
+  href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/libsvn_fs_base/notes/structure">Structure
+  of the Subversion FS BerkeleyDB backend</a></li>
+
+</ul>
+
+</div>  <!-- related-documents -->
+
+<p>$Date$</p>
+
+</div>  <!-- h1 -->
+</body>
+</html>

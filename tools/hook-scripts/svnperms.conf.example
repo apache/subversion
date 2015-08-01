@@ -9,6 +9,8 @@
 #
 [groups]
 group1 = user1 user2 user3
+group2 = user4 user5
+supergroup = @group1 @group2 user6
 
 #
 # Example repository control, showing allowed syntax.
@@ -20,13 +22,13 @@ group1 = user1 user2 user3
 # - line breaks are accepted
 #
 [example1 groups]
-group2 = user9 user10
+group3 = user9 user10
 
 [example1]
 trunk/.* = *(add,remove,update) @group1,user4,user5(update)
            user6,user7()
 trunk/.* = user8(add,update)
-tags/[^/]+/ = @group2(add)
+tags/[^/]+/ = @group3(add)
 branches/[^/]+/.* = *(add,remove,update)
 
 #

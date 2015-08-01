@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -33,7 +38,7 @@
 JNIMutex::JNIMutex(apr_pool_t *pool)
 {
   apr_status_t apr_err =
-    apr_thread_mutex_create (&m_mutex, APR_THREAD_MUTEX_NESTED, pool);
+    apr_thread_mutex_create(&m_mutex, APR_THREAD_MUTEX_NESTED, pool);
   if (apr_err)
     JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_create");
 }
@@ -43,7 +48,7 @@ JNIMutex::JNIMutex(apr_pool_t *pool)
  */
 JNIMutex::~JNIMutex()
 {
-  apr_status_t apr_err = apr_thread_mutex_destroy (m_mutex);
+  apr_status_t apr_err = apr_thread_mutex_destroy(m_mutex);
   if (apr_err)
     JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_destroy");
 }

@@ -56,6 +56,12 @@ II.   Configuration
            Satisfy Any
            Require valid-user
          </Location>
+         
+         NOTE: The access control is designed to never display entries that
+         the user does not have access to.  Combining anonymous access on the
+         top levels while restricting read access lower in the directory 
+         structure makes it difficult to browse because the server will not
+         request authentication. 
 
       C. Example 3: Authenticated access only
 
@@ -79,6 +85,125 @@ II.   Configuration
          though AuthzSVNAnonymous was set to 'No'.  The AuthzSVNAnonymous
          directive prevents the anonymous access check from being run.
 
+      D. Example 4: Per-repository access file
+
+         This configuration allows to use SVNParentPath but have
+         different authz files per repository.
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNReposRelativeAccessFile filename
+
+           Require valid-user
+         </Location>
+
+         NOTE: AuthzSVNReposRelativeAccessFile filename causes the authz file
+         to be read from <repo path>/conf/<filename>
+
+      E. Example 5: Authz file stored in a Subversion repository
+
+         This configuration allows storing of the authz file in a repository.
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile file:///path/to/repos/authz
+
+           Require valid-user
+         </Location>
+
+         NOTE: http:// and svn:// URLs are not supported, only local file://
+         absolute URLs may be used.  The URL does not have to point to the
+         same repository as the repository being accessed.  If you wish to 
+         restrict access to this authz file and it is in the same repository
+         you should include a rule for it.
+
+      F. Example 6: Authz file stored inside the repository being accessed.
+
+         This configuration allows providing a relative path within the
+         repository being accessed.
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile ^/authz
+
+           Require valid-user
+         </Location>
+
+         NOTE: You should include rules in your authz file to restirct access
+         to the authz file as desired.  
+
+      G. Example 7: Authenticated access to "Collection of Repositories"
+
+         The "Collection of Repositories" is filtered based on read access to
+         the root of each repository, i.e. consistent with the directory lists
+         within repositories.  If read access is restricted in repository roots,
+         it is typically desirable to require authentication for "Collection of
+         Repositories" in order to ensure that repositories where the user has
+         access are displayed.
+
+         This is accomplished by specifying "Satisfy All" (which is the default
+         setting):
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile /path/to/access/file
+           # implicit Satisfy All
+           Require valid-user
+         </Location>
+         
+         If the same server must be able to serve paths with anonymous access,
+         it can be defined using an additional location.
+         
+         <LocationMatch "^/svn/.+">
+           Satisfy Any
+           Require valid-user
+         </LocationMatch>
+
+         The "Require" statement in the previous example is not strictly
+         needed, but has been included for clarity.
+
+      H. Example 8: Separate authz and groups files.
+
+         This configuration allows storing the groups separately from the
+         main authz file with the authorization rules.
+
+         <Location /svn>
+           DAV svn
+           SVNParentPath /path/to/reposparent
+
+           AuthType Basic
+           AuthName "Subversion repository"
+           AuthUserFile /path/to/htpasswd/file
+
+           AuthzSVNAccessFile /path/to/access/file
+           AuthzSVNGroupsFile /path/to/groups/file
+
+           Require valid-user
+         </Location>
 
    2. Specifying permissions
 

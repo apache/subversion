@@ -2,17 +2,22 @@
  * revision-test.c -- test the revision functions
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -21,10 +26,7 @@
 #include "../svn_test.h"
 
 static svn_error_t *
-test_parse_revision_number(const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
+test_revnum_parse(apr_pool_t *pool)
 {
   const char **t;
 
@@ -32,6 +34,12 @@ test_parse_revision_number(const char **msg,
     "",
     "abc",
     "-456",
+    "2147483648",
+    "4294967295",
+    "4300000000",
+    "00000000001",
+    "21474836470",
+    "999999999999999999999999",
     NULL
   };
 
@@ -39,10 +47,10 @@ test_parse_revision_number(const char **msg,
     "0",
     "12345",
     "12345ABC",
+    "0000000001",
+    "2147483647x",
     NULL
   };
-
-  *msg = "test svn_parse_revision_number";
 
   /* These tests should succeed. */
   for (t=success_tests; *t; ++t)
@@ -52,14 +60,14 @@ test_parse_revision_number(const char **msg,
 
       /* Do one test with a NULL end pointer and then with non-NULL
          pointer. */
-      SVN_ERR(svn_parse_revision_number(&rev, *t, NULL));
-      SVN_ERR(svn_parse_revision_number(&rev, *t, &endptr));
+      SVN_ERR(svn_revnum_parse(&rev, *t, NULL));
+      SVN_ERR(svn_revnum_parse(&rev, *t, &endptr));
 
       if (-123 == rev)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED,
            NULL,
-           "svn_parse_revision_number('%s') should change the revision for "
+           "svn_revnum_parse('%s') should change the revision for "
            "a good string",
            *t);
 
@@ -67,7 +75,7 @@ test_parse_revision_number(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED,
            NULL,
-           "End pointer for svn_parse_revision_number('%s') should not "
+           "End pointer for svn_revnum_parse('%s') should not "
            "point to the start of the string",
            *t);
     }
@@ -80,14 +88,14 @@ test_parse_revision_number(const char **msg,
 
       /* Do one test with a NULL end pointer and then with non-NULL
          pointer. */
-      svn_error_t *err = svn_parse_revision_number(&rev, *t, NULL);
+      svn_error_t *err = svn_revnum_parse(&rev, *t, NULL);
       svn_error_clear(err);
 
-      err = svn_parse_revision_number(&rev, *t, &endptr);
+      err = svn_revnum_parse(&rev, *t, &endptr);
       if (! err)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
-           "svn_parse_revision_number('%s') succeeded when it should "
+           "svn_revnum_parse('%s') succeeded when it should "
            "have failed",
            *t);
       svn_error_clear(err);
@@ -96,7 +104,7 @@ test_parse_revision_number(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED,
            NULL,
-           "svn_parse_revision_number('%s') should not change the revision "
+           "svn_revnum_parse('%s') should not change the revision "
            "for a bad string",
            *t);
 
@@ -104,7 +112,7 @@ test_parse_revision_number(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED,
            NULL,
-           "End pointer for svn_parse_revision_number('%s') does not "
+           "End pointer for svn_revnum_parse('%s') does not "
            "point to the start of the string",
            *t);
     }
@@ -115,9 +123,14 @@ test_parse_revision_number(const char **msg,
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_parse_revision_number),
+    SVN_TEST_PASS2(test_revnum_parse,
+                   "test svn_revnum_parse"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

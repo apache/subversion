@@ -1,0 +1,15 @@
+This tracked the remaining TODOs for the 'Test Review' roadmap item for
+1.7's release status (http://subversion.apache.org/roadmap), i.e.:
+
+  "Determine which XFail and WIP tests should remain so,
+   and which need to be fixed before release."
+
+To answer that question (for 1.7 or any future release) we can now simply run:
+
+(Windows)
+  win-tests.py --list --mode-filter xfail --log-to-stdout
+  --milestone-filter="1.7.0"
+
+(Unix-like)
+   make check MILESTONE_FILTER="1.7.0" MODE_FILTER=xfail \
+    TESTS=subversion/tests/cmdline/*py

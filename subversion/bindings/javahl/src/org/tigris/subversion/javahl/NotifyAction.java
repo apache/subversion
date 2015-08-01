@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -135,15 +140,69 @@ public interface NotifyAction
 
     /**
      * @since 1.5
-     * Changelist operation failed.
+     * A merge operation has begun.
      */
-    public static final int changelist_failed = 28;
+    public static final int merge_begin = 28;
 
     /**
      * @since 1.5
-     * A merge operation has begun.
+     * A merge operation from a foreign repository has begun.
      */
-    public static final int merge_begin = 29;
+   public static final int foreign_merge_begin = 29;
+
+    /**
+     * @since 1.5
+     * Got a replaced in an update.
+     */
+    public static final int update_replaced = 30;
+
+    /**
+     * @since 1.6
+     * Property added.
+     */
+    public static final int property_added = 31;
+
+    /**
+     * @since 1.6
+     * Property modified.
+     */
+    public static final int property_modified = 32;
+
+    /**
+     * @since 1.6
+     * Property deleted.
+     */
+    public static final int property_deleted = 33;
+
+    /**
+     * @since 1.6
+     * Property delete nonexistent.
+     */
+    public static final int property_deleted_nonexistent = 34;
+
+    /**
+     * @since 1.6
+     * Revision property set.
+     */
+    public static final int revprop_set = 35;
+
+    /**
+     * @since 1.6
+     * Revision property deleted.
+     */
+    public static final int revprop_deleted = 36;
+
+    /**
+     * @since 1.6
+     * The last notification in a merge
+     */
+    public static final int merge_completed = 37;
+
+    /**
+     * @since 1.6
+     * The path is a tree-conflict victim of the intended action
+     */
+    public static final int tree_conflict = 38;
 
     /**
      * textual representation of the action types
@@ -178,7 +237,16 @@ public interface NotifyAction
         "path exists",
         "changelist set",
         "changelist cleared",
-        "changelist failed",
         "merge begin",
+        "foreign merge begin",
+        "replaced",
+        "property added",
+        "property modified",
+        "property deleted",
+        "nonexistent property deleted",
+        "revprop set",
+        "revprop deleted",
+        "merge completed",
+        "tree conflict"
     };
 }

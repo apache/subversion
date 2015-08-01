@@ -1,22 +1,35 @@
 /*
  * ====================================================================
- * Copyright (c) 2005-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * svn_global.swg: Central point for global definitions to be used in
  *  every bindings module.  This file is %included before anything
  *  else, in every Subversion .i file.
  */
+
+/* 
+ * Explicitly define SVN_DEPRECATED so SWIG doesn't have issues parsing
+ * our headers.
+ */
+#ifndef SVN_DEPRECATED
+#define SVN_DEPRECATED
+#endif
 
 %include typemaps.i
 %include constraints.i
@@ -79,7 +92,7 @@ static PyObject * _global_py_pool = NULL;
 #define $svn_argnum svn_argnum_$input
 
 /* We assume here that Subversion functions have no more than
-   20 fixed parameters. If you want to wrap a function that has
+   40 fixed parameters. If you want to wrap a function that has
    more fixed parameters, you'll need to add more #define
    statements. */
 %{
@@ -103,6 +116,26 @@ static PyObject * _global_py_pool = NULL;
 #define svn_argnum_obj17 18
 #define svn_argnum_obj18 19
 #define svn_argnum_obj19 20
+#define svn_argnum_obj20 21
+#define svn_argnum_obj21 22
+#define svn_argnum_obj22 23
+#define svn_argnum_obj23 24
+#define svn_argnum_obj24 25
+#define svn_argnum_obj25 26
+#define svn_argnum_obj26 27
+#define svn_argnum_obj27 28
+#define svn_argnum_obj28 29
+#define svn_argnum_obj29 30
+#define svn_argnum_obj30 31
+#define svn_argnum_obj31 32
+#define svn_argnum_obj32 33
+#define svn_argnum_obj33 34
+#define svn_argnum_obj34 35
+#define svn_argnum_obj35 36
+#define svn_argnum_obj36 37
+#define svn_argnum_obj37 38
+#define svn_argnum_obj38 39
+#define svn_argnum_obj39 40
 %}
 
 /* Python format specifiers. Use Python instead of SWIG to parse

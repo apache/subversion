@@ -1,4 +1,24 @@
 #!/usr/bin/perl -w
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 use Test::More tests => 22;
 use strict;
@@ -16,24 +36,32 @@ my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
 my $repos;
 
+# TEST
 ok($repos = SVN::Repos::create("$repospath", undef, undef, undef, undef),
    "create repository at $repospath");
 
 my $fs = $repos->fs;
 
+# TEST
 cmp_ok($fs->youngest_rev, '==', 0,
        "new repository start with rev 0");
 
+# TEST
 is($fs->path, "$repospath/db", '$fs->path()');
+# TEST
 is(SVN::Fs::type($fs->path), 'fsfs', 'SVN::Fs::type()');
 
 my $txn = $fs->begin_txn($fs->youngest_rev);
 
 my $txns = $fs->list_transactions;
+# TEST
 ok(eq_array($fs->list_transactions, [$txn->name]), 'list transaction');
 
+# TEST
 isa_ok($txn->root, '_p_svn_fs_root_t', '$txn->root()');
+# TEST
 is($txn->root->txn_name, $txn->name, '$txn->root->txn_name()');
+# TEST
 is($fs->revision_root($fs->youngest_rev)->txn_name, undef);
 
 $txn->root->make_dir('trunk');
@@ -43,32 +71,43 @@ my $text = "this is just a test\n";
 $txn->root->make_file($path);
 {
     my $stream = $txn->root->apply_text($path, undef);
+    # TEST
     isa_ok($stream, 'SVN::Stream', '$txn->root->apply_text');
     print $stream $text;
     close $stream;
 }
 $txn->commit;
 
+# TEST
 cmp_ok($fs->youngest_rev, '==', 1, 'revision increased');
 
 my $root = $fs->revision_root($fs->youngest_rev);
 
+# TEST
 cmp_ok($root->check_path($path), '==', $SVN::Node::file, 'check_path');
+# TEST
 ok(!$root->is_dir($path), 'is_dir');
+# TEST
 ok($root->is_file($path), 'is_file');
 {
     my $stream = $root->file_contents($path);
     local $/;
+    # TEST
     is(<$stream>, $text, 'content verified');
-    is($root->file_md5_checksum ($path), 'dd2314129f81675e95b940ff94ddc935',
+    # TEST
+    is($root->file_md5_checksum($path), 'dd2314129f81675e95b940ff94ddc935',
        'md5 verified');
 }
 
+# TEST
 cmp_ok($root->file_length($path), '==', length($text), 'file_length');
 
 # Revision properties
+# TEST
 isa_ok($fs->revision_proplist(1), 'HASH', 'revision_proplist: object');
+# TEST
 is($fs->revision_prop(1, 'not:exists'), undef, 'revision_prop: nonexistent');
+# TEST
 like($fs->revision_prop(1, 'svn:date'), qr/^\d+-\d+-\d+T\d+:\d+:\d+\.\d+Z$/,
      'revision_prop: svn:date');
 
@@ -88,12 +127,15 @@ SKIP: {
         or die "error making hook script '$script_filename' executable: $!";
 
     $fs->change_rev_prop(1, 'test-prop', 'foo');
+    # TEST
     is($fs->revision_prop(1, 'test-prop'), 'foo', 'change_rev_prop');
 
     $fs->change_rev_prop(1, 'test-prop', undef);
+    # TEST
     is($fs->revision_prop(1, 'test-prop'), undef, 'change_rev_prop: deleted');
 
     $fs->change_rev_prop(1, 'binary-prop', $BINARY_DATA);
+    # TEST
     is($fs->revision_prop(1, 'binary-prop'), $BINARY_DATA,
        'change_rev_prop with binary data');
 }

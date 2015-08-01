@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -19,38 +24,33 @@
  * @brief Interface of the class Targets
  */
 
-#if !defined(AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_)
-#define AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef TARGETS_H
+#define TARGETS_H
 
 #include <jni.h>
+#include "Pool.h"
+#include "StringArray.h"
 
 struct apr_array_header_t;
-struct svn_error_t;
-class Pool;
 
 #include "Path.h"
+#include "Pool.h"
 #include <vector>
 
 class Targets
 {
  private:
-  std::vector<Path> m_targets;
-  jobjectArray m_targetArray;
-  svn_error_t *m_error_occured;
-  bool m_doesNotContainsPath;
+  SVN::Pool m_subpool;
+  std::vector<const char*> m_targets;
+  StringArray *m_strArray;
+  svn_error_t *m_error_occurred;
  public:
-  Targets(jobjectArray jtargets);
-  Targets(const char *path);
+  Targets(StringArray &strArray, SVN::Pool &in_pool);
+  Targets(const char *path, SVN::Pool &in_pool);
   void add(const char *path);
   ~Targets();
-  const apr_array_header_t *array(const Pool &pool);
-  svn_error_t *error_occured();
-  void setDoesNotContainsPath();
+  const apr_array_header_t *array(const SVN::Pool &pool);
+  svn_error_t *error_occurred();
 };
 
-// !defined(AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_)
-#endif
+#endif // TARGETS_H

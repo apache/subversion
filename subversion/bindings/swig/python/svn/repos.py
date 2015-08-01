@@ -1,25 +1,33 @@
 #
 # repos.py: public Python interface for repos components
 #
-# Subversion is a tool for revision control. 
-# See http://subversion.tigris.org for more information.
-#    
+# Subversion is a tool for revision control.
+# See http://subversion.apache.org for more information.
+#
 ######################################################################
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
-#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 from libsvn.repos import *
 from svn.core import _unprefix_names, Pool
 _unprefix_names(locals(), 'svn_repos_')
 _unprefix_names(locals(), 'SVN_REPOS_')
+__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
 del _unprefix_names
 
 
@@ -48,7 +56,7 @@ class ChangedPath:
     self.path = path
     if action not in [None, CHANGE_ACTION_MODIFY, CHANGE_ACTION_ADD,
                       CHANGE_ACTION_DELETE, CHANGE_ACTION_REPLACE]:
-      raise Exception, "unsupported change type"
+      raise Exception("unsupported change type")
     self.action = action
 
     ### it would be nice to avoid this flag. however, without it, it would
@@ -65,12 +73,28 @@ class ChangedPath:
 
 
 class ChangeCollector(_svndelta.Editor):
-  """Available Since: 1.2.0
+  """An editor that, when driven, walks a revision or a transaction and
+  incrementally invokes a callback with ChangedPath instances corresponding to
+  paths changed in that revision.
+
+  Available Since: 1.2.0
   """
-  
+
   # BATON FORMAT: [path, base_path, base_rev]
-  
+
   def __init__(self, fs_ptr, root, pool=None, notify_cb=None):
+    """Construct a walker over the svn_fs_root_t ROOT, which must
+    be in the svn_fs_t FS_PTR.  Invoke NOTIFY_CB with a single argument
+    of type ChangedPath for each change under ROOT.
+
+    At this time, two ChangedPath objects will be passed for a path that had
+    been replaced in the revision/transaction.  This may change in the future.
+
+    ### Can't we deduce FS_PTR from ROOT?
+
+    ### POOL is unused
+    """
+
     self.fs_ptr = fs_ptr
     self.changes = { } # path -> ChangedPathEntry()
     self.roots = { } # revision -> svn_svnfs_root_t
@@ -94,13 +118,13 @@ class ChangeCollector(_svndelta.Editor):
 
   def get_changes(self):
     return self.changes
-  
+
   def _send_change(self, path):
     if self.notify_cb:
       change = self.changes.get(path)
       if change:
         self.notify_cb(change)
-    
+
   def _make_base_path(self, parent_path, path):
     idx = path.rfind('/')
     if parent_path:
@@ -116,7 +140,7 @@ class ChangeCollector(_svndelta.Editor):
       pass
     root = self.roots[rev] = _svnfs.revision_root(self.fs_ptr, rev)
     return root
-    
+
   def open_root(self, base_revision, dir_pool=None):
     return ('', '', self.base_rev)  # dir_baton
 
@@ -129,9 +153,9 @@ class ChangeCollector(_svndelta.Editor):
     self.changes[path] = ChangedPath(item_type,
                                      False,
                                      False,
-                                     base_path,
+                                     base_path,       # base_path
                                      parent_baton[2], # base_rev
-                                     None,            # (new) path
+                                     path,            # path
                                      False,           # added
                                      CHANGE_ACTION_DELETE,
                                      )
@@ -139,7 +163,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool=None):
-    action = self.changes.has_key(path) and CHANGE_ACTION_REPLACE \
+    action = path in self.changes and CHANGE_ACTION_REPLACE \
              or CHANGE_ACTION_ADD
     self.changes[path] = ChangedPath(_svncore.svn_node_dir,
                                      False,
@@ -163,7 +187,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def change_dir_prop(self, dir_baton, name, value, pool=None):
     dir_path = dir_baton[0]
-    if self.changes.has_key(dir_path):
+    if dir_path in self.changes:
       self.changes[dir_path].prop_changes = True
     else:
       # can't be added or deleted, so this must be CHANGED
@@ -179,7 +203,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool=None):
-    action = self.changes.has_key(path) and CHANGE_ACTION_REPLACE \
+    action = path in self.changes and CHANGE_ACTION_REPLACE \
              or CHANGE_ACTION_ADD
     self.changes[path] = ChangedPath(_svncore.svn_node_file,
                                      False,
@@ -203,7 +227,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def apply_textdelta(self, file_baton, base_checksum):
     file_path = file_baton[0]
-    if self.changes.has_key(file_path):
+    if file_path in self.changes:
       self.changes[file_path].text_changed = True
     else:
       # an add would have inserted a change record already, and it can't
@@ -223,7 +247,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def change_file_prop(self, file_baton, name, value, pool=None):
     file_path = file_baton[0]
-    if self.changes.has_key(file_path):
+    if file_path in self.changes:
       self.changes[file_path].prop_changes = True
     else:
       # an add would have inserted a change record already, and it can't
@@ -239,16 +263,16 @@ class ChangeCollector(_svndelta.Editor):
                                             )
   def close_directory(self, dir_baton):
     self._send_change(dir_baton[0])
-    
+
   def close_file(self, file_baton, text_checksum):
     self._send_change(file_baton[0])
-    
+
 
 class RevisionChangeCollector(ChangeCollector):
   """Deprecated: Use ChangeCollector.
   This is a compatibility wrapper providing the interface of the
   Subversion 1.1.x and earlier bindings.
-  
+
   Important difference: base_path members have a leading '/' character in
   this interface."""
 
@@ -263,9 +287,54 @@ class RevisionChangeCollector(ChangeCollector):
     return parent_path + path[idx:]
 
 
-# enable True/False in older vsns of Python
-try:
-  True
-except NameError:
-  True = 1
-  False = 0
+class ParseFns3:
+    def __init__(self):
+        pass
+
+    def __del__(self):
+        pass
+
+    def _close_dumpstream(self):
+        # Does not correspond to a C method - called before finishing the
+        # parsing of the dump stream.
+        pass
+
+    def magic_header_record(self, version, pool=None):
+        pass
+
+    def uuid_record(self, uuid, pool=None):
+        pass
+
+    def new_revision_record(self, headers, pool=None):
+        return None # Returns revision_baton
+
+    def new_node_record(self, headers, revision_baton, pool=None):
+        return None # Returns node_baton
+
+    def set_revision_property(self, revision_baton, name, value):
+        pass
+
+    def set_node_property(self, node_baton, name, value):
+        pass
+
+    def delete_node_property(self, node_baton, name):
+        pass
+
+    def remove_node_props(self, node_baton):
+        pass
+
+    def set_fulltext(self, node_baton):
+        return None # Returns a writable stream
+
+    def apply_textdelta(self, node_baton):
+        return None # Returns delta window handler
+
+    def close_node(self, node_baton):
+        pass
+
+    def close_revision(self, revision_baton):
+        pass
+
+
+def make_parse_fns3(parse_fns3, pool=None):
+    return svn_swig_py_make_parse_fns3(parse_fns3, pool)

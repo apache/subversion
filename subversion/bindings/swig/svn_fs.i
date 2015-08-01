@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * svn_fs.i: SWIG interface file for svn_fs.h
@@ -49,6 +54,7 @@
     const char *base_checksum,
     const char *result_checksum,
     const char *token,
+    const char *uuid,
     const char *comment
 };
 
@@ -58,6 +64,7 @@
 
 %hash_argout_typemap(entries_p, svn_fs_dirent_t *)
 %hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *)
+%hash_argout_typemap(changed_paths2_p, svn_fs_path_change2_t *)
 
 #ifndef SWIGPERL
 #ifndef SWIGMZSCHEME
@@ -68,6 +75,14 @@
                   svn_swig_rb_fs_get_locks_callback,,,)
 #endif
 #endif
+
+#ifdef SWIGPYTHON
+%callback_typemap(svn_fs_lock_callback_t lock_callback, void *lock_baton,
+                  svn_swig_py_fs_lock_callback,
+                  ,
+                  )
+#endif
+
 /* -----------------------------------------------------------------------
    svn_fs_get_merge_info
 */
@@ -77,12 +92,6 @@
 {
   %append_output(svn_swig_py_stringhash_to_dict(*$1));
 }
-#endif
-
-#ifdef SWIGRUBY
-%apply apr_hash_t **HASH_CSTRING {
-  apr_hash_t **minfohash
-};
 #endif
 
 %apply apr_hash_t *MERGEINFO { apr_hash_t *mergeinhash };
@@ -133,6 +142,7 @@ svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
 /* ----------------------------------------------------------------------- */
 
 %{
+#include <apr_md5.h>
 #include "svn_md5.h"
 %}
 

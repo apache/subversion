@@ -1,22 +1,27 @@
 /* trail.c : backing out of aborted Berkeley DB transactions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include <apr_pools.h>
 #include "svn_pools.h"
@@ -89,10 +94,9 @@ begin_trail(trail_t **trail_p,
       /* [*]
          If we're already inside a trail operation, abort() -- this is
          a coding problem (and will likely hang the repository anyway). */
-      if (bfd->in_txn_trail)
-        abort();
+      SVN_ERR_ASSERT(! bfd->in_txn_trail);
 
-      SVN_ERR(BDB_WRAP(fs, "beginning Berkeley DB transaction",
+      SVN_ERR(BDB_WRAP(fs, N_("beginning Berkeley DB transaction"),
                        bfd->bdb->env->txn_begin(bfd->bdb->env, 0,
                                                 &trail->db_txn, 0)));
       bfd->in_txn_trail = TRUE;
@@ -127,7 +131,7 @@ abort_trail(trail_t *trail)
          see the returned error than to abort.  An obvious example is
          when DB_TXN->abort() returns DB_RUNRECOVERY. */
       bfd->in_txn_trail = FALSE;
-      SVN_ERR(BDB_WRAP(fs, "aborting Berkeley DB transaction",
+      SVN_ERR(BDB_WRAP(fs, N_("aborting Berkeley DB transaction"),
                        trail->db_txn->abort(trail->db_txn)));
     }
   svn_pool_destroy(trail->pool);
@@ -151,7 +155,7 @@ commit_trail(trail_t *trail)
       /* See comment [**] in abort_trail() above.
          An error during txn commit will abort the transaction anyway. */
       bfd->in_txn_trail = FALSE;
-      SVN_ERR(BDB_WRAP(fs, "committing Berkeley DB transaction",
+      SVN_ERR(BDB_WRAP(fs, N_("committing Berkeley DB transaction"),
                        trail->db_txn->commit(trail->db_txn, 0)));
     }
 
@@ -191,6 +195,7 @@ do_retry(svn_fs_t *fs,
          svn_error_t *(*txn_body)(void *baton, trail_t *trail),
          void *baton,
          svn_boolean_t use_txn,
+         svn_boolean_t destroy_trail_pool,
          apr_pool_t *pool,
          const char *txn_body_fn_name,
          const char *filename,
@@ -214,6 +219,11 @@ do_retry(svn_fs_t *fs,
 
           if (use_txn)
             print_trail_debug(trail, txn_body_fn_name, filename, line);
+
+          /* If our caller doesn't want us to keep trail memory
+             around, destroy our subpool. */
+          if (destroy_trail_pool)
+            svn_pool_destroy(trail->pool);
 
           return SVN_NO_ERROR;
         }
@@ -243,12 +253,13 @@ svn_error_t *
 svn_fs_base__retry_debug(svn_fs_t *fs,
                          svn_error_t *(*txn_body)(void *baton, trail_t *trail),
                          void *baton,
+                         svn_boolean_t destroy_trail_pool,
                          apr_pool_t *pool,
                          const char *txn_body_fn_name,
                          const char *filename,
                          int line)
 {
-  return do_retry(fs, txn_body, baton, TRUE, pool,
+  return do_retry(fs, txn_body, baton, TRUE, destroy_trail_pool, pool,
                   txn_body_fn_name, filename, line);
 }
 
@@ -261,9 +272,10 @@ svn_error_t *
 svn_fs_base__retry_txn(svn_fs_t *fs,
                        svn_error_t *(*txn_body)(void *baton, trail_t *trail),
                        void *baton,
+                       svn_boolean_t destroy_trail_pool,
                        apr_pool_t *pool)
 {
-  return do_retry(fs, txn_body, baton, TRUE, pool,
+  return do_retry(fs, txn_body, baton, TRUE, destroy_trail_pool, pool,
                   "unknown", "", 0);
 }
 
@@ -272,8 +284,9 @@ svn_error_t *
 svn_fs_base__retry(svn_fs_t *fs,
                    svn_error_t *(*txn_body)(void *baton, trail_t *trail),
                    void *baton,
+                   svn_boolean_t destroy_trail_pool,
                    apr_pool_t *pool)
 {
-  return do_retry(fs, txn_body, baton, FALSE, pool,
+  return do_retry(fs, txn_body, baton, FALSE, destroy_trail_pool, pool,
                   NULL, NULL, 0);
 }

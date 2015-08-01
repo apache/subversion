@@ -1,3 +1,21 @@
+dnl ===================================================================
+dnl   Licensed to the Apache Software Foundation (ASF) under one
+dnl   or more contributor license agreements.  See the NOTICE file
+dnl   distributed with this work for additional information
+dnl   regarding copyright ownership.  The ASF licenses this file
+dnl   to you under the Apache License, Version 2.0 (the
+dnl   "License"); you may not use this file except in compliance
+dnl   with the License.  You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl   Unless required by applicable law or agreed to in writing,
+dnl   software distributed under the License is distributed on an
+dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+dnl   KIND, either express or implied.  See the License for the
+dnl   specific language governing permissions and limitations
+dnl   under the License.
+dnl ===================================================================
 dnl
 dnl  SVN_LIB_SASL
 dnl
@@ -10,10 +28,8 @@ dnl  to `no'.
 
 AC_DEFUN(SVN_LIB_SASL,
 [
-  AC_ARG_WITH(sasl, 
-  [
-  --with-sasl=PATH       Compile with libsasl2 in PATH
-  ],
+  AC_ARG_WITH(sasl, [AS_HELP_STRING([--with-sasl=PATH],
+                                    [Compile with libsasl2 in PATH])],
   [
     with_sasl="$withval"
     required="yes"
@@ -32,29 +48,35 @@ AC_DEFUN(SVN_LIB_SASL,
     AC_MSG_RESULT([yes])
     saved_LDFLAGS="$LDFLAGS"
     saved_CPPFLAGS="$CPPFLAGS"
-    
-    dnl If the user doesn't specify a (valid) directory 
-    dnl (or he doesn't supply a --with-sasl option at all), we
-    dnl want to look in the default directories: /usr and /usr/local.
-    dnl However, the compiler always looks in /usr/{lib,include} anyway,
-    dnl so we only need to look in /usr/local
 
-    if test ! -d ${with_sasl}; then
+    if test "$with_sasl" = "yes"; then
       AC_MSG_NOTICE([Looking in default locations])
-      with_sasl="/usr/local"
+      AC_CHECK_HEADER(sasl/sasl.h,
+        [AC_CHECK_HEADER(sasl/saslutil.h,
+         [AC_CHECK_LIB(sasl2, prop_get, 
+                       svn_lib_sasl=yes,
+                       svn_lib_sasl=no)],
+                       svn_lib_sasl=no)], svn_lib_sasl=no)
+      if test "$svn_lib_sasl" = "no"; then
+        with_sasl="/usr/local"
+      fi
+    else
+      svn_lib_sasl=no
     fi
 
-    SVN_SASL_INCLUDES="-I${with_sasl}/include"
-    CPPFLAGS="$CPPFLAGS $SVN_SASL_INCLUDES"
-    LDFLAGS="$LDFLAGS -L${with_sasl}/lib"
-  
-    AC_CHECK_HEADER(sasl/sasl.h,
-      [AC_CHECK_HEADER(sasl/saslutil.h,
-        [AC_CHECK_LIB(sasl2, prop_get, 
-                     svn_lib_sasl=yes,
-                     svn_lib_sasl=no)],
-                     svn_lib_sasl=no)], svn_lib_sasl=no)
-  
+    if test "$svn_lib_sasl" = "no"; then
+      SVN_SASL_INCLUDES="-I${with_sasl}/include"
+      CPPFLAGS="$CPPFLAGS $SVN_SASL_INCLUDES"
+      LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L${with_sasl}/lib)`"
+
+      AC_CHECK_HEADER(sasl/sasl.h,
+        [AC_CHECK_HEADER(sasl/saslutil.h,
+         [AC_CHECK_LIB(sasl2, prop_get, 
+                       svn_lib_sasl=yes,
+                       svn_lib_sasl=no)],
+                       svn_lib_sasl=no)], svn_lib_sasl=no)
+    fi
+
     AC_MSG_CHECKING([for availability of Cyrus SASL v2])
     if test "$svn_lib_sasl" = "yes"; then
       SVN_SASL_LIBS="-lsasl2"

@@ -2,17 +2,22 @@
  * random-test.c:  Test delta generation and application using random data.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -26,11 +31,11 @@
 #include <apr_getopt.h>
 #include <apr_file_io.h>
 
+#include "../svn_test.h"
+
 #include "svn_delta.h"
 #include "svn_pools.h"
 #include "svn_error.h"
-
-#include "../svn_test.h"
 
 #include "../../libsvn_delta/delta.h"
 #include "delta-window-test.h"
@@ -52,7 +57,7 @@ static void init_params(apr_uint32_t *seed,
                         apr_uint32_t *maxlen, int *iterations,
                         int *dump_files, int *print_windows,
                         const char **random_bytes,
-                        apr_uint32_t *bytes_range,
+                        apr_size_t *bytes_range,
                         apr_pool_t *pool)
 {
   apr_getopt_t *opt;
@@ -75,7 +80,7 @@ static void init_params(apr_uint32_t *seed,
       switch (optch)
         {
         case 's':
-          *seed = atol(opt_arg);
+          *seed = (apr_uint32_t) atol(opt_arg);
           break;
         case 'l':
           *maxlen = atoi(opt_arg);
@@ -104,12 +109,9 @@ open_tempfile(const char *name_template, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *fp = NULL;
-  char *templ;
-
-  if (!name_template)
-    templ = apr_pstrdup(pool, "tempfile_XXXXXX");
-  else
-    templ = apr_pstrdup(pool, name_template);
+  char *templ = (char *)apr_pstrdup(
+      pool, svn_test_data_path(
+          name_template ? name_template : "tempfile_XXXXXX", pool));
 
   apr_err = apr_file_mktemp(&fp, templ, 0, pool);
   assert(apr_err == 0);
@@ -155,7 +157,7 @@ generate_random_file(apr_uint32_t maxlen,
                      apr_uint32_t subseed_base,
                      apr_uint32_t *seed,
                      const char *random_bytes,
-                     apr_uint32_t bytes_range,
+                     apr_size_t bytes_range,
                      int dump_files,
                      apr_pool_t *pool)
 {
@@ -184,7 +186,7 @@ generate_random_file(apr_uint32_t maxlen,
         {
           const int ch = (random_bytes
                           ? (unsigned)random_bytes[r % bytes_range]
-                          : r % bytes_range);
+                          : (int)(r % bytes_range));
           if (buf == end)
             {
               apr_size_t ignore_length;
@@ -193,7 +195,7 @@ generate_random_file(apr_uint32_t maxlen,
               buf = file_buffer;
             }
 
-          *buf++ = ch;
+          *buf++ = (char)ch;
           r = r * 1103515245 + 12345;
         }
     }
@@ -202,7 +204,6 @@ generate_random_file(apr_uint32_t maxlen,
     {
       apr_size_t ignore_length;
       apr_file_write_full(fp, file_buffer, buf - file_buffer, &ignore_length);
-      buf = file_buffer;
     }
   rewind_file(fp);
 
@@ -279,16 +280,13 @@ copy_tempfile(apr_file_t *fp, apr_pool_t *pool)
 
 
 
-/* Implements svn_test_driver_t. */
+/* (Note: *LAST_SEED is an output parameter.) */
 static svn_error_t *
-random_test(const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
-            apr_pool_t *pool)
+do_random_test(apr_pool_t *pool,
+               apr_uint32_t *last_seed)
 {
-  static char msg_buff[256];
-
-  apr_uint32_t seed, bytes_range, maxlen;
+  apr_uint32_t seed, maxlen;
+  apr_size_t bytes_range;
   int i, iterations, dump_files, print_windows;
   const char *random_bytes;
 
@@ -296,18 +294,11 @@ random_test(const char **msg,
      or something. */
   init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
               &random_bytes, &bytes_range, pool);
-  sprintf(msg_buff, "random delta test, seed = %lu", (unsigned long) seed);
-  *msg = msg_buff;
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-  else
-    printf("SEED:  %s\n", msg_buff);
 
   for (i = 0; i < iterations; i++)
     {
       /* Generate source and target for the delta and its application.  */
-      apr_uint32_t subseed_base = svn_test_rand(&seed);
+      apr_uint32_t subseed_base = svn_test_rand((*last_seed = seed, &seed));
       apr_file_t *source = generate_random_file(maxlen, subseed_base, &seed,
                                                 random_bytes, bytes_range,
                                                 dump_files, pool);
@@ -337,15 +328,17 @@ random_test(const char **msg,
       stream = svn_txdelta_parse_svndiff(handler, handler_baton, TRUE,
                                          delta_pool);
 
-      /* Make stage 2: encode the text delta in svndiff format.  */
-      svn_txdelta_to_svndiff2(&handler, &handler_baton, stream, 1,
+      /* Make stage 2: encode the text delta in svndiff format using
+                       varying compression levels. */
+      svn_txdelta_to_svndiff3(&handler, &handler_baton, stream, 1, i % 10,
                               delta_pool);
 
       /* Make stage 1: create the text delta.  */
-      svn_txdelta(&txdelta_stream,
-                  svn_stream_from_aprfile(source, delta_pool),
-                  svn_stream_from_aprfile(target, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream,
+                   svn_stream_from_aprfile(source, delta_pool),
+                   svn_stream_from_aprfile(target, delta_pool),
+                   FALSE,
+                   delta_pool);
 
       SVN_ERR(svn_txdelta_send_txstream(txdelta_stream,
                                         handler,
@@ -365,18 +358,26 @@ random_test(const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_test_driver_t. */
+static svn_error_t *
+random_test(apr_pool_t *pool)
+{
+  apr_uint32_t seed;
+  svn_error_t *err = do_random_test(pool, &seed);
+  if (err)
+    fprintf(stderr, "SEED: %lu\n", (unsigned long)seed);
+  return err;
+}
+
 
 
 /* (Note: *LAST_SEED is an output parameter.) */
 static svn_error_t *
-do_random_combine_test(const char **msg,
-                       svn_boolean_t msg_only,
-                       apr_pool_t *pool,
+do_random_combine_test(apr_pool_t *pool,
                        apr_uint32_t *last_seed)
 {
-  static char msg_buff[256];
-
-  apr_uint32_t seed, bytes_range, maxlen;
+  apr_uint32_t seed, maxlen;
+  apr_size_t bytes_range;
   int i, iterations, dump_files, print_windows;
   const char *random_bytes;
 
@@ -384,14 +385,6 @@ do_random_combine_test(const char **msg,
      or something. */
   init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
               &random_bytes, &bytes_range, pool);
-  sprintf(msg_buff,
-          "random combine delta test, seed = %lu", (unsigned long) seed);
-  *msg = msg_buff;
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-  else
-    printf("SEED:  %s\n", msg_buff);
 
   for (i = 0; i < iterations; i++)
     {
@@ -431,21 +424,24 @@ do_random_combine_test(const char **msg,
       stream = svn_txdelta_parse_svndiff(handler, handler_baton, TRUE,
                                          delta_pool);
 
-      /* Make stage 2: encode the text delta in svndiff format.  */
-      svn_txdelta_to_svndiff2(&handler, &handler_baton, stream, 1,
+      /* Make stage 2: encode the text delta in svndiff format using
+                       varying compression levels. */
+      svn_txdelta_to_svndiff3(&handler, &handler_baton, stream, 1, i % 10,
                               delta_pool);
 
       /* Make stage 1: create the text deltas.  */
 
-      svn_txdelta(&txdelta_stream_A,
-                  svn_stream_from_aprfile(source, delta_pool),
-                  svn_stream_from_aprfile(middle, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream_A,
+                   svn_stream_from_aprfile(source, delta_pool),
+                   svn_stream_from_aprfile(middle, delta_pool),
+                   FALSE,
+                   delta_pool);
 
-      svn_txdelta(&txdelta_stream_B,
-                  svn_stream_from_aprfile(middle_copy, delta_pool),
-                  svn_stream_from_aprfile(target, delta_pool),
-                  delta_pool);
+      svn_txdelta2(&txdelta_stream_B,
+                   svn_stream_from_aprfile(middle_copy, delta_pool),
+                   svn_stream_from_aprfile(target, delta_pool),
+                   FALSE,
+                   delta_pool);
 
       {
         svn_txdelta_window_t *window_A;
@@ -509,15 +505,12 @@ do_random_combine_test(const char **msg,
 
 /* Implements svn_test_driver_t. */
 static svn_error_t *
-random_combine_test(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+random_combine_test(apr_pool_t *pool)
 {
   apr_uint32_t seed;
-  svn_error_t *err = do_random_combine_test(msg, msg_only, pool, &seed);
-  if (!msg_only)
-    printf("SEED:  Last seen = %lu\n", (unsigned long) seed);
+  svn_error_t *err = do_random_combine_test(pool, &seed);
+  if (err)
+    fprintf(stderr, "SEED: %lu\n", (unsigned long)seed);
   return err;
 }
 
@@ -531,13 +524,20 @@ random_combine_test(const char **msg,
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(random_test),
-    SVN_TEST_PASS(random_combine_test),
+    SVN_TEST_PASS2(random_test,
+                   "random delta test"),
+    SVN_TEST_PASS2(random_combine_test,
+                   "random combine delta test"),
 #ifdef SVN_RANGE_INDEX_TEST_H
-    SVN_TEST_PASS(random_range_index_test),
+    SVN_TEST_PASS2(random_range_index_test,
+                   "random range index test"),
 #endif
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

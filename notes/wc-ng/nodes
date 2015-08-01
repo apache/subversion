@@ -1,0 +1,291 @@
+
+Description of the NODES table
+==============================
+
+
+ * Introduction
+ * Inclusion of BASE nodes
+ * Rows to store state
+ * Ordering rows into layers
+ * Visibility of multiple op_depth rows
+ * Restructuring the tree means adding rows
+ * Copies of mixed-revision subtrees become multiple layers
+ * In a deleted subtree, all nodes get marked deleted explicitly
+ * Nodes in a replaced subtree can have different presence values
+ * Presence values of nodes in partially overlapping replacements
+ * Status needs to consult the *two* topmost layers - sometimes
+
+
+Introduction
+------------
+
+The entire original design of wc-ng evolves around the notion that
+there are a number of states in a working copy, each of which needs
+to be managed.  All operations - excluding merge - operate on three
+trees: BASE, WORKING and ACTUAL.
+
+For an in-depth description of what each means, the reader is referred
+to other documentation, also in the notes/ directory.  In short, BASE
+is what was checked out from the repository; WORKING includes
+tree restructuring; while ACTUAL also includes changes to properties
+and file contents.
+
+The idea that there are three trees works - mostly. There is no need
+for more trees outside the area of the metadata administration and even
+then three trees got us pretty far.  The problem starts when one realizes
+tree modifications can be overlapping or layered. Imagine a tree with
+a replaced subtree.  It's possible to replace a subtree within the
+replacement.  Imagine that happened and that the user wants to revert
+one of the replacements.  Given a 'flat' system, with just enough columns
+in the database to record the 'old' and 'new' information per node, a single
+revert can be supported.  However, in the example with the double
+replacement above, that would mean it's impossible to revert one of the
+two replacements: either there's not enough information in the deepest
+replacement to execute the highest level replacement or vice versa
+- depending on which information was selected to be stored in the "new"
+columns.
+
+The NODES table is the answer to this problem: instead of having a single
+row in a table with WORKING nodes with just enough columns to record
+(as per the example) a replacement, the solution is to record different
+layers of tree restructuring by having multiple rows.
+
+
+
+Inclusion of BASE nodes
+-----------------------
+
+The original technical design of wc-ng included a WORKING_NODE and a
+BASE_NODE table.  As described in the introduction, the WORKING_NODE
+table was replaced with NODES.  However, the BASE_NODE table stores
+roughly the same state information that WORKING_NODE did.  Additionally,
+in a number of situations, the system isn't interested in the type of
+state it gets returned (BASE or WORKING) - it just wants the latest.
+
+As a result the BASE_NODE table has been integrated into the NODES
+table.
+
+The main difference between the WORKING_NODE and BASE_NODE tables was
+that the BASE_NODE table contained a few caching fields which are
+not relevant to WORKING_NODE.  Moving those to a separate table was
+determined to be wasteful because the primary key of that table
+would be much larger than any information stored in it in the first
+place.
+
+
+
+Rows to store state
+-------------------
+
+Rows of the NODES table store state of nodes in the BASE tree
+and the layers in the WORKING tree.  Note that these nodes do not
+need to exist in the working copy presented to the user: they may
+be 'absent', 'not-present' or just removed (rm) without using
+Subversion commands.
+
+A row contains information linking to the repository, if the node
+was received from a repository.  This reference may be a link to
+the original nodes for copied or moved nodes, but for rows designating
+BASE state, they refer to the repository location which was checked
+out from.
+
+Additionally, the rows contain information about local modifications
+such as copy, move or delete operations.
+
+
+
+Ordering rows into layers
+-------------------------
+
+Since the table might contain more than one row per (wc_id, local_relpath)
+combination, an ordering mechanism needs to be added.  To that effect
+the 'op_depth' value has been devised.  The op_depth is an integer
+indicating the depth of the operation which modified the tree in order
+for the node to enter the state indicated in the row.
+
+Every row for the (wc_id, local_relpath) combination must have a unique
+op_depth associated with it.  The value of op_depth is related to the
+top-most node being modified in the given tree-restructuring
+operation (operation root or oproot).  E.g. upon deletion of a subtree,
+every node in the subtree will have a row in the table with the same
+op_depth, that being the depth of the top directory of the subtree.
+
+The op_depth is calculated by taking the number of path components in
+the local_relpath of the oproot. The unmodified tree (BASE) is identified
+by rows with an op_depth value 0.
+
+By having multiple restructuring operations on the same path in a modified
+subtree (most notably replacements), the table may end up with multiple rows
+with an op_depth bigger than 0.
+
+
+
+Visibility of multiple op_depth rows
+------------------------------------
+
+As stated in the introduction, there's no need to leak the concept of
+multiple op_depth rows out of the meta data store - apart from the BASE
+and WORKING trees.
+
+As described before, the BASE tree is defined by op_depth == 0. WORKING as
+visible outside the metadata store maps back to those rows where
+op_depth == MAX(op_depth) for each (wc_id, local_relpath) combination.
+
+
+
+Restructuring the tree means adding rows
+----------------------------------------
+
+The base idea behind the NODES table is that every tree restructuring
+operation causes nodes to be added to the table in order to best support
+the reversal process: in that case a revert simply means deletion of rows
+and bringing the subtree back into sync with the metadata.
+
+There's one exception: When a delete is followed by a copy or move to
+the deleted location - causing a replacement - a row with the right
+op_depth may already exist, due to the delete.  If so, it needs to be
+modified.  On revert, the modified nodes need to be restored to 'deleted'
+state, which itself can be reverted during the next revert.  (If the row did
+not exist with the right op_depth, then this copy or move is being performed
+at some greater depth than the delete, and then this copy or move will
+simply create rows at a new op_depth.)
+
+### JAF: I don't think a replacement should be reverted in two stages, even
+  though it was created in two stages.  I think 'revert' should restore the
+  previous existing node, just like it does in WC-1.  A partial revert of
+  this state is not a particularly helpful or frequent use case.
+
+  GJS: I believe that wc_db should enable the individual reverts. The
+  first revert will undo the add/copy, and the second revert will undo
+  the delete. The UI (or the next level up in libsvn_wc) can collapse
+  those into a single user action. This leaves us the future
+  possibility of finer-grained reverts.
+
+### EHU: The statement above probably means that *all* nodes in the subtree
+  need to be rewritten: they all have a deleted state with the affected
+  op_depth, meaning they probably need a 'replaced/copied-to' state with
+  the same op_depth...
+
+  GJS: not all nodes. The newly-arriving copy/move may have
+  new/disjoint nodes that were not part of the deleted set. We will
+  simply add new rows for these arriving nodes. Similarly, the
+  arriving subtree may NOT have a similar node, so the deleted node
+  remains untouched.
+
+
+Copies of mixed-revision subtrees become multiple layers
+--------------------------------------------------------
+
+In the design, every node which is not a child of its parent implies a
+tree restructuring operation having taken place.  When committing a
+mixed-revision subtree, the commit should mirror the actual mixed state
+of the tree.
+
+A mixed-revision tree which came about in the usual process of committing
+content changes - ie one without tree modifications - differs exactly in
+that respect:  the tree in the repository doesn't need to mirror the mixed
+revision state in the working copy.
+
+The idea is that every tree restructuring operation takes place on the
+oproot.  When a node or subtree within the copied tree isn't a direct
+child of its parent, most notably because it's at a different revision,
+that's a tree restructuring: a node of the same revision has been
+replaced by a node (of the same name) from another rev.
+
+By strict application of the design rule, all nodes and subtrees at
+different revision levels than their parents within the copied subtree,
+become an op_depth layer of their own.
+
+### JAF: We don't have the info in the WC to be able to fill in the lower
+  layers of this tree for the copy, if we are copying from BASE, because
+  BASE is stored flat.  Therefore we won't be able to revert/delete/replace
+  the different-revision sub-trees of this copied tree.  Therefore I think
+  we have to store the mixed-rev copy flat (single op_depth) and modify the
+  commit rules to act on revision-number changes within this flat tree.
+
+  GJS: correct. Consider a root of the subtree at r10, and a
+  descendant is at r12. We cannot create one layer at r10, and another
+  at r12 because we do not have the descendant@r10 to place into the
+  first layer. Thus, we need to use a single op_depth layer for this
+  operation. At commit time, one copy will be me for the subtree from
+  r10, a deletion will be made for the descendant, and then another
+  copy performed for the r12 descendant.
+
+### GJS: in the above scenario, we do not know if the descendant
+  existed in r10, so the deletion may not be necessary (and could even
+  throw an error!). I do not recall if our copy's destination is
+  allowed to exist (ie. we have implied overwrite semantics in the
+  repository).
+
+  PM: Yes, we have overwrite sematics.  The FS layer on the server has
+  magic that converts the copy of the r12 descendant into a replace if
+  the descendant exists in r10.  The client does not send a delete.
+
+  This magic applies to copies, not deletes, so there is a problem
+  when the descendant is deleted in the mixed-revision copy in the
+  working copy.  When faced with a copy of the subtree at r10 and a
+  delete of a descendant at r12 the commit doesn't work at present.
+  Deleting the descendant is wrong if it does not exist in r10, but
+  not deleting it is wrong if it does exist.  I suppose the client
+  could ask the server, or perhaps use multiple layers of BASE to
+  track mixed-revisions (argh!).
+
+In a deleted subtree, all nodes get marked deleted explicitly
+-------------------------------------------------------------
+
+All nodes in a deleted subtree get marked 'deleted' explicitly in order
+to be able to query on a single node and find in its topmost layer
+that the node that might have ever existed at the given path does not
+exist there anymore.
+
+
+Presence values of nodes in partially overlapping replacements
+--------------------------------------------------------------
+
+Replacement - being a two-step operation consisting of a delete and an
+add/copy - causes all rows of the deleted subtree to be added with a
+new op_depth and presence value 'deleted'.  So far so good.
+
+Adding a tree on top of the same oproot will cause the oproot -
+and all overlapping children! - to switch their presence value to
+'normal'.  When a node replaces a deleted node it hides any deleted
+children of the previously deleted node, and may come with children of
+its own.  Some of the new children may have the same names as some of
+the deleted children, but these overlapping children should not be
+considered restructuring replacements.  Only the parent, with op_depth
+equal to the tree depth, is a restructuring replacement.
+
+
+Status needs to consult the *two* topmost layers - sometimes
+------------------------------------------------------------
+
+As discussed before, every tree restructuring operation becomes an
+oproot, causing rows to be added with a new op_depth value.
+
+Status wants to report the oproots, making a clear distinction between
+adds and replacements.  However, both added and replaced nodes have
+the presence value 'normal'.  In order to make the distinction, status
+needs to determine if there was a node in the layer below the
+restructured layer.  In case there is, it must be a replacement,
+otherwise, it must be an addition.
+
+
+
+
+TODO:
+
+       GJS: yup. tho it will complicate a revert of a copy/move-here
+       since we will need to perform a query to see whether we should
+       convert the copy/move into a deleted node, or whether to simply
+       remove the node entirely.
+
+       GJS: and yes, if wc_db performed a double-operation revert,
+       then we wouldn't have to do this. arguably, we could push the
+       2-op revert to a future release when we also choose to alter
+       the higher layers to bring in the finer-grained control. (or
+       maybe we have to look at prior nodes regardless, so checking
+       for "replace with a deleted node" comes for no additional
+       cost).
+
+ * Document states of the table and their meaning (including values
+    of the relevant columns)

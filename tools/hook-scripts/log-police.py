@@ -1,4 +1,24 @@
 #!/usr/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 # log-police.py: Ensure that log messages end with a single newline.
 # See usage() function for details, or just run with no arguments.
@@ -15,14 +35,6 @@ import svn
 import svn.fs
 import svn.repos
 import svn.core
-
-
-# Pretend we have true booleans on older python versions
-try:
-  True
-except:
-  True = 1
-  False = 0
 
 
 def fix_log_message(log_message):
@@ -106,7 +118,7 @@ def main(ignored_pool, argv):
     usage_and_exit("must provide exactly one of -r, -t, or --all-revs.")
   if len(args) != 1:
     usage_and_exit("only one argument allowed (the repository).")
-    
+
   repos_path = svn.core.svn_path_canonicalize(args[0])
 
   # A non-bindings version of this could be implemented by calling out

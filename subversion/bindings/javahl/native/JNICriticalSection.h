@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -19,18 +24,15 @@
  * @brief Interface of the class JNICriticalSection
  */
 
-#if !defined(AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_)
-#define AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_
+#ifndef JNICRITICALSECTION_H
+#define JNICRITICALSECTION_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 class JNIMutex;
 
 /**
  * This class holds a mutex which will be locked during the constructor and
  * released during the destructor. If the object is created on the stack, this
- * garanties that the mutex will be released all the time if the block is left.
+ * guaranties that the mutex will be released all the time if the block is left.
  * Only one thread can enter all the critrical sections secured by the same
  * mutex.
  */
@@ -46,5 +48,4 @@ class JNICriticalSection
   JNIMutex *m_mutex;
 };
 
-// !defined(AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_)
-#endif
+#endif  // JNICRITICALSECTION_H

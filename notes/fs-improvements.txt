@@ -156,7 +156,7 @@ like that.  Fortunately, copyIDs are generated from a new `copies'
 table, which maps unique copyIDs onto (REV COPY_DST_PATH
 COPY_DST_NODEKEY).  We look up the rev/path for the old copyID,
 convert it to a node key, and compare it to the node key we're
-currently on.  Voil‡!  Actually, we're not sure we'll store all of
+currently on.  Voil√†!  Actually, we're not sure we'll store all of
 those in the copies table, it may boil down to just the DST_NODEKEY or
 just the other two, we'll see.
 
@@ -171,7 +171,7 @@ it's quite possible that a higher copyID will become visible in the
 revision history before a lower one.
 
 The one thing we can know is that a lower copyID can never be a
-branchwise descendent of a lower copyID, since the lower one must have
+branchwise descendant of a lower copyID, since the lower one must have
 been committed before any of its descendants txns were started, of
 course.  I'm not sure this minimal inference will ever be useful, but
 anyway it's all we've got.  Anyway, right now, we only ever need ask

@@ -1,0 +1,56 @@
+#!/usr/bin/bash
+#
+# a dumb init script for twistd on solaris. cus like, writing XML for SMF is f'ing lame.
+#
+
+svnwcsub_user=${svnwcsub_user-"svnwc"}
+svnwcsub_group=${svnwcsub_group-"other"}
+svnwcsub_pidfile=${svnwcsub_pidfile-"/var/run/svnwcsub/svnwcsub.pid"}
+svnwcsub_config=${svnwcsub_config-"/etc/svnwcsub.conf"}
+svnwcsub_logfile=${svnwcsub_logfile-"/x1/log/svnwcsub/svnwcsub.log"}
+pidfile="${svnwcsub_pidfile}"
+
+SVNWCSUB_CMD="/usr/local/svnpubsub/svnwcsub.py \
+              --daemon \
+              --logfile=${svnwcsub_logfile} \
+              --pidfile=${pidfile} \
+              --uid=${svnwcsub_user} --gid=${svnwcsub_group} \
+              --umask=002 \
+              ${svnwcsub_config}"
+
+RETVAL=0
+ 
+start() {
+    echo "Starting SvnWcSub Server: "
+    $SVNWCSUB_CMD
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && echo "ok" || echo "failed"
+    return $RETVAL
+}
+ 
+stop() {
+    echo "Stopping SvnWcSub Server: "
+    THE_PID=`cat ${pidfile}`
+    kill $THE_PID
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && echo "ok" || echo "failed"
+    return $RETVAL
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $RETVAL

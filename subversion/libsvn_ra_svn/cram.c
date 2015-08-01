@@ -2,17 +2,22 @@
  * cram.c :  Minimal standalone CRAM-MD5 implementation
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -45,7 +50,7 @@ static int hex_to_int(char c)
 
 static char int_to_hex(int v)
 {
-  return (v < 10) ? '0' + v : 'a' + (v - 10);
+  return (char)((v < 10) ? '0' + v : 'a' + (v - 10));
 }
 
 static svn_boolean_t hex_decode(unsigned char *hashval, const char *hexval)
@@ -58,7 +63,7 @@ static svn_boolean_t hex_decode(unsigned char *hashval, const char *hexval)
       h2 = hex_to_int(hexval[2 * i + 1]);
       if (h1 == -1 || h2 == -1)
         return FALSE;
-      hashval[i] = (h1 << 4) | h2;
+      hashval[i] = (unsigned char)((h1 << 4) | h2);
     }
   return TRUE;
 }
@@ -108,8 +113,8 @@ static void compute_digest(unsigned char *digest, const char *challenge,
 static svn_error_t *fail(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                          const char *msg)
 {
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure", msg));
-  return svn_ra_svn_flush(conn, pool);
+  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(c)", "failure", msg));
+  return svn_error_trace(svn_ra_svn__flush(conn, pool));
 }
 
 /* If we can, make the nonce with random bytes.  If we can't... well,
@@ -149,10 +154,10 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   challenge = apr_psprintf(pool,
                            "<%" APR_UINT64_T_FMT ".%" APR_TIME_T_FMT "@%s>",
                            nonce, apr_time_now(), hostbuf);
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "step", challenge));
+  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(c)", "step", challenge));
 
   /* Read the client's response and decode it into *user and cdigest. */
-  SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
+  SVN_ERR(svn_ra_svn__read_item(conn, pool, &item));
   if (item->kind != SVN_RA_SVN_STRING)  /* Very wrong; don't report failure */
     return SVN_NO_ERROR;
   resp = item->u.string;
@@ -171,7 +176,7 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     return fail(conn, pool, "Password incorrect");
 
   *success = TRUE;
-  return svn_ra_svn_write_tuple(conn, pool, "w()", "success");
+  return svn_ra_svn__write_tuple(conn, pool, "w()", "success");
 }
 
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -183,7 +188,7 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char hex[2 * APR_MD5_DIGESTSIZE + 1];
 
   /* Read the server challenge. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &status, &str));
+  SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "w(?c)", &status, &str));
   if (strcmp(status, "failure") == 0 && str)
     {
       *message = str;
@@ -198,10 +203,10 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   hex_encode(hex, digest);
   hex[sizeof(hex) - 1] = '\0';
   reply = apr_psprintf(pool, "%s %s", user, hex);
-  SVN_ERR(svn_ra_svn_write_cstring(conn, pool, reply));
+  SVN_ERR(svn_ra_svn__write_cstring(conn, pool, reply));
 
   /* Read the success or failure response from the server. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &status, &str));
+  SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "w(?c)", &status, &str));
   if (strcmp(status, "failure") == 0 && str)
     {
       *message = str;

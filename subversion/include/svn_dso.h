@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -26,7 +31,7 @@
 
 #include <apr_dso.h>
 
-#include "svn_error.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,15 +50,32 @@ extern "C" {
  *       into the previously mentioned problems with DSO unloading and
  *       pool cleanup callbacks.
  *
- * @since New in 1.4.0.
+ * Returns svn_error_t object with corresponding apr_err returned by
+ * underlying calls. In case of no error returns @c SVN_NO_ERROR.
+ *
+ * @since New in 1.6.
  */
-void svn_dso_initialize(void);
+svn_error_t *
+svn_dso_initialize2(void);
+
+/** The same as svn_dso_initialize2(), except that if there is an error this
+ * calls abort() instead of returning the error.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
+ *
+ * @since New in 1.4.
+ */
+SVN_DEPRECATED
+void
+svn_dso_initialize(void);
+
 
 #if APR_HAS_DSO
+
 /**
- * Attempt to load @a libname, returning it in @a dso.
+ * Attempt to load @a libname, returning it in @a *dso.
  *
- * If @a libname cannot be loaded set @a dso to NULL and return
+ * If @a libname cannot be loaded set @a *dso to NULL and return
  * @c SVN_NO_ERROR.
  *
  * @note Due to pool lifetime issues DSOs are all loaded into a global
@@ -61,10 +83,14 @@ void svn_dso_initialize(void);
  *       them that will ever be loaded by the system, otherwise you will
  *       leak memory.
  *
- * @since New in 1.4.0.
+ * @since New in 1.4.
  */
-svn_error_t *svn_dso_load(apr_dso_handle_t **dso, const char *libname);
+svn_error_t *
+svn_dso_load(apr_dso_handle_t **dso,
+             const char *libname);
+
 #endif /* APR_HAS_DSO */
+
 
 #ifdef __cplusplus
 }

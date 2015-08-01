@@ -1,0 +1,81 @@
+﻿[#
+<!--
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+-->
+]<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+[for configs][for platforms]    <ProjectConfiguration Include="[configs]|[platforms]">
+      <Configuration>[configs]</Configuration>
+      <Platform>[platforms]</Platform>
+    </ProjectConfiguration>
+[end][end]  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>svn_config</ProjectName>
+    <ProjectGuid>[project_guid]</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+[for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <UseDebugLibraries>[is configs "Debug"]true[else]false[end]</UseDebugLibraries>
+    <PlatformToolset>[toolset_version]</PlatformToolset>
+    <CLRSupport>false</CLRSupport>
+  </PropertyGroup>
+[end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+[for platforms][for configs]  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+  </ImportGroup>
+[end][end]  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">.\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(SolutionDir)\$(Configuration)\</IntDir>
+[end][end]  </PropertyGroup>
+  <ItemGroup>
+    <CustomBuild Include="$(IntDir)svn_private_config.h">
+[for configs][for platforms]      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">true</ExcludedFromBuild>
+[end][end]    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="$(SolutionDir)\subversion\svn_private_config.hw">
+      <FileType>Document</FileType>
+[for configs][for platforms]      <Message Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">Creating svn_private_config.h from svn_private_config.hw.</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"[svn_python]" "$(SolutionDir)\build\transform_config_hw.py" $(Platform) "%(FullPath)" "$(IntDir)svn_private_config.h"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(IntDir)svn_private_config.h;%(Outputs)</Outputs>
+[end][end]    </CustomBuild>
+[for sql]    <CustomBuild Include="$(SolutionDir)\[sql.header]">
+[for configs][for platforms]      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">true</ExcludedFromBuild>
+[end][end]    </CustomBuild>
+    <CustomBuild Include="$(SolutionDir)\[sql.source]">
+      <FileType>Document</FileType>
+[for configs][for platforms]      <Message Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">Generating [sql.header].</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"[svn_python]" "$(SolutionDir)\build\transform_sql.py" "%(FullPath)" "$(SolutionDir)\[sql.header]"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(SolutionDir)\[sql.header];%(Outputs)</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">[for sql.dependencies]$(SolutionDir)\[sql.dependencies];[end]%(AdditionalInputs)</AdditionalInputs>
+[end][end]
+    </CustomBuild>
+[end]  </ItemGroup>
+  <ItemGroup>
+[for sql][for sql.dependencies]    <None Include="$(SolutionDir)\[sql.dependencies]" />
+[end][end]  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

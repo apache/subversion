@@ -1,0 +1,137 @@
+******************************************************************************
+                          COMPARISON WITH OTHER VCS
+                                     FOR
+                            ISSUE #516: OBLITERATE
+******************************************************************************
+
+
+TABLE OF CONTENTS
+
+    1. INTRODUCTION
+
+    2. COMPARISON MATRIX
+
+    3. PERFORCE
+
+    4. CVS
+
+    5. CLEARCASE
+
+    6. MERCURIAL
+
+    7. GIT
+
+
+1. INTRODUCTION
+
+  This document describes how obliteration works in some other Version Control
+  Systems.
+
+
+2. COMPARISON MATRIX
+
+  This table indicates whether and how three different goals can be
+  accomplished in Subversion (prior to development of the Obliterate feature)
+  and other version control systems.
+
+  +-------------+-------------------+-------------------+-------------------+
+  |             | Quick hiding      | Space recovery    | Latest only       |
+  +-------------+-------------------+-------------------+-------------------+
+  |             |                   |                   |                   |
+  | Subversion  | Apache authz?     | dump/filter/load  | NO                |
+  | (1.6)       | Hook scripts?     |                   |                   |
+  |             |                   |                   |                   |
+  | Perforce    | p4 obliterate     | p4 obliterate     | YES               |
+  |             | p4 protect        |                   |                   |
+  |             |                   |                   |                   |
+  | CVS         | Admin manual task | Admin manual task | NO ?              |
+  |             |                   |                   |                   |
+  | ClearCase   | rmversion/rmelem  | rmversion/rmelem  | ?                 |
+  |             |                   |                   |                   |
+  | Mercurial   | ?                 | ?                 | ?                 |
+  |             |                   |                   |                   |
+  | GIT         | ?                 | ?                 | ?                 |
+  |             |                   |                   |                   |
+  +-------------+-------------------+-------------------+-------------------+
+
+
+3. PERFORCE
+
+  Perforce has a client-side command for obliterating file-revs from the
+  repository.
+
+  Invocation: Client side.
+
+    p4 obliterate [-y] file[rev-range] ...
+
+  Authz: Restricted by the "admin" priviledge which, like other privilege
+  levels in Perforce, can be granted per user on arbitrary paths in the
+  repository.
+
+  Repository transformation: The file becomes nonexistent at the specified
+  revision. At all other revisions it is unchanged. If the head revision of
+  that file was obliterated, the head file-revision number of that file will
+  go back to the highest remaining revision, and the next revision to be
+  committed will have a file-revision number that has been used before. The
+  repository-scope "changelist" numbers are not affected.
+
+  Client (WC) issues: If a file is obliterated at all revisions, this file
+  becomes unversioned in WCs and/or is removed from WCs by a "sync" command
+  (that's not clear). If a file is obliterated at only specified revisions,
+  according to the manual: "Syncing to an obliterated revision will remove the
+  file from your client workspace, syncing to the head revision will [...]
+  provide you with the most recent non-obliterated revision of the file."
+
+  Backups, Mirrors: ### ?
+
+  Relevant differences between Subversion and Perforce: In Perforce, only
+  files are versioned, and files are tracked primarily by their path (with
+  some support for renaming, moving and replacing). Perforce maintains both a
+  file-revision number and a repository-scope "changeset" number (which is
+  similar to Subversion's revision number). Perforce does not maintain
+  client-side state for the WCs so the new state is immediately seen when any
+  Perforce operation is attempted.
+
+  Reference manual:
+  <http://www.perforce.com/perforce/doc.current/manuals/cmdref/obliterate.html>
+
+
+4. CVS
+
+  CVS has no special support for obliterating, but it is established
+  practice for administrators to obliterate the whole history of a file by
+  deleting the corresponding archive file from the repository.
+
+  CVS has little repository-side metadata outside the per-file RCS archive
+  files, so deleting one of these achieves total obliteration of the
+  corresponding file through all its revisions.
+
+  Invocation: Server side, native operating system commands.
+
+  Authz: Implicit (requires server file-system privileges).
+
+  Repository transformation: The file's existence and its history is deleted,
+  including its change logs.
+
+  Client (WC) issues: ###
+
+  Backups, Mirrors: ### ?
+
+
+5. CLEARCASE
+
+
+6. MERCURIAL
+
+  Mercurial has no Obliterate command. This email describes how one might
+  achieve obliteration:
+  <http://www.selenic.com/pipermail/mercurial/2008-March/017859.html>.
+
+
+7. GIT
+
+  Git has a "git-filter-branch" command which can be used to achieve
+  obliteration. See the manual page
+  <http://www.kernel.org/pub/software/scm/git/docs/git-filter-branch.html>.
+
+

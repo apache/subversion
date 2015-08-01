@@ -2,19 +2,26 @@
  * debug_editor.c :  An editor that writes the operations it does to stderr.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
+
+#include "svn_io.h"
 
 #include "debug_editor.h"
 
@@ -26,6 +33,7 @@ struct edit_baton
   int indent_level;
 
   svn_stream_t *out;
+  const char *prefix;
 };
 
 struct dir_baton
@@ -45,8 +53,9 @@ write_indent(struct edit_baton *eb, apr_pool_t *pool)
 {
   int i;
 
+  SVN_ERR(svn_stream_puts(eb->out, eb->prefix));
   for (i = 0; i < eb->indent_level; ++i)
-    SVN_ERR(svn_stream_printf(eb->out, pool, " "));
+    SVN_ERR(svn_stream_puts(eb->out, " "));
 
   return SVN_NO_ERROR;
 }
@@ -62,11 +71,9 @@ set_target_revision(void *edit_baton,
   SVN_ERR(svn_stream_printf(eb->out, pool, "set_target_revision : %ld\n",
                             target_revision));
 
-  SVN_ERR(eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
-                                                  target_revision,
-                                                  pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
+                                                 target_revision,
+                                                 pool);
 }
 
 static svn_error_t *
@@ -108,12 +115,10 @@ delete_entry(const char *path,
   SVN_ERR(svn_stream_printf(eb->out, pool, "delete_entry : %s:%ld\n",
                             path, base_revision));
 
-  SVN_ERR(eb->wrapped_editor->delete_entry(path,
-                                           base_revision,
-                                           pb->wrapped_dir_baton,
-                                           pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->delete_entry(path,
+                                          base_revision,
+                                          pb->wrapped_dir_baton,
+                                          pool);
 }
 
 static svn_error_t *
@@ -189,8 +194,10 @@ add_file(const char *path,
 
   SVN_ERR(write_indent(eb, pool));
   SVN_ERR(svn_stream_printf(eb->out, pool,
-                            " add_file : '%s' [from '%s':%ld]\n",
+                            "add_file : '%s' [from '%s':%ld]\n",
                             path, copyfrom_path, copyfrom_revision));
+
+  eb->indent_level++;
 
   SVN_ERR(eb->wrapped_editor->add_file(path,
                                        pb->wrapped_dir_baton,
@@ -339,8 +346,8 @@ change_file_prop(void *file_baton,
   struct edit_baton *eb = fb->edit_baton;
 
   SVN_ERR(write_indent(eb, pool));
-  SVN_ERR(svn_stream_printf(eb->out, pool, "change_file_prop : %s\n",
-                            name));
+  SVN_ERR(svn_stream_printf(eb->out, pool, "change_file_prop : %s -> %s\n",
+                            name, value ? value->data : "<deleted>"));
 
   SVN_ERR(eb->wrapped_editor->change_file_prop(fb->wrapped_file_baton,
                                                name,
@@ -360,7 +367,8 @@ change_dir_prop(void *dir_baton,
   struct edit_baton *eb = db->edit_baton;
 
   SVN_ERR(write_indent(eb, pool));
-  SVN_ERR(svn_stream_printf(eb->out, pool, "change_dir_prop : %s\n", name));
+  SVN_ERR(svn_stream_printf(eb->out, pool, "change_dir_prop : %s -> %s\n",
+                            name, value ? value->data : "<deleted>"));
 
   SVN_ERR(eb->wrapped_editor->change_dir_prop(db->wrapped_dir_baton,
                                               name,
@@ -384,23 +392,38 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+abort_edit(void *edit_baton,
+           apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+
+  SVN_ERR(write_indent(eb, pool));
+  SVN_ERR(svn_stream_printf(eb->out, pool, "abort_edit\n"));
+
+  SVN_ERR(eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
                             void **edit_baton,
                             const svn_delta_editor_t *wrapped_editor,
                             void *wrapped_edit_baton,
+                            const char *prefix,
                             apr_pool_t *pool)
 {
-  svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
+  svn_delta_editor_t *tree_editor = apr_palloc(pool, sizeof(*tree_editor));
   struct edit_baton *eb = apr_palloc(pool, sizeof(*eb));
   apr_file_t *errfp;
   svn_stream_t *out;
 
-  apr_status_t apr_err = apr_file_open_stderr(&errfp, pool);
+  apr_status_t apr_err = apr_file_open_stdout(&errfp, pool);
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Problem opening stderr");
 
-  out = svn_stream_from_aprfile(errfp, pool);
+  out = svn_stream_from_aprfile2(errfp, TRUE, pool);
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;
@@ -417,11 +440,14 @@ svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
   tree_editor->close_file = close_file;
   tree_editor->absent_file = absent_file;
   tree_editor->close_edit = close_edit;
+  tree_editor->abort_edit = abort_edit;
 
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;
   eb->out = out;
   eb->indent_level = 0;
+  /* This is DBG_FLAG from ../libsvn_subr/debug.c */
+  eb->prefix = apr_pstrcat(pool, "DBG: ", prefix, SVN_VA_NULL);
 
   *editor = tree_editor;
   *edit_baton = eb;

@@ -1,24 +1,93 @@
 #
 # core.py: public Python interface for core components
 #
-# Subversion is a tool for revision control. 
-# See http://subversion.tigris.org for more information.
-#    
+# Subversion is a tool for revision control.
+# See http://subversion.apache.org for more information.
+#
 ######################################################################
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
-#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
+import sys
+# __all__ is defined later, since some svn_* functions are implemented below.
+
+
+class SubversionException(Exception):
+
+  def __init__(self, message=None, apr_err=None, child=None,
+               file=None, line=None):
+    """Initialize a new Subversion exception object.
+
+    Arguments:
+    message     -- optional user-visible error message
+    apr_err     -- optional integer error code (apr_status_t)
+    child       -- optional SubversionException to wrap
+    file        -- optional source file name where the error originated
+    line        -- optional line number of the source file
+
+    file and line are for C, not Python; they are redundant to the
+    traceback information for exceptions raised in Python.
+    """
+    # Be compatible with Subversion <1.5 .args behavior:
+    args = []
+    if message is not None or apr_err is not None:
+        args.append(message)
+        if apr_err is not None:
+            args.append(apr_err)
+    Exception.__init__(self, *args)
+
+    self.apr_err = apr_err
+    self.message = message
+    self.child = child
+    self.file = file
+    self.line = line
+
+  def __str__(self):
+    dump = '%d - %s' % (self.apr_err, self.message)
+    if self.file != None:
+      dump = dump + '\n at %s:%d' % (self.file, self.line)
+    if self.child != None:
+      dump = dump + '\n' + self.child.__str__()
+
+    return dump
+
+  @classmethod
+  def _new_from_err_list(cls, errors):
+    """Return new Subversion exception object from list of svn_error_t data.
+
+    This alternative constructor is for turning a chain of svn_error_t
+    objects in C into a chain of SubversionException objects in Python.
+    errors is a list of (apr_err, message, file, line) tuples, in order
+    from outer-most child to inner-most.
+
+    Use svn_swig_py_svn_exception rather than calling this directly.
+
+    Note: this modifies the errors list provided by the caller by
+    reversing it.
+    """
+    child = None
+    errors.reverse()
+    for (apr_err, message, file, line) in errors:
+      child = cls(message, apr_err, child, file, line)
+    return child
 
 def _cleanup_application_pool():
   """Cleanup the application pool before exiting"""
@@ -35,8 +104,8 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
 Pool = _libsvncore.svn_pool_create
 
 # Setup consistent names for revnum constants
-svn_ignored_revnum = SWIG_SVN_IGNORED_REVNUM
-svn_invalid_revnum = SWIG_SVN_INVALID_REVNUM
+SVN_IGNORED_REVNUM = SWIG_SVN_IGNORED_REVNUM
+SVN_INVALID_REVNUM = SWIG_SVN_INVALID_REVNUM
 
 def svn_path_compare_paths(path1, path2):
   path1_len = len (path1);
@@ -47,7 +116,7 @@ def svn_path_compare_paths(path1, path2):
   # Are the paths exactly the same?
   if path1 == path2:
     return 0
-  
+
   # Skip past common prefix
   while (i < min_len) and (path1[i] == path2[i]):
     i = i + 1
@@ -60,7 +129,7 @@ def svn_path_compare_paths(path1, path2):
     char1 = path1[i]
   if (i < path2_len):
     char2 = path2[i]
-    
+
   if (char1 == '/') and (i == path2_len):
     return 1
   if (char2 == '/') and (i == path1_len):
@@ -74,6 +143,17 @@ def svn_path_compare_paths(path1, path2):
   # determine order
   return cmp(char1, char2)
 
+def svn_mergeinfo_merge(mergeinfo, changes):
+  return _libsvncore.svn_swig_mergeinfo_merge(mergeinfo, changes)
+
+def svn_mergeinfo_sort(mergeinfo):
+  return _libsvncore.svn_swig_mergeinfo_sort(mergeinfo)
+
+def svn_rangelist_merge(rangelist, changes):
+  return _libsvncore.svn_swig_rangelist_merge(rangelist, changes)
+
+def svn_rangelist_reverse(rangelist):
+  return _libsvncore.svn_swig_rangelist_reverse(rangelist)
 
 class Stream:
   """A file-object-like wrapper for Subversion svn_stream_t objects."""
@@ -81,10 +161,12 @@ class Stream:
     self._stream = stream
 
   def read(self, amt=None):
+    if self._stream is None:
+      raise ValueError
     if amt is None:
       # read the rest of the stream
       chunks = [ ]
-      while 1:
+      while True:
         data = svn_stream_read(self._stream, SVN_STREAM_CHUNK_SIZE)
         if not data:
           break
@@ -95,8 +177,15 @@ class Stream:
     return svn_stream_read(self._stream, int(amt))
 
   def write(self, buf):
+    if self._stream is None:
+      raise ValueError
     ### what to do with the amount written? (the result value)
     svn_stream_write(self._stream, buf)
+
+  def close(self):
+    if self._stream is not None:
+      svn_stream_close(self._stream)
+      self._stream = None
 
 def secs_from_timestr(svn_datetime, pool=None):
   """Convert a Subversion datetime string into seconds since the Epoch."""
@@ -185,7 +274,7 @@ def svn_pool_destroy(pool):
   want to manually destroy a pool, use Pool.destroy. This is
   a compatibility wrapper providing the interface of the
   Subversion 1.2.x and earlier bindings."""
-  
+
   assert pool is not None
 
   # New in 1.3.x: All pools are automatically destroyed when Python shuts
@@ -218,4 +307,22 @@ def run_app(func, *args, **kw):
   APR is initialized, and an application pool is created. Cleanup is
   performed as the function exits (normally or via an exception).
   '''
-  return apply(func, (application_pool,) + args, kw)
+  return func(application_pool, *args, **kw)
+
+# Currently, this excludes:
+# 'FALSE' 'TRUE'
+# 'apr_array_header_t' 'apr_file_t' 'apr_hash_t'
+# 'apr_file_open_stderr' 'apr_file_open_stdout'
+# 'apr_initialize' 'apr_terminate'
+# 'apr_pool_clear' 'apr_pool_destroy' 'apr_pool_t'
+# 'apr_time_ansi_put'
+# 'run_app'
+# 'svn_relpath__internal_style' 'svn_uri__is_ancestor'
+# 'svn_tristate__from_word' 'svn_tristate__to_word'
+__all__ = filter(lambda s: (s.startswith('svn_')
+                            or s.startswith('SVN_')
+                            or s.startswith('SVNSYNC_')
+                            or s in ('Pool', 'SubversionException'))
+                           and '__' not in s,
+                 locals())
+

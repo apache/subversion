@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -20,10 +25,13 @@
  */
 
 #include "CommitMessage.h"
+#include "CreateJ.h"
+#include "EnumMapper.h"
 #include "JNIUtil.h"
+#include "JNIStringHolder.h"
+
 #include <apr_tables.h>
 #include "svn_client.h"
-#include "../include/org_tigris_subversion_javahl_CommitItemStateFlags.h"
 
 CommitMessage::CommitMessage(jobject jcommitMessage)
 {
@@ -32,178 +40,81 @@ CommitMessage::CommitMessage(jobject jcommitMessage)
 
 CommitMessage::~CommitMessage()
 {
-  // Since the m_jcommitMessage is a global reference, it has to be
-  // deleted to allow the Java garbage collector to reclaim the
-  // object.
-  if (m_jcommitMessage!= NULL)
-    {
-      JNIEnv *env = JNIUtil::getEnv();
-      env->DeleteGlobalRef(m_jcommitMessage);
-    }
+  // No need to delete the local reference
 }
 
-CommitMessage *CommitMessage::makeCCommitMessage(jobject jcommitMessage)
+svn_error_t *
+CommitMessage::callback(const char **log_msg,
+                        const char **tmp_file,
+                        const apr_array_header_t *commit_items,
+                        void *baton,
+                        apr_pool_t *pool)
 {
-  // If there is no object passed into this method, there is no need
-  // for a C++ holding object.
-  if (jcommitMessage == NULL)
-    return NULL;
+  if (baton && static_cast<CommitMessage *>(baton)->m_jcommitMessage)
+    return static_cast<CommitMessage *>(baton)->getCommitMessage(
+            log_msg, tmp_file, commit_items, pool);
 
-  // Sanity check, that the passed Java object implements the right
-  // interface.
-  JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitMessage");
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  if (!env->IsInstanceOf(jcommitMessage, clazz))
-    {
-      env->DeleteLocalRef(clazz);
-      return NULL;
-    }
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  // Since the reference is longer needed then the duration of the
-  // SVNClient.commtMessage, the local reference has to be converted
-  // to a global reference.
-  jobject myCommitMessage = env->NewGlobalRef(jcommitMessage);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  // create & return the holding object
-  return new CommitMessage(myCommitMessage);
+  *log_msg = NULL;
+  *tmp_file = NULL;
+  return SVN_NO_ERROR;
 }
 
-/**
- * Call the Java callback method to retrieve the commit message
- * @param commit_items  the array of the items of this commit
- * @returns the commit message
- */
-jstring
-CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
+svn_error_t *
+CommitMessage::getCommitMessage(const char **log_msg,
+                                const char **tmp_file,
+                                const apr_array_header_t *commit_items,
+                                apr_pool_t *pool)
 {
+  *log_msg = NULL;
+  *tmp_file = NULL;
   JNIEnv *env = JNIUtil::getEnv();
-  // create an Java array for the commit items
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitItem");
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  int count = commit_items->nelts;
-  jobjectArray jitems = env->NewObjectArray(count, clazz, NULL);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-
-  // Java method ids will not change during the time this library is
-  // loaded, so they can be cached.
-
-  // Get the method id for the CommitItem constructor.
-  static jmethodID midConstructor = 0;
-  if (midConstructor == 0)
-    {
-      midConstructor = env->GetMethodID(clazz, "<init>",
-                                        "(Ljava/lang/String;"
-                                        "IILjava/lang/String;"
-                                        "Ljava/lang/String;J)V");
-      if (JNIUtil::isExceptionThrown())
-        return NULL;
-    }
 
   // get the method if for the CommitMessage callback method
   static jmethodID midCallback = 0;
   if (midCallback == 0)
     {
-      jclass clazz2 = env->FindClass(JAVA_PACKAGE"/CommitMessage");
+      jclass clazz2 = env->FindClass(JAVAHL_CLASS("/callback/CommitMessageCallback"));
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        return SVN_NO_ERROR;
 
       midCallback = env->GetMethodID(clazz2, "getLogMessage",
-                                     "([L"JAVA_PACKAGE"/CommitItem;)"
-                                     "Ljava/lang/String;");
+                                     "(Ljava/util/Set;)Ljava/lang/String;");
       if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+        return SVN_NO_ERROR;
 
       env->DeleteLocalRef(clazz2);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
     }
 
   // create a Java CommitItem for each of the passed in commit items
-  for (int i = 0; i < count; ++i)
+  std::vector<jobject> jitems;
+  for (int i = 0; i < commit_items->nelts; ++i)
     {
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
-      // convert the commit item members to the match Java members
-      jstring jpath = JNIUtil::makeJString(item->path);
+      jobject jitem = CreateJ::CommitItem(item);
 
-      jint jnodeKind = item->kind;
-
-      jint jstateFlags = 0;
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
-        jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_Add;
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-        jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_Delete;
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
-        jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_TextMods;
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
-        jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_PropMods;
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-        jstateFlags |=
-          org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
-
-      jstring jurl = JNIUtil::makeJString(item->url);
-
-      jstring jcopyUrl = JNIUtil::makeJString(item->copyfrom_url);
-
-      jlong jcopyRevision = item->revision;
-
-      // create the Java object
-      jobject jitem = env->NewObject(clazz, midConstructor, jpath,
-                                     jnodeKind, jstateFlags, jurl,
-                                     jcopyUrl, jcopyRevision);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      // release the tempory Java objects
-      env->DeleteLocalRef(jpath);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-
-      env->DeleteLocalRef(jurl);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      env->DeleteLocalRef(jcopyUrl);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+      if (!jitem)
+        return SVN_NO_ERROR; /* Exception thrown */
 
       // store the Java object into the array
-      env->SetObjectArrayElement(jitems, i, jitem);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+      jitems.push_back(jitem);
     }
-  env->DeleteLocalRef(clazz);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
 
   // call the Java callback method
   jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage,
                                                     midCallback,
-                                                    jitems);
+                                                    CreateJ::Set(jitems));
   if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+    POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 
-  // release the Java object array
-  env->DeleteLocalRef(jitems);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+  if (jmessage != NULL)
+    {
+      JNIStringHolder msg(jmessage);
+      *log_msg = apr_pstrdup(pool, msg);
+    }
+  else
+    *log_msg = NULL;
 
-  return jmessage;
+  return SVN_NO_ERROR;
 }

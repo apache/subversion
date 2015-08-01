@@ -1,0 +1,134 @@
+                                                                -*- Text -*-
+
+
+Introduction
+============
+One of the major performance problems with the first-generation working copy
+library was the locking strategy.  Each directory could have a write lock that
+excluded other processes from performing certain actions on that directory.
+
+The locks were implemented as physical `lock' files which had to be placed and
+removed in the administrative area of each directory.  For many operations,
+this necessitated a crawl of the working copy to lock or unlock various
+directories, even if those directories would never be touched by the operation.
+For working copies of even modest size, these crawls could easily dominate the
+running time of the client, and were made even worse by high-latency
+filesystems, such as NFS.
+
+Read-only locks didn't really exist; read-only access was implemented as a
+`snapshot' of the working copy.  This snapshot was potentially out-of-date
+as soon as it was created; a snapshot of a working copy being modified under
+write locks might become out-of-date while it was being created. There was no
+mechanism to upgrade a read-only lock to a write lock and there was no way to
+determine whether a read-only lock was up-to-date or out-of-date.
+
+The snapshot approach to read-only locks worked well for the command line
+client as that only needs short lived handles on the database.  It worked less
+well for GUI clients which need long lived handles.
+
+By centralizing the working copy metadata as part of wc-ng, we can also
+centralize our locking strategy and take advantage of the transaction and
+locking primitives of the underlying sqlite database, while still maintaining
+backward compatibility.  This document describes the proposed implementation
+guidelines for working copy locking in wc-ng.
+
+
+Overview
+========
+Even with the addition of SQLite and its locking and transaction
+capabilities, there are still instances where we will need to maintain our
+own locks on the working copy.  It is expected, though, that these
+occasions are much fewer than in the old working copy library.
+
+This document deals specifically with write locks, which prevent multiple
+processes from concurrently writing to the working copy metadata.  The
+sqlite transaction mechanism is used to ensure that the database is kept
+consistent between calls to wc_db APIs.  Thus, all readers at whatever point
+they read the database will be shown a consistent view of the metadata, so
+read locks are not needed for wc-ng.
+
+
+Types of Locks
+==============
+There are two type of locks in the working copy: logical and explicit.
+Logical locks are what API consumers are referring to when they ask "is PATH
+locked?"  Explicit locks are the actual artifacts that are persisted which
+the wc_db APIs can use to deduce logical locks.  In wc-1, logical and explicit
+locks were the same, but wc-ng adds the notion of lock inheritance, allowing
+a single explicit lock to logically lock an entire subtree.
+
+
+How Locks are Stored
+====================
+As of working copy format 15, locks are currently indicated as row in the
+WC_LOCK table in the sqlite database.  This table has the following schema:
+
+    CREATE TABLE WC_LOCK (
+      /* specifies the location of this node in the local filesystem */
+      wc_id  INTEGER NOT NULL  REFERENCES WCROOT (id),
+      local_dir_relpath  TEXT NOT NULL,
+
+      PRIMARY KEY (wc_id, local_dir_relpath)
+     );
+
+[ It is anticipated that future versions of the schema will add a LOCKED_LEVELS
+  column, so that column will be described below. ]
+
+An entry in the WC_LOCK table is equivalent to an explicit lock, and must
+exist prior to several wc_db APIs which require persistent write access.  In
+order to accommodate backward compatibility, the LOCKED_LEVELS column can be
+used to limit the depth of the logical lock specified by the explicit lock.
+If the value is zero or positive, that number of directories below
+LOCAL_DIR_RELPATH at to be locked.  It is anticipated that this column will be
+'-1' (lock to infinite depth) for all locks created through the wc_db APIs.
+
+
+Using Locks
+===========
+There are two kinds of operations which in wc_db APIs that need different kinds
+of write checks:
+
+Atomic Operations
+-----------------
+WC-NG operations that can operate without outside knowledge learned before
+the operation.
+
+These functions that are just one sqlite transaction by itself, just need to
+make sure nobody else has a write lock. Having a write lock is not required
+for operations like just changing the actual properties on a node.  Of course
+nobody else can own a write lock, or it might change the properties after
+sending the commit data, but before moving the data to the base_node table.
+
+In a centralized metadata scheme, it is easy to check that nobody else has
+a write lock. (Checking if we ourselves have a write lock ourself is just a
+memory lookup of course).
+
+Partial Operations
+------------------
+These operations rely on data read before the wc_db operation and only work
+correctly if the data didn't change since reading.  All entry based operations
+are in this category and the WC-NG work tries to redesign several of these
+operation to the first class of operations.
+
+Lock Overlapping
+----------------
+As in wc-1, locks may not overlap.  For instance, a process which acquires
+a depth-infinity lock for /A/B will encounter an error if it attempts to
+later acquire a lock for /A/B/C, even though it already owns the logical
+lock for that path.  In this way wc-ng can ensure the explicit lock for a
+given logical lock is stored in one location.  This location will be the
+first lock encountered on a recursive crawl up the working copy tree.
+
+
+APIs
+----
+wc_db will provide several APIs to acquire, release and check locks.  These
+APIs are still under consideration.
+
+
+Backward Compatibility
+======================
+This proposed write lock scheme will be fully backward compatible, thanks to
+the LOCKED_LEVELS column.  This allows old-style access batons to utilize the
+new locking mechanisms internally and be compatible with processes using the
+new APIs.

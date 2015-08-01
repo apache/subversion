@@ -2,17 +2,22 @@
  * diff.c :  routines for doing diffs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -31,7 +36,7 @@
 /*
  * Variance adjustment rules:
  *
- * http://subversion.tigris.org/variance-adjusted-patching.html
+ * See notes/variance-adjusted-patching.html
  *
  * ###: Expand this comment to contain the full set of adjustment
  * ###: rules instead of pointing to a webpage.
@@ -70,18 +75,18 @@
 
    2. Out-range deleted line: increment the line numbers in every hunk in P
       that comes after the deletion. This undoes the effect of the deletion,
-      since the deletion never happened in D. 
+      since the deletion never happened in D.
 
-   3. Out-range edited line: do nothing. Out-range edits are irrelevant to P. 
+   3. Out-range edited line: do nothing. Out-range edits are irrelevant to P.
 
    4. Added line in context range in P: remove the corresponding line from
       the context, optionally replacing it with new context based on that
-      region in M, and adjust line numbers and mappings appropriately. 
+      region in M, and adjust line numbers and mappings appropriately.
 
    5. Added line in affected text range in P: this is a dependency problem
       -- part of the change T:18-T:19 depends on changes introduced to T after
       B branched. There are several possible behaviors, depending on what the
-      user wants. One is to generate an informative error, stating that 
+      user wants. One is to generate an informative error, stating that
       T:18-T:19 depends on some other change (T:N-T:M, where N>=8, M<=18,
       and M-N == 1); the exact revisions can be discovered automatically using
       the same process as "cvs annotate", though it may take some time to do
@@ -91,14 +96,14 @@
       merge algorithm, try drinking more of the Kool-Aid.) A third option is
       to include it as an insertion, but with metadata (such as CVS-style
       conflict markers) indicating that the line attempting to be patched
-      does not exist in B. 
+      does not exist in B.
 
    6. Deleted line that is in-range in P: request another universe -- this
-      situation can't happen in ours. 
+      situation can't happen in ours.
 
    7. In-range edited line: reverse that edit in the "before" version of the
       corresponding line in the appropriate hunk in P, to obtain the version of
-      the line that will be found in B when P is applied. 
+      the line that will be found in B when P is applied.
 */
 
 
@@ -161,13 +166,19 @@ adjust_diff(svn_diff_t *diff, svn_diff_t *adjust)
 }
 
 svn_error_t *
-svn_diff_diff4(svn_diff_t **diff,
-               void *diff_baton,
-               const svn_diff_fns_t *vtable,
-               apr_pool_t *pool)
+svn_diff_diff4_2(svn_diff_t **diff,
+                 void *diff_baton,
+                 const svn_diff_fns2_t *vtable,
+                 apr_pool_t *pool)
 {
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[4];
+  svn_diff__token_index_t num_tokens;
+  svn_diff__token_index_t *token_counts[4];
+  svn_diff_datasource_e datasource[] = {svn_diff_datasource_original,
+                                        svn_diff_datasource_modified,
+                                        svn_diff_datasource_latest,
+                                        svn_diff_datasource_ancestor};
   svn_diff__lcs_t *lcs_ol;
   svn_diff__lcs_t *lcs_adjust;
   svn_diff_t *diff_ol;
@@ -176,6 +187,8 @@ svn_diff_diff4(svn_diff_t **diff,
   apr_pool_t *subpool;
   apr_pool_t *subpool2;
   apr_pool_t *subpool3;
+  apr_off_t prefix_lines = 0;
+  apr_off_t suffix_lines = 0;
 
   *diff = NULL;
 
@@ -185,29 +198,38 @@ svn_diff_diff4(svn_diff_t **diff,
 
   svn_diff__tree_create(&tree, subpool3);
 
+  SVN_ERR(vtable->datasources_open(diff_baton, &prefix_lines, &suffix_lines,
+                                   datasource, 4));
+
   SVN_ERR(svn_diff__get_tokens(&position_list[0],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_original,
+                               prefix_lines,
                                subpool2));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[1],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_modified,
+                               prefix_lines,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[2],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_latest,
+                               prefix_lines,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[3],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_ancestor,
+                               prefix_lines,
                                subpool2));
+
+  num_tokens = svn_diff__get_node_count(tree);
 
   /* Get rid of the tokens, we don't need them to calc the diff */
   if (vtable->token_discard_all != NULL)
@@ -216,8 +238,20 @@ svn_diff_diff4(svn_diff_t **diff,
   /* We don't need the nodes in the tree either anymore, nor the tree itself */
   svn_pool_clear(subpool3);
 
+  token_counts[0] = svn_diff__get_token_counts(position_list[0], num_tokens,
+                                               subpool);
+  token_counts[1] = svn_diff__get_token_counts(position_list[1], num_tokens,
+                                               subpool);
+  token_counts[2] = svn_diff__get_token_counts(position_list[2], num_tokens,
+                                               subpool);
+  token_counts[3] = svn_diff__get_token_counts(position_list[3], num_tokens,
+                                               subpool);
+
   /* Get the lcs for original - latest */
-  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], subpool3);
+  lcs_ol = svn_diff__lcs(position_list[0], position_list[2],
+                         token_counts[0], token_counts[2],
+                         num_tokens, prefix_lines,
+                         suffix_lines, subpool3);
   diff_ol = svn_diff__diff(lcs_ol, 1, 1, TRUE, pool);
 
   svn_pool_clear(subpool3);
@@ -236,9 +270,12 @@ svn_diff_diff4(svn_diff_t **diff,
     }
 
   /* Get the lcs for common ancestor - original
-   * Do reverse adjustements
+   * Do reverse adjustments
    */
-  lcs_adjust = svn_diff__lcs(position_list[3], position_list[2], subpool3);
+  lcs_adjust = svn_diff__lcs(position_list[3], position_list[2],
+                             token_counts[3], token_counts[2],
+                             num_tokens, prefix_lines,
+                             suffix_lines, subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
   adjust_diff(diff_ol, diff_adjust);
 
@@ -247,7 +284,10 @@ svn_diff_diff4(svn_diff_t **diff,
   /* Get the lcs for modified - common ancestor
    * Do forward adjustments
    */
-  lcs_adjust = svn_diff__lcs(position_list[1], position_list[3], subpool3);
+  lcs_adjust = svn_diff__lcs(position_list[1], position_list[3],
+                             token_counts[1], token_counts[3],
+                             num_tokens, prefix_lines,
+                             suffix_lines, subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
   adjust_diff(diff_ol, diff_adjust);
 
@@ -261,8 +301,8 @@ svn_diff_diff4(svn_diff_t **diff,
     {
       if (hunk->type == svn_diff__type_conflict)
         {
-          svn_diff__resolve_conflict(hunk, &position_list[1], 
-                                     &position_list[2], pool);
+          svn_diff__resolve_conflict(hunk, &position_list[1],
+                                     &position_list[2], num_tokens, pool);
         }
     }
 

@@ -1,22 +1,26 @@
 /* uuid.c : operations on repository uuids
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
-#include <assert.h>
-
+#include "svn_pools.h"
 #include "fs.h"
 #include "trail.h"
 #include "err.h"
@@ -38,36 +42,33 @@ static svn_error_t *
 txn_body_get_uuid(void *baton, trail_t *trail)
 {
   struct get_uuid_args *args = baton;
-  return svn_fs_bdb__get_uuid(trail->fs, args->idx, args->uuid, 
+  return svn_fs_bdb__get_uuid(trail->fs, args->idx, args->uuid,
                               trail, trail->pool);
 }
 
 
 svn_error_t *
-svn_fs_base__get_uuid(svn_fs_t *fs,
-                      const char **uuid,
-                      apr_pool_t *pool)
+svn_fs_base__populate_uuid(svn_fs_t *fs,
+                           apr_pool_t *scratch_pool)
 {
-  base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  /* Check for a cached UUID first.  Failing that, we hit the
-     database. */
-  if (bfd->uuid)
+  /* We hit the database. */
     {
-      *uuid = apr_pstrdup(pool, bfd->uuid);
-    }
-  else
-    {
+      const char *uuid;
       struct get_uuid_args args;
-      args.idx = 1;
-      args.uuid = uuid;
-      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_uuid, &args, pool));
 
-      /* Toss what we find into the cache. */
-      if (*uuid)
-        bfd->uuid = apr_pstrdup(fs->pool, *uuid);
+      args.idx = 1;
+      args.uuid = &uuid;
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_uuid, &args,
+                                     FALSE, scratch_pool));
+
+      if (uuid)
+        {
+          /* Toss what we find into the cache. */
+          fs->uuid = apr_pstrdup(fs->pool, uuid);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -85,7 +86,7 @@ static svn_error_t *
 txn_body_set_uuid(void *baton, trail_t *trail)
 {
   struct set_uuid_args *args = baton;
-  return svn_fs_bdb__set_uuid(trail->fs, args->idx, args->uuid, 
+  return svn_fs_bdb__set_uuid(trail->fs, args->idx, args->uuid,
                               trail, trail->pool);
 }
 
@@ -96,17 +97,19 @@ svn_fs_base__set_uuid(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   struct set_uuid_args args;
-  base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
+  if (! uuid)
+    uuid = svn_uuid_generate(pool);
 
   args.idx = 1;
   args.uuid = uuid;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_set_uuid, &args, pool));
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_set_uuid, &args, TRUE, pool));
 
   /* Toss our value into the cache. */
   if (uuid)
-    bfd->uuid = apr_pstrdup(fs->pool, uuid);
+    fs->uuid = apr_pstrdup(fs->pool, uuid);
 
   return SVN_NO_ERROR;
 }

@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * svn_client.i: SWIG interface file for svn_client.h
@@ -31,6 +36,9 @@
 %import svn_delta.i
 %import svn_wc.i
 
+/* Ignore platform-specific auth functions */
+%ignore svn_client_get_windows_simple_provider;
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
@@ -42,19 +50,13 @@
 
 %apply const char *MAY_BE_NULL {
     const char *native_eol,
-    const char *comment
+    const char *comment,
+    const char *relative_to_dir
 };
 
 #ifdef SWIGRUBY
 %apply apr_hash_t *HASH_CSTRING_MAYBENULL {
-  apr_hash_t *mimetypes_map,
-  apr_hash_t *revprop_table
-}
-#endif
-
-#if defined(SWIGPYTHON) || defined(SWIGRUBY)
-%apply apr_hash_t **MERGEHASH {
-  apr_hash_t **mergeinfo
+  apr_hash_t *mimetypes_map
 }
 #endif
 
@@ -63,6 +65,11 @@
   apr_array_header_t *sources
 }
 #endif
+
+%apply apr_array_header_t *REVISION_RANGE_LIST {
+  const apr_array_header_t *ranges_to_merge,
+  const apr_array_header_t *revision_ranges
+}
 
 #ifdef SWIGRUBY
 %apply const char *NOT_NULL {
@@ -74,8 +81,19 @@
   apr_array_header_t *src_paths
 }
 
+#if defined(SWIGRUBY) || defined(SWIGPERL)
+%apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+  apr_array_header_t *changelists
+}
+#else
+%apply const apr_array_header_t *STRINGLIST {
+  apr_array_header_t *changelists
+}
+#endif
+
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-  apr_array_header_t **paths
+  apr_array_header_t **paths,
+  apr_array_header_t **suggestions
 }
 
 #ifdef SWIGPYTHON
@@ -154,13 +172,6 @@
                   svn_swig_rb_get_commit_log_func,,,)
 #endif
 
-#ifdef SWIGRUBY
-%callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
-                  ,
-                  ,
-                  svn_swig_rb_cancel_func,,,)
-#endif
-
 #ifndef SWIGMZSCHEME
 %callback_typemap(svn_client_blame_receiver_t receiver, void *receiver_baton,
                   svn_swig_py_client_blame_receiver_func,
@@ -179,6 +190,33 @@
                   svn_swig_py_info_receiver_func,
                   ,,,,
                   )
+
+%callback_typemap(svn_changelist_receiver_t callback_func, void *callback_baton,
+                  svn_swig_py_changelist_receiver_func,
+                  ,
+                  )
+#endif
+
+/* -----------------------------------------------------------------------
+Callback: svn_client_diff_summarize_func_t
+        svn_client_diff_summarize2()
+        svn_client_diff_summarize()
+        svn_client_diff_summarize_peg2()
+        svn_client_diff_summarize_peg()
+*/
+
+#ifdef SWIGPYTHON
+#endif
+
+#ifdef SWIGPERL
+    %typemap(in) (svn_client_diff_summarize_func_t summarize_func,
+                  void *summarize_baton) {
+        $1 = svn_swig_pl_thunk_client_diff_summarize_func;
+        $2 = (void *)$input;
+    }
+#endif
+
+#ifdef SWIGRUBY
 #endif
 
 #ifdef SWIGRUBY
@@ -259,8 +297,9 @@
  */
 #ifdef SWIGPERL
 %typemap(in) apr_hash_t *config {
-  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
-                                         svn_swig_pl_make_pool ((SV *)NULL));
+  apr_pool_t *pool = svn_swig_pl_make_pool ((SV *)NULL);
+  SPAGAIN;
+  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *", pool);
 }
 
 %typemap(out) apr_hash_t *config {
@@ -331,39 +370,9 @@
 %ignore svn_client_copy_source_t::revision;
 %ignore svn_client_copy_source_t::peg_revision;
 
-%ignore svn_client_remove_from_changelist;
-%ignore svn_client_commit4;
 #endif
 
 %include svn_client_h.swg
-
-#ifdef SWIGRUBY
-%header %{
-#define _svn_client_remove_from_changelist svn_client_remove_from_changelist
-#define _svn_client_commit4 svn_client_commit4
-%}
-%rename(svn_client_remove_from_changelist) _svn_client_remove_from_changelist;
-%rename(svn_client_commit4) _svn_client_commit4;
-%apply const char *MAY_BE_NULL {
-  const char *removed_changelist,
-  const char *changelist_name_may_be_null
-}
-svn_error_t *
-_svn_client_remove_from_changelist(const apr_array_header_t *paths,
-                                   const char *removed_changelist,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
-
-svn_error_t *
-_svn_client_commit4(svn_commit_info_t **commit_info_p,
-                    const apr_array_header_t *targets,
-                    svn_boolean_t recurse,
-                    svn_boolean_t keep_locks,
-                    svn_boolean_t keep_changelist,
-                    const char *changelist_name_may_be_null,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
-#endif
 
 /* Ugliness because the constant is typedefed and SWIG ignores it
    as a result. Does not get ignored by mzscheme */
@@ -376,7 +385,8 @@ _svn_client_commit4(svn_commit_info_t **commit_info_p,
 /* provide Python with access to some thunks. */
 %constant svn_cancel_func_t svn_swig_py_cancel_func;
 %constant svn_client_get_commit_log3_t svn_swig_py_get_commit_log_func;
-%constant svn_wc_notify_func2_t svn_swig_py_notify_func;
+%constant svn_wc_notify_func_t svn_swig_py_notify_func;
+%constant svn_wc_notify_func2_t svn_swig_py_notify_func2;
 
 #endif
 
@@ -386,7 +396,13 @@ _svn_client_commit4(svn_commit_info_t **commit_info_p,
   svn_client_ctx_t(apr_pool_t *pool) {
     svn_error_t *err;
     svn_client_ctx_t *self;
-    err = svn_client_create_context(&self, pool);
+    apr_hash_t *cfg_hash;
+
+    err = svn_config_get_config(&cfg_hash, NULL, pool);
+    if (err)
+      svn_swig_rb_handle_svn_error(err);
+
+    err = svn_client_create_context2(&self, cfg_hash, pool);
     if (err)
       svn_swig_rb_handle_svn_error(err);
     return self;
@@ -503,7 +519,13 @@ svn_client_set_config(svn_client_ctx_t *ctx,
                       apr_hash_t *config,
                       apr_pool_t *pool)
 {
-  ctx->config = config;
+  svn_error_t *err;
+
+  apr_hash_clear(ctx->config);
+  err = svn_config_copy_config(&ctx->config, config,
+                               apr_hash_pool_get(ctx->config));
+  if (err)
+    svn_swig_rb_handle_svn_error(err);
   return Qnil;
 }
 

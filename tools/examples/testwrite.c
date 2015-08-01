@@ -2,17 +2,22 @@
  * testwrite.c : test whether a user has commit access.
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  *  To compile on unix against Subversion and APR libraries, try
@@ -155,7 +160,7 @@ main (int argc, const char **argv)
   apr_hash_t *dirents;
   const char *upload_file, *URL;
   const char *parent_URL, *basename;
-  svn_ra_plugin_t *ra_lib;  
+  svn_ra_plugin_t *ra_lib;
   void *session, *ra_baton;
   svn_revnum_t rev;
   const svn_delta_editor_t *editor;
@@ -167,7 +172,7 @@ main (int argc, const char **argv)
 
   if (argc <= 1)
     {
-      printf ("Usage:  %s URL\n", argv[0]);  
+      printf ("Usage:  %s URL\n", argv[0]);
       printf ("    Tries to create an svn commit-transaction at URL.\n");
       return EXIT_FAILURE;
     }
@@ -185,13 +190,13 @@ main (int argc, const char **argv)
   err = svn_fs_initialize (pool);
   if (err) goto hit_error;
 
-  /* Make sure the ~/.subversion run-time config files exist, and load. */  
+  /* Make sure the ~/.subversion run-time config files exist, and load. */
   err = svn_config_ensure (NULL, pool);
   if (err) goto hit_error;
 
   err = svn_config_get_config (&cfg_hash, NULL, pool);
   if (err) goto hit_error;
-    
+
   /* Build an authentication baton. */
   {
     /* There are many different kinds of authentication back-end
@@ -199,21 +204,21 @@ main (int argc, const char **argv)
     svn_auth_provider_object_t *provider;
     apr_array_header_t *providers
       = apr_array_make (pool, 4, sizeof (svn_auth_provider_object_t *));
-    
+
     svn_client_get_simple_prompt_provider (&provider,
                                            my_simple_prompt_callback,
                                            NULL, /* baton */
                                            2, /* retry limit */ pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    
+
     svn_client_get_username_prompt_provider (&provider,
                                              my_username_prompt_callback,
                                              NULL, /* baton */
                                              2, /* retry limit */ pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    
+
     /* Register the auth-providers into the context's auth_baton. */
-    svn_auth_open (&auth_baton, providers, pool);      
+    svn_auth_open (&auth_baton, providers, pool);
   }
 
   /* Create a table of callbacks for the RA session, mostly nonexistent. */
@@ -232,7 +237,7 @@ main (int argc, const char **argv)
 
   err = svn_ra_get_ra_library (&ra_lib, ra_baton, parent_URL, pool);
   if (err) goto hit_error;
-  
+
   err = ra_lib->open (&session, parent_URL, cbtable, NULL, cfg_hash, pool);
   if (err) goto hit_error;
 
@@ -250,12 +255,12 @@ main (int argc, const char **argv)
     svn_txdelta_window_handler_t handler;
     svn_stream_t *contents;
     apr_file_t *f = NULL;
-  
+
     err = editor->open_root (edit_baton, rev, pool, &root_baton);
     if (err) goto hit_error;
-  
+
     err = editor->abort_edit (edit_baton, pool);
-    if (err) goto hit_error;    
+    if (err) goto hit_error;
   }
 
   printf ("No problems creating commit transaction.\n");

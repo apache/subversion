@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -37,47 +42,9 @@ public interface ConflictResolverCallback extends EventListener
      *
      * @param descrip A description of the conflict.
      * @return The result of any conflict resolution, from the {@link
-     * #Result} enum.
+     * ConflictResult} enum.
      * @throws SubversionException If an error occurs.
-     * @see ConflictResolverCallback.Result
      */
-    public int resolve(ConflictDescriptor descrip)
+    public ConflictResult resolve(ConflictDescriptor descrip)
         throws SubversionException;
-
-    /**
-     * Poor man's enum for <code>svn_wc_conflict_result_t</code>.
-     */
-    public final class Result
-    {
-        /**
-         * User did nothing; conflict remains.
-         */
-        public static final int conflicted = 0;
-
-        /**
-         * User has resolved the conflict.
-         */
-        public static final int resolved = 1;
-
-        /**
-         * User chooses the base file.
-         */
-        public static final int choose_base = 2;
-
-        /**
-         * User chooses the repository file.
-         */
-        public static final int choose_repos = 3;
-
-        /**
-         * User chooses own version of file.
-         */
-        public static final int choose_user = 4;
-
-        /**
-         * User chooses the merged-file (which she may have manually
-         * edited).
-         */
-        public static final int choose_merged = 5;
-    }
 }

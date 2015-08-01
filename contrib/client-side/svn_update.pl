@@ -57,7 +57,7 @@
 # comment this line out and change the $backup_mine_files to 0.
 use File::Copy;
 
-# This forces backing up of the .mine files for reference even 
+# This forces backing up of the .mine files for reference even
 # after the resolved command.  The backups will be stored as
 # <filename.username>
 $backup_mine_files=1;
@@ -73,13 +73,13 @@ $DIFF3CMD="xcleardiff";
 #$d3cmdoverride="";
 $d3cmdoverride="/bin/false";
 
-# Add more diff programs here.  
+# Add more diff programs here.
 # For the internal, discovered, file parameters:
 #	+A+ ==> mine
 #	+B+ ==> older
 #	+C+ ==> latest
 #	+D+ ==> Destination (The output of your merged code would go here.
-#                            This would, generally, be whatever 
+#                            This would, generally, be whatever
 #                            $(basename <+A+> .mine) would evaluate to.
 # But you can feel free to do something like these:
 # 	"+B+ +C+ +A+ -out +D+.bob"
@@ -89,11 +89,11 @@ $d3cmdoverride="/bin/false";
 #
 # HAVING THE CORRECT PATH, AND ARGS FOR YOUR DIFF PROGRAM, IS CRITICAL!!
 %DIFF3CMD_hash=(# Ahh...hallowed be thy name.
-                "/opt/atria/bin/xcleardiff" => "+A+ +B+ +C+ -out +D+",  
+                "/opt/atria/bin/xcleardiff" => "+A+ +B+ +C+ -out +D+",
                 # This one is slow.
-                "/usr/bin/kdiff3"           => "+A+ +B+ +C+ -o +D+",    
+                "/usr/bin/kdiff3"           => "+A+ +B+ +C+ -o +D+",
                 # This one's slow and it sucks!(BUGGY)
-                "/usr/bin/xxdiff"           => "-M +D+ +A+ +B+ +C+",    
+                "/usr/bin/xxdiff"           => "-M +D+ +A+ +B+ +C+",
                 # This one's even worse (no output filename).
                 "/usr/bin/meld"             => "+A+ +B+ +C+",
                 );
@@ -101,7 +101,7 @@ $d3cmdoverride="/bin/false";
 sub exec_cmd
 {
   my @args=@_;
-  my $CMD=$args[0];  
+  my $CMD=$args[0];
   my @retData;
   my $i=0;
 
@@ -109,7 +109,7 @@ sub exec_cmd
   while($_=<FH>)
   {
     chomp($_);
-    $retData[$i]=$_; 
+    $retData[$i]=$_;
     $i++;
   }
   close(FH);
@@ -271,8 +271,8 @@ sub parse_it
     # Add the files we may wish to remove to an array.  Keep *.mine
     # files in case something bad happened.
     push(@cleanup_array,
-         "${fpath}/${sbox_repo_base}", 
-         "${fpath}/${sbox_repo_latest}", 
+         "${fpath}/${sbox_repo_base}",
+         "${fpath}/${sbox_repo_latest}",
          "${fpath}/${fname}.orig");
 
     # Make copies of *.mine for ctya purposes.

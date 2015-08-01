@@ -2,17 +2,22 @@
  * config_impl.h :  private header for the config file implementation.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -27,8 +32,8 @@
 #include <apr_hash.h>
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_io.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +46,8 @@ struct svn_config_t
   /* Table of cfg_section_t's. */
   apr_hash_t *sections;
 
-  /* Pool for hash tables, table entries and unexpanded values */
+  /* Pool for hash tables, table entries and unexpanded values.
+     Also, parent pool for temporary pools. */
   apr_pool_t *pool;
 
   /* Pool for expanded values -- this is separate, so that we can
@@ -58,14 +64,29 @@ struct svn_config_t
   /* Temporary value used for expanded default values in svn_config_get.
      (Using a stringbuf so that frequent resetting is efficient.) */
   svn_stringbuf_t *tmp_value;
-};
 
+  /* Specifies whether section names are populated case sensitively. */
+  svn_boolean_t section_names_case_sensitive;
+
+  /* Specifies whether option names are populated case sensitively. */
+  svn_boolean_t option_names_case_sensitive;
+
+  /* When set, all modification attempts will be ignored.
+   * In debug mode, we will trigger an assertion. */
+  svn_boolean_t read_only;
+};
 
 /* Read sections and options from a file. */
 svn_error_t *svn_config__parse_file(svn_config_t *cfg,
                                     const char *file,
                                     svn_boolean_t must_exist,
                                     apr_pool_t *pool);
+
+/* Read sections and options from a stream. */
+svn_error_t *svn_config__parse_stream(svn_config_t *cfg,
+                                      svn_stream_t *stream,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 /* The name of the magic [DEFAULT] section. */
 #define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
@@ -74,8 +95,9 @@ svn_error_t *svn_config__parse_file(svn_config_t *cfg,
 #ifdef WIN32
 /* Get the common or user-specific AppData folder */
 svn_error_t *svn_config__win_config_path(const char **folder,
-                                         int system_path,
-                                         apr_pool_t *pool);
+                                         svn_boolean_t system_path,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
 
 /* Read sections and options from the Windows Registry. */
 svn_error_t *svn_config__parse_registry(svn_config_t *cfg,
@@ -106,10 +128,13 @@ svn_error_t *svn_config__parse_registry(svn_config_t *cfg,
 
 /* System-wide and configuration subdirectory names.
    NOTE: Don't use these directly; call svn_config__sys_config_path()
-   or svn_config__user_config_path() instead. */
+   or svn_config_get_user_config_path() instead. */
 #ifdef WIN32
 #  define SVN_CONFIG__SUBDIRECTORY    "Subversion"
-#else  /* ! WIN32 */
+#elif defined __HAIKU__ /* HAIKU */
+#  define SVN_CONFIG__SYS_DIRECTORY   "subversion"
+#  define SVN_CONFIG__USR_DIRECTORY   "subversion"
+#else  /* ! WIN32 && ! __HAIKU__ */
 #  define SVN_CONFIG__SYS_DIRECTORY   "/etc/subversion"
 #  define SVN_CONFIG__USR_DIRECTORY   ".subversion"
 #endif /* WIN32 */
@@ -132,40 +157,6 @@ svn_config__sys_config_path(const char **path_p,
                             const char *fname,
                             apr_pool_t *pool);
 
-
-/* Set *PATH_P to the path to config file FNAME in the user's personal
-   configuration area; if FNAME is NULL, set *PATH_P to the directory
-   name of the user's config area.  Allocate *PATH_P in POOL.
-
-   If the user's personal configuration area cannot be located (most
-   likely under Win32), set *PATH_P to NULL regardless of FNAME.  
-   
-   CONFIG_DIR overrides this and if set *PATH_P is set to it.
-   */
-svn_error_t *
-svn_config__user_config_path(const char *config_dir,
-                             const char **path_p,
-                             const char *fname,
-                             apr_pool_t *pool);
-
-
-/* Open a config file FILENAME with mode MODE. FILENAME is encoded in
-   UTF-8, so use POOL for any temporary storage needed for
-   conversions. */
-svn_error_t *
-svn_config__open_file(FILE **pfile,
-                      const char *filename,
-                      const char *mode,
-                      apr_pool_t *pool);
-
-
-/* Stubs for allowing 1.0.x Apache modules to be mixed with 1.1.x libraries. */
-typedef svn_boolean_t(*svn_config__section_enumerator_t)
-        (const char *name, void *baton);
-
-int svn_config__enumerate_sections(svn_config_t *cfg,
-                                   svn_config__section_enumerator_t callback,
-                                   void *baton);
 
 #ifdef __cplusplus
 }

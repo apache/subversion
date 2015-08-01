@@ -1,15 +1,41 @@
 #!/usr/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 ## See the usage() function for operating instructions. ##
 
 import re
+try:
+  # Python >=2.6
+  from functools import reduce
+except ImportError:
+  # Python <2.6
+  pass
 import sys
 import operator
 
 _re_trail = re.compile('\((?P<txn_body>[a-z_]*), (?P<filename>[a-z_\-./]*), (?P<lineno>[0-9]*), (?P<txn>0|1)\): (?P<ops>.*)')
 _re_table_op = re.compile('\(([a-z]*), ([a-z]*)\)')
 
-_seperator = '------------------------------------------------------------\n'
+_separator = '------------------------------------------------------------\n'
 
 def parse_trails_log(infile):
   trails = []
@@ -53,9 +79,9 @@ def output_summary(trails, outfile):
   median_ops = ops[total_trails / 2]
   average_ops = float(total_ops) / total_trails
 
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('Summary\n')
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('Total number of trails: %10i\n' % total_trails)
   outfile.write('Total number of ops:    %10i\n' % total_ops)
   outfile.write('max ops/trail:          %10i\n' % max_ops)
@@ -65,7 +91,9 @@ def output_summary(trails, outfile):
 
 
 # custom compare function
-def _freqtable_cmp((a, b), (c, d)):
+def _freqtable_cmp(a_b, c_d):
+  (a, b) = a_b
+  (c, d) = c_d
   c = cmp(d, b)
   if not c:
     c = cmp(a, c)
@@ -76,12 +104,12 @@ def list_frequencies(list):
   Given a list, return a list composed of (item, frequency)
   in sorted order
   """
-  
+
   counter = {}
   for item in list:
     counter[item] = counter.get(item, 0) + 1
 
-  frequencies = counter.items()
+  frequencies = list(counter.items())
   frequencies.sort(_freqtable_cmp)
 
   return frequencies
@@ -94,10 +122,10 @@ def output_trail_length_frequencies(trails, outfile):
 
   total_trails = len(ops)
   frequencies = list_frequencies(ops)
- 
-  outfile.write(_seperator)
+
+  outfile.write(_separator)
   outfile.write('Trail length frequencies\n')
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('ops/trail   frequency   percentage\n')
   for (r, f) in frequencies:
     p = float(f) * 100 / total_trails
@@ -122,7 +150,7 @@ def output_trail(outfile, trail, column = 0):
     else:
       line = line + ', ' + op_str
   outfile.write('%s\n' % line)
-    
+
   outfile.write('\n')
 
 
@@ -136,9 +164,9 @@ def output_trail_frequencies(trails, outfile):
 
   frequencies = list_frequencies(ttrails)
 
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('Trail frequencies\n')
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('frequency   percentage   ops/trail   trail\n')
   for (((txn_body, file, line), trail), f) in frequencies:
     p = float(f) * 100 / total_trails
@@ -154,10 +182,10 @@ def output_txn_body_frequencies(trails, outfile):
 
   total_trails = len(trails)
   frequencies = list_frequencies(bodies)
-  
-  outfile.write(_seperator)
+
+  outfile.write(_separator)
   outfile.write('txn_body frequencies\n')
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('frequency   percentage   txn_body\n')
   for ((txn_body, file, line), f) in frequencies:
     p = float(f) * 100 / total_trails

@@ -1,5 +1,5 @@
 usage: svn <subcommand> [options] [args]
-Subversion command-line client, version X.Y.Z.
+Subversion command-line client.
 Type 'svn help <subcommand>' for help on a specific subcommand.
 Type 'svn --version' to see the program version and RA modules
   or 'svn --version --quiet' to see just the version number.
@@ -10,6 +10,7 @@ command, it recurses on the current directory (inclusive) by default.
 
 Available subcommands:
    add
+   auth
    blame (praise, annotate, ann)
    cat
    changelist (cl)
@@ -27,19 +28,24 @@ Available subcommands:
    lock
    log
    merge
+   mergeinfo
    mkdir
    move (mv, rename, ren)
+   patch
    propdel (pdel, pd)
    propedit (pedit, pe)
    propget (pget, pg)
    proplist (plist, pl)
    propset (pset, ps)
+   relocate
+   resolve
    resolved
    revert
    status (stat, st)
    switch (sw)
    unlock
    update (up)
+   upgrade
 
 Subversion is a tool for version control.
-For additional information, see http://subversion.tigris.org/
+For additional information, see http://subversion.apache.org/

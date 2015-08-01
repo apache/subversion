@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -20,9 +25,12 @@
  */
 
 #include "LogMessageCallback.h"
+#include "CreateJ.h"
+#include "EnumMapper.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_compat.h"
 
 /**
  * Create a LogMessageCallback object
@@ -49,7 +57,8 @@ LogMessageCallback::callback(void *baton,
                              apr_pool_t *pool)
 {
   if (baton)
-    return ((LogMessageCallback *)baton)->singleMessage(log_entry, pool);
+    return static_cast<LogMessageCallback *>(baton)->singleMessage(
+            log_entry, pool);
 
   return SVN_NO_ERROR;
 }
@@ -62,130 +71,60 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
   // The method id will not change during the time this library is
   // loaded, so it can be cached.
   static jmethodID sm_mid = 0;
   if (sm_mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessageCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/LogMessageCallback"));
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
 
       sm_mid = env->GetMethodID(clazz,
                                 "singleMessage",
-                                "([L"JAVA_PACKAGE"/ChangePath;"
-                                "JLjava/lang/String;"
-                                "JLjava/lang/String;J)V");
+                                "(Ljava/util/Set;JLjava/util/Map;Z)V");
       if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
-
-      env->DeleteLocalRef(clazz);
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
+        POP_AND_RETURN(SVN_NO_ERROR);
     }
 
-  jclass clazzCP = env->FindClass(JAVA_PACKAGE"/ChangePath");
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  static jmethodID midCP = 0;
-  if (midCP == 0)
-    {
-      midCP = env->GetMethodID(clazzCP,
-                               "<init>",
-                               "(Ljava/lang/String;JLjava/lang/String;C)V");
-      if (JNIUtil::isJavaExceptionThrown())
-        return SVN_NO_ERROR;
-    }
-
-  apr_time_t commit_time = -1;
-  if (log_entry->date != NULL && *log_entry->date != '\0')
-    SVN_ERR(svn_time_from_cstring(&commit_time, log_entry->date, pool));
-
-  jstring jauthor = JNIUtil::makeJString(log_entry->author);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  jobjectArray jChangedPaths = NULL;
+  jobject jChangedPaths = NULL;
   if (log_entry->changed_paths)
     {
-      apr_array_header_t *sorted_paths;
-      int i;
+      apr_hash_index_t *hi;
+      std::vector<jobject> jcps;
 
-      /* Get an array of sorted hash keys. */
-      sorted_paths = svn_sort__hash(log_entry->changed_paths,
-                                    svn_sort_compare_items_as_paths,
-                                    pool);
-
-      jChangedPaths = env->NewObjectArray(sorted_paths->nelts,
-                                          clazzCP,
-                                          NULL);
-
-      for (i = 0; i < sorted_paths->nelts; ++i)
+      for (hi = apr_hash_first(pool, log_entry->changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
         {
-          svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
-                                                   svn_sort__item_t));
-          const char *path = (const char *)item->key;
-          svn_log_changed_path_t *log_item
-            = (svn_log_changed_path_t *)
-            apr_hash_get(log_entry->changed_paths, item->key, item->klen);
+          const char *path =
+            reinterpret_cast<const char *>(apr_hash_this_key(hi));
+          svn_log_changed_path2_t *log_item =
+            reinterpret_cast<svn_log_changed_path2_t *>(apr_hash_this_val(hi));
 
-          jstring jpath = JNIUtil::makeJString(path);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+          jobject cp = CreateJ::ChangedPath(path, log_item);
 
-          jstring jcopyFromPath =
-            JNIUtil::makeJString(log_item->copyfrom_path);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
-
-          jlong jcopyFromRev = log_item->copyfrom_rev;
-          jchar jaction = log_item->action;
-
-          jobject cp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
-                                      jcopyFromPath, jaction);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
-
-          env->SetObjectArrayElement(jChangedPaths, i, cp);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
-
-          env->DeleteLocalRef(cp);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
-
-          env->DeleteLocalRef(jpath);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
-
-          env->DeleteLocalRef(jcopyFromPath);
-          if (JNIUtil::isJavaExceptionThrown())
-            return SVN_NO_ERROR;
+          jcps.push_back(cp);
         }
+
+      jChangedPaths = CreateJ::Set(jcps);
     }
 
-  jstring jmessage = JNIUtil::makeJString(log_entry->message);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+  jobject jrevprops = NULL;
+  if (log_entry->revprops != NULL && apr_hash_count(log_entry->revprops) > 0)
+    jrevprops = CreateJ::PropertyMap(log_entry->revprops, pool);
 
   env->CallVoidMethod(m_callback,
                       sm_mid,
                       jChangedPaths,
                       (jlong)log_entry->revision,
-                      jauthor,
-                      (jlong)commit_time,
-                      jmessage,
-                      (jlong)log_entry->nbr_children);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+                      jrevprops,
+                      (jboolean)log_entry->has_children);
 
-  env->DeleteLocalRef(jauthor);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  env->DeleteLocalRef(jmessage);
-  // No need to check for an exception here, because we return anyway.
-
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }

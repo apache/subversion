@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -38,9 +43,25 @@ extern "C" {
  */
 #define SVN_SVNDIFF_MIME_TYPE "application/vnd.svn-svndiff"
 
+/** This is the MIME type that Subversion users for its "skel" format.
+ *
+ * This is an application type, for the "svn" vendor. The specific subtype
+ * is "skel".
+ * @since New in 1.7.
+ */
+#define SVN_SKEL_MIME_TYPE "application/vnd.svn-skel"
 
 /** This header is *TEMPORARILY* used to transmit the delta base to the
  * server. It contains a version resource URL for what is on the client.
+ *
+ * @note The HTTP delta draft recommends an If-None-Match header
+ * holding an entity tag corresponding to the base copy that the
+ * client has.  In Subversion, it is much more natural to use a version
+ * URL to specify that base.  We'd like, then, to use the If: header
+ * to specify the URL.  Unfortunately, mod_dav sees all "State-token"
+ * items as lock tokens.  So we'll use this custom header until mod_dav
+ * and other backend APIs are taught to be less rigid, at which time
+ * we can switch to using an If: header to report our base version.
  */
 #define SVN_DAV_DELTA_BASE_HEADER "X-SVN-VR-Base"
 
@@ -81,6 +102,108 @@ extern "C" {
     universe of svn_lock_t->owner.)  */
 #define SVN_DAV_LOCK_OWNER_HEADER "X-SVN-Lock-Owner"
 
+/** Assuming the OPTIONS was performed against a resource within a
+ * Subversion repository, then this header indicates the youngest
+ * revision in the repository.
+ * @since New in 1.7.  */
+#define SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
+
+/** Assuming the OPTIONS was performed against a resource within a
+ * Subversion repository, then this header indicates the UUID of the
+ * repository.
+ * @since New in 1.7.  */
+#define SVN_DAV_REPOS_UUID_HEADER "SVN-Repository-UUID"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the server speaks HTTP protocol v2.  This header provides an
+ * opaque URI that the client should send all custom REPORT requests
+ * against.
+ * @since New in 1.7.  */
+#define SVN_DAV_ME_RESOURCE_HEADER "SVN-Me-Resource"
+
+/** This header provides the repository root URI, suitable for use in
+ * calculating the relative paths of other public URIs for this
+ * repository into .  (HTTP protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_ROOT_URI_HEADER "SVN-Repository-Root"
+
+/** This header provides an opaque URI that the client can append a
+ * revision to, to construct a 'revision URL'.  This allows direct
+ * read/write access to revprops via PROPFIND or PROPPATCH, and is
+ * similar to libsvn_fs's revision objects (as distinct from "revision
+ * roots").  (HTTP protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_REV_STUB_HEADER "SVN-Rev-Stub"
+
+/** This header provides an opaque URI that the client can append
+ * PEGREV/PATH to, in order to construct URIs of pegged objects in the
+ * repository, similar to the use of a "revision root" in the
+ * libsvn_fs API.  (HTTP protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_REV_ROOT_STUB_HEADER "SVN-Rev-Root-Stub"
+
+/** This header provides an opaque URI which represents a Subversion
+ * transaction (revision-in-progress) object.  It is suitable for use
+ * in fetching and modifying transaction properties as part of a
+ * commit process, similar to the svn_fs_txn_t object (as distinct
+ * from a "txn root").  (HTTP protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_TXN_STUB_HEADER "SVN-Txn-Stub"
+
+/** Companion to @c SVN_DAV_TXN_STUB_HEADER, used when a POST request
+ *  returns @c SVN_DAV_VTXN_NAME_HEADER in response to a client
+ *  supplied name.  (HTTP protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_VTXN_STUB_HEADER "SVN-VTxn-Stub"
+
+/** This header provides an opaque URI which represents the root
+ * directory of a Subversion transaction (revision-in-progress),
+ * similar to the concept of a "txn root" in the libsvn_fs API.  The
+ * client can append additional path segments to it to access items
+ * deeper in the transaction tree as part of a commit process.  (HTTP
+ * protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_TXN_ROOT_STUB_HEADER "SVN-Txn-Root-Stub"
+
+/** Companion to @c SVN_DAV_TXN_ROOT_STUB_HEADER, used when a POST
+ *  request returns @c SVN_DAV_VTXN_NAME_HEADER in response to a
+ *  client supplied name.  (HTTP protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_VTXN_ROOT_STUB_HEADER "SVN-VTxn-Root-Stub"
+
+/** This header is used in the POST response to tell the client the
+ * name of the Subversion transaction created by the request.  It can
+ * then be appended to the transaction stub and transaction root stub
+ * for access to the properties and paths, respectively, of the named
+ * transaction.  (HTTP protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_TXN_NAME_HEADER "SVN-Txn-Name"
+
+/** This header is used in the POST request, to pass a client supplied
+ * alternative transaction name to the server, and in the POST
+ * response, to tell the client that the alternative transaction
+ * resource names should be used.  (HTTP protocol v2 only)
+ * @since New in 1.7.  */
+#define SVN_DAV_VTXN_NAME_HEADER "SVN-VTxn-Name"
+
+/** This header is used in the OPTIONS response to identify named
+ * skel-based POST request types which the server is prepared to
+ * handle.  (HTTP protocol v2 only)
+ * @since New in 1.8.   */
+#define SVN_DAV_SUPPORTED_POSTS_HEADER "SVN-Supported-Posts"
+
+/** This header is used in the OPTIONS response to indicate if the server
+ * wants bulk update requests (Prefer) or only accepts skelta requests (Off).
+ * If this value is On both options are allowed.
+ * @since New in 1.8.   */
+#define SVN_DAV_ALLOW_BULK_UPDATES "SVN-Allow-Bulk-Updates"
+
+/** Assuming the request target is a Subversion repository resource,
+ * this header is returned in the OPTIONS response to indicate whether
+ * the repository supports the merge tracking feature ("yes") or not
+ * ("no").
+ * @since New in 1.8.  */
+#define SVN_DAV_REPOSITORY_MERGEINFO "SVN-Repository-MergeInfo"
 
 /**
  * @name Fulltext MD5 headers
@@ -88,7 +211,7 @@ extern "C" {
  * These headers are for client and server to verify that the base
  * and the result of a change transmission are the same on both
  * sides, regardless of what transformations (svndiff deltification,
- * gzipping, etc) the data may have gone through in between.  
+ * gzipping, etc) the data may have gone through in between.
  *
  * The result md5 is always used whenever file contents are
  * transferred, because every transmission has a resulting text.
@@ -113,7 +236,7 @@ extern "C" {
 
 /** The svn-specific object that is placed within a <D:error> response.
  *
- * @defgroup svn_dav_error svn_dav errors
+ * @defgroup svn_dav_error Errors in svn_dav
  * @{ */
 
 /** The error object's namespace */
@@ -128,7 +251,7 @@ extern "C" {
 /** General property (xml) namespaces that will be used by both ra_dav
  * and mod_dav_svn for marshalling properties.
  *
- * @defgroup svn_dav_property_xml_namespaces dav property namespaces
+ * @defgroup svn_dav_property_xml_namespaces DAV property namespaces
  * @{
  */
 
@@ -148,6 +271,123 @@ extern "C" {
  * seen by either fs or wc.
  */
 #define SVN_DAV_PROP_NS_DAV "http://subversion.tigris.org/xmlns/dav/"
+
+
+/**
+ * @name Custom (extension) values for the DAV header.
+ * Note that although these share the SVN_DAV_PROP_NS_DAV namespace
+ * prefix, they are not properties; they are header values.
+ * @{
+ */
+
+/* ##################################################################
+ *
+ *    WARNING:  At least some versions of Microsoft's Web Folders
+ *              WebDAV client implementation are unable to handle
+ *              DAV: headers with values longer than 63 characters,
+ *              so please keep these strings within that limit.
+ *
+ * ##################################################################
+ */
+
+
+/** Presence of this in a DAV header in an OPTIONS request or response
+ * indicates that the transmitter supports @c svn_depth_t.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DAV_NS_DAV_SVN_DEPTH\
+            SVN_DAV_PROP_NS_DAV "svn/depth"
+
+/** Presence of this in a DAV header in an OPTIONS request or response
+ * indicates that the server knows how to handle merge-tracking
+ * information.
+ *
+ * Note that this says nothing about whether the repository can handle
+ * mergeinfo, only whether the server does.  For more information, see
+ * mod_dav_svn/version.c:get_vsn_options().
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DAV_NS_DAV_SVN_MERGEINFO\
+            SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to send
+ * custom revprops in log responses.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DAV_NS_DAV_SVN_LOG_REVPROPS\
+            SVN_DAV_PROP_NS_DAV "svn/log-revprops"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to handle
+ * a replay of a directory in the repository (not root).
+ *
+ * @since New in 1.5.
+ */
+#define SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY\
+            SVN_DAV_PROP_NS_DAV "svn/partial-replay"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to enforce
+ * old-value atomicity in PROPPATCH (for editing revprops).
+ *
+ * @since New in 1.7.
+ */
+#define SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS\
+            SVN_DAV_PROP_NS_DAV "svn/atomic-revprops"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to get
+ * inherited properties.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_DAV_NS_DAV_SVN_INHERITED_PROPS\
+            SVN_DAV_PROP_NS_DAV "svn/inherited-props"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to
+ * properly handle ephemeral (that is, deleted-just-before-commit) FS
+ * transaction properties.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS\
+            SVN_DAV_PROP_NS_DAV "svn/ephemeral-txnprops"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) supports serving
+ * properties inline in update editor when 'send-all' is 'false'.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_DAV_NS_DAV_SVN_INLINE_PROPS\
+            SVN_DAV_PROP_NS_DAV "svn/inline-props"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to handle
+ * a replay of a revision resource.  Transmitters must be
+ * HTTP-v2-enabled to support this feature.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_DAV_NS_DAV_SVN_REPLAY_REV_RESOURCE\
+            SVN_DAV_PROP_NS_DAV "svn/replay-rev-resource"
+
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to handle
+ * a reversed fetch of file versions.
+ *
+ * @since New in 1.8.
+ */
+#define SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS\
+            SVN_DAV_PROP_NS_DAV "svn/reverse-file-revs"
+
+
+/** @} */
 
 /** @} */
 

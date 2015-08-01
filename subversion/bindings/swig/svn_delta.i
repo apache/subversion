@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * svn_delta.i: SWIG interface file for svn_delta.h
@@ -28,6 +33,10 @@
 
 %include svn_global.swg
 %import core.i
+
+#ifdef SWIGRUBY
+%ignore svn_compat_wrap_file_rev_handler;
+#endif
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
@@ -56,6 +65,9 @@
 */
 
 #ifdef SWIGPYTHON
+/* Make swig wrap this function for us, to allow making an editor in python
+   ### There must be a cleaner way to implement this? 
+   ### Maybe follow Ruby by wrapping it where passing an editor? */
 void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              PyObject *py_editor,
@@ -64,25 +76,8 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 
 #ifdef SWIGPERL
 %typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON) {
-    svn_delta_make_editor(&$1, &$2, $input, _global_pool);
+    svn_swig_pl_make_editor(&$1, &$2, $input, _global_pool);
 }
-
-%inline %{
-/* helper for invoking txdelta window handler */
-void svn_delta_invoke_window_handler(svn_txdelta_window_handler_t handler,
-                                     void *baton,
-                                     svn_txdelta_window_t *window)
-{
-    handler(window, baton);
-}
-
-%}
-
-void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
-                                   void **handler_baton,
-                                   SV *callback,
-                                   apr_pool_t *pool);
-
 #endif
 
 #ifdef SWIGRUBY
@@ -168,6 +163,7 @@ SWIG_fail;
 /* ----------------------------------------------------------------------- */
 
 %{
+#include <apr_md5.h>
 #include "svn_md5.h"
 %}
 
@@ -185,8 +181,48 @@ svn_txdelta_window_t_ops_get(svn_txdelta_window_t *window)
 %}
 #endif
 
+#ifdef SWIGPYTHON
+%ignore svn_txdelta_window_t::ops;
+%extend svn_txdelta_window_t {
+
+void _ops_get(int *num_ops, const svn_txdelta_op_t **ops)
+{
+  *num_ops = self->num_ops;
+  *ops = self->ops;
+}
+
+%pythoncode {
+  ops = property(_ops_get)
+}
+}
+
+%typemap(argout) (int *num_ops, svn_txdelta_op_t **ops) {
+  apr_pool_t *parent_pool;
+  PyObject *parent_py_pool;
+  PyObject *ops_list;
+  
+  if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                  &parent_py_pool, &parent_pool))
+    SWIG_fail;
+  
+  ops_list = svn_swig_py_convert_txdelta_op_c_array(*$1, *$2,
+    $descriptor(svn_txdelta_op_t *), parent_py_pool);
+
+  if (!ops_list) SWIG_fail;
+
+  %append_output(ops_list);
+}
+#endif
 
 %include svn_delta_h.swg
+
+#ifdef SWIGPYTHON
+%pythoncode %{
+# This function is for backwards compatibility only.
+# Use svn_txdelta_window_t.ops instead.
+svn_txdelta_window_t_ops_get = svn_txdelta_window_t._ops_get
+%}
+#endif
 
 #ifdef SWIGRUBY
 %inline %{

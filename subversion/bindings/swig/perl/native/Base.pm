@@ -40,7 +40,7 @@ with prefix trimmed in the namespace of the caller for this import.
 
 The 3rd through the last parameter is a list of symbol endings that
 you wish for SVN::Base not to import into your namespace.  This is useful
-for cases where you may want to import certaion symbols differently than
+for cases where you may want to import certain symbols differently than
 normally.
 
 =head1 CAVEATS
@@ -55,8 +55,8 @@ sub import {
     my (undef, $pkg, $prefix, @ignore) = @_;
     no warnings 'uninitialized';
     unless (${"SVN::_${pkg}::ISA"}[0] eq 'DynaLoader') {
-	@{"SVN::_${pkg}::ISA"} = qw(DynaLoader);
-	eval qq'
+        @{"SVN::_${pkg}::ISA"} = qw(DynaLoader);
+        eval qq'
 package SVN::_$pkg;
 require DynaLoader;
 bootstrap SVN::_$pkg;
@@ -69,23 +69,23 @@ bootstrap SVN::_$pkg;
     my $prefix_re = qr/(?i:$prefix)/;
     my $ignore_re = join('|', @ignore);
     for (keys %{"SVN::_${pkg}::"}) {
-	my $name = $_;
-	next unless s/^$prefix_re//;
-	next if $ignore_re && m/$ignore_re/;
+        my $name = $_;
+        next unless s/^$prefix_re//;
+        next if $ignore_re && m/$ignore_re/;
 
-	# insert the accessor
-	if (m/(.*)_get$/) {
-	    my $member = $1;
-	    *{"${caller}::$1"} = sub {
-		&{"SVN::_${pkg}::${prefix}${member}_".
-		      (@_ > 1 ? 'set' : 'get')} (@_)
-		  }
-	}
-	elsif (m/(.*)_set$/) {
-	}
-	else {
-	    *{"${caller}::$_"} = ${"SVN::_${pkg}::"}{$name};
-	}
+        # insert the accessor
+        if (m/(.*)_get$/) {
+            my $member = $1;
+            *{"${caller}::$1"} = sub {
+                &{"SVN::_${pkg}::${prefix}${member}_".
+                    (@_ > 1 ? 'set' : 'get')}(@_)
+            }
+        }
+        elsif (m/(.*)_set$/) {
+        }
+        else {
+            *{"${caller}::$_"} = ${"SVN::_${pkg}::"}{$name};
+        }
     }
 
 }
@@ -96,17 +96,22 @@ Chia-liang Kao E<lt>clkao@clkao.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2003 CollabNet.  All rights reserved.
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
 
-This software is licensed as described in the file COPYING, which you
-should have received as part of this distribution.  The terms are also
-available at http://subversion.tigris.org/license-1.html.  If newer
-versions of this license are posted there, you may use a newer version
-instead, at your option.
+      http://www.apache.org/licenses/LICENSE-2.0
 
-This software consists of voluntary contributions made by many
-individuals.  For exact contribution history, see the revision history
-and logs, available at http://subversion.tigris.org/.
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
 
 =cut
 

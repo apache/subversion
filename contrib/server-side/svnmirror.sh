@@ -65,19 +65,19 @@ VERSION="0.0.7"
 #
 # License:
 #    The same as svn itself. for latest version check:
-#    http://svn.collab.net/repos/svn/trunk/subversion/LICENSE
+#    http://svn.apache.org/repos/asf/subversion/trunk/subversion/LICENSE
 #
 # Thanks to the subversion team for their great work.
 #
 # Links:
 #    If you do not like our solution check:
 #       - svnpush
-#         + http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn-push/svn-push.c
+#         + http://svn.apache.org/repos/asf/subversion/trunk/contrib/client-side/svn-push/svn-push.c
 #       - svn replicate
 #         + https://open.datacore.ch/read-only/
 #       - SVN::Mirror and SVN::Web
 #         + http://svn.elixus.org/repos/member/clkao/
-#         + http://svn.elixus.org/svnweb/repos/browse/member/clkao/ 
+#         + http://svn.elixus.org/svnweb/repos/browse/member/clkao/
 #
 # Changes:
 #  0.0.7
@@ -144,7 +144,7 @@ DFLT_KEYCHAIN=""
 #
 # see "svnadmin help dump" for it.
 # default is "--incremental"
-# 
+#
 # if you use svn 1.1 on both you should add "--deltas"
 # it should speed up the transfer on slow lines.
 #
@@ -203,7 +203,7 @@ DFLT_RADDITIONAL=""
 # examples:
 #
 # this will skip trunk/foo.conf from syncing
-# 
+#
 # FILTER="exclude trunk/foo.conf"
 #
 # this filter will only sync trunk
@@ -248,7 +248,7 @@ create_config()
 #
 #######################################################################
 #
-# 
+#
 
 show_help()
 {
@@ -414,7 +414,7 @@ if [ ${RC} -ne 0 ]; then
     echo "failed" >&2
 else
     [ ${VERBOSE} = true ] && \
-        echo "successfull completed."
+        echo "successfully completed."
 fi
 exit ${RC}
 

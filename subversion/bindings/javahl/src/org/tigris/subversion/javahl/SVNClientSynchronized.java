@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -19,6 +24,7 @@
 package org.tigris.subversion.javahl;
 
 import java.io.OutputStream;
+import java.util.Map;
 
 /**
  * This class provides a threadsafe wrapped for SVNClient
@@ -69,9 +75,9 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
-     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">Instructions</a>
-     * on changing this as a work-around for the behavior of ASP.Net
-     * on Windows.
+     * href="http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt">
+     * Instructions on changing this as a work-around for the behavior of
+     * ASP.Net on Windows.</a>
      * @since 1.3
      */
     public String getAdminDirectoryName()
@@ -110,13 +116,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * List a directory or file of the working copy.
-     *
-     * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if they exist.
-     * @param onServer  Request status information from server.
-     * @param getAll    get status for uninteristing files (unchanged).
-     * @return Array of Status entries.
+     * @deprecated Use {@link #status(String, int, boolean, boolean,
+     *                                boolean, boolean, StatusCallback)}
+     *             instead.
+     * @since 1.0
      */
     public Status[] status(String path, boolean descend, boolean onServer,
                            boolean getAll)
@@ -127,15 +130,12 @@ public class SVNClientSynchronized implements SVNClientInterface
             return worker.status(path, descend, onServer, getAll);
         }
     }
+
     /**
-     * List a directory or file of the working copy.
-     *
-     * @param path      Path to explore.
-     * @param descend   Recurse into subdirectories if they exist.
-     * @param onServer  Request status information from server.
-     * @param getAll    get status for uninteristing files (unchanged).
-     * @param noIgnore  get status for normaly ignored files and directories.
-     * @return Array of Status entries.
+     * @deprecated Use {@link #status(String, int, boolean, boolean,
+     *                                boolean, boolean, StatusCallback)}
+     *             instead.
+     * @since 1.0
      */
     public Status[] status(String path, boolean descend, boolean onServer,
                            boolean getAll, boolean noIgnore)
@@ -148,16 +148,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * List a directory or file of the working copy.
-     *
-     * @param path            Path to explore.
-     * @param descend         Recurse into subdirectories if they exist.
-     * @param onServer        Request status information from server.
-     * @param getAll          get status for uninteristing files (unchanged).
-     * @param noIgnore        get status for normaly ignored files and
-     *                        directories.
-     * @param ignoreExternals if externals are ignored during checkout
-     * @return Array of Status entries.
+     * @deprecated Use {@link #status(String, int, boolean, boolean,
+     *                                boolean, boolean, StatusCallback)}
+     *             instead.
      * @since 1.2
      */
     public Status[] status(String path, boolean descend, boolean onServer,
@@ -173,35 +166,25 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * List a directory or file of the working copy.
-     *
-     * @param path      Path to explore.
-     * @param depth     How deep to recurse into subdirectories.
-     * @param onServer  Request status information from server.
-     * @param getAll    get status for uninteresting (unchanged) files.
-     * @param noIgnore  get status for normaly ignored files and directories.
-     * @param ignoreExternals if externals are ignored during status
-     * @return Array of Status entries.
      * @since 1.5
      */
     public void status(String path, int depth, boolean onServer,
                        boolean getAll, boolean noIgnore,
-                       boolean ignoreExternals, StatusCallback callback)
+                       boolean ignoreExternals, String[] changelists,
+                       StatusCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
             worker.status(path, depth, onServer, getAll, noIgnore,
-                          ignoreExternals, callback);
+                          ignoreExternals, changelists, callback);
         }
     }
 
     /**
-     * Lists the directory entries of an url on the server.
-     * @param url       the url to list
-     * @param revision  the revision to list
-     * @param recurse   recurse into subdirectories
-     * @return  Array of DirEntry objects.
+     * @deprecated Use {@link #list(String, Revision, Revision, int, int,
+     *                              boolean, ListCallback)} instead.
+     * @since 1.0
      */
     public DirEntry[] list(String url, Revision revision, boolean recurse)
             throws ClientException
@@ -213,13 +196,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Lists the directory entries of an url on the server.
-     *
-     * @param url         the url to list
-     * @param revision    the revision to list
-     * @param pegRevision the revision to interpret url
-     * @param recurse     recurse into subdirectories
-     * @return Array of DirEntry objects.
+     * @deprecated Use {@link #list(String, Revision, Revision, int, int,
+     *                              boolean, ListCallback)} instead.
      * @since 1.2
      */
     public DirEntry[] list(String url, Revision revision, Revision pegRevision,
@@ -233,14 +211,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Lists the directory entries of an url on the server.
-     * @param url             the url to list
-     * @param revision        the revision to list
-     * @param pegRevision     the revision to interpret url
-     * @param depth           the depth to recurse into subdirectories
-     * @param direntFields    the fields to retrieve
-     * @param fetchLocks      whether to fetch lock information
-     * @param callback        the callback to receive the directory entries
      * @since 1.5
      */
     public void list(String url, Revision revision, Revision pegRevision,
@@ -256,11 +226,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Returns the status of a single file in the path.
-     *
-     * @param path      File to gather status.
-     * @param onServer  Request status information from the server.
-     * @return  the subversion status of the file.
+     * @deprecated Use {@link #status(String, int, boolean, boolean,
+     *                                boolean, boolean, StatusCallback)}
+     *             instead.
+     * @since 1.0
      */
     public Status singleStatus(String path, boolean onServer)
             throws ClientException
@@ -270,9 +239,9 @@ public class SVNClientSynchronized implements SVNClientInterface
             return worker.singleStatus(path, onServer);
         }
     }
+
     /**
-     * Sets the username used for authentification.
-     * @param username  the username
+     * @since 1.0
      */
     public void username(String username)
     {
@@ -281,9 +250,9 @@ public class SVNClientSynchronized implements SVNClientInterface
             worker.username(username);
         }
     }
+
     /**
-     * Sets the password used for authification.
-     * @param password  the password
+     * @since 1.0
      */
     public void password(String password)
     {
@@ -292,9 +261,9 @@ public class SVNClientSynchronized implements SVNClientInterface
             worker.password(password);
         }
     }
+
     /**
-     * Register callback interface to supply username and password on demand
-     * @param prompt the callback interface
+     * @since 1.0
      */
     public void setPrompt(PromptUserPassword prompt)
     {
@@ -305,11 +274,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the log messages for an item
-     * @param path          path or url to get the log message for.
-     * @param revisionStart first revision to show
-     * @param revisionEnd   last revision to show
-     * @return array of LogMessages
+     * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
+     * @since 1.0
      */
     public LogMessage[] logMessages(String path, Revision revisionStart,
                                     Revision revisionEnd)
@@ -323,12 +291,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the log messages for an item
-     * @param path          path or url to get the log message for.
-     * @param revisionStart first revision to show
-     * @param revisionEnd   last revision to show
-     * @param stopOnCopy    do not continue on copy operations
-     * @return array of LogMessages
+     * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
+     * @since 1.0
      */
     public LogMessage[] logMessages(String path, Revision revisionStart,
                                     Revision revisionEnd, boolean stopOnCopy)
@@ -342,14 +308,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the log messages for an item
-     * @param path          path or url to get the log message for.
-     * @param revisionStart first revision to show
-     * @param revisionEnd   last revision to show
-     * @param stopOnCopy    do not continue on copy operations
-     * @param discoverPath  returns the paths of the changed items in the
-     *                      returned objects
-     * @return array of LogMessages
+     * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
+     * @since 1.0
      */
     public LogMessage[] logMessages(String path, Revision revisionStart,
                                     Revision revisionEnd, boolean stopOnCopy,
@@ -364,16 +326,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the log messages for an item
-     * @param path          path or url to get the log message for.
-     * @param revisionStart first revision to show
-     * @param revisionEnd   last revision to show
-     * @param stopOnCopy    do not continue on copy operations
-     * @param discoverPath  returns the paths of the changed items in the
-     *                      returned objects
-     * @param limit         limit the number of log messages (if 0 or less no
-     *                      limit)
-     * @return array of LogMessages
+     * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
      * @since 1.2
      */
     public LogMessage[] logMessages(String path, Revision revisionStart,
@@ -389,20 +344,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the log messages for an item
-     * @param path          path or url to get the log message for.
-     * @param pegRevision   the revision to interpret path
-     * @param revisionStart first revision to show
-     * @param revisionEnd   last revision to show
-     * @param stopOnCopy    do not continue on copy operations
-     * @param discoverPath  returns the paths of the changed items in the
-     *                      returned objects
-     * @param includeMergedRevisions include log messages for revisions which
-     *                               were merged.
-     * @param omitLogText   supress log message text.
-     * @param limit         limit the number of log messages (if 0 or less no
-     *                      limit)
-     * @param callback      the object to receive the messages
+     * @deprecated Use {@link #logMessages(String, Revision, RevisionRange[],
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
      * @since 1.5
      */
     public void logMessages(String path, Revision pegRevision,
@@ -410,7 +354,7 @@ public class SVNClientSynchronized implements SVNClientInterface
                             Revision revisionEnd, boolean stopOnCopy,
                             boolean discoverPath,
                             boolean includeMergedRevisions,
-                            boolean omitLogText, long limit,
+                            String[] revProps, long limit,
                             LogMessageCallback callback)
             throws ClientException
     {
@@ -418,21 +362,63 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.logMessages(path, pegRevision, revisionStart,
                                revisionEnd, stopOnCopy, discoverPath,
-                               includeMergedRevisions, omitLogText, 
+                               includeMergedRevisions, revProps,
                                limit, callback);
         }
     }
 
     /**
-     * Executes a revision checkout.
-     * @param moduleName name of the module to checkout.
-     * @param destPath destination directory for checkout.
-     * @param revision the revision to checkout.
-     * @param pegRevision the peg revision to interpret the path
-     * @param recurse how deep to checkout files recursively.
-     * @param ignoreExternals if externals are ignored during checkout
-     * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @throws ClientException
+     * @since 1.6
+     */
+    public void logMessages(String path, Revision pegRevision,
+                            RevisionRange[] revisionRanges, boolean stopOnCopy,
+                            boolean discoverPath,
+                            boolean includeMergedRevisions,
+                            String[] revProps, long limit,
+                            LogMessageCallback callback)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.logMessages(path, pegRevision, revisionRanges,
+                               stopOnCopy, discoverPath, includeMergedRevisions,
+                               revProps, limit, callback);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #checkout(String, String, Revision, Revision,
+     *                                  int, boolean, boolean)} instead.
+     * @since 1.0
+     */
+    public long checkout(String moduleName, String destPath, Revision revision,
+                         boolean recurse)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.checkout(moduleName, destPath, revision, recurse);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #checkout(String, String, Revision, Revision,
+     *                                  int, boolean, boolean)} instead.
+     * @since 1.2
+     */
+    public long checkout(String moduleName, String destPath, Revision revision,
+                         Revision pegRevision, boolean recurse,
+                         boolean ignoreExternals)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.checkout(moduleName, destPath, revision, pegRevision,
+                                   recurse, ignoreExternals);
+        }
+    }
+
+    /**
      * @since 1.5
      */
     public long checkout(String moduleName, String destPath, Revision revision,
@@ -450,51 +436,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Executes a revision checkout.
-     * @param moduleName name of the module to checkout.
-     * @param destPath destination directory for checkout.
-     * @param revision the revision to checkout.
-     * @param pegRevision the peg revision to interpret the path
-     * @param recurse whether you want it to checkout files recursively.
-     * @param ignoreExternals if externals are ignored during checkout
-     * @throws ClientException
-     * @since 1.2
-     */
-    public long checkout(String moduleName, String destPath, Revision revision,
-                         Revision pegRevision, boolean recurse,
-                         boolean ignoreExternals)
-            throws ClientException
-    {
-        synchronized(clazz)
-        {
-            return worker.checkout(moduleName, destPath, revision, pegRevision,
-                                   recurse, ignoreExternals);
-        }
-    }
-
-    /**
-     * Executes a revision checkout.
-     * @param moduleName name of the module to checkout.
-     * @param destPath destination directory for checkout.
-     * @param revision the revision to checkout.
-     * @param recurse whether you want it to checkout files recursively.
-     * @throws ClientException
-     */
-    public long checkout(String moduleName, String destPath, Revision revision,
-                         boolean recurse)
-            throws ClientException
-    {
-        synchronized(clazz)
-        {
-            return worker.checkout(moduleName, destPath, revision, recurse);
-        }
-    }
-    /**
-     * Sets the notification callback used to send processing information back
-     * to the calling program.
-     * @param notify listener that the SVN library should call on many
-     *               file operations.
-     * @deprecated use notification2 instead
+     * @deprecated Use {@link #notification2(Notify2)} instead.
+     * @since 1.0
      */
     public void notification(Notify notify)
     {
@@ -505,11 +448,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Sets the notification callback used to send processing information back
-     * to the calling program.
-     *
-     * @param notify listener that the SVN library should call on many
-     *               file operations.
      * @since 1.2
      */
     public void notification2(Notify2 notify)
@@ -521,7 +459,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#setConflictResolver(ConflictResolverCallback)
      * @since 1.5
      */
     public void setConflictResolver(ConflictResolverCallback listener)
@@ -533,9 +470,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Set the progress callback.
-     *
-     * @param listener The progress callback.
      * @since 1.5
      */
     public void setProgressListener(ProgressListener listener)
@@ -547,11 +481,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Sets the commit message handler. This allows more complex commit message
-     * with the list of the elements to be commited as input.
-     * @param messageHandler    callback for entering commit messages
-     *                          if this is set the message parameter is
-     *                          ignored.
+     * @since 1.0
      */
     public void commitMessageHandler(CommitMessage messageHandler)
     {
@@ -561,42 +491,35 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
     /**
-     * Sets a file for deletion.
-     * @param path      path or url to be deleted
-     * @param message   if path is a url, this will be the commit message.
-     * @param force     delete even when there are local modifications.
-     * @throws ClientException
+     * @deprecated Use {@link #remove(String[], String, boolean, boolean)}
+     *             instead.
+     * @since 1.0
      */
     public void remove(String[] path, String message, boolean force)
             throws ClientException
     {
-        remove(path, message, force, false);
-    }
-
-    /**
-     * Sets a file for deletion.
-     * @param path      path or url to be deleted
-     * @param message   if path is a url, this will be the commit message.
-     * @param force     delete even when there are local modifications.
-     * @param keepLocal only remove the paths from the repository.
-     * @throws ClientException
-     * @since 1.5
-     */
-    public void remove(String[] path, String message, boolean force,
-                       boolean keepLocal)
-            throws ClientException
-    {
         synchronized (clazz)
         {
-            worker.remove(path, message, force, keepLocal);
+            worker.remove(path, message, force);
         }
     }
 
     /**
-     * Reverts a file to a pristine state.
-     * @param path      path of the file.
-     * @param recurse   recurse into subdirectories
-     * @throws ClientException
+     * @since 1.5
+     */
+    public void remove(String[] path, String message, boolean force,
+                       boolean keepLocal, Map revpropTable)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.remove(path, message, force, keepLocal, revpropTable);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #revert(String, int)} instead.
+     * @since 1.0
      */
     public void revert(String path, boolean recurse) throws ClientException
     {
@@ -607,10 +530,21 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Adds a file to the repository.
-     * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
-     * @throws ClientException
+     * @since 1.5
+     */
+    public void revert(String path, int depth, String[] changelists)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.revert(path, depth, changelists);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #add(String, int, boolean, boolean, boolean)}
+     *             instead.
+     * @since 1.0
      */
     public void add(String path, boolean recurse) throws ClientException
     {
@@ -621,12 +555,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Adds a file to the repository.
-     * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
-     * @param force     if adding a directory and recurse true and path is a
-     *                  directory, all not already managed files are added.
-     * @throws ClientException
+     * @deprecated Use {@link #add(String, int, boolean, boolean, boolean)}
+     *             instead.
      * @since 1.2
      */
     public void add(String path, boolean recurse, boolean force)
@@ -639,35 +569,22 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Adds a file to the repository.
-     * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
-     * @param force     if adding a directory and recurse true and path is a
-     *                  directory, all not already managed files are added.
-     * @param noIgnores if false, don't add files or directories matching
-     *                  ignore patterns
-     * @param addParents add any intermediate parents to the working copy
-     * @throws ClientException
      * @since 1.5
      */
-    public void add(String path, boolean recurse, boolean force,
+    public void add(String path, int depth, boolean force,
                     boolean noIgnores, boolean addParents)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.add(path, recurse, force, noIgnores, addParents);
+            worker.add(path, depth, force, noIgnores, addParents);
         }
     }
 
     /**
-     * Updates the directory or file from repository
-     * @param path target file.
-     * @param revision the revision number to update.
-     *                 Revision.HEAD will update to the
-     *                 latest revision.
-     * @param recurse recursively update.
-     * @throws ClientException
+     * @deprecated Use {@link #update(String, Revision, int, boolean,
+     *                                boolean, boolean)} instead.
+     * @since 1.0
      */
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
@@ -679,14 +596,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Updates the directories or files from repository
-     * @param path array of target files.
-     * @param revision the revision number to update.
-     *                 Revision.HEAD will update to the
-     *                 latest revision.
-     * @param recurse recursively update.
-     * @param ignoreExternals if externals are ignored during update
-     * @throws ClientException
+     * @deprecated Use {@link #update(String[], Revision, int, boolean,
+     *                                boolean, boolean)} instead.
      * @since 1.2
      */
     public long[] update(String[] path, Revision revision, boolean recurse,
@@ -700,54 +611,39 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Updates the directory or file from repository
-     * @param path target file.
-     * @param revision the revision number to update.
-     *                 Revision.HEAD will update to the
-     *                 latest revision.
-     * @param depth  the depth to recursively update.
-     * @param ignoreExternals if externals are ignored during update
-     * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @throws ClientException
      * @since 1.5
      */
     public long update(String path, Revision revision, int depth,
-                       boolean ignoreExternals, boolean allowUnverObstructions)
+                       boolean depthIsSticky, boolean ignoreExternals,
+                       boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.update(path, revision, depth, ignoreExternals,
-                                 allowUnverObstructions);
+            return worker.update(path, revision, depth, depthIsSticky,
+                                 ignoreExternals, allowUnverObstructions);
         }
     }
 
     /**
-     * Updates the directories or files from repository
-     * @param path array of target files.
-     * @param revision the revision number to update.
-     *                 Revision.HEAD will update to the
-     *                 latest revision.
-     * @param depth  the depth to recursively update.
-     * @param ignoreExternals if externals are ignored during update
-     * @param allowUnverObstructions allow unversioned paths that obstruct adds
-     * @throws ClientException
      * @since 1.5
      */
     public long[] update(String[] path, Revision revision, int depth,
-                         boolean ignoreExternals,
+                         boolean depthIsSticky, boolean ignoreExternals,
                          boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.update(path, revision, depth, ignoreExternals,
-                                 allowUnverObstructions);
+            return worker.update(path, revision, depth, depthIsSticky,
+                                 ignoreExternals, allowUnverObstructions);
         }
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean)
+     * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
+     *                                String[])} instead.
+     * @since 1.0
      */
     public long commit(String[] path, String message, boolean recurse)
             throws ClientException
@@ -759,55 +655,71 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean, boolean, String)
-     * @since 1.5
+     * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
+     *                                String[])} instead.
+     * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,
-                       boolean noUnlock, boolean keepChangelist,
-                       String changelistName)
+                       boolean noUnlock)
             throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.commit(path, message, recurse, noUnlock,
-                                 keepChangelist, changelistName);
+            return worker.commit(path, message, recurse, noUnlock);
         }
     }
 
     /**
-     * Copy versioned paths with the history preserved.
-     *
-     * @param sources A list of <code>CopySource</code> objects.
-     * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
-     * @param copyAsChild Whether to copy <code>srcPaths</code> as
-     * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
-     * @throws ClientException If the copy operation fails.
      * @since 1.5
-     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
+     */
+    public long commit(String[] path, String message, int depth,
+                       boolean noUnlock, boolean keepChangelist,
+                       String[] changelists, Map revpropTable)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            return worker.commit(path, message, depth, noUnlock,
+                                 keepChangelist, changelists, revpropTable);
+        }
+    }
+
+    /**
+     * @since 1.7
      */
     public void copy(CopySource[] sources, String destPath, String message,
-                     boolean copyAsChild, boolean makeParents)
+                     boolean copyAsChild, boolean makeParents,
+                     boolean ignoreExternals, Map revpropTable)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.copy(sources, destPath, message, copyAsChild,
+                        makeParents, ignoreExternals, revpropTable);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
+     *                              boolean, boolean, Map)} instead.
+     * @since 1.5
+     */
+    public void copy(CopySource[] sources, String destPath, String message,
+                     boolean copyAsChild, boolean makeParents,
+                     Map revpropTable)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.copy(sources, destPath, message, copyAsChild,
-                        makeParents);
+                        makeParents, revpropTable);
         }
     }
 
     /**
-     * Copy versioned paths with the history preserved (with
-     * <code>copyAsChild</code> behavior).
-     *
-     * @param srcPath   source path or url
-     * @param destPath  destination path or url
-     * @param message   commit message if destPath is an url
-     * @param revision  source revision
-     * @throws ClientException
+     * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
+     *                              boolean, boolean, Map)} instead.
+     * @since 1.0
      */
     public void copy(String srcPath, String destPath, String message,
                      Revision revision) throws ClientException
@@ -819,36 +731,23 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Move or rename versioned paths.
-     *
-     * @param srcPaths Source paths or URLs.
-     * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
-     * @param force Whether to perform the move even if local
-     * modifications exist.
-     * @param moveAsChild Whether to move <code>srcPaths</code> as
-     * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
-     * @throws ClientException If the move operation fails.
      * @since 1.5
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
      */
     public void move(String[] srcPaths, String destPath, String message,
                      boolean force, boolean moveAsChild,
-                     boolean makeParents)
+                     boolean makeParents, Map revpropTable)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.move(srcPaths, destPath, message, force, moveAsChild,
-                        makeParents);
+                        makeParents, revpropTable);
         }
     }
 
     /**
-     * @deprecated Use move() without a Revision parameter.
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
@@ -862,15 +761,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Move or rename versioned paths (with <code>moveAsChild</code>
-     * behavior).
-     *
-     * @param srcPath  source path or url
-     * @param destPath destination path or url
-     * @param message  commit message if destPath is an url
-     * @param force    even with local modifications.
-     * @throws ClientException
-     *
+     * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
+     *                              boolean)} instead.
+     * @since 1.0
      */
     public void move(String srcPath, String destPath, String message,
                      boolean force)
@@ -883,29 +776,21 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Creates a directory directly in a repository or creates a
-     * directory on disk and schedules it for addition.
-     * @param path      directories to be created
-     * @param message   commit message to used if path contains urls
-     * @param makeParents Whether to create intermediate parents
-     * @throws ClientException
      * @since 1.5
      */
-    public void mkdir(String[] path, String message, boolean makeParents)
+    public void mkdir(String[] path, String message, boolean makeParents,
+                      Map revpropTable)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.mkdir(path, message, makeParents);
+            worker.mkdir(path, message, makeParents, revpropTable);
         }
     }
 
     /**
-     * Creates a directory directly in a repository or creates a
-     * directory on disk and schedules it for addition.
-     * @param path      directories to be created
-     * @param message   commit message to used if path contains urls
-     * @throws ClientException
+     * @deprecated Use {@link #mkdir(String[], String, boolean)} instead.
+     * @since 1.0
      */
     public void mkdir(String[] path, String message) throws ClientException
     {
@@ -916,10 +801,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Recursively cleans up a local directory, finishing any
-     * incomplete operations, removing lockfiles, etc.
-     * @param path a local directory.
-     * @throws ClientException
+     * @since 1.0
      */
     public void cleanup(String path) throws ClientException
     {
@@ -930,28 +812,33 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Removes the 'conflicted' state on a file.
-     * @param path      path to cleanup
-     * @param recurse   recurce into subdirectories
-     * @throws ClientException
+     * @since 1.5
      */
-    public void resolved(String path, boolean recurse) throws ClientException
+    public void resolve(String path, int depth, int conflictResult)
+        throws SubversionException
     {
-        synchronized(clazz)
+        synchronized (clazz)
         {
-            worker.resolved(path,recurse);
+            worker.resolve(path, depth, conflictResult);
         }
     }
 
     /**
-     * Exports the contents of either a subversion repository into a
-     * 'clean' directory (meaning a directory with no administrative
-     * directories).
-     * @param srcPath   the url of the repository path to be exported
-     * @param destPath  a destination path that must not already exist.
-     * @param revision  the revsion to be exported
-     * @param force     set if it is ok to overwrite local files
-     * @throws ClientException
+     * @deprecated Use {@link #resolve(String, int, int)} instead.
+     * @since 1.0
+     */
+    public void resolved(String path, boolean recurse) throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.resolved(path, recurse);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #doExport(String, String, Revision, Revision,
+     *                                  boolean, boolean, int, String)} instead.
+     * @since 1.0
      */
     public long doExport(String srcPath, String destPath, Revision revision,
                          boolean force)
@@ -964,19 +851,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Exports the contents of either a subversion repository into a
-     * 'clean' directory (meaning a directory with no administrative
-     * directories).
-     *
-     * @param srcPath         the url of the repository path to be exported
-     * @param destPath        a destination path that must not already exist.
-     * @param revision        the revsion to be exported
-     * @param pegRevision     the revision to interpret srcPath
-     * @param force           set if it is ok to overwrite local files
-     * @param ignoreExternals ignore external during export
-     * @param recurse         recurse to subdirectories
-     * @param nativeEOL       which EOL characters to use during export
-     * @throws ClientException
+     * @deprecated Use {@link #doExport(String, String, Revision, Revision,
+     *                                  boolean, boolean, int, String)} instead.
      * @since 1.2
      */
     public long doExport(String srcPath, String destPath, Revision revision,
@@ -993,19 +869,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Exports the contents of either a subversion repository into a
-     * 'clean' directory (meaning a directory with no administrative
-     * directories).
-     *
-     * @param srcPath         the url of the repository path to be exported
-     * @param destPath        a destination path that must not already exist.
-     * @param revision        the revsion to be exported
-     * @param pegRevision     the revision to interpret srcPath
-     * @param force           set if it is ok to overwrite local files
-     * @param ignoreExternals ignore external during export
-     * @param depth           how deep to recurse in subdirectories
-     * @param nativeEOL       which EOL characters to use during export
-     * @throws ClientException
      * @since 1.5
      */
     public long doExport(String srcPath, String destPath, Revision revision,
@@ -1021,28 +884,26 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.doSwitch(String, String, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public long doSwitch(String path, String url, Revision revision,
-                         int depth, boolean ignoreExternals,
+                         Revision pegRevision, int depth,
+                         boolean depthIsSticky, boolean ignoreExternals,
                          boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.doSwitch(path, url, revision, depth, ignoreExternals,
+            return worker.doSwitch(path, url, revision, pegRevision, depth,
+                                   depthIsSticky, ignoreExternals,
                                    allowUnverObstructions);
         }
     }
 
     /**
-     * Update local copy to mirror a new url.
-     * @param path      the working copy path
-     * @param url       the new url for the working copy
-     * @param revision  the new base revision of working copy
-     * @param recurse   traverse into subdirectories
-     * @throws ClientException
+     * @deprecated Use {@link #doSwitch(String, String, Revision, boolean)}
+     *             instead.
+     * @since 1.0
      */
     public long doSwitch(String path, String url, Revision revision,
                          boolean recurse)
@@ -1055,13 +916,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Import a file or directory into a repository directory  at
-     * head.
-     * @param path      the local path
-     * @param url       the target url
-     * @param message   the log message.
-     * @param recurse   traverse into subdirectories
-     * @throws ClientException
+     * @deprecated Use {@link #doImport(String, String, String, int, boolean,
+     *                                  boolean)} instead.
+     * @since 1.0
      */
     public void doImport(String path, String url, String message,
                          boolean recurse)
@@ -1074,15 +931,37 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Merge changes from two paths into a new local path.
-     * @param path1         first path or url
-     * @param revision1     first revision
-     * @param path2         second path or url
-     * @param revision2     second revision
-     * @param localPath     target local path
-     * @param force         overwrite local changes
-     * @param recurse       traverse into subdirectories
-     * @throws ClientException
+     * @since 1.5
+     */
+    public void doImport(String path, String url, String message, int depth,
+                         boolean noIgnore, boolean ignoreUnknownNodeTypes,
+                         Map revpropTable)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.doImport(path, url, message, depth, noIgnore,
+                            ignoreUnknownNodeTypes, revpropTable);
+        }
+    }
+
+    /**
+     * @since 1.5
+     */
+    public String[] suggestMergeSources(String path, Revision pegRevision)
+            throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            return worker.suggestMergeSources(path, pegRevision);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #merge(String, Revision, String, Revision,
+     *                               String, boolean, int, boolean,
+     *                               boolean, boolean)} instead.
+     * @since 1.0
      */
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath, boolean force,
@@ -1097,18 +976,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Merge changes from two paths into a new local path.
-     *
-     * @param path1          first path or url
-     * @param revision1      first revision
-     * @param path2          second path or url
-     * @param revision2      second revision
-     * @param localPath      target local path
-     * @param force          overwrite local changes
-     * @param recurse        traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun         do not change anything
-     * @throws ClientException
+     * @deprecated Use {@link #merge(String, Revision, String, Revision,
+     *                               String, boolean, int, boolean,
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     public void merge(String path1, Revision revision1, String path2,
@@ -1124,45 +994,24 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Merge changes from two paths into a new local path.
-     *
-     * @param path1          first path or url
-     * @param revision1      first revision
-     * @param path2          second path or url
-     * @param revision2      second revision
-     * @param localPath      target local path
-     * @param force          overwrite local changes
-     * @param depth          how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun         do not change anything
-     * @throws ClientException
      * @since 1.5
      */
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath, boolean force,
-                      int depth, boolean ignoreAncestry, boolean dryRun)
-            throws ClientException
+                      int depth, boolean ignoreAncestry, boolean dryRun,
+                      boolean recordOnly) throws ClientException
     {
         synchronized (clazz)
         {
             worker.merge(path1, revision1, path2, revision2, localPath, force,
-                         depth, ignoreAncestry, dryRun);
+                         depth, ignoreAncestry, dryRun, recordOnly);
         }
     }
 
     /**
-     * Merge changes from two paths into a new local path.
-     *
-     * @param path           path or url
-     * @param pegRevision    revision to interpret path
-     * @param revision1      first revision
-     * @param revision2      second revision
-     * @param localPath      target local path
-     * @param force          overwrite local changes
-     * @param recurse        traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun         do not change anything
-     * @throws ClientException
+     * @deprecated Use {@link #merge(String, Revision, RevisionRange[],
+     *                               String, boolean, int, boolean,
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     public void merge(String path, Revision pegRevision, Revision revision1,
@@ -1178,79 +1027,90 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Merge changes from two paths into a new local path.
-     *
-     * @param path           path or url
-     * @param pegRevision    revision to interpret path
-     * @param revision1      first revision
-     * @param revision2      second revision
-     * @param localPath      target local path
-     * @param force          overwrite local changes
-     * @param depth          how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun         do not change anything
-     * @throws ClientException
-     * @since 1.5
-     */
-    public void merge(String path, Revision pegRevision, Revision revision1,
-                      Revision revision2, String localPath, boolean force,
-                      int depth, boolean ignoreAncestry, boolean dryRun)
-           throws ClientException
-    {
-        synchronized (clazz)
-        {
-            worker.merge(path, pegRevision, revision1, revision2, localPath,
-                         force, depth, ignoreAncestry, dryRun);
-        }
-    }
-
-    /**
-     * Merge set of revisions into a new local path.
-     * @param path          path or url
-     * @param pegRevision   revision to interpret path
-     * @param revisions     revisions to merge
-     * @param localPath     target local path
-     * @param force         overwrite local changes
-     * @param depth         how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun        do not change anything
-     * @throws ClientException
      * @since 1.5
      */
     public void merge(String path, Revision pegRevision,
                       RevisionRange[] revisions, String localPath,
                       boolean force, int depth, boolean ignoreAncestry,
-                      boolean dryRun) throws ClientException
+                      boolean dryRun, boolean recordOnly)
+            throws ClientException
     {
         synchronized(clazz)
         {
             worker.merge(path, pegRevision, revisions, localPath, force,
-                         depth, ignoreAncestry, dryRun);
+                         depth, ignoreAncestry, dryRun, recordOnly);
         }
     }
 
     /**
-     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(String, Revision)
      * @since 1.5
      */
-    public MergeInfo getMergeInfo(String path, Revision revision)
+    public void mergeReintegrate(String path, Revision pegRevision,
+                                 String localPath, boolean dryRun)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.mergeReintegrate(path, pegRevision, localPath, dryRun);
+        }
+    }
+
+    /**
+     * @since 1.5
+     */
+    public Mergeinfo getMergeinfo(String path, Revision pegRevision)
         throws SubversionException
     {
         synchronized (clazz)
         {
-            return worker.getMergeInfo(path, revision);
+            return worker.getMergeinfo(path, pegRevision);
         }
     }
 
     /**
-     * Display the differences between two paths
-     * @param target1       first path or url
-     * @param revision1     first revision
-     * @param target2       second path or url
-     * @param revision2     second revision
-     * @param outFileName   file name where difference are written
-     * @param recurse       traverse into subdirectories
-     * @throws ClientException
+     * @since 1.7
+     */
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision, String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths, int depth,
+                                String[] revprops, LogMessageCallback callback)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                                   srcPegRevision, discoverChangedPaths, depth,
+                                   revprops, callback);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #getMergeinfoLog(int, String, Revision, String,
+     *                                         Revision, boolean, int,
+     *                                         String[], LogMessageCallback)}
+     * @since 1.5
+     */
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision, String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths,
+                                String[] revprops, LogMessageCallback callback)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                                   srcPegRevision, discoverChangedPaths,
+                                   revprops, callback);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
+     * @since 1.0
      */
     public void diff(String target1, Revision revision1, String target2,
                      Revision revision2, String outFileName, boolean recurse)
@@ -1264,18 +1124,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Display the differences between two paths
-     *
-     * @param target1        first path or url
-     * @param revision1      first revision
-     * @param target2        second path or url
-     * @param revision2      second revision
-     * @param outFileName    file name where difference are written
-     * @param recurse        traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param noDiffDeleted  no output on deleted files
-     * @param force          diff even on binary files
-     * @throws ClientException
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -1292,45 +1143,48 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Display the differences between two paths
-     * @param target1       first path or url
-     * @param revision1     first revision
-     * @param target2       second path or url
-     * @param revision2     second revision
-     * @param outFileName   file name where difference are written
-     * @param depth         how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param noDiffDeleted no output on deleted files
-     * @param force         diff even on binary files
-     * @throws ClientException
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
      */
     public void diff(String target1, Revision revision1, String target2,
-                     Revision revision2, String outFileName, int depth,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, int depth, String[] changelists,
                      boolean ignoreAncestry, boolean noDiffDeleted,
                      boolean force)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.diff(target1, revision1, target2, revision2, outFileName,
-                        depth, ignoreAncestry, noDiffDeleted, force);
+            worker.diff(target1, revision1, target2, revision2, relativeToDir,
+                        outFileName, depth, changelists, ignoreAncestry,
+                        noDiffDeleted, force);
         }
     }
 
     /**
-     * Display the differences between two paths
-     *
-     * @param target         path or url
-     * @param pegRevision    revision tointerpret target
-     * @param startRevision  first Revision to compare
-     * @param endRevision    second Revision to compare
-     * @param outFileName    file name where difference are written
-     * @param recurse        traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param noDiffDeleted  no output on deleted files
-     * @param force          diff even on binary files
-     * @throws ClientException
+     * @since 1.7
+     */
+    public void diff(String target1, Revision revision1, String target2,
+                     Revision revision2, String relativeToDir,
+                     String outFileName, int depth, String[] changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force, boolean copiesAsAdds)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.diff(target1, revision1, target2, revision2, relativeToDir,
+                        outFileName, depth, changelists, ignoreAncestry,
+                        noDiffDeleted, force, copiesAsAdds);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void diff(String target, Revision pegRevision,
@@ -1349,111 +1203,84 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Display the differences between two paths
-     * @param target        path or url
-     * @param pegRevision   revision tointerpret target
-     * @param startRevision first Revision to compare
-     * @param endRevision   second Revision to compare
-     * @param outFileName   file name where difference are written
-     * @param depth         how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param noDiffDeleted no output on deleted files
-     * @param force         diff even on binary files
-     * @throws ClientException
+     * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
+     *                              String, String, int, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.5
      */
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
-                     String outFileName, int depth, boolean ignoreAncestry,
+                     String relativeToDir, String outFileName, int depth,
+                     String[] changelists, boolean ignoreAncestry,
                      boolean noDiffDeleted, boolean force)
             throws ClientException
     {
         synchronized (clazz)
         {
             worker.diff(target, pegRevision, startRevision, endRevision,
-                        outFileName, depth, ignoreAncestry, noDiffDeleted,
-                        force);
+                        relativeToDir, outFileName, depth, changelists,
+                        ignoreAncestry, noDiffDeleted, force);
         }
     }
 
     /**
-     * Produce a diff summary which lists the items changed between
-     * path and revision pairs.
-     *
-     * @param target1 Path or URL.
-     * @param revision1 Revision of <code>target1</code>.
-     * @param target2 Path or URL.
-     * @param revision2 Revision of <code>target2</code>.
-     * @param depth how deep to recurse.
-     * @param ignoreAncestry Whether to ignore unrelated files during
-     * comparison.  False positives may potentially be reported if
-     * this parameter <code>false</code>, since a file might have been
-     * modified between two revisions, but still have the same
-     * contents.
-     * @param receiver As each is difference is found, this callback
-     * is invoked with a description of the difference.
-     *
-     * @throws ClientException
+     * @since 1.7
+     */
+    public void diff(String target, Revision pegRevision,
+                     Revision startRevision, Revision endRevision,
+                     String relativeToDir, String outFileName, int depth,
+                     String[] changelists, boolean ignoreAncestry,
+                     boolean noDiffDeleted, boolean force,
+                     boolean copiesAsAdds)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.diff(target, pegRevision, startRevision, endRevision,
+                        relativeToDir, outFileName, depth, changelists,
+                        ignoreAncestry, noDiffDeleted, force, copiesAsAdds);
+        }
+    }
+
+    /**
      * @since 1.5
      */
     public void diffSummarize(String target1, Revision revision1,
                               String target2, Revision revision2,
-                              int depth, boolean ignoreAncestry,
+                              int depth, String[] changelists,
+                              boolean ignoreAncestry,
                               DiffSummaryReceiver receiver)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.diffSummarize(target1, revision1, target2, revision2,
-                                 depth, ignoreAncestry, receiver);
+                                 depth, changelists, ignoreAncestry, receiver);
         }
     }
 
     /**
-     * Produce a diff summary which lists the items changed between
-     * path and revision pairs.
-     *
-     * @param target Path or URL.
-     * @param pegRevision Revision at which to interpret
-     * <code>target</code>.  If {@link RevisionKind#unspecified} or
-     * <code>null</code>, behave identically to {@link
-     * diffSummarize(String, Revision, String, Revision, boolean,
-     * boolean, DiffSummaryReceiver)}, using <code>path</code> for
-     * both of that method's targets.
-     * @param startRevision Beginning of range for comparsion of
-     * <code>target</code>.
-     * @param endRevision End of range for comparsion of
-     * <code>target</code>.
-     * @param depth how deep to recurse.
-     * @param ignoreAncestry Whether to ignore unrelated files during
-     * comparison.  False positives may potentially be reported if
-     * this parameter <code>false</code>, since a file might have been
-     * modified between two revisions, but still have the same
-     * contents.
-     * @param receiver As each is difference is found, this callback
-     * is invoked with a description of the difference.
-     *
-     * @throws ClientException
      * @since 1.5
      */
     public void diffSummarize(String target, Revision pegRevision,
                               Revision startRevision, Revision endRevision,
-                              int depth, boolean ignoreAncestry,
+                              int depth, String[] changelists,
+                              boolean ignoreAncestry,
                               DiffSummaryReceiver receiver)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.diffSummarize(target, pegRevision, startRevision,
-                                 endRevision, depth, ignoreAncestry,
-                                 receiver);
+                                 endRevision, depth, changelists,
+                                 ignoreAncestry, receiver);
         }
     }
 
     /**
-     * Retrieves the properties of an item
-     * @param path  the path of the item
-     * @return array of property objects
+     * @deprecated Use {@link #properties(String, Revision, Revision,
+     *                                    int, ProplistCallback)} instead.
+     * @since 1.0
      */
     public PropertyData[] properties(String path) throws ClientException
     {
@@ -1464,11 +1291,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieves the properties of an item
-     *
-     * @param path     the path of the item
-     * @param revision the revision of the item
-     * @return array of property objects
+     * @deprecated Use {@link #properties(String, Revision, Revision,
+     *                                    int, ProplistCallback)} instead.
      * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision)
@@ -1481,12 +1305,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieves the properties of an item
-     *
-     * @param path        the path of the item
-     * @param revision    the revision of the item
-     * @param pegRevision the revision to interpret path
-     * @return array of property objects
+     * @deprecated Use {@link #properties(String, Revision, Revision,
+     *                                    int, ProplistCallback)} instead.
      * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision,
@@ -1500,33 +1320,25 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieves the properties of an item
-     *
-     * @param path        the path of the item
-     * @param revision    the revision of the item
-     * @param pegRevision the revision to interpret path
-     * @param depth       the depth to recurse into subdirectories
-     * @param callback    the callback to use to return the properties
      * @since 1.5
      */
     public void properties(String path, Revision revision,
                            Revision pegRevision, int depth,
+                           String[] changelists,
                            ProplistCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.properties(path, revision, pegRevision, depth, callback);
+            worker.properties(path, revision, pegRevision, depth, changelists,
+                              callback);
         }
     }
 
     /**
-     * Sets one property of an item with a String value
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param value     new value of the property
-     * @param recurse   set property also on the subdirectories
-     * @throws ClientException
+     * @deprecated Use {@link #propertySet(String, String, String, int,
+     *                                     boolean)} instead.
+     * @since 1.0
      */
     public void propertySet(String path, String name, String value,
                             boolean recurse)
@@ -1539,14 +1351,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Sets one property of an item with a String value
-     *
-     * @param path    path of the item
-     * @param name    name of the property
-     * @param value   new value of the property
-     * @param recurse set property also on the subdirectories
-     * @param force   do not check if the value is valid
-     * @throws ClientException
+     * @deprecated Use {@link #propertySet(String, String, String, int,
+     *                                     boolean)} instead.
      * @since 1.2
      */
     public void propertySet(String path, String name, String value,
@@ -1560,12 +1366,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Sets one property of an item with a byte array value
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param value     new value of the property
-     * @param recurse   set property also on the subdirectories
-     * @throws ClientException
+     * @deprecated Use {@link #propertySet(String, String, String, int,
+     *                                     boolean)} instead.
+     * @since 1.0
      */
     public void propertySet(String path, String name, byte[] value,
                             boolean recurse) throws ClientException
@@ -1577,14 +1380,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Sets one property of an item with a byte array value
-     *
-     * @param path    path of the item
-     * @param name    name of the property
-     * @param value   new value of the property
-     * @param recurse set property also on the subdirectories
-     * @param force   do not check if the value is valid
-     * @throws ClientException
+     * @deprecated Use {@link #propertySet(String, String, String, int,
+     *                                     boolean)} instead.
      * @since 1.2
      */
     public void propertySet(String path, String name, byte[] value,
@@ -1598,11 +1395,23 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Remove one property of an item.
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param recurse   remove the property also on subdirectories
-     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertySet(String path, String name, String value, int depth,
+                            String[] changelists, boolean force,
+                            Map revpropTable)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertySet(path, name, value, depth, changelists, force,
+                               revpropTable);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #propertyRemove(String, String, int)} instead.
+     * @since 1.0
      */
     public void propertyRemove(String path, String name, boolean recurse)
             throws ClientException
@@ -1614,12 +1423,22 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Create and sets one property of an item with a String value
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param value     new value of the property
-     * @param recurse   set property also on the subdirectories
-     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertyRemove(String path, String name, int depth,
+                               String[] changelists)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertyRemove(path, name, depth, changelists);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #propertyCreate(String, String, String, int,
+     *                                        boolean)} instead.
+     * @since 1.0
      */
     public void propertyCreate(String path, String name, String value,
                                boolean recurse)
@@ -1632,14 +1451,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Create and sets one property of an item with a String value
-     *
-     * @param path    path of the item
-     * @param name    name of the property
-     * @param value   new value of the property
-     * @param recurse set property also on the subdirectories
-     * @param force   do not check if the value is valid
-     * @throws ClientException
+     * @deprecated Use {@link #propertyCreate(String, String, String, int,
+     *                                        boolean)} instead.
      * @since 1.2
      */
     public void propertyCreate(String path, String name, String value,
@@ -1653,12 +1466,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Create and sets one property of an item with a byte array value
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param value     new value of the property
-     * @param recurse   set property also on the subdirectories
-     * @throws ClientException
+     * @deprecated Use {@link #propertyCreate(String, String, String, int,
+     *                                        boolean)} instead.
+     * @since 1.0
      */
     public void propertyCreate(String path, String name, byte[] value,
                                boolean recurse)
@@ -1671,14 +1481,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Create and sets one property of an item with a byte array value
-     *
-     * @param path    path of the item
-     * @param name    name of the property
-     * @param value   new value of the property
-     * @param recurse set property also on the subdirectories
-     * @param force   do not check if the value is valid
-     * @throws ClientException
+     * @deprecated Use {@link #propertyCreate(String, String, String, int,
+     *                                        boolean)} instead.
      * @since 1.2
      */
     public void propertyCreate(String path, String name, byte[] value,
@@ -1692,12 +1496,20 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve one revsision property of one item
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param rev       revision to retrieve
-     * @return the Property
-     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertyCreate(String path, String name, String value,
+                               int depth, String[] changelists, boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertyCreate(path, name, value, depth, changelists, force);
+        }
+    }
+
+    /**
+     * @since 1.0
      */
     public PropertyData revProperty(String path, String name, Revision rev)
             throws ClientException
@@ -1709,12 +1521,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve all revsision properties of one item
-     *
-     * @param path path of the item
-     * @param rev  revision to retrieve
-     * @return the Properties
-     * @throws ClientException
      * @since 1.2
      */
     public PropertyData[] revProperties(String path, Revision rev)
@@ -1727,13 +1533,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * set one revsision property of one item
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param rev       revision to retrieve
-     * @param value     value of the property
-     * @param force
-     * @throws ClientException
      * @since 1.2
      */
     public void setRevProperty(String path, String name, Revision rev,
@@ -1747,11 +1546,22 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve one property of one iten
-     * @param path      path of the item
-     * @param name      name of property
-     * @return the Property
-     * @throws ClientException
+     * @since 1.6
+     */
+    public void setRevProperty(String path, String name, Revision rev,
+                               String value, String originalValue,
+                               boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.setRevProperty(path, name, rev, value, originalValue, force);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #propertyGet(String, String, Revision)} instead.
+     * @since 1.0
      */
     public PropertyData propertyGet(String path, String name)
             throws ClientException
@@ -1763,13 +1573,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve one property of one iten
-     *
-     * @param path     path of the item
-     * @param name     name of property
-     * @param revision revision of the item
-     * @return the Property
-     * @throws ClientException
      * @since 1.2
      */
     public PropertyData propertyGet(String path,
@@ -1784,14 +1587,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve one property of one iten
-     *
-     * @param path     path of the item
-     * @param name     name of property
-     * @param revision revision of the item
-     * @param pegRevision the revision to interpret path
-     * @return the Property
-     * @throws ClientException
      * @since 1.2
      */
     public PropertyData propertyGet(String path,
@@ -1807,11 +1602,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     *  Retrieve the content of a file
-     * @param path      the path of the file
-     * @param revision  the revision to retrieve
-     * @return          the content as byte array
-     * @throws ClientException
+     * @deprecated Use {@link #fileContent(String, Revision, Revision)}
+     *             instead.
+     * @since 1.0
      */
     public byte[] fileContent(String path, Revision revision)
             throws ClientException
@@ -1823,13 +1616,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the content of a file
-     *
-     * @param path        the path of the file
-     * @param revision    the revision to retrieve
-     * @param pegRevision the revision to interpret path
-     * @return the content as byte array
-     * @throws ClientException
      * @since 1.2
      */
     public byte[] fileContent(String path, Revision revision,
@@ -1843,13 +1629,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Write the file's content to the specified output stream.
-     *
-     * @param path        the path of the file
-     * @param revision    the revision to retrieve
-     * @param pegRevision the revision at which to interpret the path
-     * @param the stream to write the file's content to
-     * @throws ClientException
+     * @since 1.0
      */
     public void streamFileContent(String path, Revision revision,
                                   Revision pegRevision, int bufferSize,
@@ -1864,12 +1644,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Rewrite the url's in the working copy
-     * @param from      old url
-     * @param to        new url
-     * @param path      working copy path
-     * @param recurse   recurse into subdirectories
-     * @throws ClientException
+     * @since 1.0
      */
     public void relocate(String from, String to, String path, boolean recurse)
             throws ClientException
@@ -1881,14 +1656,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Return for each line of the file, the author and the revision of the
-     * last together with the content.
-     * @deprecated
-     * @param path          the path
-     * @param revisionStart the first revision to show
-     * @param revisionEnd   the last revision to show
-     * @return  the content together with author and revision of last change
-     * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback2)}
+     *                               instead.
+     * @since 1.0
      */
     public byte[] blame(String path, Revision revisionStart,
                         Revision revisionEnd)
@@ -1901,14 +1672,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the content together with the author, the revision and the date
-     * of the last change of each line
-     * @param path          the path
-     * @param revisionStart the first revision to show
-     * @param revisionEnd   the last revision to show
-     * @param callback      callback to receive the file content and the other
-     *                      information
-     * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback2)}
+     *                               instead.
+     * @since 1.0
      */
     public void blame(String path,
                       Revision revisionStart,
@@ -1923,15 +1690,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the content together with the author, the revision and the date
-     * of the last change of each line
-     * @param path          the path
-     * @param pegRevision   the revision to interpret the path
-     * @param revisionStart the first revision to show
-     * @param revisionEnd   the last revision to show
-     * @param callback      callback to receive the file content and the other
-     *                      information
-     * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback2)}
+     *                               instead.
      * @since 1.2
      */
     public void blame(String path,
@@ -1949,21 +1710,11 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve the content together with the author, the revision and the date
-     * of the last change of each line
-     * @param path          the path
-     * @param pegRevision   the revision to interpret the path
-     * @param revisionStart the first revision to show
-     * @param revisionEnd   the last revision to show
-     * @param ignoreMimeType whether or not to ignore the mime-type
-     * @param includeMergedRevisions whether or not to include extra merge
-     *                      information
-     * @param callback      callback to receive the file content and the other
-     *                      information
-     * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback3)}
+     *                               instead.
      * @since 1.5
      */
-
     public void blame(String path,
                       Revision pegRevision,
                       Revision revisionStart,
@@ -1980,8 +1731,28 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
 
+
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.setConfigDirectory(String)
+     * @since 1.7
+     */
+    public void blame(String path,
+                      Revision pegRevision,
+                      Revision revisionStart,
+                      Revision revisionEnd,
+                      boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback3 callback)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.blame(path, pegRevision, revisionStart, revisionEnd,
+                         ignoreMimeType, includeMergedRevisions, callback);
+        }
+    }
+
+    /**
+     * @since 1.0
      */
     public void setConfigDirectory(String configDir) throws ClientException
     {
@@ -1992,9 +1763,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Get the configuration directory
-     * @return  the directory
-     * @throws ClientException
+     * @since 1.0
      */
     public String getConfigDirectory() throws ClientException
     {
@@ -2005,8 +1774,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * cancel the active operation
-     * @throws ClientException
+     * @since 1.0
      */
     public void cancelOperation() throws ClientException
     {
@@ -2016,10 +1784,9 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieves the working copy information for an item
-     * @param path  path of the item
-     * @return      the information object
-     * @throws ClientException
+     * @deprecated Use {@link #info2(String, Revision, Revision, int,
+     *                               InfoCallback)} instead.
+     * @since 1.0
      */
     public Info info(String path) throws ClientException
     {
@@ -2030,68 +1797,45 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Add paths to a changelist
-     * @param paths      paths to add to the changelist
-     * @param changelist changelist name
+     * @since 1.5
      */
-    public void addToChangelist(String[] paths, String changelist)
+    public void addToChangelist(String[] paths, String changelist, int depth,
+                                String[] changelists)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.addToChangelist(paths, changelist);
+            worker.addToChangelist(paths, changelist, depth, changelists);
         }
     }
 
     /**
-     * Remove paths from a changelist
-     * @param paths      paths to remove from the changelist
-     * @param changelist changelist name
+     * @since 1.5
      */
-    public void removeFromChangelist(String[] paths, String changelist)
+    public void removeFromChangelists(String[] paths, int depth,
+                                      String[] changelists)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.removeFromChangelist(paths, changelist);
+            worker.removeFromChangelists(paths, depth, changelists);
         }
     }
 
     /**
-     * Recursively get the paths which belong to a changelist
-     * @param changelist  changelist name
-     * @param rootPath    the wc path under which to check
+     * @since 1.5
      */
-    public String[] getChangelist(String changelist, String rootPath)
+    public void getChangelists(String rootPath, String[] changelists,
+                               int depth, ChangelistCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.getChangelist(changelist, rootPath);
+            worker.getChangelists(rootPath, changelists, depth, callback);
         }
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean)
-     * @since 1.2
-     */
-    public long commit(String[] path, String message, boolean recurse,
-                       boolean noUnlock)
-            throws ClientException
-    {
-        synchronized (clazz)
-        {
-            return worker.commit(path, message, recurse, noUnlock);
-        }
-    }
-
-    /**
-     * Lock a working copy item
-     *
-     * @param path  path of the item
-     * @param comment
-     * @param force break an existing lock
-     * @throws ClientException
      * @since 1.2
      */
     public void lock(String[] path, String comment, boolean force)
@@ -2104,11 +1848,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Unlock a working copy item
-     *
-     * @param path  path of the item
-     * @param force break an existing lock
-     * @throws ClientException
      * @since 1.2
      */
     public void unlock(String[] path, boolean force)
@@ -2121,13 +1860,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve information about repository or working copy items.
-     *
-     * @param pathOrUrl   the path or the url of the item
-     * @param revision    the revision of the item to return
-     * @param pegRevision the revision to interpret pathOrUrl
-     * @param recurse     flag if to recurse, if the item is a directory
-     * @return the information objects
+     * @deprecated Use {@link #info2(String, Revision, Revision, int,
+     *                               InfoCallback)} instead.
      * @since 1.2
      */
     public Info2[] info2(String pathOrUrl, Revision revision,
@@ -2141,46 +1875,21 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve information about repository or working copy items.
-     * @param pathOrUrl     the path or the url of the item
-     * @param revision      the revision of the item to return
-     * @param pegRevision   the revision to interpret pathOrUrl
-     * @param recurse       flag if to recurse, if the item is a directory
-     * @param callback      a callback to receive the infos retreived
-     * @return              the information objects
      * @since 1.5
      */
     public void info2(String pathOrUrl, Revision revision,
-                      Revision pegRevision, boolean recurse,
+                      Revision pegRevision, int depth, String[] changelists,
                       InfoCallback callback)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.info2(pathOrUrl, revision, pegRevision, recurse, callback);
+            worker.info2(pathOrUrl, revision, pegRevision, depth, changelists,
+                         callback);
         }
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String, Revision)
-     * @since 1.5
-     */
-    public CopySource getCopySource(String path, Revision revision)
-        throws SubversionException
-    {
-        synchronized (clazz)
-        {
-            return worker.getCopySource(path, revision);
-        }
-    }
-
-    /**
-     *  Produce a compact "version number" for a working copy
-     * @param path          path of the working copy
-     * @param trailUrl      to detect switches of the whole working copy
-     * @param lastChanged   last changed rather than current revisions
-     * @return      the compact "version number"
-     * @throws ClientException
      * @since 1.2
      */
     public String getVersionInfo(String path, String trailUrl,
@@ -2192,4 +1901,15 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
 
+    /**
+     * @since 1.7
+     */
+    public void upgrade(String path)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.upgrade(path);
+        }
+    }
 }

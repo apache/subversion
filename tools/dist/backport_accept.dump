@@ -1,0 +1,550 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 76cee987-25c9-4d6c-ad40-000000000003
+
+Revision-number: 0
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 83
+Content-length: 83
+
+K 10
+svn:author
+V 7
+jrandom
+K 7
+svn:log
+V 27
+Log message for revision 1.
+PROPS-END
+
+Node-path: A
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/B
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/B/E
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/B/E/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 26
+Text-content-md5: d1fa4a3ced98961674a441930a51f2d3
+Text-content-sha1: b347d1da69df9a6a70433ceeaa0d46c8483e8c03
+Content-length: 36
+
+PROPS-END
+This is the file 'alpha'.
+
+
+Node-path: A/B/E/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 25
+Text-content-md5: 67c756078f24f946f6ec2d00d02f50e1
+Text-content-sha1: d001710ac8e622c6d1fe59b1e265a3908acdd2a3
+Content-length: 35
+
+PROPS-END
+This is the file 'beta'.
+
+
+Node-path: A/B/F
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/B/lambda
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 27
+Text-content-md5: 911c7a8d869b8c1e566f57da54d889c6
+Text-content-sha1: 784a9298366863da2b65ebf82b4e1123755a2421
+Content-length: 37
+
+PROPS-END
+This is the file 'lambda'.
+
+
+Node-path: A/C
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/D
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/D/G
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/D/G/pi
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 23
+Text-content-md5: adddfc3e6b605b5f90ceeab11b4e8ab6
+Text-content-sha1: 411e258dc14b42701fdc29b75f653e93f8686415
+Content-length: 33
+
+PROPS-END
+This is the file 'pi'.
+
+
+Node-path: A/D/G/rho
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 24
+Text-content-md5: 82f2211cf4ab22e3555fc7b835fbc604
+Text-content-sha1: 56388a031dffbf9df7c32e1f299b1d5d7ef60881
+Content-length: 34
+
+PROPS-END
+This is the file 'rho'.
+
+
+Node-path: A/D/G/tau
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 24
+Text-content-md5: 9936e2716e469bb686deb98c280ead58
+Text-content-sha1: 62e8c07d56bee94ea4577e80414fa8805aaf0175
+Content-length: 34
+
+PROPS-END
+This is the file 'tau'.
+
+
+Node-path: A/D/H
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/D/H/chi
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 24
+Text-content-md5: 8f5ebad6d1f7775c2682e54417cbe4d3
+Text-content-sha1: abeac1bf62099ab66b44779198dc19f40e3244f4
+Content-length: 34
+
+PROPS-END
+This is the file 'chi'.
+
+
+Node-path: A/D/H/omega
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 26
+Text-content-md5: fe4ec8bdd3d2056db4f55b474a10fadc
+Text-content-sha1: c06e671bf15a6af55086176a0931d3b5034c82e6
+Content-length: 36
+
+PROPS-END
+This is the file 'omega'.
+
+
+Node-path: A/D/H/psi
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 24
+Text-content-md5: e81f8f68ba50e749c200cb3c9ce5d2b1
+Text-content-sha1: 9c438bde39e8ccbbd366df2638e3cb6700950204
+Content-length: 34
+
+PROPS-END
+This is the file 'psi'.
+
+
+Node-path: A/D/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 26
+Text-content-md5: 412138bd677d64cd1c32fafbffe6245d
+Text-content-sha1: 74b75d7f2e1a0292f17d5a57c570bd89783f5d1c
+Content-length: 36
+
+PROPS-END
+This is the file 'gamma'.
+
+
+Node-path: A/mu
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 23
+Text-content-md5: baf78ae06a2d5b7d9554c5f1280d3fa8
+Text-content-sha1: b4d00c56351d1a752e24d839d41a362d8da4a4c7
+Content-length: 33
+
+PROPS-END
+This is the file 'mu'.
+
+
+Node-path: iota
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 25
+Text-content-md5: 2d18c5e57e84c5b8a5e9a6e13fa394dc
+Text-content-sha1: 2c0aa9014a0cd07f01795a333d82485ef6d083e2
+Content-length: 35
+
+PROPS-END
+This is the file 'iota'.
+
+
+Revision-number: 2
+Prop-content-length: 68
+Content-length: 68
+
+K 10
+svn:author
+V 7
+jrandom
+K 7
+svn:log
+V 12
+Create trunk
+PROPS-END
+
+Node-path: subversion
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subversion/branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subversion/tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subversion/trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subversion/trunk/A
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: A
+
+
+Node-path: subversion/trunk/iota
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: iota
+Text-copy-source-md5: 2d18c5e57e84c5b8a5e9a6e13fa394dc
+Text-copy-source-sha1: 2c0aa9014a0cd07f01795a333d82485ef6d083e2
+
+
+Node-path: A
+Node-action: delete
+
+
+Node-path: iota
+Node-action: delete
+
+
+Revision-number: 3
+Prop-content-length: 87
+Content-length: 87
+
+K 10
+svn:author
+V 7
+jrandom
+K 7
+svn:log
+V 31
+Create branch, with STATUS file
+PROPS-END
+
+Node-path: branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: subversion/trunk
+
+
+Node-path: branch/STATUS
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 0
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 4
+Prop-content-length: 68
+Content-length: 68
+
+K 10
+svn:author
+V 7
+jrandom
+K 7
+svn:log
+V 12
+First change
+PROPS-END
+
+Node-path: subversion/trunk/iota
+Node-kind: file
+Node-action: change
+Text-content-length: 38
+Text-content-md5: 67f471c2ecc2c9e561d122d6e6b0f847
+Text-content-sha1: 750accb6e7f880a1d05ce725c19eb60183bb4b26
+Content-length: 38
+
+This is the file 'iota'.
+First change
+
+
+Revision-number: 5
+Prop-content-length: 69
+Content-length: 69
+
+K 10
+svn:author
+V 7
+jrandom
+K 7
+svn:log
+V 13
+Second change
+PROPS-END
+
+Node-path: subversion/trunk/A/mu
+Node-kind: file
+Node-action: change
+Text-content-length: 37
+Text-content-md5: eab751301b4e650c83324dfef4aad667
+Text-content-sha1: ab36cad564c7c50dec5ac1eb0bf879cf4e3a5f99
+Content-length: 37
+
+This is the file 'mu'.
+Second change
+
+
+Revision-number: 6
+Prop-content-length: 82
+Content-length: 82
+
+K 10
+svn:author
+V 7
+jrandom
+K 7
+svn:log
+V 26
+Conflicting change on iota
+PROPS-END
+
+Node-path: branch/iota
+Node-kind: file
+Node-action: change
+Text-content-length: 53
+Text-content-md5: 0c42f8c8b103bf00045cdf514238cfab
+Text-content-sha1: 440ad0a1673258aea8ba78fef0845e182757f8f9
+Content-length: 53
+
+This is the file 'iota'.
+Conflicts with first change
+
+
+Revision-number: 7
+Prop-content-length: 67
+Content-length: 67
+
+K 10
+svn:author
+V 7
+jrandom
+K 7
+svn:log
+V 11
+Nominate r4
+PROPS-END
+
+Node-path: branch/STATUS
+Node-kind: file
+Node-action: change
+Text-content-length: 284
+Text-content-md5: f1f6d73c681587eba4082139a9f2b724
+Text-content-sha1: 251bb84036790a810b1f4cc7f7a4e64c6a54ce9b
+Content-length: 284
+
+Status of 1.8.x:
+
+Candidate changes:
+==================
+
+Random new subheading:
+======================
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+* r4
+  default logsummary
+  Notes: Merge with --accept=theirs-conflict.
+  Votes:
+    +1: jrandom
+
+
+
+Revision-number: 8
+Prop-content-length: 206
+Content-length: 206
+
+K 10
+svn:author
+V 6
+daniel
+K 7
+svn:log
+V 150
+Merge r4 from trunk, with --accept=theirs-conflict:
+
+* r4
+  default logsummary
+  Notes: Merge with --accept=theirs-conflict.
+  Votes:
+    +1: jrandom
+
+PROPS-END
+
+Node-path: branch
+Node-kind: dir
+Node-action: change
+Prop-content-length: 54
+Content-length: 54
+
+K 13
+svn:mergeinfo
+V 19
+/subversion/trunk:4
+PROPS-END
+
+
+Node-path: branch/STATUS
+Node-kind: file
+Node-action: change
+Text-content-length: 185
+Text-content-md5: 6f71fec92afeaa5c1ebe02349f548ca9
+Text-content-sha1: eece02003d9c51610249e3fdd0d4e191e02ba3b7
+Content-length: 185
+
+Status of 1.8.x:
+
+Candidate changes:
+==================
+
+Random new subheading:
+======================
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+
+Node-path: branch/iota
+Node-kind: file
+Node-action: change
+Text-content-length: 38
+Text-content-md5: 67f471c2ecc2c9e561d122d6e6b0f847
+Text-content-sha1: 750accb6e7f880a1d05ce725c19eb60183bb4b26
+Content-length: 38
+
+This is the file 'iota'.
+First change
+
+

@@ -2,17 +2,22 @@
  * delete-cmd.c -- Delete/undelete commands
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -41,20 +46,20 @@ svn_cl__delete(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
+  svn_boolean_t is_url;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, FALSE, pool));
 
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                         FALSE, FALSE, pool);
+  SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
+  is_url = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
 
-  if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
+  if (! is_url)
     {
       ctx->log_msg_func3 = NULL;
       if (opt_state->message || opt_state->filedata || opt_state->revprop_table)
@@ -71,20 +76,20 @@ svn_cl__delete(apr_getopt_t *os,
                                          NULL, ctx->config, pool));
     }
 
-  ctx->revprop_table = opt_state->revprop_table;
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  err = svn_client_delete3(&commit_info, targets, opt_state->force,
-                           opt_state->keep_local, ctx, pool);
+  err = svn_client_delete4(targets, opt_state->force, opt_state->keep_local,
+                           opt_state->revprop_table,
+                           (opt_state->quiet
+                            ? NULL : svn_cl__print_commit_info),
+                           NULL, ctx, pool);
   if (err)
     err = svn_cl__may_need_force(err);
 
   if (ctx->log_msg_func3)
-    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
+    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
   else if (err)
-    return err;
+    return svn_error_trace(err);
 
-  if (commit_info && ! opt_state->quiet)
-    SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
-      
   return SVN_NO_ERROR;
 }

@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "English"
 require "svn/error"
 require "svn/util"
@@ -12,7 +31,7 @@ module Svn
     self.swig_init_asp_dot_net_hack()
 
     @@alias_targets = %w(parse_externals_description
-                         ensure_adm cleanup set_changelist)
+                         ensure_adm cleanup)
     class << self
       @@alias_targets.each do |target|
         alias_method "_#{target}", target
@@ -22,7 +41,7 @@ module Svn
       alias_method "_#{target}", target
     end
     @@alias_targets = nil
-    
+
     module_function
     def locked?(path)
       Wc.locked(path)
@@ -44,11 +63,11 @@ module Svn
     def normal_prop?(name)
       Wc.is_normal_prop(name)
     end
-    
+
     def wc_prop?(name)
       Wc.is_wc_prop(name)
     end
-    
+
     def entry_prop?(name)
       Wc.is_entry_prop(name)
     end
@@ -60,7 +79,7 @@ module Svn
     def default_ignores(config)
       Wc.get_default_ignores(config)
     end
-    
+
     def cleanup(path, diff3_cmd=nil, cancel_func=nil)
       Wc.cleanup2(path, diff3_cmd, cancel_func)
     end
@@ -69,19 +88,10 @@ module Svn
       Wc.match_ignore_list(path, patterns)
     end
 
-    def set_change_list(paths, change_list_name, matching_change_list_name=nil,
-                        cancel_func=nil, notify_func=nil)
-      paths = [paths] unless paths.is_a?(Array)
-      Wc._set_changelist(paths, change_list_name, matching_change_list_name,
-                         cancel_func, notify_func)
-    end
-    alias_method :set_changelist, :set_change_list
-    module_function :set_changelist
-
     module ExternalsDescription
       module_function
-      def parse(parent_dir, desc)
-        Wc.parse_externals_description3(parent_dir, desc)
+      def parse(parent_dir, desc, canonicalize_url=true)
+        Wc.parse_externals_description3(parent_dir, desc, canonicalize_url)
       end
     end
 
@@ -146,7 +156,7 @@ module Svn
       def retrieve(path)
         Wc.adm_retrieve(self, path)
       end
-        
+
       def probe_retrieve(path)
         Wc.adm_probe_retrieve(self, path)
       end
@@ -174,7 +184,7 @@ module Svn
       def text_modified?(filename, force=false)
         Wc.text_modified_p(filename, force, self)
       end
-      
+
       def props_modified?(path)
         Wc.props_modified_p(path, self)
       end
@@ -191,8 +201,10 @@ module Svn
         Wc.get_ancestry(path, self)
       end
 
-      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil)
-        Wc.walk_entries3(path, self, callbacks, show_hidden, cancel_func)
+      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil,
+                       depth=nil)
+        Wc.walk_entries3(path, self, callbacks, depth, show_hidden,
+                         cancel_func)
       end
 
       def mark_missing_deleted(path)
@@ -202,7 +214,7 @@ module Svn
       def maybe_set_repos_root(path, repos)
         Wc.maybe_set_repos_root(self, path, repos)
       end
-      
+
       def status(path)
         Wc.status2(path, self)
       end
@@ -275,11 +287,11 @@ module Svn
       def process_committed(path, new_revnum, rev_date=nil, rev_author=nil,
                             wcprop_changes=[], recurse=true,
                             remove_lock=true, digest=nil,
-                            remove_change_list=false)
+                            remove_changelist=false)
         Wc.process_committed4(path, self, recurse,
                               new_revnum, rev_date,
                               rev_author, wcprop_changes,
-                              remove_lock, remove_change_list, digest)
+                              remove_lock, remove_changelist, digest)
       end
 
       def crawl_revisions(path, reporter, restore_files=true,
@@ -295,36 +307,119 @@ module Svn
         Wc.is_wc_root(path, self)
       end
 
-      def update_editor(target_revision, target, use_commit_times=true,
-                        depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
+      def update_editor(target, target_revision=nil, use_commit_times=nil,
+                        depth=nil, allow_unver_obstruction=nil, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
-                        preserved_exts=nil, conflict_func=nil)
-        preserved_exts ||= []
-        traversal_info ||= _traversal_info
-        results = Wc.get_update_editor3(target_revision, self, target,
-                                        use_commit_times, depth,
-                                        allow_unver_obstruction,
-                                        notify_func, cancel_func, conflict_func, diff3_cmd,
-                                        preserved_exts, traversal_info)
+                        preserved_exts=nil)
+        update_editor2(:target => target,
+                       :target_revision => target_revision,
+                       :use_commit_times => use_commit_times,
+                       :depth => depth,
+                       :allow_unver_obstruction => allow_unver_obstruction,
+                       :diff3_cmd => diff3_cmd,
+                       :notify_func => notify_func,
+                       :cancel_func => cancel_func,
+                       :traversal_info => traversal_info,
+                       :preserved_exts => preserved_exts )
+      end
+
+      UPDATE_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target]
+      def update_editor2(arguments={})
+        arguments = arguments.reject {|k, v| v.nil?}
+        optional_arguments_defaults = {
+            :target_revision => nil,
+            :use_commit_times => true,
+            :depth => nil,
+            :depth_is_sticky => false,
+            :allow_unver_obstruction => false,
+            :diff3_cmd => nil,
+            :notify_func => nil,
+            :cancel_func => nil,
+            :conflict_func => nil,
+            :traversal_info => _traversal_info,
+            :preserved_exts => []
+          }
+
+        arguments = optional_arguments_defaults.merge(arguments)
+        Util.validate_options(arguments,
+                              optional_arguments_defaults.keys,
+                              UPDATE_EDITOR2_REQUIRED_ARGUMENTS_KEYS)
+
+        # TODO(rb support fetch_fun): implement support for the fetch_func
+        # callback.
+        arguments[:fetch_func] = nil
+
+        results = Wc.get_update_editor3(arguments[:target_revision], self,
+                                        arguments[:target],
+                                        arguments[:use_commit_times],
+                                        arguments[:depth],
+                                        arguments[:depth_is_sticky],
+                                        arguments[:allow_unver_obstruction],
+                                        arguments[:notify_func],
+                                        arguments[:cancel_func],
+                                        arguments[:conflict_func],
+                                        arguments[:fetch_func],
+                                        arguments[:diff3_cmd],
+                                        arguments[:preserved_exts],
+                                        arguments[:traversal_info])
         target_revision_address, editor, editor_baton = results
         editor.__send__(:target_revision_address=, target_revision_address)
         editor.baton = editor_baton
         editor
       end
 
-      def switch_editor(target_revision, target, switch_url,
-                        use_commit_times=true, depth=nil,
-                        allow_unver_obstruction=false, diff3_cmd=nil,
+      def switch_editor(target, switch_url, target_revision=nil,
+                        use_commit_times=nil, depth=nil,
+                        allow_unver_obstruction=nil, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
                         preserved_exts=nil)
-        preserved_exts ||= []
-        traversal_info ||= _traversal_info
-        results = Wc.get_switch_editor3(target_revision, self, target,
-                                        switch_url, use_commit_times, depth,
-                                        allow_unver_obstruction,
-                                        notify_func, cancel_func,
-                                        diff3_cmd, preserved_exts,
-                                        traversal_info)
+        switch_editor2(:target => target,
+                       :switch_url => switch_url,
+                       :target_revision => target_revision,
+                       :use_commit_times => use_commit_times,
+                       :depth => depth,
+                       :allow_unver_obstruction => allow_unver_obstruction,
+                       :diff3_cmd => diff3_cmd,
+                       :notify_func => notify_func,
+                       :cancel_func => cancel_func,
+                       :traversal_info => traversal_info,
+                       :preserved_exts => preserved_exts )
+       end
+
+      SWITCH_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target, :switch_url]
+      def switch_editor2(arguments={})
+        arguments = arguments.reject {|k, v| v.nil?}
+        optional_arguments_defaults = {
+          :target_revision => nil,
+          :use_commit_times => true,
+          :depth => nil,
+          :depth_is_sticky => false,
+          :allow_unver_obstruction => false,
+          :diff3_cmd => nil,
+          :notify_func => nil,
+          :cancel_func => nil,
+          :conflict_func => nil,
+          :traversal_info => _traversal_info,
+          :preserved_exts => []
+        }
+        arguments = optional_arguments_defaults.merge(arguments)
+        Util.validate_options(arguments,
+                              optional_arguments_defaults.keys,
+                              SWITCH_EDITOR2_REQUIRED_ARGUMENTS_KEYS)
+
+        results = Wc.get_switch_editor3(arguments[:target_revision], self,
+                                        arguments[:target],
+                                        arguments[:switch_url],
+                                        arguments[:use_commit_times],
+                                        arguments[:depth],
+                                        arguments[:depth_is_sticky],
+                                        arguments[:allow_unver_obstruction],
+                                        arguments[:notify_func],
+                                        arguments[:cancel_func],
+                                        arguments[:conflict_func],
+                                        arguments[:diff3_cmd],
+                                        arguments[:preserved_exts],
+                                        arguments[:traversal_info])
         target_revision_address, editor, editor_baton = results
         editor.__send__(:target_revision_address=, target_revision_address)
         editor.baton = editor_baton
@@ -354,11 +449,11 @@ module Svn
 
       def diff_editor2(target, callbacks, depth=nil,
                        ignore_ancestry=true, use_text_base=false,
-                       reverse_order=false, cancel_func=nil)
+                       reverse_order=false, cancel_func=nil, changelists=nil)
         editor, editor_baton = Wc.get_diff_editor4(self, target, callbacks,
                                                    depth, ignore_ancestry,
                                                    use_text_base, reverse_order,
-                                                   cancel_func)
+                                                   cancel_func, changelists)
         editor.baton = editor_baton
         editor
       end
@@ -456,6 +551,12 @@ module Svn
         Wc.remove_lock(path, self)
       end
 
+      def set_changelist(path, changelist_name, cancel_func=nil,
+                         notify_func=nil)
+        Wc.set_changelist(path, changelist_name, self, cancel_func,
+                          notify_func)
+      end
+
       private
       def _traversal_info
         @traversal_info ||= nil
@@ -502,8 +603,6 @@ module Svn
     end
 
     class Entry
-      alias_method :change_list, :changelist
-
       def dup
         Wc.entry_dup(self, Svn::Core::Pool.new)
       end
@@ -519,11 +618,11 @@ module Svn
       def text_conflicted?(dir_path)
         conflicted(dir_path)[0]
       end
-      
+
       def prop_conflicted?(dir_path)
         conflicted(dir_path)[1]
       end
-      
+
       def dir?
         kind == Core::NODE_DIR
       end
@@ -540,12 +639,12 @@ module Svn
         schedule == SCHEDULE_NORMAL
       end
     end
-    
+
     class Status2
       def dup
         Wc.dup_status2(self, Core::Pool.new)
       end
-      
+
       def text_added?
         text_status == STATUS_ADDED
       end
@@ -594,9 +693,9 @@ module Svn
 
     class CommittedQueue
       def push(access, path, recurse=true, wcprop_changes={}, remove_lock=true,
-               remove_change_list=false, digest=nil)
+               remove_changelist=false, digest=nil)
         Wc.queue_committed(self, path, access, recurse, wcprop_changes,
-                           remove_lock, remove_change_list, digest)
+                           remove_lock, remove_changelist, digest)
         self
       end
 
@@ -605,5 +704,50 @@ module Svn
         Wc.process_committed_queue(self, access, new_rev, rev_date, rev_author)
       end
     end
+
+    Context = SWIG::TYPE_p_svn_wc_context_t
+    # A context is not associated with a particular working copy, but as
+    # operations are performed, will load the appropriate working copy
+    # information.
+    class Context
+      class << self
+
+        # Creates an new instance of Context.
+        #
+        # ==== arguments
+        #
+        # * <tt>:config</tt> <i>(default=>nil)</i> A \
+        # Svn::Core::Config with options that apply to this Context.
+        def new(arguments={})
+          optional_arguments_defaults = { :config => nil }
+          arguments = optional_arguments_defaults.merge(arguments)
+          context = Wc.context_create(arguments[:config])
+          return context
+        end
+
+        # Creates an new instance of Context for use in the block, the context
+        # is destroyed when the block completes.
+        #
+        # ==== arguments
+        #
+        # see new.
+        def create(arguments={})
+          context = new(arguments)
+          begin
+            yield context
+          ensure
+            context.destroy if context
+          end
+        end
+
+      end
+
+      # Destroys the context, releasing any acquired resources.
+      # The context is unavailable for any further operations.
+      def destroy
+        Wc.context_destroy(self)
+      end
+    end
+
   end
 end

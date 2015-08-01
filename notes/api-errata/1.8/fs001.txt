@@ -1,0 +1,35 @@
+API ERRATA -- $Id$
+
+Root Cause of Errata: implementation/docstring mismatch
+ Library(s) Affected: libsvn_fs_fs, libsvn_fs_base, libsvn_repos
+Function(s) Affected: svn_fs_commit_txn, svn_repos_fs_commit_txn
+     New Behavior in: n/a
+      Related Issues: n/a
+
+
+== Details ==
+
+The docstring for svn_fs_commit_txn() stated that the returned
+CONFLICT_PATH value was allocated in the transaction's pool. However,
+the two implementations (BDB and FSFS) allocate the path in the POOL
+parameter passed to the function.
+
+This behavior is directly propagated to the svn_repos_fs_commit_txn
+function and its CONFLICT_PATH and POOL parameters.
+
+For the 1.8 release, the docstring has been updated to match the
+implementation: the path is allocated in the provided pool.
+
+
+== Impact on API Users ==
+
+If an API user expected the path to live in the transaction pool, then
+it may run into problems depending upon the lifetime of the provided
+pool, relative to the transaction pool. A number of callers abort the
+transaction when such a conflict occurs; if the implementation had
+actually placed the path into the transaction pool, it would become
+invalid when the transaction is aborted and likely cause problems for
+any caller truly expecting the path to live in the transaction pool.
+
+All API users should review their use of the CONFLICT_PATH parameter
+and the necessary lifetime.

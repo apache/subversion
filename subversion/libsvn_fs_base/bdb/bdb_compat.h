@@ -1,25 +1,30 @@
 /* svn_bdb_compat.h --- Compatibility wrapper for different BDB versions.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #ifndef SVN_LIBSVN_FS_BDB_COMPAT_H
 #define SVN_LIBSVN_FS_BDB_COMPAT_H
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,6 +100,25 @@ extern "C" {
 #define SVN_BDB_PATH_UTF8 (0)
 #endif
 
+/* In BDB 4.6, the cursor routines were renamed, and the old names
+   deprecated. */
+#if SVN_BDB_VERSION_AT_LEAST(4,6)
+#define svn_bdb_dbc_close(c)         ((c)->close(c))
+#define svn_bdb_dbc_count(c,r,f)     ((c)->count(c,r,f))
+#define svn_bdb_dbc_del(c,f)         ((c)->del(c,f))
+#define svn_bdb_dbc_dup(c,p,f)       ((c)->dup(c,p,f))
+#define svn_bdb_dbc_get(c,k,d,f)     ((c)->get(c,k,d,f))
+#define svn_bdb_dbc_pget(c,k,p,d,f)  ((c)->pget(c,k,p,d,f))
+#define svn_bdb_dbc_put(c,k,d,f)     ((c)->put(c,k,d,f))
+#else
+#define svn_bdb_dbc_close(c)         ((c)->c_close(c))
+#define svn_bdb_dbc_count(c,r,f)     ((c)->c_count(c,r,f))
+#define svn_bdb_dbc_del(c,f)         ((c)->c_del(c,f))
+#define svn_bdb_dbc_dup(c,p,f)       ((c)->c_dup(c,p,f))
+#define svn_bdb_dbc_get(c,k,d,f)     ((c)->c_get(c,k,d,f))
+#define svn_bdb_dbc_pget(c,k,p,d,f)  ((c)->c_pget(c,k,p,d,f))
+#define svn_bdb_dbc_put(c,k,d,f)     ((c)->c_put(c,k,d,f))
+#endif
 
 /* Before calling db_create, we must check that the version of the BDB
    libraries we're linking with is the same as the one we compiled

@@ -2,17 +2,22 @@
  * xml.c:  xml helper code shared among the Subversion libraries.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -22,11 +27,13 @@
 #include <assert.h>
 
 #include "svn_private_config.h"         /* for SVN_HAVE_OLD_EXPAT */
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
-#include "utf_impl.h"
+
+#include "private/svn_utf_private.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include <xmlparse.h>
@@ -94,6 +101,11 @@ svn_xml_is_xml_safe(const char *data, apr_size_t len)
 
 /*** XML escaping. ***/
 
+/* ### ...?
+ *
+ * If *OUTSTR is @c NULL, set *OUTSTR to a new stringbuf allocated
+ * in POOL, else append to the existing stringbuf there.
+ */
 static void
 xml_escape_cdata(svn_stringbuf_t **outstr,
                  const char *data,
@@ -104,14 +116,14 @@ xml_escape_cdata(svn_stringbuf_t **outstr,
   const char *p = data, *q;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_empty(pool);
 
   while (1)
     {
       /* Find a character which needs to be quoted and append bytes up
          to that point.  Strictly speaking, '>' only needs to be
          quoted if it follows "]]", but it's easier to quote it all
-         the time.  
+         the time.
 
          So, why are we escaping '\r' here?  Well, according to the
          XML spec, '\r\n' gets converted to '\n' during XML parsing.
@@ -153,7 +165,7 @@ xml_escape_attr(svn_stringbuf_t **outstr,
   const char *p = data, *q;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_ensure(len, pool);
 
   while (1)
     {
@@ -266,7 +278,7 @@ svn_xml_fuzzy_escape(const char *string, apr_pool_t *pool)
   if (q == end)
     return string;
 
-  outstr = svn_stringbuf_create("", pool);
+  outstr = svn_stringbuf_create_empty(pool);
   while (1)
     {
       q = p;
@@ -284,13 +296,14 @@ svn_xml_fuzzy_escape(const char *string, apr_pool_t *pool)
         break;
 
       /* Append an escaped version of the unsafe character.
-         
+
          ### This format was chosen for consistency with
          ### svn_utf__cstring_from_utf8_fuzzy().  The two functions
          ### should probably share code, even though they escape
          ### different characters.
       */
-      sprintf(escaped_char, "?\\%03u", (unsigned char) *q);
+      apr_snprintf(escaped_char, sizeof(escaped_char), "?\\%03u",
+                   (unsigned char) *q);
       svn_stringbuf_appendcstr(outstr, escaped_char);
 
       p = q + 1;
@@ -371,7 +384,7 @@ void
 svn_xml_free_parser(svn_xml_parser_t *svn_parser)
 {
   /* Free the expat parser */
-  XML_ParserFree(svn_parser->parser);        
+  XML_ParserFree(svn_parser->parser);
 
   /* Free the subversion parser */
   svn_pool_destroy(svn_parser->pool);
@@ -390,17 +403,19 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
   int success;
 
   /* Parse some xml data */
-  success = XML_Parse(svn_parser->parser, buf, len, is_final);
+  success = XML_Parse(svn_parser->parser, buf, (int) len, is_final);
 
   /* If expat choked internally, return its error. */
   if (! success)
     {
+      /* Line num is "int" in Expat v1, "long" in v2; hide the difference. */
+      long line = XML_GetCurrentLineNumber(svn_parser->parser);
+
       err = svn_error_createf
-        (SVN_ERR_XML_MALFORMED, NULL, 
-         _("Malformed XML: %s at line %d"),
-         XML_ErrorString(XML_GetErrorCode(svn_parser->parser)),
-         XML_GetCurrentLineNumber(svn_parser->parser));
-      
+        (SVN_ERR_XML_MALFORMED, NULL,
+         _("Malformed XML: %s at line %ld"),
+         XML_ErrorString(XML_GetErrorCode(svn_parser->parser)), line);
+
       /* Kill all parsers and return the expat error */
       svn_xml_free_parser(svn_parser);
       return err;
@@ -413,7 +428,7 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
       svn_xml_free_parser(svn_parser);
       return err;
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -425,7 +440,7 @@ void svn_xml_signal_bailout(svn_error_t *error,
   /* This will cause the current XML_Parse() call to finish quickly! */
   XML_SetElementHandler(svn_parser->parser, NULL, NULL);
   XML_SetCharacterDataHandler(svn_parser->parser, NULL);
-  
+
   /* Once outside of XML_Parse(), the existence of this field will
      cause svn_delta_parse()'s main read-loop to return error. */
   svn_parser->error = error;
@@ -441,7 +456,7 @@ void svn_xml_signal_bailout(svn_error_t *error,
 /*** Attribute walking. ***/
 
 const char *
-svn_xml_get_attr_value(const char *name, const char **atts)
+svn_xml_get_attr_value(const char *name, const char *const *atts)
 {
   while (atts && (*atts))
     {
@@ -460,12 +475,19 @@ svn_xml_get_attr_value(const char *name, const char **atts)
 /*** Printing XML ***/
 
 void
-svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
+svn_xml_make_header2(svn_stringbuf_t **str, const char *encoding,
+                     apr_pool_t *pool)
 {
+
   if (*str == NULL)
-    *str = svn_stringbuf_create("", pool);
-  svn_stringbuf_appendcstr(*str,
-                           "<?xml version=\"1.0\"?>\n");
+    *str = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_appendcstr(*str, "<?xml version=\"1.0\"");
+  if (encoding)
+    {
+      encoding = apr_psprintf(pool, " encoding=\"%s\"", encoding);
+      svn_stringbuf_appendcstr(*str, encoding);
+    }
+  svn_stringbuf_appendcstr(*str, "?>\n");
 }
 
 
@@ -490,14 +512,14 @@ amalgamate(const char **atts,
         const char *val = *(++atts);
         size_t keylen;
         assert(key != NULL);
-        /* kff todo: should we also insist that val be non-null here? 
+        /* kff todo: should we also insist that val be non-null here?
            Probably. */
 
         keylen = strlen(key);
         if (preserve && ((apr_hash_get(ht, key, keylen)) != NULL))
           continue;
         else
-          apr_hash_set(ht, apr_pstrndup(pool, key, keylen), keylen, 
+          apr_hash_set(ht, apr_pstrndup(pool, key, keylen), keylen,
                        val ? apr_pstrdup(pool, val) : NULL);
       }
 }
@@ -508,11 +530,11 @@ svn_xml_ap_to_hash(va_list ap, apr_pool_t *pool)
 {
   apr_hash_t *ht = apr_hash_make(pool);
   const char *key;
-  
+
   while ((key = va_arg(ap, char *)) != NULL)
     {
       const char *val = va_arg(ap, const char *);
-      apr_hash_set(ht, key, APR_HASH_KEY_STRING, val);
+      svn_hash_sets(ht, key, val);
     }
 
   return ht;
@@ -558,9 +580,10 @@ svn_xml_make_open_tag_hash(svn_stringbuf_t **str,
                            apr_hash_t *attributes)
 {
   apr_hash_index_t *hi;
+  apr_size_t est_size = strlen(tagname) + 4 + apr_hash_count(attributes) * 30;
 
   if (*str == NULL)
-    *str = svn_stringbuf_create("", pool);
+    *str = svn_stringbuf_create_ensure(est_size, pool);
 
   svn_stringbuf_appendcstr(*str, "<");
   svn_stringbuf_appendcstr(*str, tagname);
@@ -624,7 +647,7 @@ void svn_xml_make_close_tag(svn_stringbuf_t **str,
                             const char *tagname)
 {
   if (*str == NULL)
-    *str = svn_stringbuf_create("", pool);
+    *str = svn_stringbuf_create_empty(pool);
 
   svn_stringbuf_appendcstr(*str, "</");
   svn_stringbuf_appendcstr(*str, tagname);

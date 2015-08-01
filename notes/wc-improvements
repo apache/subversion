@@ -111,9 +111,6 @@ implement, some of them may not work at all.
   ### file might be modified in such a way that these modifications disappear
   ### when the file is detranslated.
 
-- Consider using the translated stream API to get a (de)translated
-  version of a file, when the temp file is not needed.
-
 - Make the entries file smaller.  The properties committed-date 
   committed-rev and last-author are really only needed for keyword
   expansion, so only store them if the appropriate svn:keywords value

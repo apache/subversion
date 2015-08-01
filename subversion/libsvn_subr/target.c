@@ -1,19 +1,24 @@
 /*
- * target.c:  functions which operate on a list of targets supplied to 
+ * target.c:  functions which operate on a list of targets supplied to
  *              a subversion subcommand.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -25,6 +30,7 @@
 
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 
@@ -40,7 +46,9 @@ svn_path_condense_targets(const char **pcommon,
   int i, j, num_condensed = targets->nelts;
   svn_boolean_t *removed;
   apr_array_header_t *abs_targets;
-  int basedir_len;
+  size_t basedir_len;
+  const char *first_target;
+  svn_boolean_t first_target_is_url;
 
   /* Early exit when there's no data to work on. */
   if (targets->nelts <= 0)
@@ -52,9 +60,15 @@ svn_path_condense_targets(const char **pcommon,
     }
 
   /* Get the absolute path of the first target. */
-  SVN_ERR(svn_path_get_absolute(pcommon,
-                                APR_ARRAY_IDX(targets, 0, const char *),
-                                pool));
+  first_target = APR_ARRAY_IDX(targets, 0, const char *);
+  first_target_is_url = svn_path_is_url(first_target);
+  if (first_target_is_url)
+    {
+      first_target = apr_pstrdup(pool, first_target);
+      *pcommon = first_target;
+    }
+  else
+    SVN_ERR(svn_dirent_get_absolute(pcommon, first_target, pool));
 
   /* Early exit when there's only one path to work on. */
   if (targets->nelts == 1)
@@ -72,21 +86,43 @@ svn_path_condense_targets(const char **pcommon,
      svn_path_get_longest_ancestor.  I decided to do it this way
      because I thought it would be simpler, since this way, we don't
      even do the loop if we don't need to condense the targets. */
-  
+
   removed = apr_pcalloc(pool, (targets->nelts * sizeof(svn_boolean_t)));
   abs_targets = apr_array_make(pool, targets->nelts, sizeof(const char *));
-  
+
   APR_ARRAY_PUSH(abs_targets, const char *) = *pcommon;
-  
+
   for (i = 1; i < targets->nelts; ++i)
     {
       const char *rel = APR_ARRAY_IDX(targets, i, const char *);
       const char *absolute;
-      SVN_ERR(svn_path_get_absolute(&absolute, rel, pool));
+      svn_boolean_t is_url = svn_path_is_url(rel);
+
+      if (is_url)
+        absolute = apr_pstrdup(pool, rel); /* ### TODO: avoid pool dup? */
+      else
+        SVN_ERR(svn_dirent_get_absolute(&absolute, rel, pool));
+
       APR_ARRAY_PUSH(abs_targets, const char *) = absolute;
-      *pcommon = svn_path_get_longest_ancestor(*pcommon, absolute, pool);
+
+      /* If we've not already determined that there's no common
+         parent, then continue trying to do so. */
+      if (*pcommon && **pcommon)
+        {
+          /* If the is-url-ness of this target doesn't match that of
+             the first target, our search for a common ancestor can
+             end right here.  Otherwise, use the appropriate
+             get-longest-ancestor function per the path type. */
+          if (is_url != first_target_is_url)
+            *pcommon = "";
+          else if (first_target_is_url)
+            *pcommon = svn_uri_get_longest_ancestor(*pcommon, absolute, pool);
+          else
+            *pcommon = svn_dirent_get_longest_ancestor(*pcommon, absolute,
+                                                       pool);
+        }
     }
-  
+
   if (pcondensed_targets != NULL)
     {
       if (remove_redundancies)
@@ -102,25 +138,37 @@ svn_path_condense_targets(const char **pcommon,
             {
               if (removed[i])
                 continue;
-              
+
               for (j = i + 1; j < abs_targets->nelts; ++j)
                 {
                   const char *abs_targets_i;
                   const char *abs_targets_j;
+                  svn_boolean_t i_is_url, j_is_url;
                   const char *ancestor;
-                  
+
                   if (removed[j])
                     continue;
-                  
+
                   abs_targets_i = APR_ARRAY_IDX(abs_targets, i, const char *);
                   abs_targets_j = APR_ARRAY_IDX(abs_targets, j, const char *);
-                  
-                  ancestor = svn_path_get_longest_ancestor 
-                    (abs_targets_i, abs_targets_j, pool);
-                  
+                  i_is_url = svn_path_is_url(abs_targets_i);
+                  j_is_url = svn_path_is_url(abs_targets_j);
+
+                  if (i_is_url != j_is_url)
+                    continue;
+
+                  if (i_is_url)
+                    ancestor = svn_uri_get_longest_ancestor(abs_targets_i,
+                                                            abs_targets_j,
+                                                            pool);
+                  else
+                    ancestor = svn_dirent_get_longest_ancestor(abs_targets_i,
+                                                               abs_targets_j,
+                                                               pool);
+
                   if (*ancestor == '\0')
                     continue;
-                  
+
                   if (strcmp(ancestor, abs_targets_i) == 0)
                     {
                       removed[j] = TRUE;
@@ -133,7 +181,7 @@ svn_path_condense_targets(const char **pcommon,
                     }
                 }
             }
-          
+
           /* Second pass: when a target is the same as *pcommon,
              remove the target. */
           for (i = 0; i < abs_targets->nelts; ++i)
@@ -148,12 +196,12 @@ svn_path_condense_targets(const char **pcommon,
                 }
             }
         }
-      
+
       /* Now create the return array, and copy the non-removed items */
       basedir_len = strlen(*pcommon);
       *pcondensed_targets = apr_array_make(pool, num_condensed,
                                            sizeof(const char *));
-      
+
       for (i = 0; i < abs_targets->nelts; ++i)
         {
           const char *rel_item = APR_ARRAY_IDX(abs_targets, i, const char *);
@@ -167,23 +215,23 @@ svn_path_condense_targets(const char **pcommon,
           if (basedir_len > 0)
             {
               /* Only advance our pointer past a path separator if
-                 REL_ITEM isn't the same as *PCOMMON.  
-                 
-                 If *PCOMMON is a root path, basedir_len will already 
-                 include the closing '/', so never advance the pointer 
+                 REL_ITEM isn't the same as *PCOMMON.
+
+                 If *PCOMMON is a root path, basedir_len will already
+                 include the closing '/', so never advance the pointer
                  here.
                  */
               rel_item += basedir_len;
-              if (rel_item[0] && 
+              if (rel_item[0] &&
                   ! svn_dirent_is_root(*pcommon, basedir_len))
                 rel_item++;
             }
-          
+
           APR_ARRAY_PUSH(*pcondensed_targets, const char *)
             = apr_pstrdup(pool, rel_item);
         }
     }
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -211,7 +259,7 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
   temp_pool = svn_pool_create(pool);
 
   /* Create our list of absolute paths for our "keepers" */
-  abs_targets = apr_array_make(temp_pool, targets->nelts, 
+  abs_targets = apr_array_make(temp_pool, targets->nelts,
                                sizeof(const char *));
 
   /* Create our list of untainted paths for our "keepers" */
@@ -231,10 +279,14 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
       const char *rel_path = APR_ARRAY_IDX(targets, i, const char *);
       const char *abs_path;
       int j;
-      svn_boolean_t keep_me;
+      svn_boolean_t is_url, keep_me;
 
       /* Get the absolute path for this target. */
-      SVN_ERR(svn_path_get_absolute(&abs_path, rel_path, temp_pool));
+      is_url = svn_path_is_url(rel_path);
+      if (is_url)
+        abs_path = rel_path;
+      else
+        SVN_ERR(svn_dirent_get_absolute(&abs_path, rel_path, temp_pool));
 
       /* For each keeper in ABS_TARGETS, see if this target is the
          same as or a child of that keeper. */
@@ -242,17 +294,23 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
       for (j = 0; j < abs_targets->nelts; j++)
         {
           const char *keeper = APR_ARRAY_IDX(abs_targets, j, const char *);
-          
-          /* Quit here if we find this path already in the keepers. */
-          if (strcmp(keeper, abs_path) == 0)
+          svn_boolean_t keeper_is_url = svn_path_is_url(keeper);
+          const char *child_relpath;
+
+          /* If KEEPER hasn't the same is-url-ness as ABS_PATH, we
+             know they aren't equal and that one isn't the child of
+             the other. */
+          if (is_url != keeper_is_url)
+            continue;
+
+          /* Quit here if this path is the same as or a child of one of the
+             keepers. */
+          if (is_url)
+            child_relpath = svn_uri_skip_ancestor(keeper, abs_path, temp_pool);
+          else
+            child_relpath = svn_dirent_skip_ancestor(keeper, abs_path);
+          if (child_relpath)
             {
-              keep_me = FALSE;
-              break;
-            }
-          
-          /* Quit here if this path is a child of one of the keepers. */
-          if (svn_path_is_child(keeper, abs_path, temp_pool))
-            { 
               keep_me = FALSE;
               break;
             }
@@ -266,12 +324,12 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
           APR_ARRAY_PUSH(rel_targets, const char *) = rel_path;
         }
     }
-  
+
   /* Destroy our temporary pool. */
   svn_pool_destroy(temp_pool);
 
   /* Make sure we return the list of untainted keeper paths. */
   *pcondensed_targets = rel_targets;
-  
+
   return SVN_NO_ERROR;
 }

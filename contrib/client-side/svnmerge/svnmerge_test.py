@@ -20,16 +20,17 @@ import sys, os
 import types
 import re
 import unittest
-from cStringIO import StringIO
+from StringIO import StringIO
 import shutil
 import svnmerge
 import stat
 import atexit
 import getopt
+import locale
 
 ####
 # IMPORTANT NOTE TO TEST AUTHORS
-# 
+#
 # Any quoted strings inside the arguments of the parameter "cmd" must
 # be enclosed in double-, not single-quotes, so that the command parser
 # knows to keep them together. For example, do not write this:
@@ -48,6 +49,11 @@ try:
 except NameError:
     True, False = 1, 0
 
+class StringIOWithEncoding(StringIO):
+    def __init__(self):
+        StringIO.__init__(self)
+        self.encoding = sys.stdout.encoding
+
 class TestCase_kwextract(unittest.TestCase):
     def test_basic(self):
         self.assertEqual(svnmerge.kwextract("$Rev: 134 rasky $"), "134 rasky")
@@ -57,6 +63,13 @@ class TestCase_kwextract(unittest.TestCase):
     def test_failure(self):
         self.assertEqual(svnmerge.kwextract("$Rev: $"), "<unknown>")
         self.assertEqual(svnmerge.kwextract("$Date$"), "<unknown>")
+
+def reset_svnmerge():
+    svnmerge.opts = svnmerge.default_opts.copy()
+    svnmerge._cache_svninfo = {}
+    svnmerge._cache_reporoot = {}
+    svnmerge.PathIdentifier.locobjs = {}
+    svnmerge.PathIdentifier.repo_hints = {}
 
 class TestCase_launch(unittest.TestCase):
     if os.name == "nt":
@@ -183,6 +196,41 @@ class TestCase_RevisionSet(unittest.TestCase):
         rs = svnmerge.RevisionSet("")
         self.assertEqual(str(rs), "")
 
+class TestCase_PathIdentifier(unittest.TestCase):
+    rrp = "/trunk/contrib/client-side/svnmerge"
+    uuid = "65390229-12b7-0310-b90b-f21a5aa7ec8e"
+    uuidrl = 'uuid://'+uuid+rrp
+    url= "http://svn.apache.org/repos/asf/subversion/trunk/contrib/client-side/svnmerge"
+    ext = "uuid://65390229-12b7-0310-b90b-f21a5aa7ec8e/trunk/contrib/client-side/svnmerge"
+    def try_pathid(self, rrp, uuid, url, ext, expected_str, expected_formats):
+        l = svnmerge.PathIdentifier(rrp, uuid, url, ext)
+        self.assertEqual(str(l), expected_str,
+            "str() gave '%s' instead of '%s'" % (str(l), expected_str))
+        for k, v in expected_formats.items():
+            self.assertEqual(l.format(k), v,
+                "format('%s') gave '%s' instead of '%s'" % (k, l.format(k), v))
+        reset_svnmerge()
+
+    def test_PathIdentifier_just_path(self):
+        self.try_pathid(self.rrp, None, None, None,
+                self.rrp, { 'path' : self.rrp })
+
+    def test_PathIdentifier_uuid(self):
+        self.try_pathid(self.rrp, self.uuid, None, None,
+                self.uuidrl, { 'path' : self.rrp, 'uuid' : self.uuidrl })
+
+    def test_PathIdentifier_url(self):
+        self.try_pathid(self.rrp, None, self.url, None,
+                self.url, { 'path' : self.rrp, 'url' : self.url })
+
+    def test_PathIdentifier_prefer_url(self):
+        self.try_pathid(self.rrp, self.uuid, self.url, None,
+                self.url, { 'path' : self.rrp, 'url' : self.url, 'uuid' : self.uuidrl })
+
+    def test_PathIdentifier_external_form(self):
+        self.try_pathid(self.rrp, self.uuid, self.url, self.ext,
+                self.ext, { 'path' : self.rrp, 'url' : self.url, 'uuid' : self.uuidrl })
+
 class TestCase_MinimalMergeIntervals(unittest.TestCase):
     def test_basic(self):
         rs = svnmerge.RevisionSet("4-8,12,18,24")
@@ -195,14 +243,15 @@ class TestCase_SvnMerge(unittest.TestCase):
         return self.svnmerge2(cmds.split(), *args, **kwargs)
 
     def svnmerge2(self, args, error=False, match=None, nonmatch=None):
-        out = StringIO()
+        # svnmerge's get_commit_log method needs the "encoding" method of
+        # sys.stdout, which is not provided by StringIO
+        out = StringIOWithEncoding()
         sys.stdout = sys.stderr = out
         try:
             try:
-                # Clear svnmerge's internal cache before running any
+                # Clear svnmerge's internal caches before running any
                 # commands.
-                svnmerge._cache_svninfo = {}
-                svnmerge._cache_reporoot = {}
+                reset_svnmerge()
 
                 ret = svnmerge.main(args)
             except SystemExit, e:
@@ -288,32 +337,6 @@ class TestCase_CommandLineOptions(TestCase_SvnMerge):
         out = self.svnmerge("init -V")
         self.assert_(out.find("Giovanni Bajo") >= 0)
 
-    def testOptionOrder(self):
-        """Make sure you can intermix command name, arguments and
-        options in any order."""
-        self.svnmerge("--log avail",
-                      error=True,
-                      match=r"no integration info")  # accepted
-        self.svnmerge("-l avail",
-                      error=True,
-                      match=r"no integration info")  # accepted
-        self.svnmerge("-r123 merge",
-                      error=True,
-                      match=r"no integration info")  # accepted
-        self.svnmerge("-s -v -r92481 merge",
-                      error=True,
-                      match=r"no integration info")  # accepted
-        self.svnmerge("--log merge",
-                      error=True,
-                      match=r"option --log not recognized")
-        self.svnmerge("--diff foobar", error=True, match=r"foobar")
-
-        # This requires gnu_getopt support to be parsed
-        if hasattr(getopt, "gnu_getopt"):
-            self.svnmerge("-r123 merge . --log",
-                          error=True,
-                          match=r"option --log not recognized")
-
 def temp_path():
     try:
         return os.environ["TEMP"]
@@ -381,6 +404,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
            tags/                      2
         """
         self.cwd = os.getcwd()
+        reset_svnmerge()
 
         test_path = get_test_path()
         template_path = get_template_path()
@@ -514,6 +538,14 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def testSelfReferentialInit(self):
         self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"],
                        error=True, match=r"cannot init integration source")
+
+    def testAvailURL(self):
+        # Initialize svnmerge
+        self.svnmerge("init")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision")
+
+        self.svnmerge("avail %s/branches/test-branch" % self.test_repo_url, match=r"\A9-10$")
 
     def testBlocked(self):
 
@@ -792,7 +824,9 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                     match=r"Committed revision")
 
         p = self.getproperty()
-        self.assert_(re.search("/branches/testYYY-branch:1-\d+? /trunk:1-\d+?", p))
+        # properties come back in arbitrary order, so search for them individually
+        self.assertTrue(re.search("/branches/testYYY-branch:1-\d+?", p))
+        self.assertTrue(re.search("/trunk:1-\d+?", p))
 
         open("test1", "a").write("foo")
 
@@ -812,7 +846,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         """ Run various scenarios w/ svnmerge.py init and verify
         the default values that are set as the integrated
         revisions."""
-        
+
         # Run init with branch as merge source and trunk as merge target
         os.chdir("..")
         os.chdir("trunk")
@@ -828,15 +862,15 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Verify range ends at rev of trunk which was copied to create branch
         self.launch("svn proplist -v", match=r":1-6")
         self.revert()
-        
+
         # Same thing, but with no explicit parameter (should work implicitly)
         self.svnmerge("init")
         # Verify range ends at rev of trunk which was copied to create branch
         self.launch("svn proplist -v", match=r":1-6")
         self.revert()
-        
-        # Run init with TRUNK as merge src, & any other branch which is not 
-        # a copy of trunk (or the source from which trunk was copied) 
+
+        # Run init with TRUNK as merge src, & any other branch which is not
+        # a copy of trunk (or the source from which trunk was copied)
         # as the merge target.
         os.chdir("../trunk")
         os.chdir("..")
@@ -848,7 +882,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # the time of initialization:
         self.launch("svn proplist -v", match=r":1-14")
         self.revert()
-        
+
         # Run init w/ explicit parms; verify them
         self.svnmerge("init -r 1-999 ../trunk")
         self.launch("svn proplist -v", match=r":1-999")
@@ -856,15 +890,15 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def testTrimmedAvailMerge(self):
         """Check that both avail and merge do not search for phantom revs too hard."""
         self.svnmerge("init")
-        self.svnmerge("avail -vv -r8-9", match=r"svn log.*-r8:9")
-        self.svnmerge("merge -F -vv -r8-9", match=r"svn log.*-r8:9")
+        self.svnmerge("avail -vv -r8-9", match=r"svn --non-interactive log.*-r8:9")
+        self.svnmerge("merge -F -vv -r8-9", match=r"svn --non-interactive log.*-r8:9")
         self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
         self.svnmerge("integrated", match=r"^3-6,8-9$")
 
     def testMergeRecordOnly(self):
         """Check that flagging revisions as manually merged works."""
         self.svnmerge("init")
-        self.svnmerge("avail -vv -r9", match=r"svn log.*-r9:9")
+        self.svnmerge("avail -vv -r9", match=r"svn --non-interactive log.*-r9:9")
         self.svnmerge("merge --record-only -F -vv -r9",
                       nonmatch=r"svn merge -r 8:9")
         self.svnmerge("avail -r9", match=r"\A$")
@@ -907,10 +941,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 16")
 
         # test-branch was copied from trunk's r6.  So non-phantom revs
-        # since that point should still be available to merge from 
+        # since that point should still be available to merge from
         # trunk to test-branch:
-        self.svnmerge("avail -vv --bidirectional", match=r"\n9-10,16$")
-        self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 15:16")
+        self.svnmerge("avail -vv", match=r"\n9-10,16$")
+        self.svnmerge("merge -vv", match=r"svn --non-interactive merge --force -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
         self.svnmerge("integrated", match=r"^3-16$")
@@ -930,13 +964,13 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 18")
 
-        # Ensure default is not to check for reflected revisions.
-        self.svnmerge("avail -vv", match=r"\n17-18$")
-
-        # Now check reflected revision is excluded with --bidirectional flag.
+        # Check reflected revision is excluded with --bidirectional
         self.svnmerge("avail -vv --bidirectional", match=r"\n18$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 17:18")
+        # and without --bidirectional.
+        self.svnmerge("avail -vv", match=r"\n18$")
+
+        self.svnmerge("merge -vv", match=r"svn --non-interactive merge --force -r 17:18")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-18", p)
 
@@ -999,10 +1033,13 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 19")
 
         # Merge into trunk
-        self.svnmerge("merge -vv -S branch2",
+        self.svnmerge("merge -vv -S /branches/test-branch2",
                       match=r"merge --force -r 18:19")
         p = self.getproperty()
-        self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
+
+        # allow properties to come back in arbitrary order
+        self.assertTrue(re.search("/branches/test-branch2:1-19", p))
+        self.assertTrue(re.search("/branches/test-branch:1-16", p))
 
         self.svnmerge("integrated -S branch2", match=r"^14-19$")
         self.svnmerge("integrated -S ../test-branch", match=r"^13-16$")
@@ -1018,13 +1055,16 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 20")
 
         # Initialized revs should not be available for merge
-        self.svnmerge("avail -v --bidirectional", match=r"initialized.*17-18")
+        self.svnmerge("avail -v", match=r"initialized.*17-18")
 
         # Latest revision on trunk which was merged from test-branch2
         # should be available for test-branch with --bidirectional flag.
         self.svnmerge("avail -vv --bidirectional", match=r"merged are:\n20$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 19:20")
+        # and also without the --bidirectional flag.
+        self.svnmerge("avail -vv", match=r"merged are:\n20$")
+
+        self.svnmerge("merge -vv", match=r"merge --force -r 19:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
 
@@ -1099,7 +1139,7 @@ D    test3"""
 
     def testMergeAndRollbackEmptyRevisionRange(self):
         """Init svnmerge, modify source head, merge, rollback where no merge
-           occured."""
+           occurred."""
 
         # Initialize svnmerge
         self.svnmerge2(["init", self.test_repo_url + "/trunk"])
@@ -1241,6 +1281,138 @@ D    test3"""
                         match=r"Committed revision 18")
         except AssertionError:
             self.assert_(os.path.isfile("dir_conflicts.prej"))
+
+    def testCommitMessageEncoding(self):
+        """Init svnmerge, modify source head and commit with a message
+        containing non-ASCII caracters, merge, commit, and verify the commit
+        message was correctly encoded."""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        commit_msg = u"adição no repositório"
+        input_encoding = locale.getdefaultlocale()[1]
+        output_encoding = sys.stdout.encoding
+
+        # Create a file
+        os.chdir("../trunk")
+        open("newfile", "w").close()
+
+        # Create a message containing non-ASCII caracters. The message will be
+        # kept inside a file, so we don't need to worry about Python or the OS
+        # converting the command line before it's sent to svn
+        msg_file = open('msg.txt', 'w')
+        msg_file.write(commit_msg.encode(input_encoding))
+        msg_file.close()
+
+        # Add the file and commit with the message above
+        self.launch("svn add newfile")
+        self.launch('svn commit -F msg.txt', match="Committed revision 15")
+        os.remove('msg.txt')
+        # Check the message was properly encoded by svn (this will currently
+        # only work if the user config file does not override log-encoding)
+        self.launch('svn log -r 15', match=commit_msg.encode(output_encoding))
+
+        # Merge changes into the branch commiting with the message provided by
+        # svnmerge
+        os.chdir("../test-branch")
+        self.svnmerge("merge")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match="Committed revision 16")
+        # The procedure above should have not misencoded the message
+        self.launch('svn log -r 16', match=commit_msg.encode(output_encoding))
+
+
+    def test_pathid_fns(self):
+        # (see also TestCase_pathid_fns for tests that don't need a repos)
+        os.chdir("..")
+        self.assertEqual(svnmerge.pathid_to_url( "/branches/testYYY-branch", "./trunk"),
+                         "%s/branches/testYYY-branch" % self.test_repo_url)
+
+        self.assertTrue(
+            svnmerge.equivalent_pathids("/branches/testYYY-branch",
+                                       "/branches/testYYY-branch",
+                                       "./trunk"))
+
+        self.assertFalse(
+            svnmerge.equivalent_pathids("/branches/test-branch",
+                                       "/branches/testYYY-branch",
+                                       "./trunk"))
+
+    def test_invalid_url(self):
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"]) # warm up svnmerge
+        self.assertEqual(svnmerge.get_svninfo("file://foo/bar"), {})
+
+    def test_dict_from_revlist_prop(self):
+        locdict = svnmerge.dict_from_revlist_prop("/trunk:1-10 uuid://65390229-12b7-0310-b90b-f21a5aa7ec8e/branches/foo:20-30")
+        for k, v in locdict.items():
+            if str(k) == '/trunk':
+                self.assertEqual(str(v), '1-10')
+            elif str(k) == 'uuid://65390229-12b7-0310-b90b-f21a5aa7ec8e/branches/foo':
+                self.assertEqual(str(v), '20-30')
+            else:
+                self.fail("Unknown pathid '%s'" % k)
+
+    def test_pathid_fns(self):
+        os.chdir("..")
+
+        # run svnmerge once to get things rolling
+        self.svnmerge("init", error=True)
+
+        branch = svnmerge.PathIdentifier.from_target("test-branch")
+        trunk = svnmerge.PathIdentifier.from_target("trunk")
+        yy = svnmerge.PathIdentifier.from_target("%s/branches/testYYY-branch" % self.test_repo_url)
+        branchurl = svnmerge.PathIdentifier.from_target("%s/branches/test-branch" % self.test_repo_url)
+        trunkurl = svnmerge.PathIdentifier.from_target("%s/trunk" % self.test_repo_url)
+
+        self.assertTrue(branchurl == branch)
+        self.assertFalse(branchurl != branch)
+        self.assertTrue(trunkurl == trunk)
+        self.assertTrue(yy != trunk)
+
+    def test_PathIdentifier_hint_url(self):
+        os.chdir("..")
+        # prime the cache with our repo URL
+        svnmerge.PathIdentifier.hint(self.test_repo_url + '/trunk')
+        expected = svnmerge.PathIdentifier.locobjs['/trunk']
+
+        # and then we should get the same pathid for all of these
+        self.assertEqual(expected, svnmerge.PathIdentifier.from_target('trunk'))
+        self.assertEqual(expected, svnmerge.PathIdentifier.from_target(self.test_repo_url + '/trunk'))
+
+    def test_is_pathid(self):
+        os.chdir("..")
+        l = svnmerge.PathIdentifier.from_target('trunk')
+        self.assertTrue(svnmerge.is_pathid(l))
+
+    def testOptionOrder(self):
+        """Make sure you can intermix command name, arguments and options in any order."""
+        # this is under TestCase_TestRepo because it assumes that '.' is a svn working dir
+        self.svnmerge("--log avail",
+                      error=True,
+                      match=r"no integration info")  # accepted
+        self.svnmerge("-l avail",
+                      error=True,
+                      match=r"no integration info")  # accepted
+        self.svnmerge("-r123 merge",
+                      error=True,
+                      match=r"no integration info")  # accepted
+        self.svnmerge("-s -v -r92481 merge",
+                      error=True,
+                      match=r"no integration info")  # accepted
+        self.svnmerge("--log merge",
+                      error=True,
+                      match=r"option --log not recognized")
+        self.svnmerge("--diff foobar", error=True, match=r"foobar")
+
+        # This requires gnu_getopt support to be parsed
+        if hasattr(getopt, "gnu_getopt"):
+            self.svnmerge("-r123 merge . --log",
+                          error=True,
+                          match=r"option --log not recognized")
 
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing

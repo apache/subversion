@@ -55,7 +55,7 @@ How to use it
 1) Get a copy of svn_load_dirs.pl, revision 3787 or later.  You can
    find it in:
 
-      http://svn.collab.net/repos/svn/trunk/tools/client-side/
+      http://svn.apache.org/repos/asf/subversion/trunk/tools/client-side/
 
 2) Edit the configuration variables in mirror_dirs_through_svn.cgi so
    it knows the location of svn, the location of svn_load_dirs.pl, the

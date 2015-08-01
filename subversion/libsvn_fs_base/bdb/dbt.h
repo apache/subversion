@@ -1,17 +1,22 @@
 /* dbt.h --- interface to DBT-frobbing functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -20,11 +25,11 @@
 
 #include <apr_pools.h>
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include "svn_fs.h"
-#include "../util/skel.h"
+#include "private/svn_skel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +47,7 @@ DBT *svn_fs_base__nodata_dbt(DBT *dbt);
 
 
 /* Set DBT to refer to the SIZE bytes at DATA.  Return DBT.  */
-DBT *svn_fs_base__set_dbt(DBT *dbt, const void *data, u_int32_t size);
+DBT *svn_fs_base__set_dbt(DBT *dbt, const void *data, apr_size_t size);
 
 
 /* Prepare DBT to hold data returned from Berkeley DB.  Return DBT.
@@ -96,13 +101,17 @@ DBT *svn_fs_base__id_to_dbt(DBT *dbt, const svn_fs_id_t *id,
 
 /* Set DBT to the unparsed form of SKEL; allocate memory from POOL.
    Return DBT.  */
-DBT *svn_fs_base__skel_to_dbt(DBT *dbt, skel_t *skel, apr_pool_t *pool);
+DBT *svn_fs_base__skel_to_dbt(DBT *dbt, svn_skel_t *skel, apr_pool_t *pool);
 
 
 /* Set DBT to the text of the null-terminated string STR.  DBT will
    refer to STR's storage.  Return DBT.  */
 DBT *svn_fs_base__str_to_dbt(DBT *dbt, const char *str);
 
+
+/* Set DBT to the bytes contained by CHECKSUM.   DBT will refer to CHECKSUM's
+   storage.  Return DBT.*/
+DBT *svn_fs_base__checksum_to_dbt(DBT* dbt, svn_checksum_t *checksum);
 
 #ifdef __cplusplus
 }

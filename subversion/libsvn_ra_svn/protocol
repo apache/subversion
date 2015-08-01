@@ -109,11 +109,15 @@ If the client does not support a protocol version within the specified
 range, it closes the connection.  Otherwise, the client responds to
 the greeting with an item matching the prototype:
 
-  response: ( version:number ( cap:word ... ) url:string )
+  response: ( version:number ( cap:word ... ) url:string
+              ? ra-client:string ( ? client:string ) )
 
 version gives the protocol version selected by the client.  The cap
 values give a list of client capabilities (see section 2.1).  url
-gives the URL the client is accessing.
+gives the URL the client is accessing.  ra-client is a string
+identifying the RA implementation, e.g. "SVN/1.6.0" or "SVNKit 1.1.4".
+client is the string returned by svn_ra_callbacks2_t.get_client_string;
+that callback may not be implemented, so this is optional.
 
 Upon receiving the client's response to the greeting, the server sends
 an authentication request, which is a command response whose arguments
@@ -162,11 +166,15 @@ is "svn".
 After a successful authentication exchange, the server sends a command
 response whose parameters match the prototype:
 
-  repos-info: ( uuid:string repos-url:string )
+  repos-info: ( uuid:string repos-url:string ( cap:word ... ) )
 
-uuid gives the universal unique identifier of the repository, and
-repos-url gives the URL of the repository's root directory.  The
-client can now begin sending commands from the main command set.
+uuid gives the universal unique identifier of the repository,
+repos-url gives the URL of the repository's root directory, and the
+cap values list the repository capabilities (that is, capabilities
+that require both server and repository support before the server can
+claim them as capabilities, e.g., SVN_RA_SVN_CAP_MERGEINFO).
+
+The client can now begin sending commands from the main command set.
 
 2.1 Capabilities
 
@@ -188,6 +196,16 @@ capability and C indicates a client capability):
                        See section 3.1.1.
 [S]  mergeinfo         If the server presents this capability, it supports the 
                        get-mergeinfo command.  See section 3.1.1.
+[S]  depth             If the server presents this capability, it understands
+                       requested operational depth (see section 3.1.1) and
+                       per-path ambient depth (see section 3.1.3).
+[S]  atomic-revprops   If the server presents this capability, it
+                       supports the change-rev-prop2 command.
+                       See section 3.1.1.
+[S]  inherited-props   If the server presents this capability, it supports the
+                       retrieval of inherited properties via the get-dir and
+                       get-file commands and also supports the get-iprops
+                       command (see section 3.1.1).
 
 3. Commands
 -----------
@@ -208,6 +226,7 @@ responds.
 Here are some miscellaneous prototypes used by the command sets:
 
   proplist:  ( ( name:string value:string ) ... )
+  iproplist: ( ( name:string proplist ) ... )
   propdelta: ( ( name:string [ value:string ] ) ... )
   node-kind: none|file|dir|unknown
   bool:      true|false
@@ -250,6 +269,16 @@ second place for auth-request point as noted below.
      changed to be optional without creating an optional tuple for
      that one parameter as we normally do.)
 
+  change-rev-prop2
+    params:   ( rev:number name:string [ value:string ]
+                ( dont-care:bool ? previous-value:string ) )
+    response: ( )
+    If value is not specified, the rev-prop is removed.  If dont-care is false,
+    then the rev-prop is changed only if it is currently set as previous-value
+    indicates.  (If dont-care is false and previous-value is unspecified, then
+    the revision property must be previously unset.)  If dont-care is true,
+    then previous-value must not be specified.
+
   rev-proplist
     params:   ( rev:number )
     response: ( props:proplist )
@@ -265,26 +294,39 @@ second place for auth-request point as noted below.
     Upon receiving response, client switches to editor command set.
     Upon successful completion of edit, server sends auth-request.
     After auth exchange completes, server sends commit-info.
+    If rev-props is present, logmsg is ignored.  Only the svn:log entry in
+    rev-props (if any) will be used.
     commit-info: ( new-rev:number date:string author:string
                    ? ( post-commit-err:string ) )
+    NOTE: when revving this, make 'logmsg' optional, or delete that parameter
+          and have the log message specified in 'rev-props'.
 
   get-file
-    params:   ( path:string [ rev:number ] want-props:bool want-contents:bool )
-    response: ( [ checksum:string ] rev:number props:proplist )
+    params:   ( path:string [ rev:number ] want-props:bool want-contents:bool
+                ? want-iprops:bool )
+    response: ( [ checksum:string ] rev:number props:proplist
+                [ inherited-props:iproplist ] )
     If want-contents is specified, then after sending response, server
      sends file contents as a series of strings, terminated by the empty
      string, followed by a second empty command response to indicate
      whether an error occurred during the sending of the file.
+    NOTE: the standard client doesn't send want-iprops as true, it uses
+     get-iprops, but does send want-iprops as false to workaround a server
+     bug in 1.8.0-1.8.8.
 
   get-dir
     params:   ( path:string [ rev:number ] want-props:bool want-contents:bool
-                ? ( field:dirent-field ... ) )
-    response: ( rev:number props:proplist ( entry:dirent ... ) )]
+                ? ( field:dirent-field ... ) ? want-iprops:bool )
+    response: ( rev:number props:proplist ( entry:dirent ... )
+                [ inherited-props:iproplist ] )]
     dirent:   ( name:string kind:node-kind size:number has-props:bool
                 created-rev:number [ created-date:string ]
                 [ last-author:string ] )
     dirent-field: kind | size | has-props | created-rev | time | last-author
                   | word
+    NOTE: the standard client doesn't send want-iprops as true, it uses
+     get-iprops, but does send want-iprops as false to workaround a server
+     bug in 1.8.0-1.8.8.
 
   check-path
     params:   ( path:string [ rev:number ] )
@@ -300,13 +342,15 @@ second place for auth-request point as noted below.
     New in svn 1.2.  If path is non-existent, an empty response is returned.
 
   get-mergeinfo
-    params:   ( ( path:string ... ) [ rev:number ] inherit:word )
+    params:   ( ( path:string ... ) [ rev:number ] inherit:word 
+                descendants:bool)
     response: ( ( ( path:string merge-info:string ) ... ) )
     New in svn 1.5.  If no paths are specified, an empty response is
     returned.  If rev is not specified, the youngest revision is used.
 
   update
-    params:   ( [ rev:number ] target:string recurse:bool ? depth:word)
+    params:   ( [ rev:number ] target:string recurse:bool
+                ? depth:word send_copyfrom_args:bool ? ignore_ancestry:bool )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -315,7 +359,7 @@ second place for auth-request point as noted below.
 
   switch
     params:   ( [ rev:number ] target:string recurse:bool url:string
-                ? depth:word)
+                ? depth:word ? send_copyfrom_args:bool ignore_ancestry:bool )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -342,23 +386,34 @@ second place for auth-request point as noted below.
   log
     params:   ( ( target-path:string ... ) [ start-rev:number ]
                 [ end-rev:number ] changed-paths:bool strict-node:bool
-                ? limit:number 
-                ? include-merged-revisions:bool omit-log-text:bool )
+                ? limit:number
+                ? include-merged-revisions:bool
+                all-revprops | revprops ( revprop:string ... ) )
     Before sending response, server sends log entries, ending with "done".
     If a client does not want to specify a limit, it should send 0 as the
-    limit parameter.
+    limit parameter.  rev-props excludes author, date, and log; they are
+    sent separately for backwards-compatibility.
     log-entry: ( ( change:changed-path-entry ... ) rev:number
-                 [ author:string ] [ date:string ] [ message:string ] 
-                 ? nbr-children:number )
+                 [ author:string ] [ date:string ] [ message:string ]
+                 ? has-children:bool invalid-revnum:bool
+                 revprop-count:number rev-props:proplist
+                 ? subtractive-merge:bool )
              | done
-    changed-path-entry: ( path:string A|D|R|M [ copy-path:string ]
-                          [ copy-rev:number ] )
+    changed-path-entry: ( path:string A|D|R|M
+                          ? ( ? copy-path:string copy-rev:number )
+                          ? ( ? node-kind:string ? text-mods:bool prop-mods:bool ) )
     response: ( )
 
   get-locations
     params:   ( path:string peg-rev:number ( rev:number ... ) )
     Before sending response, server sends location entries, ending with "done".
     location-entry: ( rev:number abs-path:number ) | done
+    response: ( )
+
+  get-location-segments
+    params:   ( path:string [ start-rev:number ] [ end-rev:number ] )
+    Before sending response, server sends location entries, ending with "done".
+    location-entry: ( range-start:number range-end:number [ abs-path:string ] ) | done
     response: ( )
 
   get-file-revs
@@ -403,7 +458,7 @@ second place for auth-request point as noted below.
     response:  ( [ lock:lockdesc ] )
 
   get-locks
-    params:    ( path:string )
+    params:    ( path:string ? [ depth:word ] )
     response   ( ( lock:lockdesc ... ) )
 
   replay
@@ -411,6 +466,26 @@ second place for auth-request point as noted below.
     After auth exchange completes, server switches to editor command set.
     After edit completes, server sends response.
     response   ( )
+
+  replay-range
+    params:    ( start-rev:number end-rev:number low-water-mark:number 
+                 send-deltas:bool )
+    After auth exchange completes, server sends each revision
+    from start-rev to end-rev, alternating between sending 'revprops' 
+    entries and sending the revision in the editor command set.
+    After all revisions are complete, server sends response.
+    revprops:  ( revprops:word props:proplist )
+      (revprops here is the literal word "revprops".)
+    response   ( )
+
+  get-deleted-rev
+    params:   ( path:string peg-rev:number end-rev:number )
+    response: ( deleted-rev:number )
+
+  get-iprops
+    params:   ( path:string [ rev:number ] )
+    response: ( inherited-props:iproplist )
+    New in svn 1.8.  If rev is not specified, the youngest revision is used.
 
 3.1.2. Editor Command Set
 
@@ -526,7 +601,13 @@ desirability:
   * The protocol version may be bumped.  Clients and servers can then
     choose to any range of protocol versions.
 
-4.1. Extending existing commands
+4.1. Limitations
+
+The current implementation limits the length of a word to 31 characters.
+Longer words, such as capability names, will be cause an error on the
+receiver side.
+
+4.2. Extending existing commands
 
 Extending an existing command is normally done by indicating that its
 tuple is allowed to end where it currently ends, for backwards

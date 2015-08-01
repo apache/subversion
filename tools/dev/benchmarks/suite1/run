@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# debug? Just uncomment.
+#SVNBENCH_DEBUG=DEBUG_
+if [ -n "$SVNBENCH_DEBUG" ]; then
+  SVNBENCH_DEBUG="DEBUG_"
+fi
+
+# Subversion bin-dir used for maintenance of working copies
+SVN_STABLE="$HOME/pat/stable/prefix/bin/"
+
+# Where to find the svn binaries you want to benchmark, what are their labels
+# and Last Changed Revisions?
+# side A
+SVN_A_NAME="1.7.0"
+SVN_A="$HOME/pat/bench/prefix/bin"
+SVN_A_REV="$("$SVN_STABLE"/svnversion -c "$HOME/pat/bench/src" | sed 's/.*://')"
+
+# side B
+SVN_B_NAME="trunk"
+SVN_B="$HOME/pat/trunk/prefix/bin"
+SVN_B_REV="$("$SVN_STABLE"/svnversion -c "$HOME/pat/trunk/src" | sed 's/.*://')"
+
+echo "$SVN_A_NAME@$SVN_A_REV vs. $SVN_B_NAME@$SVN_B_REV"
+
+# benchmark script and parameters...
+benchmark="$PWD/benchmark.py"
+
+db="$PWD/${SVNBENCH_DEBUG}benchmark.db"
+
+batch(){
+  levels="$1"
+  spread="$2"
+  N="$3"
+
+  # SVN_A is a fixed tag, currently 1.7.0. For each call, run this once.
+  # It will be called again and again for each trunk build being tested,
+  # that's why we don't really need to run it $N times every time.
+  N_for_A=1
+  "$benchmark" "--db-path=$db" "--svn-bin-dir=$SVN_A" \
+      run "$SVN_A_NAME@$SVN_A_REV,${levels}x$spread" "$N_for_A" >/dev/null
+
+  # SVN_B is a branch, i.e. the moving target, benchmarked at a specific
+  # point in history each time this script is called. Run this $N times.
+  "$benchmark" "--db-path=$db" "--svn-bin-dir=$SVN_B" \
+      run "$SVN_B_NAME@$SVN_B_REV,${levels}x$spread" $N >/dev/null
+}
+
+N=3
+al=5
+as=5
+bl=100
+bs=1
+cl=1
+cs=100
+
+if [ -n "$SVNBENCH_DEBUG" ]; then
+  echo "DEBUG"
+  N=1
+  al=1
+  as=1
+  bl=2
+  bs=1
+  cl=1
+  cs=2
+fi
+
+
+{
+started="$(date)"
+echo "Started at $started"
+
+echo "
+*DISCLAIMER* - This tests only file://-URL access on a GNU/Linux VM.
+This is intended to measure changes in performance of the local working
+copy layer, *only*. These results are *not* generally true for everyone.
+
+Charts of this data are available at http://svn-qavm.apache.org/charts/"
+
+if [ -z "$SVNBENCH_SUMMARY_ONLY" ]; then
+  batch $al $as $N
+  batch $bl $bs $N
+  batch $cl $cs $N
+else
+  echo "(not running benchmarks, just printing results on record.)"
+fi
+
+echo ""
+echo "Averaged-total results across all runs:"
+echo "---------------------------------------"
+echo ""
+"$benchmark" "--db-path=$db" \
+    compare "$SVN_A_NAME" "$SVN_B_NAME@$SVN_B_REV"
+
+echo ""
+echo ""
+echo "Above totals split into separate <dir-levels>x<dir-spread> runs:"
+echo "----------------------------------------------------------------"
+echo ""
+
+for lvlspr in "${al}x${as}" "${bl}x${bs}" "${cl}x${cs}"; do
+  "$benchmark" "--db-path=$db" \
+      compare "$SVN_A_NAME,$lvlspr" "$SVN_B_NAME@$SVN_B_REV,$lvlspr"
+  echo ""
+done
+
+echo ""
+echo ""
+echo "More detail:"
+echo "------------"
+echo ""
+
+for lvlspr in "${al}x${as}" "${bl}x${bs}" "${cl}x${cs}" "" ; do
+  "$benchmark" "--db-path=$db" show "$SVN_A_NAME,$lvlspr"
+  echo --
+  "$benchmark" "--db-path=$db" show "$SVN_B_NAME@$SVN_B_REV,$lvlspr"
+  echo --
+  "$benchmark" "--db-path=$db" \
+      compare -v "$SVN_A_NAME,$lvlspr" "$SVN_B_NAME@$SVN_B_REV,$lvlspr"
+  echo ""
+  echo ""
+done
+
+echo ""
+echo "Had started at $started,"
+echo "       done at $(date)"
+} 2>&1 | tee results.txt
+

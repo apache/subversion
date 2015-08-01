@@ -1,17 +1,22 @@
 /* svndiff-test.c -- test driver for text deltas
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -19,6 +24,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <apr_general.h>
+
+#include "../svn_test.h"
+
 #include "svn_base64.h"
 #include "svn_quoprint.h"
 #include "svn_pools.h"
@@ -67,10 +75,11 @@ main(int argc, char **argv)
   if (argc == 4)
     version = atoi(argv[3]);
 
-  svn_txdelta(&txdelta_stream,
-              svn_stream_from_aprfile(source_file, pool),
-              svn_stream_from_aprfile(target_file, pool),
-              pool);
+  svn_txdelta2(&txdelta_stream,
+               svn_stream_from_aprfile(source_file, pool),
+               svn_stream_from_aprfile(target_file, pool),
+               FALSE,
+               pool);
 
   err = svn_stream_for_stdout(&stdout_stream, pool);
   if (err)
@@ -81,8 +90,9 @@ main(int argc, char **argv)
 #else
   encoder = svn_base64_encode(stdout_stream, pool);
 #endif
-  svn_txdelta_to_svndiff2(&svndiff_handler, &svndiff_baton, 
-                          encoder, version, pool);
+  /* use maximum compression level */
+  svn_txdelta_to_svndiff3(&svndiff_handler, &svndiff_baton,
+                          encoder, version, 9, pool);
   err = svn_txdelta_send_txstream(txdelta_stream,
                                   svndiff_handler,
                                   svndiff_baton,

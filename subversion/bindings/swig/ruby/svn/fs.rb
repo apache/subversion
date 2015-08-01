@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "English"
 require "tempfile"
 require "svn/error"
@@ -84,7 +103,7 @@ module Svn
       def path
         Fs.path(self)
       end
-      
+
       def open_txn(name)
         Fs.open_txn(self, name)
       end
@@ -95,7 +114,7 @@ module Svn
 
       def transaction(rev=nil, flags=0)
         txn = Fs.begin_txn2(self, rev || youngest_rev, flags)
-        
+
         if block_given?
           yield(txn)
           txn.commit if transactions.include?(txn.name)
@@ -103,7 +122,7 @@ module Svn
           txn
         end
       end
-      
+
       def youngest_revision
         Fs.youngest_rev(self)
       end
@@ -236,14 +255,14 @@ module Svn
         Fs.access_add_lock_token(self, token)
       end
     end
-    
+
     Transaction = SWIG::TYPE_p_svn_fs_txn_t
     class Transaction
 
       def name
         Fs.txn_name(self)
       end
-      
+
       def prop(name)
         value = Fs.txn_prop(self, name)
         if name == Svn::Core::PROP_REVISION_DATE and value
@@ -299,11 +318,11 @@ module Svn
       def dir?(path)
         Fs.is_dir(self, path)
       end
-      
+
       def file?(path)
         Fs.is_file(self, path)
       end
-      
+
       def base_revision
         Fs.txn_root_base_revision(self)
       end
@@ -319,7 +338,7 @@ module Svn
       def fs
         Fs.root_fs_wrapper(self)
       end
-      
+
       def node_id(path)
         Fs.node_id(self, path)
       end
@@ -335,7 +354,7 @@ module Svn
       def node_prop(path, key)
         Fs.node_prop(self, path, key)
       end
-      
+
       def set_node_prop(path, key, value, validate=true)
         if validate
           Repos.fs_change_node_prop(self, path, key, value)
@@ -343,7 +362,7 @@ module Svn
           Fs.change_node_prop(self, path, key, value)
         end
       end
-      
+
       def node_proplist(path)
         Fs.node_proplist(self, path)
       end
@@ -360,7 +379,7 @@ module Svn
       def file_md5_checksum(path)
         Fs.file_md5_checksum(self, path)
       end
-      
+
       def file_contents(path)
         stream = Fs.file_contents(self, path)
         if block_given?
@@ -396,7 +415,7 @@ module Svn
                         ignore_ancestry)
       end
 
-      def replay(editor, base_dir=nil, low_water_mark=nil, send_deltas=false,
+      def replay(editor, base_dir=nil, low_water_mark=nil, send_deltas=true,
                  &callback)
         base_dir ||= ""
         low_water_mark ||= Core::INVALID_REVNUM
@@ -441,7 +460,7 @@ module Svn
       def delete(path)
         Fs._delete(self, path)
       end
-      
+
       def copy(to_path, from_root, from_path)
         Fs.copy(from_root, from_path, self, to_path)
       end
@@ -461,7 +480,7 @@ module Svn
         handler.baton = handler_baton
         handler
       end
-      
+
       def apply_text(path, result_checksum=nil)
         Fs.apply_text(self, path, result_checksum)
       end
@@ -496,16 +515,14 @@ module Svn
         Fs.closest_copy(self, path)
       end
 
-      def merge_info(paths, inherit=nil)
+      def mergeinfo(paths, inherit=nil, include_descendants=false)
         paths = [paths] unless paths.is_a?(Array)
-        Fs.get_mergeinfo(self, paths, inherit)
+        Fs.get_mergeinfo(self, paths, inherit, include_descendants)
       end
-      alias_method :mergeinfo, :merge_info
 
-      def change_merge_info(path, info)
+      def change_mergeinfo(path, info)
         Fs.change_mergeinfo(self, path, info)
       end
-      alias_method :change_mergeinfo, :change_merge_info
     end
 
     History = SWIG::TYPE_p_svn_fs_history_t
@@ -519,16 +536,16 @@ module Svn
         Fs.history_prev(self, cross_copies)
       end
     end
-    
+
 
     DirectoryEntry = Dirent
-    
+
     Id = SWIG::TYPE_p_svn_fs_id_t
     class Id
       def to_s
         unparse
       end
-      
+
       def unparse
         Fs.unparse_id(self)
       end
@@ -555,13 +572,13 @@ module Svn
         text_mod
       end
     end
-    
+
     class FileDiff
 
       def initialize(root1, path1, root2, path2)
         @tempfile1 = nil
         @tempfile2 = nil
-        
+
         @binary = nil
 
         @root1 = root1
@@ -585,8 +602,13 @@ module Svn
           @tempfile1 = Tempfile.new("svn_fs")
           @tempfile2 = Tempfile.new("svn_fs")
 
-          dump_contents(@tempfile1, @root1, @path1)
-          dump_contents(@tempfile2, @root2, @path2)
+          begin
+            dump_contents(@tempfile1, @root1, @path1)
+            dump_contents(@tempfile2, @root2, @path2)
+          ensure
+            @tempfile1.close
+            @tempfile2.close
+          end
 
           [@tempfile1, @tempfile2]
         end
@@ -597,24 +619,19 @@ module Svn
         @diff ||= Core::Diff.file_diff(@tempfile1.path, @tempfile2.path)
       end
 
-      def unified(label1, label2)
+      def unified(label1, label2, header_encoding=nil)
         if diff and diff.diff?
-          diff.unified(label1, label2)
+          diff.unified(label1, label2, header_encoding)
         else
           ""
         end
       end
-      
+
       private
-      def dump_contents(tempfile, root, path)
+      def dump_contents(open_tempfile, root, path)
         if root and path
-          begin
-            tempfile.open
-            root.file_contents(path) do |stream|
-              tempfile.print(stream.read)
-            end
-          ensure
-            tempfile.close
+          root.file_contents(path) do |stream|
+            open_tempfile.print(stream.read)
           end
         end
       end

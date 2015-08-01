@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "English"
 require "tempfile"
 require "svn/error"
@@ -19,19 +38,32 @@ module Svn
         print_modules("")
       end
     end
-    
+
     Session = SWIG::TYPE_p_svn_ra_session_t
 
     class Session
       class << self
-        def open(url, config={}, callbacks=nil)
-          Ra.open2(url, callbacks, config)
+        def open(url, config=nil, callbacks=nil)
+          pool = Core::Pool.new
+          session = Ra.open2(url, callbacks, config || Svn::Core::Config.get, pool)
+          session.instance_variable_set(:@pool, pool)
+          return session unless block_given?
+          begin
+            yield session
+          ensure
+            session.close
+          end
         end
+      end
+
+      def close
+        @pool.destroy
       end
 
       def latest_revnum
         Ra.get_latest_revnum(self)
       end
+      alias latest_revision latest_revnum
 
       def dated_revision(time)
         Ra.get_dated_revision(self, time.to_apr_time)
@@ -41,13 +73,21 @@ module Svn
         Ra.change_rev_prop(self, rev || latest_revnum, name, value)
       end
 
+      def []=(name, *args)
+        value = args.pop
+        set_prop(name, value, *args)
+        value
+      end
+
       def proplist(rev=nil)
         Ra.rev_proplist(self, rev || latest_revnum)
       end
+      alias properties proplist
 
       def prop(name, rev=nil)
         Ra.rev_prop(self, rev || latest_revnum, name)
       end
+      alias [] prop
 
       def commit_editor(log_msg, lock_tokens={}, keep_lock=false)
         callback = Proc.new do |new_revision, date, author|
@@ -96,9 +136,11 @@ module Svn
                 editor, depth, &block)
       end
 
-      def update2(revision_to_update_to, update_target, editor, depth=nil)
+      def update2(revision_to_update_to, update_target, editor, depth=nil,
+                  send_copyfrom_args=nil)
         reporter, reporter_baton = Ra.do_update2(self, revision_to_update_to,
-                                                 update_target, depth, editor)
+                                                 update_target, depth,
+                                                 send_copyfrom_args, editor)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
@@ -180,7 +222,7 @@ module Svn
       end
 
       def uuid
-        Ra.uuid(self)
+        Ra.get_uuid(self)
       end
 
       def repos_root
@@ -244,10 +286,11 @@ module Svn
         Ra.reparent(self, url)
       end
 
-      def merge_info(paths, revision=nil, inherit=nil)
+      def mergeinfo(paths, revision=nil, inherit=nil, include_descendants=false)
         paths = [paths] unless paths.is_a?(Array)
         revision ||= Svn::Core::INVALID_REVNUM
-        info = Ra.get_mergeinfo(self, paths, revision, inherit)
+        info = Ra.get_mergeinfo(self, paths, revision, inherit,
+                                include_descendants)
         unless info.nil?
           info.each_key do |key|
             info[key] = Core::MergeInfo.new(info[key])
@@ -255,7 +298,6 @@ module Svn
         end
         info
       end
-      alias_method :mergeinfo, :merge_info
 
       private
       def props_filter(props)
@@ -297,9 +339,10 @@ module Svn
 
     remove_const(:Callbacks)
     class Callbacks
-      attr_accessor :auth_baton
-      def initialize(auth_baton)
-        @auth_baton = auth_baton
+      include Core::Authenticatable
+
+      def initialize(auth_baton=nil)
+        self.auth_baton = auth_baton || Core::AuthBaton.new
       end
 
       def open_tmp_file

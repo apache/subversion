@@ -111,6 +111,21 @@ WHAT USERS SHOULD EXPECT FROM PATH-BASED AUTHZ
    This situation is quite annoying for people who can't read all the
    changed-paths.
 
+   Notice that for the purposes of gating read and write access to
+   revision properties, Subversion never considers the user's *write*
+   access to the changed-paths.  To understand the reason behind this,
+   it helps to understand why revprop access is gated at all.
+   Subversion assumes that revprops for a given revision -- especially
+   the log message (svn:log) property -- are likely to reveal paths
+   modified in that revision.  It is precisely because Subversion
+   tries not to reveal unreadable paths to users that revprop access
+   is limited as described above.  So as long as the user has the
+   requisite read access to the changed-paths, it's okay if he or she
+   lacks write access to one or more of those paths when attempting to
+   set or change revprops -- the information Subversion is trying to
+   protect through its revprop access control is considered safe to
+   reveal to that user.
+
 
 6. KNOWN LEAKAGE OF UNREADABLE PATHS
 

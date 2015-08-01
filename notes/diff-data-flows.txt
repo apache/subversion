@@ -1,0 +1,100 @@
+How Diffs are Generated in Subversion Client Libraries
+======================================================
+
+  This is an overview of how the Subversion client libraries calculate a
+  difference between two trees.  The two trees might be the working copy
+  and its base state, or two trees in the repository, or one tree in the
+  repository and one in the working copy.
+
+
+DATA FLOWS
+
+    "delta edit" => svn_delta_editor_t
+    "diff cb." => svn_wc_diff_callbacks4_t
+    "ra report" => svn_ra_reporter3_t
+    "summary cb." => svn_client_diff_summarize_func_t
+
+Merge (a repos-repos diff)
+
+    +-------------+           +---------------+           +----------+
+    | Diff two    |           | Convert delta |           | Merge    |
+    |  repo trees |           | edit to diff  |           | into WC  |
+    |             |           | callbacks     |           |          |
+    |             | --------> |               | --------> |          |
+    |             |  delta    |               |  diff     |          |
+    |             |  edit     |               |  cb.      |          |
+    +-------------+           +---------------+           +----------+
+    ra_do_diff3()             client_get_diff_ed.()       merge_callbacks
+    <virtual>                 cl/repos_diff.c             cl/merge.c
+
+Diff [--git] (repos-repos)
+
+    +-------------+           +---------------+           +----------+
+    | Diff two    |           | Convert delta |           | Print a  |
+    | repo trees  |           | edit to diff  |           | plain or |
+    |             |           | callbacks     |       [1] | git diff |
+    |             | --------> |               | --------> |          |
+    |             |  delta    |               |  diff     |          |
+    |             |  edit     |               |  cb.      |          |
+    +-------------+           +---------------+           +----------+
+    ra_do_diff3()             client_get_diff_ed.()       diff_callbacks
+    <virtual>                 cl/repos_diff.c             cl/diff.c
+
+    [1] See "diff --summarize" below for an alternative ending.
+
+Diff [--git] (wc-wc)
+
+    +-------------+                                       +----------+
+    | Diff two    |                                       | Print a  |
+    | WC trees    |                                       | plain or |
+    |             |                                   [1] | git diff |
+    |             | ------------------------------------> |          |
+    |             |                              diff     |          |
+    |             |                              cb.      |          |
+    +-------------+                                       +----------+
+    wc_diff6()                                            diff_callbacks
+    wc/diff_local.c                                       cl/diff.c
+
+    [1] See "diff --summarize" below for an alternative ending.
+
+Diff [--git] (repos-wc)
+
+    +----------+      +----------+      +----------+      +----------+
+    | Crawl WC |      | Diff repo|      | WC diff  |      | Print a  |
+    | and      |      | against  |      | editor   |      | plain or |
+    | report   |      | reported |      |          |  [2] | git diff |
+    |          | ---> |          | ---> |          | ---> |          |
+    |          | ra   |          | delta|          | diff |          |
+    |          | rept.|          | edit |          | cb.  |          |
+    +----------+      +----------+      +----------+      +----------+
+    wc_crawl_rev's5() ra_do_diff3()    wc_get_diff_ed.6() diff_callbacks
+    wc/diff_local.c   <virtual>        wc/diff_editor.c   cl/diff.c
+
+    [2] If diff --summarize were supported, this is where it would plug in.
+
+Diff --summarize (repos-repos or wc-wc)
+
+        - - -  ----+           +-----------+           +----------+
+        (Either of |           | Summarize |           | Print a  |
+        the flows  |           | the diff  |           | summary  |
+        marked [1] | [1]       |           |           |          |
+        above.)    | --------> |           | --------> |          |
+                   |  diff     |           |  summary  |          |
+                   |  cb.      |           |  cb.      |          |
+        - - -  ----+           +-----------+           +----------+
+                               cb_*()                  summarize_regular()
+                               cl/repos_diff_summ..c   svn/diff-cmd.c
+
+Diff --summarize --xml (repos-repos or wc-wc)
+
+        - - -  ----+           +-----------+           +----------+
+        (Either of |           | Summarize |           | Print an |
+        the flows  |           | the diff  |           | XML      |
+        marked [1] | [1]       |           |           | summary  |
+        above.)    | --------> |           | --------> |          |
+                   |  diff     |           |  summary  |          |
+                   |  cb.      |           |  cb.      |          |
+        - - -  ----+           +-----------+           +----------+
+                               cb_*()                  summarize_xml()
+                               cl/repos_diff_summ..c   svn/diff-cmd.c
+

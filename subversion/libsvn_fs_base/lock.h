@@ -1,17 +1,22 @@
 /* lock.h : internal interface to lock functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -28,37 +33,45 @@ extern "C" {
 
 
 /* These functions implement part of the FS loader library's fs
-   vtables.  See the public svn_fs.h for docstrings.*/
+   vtables. */
 
-svn_error_t *svn_fs_base__lock(svn_lock_t **lock,
-                               svn_fs_t *fs,
-                               const char *path,
-                               const char *token,
+/* See svn_fs_lock(), svn_fs_lock_many(). */
+svn_error_t *svn_fs_base__lock(svn_fs_t *fs,
+                               apr_hash_t *targets,
                                const char *comment,
                                svn_boolean_t is_dav_comment,
                                apr_time_t expiration_date,
-                               svn_revnum_t current_rev,
                                svn_boolean_t steal_lock,
-                               apr_pool_t *pool);
+                               svn_fs_lock_callback_t lock_callback,
+                               void *lock_baton,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
+/* See svn_fs_generate_lock_token(). */
 svn_error_t *svn_fs_base__generate_lock_token(const char **token,
                                               svn_fs_t *fs,
                                               apr_pool_t *pool);
 
+/* See svn_fs_unlock(), svn_fs_unlock_many(). */
 svn_error_t *svn_fs_base__unlock(svn_fs_t *fs,
-                                 const char *path,
-                                 const char *token,
+                                 apr_hash_t *targets,
                                  svn_boolean_t break_lock,
-                                 apr_pool_t *pool);
+                                 svn_fs_lock_callback_t lock_callback,
+                                 void *lock_baton,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
+/* See svn_fs_get_lock(). */
 svn_error_t *svn_fs_base__get_lock(svn_lock_t **lock,
                                    svn_fs_t *fs,
                                    const char *path,
                                    apr_pool_t *pool);
 
+/* See svn_fs_get_locks2(). */
 svn_error_t *
 svn_fs_base__get_locks(svn_fs_t *fs,
                        const char *path,
+                       svn_depth_t depth,
                        svn_fs_get_locks_callback_t get_locks_func,
                        void *get_locks_baton,
                        apr_pool_t *pool);
@@ -78,7 +91,7 @@ svn_fs_base__get_lock_helper(svn_lock_t **lock_p,
                              const char *path,
                              trail_t *trail,
                              apr_pool_t *pool);
-  
+
 
 /* Examine PATH for existing locks, and check whether they can be
    used.  Do all work in the context of TRAIL, using POOL for

@@ -1,0 +1,22 @@
+<div class="h3" id="news-[date]"> 
+<h3>[date_pres] &mdash; Apache Subversion [version] Released
+  <a class="sectionlink" href="#news-[date]"
+    title="Link to this section">&para;</a> 
+</h3> 
+ 
+<p>We are pleased to announce the release of Apache Subversion [version].  This
+   release is not intended for production use, but is provided as a milestone
+   to encourage wider testing and feedback from intrepid users and maintainers.
+   Please see the
+   <a href="">release
+   announcement</a> for more information about this release, and the
+   <a href="/docs/release-notes/[major-minor].html">release notes</a> and 
+   <a href="http://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES"> 
+   change log</a> for information about what will eventually be
+   in the [version_base] release.</p> 
+ 
+<p>To get this release from the nearest mirror, please visit our
+   <a href="/download/#[anchor]">download page</a>.</p> 
+ 
+</div> <!-- #news-[date] --> 
+

@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005,2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -35,7 +40,7 @@ public class Status implements java.io.Serializable
     // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
     // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
     // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /**
      * the url for accessing the item
@@ -98,6 +103,23 @@ public class Status implements java.io.Serializable
      * has the url of the item be switch
      */
     private boolean switched;
+
+    /**
+     * has the item is a file external
+     */
+    private boolean fileExternal;
+
+    /**
+     * @since 1.6
+     * is this item in a tree conflicted state
+     */
+    private boolean treeConflicted;
+
+    /**
+     * @since 1.6
+     * description of the tree conflict
+     */
+    private ConflictDescriptor conflictDescriptor;
 
     /**
      * the file or directory status of base (See StatusKind)
@@ -219,6 +241,8 @@ public class Status implements java.io.Serializable
      * @param locked                if the item is locked (running or aborted
      *                              operation)
      * @param copied                if the item is copy
+     * @param treeConflicted        if the item is part of a tree conflict
+     * @param conflictDescriptor    the description of the tree conflict
      * @param conflictOld           in case of conflict, the file name of the
      *                              the common base version
      * @param conflictNew           in case of conflict, the file name of new
@@ -230,6 +254,7 @@ public class Status implements java.io.Serializable
      *                              source
      * @param switched              flag if the node has been switched in the
      *                              path
+     * @param fileExternal          flag if the node is a file external
      * @param lockToken             the token for the current lock if any
      * @param lockOwner             the owner of the current lock is any
      * @param lockComment           the comment of the current lock if any
@@ -248,13 +273,15 @@ public class Status implements java.io.Serializable
                   long lastChangedRevision, long lastChangedDate,
                   String lastCommitAuthor, int textStatus, int propStatus,
                   int repositoryTextStatus, int repositoryPropStatus,
-                  boolean locked, boolean copied, String conflictOld,
+                  boolean locked, boolean copied, boolean treeConflicted,
+                  ConflictDescriptor conflictDescriptor, String conflictOld,
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
-                  boolean switched, String lockToken, String lockOwner,
-                  String lockComment, long lockCreationDate, Lock reposLock,
-                  long reposLastCmtRevision, long reposLastCmtDate,
-                  int reposKind, String reposLastCmtAuthor, String changelist)
+                  boolean switched, boolean fileExternal, String lockToken,
+                  String lockOwner, String lockComment, long lockCreationDate,
+                  Lock reposLock, long reposLastCmtRevision,
+                  long reposLastCmtDate, int reposKind,
+                  String reposLastCmtAuthor, String changelist)
     {
         this.path = path;
         this.url = url;
@@ -267,6 +294,8 @@ public class Status implements java.io.Serializable
         this.propStatus = propStatus;
         this.locked = locked;
         this.copied = copied;
+        this.treeConflicted = treeConflicted;
+        this.conflictDescriptor = conflictDescriptor;
         this.repositoryTextStatus = repositoryTextStatus;
         this.repositoryPropStatus = repositoryPropStatus;
         this.conflictOld = conflictOld;
@@ -275,6 +304,7 @@ public class Status implements java.io.Serializable
         this.urlCopiedFrom = urlCopiedFrom;
         this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
+        this.fileExternal = fileExternal;
         this.lockToken = lockToken;
         this.lockOwner = lockOwner;
         this.lockComment = lockComment;
@@ -285,6 +315,124 @@ public class Status implements java.io.Serializable
         this.reposKind = reposKind;
         this.reposLastCmtAuthor = reposLastCmtAuthor;
         this.changelist = changelist;
+    }
+
+    /** Create an empty status struct */
+    public Status(String path)
+    {
+        this(path, null, NodeKind.fromApache(null), Revision.SVN_INVALID_REVNUM,
+             Revision.SVN_INVALID_REVNUM, 0, null, fromAStatusKind(null),
+             fromAStatusKind(null), fromAStatusKind(null),
+             fromAStatusKind(null), false, false, false, null,
+             null, null, null, null, Revision.SVN_INVALID_REVNUM,
+             false, false, null, null, null, 0, null,
+             Revision.SVN_INVALID_REVNUM, 0, NodeKind.fromApache(null),
+             null, null);
+    }
+
+    private void
+    populateFromInfo(org.apache.subversion.javahl.SVNClient aClient,
+                     String path)
+        throws org.apache.subversion.javahl.ClientException
+    {
+        class MyInfoCallback
+                implements org.apache.subversion.javahl.callback.InfoCallback
+        {
+          org.apache.subversion.javahl.types.Info info;
+
+          public void singleInfo(org.apache.subversion.javahl.types.Info aInfo)
+          {
+            info = aInfo;
+          }
+
+          public org.apache.subversion.javahl.types.Info getInfo()
+          {
+            return info;
+          }
+        }
+
+        MyInfoCallback callback = new MyInfoCallback();
+
+        aClient.info2(path, null, null,
+                      org.apache.subversion.javahl.types.Depth.empty, null,
+                      callback);
+
+        org.apache.subversion.javahl.types.Info aInfo = callback.getInfo();
+        if (aInfo == null)
+            return;
+
+        if (aInfo.getConflicts() != null)
+            for (org.apache.subversion.javahl.ConflictDescriptor conflict
+                    : aInfo.getConflicts())
+            {
+               switch (conflict.getKind())
+               {
+                 case tree:
+                   this.treeConflicted = true;
+                   this.conflictDescriptor = new ConflictDescriptor(conflict);
+                   break;
+
+                 case text:
+                   this.conflictOld = conflict.getBasePath();
+                   this.conflictWorking = conflict.getMergedPath();
+                   this.conflictNew = conflict.getMyPath();
+                   break;
+
+                 case property:
+                   // Ignore
+                   break;
+               }
+            }
+
+        this.urlCopiedFrom = aInfo.getCopyFromUrl();
+        this.revisionCopiedFrom = aInfo.getCopyFromRev();
+    }
+
+    void
+    populateLocalLock(org.apache.subversion.javahl.types.Lock aLock)
+    {
+        if (aLock == null)
+            return;
+
+        this.lockToken = aLock.getToken();
+        this.lockOwner = aLock.getOwner();
+        this.lockComment = aLock.getComment();
+        this.lockCreationDate = aLock.getCreationDate().getTime() * 1000;;
+    }
+
+    /**
+     * A backward-compat wrapper.
+     */
+    public Status(org.apache.subversion.javahl.SVNClient aClient,
+                  org.apache.subversion.javahl.types.Status aStatus)
+    {
+        this(aStatus.getPath(), aStatus.getUrl(),
+             NodeKind.fromApache(aStatus.getNodeKind()),
+             aStatus.getRevisionNumber(),
+             aStatus.getLastChangedRevisionNumber(),
+             aStatus.getLastChangedDateMicros(), aStatus.getLastCommitAuthor(),
+             fromAStatusKind(aStatus.getTextStatus()),
+             fromAStatusKind(aStatus.getPropStatus()),
+             fromAStatusKind(aStatus.getRepositoryTextStatus()),
+             fromAStatusKind(aStatus.getRepositoryPropStatus()),
+             aStatus.isLocked(), aStatus.isCopied(), false,
+             null, null, null, null, null, Revision.SVN_INVALID_REVNUM,
+             aStatus.isSwitched(),
+             aStatus.isFileExternal(), null, null, null, 0,
+             aStatus.getReposLock() == null ? null
+                : new Lock(aStatus.getReposLock()),
+             aStatus.getReposLastCmtRevisionNumber(),
+             aStatus.getReposLastCmtDateMicros(),
+             NodeKind.fromApache(aStatus.getReposKind()),
+             aStatus.getReposLastCmtAuthor(), aStatus.getChangelist());
+
+        try {
+            populateFromInfo(aClient, aStatus.getPath());
+            if (aStatus.getLocalLock() != null)
+                populateLocalLock(aStatus.getLocalLock());
+        } catch (org.apache.subversion.javahl.ClientException ex) {
+            // Ignore
+        }
     }
 
     /**
@@ -526,6 +674,15 @@ public class Status implements java.io.Serializable
     }
 
     /**
+     * Returns if the item is a file external
+     * @return is the item is a file external
+     */
+    public boolean isFileExternal()
+    {
+        return fileExternal;
+    }
+
+    /**
      * Returns if is managed by svn (added, normal, modified ...)
      * @return if managed by svn
      */
@@ -713,7 +870,7 @@ public class Status implements java.io.Serializable
     {
         return reposLastCmtAuthor;
     }
-    
+
     /**
      * @return the changelist name
      * @since 1.5
@@ -721,6 +878,24 @@ public class Status implements java.io.Serializable
     public String getChangelist()
     {
         return changelist;
+    }
+
+    /**
+     * @return the tree conflicted state
+     * @since 1.6
+     */
+    public boolean hasTreeConflict()
+    {
+        return treeConflicted;
+    }
+
+    /**
+     * @return the conflict descriptor for the tree conflict
+     * @since 1.6
+     */
+    public ConflictDescriptor getConflictDescriptor()
+    {
+        return conflictDescriptor;
     }
 
     /**
@@ -780,5 +955,45 @@ public class Status implements java.io.Serializable
     private static Date microsecondsToDate(long micros)
     {
         return (micros == 0 ? null : new Date(micros / 1000));
+    }
+
+    private static int fromAStatusKind(
+                            org.apache.subversion.javahl.types.Status.Kind aKind)
+    {
+        if (aKind == null)
+            return StatusKind.none;
+
+        switch (aKind)
+        {
+            default:
+            case none:
+                return StatusKind.none;
+            case normal:
+                return StatusKind.normal;
+            case modified:
+                return StatusKind.modified;
+            case added:
+                return StatusKind.added;
+            case deleted:
+                return StatusKind.deleted;
+            case unversioned:
+                return StatusKind.unversioned;
+            case missing:
+                return StatusKind.missing;
+            case replaced:
+                return StatusKind.replaced;
+            case merged:
+                return StatusKind.merged;
+            case conflicted:
+                return StatusKind.conflicted;
+            case obstructed:
+                return StatusKind.obstructed;
+            case ignored:
+                return StatusKind.ignored;
+            case incomplete:
+                return StatusKind.incomplete;
+            case external:
+                return StatusKind.external;
+        }
     }
 }

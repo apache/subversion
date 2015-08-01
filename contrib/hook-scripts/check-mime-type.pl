@@ -28,10 +28,10 @@
 # Turn on warnings the best way depending on the Perl version.
 BEGIN {
   if ( $] >= 5.006_000)
-    { require warnings; import warnings; }                      
-  else  
-    { $^W = 1; }               
-}           
+    { require warnings; import warnings; }
+  else
+    { $^W = 1; }
+}
 
 use strict;
 use Carp;
@@ -112,15 +112,15 @@ foreach my $line (&read_from_process($svnlook, 'changed', $repos, '-t', $txn))
   }
 
 my @errors;
-foreach my $path ( @files_added ) 
+foreach my $path ( @files_added )
 	{
 		my $mime_type;
 		my $eol_style;
 
 		# Parse the complete list of property values of the file $path to extract
 		# the mime-type and eol-style
-		foreach my $prop (&read_from_process($svnlook, 'proplist', $repos, '-t', 
-		                  $txn, '--verbose', $path))
+		foreach my $prop (&read_from_process($svnlook, 'proplist', $repos, '-t',
+		                  $txn, '--verbose', '--', $path))
 			{
 				if ($prop =~ /^\s*svn:mime-type : (\S+)/)
 					{
@@ -154,14 +154,14 @@ if (@errors)
 
     Every added file must have the svn:mime-type property set. In
     addition text files must have the svn:eol-style property set.
-    
+
     For binary files try running
     svn propset svn:mime-type application/octet-stream path/of/file
-    
+
     For text files try
     svn propset svn:mime-type text/plain path/of/file
     svn propset svn:eol-style native path/of/file
-    
+
     You may want to consider uncommenting the auto-props section
     in your ~/.subversion/config file. Read the Subversion book
     (http://svnbook.red-bean.com/), Chapter 7, Properties section,
@@ -187,7 +187,7 @@ sub safe_read_from_pipe
       croak "$0: safe_read_from_pipe passed no arguments.\n";
     }
   print "Running @_\n";
-  my $pid = open(SAFE_READ, '-|');
+  my $pid = open(SAFE_READ, '-|', @_);
   unless (defined $pid)
     {
       die "$0: cannot fork: $!\n";

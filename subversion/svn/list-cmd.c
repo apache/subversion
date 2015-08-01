@@ -2,25 +2,24 @@
  * list-cmd.c -- list a URL
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
-
-/* ==================================================================== */
-
-
-
-/*** Includes. ***/
 
 #include "svn_cmdline.h"
 #include "svn_client.h"
@@ -28,20 +27,35 @@
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_xml.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_utf.h"
+#include "svn_opt.h"
+
 #include "cl.h"
 
 #include "svn_private_config.h"
+
 
-/*** Code. ***/
 
 /* Baton used when printing directory entries. */
 struct print_baton {
   svn_boolean_t verbose;
   svn_client_ctx_t *ctx;
+
+  /* To keep track of last seen external information. */
+  const char *last_external_parent_url;
+  const char *last_external_target;
+  svn_boolean_t in_external;
 };
 
-/* This implements the svn_client_list_func_t API, printing a single
+/* Field flags required for this function */
+static const apr_uint32_t print_dirent_fields = SVN_DIRENT_KIND;
+static const apr_uint32_t print_dirent_fields_verbose = (
+    SVN_DIRENT_KIND  | SVN_DIRENT_SIZE | SVN_DIRENT_TIME |
+    SVN_DIRENT_CREATED_REV | SVN_DIRENT_LAST_AUTHOR);
+
+/* This implements the svn_client_list_func2_t API, printing a single
    directory entry in text format. */
 static svn_error_t *
 print_dirent(void *baton,
@@ -49,18 +63,30 @@ print_dirent(void *baton,
              const svn_dirent_t *dirent,
              const svn_lock_t *lock,
              const char *abs_path,
-             apr_pool_t *pool)
+             const char *external_parent_url,
+             const char *external_target,
+             apr_pool_t *scratch_pool)
 {
   struct print_baton *pb = baton;
   const char *entryname;
+  static const char *time_format_long = NULL;
+  static const char *time_format_short = NULL;
+
+  SVN_ERR_ASSERT((external_parent_url == NULL && external_target == NULL) ||
+                 (external_parent_url && external_target));
+
+  if (time_format_long == NULL)
+    time_format_long = _("%b %d %H:%M");
+  if (time_format_short == NULL)
+    time_format_short = _("%b %d  %Y");
 
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
-     
+
   if (strcmp(path, "") == 0)
     {
       if (dirent->kind == svn_node_file)
-        entryname = svn_path_basename(abs_path, pool);
+        entryname = svn_dirent_basename(abs_path, scratch_pool);
       else if (pb->verbose)
         entryname = ".";
       else
@@ -69,6 +95,24 @@ print_dirent(void *baton,
     }
   else
     entryname = path;
+
+  if (external_parent_url && external_target)
+    {
+      if ((pb->last_external_parent_url == NULL
+           && pb->last_external_target == NULL)
+          || (strcmp(pb->last_external_parent_url, external_parent_url) != 0
+              || strcmp(pb->last_external_target, external_target) != 0))
+        {
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                     _("Listing external '%s'"
+                                       " defined on '%s':\n"),
+                                     external_target,
+                                     external_parent_url));
+
+          pb->last_external_parent_url = external_parent_url;
+          pb->last_external_target = external_target;
+        }
+    }
 
   if (pb->verbose)
     {
@@ -87,12 +131,12 @@ print_dirent(void *baton,
           && apr_time_sec(dirent->time - now) < (365 * 86400 / 2))
         {
           apr_err = apr_strftime(timestr, &size, sizeof(timestr),
-                                 "%b %d %H:%M", &exp_time);
+                                 time_format_long, &exp_time);
         }
       else
         {
           apr_err = apr_strftime(timestr, &size, sizeof(timestr),
-                                 "%b %d  %Y", &exp_time);
+                                 time_format_short, &exp_time);
         }
 
       /* if that failed, just zero out the string and print nothing */
@@ -100,32 +144,34 @@ print_dirent(void *baton,
         timestr[0] = '\0';
 
       /* we need it in UTF-8. */
-      SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, timestr, pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, timestr, scratch_pool));
 
-      sizestr = apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, dirent->size);
+      sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT,
+                             dirent->size);
 
-      SVN_ERR(svn_cmdline_printf
-              (pool, "%7ld %-8.8s %c %10s %12s %s%s\n",
+      return svn_cmdline_printf
+              (scratch_pool, "%7ld %-8.8s %c %10s %12s %s%s\n",
                dirent->created_rev,
                dirent->last_author ? dirent->last_author : " ? ",
                lock ? 'O' : ' ',
                (dirent->kind == svn_node_file) ? sizestr : "",
                utf8_timestr,
                entryname,
-               (dirent->kind == svn_node_dir) ? "/" : ""));
+               (dirent->kind == svn_node_dir) ? "/" : "");
     }
   else
     {
-      SVN_ERR(svn_cmdline_printf(pool, "%s%s\n", entryname,
-                                 (dirent->kind == svn_node_dir)
-                                 ? "/" : ""));
+      return svn_cmdline_printf(scratch_pool, "%s%s\n", entryname,
+                                (dirent->kind == svn_node_dir)
+                                ? "/" : "");
     }
-
-  return SVN_NO_ERROR;
 }
 
-
-/* This implements the svn_client_list_func_t API, printing a single dirent
+/* Field flags required for this function */
+static const apr_uint32_t print_dirent_xml_fields = (
+    SVN_DIRENT_KIND  | SVN_DIRENT_SIZE | SVN_DIRENT_TIME |
+    SVN_DIRENT_CREATED_REV | SVN_DIRENT_LAST_AUTHOR);
+/* This implements the svn_client_list_func2_t API, printing a single dirent
    in XML format. */
 static svn_error_t *
 print_dirent_xml(void *baton,
@@ -133,18 +179,21 @@ print_dirent_xml(void *baton,
                  const svn_dirent_t *dirent,
                  const svn_lock_t *lock,
                  const char *abs_path,
-                 apr_pool_t *pool)
+                 const char *external_parent_url,
+                 const char *external_target,
+                 apr_pool_t *scratch_pool)
 {
   struct print_baton *pb = baton;
   const char *entryname;
-  svn_stringbuf_t *sb;
+  svn_stringbuf_t *sb = svn_stringbuf_create_empty(scratch_pool);
+
+  SVN_ERR_ASSERT((external_parent_url == NULL && external_target == NULL) ||
+                 (external_parent_url && external_target));
 
   if (strcmp(path, "") == 0)
     {
       if (dirent->kind == svn_node_file)
-        entryname = svn_path_basename(abs_path, pool);
-      else if (pb->verbose)
-        entryname = ".";
+        entryname = svn_dirent_basename(abs_path, scratch_pool);
       else
         /* Don't bother to list if no useful information will be shown. */
         return SVN_NO_ERROR;
@@ -154,53 +203,76 @@ print_dirent_xml(void *baton,
 
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
-     
-  sb = svn_stringbuf_create("", pool);
 
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "kind", svn_cl__node_kind_str(dirent->kind),
-                        NULL);
+  if (external_parent_url && external_target)
+    {
+      if ((pb->last_external_parent_url == NULL
+           && pb->last_external_target == NULL)
+          || (strcmp(pb->last_external_parent_url, external_parent_url) != 0
+              || strcmp(pb->last_external_target, external_target) != 0))
+        {
+          if (pb->in_external)
+            {
+              /* The external item being listed is different from the previous
+                 one, so close the tag. */
+              svn_xml_make_close_tag(&sb, scratch_pool, "external");
+              pb->in_external = FALSE;
+            }
 
-  svn_cl__xml_tagged_cdata(&sb, pool, "name", entryname);
+          svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "external",
+                                "parent_url", external_parent_url,
+                                "target", external_target,
+                                SVN_VA_NULL);
+
+          pb->last_external_parent_url = external_parent_url;
+          pb->last_external_target = external_target;
+          pb->in_external = TRUE;
+        }
+    }
+
+  svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "entry",
+                        "kind", svn_cl__node_kind_str_xml(dirent->kind),
+                        SVN_VA_NULL);
+
+  svn_cl__xml_tagged_cdata(&sb, scratch_pool, "name", entryname);
 
   if (dirent->kind == svn_node_file)
     {
       svn_cl__xml_tagged_cdata
-        (&sb, pool, "size",
-         apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, dirent->size));
+        (&sb, scratch_pool, "size",
+         apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT, dirent->size));
     }
 
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "commit",
+  svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "commit",
                         "revision",
-                        apr_psprintf(pool, "%ld", dirent->created_rev),
-                        NULL);
-  svn_cl__xml_tagged_cdata(&sb, pool, "author", dirent->last_author);
+                        apr_psprintf(scratch_pool, "%ld", dirent->created_rev),
+                        SVN_VA_NULL);
+  svn_cl__xml_tagged_cdata(&sb, scratch_pool, "author", dirent->last_author);
   if (dirent->time)
-    svn_cl__xml_tagged_cdata(&sb, pool, "date",
-                             svn_time_to_cstring(dirent->time, pool));
-  svn_xml_make_close_tag(&sb, pool, "commit");
+    svn_cl__xml_tagged_cdata(&sb, scratch_pool, "date",
+                             svn_time_to_cstring(dirent->time, scratch_pool));
+  svn_xml_make_close_tag(&sb, scratch_pool, "commit");
 
   if (lock)
     {
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lock", NULL);
-      svn_cl__xml_tagged_cdata(&sb, pool, "token", lock->token);
-      svn_cl__xml_tagged_cdata(&sb, pool, "owner", lock->owner);
-      svn_cl__xml_tagged_cdata(&sb, pool, "comment", lock->comment);
-      svn_cl__xml_tagged_cdata(&sb, pool, "created",
+      svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "lock",
+                            SVN_VA_NULL);
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "token", lock->token);
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "owner", lock->owner);
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "comment", lock->comment);
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "created",
                                svn_time_to_cstring(lock->creation_date,
-                                                   pool));
+                                                   scratch_pool));
       if (lock->expiration_date != 0)
-        svn_cl__xml_tagged_cdata(&sb, pool, "expires",
+        svn_cl__xml_tagged_cdata(&sb, scratch_pool, "expires",
                                  svn_time_to_cstring
-                                 (lock->expiration_date, pool));
-      svn_xml_make_close_tag(&sb, pool, "lock");
+                                 (lock->expiration_date, scratch_pool));
+      svn_xml_make_close_tag(&sb, scratch_pool, "lock");
     }
 
-  svn_xml_make_close_tag(&sb, pool, "entry");
+  svn_xml_make_close_tag(&sb, scratch_pool, "entry");
 
-  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 
@@ -214,12 +286,17 @@ svn_cl__list(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   int i;
-  apr_pool_t *subpool = svn_pool_create(pool); 
+  apr_pool_t *subpool = svn_pool_create(pool);
   apr_uint32_t dirent_fields;
   struct print_baton pb;
+  svn_boolean_t seen_nonexistent_target = FALSE;
+  svn_error_t *err;
+  svn_error_t *externals_err = SVN_NO_ERROR;
+  struct svn_cl__check_externals_failed_notify_baton nwb;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, FALSE, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -246,16 +323,27 @@ svn_cl__list(apr_getopt_t *os,
                                   "mode"));
     }
 
-  if (opt_state->verbose || opt_state->xml)
-    dirent_fields = SVN_DIRENT_ALL;
+  if (opt_state->xml)
+    dirent_fields = print_dirent_xml_fields;
+  else if (opt_state->verbose)
+    dirent_fields = print_dirent_fields_verbose;
   else
-    dirent_fields = SVN_DIRENT_KIND; /* the only thing we actually need... */
+    dirent_fields = print_dirent_fields;
 
   pb.ctx = ctx;
   pb.verbose = opt_state->verbose;
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_immediates;
+
+  if (opt_state->include_externals)
+    {
+      nwb.wrapped_func = ctx->notify_func2;
+      nwb.wrapped_baton = ctx->notify_baton2;
+      nwb.had_externals_error = FALSE;
+      ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
+      ctx->notify_baton2 = &nwb;
+    }
 
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)
@@ -264,8 +352,14 @@ svn_cl__list(apr_getopt_t *os,
       const char *truepath;
       svn_opt_revision_t peg_revision;
 
+      /* Initialize the following variables for
+         every list target. */
+      pb.last_external_parent_url = NULL;
+      pb.last_external_target = NULL;
+      pb.in_external = FALSE;
+
       svn_pool_clear(subpool);
-     
+
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       /* Get peg revisions. */
@@ -274,33 +368,71 @@ svn_cl__list(apr_getopt_t *os,
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
           svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "list",
                                 "path", truepath[0] == '\0' ? "." : truepath,
-                                NULL);
+                                SVN_VA_NULL);
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
 
-      SVN_ERR(svn_client_list2(truepath, &peg_revision,
-                               &(opt_state->start_revision),
-                               opt_state->depth,
-                               dirent_fields,
-                               (opt_state->xml || opt_state->verbose),
-                               opt_state->xml ? print_dirent_xml : print_dirent,
-                               &pb, ctx, subpool));
+      err = svn_client_list3(truepath, &peg_revision,
+                             &(opt_state->start_revision),
+                             opt_state->depth,
+                             dirent_fields,
+                             (opt_state->xml || opt_state->verbose),
+                             opt_state->include_externals,
+                             opt_state->xml ? print_dirent_xml : print_dirent,
+                             &pb, ctx, subpool);
+
+      if (err)
+        {
+          /* If one of the targets is a non-existent URL or wc-entry,
+             don't bail out.  Just warn and move on to the next target. */
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+              err->apr_err == SVN_ERR_FS_NOT_FOUND)
+              svn_handle_warning2(stderr, err, "svn: ");
+          else
+              return svn_error_trace(err);
+
+          svn_error_clear(err);
+          err = NULL;
+          seen_nonexistent_target = TRUE;
+        }
 
       if (opt_state->xml)
         {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+          svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
+
+          if (pb.in_external)
+            {
+              /* close the final external item's tag */
+              svn_xml_make_close_tag(&sb, pool, "external");
+              pb.in_external = FALSE;
+            }
+
           svn_xml_make_close_tag(&sb, pool, "list");
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
     }
 
   svn_pool_destroy(subpool);
-  
+
+  if (opt_state->include_externals && nwb.had_externals_error)
+    {
+      externals_err = svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
+                                       NULL,
+                                       _("Failure occurred processing one or "
+                                         "more externals definitions"));
+    }
+
   if (opt_state->xml && ! opt_state->incremental)
     SVN_ERR(svn_cl__xml_print_footer("lists", pool));
 
-  return SVN_NO_ERROR;
+  if (seen_nonexistent_target)
+    err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+          _("Could not list all targets because some targets don't exist"));
+  else
+    err = NULL;
+
+  return svn_error_compose_create(externals_err, err);
 }

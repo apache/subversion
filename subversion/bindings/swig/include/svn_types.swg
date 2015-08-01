@@ -1,16 +1,21 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  *
  * svn_types.swg: This is the main file of the Subversion typemap
@@ -27,7 +32,7 @@
 /* -----------------------------------------------------------------------
    Generic handling for "type **" parameters.  Almost all such parameters
    are OUTPUT parameters.  Handling is as follows:
-   - "in" typemap which allocates storage for a pointer, and points the 
+   - "in" typemap which allocates storage for a pointer, and points the
      argument to that storage.
    - Default "argout" typemap which complains at compile time, and raises
      an exception at runtime.
@@ -67,8 +72,8 @@
 
 #ifdef SWIGPYTHON
 %typemap(argout) SWIGTYPE **OUTPARAM {
-  %append_output(svn_swig_NewPointerObj(*$1, $*1_descriptor,
-                                        _global_py_pool, args));
+  %append_output(svn_swig_py_new_pointer_obj(*$1, $*1_descriptor,
+                                             _global_py_pool, args));
 }
 #else
 %typemap(argout) SWIGTYPE **OUTPARAM {
@@ -97,6 +102,8 @@
   svn_auth_provider_object_t **,
   svn_config_t **,
   svn_diff_t **,
+  svn_patch_file_t **,
+  svn_patch_t **,
   void **credentials,
   void **iter_baton,
   void **token,
@@ -140,7 +147,8 @@
   /* svn_repos */
   svn_authz_t **,
   svn_repos_t **,
-  const svn_repos_parse_fns2_t **,
+  const svn_repos_parse_fns3_t **,
+  const svn_repos_parser_fns2_t **,
   const svn_repos_parser_fns_t **,
   void **parse_baton,
   void **revision_baton,
@@ -152,6 +160,11 @@
   svn_wc_revision_status_t **,
   svn_wc_status_t **,
   svn_wc_status2_t **,
+  svn_wc_committed_queue_t **,
+#ifdef SWIGRUBY
+  /* Only tested for Ruby */
+  svn_wc_context_t **,
+#endif
   void **set_locks_baton
 };
 
@@ -265,7 +278,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %define %callback_typemap(CallbackFunction, CallbackBaton,
                           PythonThunk, PerlThunk, RubyThunk, MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
-  $1 = PythonThunk;
+  $1 = ($1_ltype) PythonThunk;
   $2 = $input;
 }
 %enddef
@@ -273,7 +286,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
                                     PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   /* FIXME: Handle the NULL case. */
-  $1 = PythonThunk;
+  $1 = ($1_ltype) PythonThunk;
   $2 = $input;
 }
 %enddef
@@ -283,7 +296,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %define %callback_typemap(CallbackFunction, CallbackBaton,
                           PythonThunk, PerlThunk, RubyThunk ,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
-  $1 = PerlThunk;
+  $1 = ($1_ltype) PerlThunk;
   $2 = $input;
 }
 %enddef
@@ -291,10 +304,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
                                     PythonThunk, PerlThunk, RubyThunk ,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   if (SvOK($input)) {
-    $1 = PerlThunk;
+    $1 = ($1_ltype) PerlThunk;
     $2 = $input;
   } else {
-    $1 = NULL;
+    $1 = ($1_ltype) NULL;
     $2 = NULL;
   }
 }
@@ -305,7 +318,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %define %callback_typemap(CallbackFunction, CallbackBaton,
                           PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
-  $1 = RubyThunk;
+  $1 = ($1_ltype) RubyThunk;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 %enddef
@@ -313,10 +326,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
                                     PythonThunk, PerlThunk, RubyThunk,  MzSchemeThunk , GuileSchemeThunk, ChickenSchemeThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   if (NIL_P($input)) {
-    $1 = NULL;
+    $1 = ($1_ltype) NULL;
     $2 = NULL;
   } else {
-    $1 = RubyThunk;
+    $1 = ($1_ltype) RubyThunk;
     $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
   }
 }
@@ -507,9 +520,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
         if (SvOK(exception_handler)) {
             SV *callback_result;
 
+            PUTBACK;
             svn_swig_pl_callback_thunk (CALL_SV, exception_handler,
                                         &callback_result, "S", $1,
                                         $1_descriptor);
+            SPAGAIN;
         } else {
             $result = SWIG_NewPointerObj($1, $1_descriptor, 0);
             argvi++;
@@ -573,7 +588,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     rb_raise(rb_eArgError, "Expecting a string");
   }
   $1 = StringValuePtr($input);
-  $2 = RSTRING(StringValue($input))->len;
+  $2 = RSTRING_LEN(StringValue($input));
 }
 #endif
 
@@ -601,15 +616,15 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 %typemap(in) POINTER_TYPES
 {
-  $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum);
+  $1 = ($1_ltype)svn_swig_py_must_get_ptr($input, $descriptor, $svn_argnum);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
 }
 
 %typemap(out) POINTER_TYPES
-    "$result = svn_swig_NewPointerObj((void*)($1), $descriptor,
-                                      _global_py_pool, args);";
+    "$result = svn_swig_py_new_pointer_obj((void*)($1), $descriptor,
+                                           _global_py_pool, args);";
 
 %apply POINTER_TYPES { void *, SWIGTYPE *, SWIGTYPE [] };
 
@@ -640,6 +655,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %typemap(in) apr_pool_t *pool "";
 %typemap(default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
+    SPAGAIN;
 }
 #endif
 #ifdef SWIGRUBY
@@ -666,10 +682,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   svn_swig_rb_push_pool(_global_svn_swig_rb_pool);
 }
 
-%typemap(argout) apr_pool_t *pool
+%typemap(freearg) apr_pool_t *pool
 {
   VALUE target;
-  target = _global_vresult_address == &$result ? self : $result;
+  target = _global_vresult_address == &vresult ? self : vresult;
   if (!svn_swig_rb_set_pool(target, _global_svn_swig_rb_pool))
     svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
   svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
@@ -680,7 +696,9 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply apr_pool_t *pool {
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
-    apr_pool_t *node_pool
+    apr_pool_t *node_pool,
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool
 };
 #endif
 
@@ -688,7 +706,9 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply apr_pool_t *pool {
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
-    apr_pool_t *node_pool
+    apr_pool_t *node_pool,
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool
 };
 #endif
 
@@ -724,8 +744,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
  */
 
 %typemap(argout) CALLABLE_CALLBACK * {
-  %append_output(svn_swig_NewPointerObj($1, $descriptor,
-                                        _global_py_pool, args));
+  %append_output(svn_swig_py_new_pointer_obj($1, $descriptor,
+                                             _global_py_pool, args));
 }
 
 /* Convert the pointer to a function pointer back into a regular
@@ -734,7 +754,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 %typemap(in) CALLABLE_CALLBACK {
   $&ltype tmp =
-    svn_swig_MustGetPtr($input, $&descriptor, $svn_argnum);
+    svn_swig_py_must_get_ptr($input, $&descriptor, $svn_argnum);
   if (tmp == NULL || PyErr_Occurred()) {
     SWIG_fail;
   }
@@ -764,8 +784,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
       SWIG_fail;
     }
     *tmp = ($ltype) $1;
-    $result = svn_swig_NewPointerObj(tmp, $&1_descriptor,
-                                     py_pool, args);
+    $result = svn_swig_py_new_pointer_obj(tmp, $&1_descriptor,
+                                          py_pool, args);
   }
 }
 
@@ -783,7 +803,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   *tmp = ($ltype) $value;
 
   %set_constant("$symname",
-    svn_swig_NewPointerObj(tmp, $&descriptor, NULL, NULL)
+    svn_swig_py_new_pointer_obj(tmp, $&descriptor, NULL, NULL)
   );
 
 }
@@ -797,28 +817,22 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    svn_repos_get_logs()
 */
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_log_message_receiver_t receiver,
-                      void *receiver_baton) {
-    $1 = svn_swig_py_log_receiver;
-    $2 = (void *)$input;
-}
-#endif
-#ifdef SWIGPERL
-%typemap(in) (svn_log_message_receiver_t receiver,
-                     void *receiver_baton) {
-    $1 = svn_swig_pl_thunk_log_receiver;
-    $2 = (void *)$input;
-}
-#endif
+%callback_typemap(svn_log_message_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_log_receiver,
+                  svn_swig_pl_thunk_log_receiver,
+                  svn_swig_rb_log_receiver)
 
-#ifdef SWIGRUBY
-%typemap(in) (svn_log_message_receiver_t receiver,
-                    void *receiver_baton) {
-    $1 = svn_swig_rb_log_receiver;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+/* -----------------------------------------------------------------------
+   Callback: svn_log_entry_receiver_t
+   svn_client_log4()
+   svn_ra_get_log2()
+   svn_repos_get_logs4()
+*/
+
+%callback_typemap(svn_log_entry_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_log_entry_receiver,
+                  svn_swig_pl_thunk_log_entry_receiver,
+                  svn_swig_rb_log_entry_receiver)
 
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback_t
@@ -859,23 +873,38 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    Callback: svn_commit_callback2_t
    svn_ra get_commit_editor2()
    svn_repos_get_commit_editor4()
+   svn_client_mkdir4() 
+   svn_client_delete4() 
+   svn_client_import4() 
+   svn_client_commit5() 
+   svn_client_copy6() 
+   svn_client_move6() 
+   svn_client_propset_remote() 
 */
 
+#ifdef SWIGPERL
+%typemap(in) (svn_commit_callback2_t commit_callback, void *commit_baton) {
+    $1 = svn_swig_pl_thunk_commit_callback2;
+    $2 = (void *)$input;
+    svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
+};
+#endif
+
 #ifdef SWIGRUBY
-%typemap(in) (svn_commit_callback2_t callback, void *callback_baton)
+%typemap(in) (svn_commit_callback2_t commit_callback, void *commit_baton)
 {
   $1 = svn_swig_rb_commit_callback2;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
-%typemap(argout) (svn_commit_callback2_t callback, void *callback_baton)
+%typemap(argout) (svn_commit_callback2_t commit_callback, void *commit_baton)
 {
   svn_swig_rb_set_baton($result, (VALUE)$2);
 };
 #endif
 
 #ifdef SWIGPYTHON
-%typemap(in) (svn_commit_callback2_t callback, void *callback_baton)
+%typemap(in) (svn_commit_callback2_t commit_callback, void *commit_baton)
 {
   $1 = svn_swig_py_commit_callback2;
   $2 = (void *)$input;
@@ -886,20 +915,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    Callback: svn_cancel_func_t
 */
 
-#ifdef SWIGPYTHON
-%typemap(in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
-  $1 = svn_swig_py_cancel_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
+%callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
+                  svn_swig_py_cancel_func,
+                  svn_swig_pl_cancel_func,
+                  svn_swig_rb_cancel_func)
 
 #ifdef SWIGRUBY
-%typemap(in) (svn_cancel_func_t cancel_func, void *cancel_baton)
-{
-  $1 = svn_swig_rb_cancel_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-
 %typemap(argout) (svn_cancel_func_t cancel_func, void *cancel_baton)
 {
   svn_swig_rb_set_baton($result, (VALUE)$2);
@@ -914,6 +935,23 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 
 %typemap(argout) (svn_wc_conflict_resolver_func_t conflict_func, void *conflict_baton)
+{
+  svn_swig_rb_set_baton($result, (VALUE)$2);
+};
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) (svn_wc_get_file_t fetch_func, void *fetch_baton)
+{
+  /* ### TODO(rb support fetch_fun): implement
+  $1 = svn_swig_rb_fetch_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  */
+  $1 = NULL;
+  $2 = NULL;
+}
+
+%typemap(argout) (svn_wc_get_file_t fetch_func, void *fetch_baton)
 {
   svn_swig_rb_set_baton($result, (VALUE)$2);
 };
@@ -940,6 +978,39 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 /* -----------------------------------------------------------------------
+   Callback: svn_repos_freeze_func_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_repos_freeze_func_t freeze_func, void *freeze_baton)
+{
+  $1 = svn_swig_py_repos_freeze_func;
+  $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Callback: svn_fs_freeze_func_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_fs_freeze_func_t freeze_func, void *freeze_baton)
+{
+  $1 = svn_swig_py_fs_freeze_func;
+  $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Callback: svn_proplist_receiver2_t
+*/
+#ifdef SWIGPYTHON
+%typemap(in) (svn_proplist_receiver2_t receiver, void *receiver_baton)
+{
+  $1 = svn_swig_py_proplist_receiver2;
+  $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Callback: svn_fs_warning_callback_t
 */
 
@@ -951,6 +1022,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   $1 = svn_swig_rb_fs_warning_callback;
   $2 = (void *)baton;
 }
+#endif
+#ifdef SWIGPERL
+%ignore svn_fs_set_warning_func;
+#endif
+#ifdef SWIGPYTHON
+%ignore svn_fs_set_warning_func;
 #endif
 
 /* -----------------------------------------------------------------------
@@ -966,15 +1043,24 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPERL
 %typemap(in) svn_stream_t * {
     svn_swig_pl_make_stream (&$1, $input);
+    SPAGAIN;
 }
 
 %typemap(out) svn_stream_t * {
-    $result = svn_swig_pl_from_stream ($1);
+    SV* tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_stream ($1);
+    SPAGAIN;
+    $result = tmp;
     argvi++;
 }
 
 %typemap(argout) svn_stream_t ** {
-  %append_output(svn_swig_pl_from_stream(*$1));
+    SV *tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_stream(*$1);
+    SPAGAIN;
+    %append_output(tmp);
 }
 #endif
 
@@ -1027,8 +1113,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
       /* We don't know the type of this reference, so we'll have to
        * treat it as an opaque void pointer.
        */
-      $result = svn_swig_NewPointerObj($1, $descriptor,
-        _global_py_pool, args);
+      $result = svn_swig_py_new_pointer_obj($1, $descriptor,
+                                            _global_py_pool, args);
     }
   }
 
@@ -1052,7 +1138,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
      Output parameter in: svn_fs_file_md5_checksum(), svn_io_file_checksum(),
                           svn_wc_transmit_text_deltas2()
-     
+
      *but* appears as an input parameter in svn_base64_from_md5() -
      practically, this means that svn_base64_from_md5 is in error, and
      should be using 'const unsigned char digest[]', but fortunately, we
@@ -1070,7 +1156,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
      These are *delayed* output parameters in svn_stream_checksummed().
      Would be quite complex to wrap, so this function is %ignore-d in the
      svn_io.h cherrypicking section.
-     
+
    'unsigned char *result_digest'
      This parameter serves as a buffer for the digest results of
      svn_txdelta_apply. As you supply data to this function via
@@ -1080,7 +1166,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
     FIXME: Both Ruby and Perl have broken typemaps for result_digest.
     The Python bindings ignore this parameter altogether.
-   
+
    Function Parameters (Category 3):
 
    'const unsigned char digest[]' (also, 'd1', 'd2'):
@@ -1124,11 +1210,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 %apply unsigned char digest[ANY] { unsigned char *digest };
 
 #ifdef SWIGRUBY
-/* FIXME: This typemap doesn't work, because svn_txdelta_apply saves
- *        away this local pointer to be used later. When the pointer
- *        is finally used, we get memory corruption / segfaults.
+/*
+ * Skip the md5sum
+ * FIXME: Wrap the md5sum
  */
-%apply unsigned char digest[ANY] { unsigned char *result_digest };
+%typemap(in, numinputs=0) unsigned char *result_digest
+  "$1 = NULL;";
 #endif
 
 #ifdef SWIGPYTHON
@@ -1146,11 +1233,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 
 %typemap(argout) unsigned char *result_digest {
-  /* FIXME: This code is clearly buggy. The return value of sv_newmortal()
-     is immediately overwritten by the return value
-     of svn_swig_pl_from_md5(). */
-    ST(argvi) = sv_newmortal();
-    ST(argvi++) = svn_swig_pl_from_md5($1);
+    SV *tmp;
+    PUTBACK;
+    tmp = svn_swig_pl_from_md5($1);
+    SPAGAIN;
+    %append_output(tmp);
 }
 #endif
 
@@ -1169,14 +1256,26 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 #endif
 
+#ifdef SWIGPYTHON
+/* ### Verify if this should use '[]' like perl and ruby */
+%typemap(in) const unsigned char *digest {
+    if ($input == Py_None) {
+        $1 = NULL;
+    } else {
+        $1 = (unsigned char *) PyString_AsString($input);
+        if ($1 == NULL) SWIG_fail;
+    }
+}
+#endif
+
 #ifdef SWIGRUBY
-%typemap(in) const unsigned char *digest
+%typemap(in) const unsigned char digest[]
 {
   if (NIL_P($input)) {
     $1 = NULL;
-  } else if (RSTRING($input)->len != APR_MD5_DIGESTSIZE) {
+  } else if (RSTRING_LEN($input) != APR_MD5_DIGESTSIZE) {
     rb_raise(rb_eArgError, "digest size (%d) must be %d",
-             RSTRING($input)->len, APR_MD5_DIGESTSIZE);
+             RSTRING_LEN($input), APR_MD5_DIGESTSIZE);
   } else {
     $1 = ($1_ltype)StringValuePtr($input);
   }
@@ -1190,54 +1289,14 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   useful convertors for svn_opt_revision_t
 */
 #ifdef SWIGPERL
-%typemap(in) svn_opt_revision_t * (svn_opt_revision_t rev) {
-    $1 = &rev;
-    if ($input == NULL || $input == &PL_sv_undef || !SvOK($input)) {
-        rev.kind = svn_opt_revision_unspecified;
-    }
-    else if (sv_isobject($input) && sv_derived_from($input, "_p_svn_opt_revision_t")) {
-        SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
-    }
-    else if (looks_like_number($input)) {
-        rev.kind = svn_opt_revision_number;
-        rev.value.number = SvIV($input);
-    }
-    else if (SvPOK($input)) {
-        char *input = SvPV_nolen($input);
-        if (strcasecmp(input, "BASE") == 0)
-            rev.kind = svn_opt_revision_base;
-        else if (strcasecmp(input, "HEAD") == 0)
-            rev.kind = svn_opt_revision_head;
-        else if (strcasecmp(input, "WORKING") == 0)
-            rev.kind = svn_opt_revision_working;
-        else if (strcasecmp(input, "COMMITTED") == 0)
-            rev.kind = svn_opt_revision_committed;
-        else if (strcasecmp(input, "PREV") == 0)
-            rev.kind = svn_opt_revision_previous;
-        else if (*input == '{') {
-            svn_boolean_t matched;
-            apr_time_t tm;
-            svn_error_t *err;
-
-            char *end = strchr(input,'}');
-            if (!end)
-                SWIG_croak("unknown opt_revision_t type");
-            *end = '\0';
-            err = svn_parse_date (&matched, &tm, input + 1, apr_time_now(),
-                                  svn_swig_pl_make_pool ((SV *)NULL));
-            if (err) {
-                svn_error_clear (err);
-                SWIG_croak("unknown opt_revision_t type");
-            }
-            if (!matched)
-                SWIG_croak("unknown opt_revision_t type");
-
-            rev.kind = svn_opt_revision_date;
-            rev.value.date = tm;
-        } else
-            SWIG_croak("unknown opt_revision_t type");
-    } else
-        SWIG_croak("unknown opt_revision_t type");
+%typemap(in) svn_opt_revision_t * 
+  (svn_opt_revision_t rev, apr_pool_t *_global_pool = NULL)
+{
+  if (_global_pool == NULL) {
+    _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+    SPAGAIN;
+  }
+  $1 = svn_swig_pl_set_revision(&rev, $input, TRUE, _global_pool);
 }
 #endif
 
@@ -1266,6 +1325,17 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGRUBY
 %typemap(in) svn_mergeinfo_inheritance_t {
   $1 = svn_swig_rb_to_mergeinfo_inheritance($input);
+}
+#endif
+
+
+/* -----------------------------------------------------------------------
+   useful convertors for svn_merge_range_inheritance_t
+*/
+
+#ifdef SWIGRUBY
+%typemap(in) svn_merge_range_inheritance_t {
+  $1 = svn_swig_rb_to_merge_range_inheritance($input);
 }
 #endif
 

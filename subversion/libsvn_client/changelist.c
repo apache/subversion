@@ -2,17 +2,22 @@
  * changelist.c:  implementation of the 'changelist' command
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -25,158 +30,115 @@
 #include "svn_client.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
+#include "svn_path.h"
+#include "svn_hash.h"
+
+#include "client.h"
+#include "private/svn_wc_private.h"
+#include "svn_private_config.h"
 
 
-/*** Code. ***/
+
 
 svn_error_t *
 svn_client_add_to_changelist(const apr_array_header_t *paths,
-                             const char *changelist_name,
+                             const char *changelist,
+                             svn_depth_t depth,
+                             const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
-  /* Someday this routine might be use a different underlying API to
-     to make the associations in a centralized database. */
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
 
-  return svn_wc_set_changelist(paths, changelist_name, NULL,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               ctx->notify_func2, ctx->notify_baton2, pool);
-}
+  if (changelist[0] == '\0')
+    return svn_error_create(SVN_ERR_BAD_CHANGELIST_NAME, NULL,
+                            _("Target changelist name must not be empty"));
 
-
-svn_error_t *
-svn_client_remove_from_changelist(const apr_array_header_t *paths,
-                                  const char *changelist_name,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool)
-{
-  /* Someday this routine might be use a different underlying API to
-     remove the associations from a centralized database.
-
-     To that end, we should keep our semantics consistent.  If
-     CHANGELIST_NAME is defined, then it's not enough to just "blank
-     out" any changelist name attached to each path's entry_t; we need
-     to verify that each incoming path is already a member of the
-     named changelist first... if not, then skip over it or show a
-     warning.  This is what a centralized database would do.
-
-     If CHANGELIST_NAME is undefined, then we can be more lax and
-     remove the path from whatever changelist it's already a part of.
- */
-
-  return svn_wc_set_changelist(paths, NULL, changelist_name,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               ctx->notify_func2, ctx->notify_baton2, pool);
-}
-
-
-/* Entry-walker callback for svn_client_get_changelist*() below. */
-
-struct fe_baton
-{
-  svn_boolean_t store_paths;
-  svn_changelist_receiver_t callback_func;
-  void *callback_baton;
-  apr_array_header_t *path_list;
-  const char *changelist_name;
-  apr_pool_t *pool;
-};
-
-
-static svn_error_t *
-found_an_entry(const char *path,
-               const svn_wc_entry_t *entry,
-               void *baton,
-               apr_pool_t *pool)
-{
-  struct fe_baton *b = (struct fe_baton *)baton;
-
-  if (entry->changelist
-      && (strcmp(entry->changelist, b->changelist_name) == 0))
+  for (i = 0; i < paths->nelts; i++)
     {
-      if ((entry->kind == svn_node_file)
-          || ((entry->kind == svn_node_dir)
-              && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)))
-        {
-          if (b->store_paths)
-            APR_ARRAY_PUSH(b->path_list, const char *) = apr_pstrdup(b->pool,
-                                                                     path);
-          else
-            SVN_ERR(b->callback_func(b->callback_baton, path));
-        }
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+      if (svn_path_is_url(path))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s' is not a local path"), path);
     }
 
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      const char *local_abspath;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
+
+      SVN_ERR(svn_wc_set_changelist2(ctx->wc_ctx, local_abspath, changelist,
+                                     depth, changelists,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     ctx->notify_func2, ctx->notify_baton2,
+                                     iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_client_get_changelist(apr_array_header_t **paths,
-                          const char *changelist_name,
-                          const char *root_path,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool)
+svn_client_remove_from_changelists(const apr_array_header_t *paths,
+                                   svn_depth_t depth,
+                                   const apr_array_header_t *changelists,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool)
 {
-  svn_wc_entry_callbacks_t entry_callbacks;
-  struct fe_baton feb;
-  svn_wc_adm_access_t *adm_access;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
 
-  entry_callbacks.found_entry = found_an_entry;
-  feb.store_paths = TRUE;
-  feb.pool = pool;
-  feb.changelist_name = changelist_name;
-  feb.path_list = apr_array_make(pool, 1, sizeof(const char *));
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
-                                 FALSE, /* no write lock */
-                                 -1, /* infinite depth */
-                                 ctx->cancel_func, ctx->cancel_baton, pool));
+      if (svn_path_is_url(path))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s' is not a local path"), path);
+    }
 
-  SVN_ERR(svn_wc_walk_entries2(root_path, adm_access,
-                               &entry_callbacks, &feb,
-                               FALSE, /* don't show hidden entries */
-                               ctx->cancel_func, ctx->cancel_baton,
-                               pool));
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      const char *local_abspath;
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
 
-  *paths = feb.path_list;
+      SVN_ERR(svn_wc_set_changelist2(ctx->wc_ctx, local_abspath, NULL,
+                                     depth, changelists,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     ctx->notify_func2, ctx->notify_baton2,
+                                     iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
-                                  void *callback_baton,
-                                  const char *changelist_name,
-                                  const char *root_path,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool)
+svn_client_get_changelists(const char *path,
+                           const apr_array_header_t *changelists,
+                           svn_depth_t depth,
+                           svn_changelist_receiver_t callback_func,
+                           void *callback_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
 {
-  svn_wc_entry_callbacks_t entry_callbacks;
-  struct fe_baton feb;
-  svn_wc_adm_access_t *adm_access;
+  const char *local_abspath;
 
-  entry_callbacks.found_entry = found_an_entry;
-  feb.store_paths = FALSE;
-  feb.callback_func = callback_func;
-  feb.callback_baton = callback_baton;
-  feb.pool = pool;
-  feb.changelist_name = changelist_name;
-  feb.path_list = apr_array_make(pool, 1, sizeof(const char *));
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
-                                 FALSE, /* no write lock */
-                                 -1, /* infinite depth */
+  SVN_ERR(svn_wc_get_changelists(ctx->wc_ctx, local_abspath, depth, changelists,
+                                 callback_func, callback_baton,
                                  ctx->cancel_func, ctx->cancel_baton, pool));
-
-  SVN_ERR(svn_wc_walk_entries2(root_path, adm_access,
-                               &entry_callbacks, &feb,
-                               FALSE, /* don't show hidden entries */
-                               ctx->cancel_func, ctx->cancel_baton,
-                               pool));
-
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
   return SVN_NO_ERROR;
 }

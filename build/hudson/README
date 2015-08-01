@@ -1,0 +1,20 @@
+INTRODUCTION
+------------
+The configuration specific to Hudson Build system is available in this
+directory. The Hudson jobs are configured to build Subversion code base
+periodically, generate the test report and report failures (if any) to
+pre-defined mailing list.
+
+The test results can be viewed in this page:
+  http://hudson.zones.apache.org/hudson/view/subversion
+
+SETUP DETAILS
+-------------
+  - The last 40 build reports are retained.
+  - The Subversion repository is polled every 1 hour (staggered).
+  - The failure notifications are sent to
+    notifications@subversion.apache.org mailing list.
+  - The builds corresponding to Linux are performed in a Ubuntu system.
+  - The Linux builds are tied to minerva.apache.org host.
+  - The builds corresponding to Solaris are performed in a Solaris 10 system.
+  - The Solaris builds are tied to hudson-solaris.zones.apache.org host.

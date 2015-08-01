@@ -1,10 +1,31 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require 'etc'
 require 'fileutils'
 
 module SvnTestUtil
   module Windows
     module Svnserve
-      SERVICE_NAME = 'test-svn-server'
+      def service_name
+        "test-svn-server--port-#{@svnserve_port}"
+      end
 
       class << self
         def escape_value(value)
@@ -13,84 +34,34 @@ module SvnTestUtil
         end
       end
 
-      def service_control(command, args={})
-        args = args.collect do |key, value|
-          "#{key}= #{Svnserve.escape_value(value)}"
-        end.join(" ")
-        if `sc #{command} #{SERVICE_NAME} #{args}`.match(/FAILED/)
-          raise "Failed to #{command} #{SERVICE_NAME}: #{args}"
-        end
-      end
-
-      def grant_everyone_full_access(dir)
-        dir = dir.tr(File::SEPARATOR, File::ALT_SEPARATOR)
-        `cacls #{Svnserve.escape_value(dir)} /T /E /P Everyone:F`
-      end
-
-      def service_exists?
-        begin
-          service_control("query")
-          true
-        rescue
-          false
-        end
-      end
-
       def setup_svnserve
-        @svnserve_port = @svnserve_ports.first
+        @svnserve_port = @svnserve_ports.last
         @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
-        grant_everyone_full_access(@full_repos_path)
 
-        unless service_exists?
-          svnserve_dir = File.expand_path(File.join(@base_dir, "svnserve"))
-          FileUtils.mkdir_p(svnserve_dir)
-          at_exit do
-            service_control('delete') if service_exists?
-            FileUtils.rm_rf(svnserve_dir)
-          end
-          targets = %w(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
-                       libsvn_fs-1.dll libsvn_delta-1.dll
-                       libaprutil.dll libapr.dll sqlite3.dll)
-          ENV["PATH"].split(";").each do |path|
-            found_targets = []
-            targets.each do |target|
-              target_path = "#{path}\\#{target}"
-              if File.exists?(target_path)
-                found_targets << target
-                FileUtils.cp(target_path, svnserve_dir)
-              end
-            end
-            targets -= found_targets
-            break if targets.empty?
-          end
-          unless targets.empty?
-            raise "can't find libraries to work svnserve: #{targets.join(' ')}"
-          end
+        @@service_created ||= begin
+          @@service_created = true
 
-          grant_everyone_full_access(svnserve_dir)
-
-          svnserve_path = File.join(svnserve_dir, "svnserve.exe")
-          svnserve_path = svnserve_path.tr(File::SEPARATOR,
-                                           File::ALT_SEPARATOR)
+          top_directory = File.join(File.dirname(__FILE__), "..", "..", "..", "..", "..")
+          build_type = ENV["BUILD_TYPE"] || "Release"
+          svnserve_path = File.join(top_directory, build_type, 'subversion', 'svnserve', 'svnserve.exe')
           svnserve_path = Svnserve.escape_value(svnserve_path)
 
           root = @full_repos_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
+          FileUtils.mkdir_p(root)
 
-          args = ["--service", "--root", Svnserve.escape_value(root),
-                  "--listen-host", @svnserve_host,
-                  "--listen-port", @svnserve_port]
+          IO.popen("#{svnserve_path} -d -r #{Svnserve.escape_value(root)} --listen-host #{@svnserve_host} --listen-port #{@svnserve_port} --pid-file #{@svnserve_pid_file}")
           user = ENV["USERNAME"] || Etc.getlogin
-          service_control('create',
-                          [["binPath", "#{svnserve_path} #{args.join(' ')}"],
-                           ["DisplayName", SERVICE_NAME],
-                           ["type", "own"]])
+
+          # Give svnserve a bit of time to start
+          sleep 1
         end
-        service_control('stop') rescue nil
-        service_control('start')
+        true
       end
 
       def teardown_svnserve
-        service_control('stop') if service_exists?
+        # TODO:
+        #   Load @svnserve_pid_file
+        #   Kill process
       end
 
       def add_pre_revprop_change_hook
@@ -109,7 +80,9 @@ exit 1
 
     module SetupEnvironment
       def setup_test_environment(top_dir, base_dir, ext_dir)
-        build_type = "Release"
+        @@top_dir = top_dir
+
+        build_type = ENV["BUILD_TYPE"] || "Release"
 
         FileUtils.mkdir_p(ext_dir)
 
@@ -137,6 +110,31 @@ exit 1
         end
       end
 
+      def gen_make_opts
+        @gen_make_opts ||= begin
+          lines = []
+          gen_make_opts = File.join(@@top_dir, "gen-make.opts")
+          lines =
+            File.read(gen_make_opts).lines.to_a if File.exists?(gen_make_opts)
+          config = Hash.new do |hash, key|
+            if /^--with-(.*)$/ =~ key
+              hash[key] = File.join(@@top_dir, $1)
+            end
+          end
+
+          lines.each do |line|
+            name, value = line.chomp.split(/\s*=\s*/, 2)
+            if value
+              config[name] = Pathname.new(value).absolute? ?
+                value :
+                File.join(@@top_dir, value)
+            end
+          end
+          config
+        end
+      end
+      module_function :gen_make_opts
+
       private
       def setup_dll_wrapper_util(dll_dir, util)
         libsvn_swig_ruby_dll_dir = File.join(dll_dir, "libsvn_swig_ruby")
@@ -156,26 +154,18 @@ EOC
       end
 
       def add_depended_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
-        lines = []
-        gen_make_opts = File.join(top_dir, "gen-make.opts")
-        lines = File.read(gen_make_opts).to_a if File.exists?(gen_make_opts)
-        config = {}
-        lines.each do |line|
-          name, value = line.chomp.split(/\s*=\s*/, 2)
-          config[name] = value if value
-        end
-
         [
          ["apr", build_type],
          ["apr-util", build_type],
          ["apr-iconv", build_type],
          ["berkeley-db", "bin"],
-         ["sqlite", "bin"],
+         ["libintl", "bin"],
+         ["sasl", "lib"],
         ].each do |lib, sub_dir|
-          lib_dir = config["--with-#{lib}"] || lib
-          dirs = [top_dir, lib_dir, sub_dir].compact
-          dll_dir = File.expand_path(File.join(*dirs))
-          util.puts("add_path.call(#{dll_dir.dump})")
+          lib_dir = Pathname.new(gen_make_opts["--with-#{lib}"])
+          dll_dir = lib_dir + sub_dir
+          dll_dir = dll_dir.expand_path
+          util.puts("add_path.call(#{dll_dir.to_s.dump})")
         end
       end
 

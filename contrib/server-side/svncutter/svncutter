@@ -1,0 +1,925 @@
+#!/usr/bin/env python
+#
+# Hacked together by ESR, October 2009. New BSD license applies.
+# The Subversion project is explicitly granted permission to redistribute
+# under the prevailing license of their project.
+
+"""
+svncutter - stream surgery on SVN dump files 
+general usage: svncutter [-q] [-r SELECTION] SUBCOMMAND
+
+In all commands, the -r (or --range) option limits the selection of revisions
+over which an operation will be performed. A selection consists of
+one or more comma-separated ranges. A range may consist of an integer
+revision number or the special name HEAD for the head revision. Or it
+may be a colon-separated pair of integers, or an integer followed by a
+colon followed by HEAD.
+
+Normally, each subcommand produces a progress spinner on standard
+error; each turn means another revision has been filtered. The -q (or
+--quiet) option suppresses this.
+
+Type 'svncutter help <subcommand>' for help on a specific subcommand.
+
+Available subcommands:
+   squash
+   select
+   propdel
+   propset
+   proprename
+   log
+   setlog
+   strip
+   expunge
+   renumber
+   reduce
+"""
+
+oneliners = {
+    "squash":     "Squashing revisions",
+    "select":     "Selecting revisions",
+    "propdel":    "Deleting revision properties",
+    "propset":    "Setting revision properties",
+    "proprename": "Renaming revision properties",
+    "log":        "Extracting log entries",
+    "setlog":     "Mutating log entries",
+    "strip":      "Replace content with unique cookies, preserving structure",
+    "expunge":    "Expunge operations by Node-path header",
+    "renumber":   "Renumber revisions so they're contiguous",
+    "reduce":     "Topologically reduce a dump.",
+    }
+
+helpdict = {
+    "squash": """\
+squash: usage: svncutter [-q] [-r SELECTION] [-m mapfile] [-f] [-c] squash
+
+The 'squash' subcommand merges adjacent commits that have the same
+author and log text and were made within 5 minutes of each other.
+This can be helpful in cleaning up after migrations from file-oriented
+revision control systems, or if a developer has been using a pre-2006
+version of Emacs VC.
+
+With the -m (or --mapfile) option, squash emits a map to the named
+file showing how old revision numbers map into new ones.
+
+With the -e (or --excise) option, the specified set of revisions in
+unconditionally removed.  The tool will exit with an error if an
+excised remove is part of a clique eligible for squashing.  Note that
+svncutter does not perform any checks on whether the repository
+history is afterwards valid; if you delete a node using this option,
+you won't find out you have a problem until you attempt to load the
+resulting dumpfile.
+
+svncutter attempts to fix up references to Subversion revisions in log
+entries so they will still be correct after squashing.  It considers
+anything that looks like the regular expression \\br[0-9]+\\b to be
+a comment reference (this is the same format that Subversion uses
+in log headers).
+
+Every revision in the file after the first omitted one gets the property
+'svncutter:original' set to the revision number it had before the
+squash operation.
+
+The option --f (or --flagrefs) causes svncutter to wrap its revision-reference
+substitutions in curly braces ({}).  By doing this, then grepping for 'r{'
+in the output of 'svncutter log', you can check for false conversions.
+
+The -c (or --compressmap) option changes the mapfile format to one
+that is easier for human browsing, though less well suited for
+interpretation by other programs.
+""",
+    "select": """\
+select: usage: svncutter [-q] [-r SELECTION] select
+
+The 'select' subcommand selects a range and permits only revisions in
+that range to pass to standard output.  A range beginning with 0
+includes the dumpfile header.
+""",
+    "propdel": """\
+propdel: usage: svncutter [-r SELECTION] propdel PROPNAME...
+
+Delete the property PROPNAME. May be restricted by a revision
+selection. You may specify multiple properties to be deleted.
+
+""",
+    "propset": """\
+propset: usage: svncutter [-r SELECTION] propset PROPNAME=PROPVAL...
+
+Set the property PROPNAME to PROPVAL. May be restricted by a revision
+selection. You may specify multiple property settings.
+""",
+    "proprename": """\
+proprename: usage: svncutter [-r SELECTION] proprename OLDNAME->NEWNAME...
+
+Rename the property OLDNAME to NEWNAME. May be restricted by a
+revision selection. You may specify multiple properties to be renamed.
+""",
+    "log": """\
+log: usage: svncutter [-r SELECTION] log
+
+Generate a log report, same format as the output of svn log on a
+repository, to standard output.
+""",
+    "setlog": """\
+setlog: usage: svncutter [-r SELECTION] --logentries=LOGFILE setlog
+
+Replace the log entries in the input dumpfile with the corresponding entries
+in the LOGFILE, which should be in the format of an svn log output.
+Replacements may be restricted to a specified range.
+""",
+    "strip": """\
+strip: usage: svncutter [-r SELECTION] strip PATTERN...
+
+Replace content with unique generated cookies on all node paths
+matching the specified regular expressions; if no expressions are
+given, match all paths.  Useful when you need to examine a
+particularly complex node structure.
+""",
+    "expunge": """\
+expunge: usage: svncutter [-r SELECTION ] expunge PATTERN...
+
+Delete all operations with Node-path headers matching the specified
+Python regular expressions.  Any revision left with no Node records
+after this filtering has its Revision record removed as well
+""",
+    "renumber": """\
+renumber: usage: svncutter renumber
+
+Renumber all revisions, patching Node-copyfrom headers as required.
+Any selection option is ignored. Takes no arguments.
+""",
+    "reduce": """\
+reduce: usage: svncutter reduce INPUT-FILE
+
+Strip revisions out of a dump so the only parts left those likely to
+be relevant to a conversion problem. A revision is interesting if it
+either (a) contains any operation that is not a plain file
+modification - any directory operation, or any add, or any delete, or
+any copy, or any operation on properties - or (b) it is referenced by
+a later copy operation. Any commit that is neither interesting nor
+has interesting neighbors is dropped.
+
+Because the 'interesting' status of a commit is not known for sure
+until all future commits have been checked for copy operations, this
+command requires an input file.  It cannot operate on standard input.
+The reduced dump is emitted to standard output.
+""",
+    }
+
+import os, sys, calendar, time, getopt, re
+
+class Baton:
+    "Ship progress indications to stderr."
+    def __init__(self, prompt, endmsg=None):
+        self.stream = sys.stderr
+        self.stream.write(prompt + "...")
+        if os.isatty(self.stream.fileno()):
+            self.stream.write(" \010")
+        self.stream.flush()
+        self.count = 0
+        self.endmsg = endmsg
+        self.time = time.time()
+        return
+
+    def twirl(self, ch=None):
+        if self.stream is None:
+            return
+        if os.isatty(self.stream.fileno()):
+            if ch:
+                self.stream.write(ch)
+            else:
+                self.stream.write("-/|\\"[self.count % 4])
+                self.stream.write("\010")
+            self.stream.flush()
+        self.count = self.count + 1
+        return
+
+    def end(self, msg=None):
+        if msg == None:
+            msg = self.endmsg
+        if self.stream:
+            self.stream.write(("...(%2.2f sec) %s." % (time.time() - self.time, msg)) + os.linesep)
+        return
+
+class LineBufferedSource:
+    "Generic class for line-buffered input with pushback."
+    def __init__(self, infile):
+        self.linebuffer = None
+        self.file = infile
+        self.linenumber = 0
+    def readline(self):
+        "Line-buffered readline."
+        if self.linebuffer:
+            line = self.linebuffer
+            self.linebuffer = None
+        else:
+            line = self.file.readline()
+            self.linenumber += 1
+        return line
+    def require(self, prefix):
+        "Read a line, require it to have a specified prefix."
+        line = self.readline()
+        if not line:
+            sys.stderr.write("svncutter: unexpected end of input while requiring '%s' input." % prefix + os.linesep)
+            sys.exit(1)
+        assert line.startswith(prefix)
+        return line
+    def read(self, len):
+        "Straight read from underlying file, no buffering."
+        assert(self.linebuffer is None)
+        text = self.file.read(len)
+        self.linenumber += text.count(os.linesep[0])
+        return text
+    def peek(self):
+        "Peek at the next line in the source."
+        assert(self.linebuffer is None)
+        self.linebuffer = self.file.readline()
+        return self.linebuffer
+    def flush(self):
+        "Get the contents of the line buffer, clearing it."
+        assert(self.linebuffer is not None)
+        line = self.linebuffer
+        self.linebuffer = None
+        return line
+    def push(self, line):
+        "Push a line back to the line buffer."
+        assert(self.linebuffer is None)
+        self.linebuffer = line
+    def has_line_buffered(self):
+        return self.linebuffer is not None
+
+class Properties:
+    def __init__(self, source):
+        self.properties = {}
+        self.propkeys = []
+        while not source.peek().startswith("PROPS-END"):
+            source.require("K")
+            keyhd = source.readline()
+            key = keyhd.strip()
+            valhd = source.require("V")
+            vlen = int(valhd.split()[1])
+            value = source.read(vlen)
+            source.require(os.linesep)
+            self.properties[key] = value
+            self.propkeys.append(key)
+        source.flush()
+    def __str__(self):
+        st = ""
+        for key in self.propkeys:
+            if key in self.properties:
+                st += "K %d%s" % (len(key), os.linesep) 
+                st += "%s%s" % (key, os.linesep) 
+                st += "V %d%s" % (len(self.properties[key]), os.linesep) 
+                st += "%s%s" % (self.properties[key], os.linesep) 
+        st += "PROPS-END\n"
+        return st
+
+class DumpfileSource(LineBufferedSource):
+    "This class knows about dumpfile format."
+    def __init__(self, infile, baton=None):
+        LineBufferedSource.__init__(self, infile)
+        self.baton = baton
+        self.revision = None
+    @staticmethod
+    def set_length(header, line, val):
+        return re.sub("(?<=" + header + "-length: )[0-9]+", str(val), line)
+    def read_revision_header(self, property_hook=None):
+        "Read a revision header, parsing its properties."
+        stash = self.require("Revision-number:")
+        self.revision = int(stash.split()[1])
+        stash += self.require("Prop-content-length:")
+        stash += self.require("Content-length:")
+        stash += self.require(os.linesep)
+        props = Properties(self)
+        if property_hook:
+            (props.propkeys, props.properties) = property_hook(props.propkeys, props.properties)
+            stash = DumpfileSource.set_length("Prop-content", stash, len(str(props)))
+            stash = DumpfileSource.set_length("Content", stash, len(str(props)))
+        stash += str(props)
+        while self.peek() == '\n':
+            stash += self.readline()
+        if self.baton:
+            self.baton.twirl()
+        return (stash, props.properties)
+    def read_node(self, property_hook=None):
+        "Read a node header and body."
+        #print "READ NODE BEGINS"
+        header = self.require("Node-path:")
+        while True:
+            line = self.readline()
+            #print "I see header line", repr(line)
+            if not line:
+                sys.stderr.write('unexpected EOF in node header' + os.linesep)
+                sys.exit(1)
+            header += line
+            if line == '\n':
+                break
+        properties = ""
+        if "Prop-content-length" in header:
+            props = Properties(self)
+            if property_hook:
+                (props.propkeys, props.properties) = property_hook(props.propkeys, props.properties)
+            properties = str(props)
+        # use a list since extending the string gets slow
+        content_list = []
+        if "Text-content-length" in header:
+            while True:
+                line = self.readline()
+                #print "I see contents line", repr(line)
+                if not line:
+                    break
+                if line.startswith(("Node-path:", "Revision-number")):
+                    self.push(line)
+                    break
+                content_list.append(line)
+        content = "".join(content_list)
+        del content_list
+        #print "READ NODE ENDS"
+        if property_hook:
+            header = DumpfileSource.set_length("Prop-content", header,
+                                               len(properties))
+            header = DumpfileSource.set_length("Content", header,
+                                               len(properties) + len(content))
+        return (header, properties, content)
+    def read_until_next(self, prefix, revmap=None):
+        "Accumulate lines until the next matches a specified prefix."
+        stash = ""
+        while True:
+            line = self.readline()
+            if not line:
+                return stash
+            elif line.startswith(prefix):
+                self.push(line)
+                return stash
+            else:
+                # Hack the revision levels in copy-from headers.
+                # We're actually modifying the dumpfile contents
+                # (rather than selectively omitting parts of it).
+                # Note: this will break on a dumpfile that has dumpfiles
+                # in its nodes!
+                if revmap and line.startswith("Node-copyfrom-rev:"):
+                    oldrev = line.split()[1]
+                    line = line.replace(oldrev, `revmap[int(oldrev)]`) 
+                stash += line
+    def report(self, selection, nodehook, prophook=None, passthrough=True):
+        "Report a filtered portion of content."
+        emit = passthrough and 0 in selection
+        stash = self.read_until_next("Revision-number:")
+        if emit:
+            sys.stdout.write(stash)
+        if not self.has_line_buffered():    
+            return
+        while True:
+            nodecount = 0
+            (stash, properties) = self.read_revision_header(prophook)
+            if self.revision in selection:
+                pass
+            elif self.revision == selection.upperbound()+1:
+                return
+            else:
+                self.read_until_next("Revision-number:")
+                continue
+            while True:
+                line = self.readline()
+                if not line:
+                    return
+                elif line == '\n':
+                    if passthrough:
+                        sys.stdout.write(line)
+                    continue
+                elif line.startswith("Revision-number:"):
+                    self.push(line)
+                    if stash and nodecount == 0:
+                        if passthrough:
+                            sys.stdout.write(stash)
+                    break
+                elif line.startswith("Node-path:"):
+                    nodecount += 1
+                    self.push(line)
+                    (header, properties, content) = self.read_node(prophook)
+                    emit = nodehook(header, properties, content)
+                    if emit and stash:
+                        emit = stash + emit
+                        stash = ""
+                    if passthrough:
+                        sys.stdout.write(emit)
+                    continue
+                else:
+                    sys.stderr.write("svncutter: parse at %s doesn't look right (%s), aborting!\n" % (self.revision, repr(line)))
+                    sys.exit(1)
+
+    def __del__(self):
+        if self.baton:
+            self.baton.end()
+
+class SubversionRange:
+    def __init__(self, txt):
+        self.txt = txt
+        self.intervals = []
+        for (i, item) in enumerate(txt.split(",")):
+            if ':' in item:
+                (lower, upper) = item.split(':')
+            else:
+                lower = upper = item
+            if lower.isdigit():
+                lower = int(lower)
+            if upper.isdigit():
+                upper = int(upper)
+            self.intervals.append((lower, upper))
+    def __contains__(self, rev):
+        for (lower, upper) in self.intervals:
+            if lower == "HEAD":
+                sys.stderr.write("svncutter: can't accept HEAD as lower bound of a range.\n")
+                sys.exit(1)
+            elif upper == "HEAD":
+                upper = sys.maxint-1
+            if rev >= lower and rev <= upper:
+                return True
+        return False
+    def upperbound(self):
+        "What is the uppermost revision in the spec?"
+        if self.intervals[-1][1] == "HEAD":
+            return sys.maxint
+        else:
+            return self.intervals[-1][1]
+    def __repr__(self):
+        return self.txt
+
+class Logfile:
+    "Represent the state of a logfile"
+    def __init__(self, readable, restriction=None):
+        self.comments = {}
+        self.source = LineBufferedSource(readable)
+        state = 'awaiting_header'
+        author = date = None
+        logentry = ""
+        lineno = 0
+        while True:
+            lineno += 1
+            line = readable.readline()
+            if state == 'in_logentry':
+                if not line or line.startswith("-----------"):
+                    if rev:
+                        logentry = logentry.strip()
+                        if restriction is None or rev in restriction:
+                            self.comments[rev] = (author, date, logentry)
+                        rev = None
+                        logentry = ""
+                    if line:
+                        state = 'awaiting_header'
+                    else:
+                        break
+                else:
+                    logentry += line
+            elif state == 'awaiting_header':
+                if not line:
+                    break
+                elif line.startswith("-----------"):
+                    continue
+                else:
+                    m = re.match("r[0-9]+", line)
+                    if not m:
+                        sys.stderr.write('"%s", line %d: svncutter did not see a comment header where one was expected\n' % (readable.name, lineno))
+                        sys.exit(1)
+                    else:
+                        fields = line.split("|")
+                        (rev, author, date, linecount) = map(lambda x: x.strip(), fields)
+                        rev = rev[1:]	# strip off leaing 'r'
+                        state = 'in_logentry'
+                        
+    def __contains__(self, key):
+        return str(key) in self.comments
+    def __getitem__(self, key):
+        "Emulate dictionary, for new-style interface."
+        return self.comments[str(key)]
+
+def isotime(s):
+    "ISO 8601 to local clock time."
+    if s[-1] == "Z":
+        s = s[:-1]
+    if "." in s:
+        (date, msec) = s.split(".")
+    else:
+        date = s
+        msec = "0"
+    # Note: no leap-second correction! 
+    return calendar.timegm(time.strptime(date, "%Y-%m-%dT%H:%M:%S")) + float("0." + msec)
+
+def reference_mapper(value, mutator, flagrefs=False):
+    "Apply a mutator function to revision references."
+    revrefs = []
+    for matchobj in re.finditer(r'\br([0-9]+)\b', value):
+        revrefs.append(matchobj)
+    if revrefs:
+        revrefs.reverse()
+        for m in revrefs:
+            new = mutator(m.group(1))
+            if flagrefs:
+                new = "{" + new + "}"
+            if new != m.group(1):
+                value = value[:m.start(1)] + new + value[m.end(1):]
+    return value
+
+# Generic machinery ends here, actual command implementations begin
+
+def squash(source, timefuzz,
+           mapto=None, selection=None, excise=None,
+           flagrefs=False, compressmap=False):
+    "Coalesce adjacent commits with same author+log and close timestamps."
+    dupes = []
+    # The tricky bit is rewriting the revision numbers in node headers
+    # associated with copy actions.
+    clique_map = {}	# Map revisions to the base reves of their cliques
+    squash_map = {}	# Map clique bases revs to their squashed numbers
+    skipcount = numbered = clique_base = 0
+    outmap = []
+    def hacklog(propkeys, propdict, revision):
+        # Hack references to revision levels in comments.
+        for (key, value) in propdict.items():
+            if key == "svn:log":
+                propdict[key] = reference_mapper(value, lambda old: str(squash_map[clique_map[int(old)]]), flagrefs)
+        return (propkeys, propdict)
+    prevprops = {"svn:log":"", "svn:author":"", "svn:date":0}
+    omit = excise is not None and 0 in excise
+    while True:
+        stash = source.read_until_next("Revision-number:", clique_map)
+        if not omit:
+            sys.stdout.write(stash)
+        if not source.has_line_buffered():    
+            if excise is not None and dupes and dupes[0] in excise:
+                outmap.append((None, dupes))
+            elif numbered >= 1:
+                outmap.append((numbered-1, dupes))
+            break
+        else:
+            (stash, properties) = source.read_revision_header(hacklog)
+            # We have all properties of this revision.
+            # Compute whether to merge it with the previous one.
+            skip = "svn:log" in properties and "svn:author" in properties \
+                   and properties["svn:log"] == prevprops.get("svn:log") \
+                   and properties["svn:author"] == prevprops.get("svn:author") \
+                   and (selection is None or source.revision in selection) \
+                   and abs(isotime(properties["svn:date"]) - isotime(prevprops.get("svn:date"))) < timefuzz
+            # Did user request an unconditional omission?
+            omit = excise is not None and source.revision in excise
+            if skip and omit:
+                sys.stderr.write("squash: can't omit a revision about to be squashed.\n")
+                sys.exit(1)
+            # Treat spans of omitted commits as cliques for reporting
+            if omit and excise is not None and source.revision-1 in excise:
+                skip = True
+            # The magic moment
+            if skip:
+                skipcount += 1
+                clique_map[source.revision] = clique_base
+            else:
+                clique_base = source.revision
+                clique_map[clique_base] = clique_base
+                squash_map[clique_base] = source.revision - skipcount
+                if excise is not None and dupes and dupes[0] in excise:
+                    outmap.append((None, dupes))
+                elif numbered >= 1:
+                    outmap.append((numbered-1, dupes))
+                dupes = []
+                if omit:
+                    skipcount += 1
+                else:
+                    sys.stdout.write(stash)
+                    prevprops = properties
+                    numbered += 1
+            dupes.append(source.revision)
+        # Go back around to copying to the next revision header.
+    if mapto:
+        mapto.write(("%% %d out of %d original revisions squashed, leaving %d" \
+                     % (skipcount, source.revision, numbered-1)) + os.linesep)
+        if not compressmap:
+            for (numbered, dupes) in outmap:
+                if numbered is None:
+                    mapto.write("  None <- " + " ".join(map(str, dupes))+os.linesep)
+                else:
+                    mapto.write(("%6d <- " % numbered) + " ".join(map(str, dupes))+os.linesep)
+        else:
+            compressed = []
+            force_new_range = True
+            last_n = -1
+            last_oldrevs = []
+            # Process the raw outmap into a form that compressees ranges.
+            # Squash cliques are left alone.  Ranger between
+            # them map to either
+            # (1) None followed by a singleton list (single deleted rev)
+            # (2) None followed by a two-element list (range of deletions)
+            # (3) Single number followed by singleton list = 1-element range)
+            # (4) Two-element list followed by two-element list =
+            #     multiple elements, old range to new range.
+            for (n, oldrevs) in outmap:
+                #print >>sys.stderr, "I see:", (n, oldrevs)
+                cliquebase = oldrevs[0]
+                if len(oldrevs) > 1:
+                    compressed.append((n, oldrevs))
+                    force_new_range = True
+                else:
+                    if (n is None) != (last_n is None):
+                        #print >>sys.stderr, "Forcing range break"
+                        force_new_range = True
+                    if force_new_range:
+                        compressed.append((n, oldrevs))
+                    else:
+                        #print >>sys.stderr, "Adding to range"
+                        if len(last_oldrevs) == 1:
+                            oldrevs = last_oldrevs + oldrevs
+                        else:
+                            oldrevs = last_oldrevs[:1] + oldrevs
+                        lowerbound = compressed[-1][0]
+                        if (last_n is None) and (n is None):
+                            compressed[-1] = [None, oldrevs]
+                        elif type(lowerbound) == type(0):
+                            compressed[-1] = [[lowerbound, n], oldrevs]
+                        else:                            
+                            compressed[-1] = [lowerbound[:1] + [n], oldrevs]
+                    force_new_range = False
+                    last_n = n
+                    last_oldrevs = oldrevs
+            #print >>sys.stderr, "Compressed:", compressed
+            for (a, b) in compressed:
+                if a is None:
+                    if len(b) == 1:
+                        print >>mapto, "  None         <- %d" % b[0]
+                        continue
+                    else:
+                        print >>mapto, "  None         <- %d..%d" % (b[0], b[-1])
+                        continue
+                else:
+                    if type(a) == type(0) and len(b) == 1:
+                        print >>mapto, "%6d         <- %d" % (a, b[0])
+                        continue
+                    elif type(a) == type(0) and type(b) == type([]):
+                        print >>mapto, "%6d         <- %d..%d" % (a, b[0], b[-1])
+                        continue
+                    elif type(a) == type([]) and len(a)==2 and len(b)==2:
+                        print >>mapto, "%6d..%-6d <- %d..%d" % (a[0], a[1], b[0], b[1])
+                        continue
+                sys.stderr.write("svncutter: Internal error on %s\n" % ((a, b),))
+                sys.exit(1)
+
+def select(source, selection):
+    "Select a portion of the dump file defined by a revision selection."
+    emit = 0 in selection
+    while True:
+        stash = source.read_until_next("Revision-number:")
+        if emit:
+            sys.stdout.write(stash)
+        if not source.has_line_buffered():    
+            return
+        else:
+            revision = int(source.linebuffer.split()[1])
+            emit = revision in selection
+            if emit:
+                sys.stdout.write(source.flush())
+            elif revision == selection.upperbound()+1:
+                return
+            else:
+                source.flush()
+
+def propdel(source, properties, selection):
+    "Delete properties."
+    def __revhook(propkeys, propdict):
+        for propname in properties:
+            if propname in propdict:
+                del propdict[propname]
+        return (propkeys, propdict)
+    def __nodehook(header, properties, content):
+        return header + properties + content
+    source.report(selection, __nodehook, __revhook)
+
+def propset(source, properties, selection):
+    "Set properties."
+    def __revhook(propkeys, propdict):
+        for prop in properties:
+            (propname, propval) = prop.split("=")
+            if propname in propdict:
+                propdict[propname] = propval
+        return (propkeys, propdict)
+    def __nodehook(header, properties, content):
+        return header + properties + content
+    source.report(selection, __nodehook, __revhook)
+
+def proprename(source, properties, selection):
+    "Rename properties."
+    def __revhook(propkeys, propdict):
+        for prop in properties:
+            (oldname, newname) = prop.split("->")
+            if oldname in propdict:
+                propdict[newname] = propdict[oldname]
+                del propdict[oldname]
+                propkeys[propkeys.index(oldname)] = newname
+        return (propkeys, propdict)
+    def __nodehook(header, properties, content):
+        return header + properties + content
+    source.report(selection, __nodehook, __revhook)
+
+def log(source, selection):
+    "Extract log entries."
+    while True:
+        source.read_until_next("Revision-number:")
+        if not source.has_line_buffered():    
+            return
+        else:
+            (stash, props) = source.read_revision_header()
+            logentry = props.get("svn:log")
+            if logentry:
+                print "-" * 72
+                author = props.get("svn:author", "(no author)")
+                date = props["svn:date"].split(".")[0]
+                date = time.strptime(date, "%Y-%m-%dT%H:%M:%S")
+                date = time.strftime("%Y-%m-%d %H:%M:%S +0000 (%a, %d %b %Y)", date)
+                print "r%s | %s | %s | %d lines" % (source.revision,
+                                                    author,
+                                                    date,
+                                                    logentry.count(os.linesep))
+                sys.stdout.write("\n" + logentry + "\n")
+
+def setlog(source, logpatch, selection):
+    "Mutate log entries."
+    logpatch = Logfile(file(logpatch), selection)
+    def loghook(propkeys, propdict):
+        if "svn:log" in propkeys and revision in logpatch:
+            (author, date, logentry) = logpatch[source.revision]
+            if author != propdict.get("svn:author", "(no author)"):
+                sys.stderr.write("svncutter: author of revision %s doesn't look right, aborting!\n" % source.revision)
+                sys.exit(1)
+            propdict["svn:log"] = logentry
+        return (propkeys, propdict)
+    source.apply_property_hook(selection, loghook)
+
+def strip(source, selection, patterns):
+    "Strip a portion of the dump file defined by a revision selection."
+    def __strip(header, properties, content):
+        def get_header(hd, name):
+            m = re.search(name + ": (.*)", hd)
+            return m and m.group(1)
+        def set_length(hd, name, val):
+            return re.sub("(?<=%s: )[0-9]+" % name, str(val), hd)
+
+        # first check against the pattern
+        ok = True
+        if header.startswith("Node-path: "):
+            filepath = header[11:header.index("\n")]
+            for pattern in patterns:
+                if re.search(pattern, filepath):
+                    #sys.stderr.write("strip skipping: %s\n" % filepath)
+                    ok = False
+                    break
+        if not ok:
+            return header + properties + content
+        del ok
+
+        if content:
+            tell = "Revision is %s, file path is %s.\n\n\n" % \
+                      (source.revision, get_header(header, "Node-path"),)
+            # Avoid replacing symlinks, a reposurgeon sanity check barfs.
+            if content.startswith("link "):
+                content = content + tell
+            else:
+                content = tell
+            header = set_length(header,
+                                "Text-content-length", len(content)-2)
+            header = set_length(header,
+                                "Content-length", len(properties)+len(content)-2)
+        header = re.sub("Text-content-md5:.*\n", "", header)
+        header = re.sub("Text-content-sha1:.*\n", "", header)
+        header = re.sub("Text-copy-source-md5:.*\n", "", header)
+        header = re.sub("Text-copy-source-sha1:.*\n", "", header)
+        return header + properties + content
+    source.report(selection, __strip)
+
+def doreduce(source):
+    "Topologically reduce a dump, removing spans of plain file modifications."
+    interesting = set([0])
+    def __reduce(header, properties, content):
+        def get_header(name):
+            m = re.search(name + ": (.*)", header)
+            return m and m.group(1)
+        if not (get_header("Node-kind") == "file" and get_header("Node-action") == "change") or properties:
+            interesting.add(source.revision)
+        copysource = get_header("Node-copyfrom-rev")
+        if copysource is not None:
+            interesting.add(int(copysource))
+        return None
+    source.report(SubversionRange("0:HEAD"), __reduce, passthrough=False)
+    selection = SubversionRange(",".join([str(x) for x in interesting or x+1 in interesting or x-1 in interesting]))
+    source.file.seek(0)
+    select(source, selection)
+
+def expunge(source, selection, patterns):
+    "Strip out ops defined by a revision selection and a path regexp."
+    def __expunge(header, properties, content):
+        if header.startswith("Node-path: "):
+            filepath = header[11:header.index("\n")]
+            for pattern in patterns:
+                if re.search(pattern, filepath):
+                    #sys.stderr.write("expunge skipping: " + header[11:header.index("\n")] +"\n")
+                    return ""
+        else:
+            return header + properties + content
+    source.report(selection, __expunge)
+
+def renumber(source):
+    "Renumber all revisions."
+    renumbering = {}
+    counter = 0
+    while True:
+        line = source.readline()
+        if not line:
+            break
+        elif line.startswith("Revision-number: "):
+            oldrev = line.split(":")[1].strip()
+            sys.stdout.write("Revision-number: %d\n" % counter)
+            renumbering[oldrev] = counter
+            counter += 1
+        elif line.startswith("Node-copyfrom-rev:"):
+            oldrev = line.split(":")[1].strip()
+            sys.stdout.write("Node-copyfrom-rev: %s\n" % renumbering[oldrev])
+        else:
+            sys.stdout.write(line)
+
+def patterns_compile(patterns):
+    return [re.compile(pattern) for pattern in patterns]
+
+if __name__ == '__main__':
+    try:
+        (options, arguments) = getopt.getopt(sys.argv[1:], "ce:fl:m:p:qr:s",
+                                             ["excise", "flagrefs", "revprop=",
+                                              "logpatch=", "map=",
+                                              "quiet", "range="])
+        selection = SubversionRange("0:HEAD")
+        timefuzz = 300	# 5 minute fuzz
+        compressmap = False
+        excise = None
+        revprops = []
+        progress = True
+        flagrefs = False
+        logpatch = None
+        mapto = None
+        for (switch, val) in options:
+            if switch in ('-c', '--compressmap'):
+                compressmap = True
+            elif switch in ('-e', '--excise'):
+                excise = SubversionRange(val)
+            elif switch in ('-f', '--flagrefs'):
+                flagrefs = True
+            elif switch in ('-l', '--logentries'):
+                logpatch = val
+            elif switch in ('-m', '--map'):
+                mapto = open(val, "w")
+            elif switch in ('-p', '--revprop'):
+                revprops.append(val)
+            elif switch in ('-q', '--quiet'):
+                progress = False
+            elif switch in ('-r', '--range'):
+                selection = SubversionRange(val)
+        if len(arguments) == 0:
+            sys.stderr.write("Type 'svncutter help' for usage." + os.linesep)
+            sys.exit(1)
+        baton = None
+        if arguments[0] != 'help':
+            if progress:
+                baton = Baton(oneliners[arguments[0]], "done")
+            else:
+                baton = None
+        if arguments[0] == "squash":
+            squash(DumpfileSource(sys.stdin, baton),
+                   timefuzz, mapto, selection, excise, flagrefs, compressmap)
+        elif arguments[0] == "propdel":
+            propdel(DumpfileSource(sys.stdin, baton), revprops + arguments[1:], selection)
+        elif arguments[0] == "propset":
+            propset(DumpfileSource(sys.stdin, baton), revprops + arguments[1:], selection)
+        elif arguments[0] == "proprename":
+            proprename(DumpfileSource(sys.stdin, baton), revprops + arguments[1:], selection)
+        elif arguments[0] == "select":
+            select(DumpfileSource(sys.stdin, baton), selection)
+        elif arguments[0] == "log":
+            log(DumpfileSource(sys.stdin, baton), selection)
+        elif arguments[0] == "setlog":
+            if not logpatch:
+                sys.stderr.write("svncutter: setlog requires a log entries file.\n")
+            setlog(DumpfileSource(sys.stdin, baton), logpatch, selection)
+        elif arguments[0] == "strip":
+            strip(DumpfileSource(sys.stdin, baton), selection, patterns_compile(arguments[1:]))
+        elif arguments[0] == "expunge":
+            expunge(DumpfileSource(sys.stdin, baton), selection, patterns_compile(arguments[1:]))
+        elif arguments[0] == "renumber":
+            renumber(DumpfileSource(sys.stdin, baton))
+        elif arguments[0] == "reduce":
+            doreduce(DumpfileSource(open(arguments[1]), baton))
+        elif arguments[0] == "help":
+            if len(arguments) == 1:
+                sys.stdout.write(__doc__)
+            else:
+                sys.stdout.write(helpdict.get(arguments[1], arguments[1] + ": no such subcommand.\n"))
+        else:
+            sys.stderr.write(('"%s": unknown subcommand\n' % arguments[0])+os.linesep)
+            sys.exit(1)
+    except KeyboardInterrupt:
+        pass
+
+# script ends here

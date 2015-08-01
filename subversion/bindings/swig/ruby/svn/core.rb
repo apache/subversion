@@ -1,3 +1,22 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "English"
 require "time"
 require "stringio"
@@ -7,7 +26,7 @@ require "svn/error"
 require "svn/ext/core"
 
 class Time
-  MILLION = 1_000_000
+  MILLION = 1_000_000 #:nodoc:
 
   class << self
     def from_apr_time(apr_time)
@@ -84,6 +103,9 @@ module Svn
     Pool = Svn::Ext::Core::Apr_pool_wrapper_t
 
     class Pool
+      RECOMMENDED_MAX_FREE_SIZE = ALLOCATOR_RECOMMENDED_MAX_FREE
+      MAX_FREE_UNLIMITED = ALLOCATOR_MAX_FREE_UNLIMITED
+
       class << self
         def number_of_pools
           ObjectSpace.each_object(Pool) {}
@@ -153,9 +175,10 @@ module Svn
 
 
     class AuthBaton
-      attr_reader :parameters
+      attr_reader :providers, :parameters
 
       alias _initialize initialize
+      private :_initialize
       def initialize(providers=[], parameters={})
         _initialize(providers)
         @providers = providers
@@ -179,6 +202,116 @@ module Svn
       end
     end
 
+    module Authenticatable
+      attr_accessor :auth_baton
+
+      def add_simple_provider
+        add_provider(Core.auth_get_simple_provider)
+      end
+
+      if Util.windows?
+        if Core.respond_to?(:auth_get_windows_simple_provider)
+          def add_windows_simple_provider
+            add_provider(Core.auth_get_windows_simple_provider)
+          end
+        elsif Core.respond_to?(:auth_get_platform_specific_provider)
+          def add_windows_simple_provider
+            add_provider(Core.auth_get_platform_specific_provider("windows","simple"))
+          end
+        end
+      end
+
+      if Core.respond_to?(:auth_get_keychain_simple_provider)
+        def add_keychain_simple_provider
+          add_provider(Core.auth_get_keychain_simple_provider)
+        end
+      end
+
+      def add_username_provider
+        add_provider(Core.auth_get_username_provider)
+      end
+
+      def add_ssl_client_cert_file_provider
+        add_provider(Core.auth_get_ssl_client_cert_file_provider)
+      end
+
+      def add_ssl_client_cert_pw_file_provider
+        add_provider(Core.auth_get_ssl_client_cert_pw_file_provider)
+      end
+
+      def add_ssl_server_trust_file_provider
+        add_provider(Core.auth_get_ssl_server_trust_file_provider)
+      end
+
+      if Core.respond_to?(:auth_get_windows_ssl_server_trust_provider)
+        def add_windows_ssl_server_trust_provider
+          add_provider(Core.auth_get_windows_ssl_server_trust_provider)
+        end
+      end
+
+      def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
+        args = [retry_limit]
+        klass = AuthCredSimple
+        add_prompt_provider("simple", args, prompt, klass)
+      end
+
+      def add_username_prompt_provider(retry_limit, prompt=Proc.new)
+        args = [retry_limit]
+        klass = AuthCredUsername
+        add_prompt_provider("username", args, prompt, klass)
+      end
+
+      def add_ssl_server_trust_prompt_provider(prompt=Proc.new)
+        args = []
+        klass = AuthCredSSLServerTrust
+        add_prompt_provider("ssl_server_trust", args, prompt, klass)
+      end
+
+      def add_ssl_client_cert_prompt_provider(retry_limit, prompt=Proc.new)
+        args = [retry_limit]
+        klass = AuthCredSSLClientCert
+        add_prompt_provider("ssl_client_cert", args, prompt, klass)
+      end
+
+      def add_ssl_client_cert_pw_prompt_provider(retry_limit, prompt=Proc.new)
+        args = [retry_limit]
+        klass = AuthCredSSLClientCertPw
+        add_prompt_provider("ssl_client_cert_pw", args, prompt, klass)
+      end
+
+      def add_platform_specific_client_providers(config=nil)
+        add_providers(Core.auth_get_platform_specific_client_providers(config))
+      end
+
+      private
+      def add_prompt_provider(name, args, prompt, credential_class)
+        real_prompt = Proc.new do |*prompt_args|
+          credential = credential_class.new
+          prompt.call(credential, *prompt_args)
+          credential
+        end
+        method_name = "swig_rb_auth_get_#{name}_prompt_provider"
+        baton, provider = Core.send(method_name, real_prompt, *args)
+        provider.instance_variable_set("@baton", baton)
+        provider.instance_variable_set("@prompt", real_prompt)
+        add_provider(provider)
+      end
+
+      def add_provider(provider)
+        add_providers([provider])
+      end
+
+      def add_providers(new_providers)
+        if auth_baton
+          providers = auth_baton.providers
+          parameters = auth_baton.parameters
+        else
+          providers = []
+          parameters = {}
+        end
+        self.auth_baton = AuthBaton.new(providers + new_providers, parameters)
+      end
+    end
 
     class AuthProviderObject
       class << self
@@ -372,9 +505,10 @@ module Svn
       include Enumerable
 
       class << self
-        def config(path)
+        def get(path=nil)
           Core.config_get_config(path)
         end
+        alias config get
 
         def read(file, must_exist=true)
           Core.config_read(file, must_exist)
@@ -540,6 +674,22 @@ module Svn
       def to_string(depth)
         Core.depth_to_word(depth)
       end
+
+      def infinity_or_empty_from_recurse(depth_or_recurse)
+        case depth_or_recurse
+          when true  then DEPTH_INFINITY
+          when false then DEPTH_EMPTY
+          else depth_or_recurse
+        end
+      end
+
+      def infinity_or_immediates_from_recurse(depth_or_recurse)
+        case depth_or_recurse
+          when true  then DEPTH_INFINITY
+          when false then DEPTH_IMMEDIATES
+          else depth_or_recurse
+        end
+      end
     end
 
     module MimeType
@@ -602,11 +752,15 @@ module Svn
 
     class MergeRange
       def to_a
-        [self.start, self.end]
+        [self.start, self.end, self.inheritable]
       end
 
       def inspect
         super.gsub(/>$/, ":#{to_a.inspect}>")
+      end
+
+      def ==(other)
+        to_a == other.to_a
       end
     end
 
@@ -624,14 +778,14 @@ module Svn
         end
       end
 
-      def diff(to)
-        Core.mergeinfo_diff(self, to).collect do |result|
+      def diff(to, consider_inheritance=false)
+        Core.mergeinfo_diff(self, to, consider_inheritance).collect do |result|
           self.class.new(result)
         end
       end
 
       def merge(changes)
-        self.class.new(Core.swig_rb_mergeinfo_merge(self, changes))
+        self.class.new(Core.swig_mergeinfo_merge(self, changes))
       end
 
       def remove(eraser)
@@ -639,11 +793,11 @@ module Svn
       end
 
       def sort
-        self.class.new(Core.swig_rb_mergeinfo_sort(self))
+        self.class.new(Core.swig_mergeinfo_sort(self))
       end
 
       def to_s
-        Core.mergeinfo_to_stringbuf(self)
+        Core.mergeinfo_to_string(self)
       end
     end
 
@@ -655,8 +809,8 @@ module Svn
         end
       end
 
-      def diff(to)
-        result = Core.rangelist_diff(self, to)
+      def diff(to, consider_inheritance=false)
+        result = Core.rangelist_diff(self, to, consider_inheritance)
         deleted = result.pop
         added = result
         [added, deleted].collect do |result|
@@ -665,24 +819,32 @@ module Svn
       end
 
       def merge(changes)
-        self.class.new(*Core.swig_rb_rangelist_merge(self, changes))
+        self.class.new(*Core.swig_rangelist_merge(self, changes))
       end
 
-      def remove(eraser)
-        self.class.new(*Core.rangelist_remove(eraser, self))
+      def remove(eraser, consider_inheritance=false)
+        self.class.new(*Core.rangelist_remove(eraser, self,
+                                              consider_inheritance))
       end
 
-      def intersect(other)
-        self.class.new(*Core.rangelist_intersect(self, other))
+      def intersect(other, consider_inheritance=false)
+        self.class.new(*Core.rangelist_intersect(self, other,
+                                                 consider_inheritance))
       end
 
       def reverse
-        self.class.new(*Core.swig_rb_rangelist_reverse(self))
+        self.class.new(*Core.swig_rangelist_reverse(self))
       end
 
       def to_s
-        Core.rangelist_to_stringbuf(self)
+        Core.rangelist_to_string(self)
       end
+    end
+
+    class LogEntry
+      alias_method(:revision_properties, :revprops)
+      alias_method(:has_children?, :has_children)
+      undef_method(:has_children)
     end
   end
 end

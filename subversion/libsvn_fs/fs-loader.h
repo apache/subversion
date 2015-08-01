@@ -2,17 +2,22 @@
  * fs_loader.h:  Declarations for the FS loader library
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -20,8 +25,10 @@
 #ifndef LIBSVN_FS_FS_H
 #define LIBSVN_FS_FS_H
 
-#include "svn_version.h"
+#include "svn_types.h"
 #include "svn_fs.h"
+#include "svn_props.h"
+#include "private/svn_mutex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,13 +38,14 @@ extern "C" {
 /* The FS loader library implements the a front end to "filesystem
    abstract providers" (FSAPs), which implement the svn_fs API.
 
-   The loader library divides up the FS API into five categories:
+   The loader library divides up the FS API into several categories:
 
      - Top-level functions, which operate on paths to an FS
      - Functions which operate on an FS object
      - Functions which operate on a transaction object
      - Functions which operate on a root object
      - Functions which operate on a history object
+     - Functions which operate on a noderev-ID object
 
    Some generic fields of the FS, transaction, root, and history
    objects are defined by the loader library; the rest are stored in
@@ -52,7 +60,7 @@ extern "C" {
    implements the BDB filesystem type.  Consult the dev list for
    details on the "FSP-level" abstraction concept.
 */
-   
+
 
 
 /*** Top-level library vtable type ***/
@@ -66,26 +74,66 @@ typedef struct fs_library_vtable_t
      this statement, now that the minor version has increased. */
   const svn_version_t *(*get_version)(void);
 
-  /* The open/create/open_for_recovery functions are serialized so that they
-     may use the common_pool parameter to allocate fs-global objects such as
-     the bdb env cache. */
-  svn_error_t *(*create)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+  /* The open_fs/create/open_fs_for_recovery/upgrade_fs functions must
+     use the common_pool_lock to serialize the access to the common_pool
+     parameter for allocating fs-global objects such as an env cache. */
+  svn_error_t *(*create)(svn_fs_t *fs, const char *path,
+                         svn_mutex__t *common_pool_lock,
+                         apr_pool_t *pool,
                          apr_pool_t *common_pool);
-  svn_error_t *(*open)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
-                       apr_pool_t *common_pool);
+  svn_error_t *(*open_fs)(svn_fs_t *fs, const char *path,
+                          svn_mutex__t *common_pool_lock,
+                          apr_pool_t *pool,
+                          apr_pool_t *common_pool);
   /* open_for_recovery() is like open(), but used to fill in an fs pointer
      that will be passed to recover().  We assume that the open() method
      might not be immediately appropriate for recovery. */
-  svn_error_t *(*open_for_recovery)(svn_fs_t *fs, const char *path,
-                                    apr_pool_t *pool,
-                                    apr_pool_t *common_pool);
+  svn_error_t *(*open_fs_for_recovery)(svn_fs_t *fs, const char *path,
+                                       svn_mutex__t *common_pool_lock,
+                                       apr_pool_t *pool,
+                                       apr_pool_t *common_pool);
+  svn_error_t *(*upgrade_fs)(svn_fs_t *fs,
+                             const char *path,
+                             svn_fs_upgrade_notify_t notify_func,
+                             void *notify_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             svn_mutex__t *common_pool_lock,
+                             apr_pool_t *scratch_pool,
+                             apr_pool_t *common_pool);
+  svn_error_t *(*verify_fs)(svn_fs_t *fs, const char *path,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
+                            svn_fs_progress_notify_func_t notify_func,
+                            void *notify_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            svn_mutex__t *common_pool_lock,
+                            apr_pool_t *pool,
+                            apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
-  svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
-                          svn_boolean_t clean, apr_pool_t *pool);
+  svn_error_t *(*hotcopy)(svn_fs_t *src_fs,
+                          svn_fs_t *dst_fs,
+                          const char *src_path,
+                          const char *dst_path,
+                          svn_boolean_t clean,
+                          svn_boolean_t incremental,
+                          svn_fs_hotcopy_notify_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_mutex__t *common_pool_lock,
+                          apr_pool_t *pool,
+                          apr_pool_t *common_pool);
   const char *(*get_description)(void);
   svn_error_t *(*recover)(svn_fs_t *fs,
                           svn_cancel_func_t cancel_func, void *cancel_baton,
                           apr_pool_t *pool);
+  svn_error_t *(*pack_fs)(svn_fs_t *fs, const char *path,
+                          svn_fs_pack_notify_t notify_func, void *notify_baton,
+                          svn_cancel_func_t cancel_func, void *cancel_baton,
+                          svn_mutex__t *common_pool_lock,
+                          apr_pool_t *pool, apr_pool_t *common_pool);
 
   /* Provider-specific functions should go here, even if they could go
      in an object vtable, so that they are all kept together. */
@@ -100,6 +148,17 @@ typedef struct fs_library_vtable_t
      into the FS vtable. */
   svn_fs_id_t *(*parse_id)(const char *data, apr_size_t len,
                            apr_pool_t *pool);
+  /* Allow an FSAP to call svn_fs_open(), which is in a higher-level library
+     (libsvn_fs-1.so) and cannot easily be moved to libsvn_fs_util. */
+  svn_error_t *(*set_svn_fs_open)(svn_fs_t *fs,
+                                  svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+                                                               const char *,
+                                                               apr_hash_t *,
+                                                               apr_pool_t *,
+                                                               apr_pool_t *));
+  /* For svn_fs_info_fsfs_dup(). */
+  void *(*info_fsap_dup)(const void *fsap_info,
+                         apr_pool_t *result_pool);
 } fs_library_vtable_t;
 
 /* This is the type of symbol an FS module defines to fetch the
@@ -131,6 +190,9 @@ svn_error_t *svn_fs_base__init(const svn_version_t *loader_version,
 svn_error_t *svn_fs_fs__init(const svn_version_t *loader_version,
                              fs_library_vtable_t **vtable,
                              apr_pool_t* common_pool);
+svn_error_t *svn_fs_x__init(const svn_version_t *loader_version,
+                            fs_library_vtable_t **vtable,
+                            apr_pool_t* common_pool);
 
 
 
@@ -147,9 +209,10 @@ typedef struct fs_vtable_t
                                     svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*change_rev_prop)(svn_fs_t *fs, svn_revnum_t rev,
                                   const char *name,
+                                  const svn_string_t *const *old_value_p,
                                   const svn_string_t *value,
                                   apr_pool_t *pool);
-  svn_error_t *(*get_uuid)(svn_fs_t *fs, const char **uuid, apr_pool_t *pool);
+  /* There is no get_uuid(); see svn_fs_t.uuid docstring. */
   svn_error_t *(*set_uuid)(svn_fs_t *fs, const char *uuid, apr_pool_t *pool);
   svn_error_t *(*revision_root)(svn_fs_root_t **root_p, svn_fs_t *fs,
                                 svn_revnum_t rev, apr_pool_t *pool);
@@ -163,22 +226,43 @@ typedef struct fs_vtable_t
   svn_error_t *(*list_transactions)(apr_array_header_t **names_p,
                                     svn_fs_t *fs, apr_pool_t *pool);
   svn_error_t *(*deltify)(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool);
-  svn_error_t *(*lock)(svn_lock_t **lock, svn_fs_t *fs,
-                       const char *path, const char *token,
+  svn_error_t *(*lock)(svn_fs_t *fs,
+                       apr_hash_t *targets,
                        const char *comment, svn_boolean_t is_dav_comment,
-                       apr_time_t expiration_date,
-                       svn_revnum_t current_rev, svn_boolean_t steal_lock,
-                       apr_pool_t *pool);
+                       apr_time_t expiration_date, svn_boolean_t steal_lock,
+                       svn_fs_lock_callback_t lock_callback, void *lock_baton,
+                       apr_pool_t *result_pool, apr_pool_t *scratch_pool);
   svn_error_t *(*generate_lock_token)(const char **token, svn_fs_t *fs,
                                       apr_pool_t *pool);
-  svn_error_t *(*unlock)(svn_fs_t *fs, const char *path, const char *token,
-                         svn_boolean_t break_lock, apr_pool_t *pool);
+  svn_error_t *(*unlock)(svn_fs_t *fs, apr_hash_t *targets,
+                         svn_boolean_t break_lock,
+                         svn_fs_lock_callback_t lock_callback, void *lock_baton,
+                         apr_pool_t *result_pool, apr_pool_t *scratch_pool);
   svn_error_t *(*get_lock)(svn_lock_t **lock, svn_fs_t *fs,
                            const char *path, apr_pool_t *pool);
-  svn_error_t *(*get_locks)(svn_fs_t *fs, const char *path,
+  svn_error_t *(*get_locks)(svn_fs_t *fs, const char *path, svn_depth_t depth,
                             svn_fs_get_locks_callback_t get_locks_func,
                             void *get_locks_baton,
                             apr_pool_t *pool);
+  svn_error_t *(*info_format)(int *fs_format,
+                              svn_version_t **supports_version,
+                              svn_fs_t *fs,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+  svn_error_t *(*info_config_files)(apr_array_header_t **files,
+                                    svn_fs_t *fs,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+  svn_error_t *(*info_fsap)(const void **fsap_info,
+                            svn_fs_t *fs,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+  /* info_fsap_dup is in the library vtable. */
+  svn_error_t *(*verify_root)(svn_fs_root_t *root,
+                              apr_pool_t *pool);
+  svn_error_t *(*freeze)(svn_fs_t *fs,
+                         svn_fs_freeze_func_t freeze_func,
+                         void *freeze_baton, apr_pool_t *pool);
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));
@@ -198,8 +282,8 @@ typedef struct txn_vtable_t
                               const svn_string_t *value, apr_pool_t *pool);
   svn_error_t *(*root)(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                        apr_pool_t *pool);
-  svn_error_t *(*get_mergeinfo)(apr_hash_t **minfoprops, svn_fs_txn_t *txn,
-                                apr_pool_t *pool);
+  svn_error_t *(*change_props)(svn_fs_txn_t *txn, const apr_array_header_t *props,
+                               apr_pool_t *pool);
 } txn_vtable_t;
 
 
@@ -207,7 +291,10 @@ typedef struct txn_vtable_t
    roots may not all have the same vtable, we need a rule to determine
    which root's vtable is used.  The rule is: if one of the roots is
    named "target", we use that root's vtable; otherwise, we use the
-   first root argument's vtable. */
+   first root argument's vtable.
+   These callbacks correspond to svn_fs_* functions in include/svn_fs.h,
+   see there for details.
+   Note: delete_node() corresponds to svn_fs_delete(). */
 typedef struct root_vtable_t
 {
   /* Determining what has changed in a root */
@@ -220,17 +307,32 @@ typedef struct root_vtable_t
                              const char *path, apr_pool_t *pool);
   svn_error_t *(*node_history)(svn_fs_history_t **history_p,
                                svn_fs_root_t *root, const char *path,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
   svn_error_t *(*node_id)(const svn_fs_id_t **id_p, svn_fs_root_t *root,
                           const char *path, apr_pool_t *pool);
+  svn_error_t *(*node_relation)(svn_fs_node_relation_t *relation,
+                                svn_fs_root_t *root_a, const char *path_a,
+                                svn_fs_root_t *root_b, const char *path_b,
+                                apr_pool_t *scratch_pool);
   svn_error_t *(*node_created_rev)(svn_revnum_t *revision,
                                    svn_fs_root_t *root, const char *path,
                                    apr_pool_t *pool);
+  svn_error_t *(*node_origin_rev)(svn_revnum_t *revision,
+                                  svn_fs_root_t *root, const char *path,
+                                  apr_pool_t *pool);
   svn_error_t *(*node_created_path)(const char **created_path,
                                     svn_fs_root_t *root, const char *path,
                                     apr_pool_t *pool);
   svn_error_t *(*delete_node)(svn_fs_root_t *root, const char *path,
                               apr_pool_t *pool);
+  svn_error_t *(*copy)(svn_fs_root_t *from_root, const char *from_path,
+                       svn_fs_root_t *to_root, const char *to_path,
+                       apr_pool_t *pool);
+  svn_error_t *(*revision_link)(svn_fs_root_t *from_root,
+                                svn_fs_root_t *to_root,
+                                const char *path,
+                                apr_pool_t *pool);
   svn_error_t *(*copied_from)(svn_revnum_t *rev_p, const char **path_p,
                               svn_fs_root_t *root, const char *path,
                               apr_pool_t *pool);
@@ -244,50 +346,58 @@ typedef struct root_vtable_t
                             apr_pool_t *pool);
   svn_error_t *(*node_proplist)(apr_hash_t **table_p, svn_fs_root_t *root,
                                 const char *path, apr_pool_t *pool);
+  svn_error_t *(*node_has_props)(svn_boolean_t *has_props, svn_fs_root_t *root,
+                                 const char *path, apr_pool_t *scratch_pool);
   svn_error_t *(*change_node_prop)(svn_fs_root_t *root, const char *path,
                                    const char *name,
                                    const svn_string_t *value,
                                    apr_pool_t *pool);
   svn_error_t *(*props_changed)(int *changed_p, svn_fs_root_t *root1,
                                 const char *path1, svn_fs_root_t *root2,
-                                const char *path2, apr_pool_t *pool);
+                                const char *path2, svn_boolean_t strict,
+                                apr_pool_t *scratch_pool);
 
   /* Directories */
   svn_error_t *(*dir_entries)(apr_hash_t **entries_p, svn_fs_root_t *root,
                               const char *path, apr_pool_t *pool);
+  svn_error_t *(*dir_optimal_order)(apr_array_header_t **ordered_p,
+                                    svn_fs_root_t *root,
+                                    apr_hash_t *entries,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
   svn_error_t *(*make_dir)(svn_fs_root_t *root, const char *path,
                            apr_pool_t *pool);
-  svn_error_t *(*copy)(svn_fs_root_t *from_root, const char *from_path,
-                       svn_fs_root_t *to_root, const char *to_path,
-                       apr_pool_t *pool);
-  svn_error_t *(*revision_link)(svn_fs_root_t *from_root,
-                                svn_fs_root_t *to_root,
-                                const char *path,
-                                apr_pool_t *pool);
 
   /* Files */
   svn_error_t *(*file_length)(svn_filesize_t *length_p, svn_fs_root_t *root,
                               const char *path, apr_pool_t *pool);
-  svn_error_t *(*file_md5_checksum)(unsigned char digest[],
-                                    svn_fs_root_t *root,
-                                    const char *path, apr_pool_t *pool);
+  svn_error_t *(*file_checksum)(svn_checksum_t **checksum,
+                                svn_checksum_kind_t kind, svn_fs_root_t *root,
+                                const char *path, apr_pool_t *pool);
   svn_error_t *(*file_contents)(svn_stream_t **contents,
                                 svn_fs_root_t *root, const char *path,
                                 apr_pool_t *pool);
+  svn_error_t *(*try_process_file_contents)(svn_boolean_t *success,
+                                            svn_fs_root_t *target_root,
+                                            const char *target_path,
+                                            svn_fs_process_contents_func_t processor,
+                                            void* baton,
+                                            apr_pool_t *pool);
   svn_error_t *(*make_file)(svn_fs_root_t *root, const char *path,
                             apr_pool_t *pool);
   svn_error_t *(*apply_textdelta)(svn_txdelta_window_handler_t *contents_p,
                                   void **contents_baton_p,
                                   svn_fs_root_t *root, const char *path,
-                                  const char *base_checksum,
-                                  const char *result_checksum,
+                                  svn_checksum_t *base_checksum,
+                                  svn_checksum_t *result_checksum,
                                   apr_pool_t *pool);
   svn_error_t *(*apply_text)(svn_stream_t **contents_p, svn_fs_root_t *root,
-                             const char *path, const char *result_checksum,
+                             const char *path, svn_checksum_t *result_checksum,
                              apr_pool_t *pool);
   svn_error_t *(*contents_changed)(int *changed_p, svn_fs_root_t *root1,
                                    const char *path1, svn_fs_root_t *root2,
-                                   const char *path2, apr_pool_t *pool);
+                                   const char *path2, svn_boolean_t strict,
+                                   apr_pool_t *scratch_pool);
   svn_error_t *(*get_file_delta_stream)(svn_txdelta_stream_t **stream_p,
                                         svn_fs_root_t *source_root,
                                         const char *source_path,
@@ -304,20 +414,15 @@ typedef struct root_vtable_t
                         svn_fs_root_t *ancestor_root,
                         const char *ancestor_path,
                         apr_pool_t *pool);
-  svn_error_t *(*change_mergeinfo)(svn_fs_root_t *root, const char *path,
-                                   apr_hash_t *info,
-                                   apr_pool_t *pool);
-  svn_error_t *(*get_mergeinfo)(apr_hash_t **minfohash,
-                                svn_fs_root_t *root, 
+  /* Mergeinfo. */
+  svn_error_t *(*get_mergeinfo)(svn_mergeinfo_catalog_t *catalog,
+                                svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
-                                apr_pool_t *pool);
-  svn_error_t *(*get_mergeinfo_for_tree)(apr_hash_t **mergeinfo,
-                                         svn_fs_root_t *root,
-                                         const apr_array_header_t *paths,
-                                         svn_fs_mergeinfo_filter_func_t filter_func,
-                                         void *filter_func_baton,
-                                         apr_pool_t *pool);
+                                svn_boolean_t include_descendants,
+                                svn_boolean_t adjust_inherited_mergeinfo,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 } root_vtable_t;
 
 
@@ -325,7 +430,7 @@ typedef struct history_vtable_t
 {
   svn_error_t *(*prev)(svn_fs_history_t **prev_history_p,
                        svn_fs_history_t *history, svn_boolean_t cross_copies,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool, apr_pool_t *scratch_pool);
   svn_error_t *(*location)(const char **path, svn_revnum_t *revision,
                            svn_fs_history_t *history, apr_pool_t *pool);
 } history_vtable_t;
@@ -333,8 +438,10 @@ typedef struct history_vtable_t
 
 typedef struct id_vtable_t
 {
-  svn_string_t *(*unparse)(const svn_fs_id_t *id, apr_pool_t *pool);
-  int (*compare)(const svn_fs_id_t *a, const svn_fs_id_t *b);
+  svn_string_t *(*unparse)(const svn_fs_id_t *id,
+                           apr_pool_t *pool);
+  svn_fs_node_relation_t (*compare)(const svn_fs_id_t *a,
+                                    const svn_fs_id_t *b);
 } id_vtable_t;
 
 
@@ -342,15 +449,11 @@ typedef struct id_vtable_t
 /*** Definitions of the abstract FS object types ***/
 
 /* These are transaction properties that correspond to the bitfields
-   in the 'flags' argument to svn_fs_lock().  */
-#define SVN_FS_PROP_TXN_CHECK_LOCKS            SVN_PROP_PREFIX "check-locks"
-#define SVN_FS_PROP_TXN_CHECK_OOD              SVN_PROP_PREFIX "check-ood"
-
-/* This transaction property determines whether the txn has mergeinfo
-   properties set in it, and thus will need some info inserted about
-   uid->rev mapping in the mergeinfo table  */
-#define SVN_FS_PROP_TXN_CONTAINS_MERGEINFO     SVN_PROP_PREFIX "contains-mergeinfo"
-
+   in the 'flags' argument to svn_fs_begin_txn2().  */
+#define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
+#define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
+/* Set to "0" at the start of the txn, to "1" when svn:date changes. */
+#define SVN_FS__PROP_TXN_CLIENT_DATE           SVN_PROP_PREFIX "client-date"
 
 struct svn_fs_t
 {
@@ -373,6 +476,9 @@ struct svn_fs_t
   /* FSAP-specific vtable and private data */
   fs_vtable_t *vtable;
   void *fsap_data;
+
+  /* UUID, stored by open(), create(), and set_uuid(). */
+  const char *uuid;
 };
 
 
@@ -397,7 +503,7 @@ struct svn_fs_txn_t
 
 struct svn_fs_root_t
 {
-  /* A pool managing this root */
+  /* A pool managing this root (and only this root!) */
   apr_pool_t *pool;
 
   /* The filesystem to which this root belongs */
@@ -445,12 +551,18 @@ struct svn_fs_access_t
   const char *username;
 
   /* A collection of lock-tokens supplied by the fs caller.
-     Hash maps (const char *) UUID --> (void *) 1
+     Hash maps (const char *) UUID --> path where path can be the
+     magic value (void *) 1 if no path was specified.
      fs functions should really only be interested whether a UUID
      exists as a hash key at all;  the value is irrelevant. */
   apr_hash_t *lock_tokens;
 };
 
+struct svn_fs_lock_target_t
+{
+  const char *token;
+  svn_revnum_t current_rev;
+};
 
 
 #ifdef __cplusplus

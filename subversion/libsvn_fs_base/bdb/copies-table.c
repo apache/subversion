@@ -1,28 +1,35 @@
 /* copies-table.c : operations on the `copies' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include <string.h>
 
 #include "bdb_compat.h"
+
+#include "private/svn_skel.h"
+
 #include "../fs.h"
 #include "../err.h"
 #include "../key-gen.h"
 #include "dbt.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../../libsvn_fs/fs-loader.h"
@@ -43,9 +50,9 @@ svn_fs_bdb__open_copies_table(DB **copies_p,
 
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&copies, env, 0));
-  BDB_ERR(copies->open(SVN_BDB_OPEN_PARAMS(copies, NULL),
-                       "copies", 0, DB_BTREE,
-                       open_flags, 0666));
+  BDB_ERR((copies->open)(SVN_BDB_OPEN_PARAMS(copies, NULL),
+                         "copies", 0, DB_BTREE,
+                         open_flags, 0666));
 
   /* Create the initial `next-key' table entry.  */
   if (create)
@@ -71,7 +78,7 @@ put_copy(svn_fs_t *fs,
          apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  skel_t *copy_skel;
+  svn_skel_t *copy_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
@@ -82,11 +89,9 @@ put_copy(svn_fs_t *fs,
   svn_fs_base__str_to_dbt(&key, copy_id);
   svn_fs_base__skel_to_dbt(&value, copy_skel, pool);
   svn_fs_base__trail_debug(trail, "copies", "put");
-  SVN_ERR(BDB_WRAP(fs, _("storing copy record"),
-                   bfd->copies->put(bfd->copies, trail->db_txn,
-                                    &key, &value, 0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, N_("storing copy record"),
+                  bfd->copies->put(bfd->copies, trail->db_txn,
+                                   &key, &value, 0));
 }
 
 
@@ -107,7 +112,7 @@ svn_fs_bdb__reserve_copy_id(const char **id_p,
   /* Get the current value associated with the `next-key' key in the
      copies table.  */
   svn_fs_base__trail_debug(trail, "copies", "get");
-  SVN_ERR(BDB_WRAP(fs, _("allocating new copy ID (getting 'next-key')"),
+  SVN_ERR(BDB_WRAP(fs, N_("allocating new copy ID (getting 'next-key')"),
                    bfd->copies->get(bfd->copies, trail->db_txn, &query,
                                     svn_fs_base__result_dbt(&result),
                                     0)));
@@ -125,8 +130,7 @@ svn_fs_bdb__reserve_copy_id(const char **id_p,
                             svn_fs_base__str_to_dbt(&result, next_key),
                             0);
 
-  SVN_ERR(BDB_WRAP(fs, _("bumping next copy key"), db_err));
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, N_("bumping next copy key"), db_err);
 }
 
 
@@ -164,7 +168,7 @@ svn_fs_bdb__delete_copy(svn_fs_t *fs,
   db_err = bfd->copies->del(bfd->copies, trail->db_txn, &key, 0);
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_no_such_copy(fs, copy_id);
-  return BDB_WRAP(fs, _("deleting entry from 'copies' table"), db_err);
+  return BDB_WRAP(fs, N_("deleting entry from 'copies' table"), db_err);
 }
 
 
@@ -178,7 +182,7 @@ svn_fs_bdb__get_copy(copy_t **copy_p,
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
   int db_err;
-  skel_t *skel;
+  svn_skel_t *skel;
   copy_t *copy;
 
   /* Only in the context of this function do we know that the DB call
@@ -192,10 +196,10 @@ svn_fs_bdb__get_copy(copy_t **copy_p,
 
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_no_such_copy(fs, copy_id);
-  SVN_ERR(BDB_WRAP(fs, _("reading copy"), db_err));
+  SVN_ERR(BDB_WRAP(fs, N_("reading copy"), db_err));
 
   /* Unparse COPY skel */
-  skel = svn_fs_base__parse_skel(value.data, value.size, pool);
+  skel = svn_skel__parse(value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_copy(fs, copy_id);
 

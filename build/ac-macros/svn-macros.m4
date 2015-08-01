@@ -1,3 +1,22 @@
+dnl ===================================================================
+dnl   Licensed to the Apache Software Foundation (ASF) under one
+dnl   or more contributor license agreements.  See the NOTICE file
+dnl   distributed with this work for additional information
+dnl   regarding copyright ownership.  The ASF licenses this file
+dnl   to you under the Apache License, Version 2.0 (the
+dnl   "License"); you may not use this file except in compliance
+dnl   with the License.  You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl   Unless required by applicable law or agreed to in writing,
+dnl   software distributed under the License is distributed on an
+dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+dnl   KIND, either express or implied.  See the License for the
+dnl   specific language governing permissions and limitations
+dnl   under the License.
+dnl ===================================================================
+dnl
 # Miscellaneous additional macros for Subversion's own use.
 
 # SVN_CONFIG_NICE(FILENAME)
@@ -26,65 +45,6 @@ EOF
   rm -f "$1.old"
 ])
 
-
-# SVN_EXTERNAL_PROJECT_SETUP()
-# Internal helper for SVN_EXTERNAL_PROJECT.
-AC_DEFUN([SVN_EXTERNAL_PROJECT_SETUP], [
-  do_subdir_config="yes"
-  AC_ARG_ENABLE([subdir-config],
-    AC_HELP_STRING([--disable-subdir-config],
-                   [do not reconfigure packages in subdirectories]),
-    [if test "$enableval" = "no"; then do_subdir_config="no"; fi])
-  AC_SUBST([SVN_EXTERNAL_PROJECT_SUBDIRS], [""])
-])
-
-# SVN_EXTERNAL_PROJECT(SUBDIR [, ADDITIONAL-CONFIGURE-ARGS])
-# Setup SUBDIR as an external project. This means:
-# - Execute the configure script immediately at the point of macro invocation.
-# - Add SUBDIR to the substitution variable SVN_EXTERNAL_PROJECT_SUBDIRS,
-#   for the Makefile.in to arrange to execute make in the subdir.
-#
-# Derived from APR_SUBDIR_CONFIG
-AC_DEFUN([SVN_EXTERNAL_PROJECT], [
-  AC_REQUIRE([SVN_EXTERNAL_PROJECT_SETUP])
-  SVN_EXTERNAL_PROJECT_SUBDIRS="$SVN_EXTERNAL_PROJECT_SUBDIRS $1"
-  if test "$do_subdir_config" = "yes" ; then
-    # save our work to this point; this allows the sub-package to use it
-    AC_CACHE_SAVE
-
-    AC_MSG_NOTICE([configuring package in $1 now])
-    ac_popdir=`pwd`
-    ac_abs_srcdir=`(cd $srcdir/$1 && pwd)`
-    apr_config_subdirs="$1"
-    test -d $1 || $MKDIR $1
-    cd $1
-
-    # A "../" for each directory in /$config_subdirs.
-    ac_dots=[`echo $apr_config_subdirs|sed -e 's%^\./%%' -e 's%[^/]$%&/%' -e 's%[^/]*/%../%g'`]
-
-    # Make the cache file name correct relative to the subdirectory.
-    case "$cache_file" in
-    /*) ac_sub_cache_file=$cache_file ;;
-    *) # Relative path.
-      ac_sub_cache_file="$ac_dots$cache_file" ;;
-    esac
-
-    # The eval makes quoting arguments work.
-    if eval $SHELL $ac_abs_srcdir/configure $ac_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_abs_srcdir $2
-    then :
-      echo "$1 configured properly"
-    else
-      echo "configure failed for $1"
-      exit 1
-    fi
-    cd $ac_popdir
-
-    # grab any updates from the sub-package
-    AC_CACHE_LOAD
-  else
-    AC_MSG_WARN([not running configure in $1])
-  fi
-])
 
 dnl
 dnl SVN_CONFIG_SCRIPT(path)
@@ -122,33 +82,84 @@ done
 $1="${svn_cur}"
 ])
 
-dnl SVN_MAYBE_ADD_TO_CFLAGS(option)
+dnl SVN_STRIP_FLAG(FLAG_VAR_NAME, FLAG)
 dnl
-dnl Attempt to compile a trivial C program to test if the option passed
-dnl is valid. If it is, then add it to CFLAGS. with the passed in option
-dnl and see if it was successfully compiled.
-dnl
-dnl This macro is usually used for stricter syntax checking flags.
-dnl Therefore we include certain headers which may in turn include system
-dnl headers, as system headers on some platforms may fail strictness checks
-dnl we wish to use on other platforms.
-
-AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
+dnl Remove FLAG from the variable FLAG_VAR_NAME, if it exists.  This macro
+dnl is primarily used for removing unwanted compiler flags, but is really
+dnl just a general wrapper around `sed'.
+AC_DEFUN(SVN_STRIP_FLAG,
 [
-  option="$1"
-  svn_maybe_add_to_cflags_saved_flags="$CFLAGS"
-  CFLAGS="$CFLAGS $option"
-  AC_MSG_CHECKING([if $CC accepts $option])
-  AC_TRY_COMPILE(
-    [#include <apr_portable.h>],
-    [],
-    [svn_maybe_add_to_cflags_ok="yes"],
-    [svn_maybe_add_to_cflags_ok="no"]
-  )
-  if test "$svn_maybe_add_to_cflags_ok" = "yes"; then
-    AC_MSG_RESULT([yes, will use it])
-  else
-    AC_MSG_RESULT([no])
-    CFLAGS="$svn_maybe_add_to_cflags_saved_flags"
+  $1=`echo "$$1" | $SED -e 's/$2//'`
+])
+
+dnl SVN_REMOVE_STANDARD_LIB_DIRS(OPTIONS)
+dnl
+dnl Remove standard library search directories.
+dnl OPTIONS is a list of compiler/linker options.
+dnl This macro prints input options except -L options whose arguments are
+dnl standard library search directories (e.g. /usr/lib).
+dnl
+dnl This macro is used to avoid linking against Subversion libraries
+dnl potentially placed in standard library search directories.
+AC_DEFUN([SVN_REMOVE_STANDARD_LIB_DIRS],
+[
+  input_flags="$1"
+  output_flags=""
+  filtered_dirs="/lib /lib64 /usr/lib /usr/lib64"
+  for flag in $input_flags; do
+    filter="no"
+    for dir in $filtered_dirs; do
+      if test "$flag" = "-L$dir" || test "$flag" = "-L$dir/"; then
+        filter="yes"
+        break
+      fi
+    done
+    if test "$filter" = "no"; then
+      output_flags="$output_flags $flag"
+    fi
+  done
+  if test -n "$output_flags"; then
+    printf "%s" "${output_flags# }"
   fi
+])
+
+AC_DEFUN([SVN_CHECK_FOR_ATOMIC_BUILTINS],
+[
+  AC_CACHE_CHECK([whether the compiler provides atomic builtins], [svn_cv_atomic_builtins],
+  [AC_TRY_RUN([
+  int main()
+  {
+      unsigned long long val = 1010, tmp, *mem = &val;
+
+      if (__sync_fetch_and_add(&val, 1010) != 1010 || val != 2020)
+          return 1;
+
+      tmp = val;
+
+      if (__sync_fetch_and_sub(mem, 1010) != tmp || val != 1010)
+          return 1;
+
+      if (__sync_sub_and_fetch(&val, 1010) != 0 || val != 0)
+          return 1;
+
+      tmp = 3030;
+
+      if (__sync_val_compare_and_swap(mem, 0, tmp) != 0 || val != tmp)
+          return 1;
+
+      if (__sync_lock_test_and_set(&val, 4040) != 3030)
+          return 1;
+
+      mem = &tmp;
+
+      if (__sync_val_compare_and_swap(&mem, &tmp, &val) != &tmp)
+          return 1;
+
+      __sync_synchronize();
+
+      if (mem != &val)
+          return 1;
+
+      return 0;
+  }], [svn_cv_atomic_builtins=yes], [svn_cv_atomic_builtins=no], [svn_cv_atomic_builtins=no])])
 ])

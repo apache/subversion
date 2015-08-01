@@ -1,0 +1,199 @@
+﻿                                                                -*- Text -*-
+
+Conflict storage 2.0/NG
+=======================
+
+For WC-NG we tried to introduce a new storage model for conflicts, but we
+didn't get this proposal completed for Subversion 1.7. I would like to
+revive the new conflict storage topic with a new simple model that can
+be extended later to allow the more advanced scenarios.
+
+I'm going to simplify the model described in the 'conflict-storage' document
+a bit in an attempt to allow fitting this in the Subversion 1.8.0 release.
+
+
+Current Situation
+-----------------
+
+We currently support three kinds of conflicts.
+
+ * Text conflicts
+ * Property conflicts
+ * Tree conflicts
+
+These conflicts all have their own storage model. 
+
+Text conflicts are stored in the working copy in marker files. This allows
+resolving later using the --accept argument of 'svn resolve'.
+While resolving non-interactively we just know where these files are.
+
+Property conflicts are stored in a 'write only' marker file. Only --accept
+working is really supported.
+While resolving non-interactively we just know that there is/was some conflict.
+
+Tree conflicts are just stored in a skel in the ACTUAL table of wc.db. Many
+details are available while resolving both interactively and non-interatively,
+but we don't have the necessary logic to provide help in common user scenarios.
+
+In our current code a node can be tree conflicted or 'node' conflicted, but not
+both. A 'node' conflicted node can have either text or property conflicts, or
+both.
+
+Once a node is tree or 'node' conflicted, it is skipped by future update,
+switch and merge operations so we (currently) don't have to allow layering
+multiple conflicts of the same type while creating conflicts.
+
+(BH: My guess would be that resolvers might encounter such situations on multi
+ layer moves, but in that case multiple tree locations are involved. So maybe
+ we can work around that)
+
+Plans for the initial version
+-----------------------------
+
+What I would like to introduce for 1.8 would be a unified extensible storage
+model that allows the interactive and non-interactive resolvers access to the
+same information. In most cases this can be accomplished by collecting the
+information and storing it in a conflict-ng skel that can be stored in the
+ACTUAL table, like we do for tree conflicts now.
+
+The Skel I would like to propose for the initial version would be
+
+(WHY (CONFLICT*) ...)
+
+Where ... is currently undefined, but explicitly free for future extension.
+
+
+Where 'WHY' would tell why the conflict was introduced
+WHY = (OPERATION (PATH_REV*) ...)
+
+OPERATION = "update" | "switch" | "merge" | ...
+PATH_REV = ("subversion" repos_root_url repos_uuid repos_relpath revision kind
+             ...) | () | ...
+
+repos_root_url, repos_uuid, repos_relpath, revision and kind are defined as in
+wc-metadata.sql or more general through libsvn_wc. We could have used a
+repos_id at a performance cost, but since we don't update the url for an
+existing repos_id on relocate it doesn't help us in keeping the database
+stable over relocates anyway. The skel format would allow switching to
+this format in a future version if we want to keep the conflicts valid.
+
+"update" and "switch" will have 1 PATH_REV item, containing the original BASE
+path from before the update/switch. The new location is already available in
+BASE so doesn't have to be duplicated. If the node is an addition the empty
+list is used.
+### stsp: The implementation *does* duplicate the new BASE node in the skel
+### in a second PATH_REV item.
+
+Merge will have 2 items: the left and right paths. These can come from a
+different repository.
+### stsp: The implementation is storing the pre-merge BASE node, and
+### the incoming merge-right node. What about merge-left?
+### How can merge-left/merge-right come from a different repository?
+
+An empty skel specifies that there is no location. (Tree conflicts and/or
+upgrade scenarios). Future versions may introduce other origins.
+
+CONFLICT =
+  ("text" MARKERS ...) |
+  ("prop" MARKERS (PROPS-OLD PROPS-NEW PROPS-WORKING) ...) |
+  ("tree" () LOCAL-STATE INCOMING-ACTION ...) |
+  ("..." MARKERS ...)
+
+A node can have more than one conflict, so this is defined to be a list.
+Currently this will be either a tree conflict, or a 'node' conflict, that might
+be text, prop or both.
+
+Every conflict has a MARKERS list
+
+MARKERS = (MARKER*)
+MARKER = local_relpath | ()
+
+This list can either contain one or more files relative from the working copy
+root. Marker positions can be skipped by using an empty list instead of a
+local_relpath (Needed for some text conflict scenarios).
+
+For all marker lists with at least one element the rule applies: Once no
+markers exist on disk the conflict is handled as if it is resolved.
+(Legacy behavior of Text and Property conflicts)
+
+The empty list specifies that there is no such behavior (tree conflicts)
+
+Making these easy to parse helps the revert and copy code, that apply
+special behavior to these files.
+
+
+Text Conflicts
+--------------
+
+Text conflicts are initially described as
+  ("text" MARKERS ...)
+
+This simple model provides all the storage of the wc-1.0 like storage and
+while resolving we can start using the WHY information.
+
+svn info can provide additional information about the conflict and all the
+svn resolve options apply in both interactive an non-interactive situations.
+
+The MARKERS list always has 4 items, mapping to ORIGINAL, MINE, ORIGINAL-THEIRS
+and THEIRS. () markers are needed to keep this code compatible with
+svn_wc_entry_t mapping.
+
+Using the PRISTINE store as additional backing store for text conflicts
+is left out of this proposal and can be implemented independently.
+
+Property Conflicts
+------------------
+  
+Property conflicts are initially described as
+  ("prop" MARKERS PROP-NAMES
+   OLD-PROPS MINE-PROPS THEIR-PROPS ...)
+
+PROP-NAMES is a list of conflicted/not-resolved properties.
+*-PROPS are (key value) property mapping lists.
+
+This simple model extends the wc-1.0 model to allow the same conflict
+resolving as for text conflicts. All the options 'base', 'working',
+'mine-conflict', 'theirs-conflict', 'mine-full' and 'theirs-full' are
+relatively easy to implement once we have the values stored.
+
+Conceptually we need 4 list of property hashes as we merge the difference
+between two lists into a potentially already modified working copy. But in
+case of update and merge the old and theirs-old list is the same and in case
+of a merge we still have the mine-old as the pristine version. So by
+retrieving the operation from the WHY skel we can reconstruct the 4 lists.
+
+svn info can provide additional information about the conflict and all the
+svn resolve options apply in both interactive an non-interactive situations.
+
+The first item in the MARKERS list is mapped into the old svn_wc_entry_t
+structure.
+
+Providing a new libsvn_wc and libsvn_client API to view the three property
+collections is outside the scope of this proposal and can be implemented
+independently once this is implemented.
+
+The --accept options already provide a lot of additional value and the
+WHY model would allow access to the specific sets by URL.
+
+
+Tree Conflicts
+--------------
+
+Tree conflicts are initially described as
+  ("tree" () LOCAL-STATE INCOMING-ACTION ...)
+  
+Tree conflicts (currently) have no marker file, so this is described as ()
+instead of MARKERS.
+
+This skel together with the WHY skel provides all the currently available
+tree conflict information and can be mapped into the old data structures.
+
+The current svn info behavior can be reused for the other conflict types,
+where it applies to the WHY parts.
+
+It would be nice if some other --accept values would be accepted, but that
+is outside the scope of this design.
+
+### gs: is LOCAL-STATE defined the same as in 'conflict-storage' ?
+
+### gs: what is the definition of INCOMING-ACTION ?

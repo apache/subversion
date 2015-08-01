@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -19,61 +24,60 @@
  * @brief Interface of the class Pool
  */
 
-#if !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
-#define AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef POOL_H
+#define POOL_H
 
 #include "svn_pools.h"
 
-/**
- * This class manages one APR pool.  Objects of this class are
- * allocated on the stack of the SVNClient and SVNAdmin methods as the
- * request pool.  Leaving the methods will destroy the pool.
- */
-class Pool
-{
- public:
-  Pool();
-  ~Pool();
-  apr_pool_t *pool() const;
-  void clear() const;
-
- private:
+namespace SVN {
   /**
-   * The apr pool request pool.
+   * This class manages one APR pool.  Objects of this class are
+   * allocated on the stack of the SVNClient and SVNAdmin methods as the
+   * request pool.  Leaving the methods will destroy the pool.
    */
-  apr_pool_t *m_pool;
+  class Pool
+  {
+  public:
+    Pool();
+    explicit Pool(const Pool &parent_pool);
+    Pool(apr_pool_t *parent_pool);
+    ~Pool();
+    apr_pool_t *getPool() const;
+    void clear() const;
 
-  /**
-   * We declare the copy constructor and assignment operator private
-   * here, so that the compiler won't inadvertently use them for us.
-   * The default copy constructor just copies all the data members,
-   * which would create two pointers to the same pool, one of which
-   * would get destroyed while the other thought it was still
-   * valid...and BOOM!  Hence the private declaration.
-   */
-  Pool(Pool &that);
-  Pool &operator= (Pool &that);
-};
+  private:
+    /**
+     * The apr pool request pool.
+     */
+    apr_pool_t *m_pool;
 
-// The following one-line functions are best inlined by the compiler, and
-// need to be implemented in the header file for that to happen.
+    /**
+     * We declare the assignment operator private here, so that the compiler
+     * won't inadvertently use them for us.
+     * The default code just copies all the data members, which would create
+     * two pointers to the same pool, one of which would get destroyed while
+     * the other thought it was still valid...and BOOM!
+     *
+     * Hence the private declaration.
+     */
+    Pool &operator=(Pool &that);
+  };
 
-APR_INLINE
-apr_pool_t *Pool::pool () const
-{
-  return m_pool;
+  // The following one-line functions are best inlined by the compiler, and
+  // need to be implemented in the header file for that to happen.
+
+  inline
+  apr_pool_t *Pool::getPool() const
+  {
+    return m_pool;
+  }
+
+  inline
+  void Pool::clear() const
+  {
+    svn_pool_clear(m_pool);
+  }
 }
 
-APR_INLINE
-void Pool::clear() const
-{
-  svn_pool_clear(m_pool);
-}
 
-
-// !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
-#endif
+#endif // POOL_H

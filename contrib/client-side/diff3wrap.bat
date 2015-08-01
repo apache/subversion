@@ -3,7 +3,7 @@
 REM Configure your favorite diff3/merge program here.
 SET DIFF3="C:\Program Files\Funky Stuff\My Merge Tool.exe"
 
-REM Subversion provides the paths we need as the ninth, tenth, and eleventh 
+REM Subversion provides the paths we need as the ninth, tenth, and eleventh
 REM parameters.  But we only have access to nine parameters at a time, so we
 REM shift our nine-parameter window twice to let us get to what we need.
 SHIFT

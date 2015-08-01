@@ -2,17 +2,22 @@
  * proxy.swg :  SWIG include file for defining automatic proxy classes
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -23,6 +28,37 @@
  *       that lets us gracefully handle objects that are allocated from
  *       a pool that's been cleared or destroyed.
  */
+ 
+%pythoncode %{
+  def _copy_metadata_deep(value, old_value):
+    """Copy all attributes of old_value into value, recursively traversing
+    lists and dicts if needed."""
+    if value is None or old_value is None or value is old_value: return
+    
+    if isinstance(value, dict):
+      for k, v in value.iteritems():
+        _copy_metadata_deep(v, old_value[k])
+    elif isinstance(value, list):
+      for v, old_v in zip(value, old_value):
+        _copy_metadata_deep(v, old_v)
+    else:
+      try:
+        value.__dict__.update(old_value.__dict__)
+      except AttributeError:
+        pass
+        
+  def _assert_valid_deep(value):
+    """Assert value's validity, recursively traversing lists and dicts."""
+    if isinstance(value, dict):
+      for v in value.itervalues():
+        _assert_valid_deep(v)
+    elif isinstance(value, list):
+      for v in value:
+        _assert_valid_deep(v)
+    else:
+      if hasattr(value, "assert_valid"):
+        value.assert_valid()
+%}
 
 /* Default code for all wrapped proxy classes in Python */
 %define %proxy_pythoncode(TYPE)
@@ -47,21 +83,14 @@
 
     value = _swig_getattr(self, self.__class__, name)
 
-    # Now, if this item has changed, SWIG must have generated a new object.
-    # Copy the pool metadata from the old object over to the new one.
+    # If we got back a different object than we have, we need to copy all our
+    # metadata into it, so that it looks identical
     members = self.__dict__.get("_members")
     if members is not None:
-      old_value = members.get(name)
-      if (old_value is not None and value is not None and
-          value is not old_value):
-        try:
-          value.__dict__.update(old_value.__dict__)
-        except AttributeError:
-          pass
-
+      _copy_metadata_deep(value, members.get(name))
+        
     # Verify that the new object is good
-    if hasattr(value, "assert_valid"):
-      value.assert_valid()
+    _assert_valid_deep(value)
 
     return value
 

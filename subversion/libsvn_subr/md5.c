@@ -2,74 +2,57 @@
  * md5.c:   checksum routines
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 
+#include <apr_md5.h>
+
+#include "svn_checksum.h"
 #include "svn_md5.h"
+#include "checksum.h"
 
 
 
-/* The MD5 digest for the empty string. */
-static const unsigned char svn_md5__empty_string_digest[] = {
-  212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
-};
-
+/* These are all deprecated, and just wrap the internal functions defined
+   above. */
 const unsigned char *
 svn_md5_empty_string_digest(void)
 {
-  return svn_md5__empty_string_digest;
+  return svn__empty_string_digest(svn_checksum_md5);
 }
-
 
 const char *
 svn_md5_digest_to_cstring_display(const unsigned char digest[],
                                   apr_pool_t *pool)
 {
-  static const char *hex = "0123456789abcdef";
-  char *str = apr_palloc(pool, (APR_MD5_DIGESTSIZE * 2) + 1);
-  int i;
-  
-  for (i = 0; i < APR_MD5_DIGESTSIZE; i++)
-    {
-      str[i*2]   = hex[digest[i] >> 4];
-      str[i*2+1] = hex[digest[i] & 0x0f];
-    }
-  str[i*2] = '\0';
-  
-  return str;
+  return svn__digest_to_cstring_display(digest, APR_MD5_DIGESTSIZE, pool);
 }
-  
 
 const char *
 svn_md5_digest_to_cstring(const unsigned char digest[], apr_pool_t *pool)
 {
-  static const unsigned char zeros_digest[APR_MD5_DIGESTSIZE] = { 0 };
-
-  if (memcmp(digest, zeros_digest, APR_MD5_DIGESTSIZE) != 0)
-    return svn_md5_digest_to_cstring_display(digest, pool);
-  else
-    return NULL;
+  return svn__digest_to_cstring(digest, APR_MD5_DIGESTSIZE, pool);
 }
-
 
 svn_boolean_t
 svn_md5_digests_match(const unsigned char d1[], const unsigned char d2[])
 {
-  static const unsigned char zeros[APR_MD5_DIGESTSIZE] = { 0 };
-
-  return ((memcmp(d1, zeros, APR_MD5_DIGESTSIZE) == 0)
-          || (memcmp(d2, zeros, APR_MD5_DIGESTSIZE) == 0)
-          || (memcmp(d1, d2, APR_MD5_DIGESTSIZE) == 0));
+  return svn__digests_match(d1, d2, APR_MD5_DIGESTSIZE);
 }

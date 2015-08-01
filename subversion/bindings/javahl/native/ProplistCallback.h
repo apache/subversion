@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -19,12 +24,9 @@
  * @brief Interface of the class ProplistCallback
  */
 
-#if !defined(_PROPLISTCALLBACK_H__INCLUDED_)
-#define _PROPLISTCALLBACK_H__INCLUDED_
+#ifndef PROPLISTCALLBACK_H
+#define PROPLISTCALLBACK_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_client.h"
 
@@ -35,27 +37,33 @@
 class ProplistCallback
 {
  public:
-  ProplistCallback(jobject jcallback);
+  ProplistCallback(jobject jcallback, bool inherited);
   ~ProplistCallback();
 
   static svn_error_t *callback(void *baton,
                                const char *path,
                                apr_hash_t *prop_hash,
+                               apr_array_header_t *inherited_props,
                                apr_pool_t *pool);
+
+  bool inherited() const { return m_inherited; }
 
  protected:
   svn_error_t *singlePath(const char *path,
                           apr_hash_t *prop_hash,
                           apr_pool_t *pool);
 
+  svn_error_t *singlePath(const char *path,
+                          apr_hash_t *prop_hash,
+                          apr_array_header_t *inherited_props,
+                          apr_pool_t *pool);
  private:
   /**
    * This a local reference to the Java object.
    */
   jobject m_callback;
-
-  jobject makeMapFromHash(apr_hash_t *prop_hash, apr_pool_t *pool);
+  bool m_inherited;
 };
 
-// !defined(_PROPLISTCALLBACK_H__INCLUDED_)
-#endif
+
+#endif  // PROPLISTCALLBACK_H

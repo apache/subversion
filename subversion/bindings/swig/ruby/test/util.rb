@@ -1,5 +1,60 @@
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
+# ====================================================================
+
 require "fileutils"
 require "pathname"
+
+# Tale of a hack...
+#
+# Here we are, %SVN-WC-ROOT%/subversion/bindings/swig/ruby/test/util.rb,
+# trying to require %SVN-WC-ROOT%/subversion/bindings/swig/ruby/svn/util.rb,
+# all the while supporting both Ruby 1.8 and 1.9.  Simply using this,
+#
+#   require "svn/util"
+#
+# works for Ruby 1.8 if the CWD is subversion/bindings/swig/ruby
+# when we are running the tests, e.g.:
+#
+#   %SVN-WC-ROOT%/subversion/bindings/swig/ruby>ruby test\run-test.rb
+#
+# This is because the CWD is included in the load path when Ruby 1.8
+# searches for required files.  But this doesn't work for Ruby 1.9,
+# which doesn't include the CWD this way, so instead we could use this:
+#
+#   require "./svn/util"
+#
+# But that only works if ./svn/util is relative to the CWD (again if the
+# CWD is %SVN-WC-ROOT%/subversion/bindings/swig/ruby).  However, if we run
+# the tests from a different CWD and specify
+# %SVN-WC-ROOT%/subversion/bindings/swig/ruby as an additional $LOAD_PATH
+# using the ruby -I option, then that fails on both 1.8 and 1.9 with a
+# LoadError.
+#
+# The usual solution in a case like this is to use require_relative,
+#
+#  require_relative "../svn/util"
+#
+# But that's only available in Ruby 1.9.  We could require the backports gem
+# but there is a simple workaround, just calculate the full path of util:
+require File.join(File.dirname(__FILE__), '../svn/util')
+
+require "tmpdir"
 
 require "my-assertions"
 
@@ -9,30 +64,34 @@ class Time
   end
 end
 
+require 'greek_tree'
+
 module SvnTestUtil
   def setup_default_variables
-    test_dir = Pathname.new(File.dirname(__FILE__))
-    pwd = Pathname.new(Dir.pwd)
-    @base_dir = test_dir.relative_path_from(pwd).to_s
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
-    @repos_path = File.join(@base_dir, "repos")
-    @full_repos_path = File.expand_path(@repos_path)
-    @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
+
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_base_dir = File.join(@base_dir, "wc-tmp")
-    @wc_path = File.join(@wc_base_dir, "wc")
-    @full_wc_path = File.expand_path(@wc_path)
-    @tmp_path = File.join(@base_dir, "tmp")
-    @config_path = File.join(@base_dir, "config")
+
+    @tmp_path = Dir.mktmpdir
+    @wc_path = File.join(@tmp_path, "wc")
+    @import_path = File.join(@tmp_path, "import")
+    @repos_path = File.join(@tmp_path, "repos")
+    @svnserve_pid_file = File.join(@tmp_path, "svnserve.pid")
+    @full_repos_path = File.expand_path(@repos_path)
+    @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
+
+    @config_path = File.join(@tmp_path, "config")
+    @greek = Greek.new(@tmp_path, @import_path, @wc_path, @repos_uri)
   end
 
   def setup_basic(need_svnserve=false)
     @need_svnserve = need_svnserve
     setup_default_variables
     setup_tmp
+    setup_tmp(@import_path)
     setup_repository
     add_hooks
     setup_svnserve if @need_svnserve
@@ -79,7 +138,7 @@ module SvnTestUtil
       end
     end
   end
-  
+
   def gc_disable(&block)
     change_gc_status(GC.disable, &block)
   end
@@ -89,48 +148,48 @@ module SvnTestUtil
   end
 
   def setup_tmp(path=@tmp_path)
-    FileUtils.rm_rf(path)
+    remove_recursively_with_retry(path)
     FileUtils.mkdir_p(path)
   end
 
   def teardown_tmp(path=@tmp_path)
-    FileUtils.rm_rf(path)
+    remove_recursively_with_retry(path)
   end
-  
+
   def setup_repository(path=@repos_path, config={}, fs_config={})
-    FileUtils.rm_rf(path)
+    require "svn/repos"
+    remove_recursively_with_retry(path)
     FileUtils.mkdir_p(File.dirname(path))
-    Svn::Repos.create(path, config, fs_config)
-    @repos = Svn::Repos.open(@repos_path)
+    @repos = Svn::Repos.create(path, config, fs_config)
     @fs = @repos.fs
   end
 
   def teardown_repository(path=@repos_path)
     @fs.close unless @fs.nil?
     @repos.close unless @repos.nil?
-    Svn::Repos.delete(path) if File.exists?(path)
+    remove_recursively_with_retry(path)
     @repos = nil
     @fs = nil
   end
 
   def setup_wc
     teardown_wc
-    make_context("").checkout(@repos_uri, @wc_path)
+    make_context("") { |ctx| ctx.checkout(@repos_uri, @wc_path) }
   end
 
   def teardown_wc
-    FileUtils.rm_rf(@wc_base_dir)
+    remove_recursively_with_retry(@wc_path)
   end
-  
+
   def setup_config
     teardown_config
     Svn::Core::Config.ensure(@config_path)
   end
 
   def teardown_config
-    FileUtils.rm_rf(@config_path)
+    remove_recursively_with_retry(@config_path)
   end
-  
+
   def add_authentication
     passwd_file = "passwd"
     File.open(@repos.svnserve_conf, "w") do |conf|
@@ -175,8 +234,14 @@ realm = #{@realm}
       cred.username = @author
       cred.may_save = false
     end
+    ctx.config = Svn::Core::Config.config(@config_path)
     setup_auth_baton(ctx.auth_baton)
-    ctx
+    return ctx unless block_given?
+    begin
+      yield ctx
+    ensure
+      ctx.destroy
+    end
   end
 
   def setup_auth_baton(auth_baton)
@@ -185,22 +250,36 @@ realm = #{@realm}
   end
 
   def normalize_line_break(str)
-    if windows?
+    if Svn::Util.windows?
       str.gsub(/\n/, "\r\n")
     else
       str
     end
   end
 
-  module_function
-  def windows?
-    /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+  def setup_greek_tree
+    make_context("setup greek tree") { |ctx| @greek.setup(ctx) }
+  end
+
+  def remove_recursively_with_retry(path)
+    retries = 0
+    while (retries+=1) < 100 && File.exist?(path)
+      begin
+        FileUtils.rm_r(path, :secure=>true)
+      rescue
+        sleep 0.1
+      end
+    end
+    assert(!File.exist?(path), "#{Dir.glob(path+'/**/*').join("\n")} should not exist after #{retries} attempts to delete")
   end
 
   module Svnserve
     def setup_svnserve
       @svnserve_port = nil
       @repos_svnserve_uri = nil
+
+      # Look through the list of potential ports until we're able to
+      # successfully start svnserve on a free one.
       @svnserve_ports.each do |port|
         @svnserve_pid = fork {
           STDERR.close
@@ -211,11 +290,18 @@ realm = #{@realm}
         }
         pid, status = Process.waitpid2(@svnserve_pid, Process::WNOHANG)
         if status and status.exited?
-          STDERR.puts "port #{port} couldn't be used for svnserve"
+          if $DEBUG
+            STDERR.puts "port #{port} couldn't be used for svnserve"
+          end
         else
+          # svnserve started successfully.  Note port number and cease
+          # startup attempts.
           @svnserve_port = port
           @repos_svnserve_uri =
             "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
+          # Avoid a race by waiting a short time for svnserve to start up.
+          # Without this, tests can fail with "Connection refused" errors.
+          sleep 1
           break
         end
       end
@@ -265,7 +351,7 @@ exit 1
     end
   end
 
-  if windows?
+  if Svn::Util.windows?
     require 'windows_util'
     include Windows::Svnserve
     extend Windows::SetupEnvironment
@@ -274,4 +360,3 @@ exit 1
     extend SetupEnvironment
   end
 end
-

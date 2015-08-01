@@ -1,3 +1,21 @@
+dnl ===================================================================
+dnl   Licensed to the Apache Software Foundation (ASF) under one
+dnl   or more contributor license agreements.  See the NOTICE file
+dnl   distributed with this work for additional information
+dnl   regarding copyright ownership.  The ASF licenses this file
+dnl   to you under the Apache License, Version 2.0 (the
+dnl   "License"); you may not use this file except in compliance
+dnl   with the License.  You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl   Unless required by applicable law or agreed to in writing,
+dnl   software distributed under the License is distributed on an
+dnl   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+dnl   KIND, either express or implied.  See the License for the
+dnl   specific language governing permissions and limitations
+dnl   under the License.
+dnl ===================================================================
 dnl
 dnl  SVN_LIB_APR(wanted_regex, alt_wanted_regex)
 dnl
@@ -14,7 +32,7 @@ AC_DEFUN(SVN_LIB_APR,
 
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
-  APR_FIND_APR("$abs_srcdir/apr", "$abs_builddir/apr", 1, [0 1])
+  APR_FIND_APR("", "", 1, [2 1 0])
 
   if test $apr_found = "no"; then
     AC_MSG_WARN([APR not found])
@@ -22,7 +40,7 @@ AC_DEFUN(SVN_LIB_APR,
   fi
 
   if test $apr_found = "reconfig"; then
-    SVN_EXTERNAL_PROJECT([apr])
+    AC_MSG_ERROR([Unexpected APR reconfig])
   fi
 
   dnl check APR version number against regex  
@@ -59,42 +77,38 @@ AC_DEFUN(SVN_LIB_APR,
     AC_MSG_ERROR([apr-config --cflags failed])
   fi
 
-  LDFLAGS="$LDFLAGS `$apr_config --ldflags`"
+  apr_ldflags="`$apr_config --ldflags`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --ldflags failed])
   fi
+  LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($apr_ldflags)`"
 
   SVN_APR_INCLUDES="`$apr_config --includes`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --includes failed])
   fi
 
-  SVN_APR_PREFIX="`$apr_config --prefix`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apr-config --prefix failed])
+  if test "$enable_all_static" = "yes"; then
+    SVN_APR_LIBS="`$apr_config --link-ld --libs`"
+    if test $? -ne 0; then
+      AC_MSG_ERROR([apr-config --link-ld --libs failed])
+    fi
+  else
+    SVN_APR_LIBS="`$apr_config --link-ld`"
+    if test $? -ne 0; then
+      AC_MSG_ERROR([apr-config --link-ld failed])
+    fi
   fi
-
-  dnl When APR stores the dependent libs in the .la file, we don't need 
-  dnl --libs.
-  SVN_APR_LIBS="`$apr_config --link-libtool --libs`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apr-config --link-libtool --libs failed])
-  fi
-
-  SVN_APR_EXPORT_LIBS="`$apr_config --link-ld --libs`"
-  if test $? -ne 0; then
-    AC_MSG_ERROR([apr-config --link-ld --libs failed])
-  fi
+  SVN_APR_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_APR_LIBS)`"
 
   SVN_APR_SHLIB_PATH_VAR="`$apr_config --shlib-path-var`"
   if test $? -ne 0; then
     AC_MSG_ERROR([apr-config --shlib-path-var failed])
   fi
 
-  AC_SUBST(SVN_APR_PREFIX)
+  AC_SUBST(SVN_APR_CONFIG, ["$apr_config"])
   AC_SUBST(SVN_APR_INCLUDES)
   AC_SUBST(SVN_APR_LIBS)
-  AC_SUBST(SVN_APR_EXPORT_LIBS)
   AC_SUBST(SVN_APR_SHLIB_PATH_VAR)
 ])
 
@@ -103,28 +117,12 @@ dnl no apr found, print out a message telling the user what to do
 AC_DEFUN(SVN_DOWNLOAD_APR,
 [
   echo "The Apache Portable Runtime (APR) library cannot be found."
-  echo "Please install APR on this system and supply the appropriate"
-  echo "--with-apr option to 'configure'"
+  echo "Please install APR on this system and configure Subversion"
+  echo "with the appropriate --with-apr option."
   echo ""
-  echo "or"
+  echo "You probably need to do something similar with the Apache"
+  echo "Portable Runtime Utility (APRUTIL) library and then configure"
+  echo "Subversion with both the --with-apr and --with-apr-util options."
   echo ""
-  echo "get it with SVN and put it in a subdirectory of this source:"
-  echo ""
-  echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/0.9.x \\"
-  echo "    apr"
-  echo ""
-  echo "Run that right here in the top level of the Subversion tree."
-  echo "then run configure again."
-  echo ""
-  echo "Whichever of the above you do, you probably need to do"
-  echo "something similar for apr-util, either providing both"
-  echo "--with-apr and --with-apr-util to 'configure', or"
-  echo "getting both from SVN with:"
-  echo ""
-  echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x \\"
-  echo "    apr-util"
-  echo ""
-  AC_MSG_ERROR([no suitable apr found])
+  AC_MSG_ERROR([no suitable APR found])
 ])

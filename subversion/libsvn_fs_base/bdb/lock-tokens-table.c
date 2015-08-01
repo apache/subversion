@@ -1,29 +1,36 @@
 /* lock-tokens-table.c : operations on the `lock-tokens' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #include <string.h>
 #include <assert.h>
+
 #include "bdb_compat.h"
 
 #include "svn_pools.h"
+#include "private/svn_skel.h"
+
 #include "dbt.h"
 #include "../err.h"
 #include "../fs.h"
-#include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../../libsvn_fs/fs-loader.h"
@@ -45,9 +52,9 @@ svn_fs_bdb__open_lock_tokens_table(DB **lock_tokens_p,
 
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&lock_tokens, env, 0));
-  error = lock_tokens->open(SVN_BDB_OPEN_PARAMS(lock_tokens, NULL),
-                            "lock-tokens", 0, DB_BTREE,
-                            open_flags, 0666);
+  error = (lock_tokens->open)(SVN_BDB_OPEN_PARAMS(lock_tokens, NULL),
+                              "lock-tokens", 0, DB_BTREE,
+                              open_flags, 0666);
 
   /* Create the table if it doesn't yet exist.  This is a form of
      automagical repository upgrading. */
@@ -77,11 +84,9 @@ svn_fs_bdb__lock_token_add(svn_fs_t *fs,
   svn_fs_base__str_to_dbt(&key, path);
   svn_fs_base__str_to_dbt(&value, lock_token);
   svn_fs_base__trail_debug(trail, "lock-tokens", "add");
-  SVN_ERR(BDB_WRAP(fs, "storing lock token record",
-                   bfd->lock_tokens->put(bfd->lock_tokens, trail->db_txn,
-                                         &key, &value, 0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, N_("storing lock token record"),
+                  bfd->lock_tokens->put(bfd->lock_tokens, trail->db_txn,
+                                        &key, &value, 0));
 }
 
 
@@ -99,10 +104,8 @@ svn_fs_bdb__lock_token_delete(svn_fs_t *fs,
   svn_fs_base__trail_debug(trail, "lock-tokens", "del");
   db_err = bfd->lock_tokens->del(bfd->lock_tokens, trail->db_txn, &key, 0);
   if (db_err == DB_NOTFOUND)
-    return SVN_FS__ERR_NO_SUCH_LOCK(fs, path); 
-  SVN_ERR(BDB_WRAP(fs, "deleting entry from 'lock-tokens' table", db_err));
-  
-  return SVN_NO_ERROR;
+    return SVN_FS__ERR_NO_SUCH_LOCK(fs, path);
+  return BDB_WRAP(fs, N_("deleting entry from 'lock-tokens' table"), db_err);
 }
 
 
@@ -129,7 +132,7 @@ svn_fs_bdb__lock_token_get(const char **lock_token_p,
 
   if (db_err == DB_NOTFOUND)
     return SVN_FS__ERR_NO_SUCH_LOCK(fs, path);
-  SVN_ERR(BDB_WRAP(fs, "reading lock token", db_err));
+  SVN_ERR(BDB_WRAP(fs, N_("reading lock token"), db_err));
 
   lock_token = apr_pstrmemdup(pool, value.data, value.size);
 
@@ -144,10 +147,10 @@ svn_fs_bdb__lock_token_get(const char **lock_token_p,
       delete_err = svn_fs_bdb__lock_token_delete(fs, path, trail, pool);
       if (delete_err)
         svn_error_compose(err, delete_err);
-      return err;
+      return svn_error_trace(err);
     }
   else if (err)
-    return err;
+    return svn_error_trace(err);
 
   *lock_token_p = lock_token;
   return SVN_NO_ERROR;

@@ -75,14 +75,9 @@ A: That's possible, but requires some gymnastics.  You see, each repository
    has its own UUID, which is stored in the working copy, so if you check
    out from the mirror, and then do a 'svn switch --relocate' to point to
    the master it'll error out.  To make this work you need to make sure that
-   the mirrors have the same UUID as the master.  You can set a repository
-   UUID via the following technique:
-
-$ cat - <<EOF | svnadmin load --force-uuid dest
-SVN-fs-dump-format-version: 2
-
-UUID: d48dd586-eb1d-0410-b581-e6e13afcedeb
-EOF
+   the mirrors have the same UUID as the master.  You can read a repository
+   UUID with 'svnlook uuid' or 'svn info', and change it with
+   'svnadmin setuuid'.
 
    Once both the mirror and master repositories have the same UUID you can
    safely check out from the mirror and commit to the master, all you have
@@ -128,9 +123,33 @@ A: svnsync will simply not copy parts of the repository that you
 
 Q: Can I mirror a subdirectory of a master repository?
 
-A: While the underlying RA layer command that svnsync relies on does
-   support that, svnsync itself does not currently. (Patches welcome!)
-   If you need this ability right now, you may want to look into SVK
+A: As of Subversion 1.5, it is possible to limit svnsync to a subdirectory
+   of the master repository.
+   This is most useful when the master repository is organized in projects, 
+   and you want to sync only one project.
+   Example showing svnsync of project1 in the master repository:
+   /project1
+      /branches
+      /tags
+      /trunk
+   /project2
+      /branches
+      /tags
+      /trunk
+
+   The following commands will sync all changes in /project1 to the target 
+   repository:
+$ svnsync init file://`pwd`/dest http://svn.example.org/source/repos/project1
+$ svnsync sync file://`pwd`/dest
+   
+   Note: this syntax only allows you to limit the scope of svnsync to
+   /project1. It does not: 
+   - allow you to sync two or more projects from the master repository. 
+   - recognize renames of project1. Example, if the original name of project1
+   was secretproject, only the changes starting from the revision in which the
+   rename to project1 was committed will be synced.
+
+   If you need any of these abilities right now, you may want to look into SVK
    (http://svk.bestpractical.com/).
 
 Q: What happens when I change a revprop on the master server?
@@ -148,3 +167,15 @@ A: That depends, did you change it on a revision that had already been
    post-revprop-change script, or to have the post-revprop-change script
    record the fact that a change occurred, and then later on have some
    job look through the list of changes and copy them over for you.
+
+Q: How can I relocate the source repository for svnsync?
+
+A: A simple way to relocate a svnsync-ed repository is to change the
+   revision property (of the mirror) that stores the source repository's
+   URL.  Just use this command:
+
+$ svn propset svn:sync-from-url --revprop -r 0 NEW_SOURCE_URL MIRROR_URL
+
+  NOTE: Don't use `svn propedit`, because editors may append an EOL
+  character to NEW_SOURCE_URL that will lead svnsync complaining
+  "svnsync: Malformed URL for repository".

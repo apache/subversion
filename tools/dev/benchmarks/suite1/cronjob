@@ -1,0 +1,102 @@
+#!/bin/bash
+#
+# ====================================================================
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+# ====================================================================
+#
+# This is the cronjob as run on our ASF box aka svn-qavm.
+# It uses neels' mad bash script magic called 'pat' to update and
+# build the latest trunk, invokes a benchmark and sends as mail.
+#
+# A word on 'pat': this is a grown-out-of-proportions bash script that holds
+# all the small and large tasks that I do while developing on Subversion.
+# While it works for me, it's not particularly beautifully coded --
+# wouldn't publish it in Subversion's trunk, but if you want to find out
+# what it does: http://hofmeyr.de/pat/
+
+#EMAILS=your@ema.il add@ress.es
+EMAILS=dev@subversion.apache.org
+
+echo
+echo "--------------------------------------------------------------------"
+date
+echo
+
+results="$(tempfile)"
+
+benchdir=/home/neels/svnbench
+patbin=/home/neels/bin/pat
+patbase=/home/neels/pat
+
+
+# first update trunk to HEAD and rebuild.
+# update/build is logged to the cronjob log (via stdout)
+
+cd "$patbase/trunk"
+"$patbin" update
+
+if [ "$?" -ne "0" ]; then
+  subject="Failed to update to HEAD."
+  echo "$subject" > "$results"
+  echo "$subject"
+else
+
+  rev="$("$patbase"/stable/prefix/bin/svn info "$patbase"/trunk/src | grep Revision)"
+  if [ -z "$rev" ]; then
+    subject="Working copy problem."
+    echo "$subject" > "$results"
+    echo "$subject"
+  else
+
+    NONMAINTAINER=1 "$patbin" remake
+    if [ "$?" -ne "0" ]; then
+      subject="Failed to build $rev."
+      echo "$subject" > "$results"
+      echo "$subject"
+    else
+
+      
+      # updating and building succeeded!
+      # run the benchmark:
+
+      compiled="$("$patbase"/trunk/prefix/bin/svn --version | grep "compiled")"
+      subject="$rev$compiled"
+
+      cd "$benchdir"
+
+      # make more or less sure that runs don't leak into each other via
+      # I/O caching.
+      sync
+
+      # basically, just run it. But also, I want to
+      # - append output to stdout, for cronjob logging.
+      # - send output as mail, but only this run's output less update&build
+      time -p ./run 2>&1 | tee "$results"
+      time -p ./generate_charts 2>&1 | tee -a "$results"
+    fi
+  fi
+fi
+
+if [ -n "$EMAILS" ]; then
+  cat "$results" | mail -s "[svnbench] $subject" $EMAILS
+else
+  echo "No email addresses configured."
+fi
+
+rm "$results"
+

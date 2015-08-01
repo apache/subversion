@@ -1,25 +1,30 @@
 /* revs-txns.h : internal interface to revision and transactions operations
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
 #ifndef SVN_LIBSVN_FS_REVS_TXNS_H
 #define SVN_LIBSVN_FS_REVS_TXNS_H
 
-#define APU_WANT_DB
-#include <apu_want.h>
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 
 #include "svn_fs.h"
 
@@ -56,6 +61,7 @@ svn_error_t *svn_fs_base__rev_get_txn_id(const char **txn_id_p,
 svn_error_t *svn_fs_base__set_rev_prop(svn_fs_t *fs,
                                        svn_revnum_t rev,
                                        const char *name,
+                                       const svn_string_t *const *old_value_p,
                                        const svn_string_t *value,
                                        trail_t *trail,
                                        apr_pool_t *pool);
@@ -86,7 +92,7 @@ svn_error_t *svn_fs_base__txn_get_revision(svn_revnum_t *revision,
                                            apr_pool_t *pool);
 
 
-/* Retrieve information about the Subversion transaction SVN_TXN from
+/* Retrieve information about the Subversion transaction TXN_NAME from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.
    Set *BASE_ROOT_ID_P to the ID of the root directory of the
@@ -144,20 +150,6 @@ svn_error_t *svn_fs_base__set_txn_base(svn_fs_t *fs,
                                        apr_pool_t *pool);
 
 
-/* Set a PATH to VALUE for the SVN_FS_PROP_TXN_MERGEINFO property (a
-   serialized hash table) on transaction TXN_NAME's proplist in FS as
-   part of TRAIL.  Use POOL for any necessary allocations.
-
-   Return SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.  */
-svn_error_t *
-svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
-                               const char *txn_name,
-                               const char *path,
-                               const svn_string_t *value,
-                               trail_t *trail,
-                               apr_pool_t *pool);
-
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
    of TRAIL.  Use POOL for any necessary allocations.
 
@@ -189,6 +181,7 @@ svn_error_t *svn_fs_base__revision_proplist(apr_hash_t **table_p,
 
 svn_error_t *svn_fs_base__change_rev_prop(svn_fs_t *fs, svn_revnum_t rev,
                                           const char *name,
+                                          const svn_string_t *const *old_value_p,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
 
@@ -214,9 +207,9 @@ svn_error_t *svn_fs_base__txn_proplist(apr_hash_t **table_p,
                                        svn_fs_txn_t *txn,
                                        apr_pool_t *pool);
 
-/* Helper func:  variant of __txn_proplist that uses an existing TRAIL. 
+/* Helper func:  variant of __txn_proplist that uses an existing TRAIL.
  * TXN_ID identifies the transaction.
- * *TABLE_P will be non-null upon success. 
+ * *TABLE_P will be non-null upon success.
  */
 svn_error_t *svn_fs_base__txn_proplist_in_trail(apr_hash_t **table_p,
                                                 const char *txn_id,
@@ -225,6 +218,10 @@ svn_error_t *svn_fs_base__txn_proplist_in_trail(apr_hash_t **table_p,
 svn_error_t *svn_fs_base__change_txn_prop(svn_fs_txn_t *txn, const char *name,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
+                                           const apr_array_header_t *props,
+                                           apr_pool_t *pool);
 
 
 #ifdef __cplusplus

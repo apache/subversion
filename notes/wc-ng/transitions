@@ -1,0 +1,164 @@
+Delete and revert both modify WORKING_NODE while leaving BASE_NODE (if
+it exists) unchanged.  The two operations can modify or delete the
+WORKING_NODE associated with a BASE_NODE.  Delete can also create a
+new WORKING_NODE.
+
+The original state before the operation can be characterised by
+BASE_NODE.presence and WORKING_NODE.presence, and only
+WORKING_NODE.presence changes (except when a new WORKING_NODE is
+created).
+
+There are 5 possible BASE_NODE.presence values: 
+  normal, incomplete, absent, excluded, not-present
+in addition to <none> when the BASE_NODE does not exist.
+
+There are 6 possible WORKING_NODE.presence values:
+  normal, incomplete, absent, excluded, not-present, base-deleted
+in addition to <none> when the WORKING_NODE does not exist.
+
+### A comment in 'wc-metadata.sql' says not all of 6 values are
+allowed in WORKING, but it may be wrong.  A wc-to-wc copy could have
+absent and excluded presence values in the BASE source, does the copy
+put those values into the working tree?  A url-to-wc copy could get
+an authz failure part way through, does that result in an absent node?
+There is currently no UI to do a sparse url-to-wc copy, but if there
+was then would that result in an excluded node?
+
+When removing a WORKING_NODE any ACTUAL_NODE is also removed.
+
+------original-state-------            ----delete----
+BASE_NODE      WORKING_NODE            WORKING_NODE
+<none>         <none>                  -
+<none>         normal                  <none> or not-present [1]
+<none>         incomplete              <none> or - [2]
+<none>         absent                  -
+<none>         excluded                - [3]
+<none>         not-present             -
+<none>         base-deleted            -
+normal         <none>                  base-deleted
+normal         normal                  base-deleted or not-present [4]
+normal         incomplete              base-deleted or - [5]
+normal         absent                  -
+normal         excluded                - [3]
+normal         not-present             -
+normal         base-deleted            -
+incomplete     <none>                  base-deleted
+incomplete     normal                  base-deleted or not-present [4]
+incomplete     incomplete              base-deleted or - [5]
+incomplete     absent                  -
+incomplete     excluded                - [3]
+incomplete     not-present             -
+incomplete     base-deleted            -
+absent         <none>                  -
+absent         normal                  x
+absent         incomplete              x
+absent         absent                  x
+absent         excluded                x
+absent         not-present             x
+absent         base-deleted            x
+excluded       <none>                  base-deleted
+excluded       normal                  base-deleted or not-present [4]
+excluded       incomplete              base-deleted or - [5]
+excluded       absent                  -
+excluded       excluded                - [3]
+excluded       not-present             -
+excluded       base-deleted            -
+not-present    <none>                  -
+not-present    normal                  <none> or not-present [1]
+not-present    incomplete              <none> or - [2]
+not-present    absent                  -
+not-present    excluded                - [3]
+not-present    not-present             -
+not-present    base-deleted            -
+
+
+------original-state-------            ---revert---
+BASE_NODE      WORKING_NODE            WORKING_NODE
+<none>         <none>                  -
+<none>         normal                  <none> or - [6]
+<none>         incomplete              <none> or - [6]
+<none>         absent                  -
+<none>         excluded                -
+<none>         not-present             normal
+<none>         base-deleted            <none>
+normal         <none>                  -
+normal         normal                  <none> or - [6]
+normal         incomplete              <none> or - [6]
+normal         absent                  -
+normal         excluded                -
+normal         not-present             normal
+normal         base-deleted            <none>
+incomplete     <none>                  -
+incomplete     normal                  <none> or - [6]
+incomplete     incomplete              <none> or - [6]
+incomplete     absent                  -
+incomplete     excluded                -
+incomplete     not-present             normal
+incomplete     base-deleted            <none>
+absent         <none>                  -
+absent         normal                  x
+absent         incomplete              x
+absent         absent                  x
+absent         excluded                x
+absent         not-present             x
+absent         base-deleted            x
+excluded       <none>                  -
+excluded       normal                  <none> or - [6]
+excluded       incomplete              <none> or - [6]
+excluded       absent                  -
+excluded       excluded                -
+excluded       not-present             normal
+excluded       base-deleted            <none>
+not-present    <none>                  -
+not-present    normal                  <none> or - [6]
+not-present    incomplete              <none> or - [6]
+not-present    absent                  -
+not-present    excluded                -
+not-present    not-present             normal
+not-present    base-deleted            <none>
+
+
+key
+---
+- : operation not allowed or no change required
+x : original state not allowed
+
+### it would be nice to call out the operations that are "not allowed"
+
+
+notes
+-----
+[1] <none> if the root of the copy, not-present otherwise.
+[2] <none> if the root of the copy, - otherwise
+[3] A sparse copy, should commit automatically delete an excluded node?
+[4] base-deleted if the root of the copy, not-present otherwise
+[5] base-deleted if the root of the copy, - otherwise
+[6] <none> if the root of the copy, - otherwise
+
+
+Generally BASE_NODE.presence normal and incomplete are treated the
+same, since update can change one into the other at any time.
+
+It's not possible to delete something with WORKING_NODE.presence
+incomplete unless it's the root of the copy.  If we transformed it to
+not-present revert would not be able to go back to incomplete.
+
+It's possible to delete something with BASE_NODE.presence excluded
+because the name alone is sufficient information at commit time.
+
+WORKING_NODE.presence excluded is more difficult.  Should commit
+automatically delete an excluded node?  There are arguments for and
+against.  If commit doesn't automatically delete the node can the user
+delete it in the working tree?  Like WORKING_NODE.presence incomplete
+the problem is that revert would not be able to cope.
+
+### gstein sez: commit should NOT do a deletion for an excluded node.
+###   the presence is typically used for (say) copying a large tree,
+###   and then excluding the subtree within the copy from the working
+###   copy. maybe the user doesn't want all that stuff there. at
+###   commit time, the copy is performed, and nothing more. if you
+###   wanted to delete this node, then switch it to depth=empty
+###   and presence=not-present.
+
+Pre-centralisation directories can be obstructed, any such nodes can
+be treated as presence=normal.

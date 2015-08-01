@@ -1,4 +1,24 @@
 #!/usr/bin/env python
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
 
 import sys
 import os
@@ -6,8 +26,8 @@ import os
 progname = os.path.basename(sys.argv[0])
 
 def usage():
-  print "Usage: %s SOURCEURL WCPATH [r]REVNUM[,] [...]" % progname
-  print "Try '%s --help' for more information" % progname
+  print("Usage: %s SOURCEURL WCPATH [r]REVNUM[,] [...]" % progname)
+  print("Try '%s --help' for more information" % progname)
 
 def help():
   val = """This script is meant to ease the pain of merging and
@@ -24,12 +44,12 @@ revision that was merged, and the diff from the previous revision.
 
 Examples:
 
-  %s http://svn.collab.net/repos/svn/trunk svn-1.2.x-branch \ 
+  %s http://svn.apache.org/repos/asf/subversion/trunk svn-1.2.x-branch \
     r14041, r14149, r14186, r14194, r14238, r14273
 
-  %s http://svn.collab.net/repos/svn/trunk svn-1.2.x-branch \ 
+  %s http://svn.apache.org/repos/asf/subversion/trunk svn-1.2.x-branch \
     14041 14149 14186 14194 14238 14273""" % (progname, progname)
-  print val
+  print(val)
 
 
 if len(sys.argv) > 1 and sys.argv[1] == '--help':
@@ -56,13 +76,13 @@ for rev in sys.argv[3:]:
   try:
     rev = int(rev)
   except ValueError:
-    print "Encountered non integer revision '%s'" % orig_rev
+    print("Encountered non integer revision '%s'" % orig_rev)
     usage()
     sys.exit(254)
   revs.append(rev)
 
 # Make an easily reviewable logfile
-logfile = "-".join(map(lambda x: str(x), revs)) + ".log"
+logfile = "-".join([str(x) for x in revs]) + ".log"
 log = open(logfile, 'w')
 
 for rev in revs:
@@ -79,7 +99,7 @@ for rev in revs:
 
   # Get our log
   fh = os.popen(log_cmd)
-  while 1:
+  while True:
     line = fh.readline()
     if not line:
       break
@@ -88,7 +108,7 @@ for rev in revs:
 
   # Get our diff
   fh = os.popen(diff_cmd)
-  while 1:
+  while True:
     line = fh.readline()
     if not line:
       break
@@ -99,4 +119,4 @@ for rev in revs:
 
 
 log.close()
-print "\nYour logfile is '%s'" % logfile
+print("\nYour logfile is '%s'" % logfile)

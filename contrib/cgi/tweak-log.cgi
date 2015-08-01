@@ -1,9 +1,8 @@
 #!/usr/bin/perl
-
 ###############################################################################
 # Tweak Subversion log messages
 # -----------------------------
-# 
+#
 # It sure would be nice to be able to change the log messages on
 # committed revisions of the Subversion repository via the web.  This
 # is a quick attempt at making that happen.
@@ -15,12 +14,27 @@
 # Upon submitting the form, it will come back with yet another form,
 # which will:
 #
-#   - Display the current log message as static text.  
+#   - Display the current log message as static text.
 #   - Present a textarea for editing, initialized with the current
 #     log message.
 #
 # The user can edit the message in the textarea, then submit that form,
 # which will return a confirmation and show the new log message.
+#
+# ====================================================================
+# Copyright (c) 2001-2003 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
+
 ###############################################################################
 
 use strict;
@@ -120,7 +134,7 @@ sub doInitialForm
     my $youngest = `$gSvnlookCmd youngest $gReposPath`;
     my $rev;
     my $oldest;
-    
+
     print "<html>\n<head>\n<title>Tweak Log</title>\n</head>\n";
     print "<body>\n<form action=\"$gActionURL\" method=\"post\">\n";
     print "<a name=\"__top__\"></a>\n";
@@ -200,7 +214,7 @@ sub doFetchLog
     {
 	return;
     }
-    
+
     # Fetch the log for that revision.
     $log = `$gSvnlookCmd log $gReposPath -r $rev`;
 
@@ -257,7 +271,7 @@ sub doCommitLog
 	&doError ("Log message doesn't appear to have been edited.");
 	return;
     }
-    
+
     # Open a tempfile
     if (not (open( LOGFILE, "> $tempfile")))
     {
@@ -293,7 +307,7 @@ sub doCommitLog
     {
         `$gSvnadminCmd setlog $gReposPath -r$rev $tempfile`;
     }
-    
+
     # ...and remove the tempfile.  It is, after all, temporary.
     unlink $tempfile;
 

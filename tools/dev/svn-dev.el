@@ -1,5 +1,23 @@
 ;;;; Emacs Lisp help for writing Subversion code. ;;;;
 
+;; Licensed to the Apache Software Foundation (ASF) under one
+;; or more contributor license agreements.  See the NOTICE file
+;; distributed with this work for additional information
+;; regarding copyright ownership.  The ASF licenses this file
+;; to you under the Apache License, Version 2.0 (the
+;; "License"); you may not use this file except in compliance
+;; with the License.  You may obtain a copy of the License at
+;;
+;;   http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing,
+;; software distributed under the License is distributed on an
+;; "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+;; KIND, either express or implied.  See the License for the
+;; specific language governing permissions and limitations
+;; under the License.
+
+
 ;; Later on, there will be auto-detection of svn files, modeline
 ;; status, and a whole library of routines to interface with the
 ;; command-line client.  For now, there's this, at Ben's request.
@@ -128,6 +146,26 @@ Inhibit backup files unless `vc-make-backup-files' is non-nil."
 
 
 
+;;; Dynamic generation of common Subversion URLs.
+;;;
+;;; (I have a version of this that actually fetches the stuff from the
+;;; Net if you don't have a local copy, but it requires a very recent
+;;; version of Emacs, so I didn't bother with it here.  -kfogel)
+
+(defvar svn-site-source-tree-top (expand-file-name "~/projects/svn/site/")
+  "*Top directory of your Subversion site source tree of
+repository \"http://svn.apache.org/repos/asf/subversion/site\".
+You almost certainly want to set this in your .emacs, to override
+the default; use `(setq svn-site-source-tree-top
+\"/path/to/the/site/tree\")'.")
+
+(defvar svn-faq-file (concat svn-site-source-tree-top "/publish/faq.html")
+  "*A local copy of the Subversion FAQ.")
+
+(defvar svn-hacking-file (concat svn-site-source-tree-top 
+                                 "/docs/community-guide/community-guide.html")
+  "*A local copy of the Subversion hacking.html file.")
+
 ;; Helper for referring to issue numbers in a user-friendly way.
 (defun svn-bug-url (n)
   "Insert the url for Subversion issue number N.  Interactively, prompt for N."
@@ -153,7 +191,65 @@ the resulting URL."
              (start (car bounds))
              (end   (cdr bounds)))
         (delete-region start end)))
-  (insert (format "http://svn.collab.net/viewcvs/svn?rev=%s&view=rev" rev)))
+  (insert (format "http://svn.apache.org/viewcvs?view=revision&revision=%s" 
+                  rev)))
+
+(defconst svn-url-base "http://subversion.apache.org/")
+(defconst svn-faq-url (concat svn-url-base "faq.html"))
+(defconst svn-hacking-url (concat svn-url-base 
+                                  "docs/community-guide/community-guide.html"))
+
+(defun svn-html-get-targets (file)
+  "Build a list of targets for the Subversion web file FILE."
+  (let* ((lst nil)
+         (already-buffer (find-buffer-visiting file))
+         (faq-buffer (or already-buffer (find-file-noselect file))))
+    (save-excursion
+      (set-buffer faq-buffer)
+      (goto-char (point-min))
+      ;; TODO: Ideally, this wouldn't depend on the presence of a
+      ;; table of contents with "#" URLs, it would read the divs and
+      ;; anchors themselves.
+      (while (search-forward "href=\"#" nil t)
+        (let ((b (point))
+              (e (progn (search-forward "\"") (forward-char -1) (point))))
+          (setq lst (cons (buffer-substring b e) lst))))
+      (if (not already-buffer)
+          (kill-buffer (current-buffer)))
+      lst)))
+
+(defun svn-url-completing-read (file prompt &optional hist-list)
+  "Completingly read an HTML target for FILE, prompting with PROMPT.
+If HIST-LIST is non-nil, it is a symbol: the completion history list to use."
+  (progn
+    (let* ((targets (svn-html-get-targets file))
+           (target-str (completing-read prompt targets nil t nil hist-list)))
+      (list target-str))))
+
+(defvar svn-faq-history-list nil
+  "History list for the 'svn-faq-url' prompt.")
+
+(defvar svn-hacking-history-list nil
+  "History list for the 'svn-hacking-url' prompt.")
+
+(defun svn-faq-url (target)
+  "Prompt with completion for a targeted SVN FAQ item, then insert it.
+If called non-interactively, TARGET is the target within the faq (an
+HTML anchor name, that is, the part after the \"#\")."
+  (interactive
+   (svn-url-completing-read svn-faq-file "FAQ entry: "
+                            'svn-faq-history-list))
+  (insert svn-faq-url "#" target))
+
+(defun svn-hacking-url (target)
+  "Prompt with completion for a targeted hacking.html item, then insert it.
+If called non-interactively, TARGET is the target within hacking.html
+(an HTML anchor name, that is, the part after the \"#\")."
+  (interactive
+   (svn-url-completing-read svn-hacking-file "hacking.html entry: "
+                            'svn-hacking-history-list))
+  (insert svn-hacking-url "#" target))
+
 
 
 ;;; Subversion C conventions

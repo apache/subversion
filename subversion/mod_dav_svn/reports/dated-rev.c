@@ -1,18 +1,23 @@
 /*
- * version.c: mod_dav_svn versioning provider functions for Subversion
+ * dated-rev.c: mod_dav_svn REPORT handler for mapping a date to a revision
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -32,6 +37,8 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+
+#include "private/svn_dav_protocol.h"
 
 #include "../dav_svn.h"
 
@@ -60,7 +67,8 @@ dav_svn__dated_rev_report(const dav_resource *resource,
     {
       for (child = doc->root->first_child; child != NULL; child = child->next)
         {
-          if (child->ns != ns || strcmp(child->name, "creationdate") != 0)
+          if (child->ns != ns ||
+              strcmp(child->name, SVN_DAV__CREATIONDATE) != 0)
             continue;
           /* If this fails, we'll notice below, so ignore any error for now. */
           svn_error_clear
@@ -72,9 +80,9 @@ dav_svn__dated_rev_report(const dav_resource *resource,
 
   if (tm == (apr_time_t) -1)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain a valid "
-                           "'DAV:creationdate' element.");
+      return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                                "The request does not contain a valid "
+                                "'DAV:" SVN_DAV__CREATIONDATE "' element.");
     }
 
   /* Do the actual work of finding the revision by date. */
@@ -82,8 +90,9 @@ dav_svn__dated_rev_report(const dav_resource *resource,
                                       resource->pool)) != SVN_NO_ERROR)
     {
       svn_error_clear(err);
-      return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           "Could not access revision times.");
+      return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                0, 0,
+                                "Could not access revision times.");
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
@@ -91,21 +100,14 @@ dav_svn__dated_rev_report(const dav_resource *resource,
                        DAV_XML_HEADER DEBUG_CR
                        "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                        "xmlns:D=\"DAV:\">" DEBUG_CR
-                       "<D:version-name>%ld</D:version-name>"
-                       "</S:dated-rev-report>", rev);
+                       "<D:" SVN_DAV__VERSION_NAME ">%ld</D:"
+                       SVN_DAV__VERSION_NAME ">""</S:dated-rev-report>", rev);
   if (apr_err)
     derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                 HTTP_INTERNAL_SERVER_ERROR,
                                 "Error writing REPORT response.",
                                 resource->pool);
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if (((apr_err = ap_fflush(output, bb))) && (! derr))
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade.",
-                                resource->pool);
-
-  return derr;
+  return dav_svn__final_flush_or_error(resource->info->r, bb, output,
+                                       derr, resource->pool);
 }

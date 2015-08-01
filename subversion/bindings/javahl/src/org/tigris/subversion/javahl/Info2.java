@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005,2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -19,6 +24,7 @@
 package org.tigris.subversion.javahl;
 
 import java.util.Date;
+import java.util.Set;
 
 /**
  * this class is returned by SVNClientInterface.info2 and contains information
@@ -167,6 +173,18 @@ public class Info2 implements java.io.Serializable
     private long reposSize;
 
     /**
+     * The depth of the item.
+     * @since 1.6
+     */
+    private int depth;
+
+    /**
+     * Info on any tree conflict of which this node is a victim.
+     * @since 1.6
+     */
+    private ConflictDescriptor treeConflict;
+
+    /**
      * constructor to build the object by native code. See fields for
      * parameters
      * @param path
@@ -190,6 +208,8 @@ public class Info2 implements java.io.Serializable
      * @param conflictNew
      * @param conflictWrk
      * @param prejfile
+     * @param depth
+     * @param treeConflict
      */
     Info2(String path, String url, long rev, int kind, String reposRootUrl,
           String reposUUID, long lastChangedRev, long lastChangedDate,
@@ -197,7 +217,8 @@ public class Info2 implements java.io.Serializable
           String copyFromUrl, long copyFromRev, long textTime, long propTime,
           String checksum, String conflictOld, String conflictNew,
           String conflictWrk, String prejfile, String changelistName,
-          long workingSize, long reposSize)
+          long workingSize, long reposSize, int depth,
+          ConflictDescriptor treeConflict)
     {
         this.path = path;
         this.url = url;
@@ -223,6 +244,134 @@ public class Info2 implements java.io.Serializable
         this.changelistName = changelistName;
         this.workingSize = workingSize;
         this.reposSize = reposSize;
+        this.depth = depth;
+        this.treeConflict = treeConflict;
+    }
+
+    static private String
+    getConflictOld(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getBasePath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getConflictNew(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getTheirPath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getConflictWrk(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getMyPath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getPrejfile(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.property)
+            return conflict.getTheirPath();
+        }
+
+      return null;
+    }
+
+    static private ConflictDescriptor
+    getTreeConflict(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                        conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.tree)
+            return new ConflictDescriptor(conflict);
+        }
+
+      return null;
+    }
+
+    static private String
+    getChecksumDigest(org.apache.subversion.javahl.types.Checksum checksum)
+    {
+    	if (checksum == null)
+    		return null;
+
+    	if (checksum.getKind() != org.apache.subversion.javahl.types.Checksum.Kind.MD5)
+    		return null;
+
+    	StringBuffer hexDigest = new StringBuffer();
+    	for (byte b : checksum.getDigest())
+    	{
+    		hexDigest.append(Integer.toHexString(0xFF & b));
+    	}
+
+    	return hexDigest.toString();
+    }
+
+    /**
+     * A backward-compat constructor.
+     */
+    public Info2(org.apache.subversion.javahl.types.Info aInfo)
+    {
+        this(aInfo.getPath(), aInfo.getUrl(), aInfo.getRev(),
+             NodeKind.fromApache(aInfo.getKind()),
+             aInfo.getReposRootUrl(), aInfo.getReposUUID(),
+             aInfo.getLastChangedRev(),
+             aInfo.getLastChangedDate() == null ? 0
+                : aInfo.getLastChangedDate().getTime() * 1000,
+             aInfo.getLastChangedAuthor(),
+             aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
+             aInfo.isHasWcInfo(),
+             aInfo.getSchedule() == null ? 0 : aInfo.getSchedule().ordinal(),
+             aInfo.getCopyFromUrl(), aInfo.getCopyFromRev(),
+             aInfo.getTextTime() == null ? 0
+                : aInfo.getTextTime().getTime() * 1000,
+             0, getChecksumDigest(aInfo.getChecksum()),
+             getConflictOld(aInfo.getConflicts()),
+             getConflictNew(aInfo.getConflicts()),
+             getConflictWrk(aInfo.getConflicts()),
+             getPrejfile(aInfo.getConflicts()),
+             aInfo.getChangelistName(), aInfo.getWorkingSize(),
+             aInfo.getReposSize(), Depth.fromADepth(aInfo.getDepth()),
+             getTreeConflict(aInfo.getConflicts()));
     }
 
     /**
@@ -434,6 +583,25 @@ public class Info2 implements java.io.Serializable
     public long getReposSize()
     {
         return reposSize;
+    }
+
+    /**
+     * @return The depth of the directory or <code>null</code> if the
+     * item is a file.
+     * @since New in 1.5.
+     */
+    public int getDepth()
+    {
+        return depth;
+    }
+
+    /**
+     * @return the tree conflict of which this node is a victim, or null if none
+     * @since New in 1.6.
+     */
+    public ConflictDescriptor getConflictDescriptor()
+    {
+        return treeConflict;
     }
 
     /**

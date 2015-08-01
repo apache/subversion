@@ -1,0 +1,336 @@
+[ THE CUSTOM TESTING CODE DESCRIBED BELOW WAS REMOVED in r1302567 ]
+
+For the 1.7 release, ra_serf grew a new internal feature to "pause"
+the parsing of (large) XML response bodies. This file intends to
+document the strategy for testing this new feature.
+
+[ We've simply shipped more invasive and difficult code before.
+  However, due to the current attempts to stabilize, and the near-ness
+  of our 1.7.x branch... it seems warranted to apply a bit of
+  testing.  ]
+
+
+TESTING STRATEGY
+
+It may be possible to arrange for writing a white box test, but I'll
+leave that to somebody with a more masochistic bent. This section will
+outline the different scenarios to test, and then how we can adjust
+the various control parameters to make that happen.
+
+There are seven states to the PENDING structure:
+
+  1) pending == NULL
+
+     No pause has (ever) occurred, OR no content has arrived since
+     the parser was paused.
+
+  2) pending->head == NULL && pending->spill == NULL
+
+     This should only happen when some data has been placed into the
+     pending membuf structure, then emptied.
+     
+     The parser may be paused and no content has arrived (yet), or
+     the parser is not in a paused state.
+
+  3) pending->head != NULL && pending->spill == NULL
+
+     A pause occurred, and some content was placed into the
+     membuf. Not enough to spill to a file, however.
+     
+     The parser may be paused, or not-paused.
+
+  4) pending->head != NULL && pending->spill != NULL. content in file
+  
+     Enought content has orrived during a paused state that it was
+     spilled into a file. Playback of the pending content *may*
+     have occurred, but it has not (yet) emptied the memory buffer.
+     
+     The parser may be paused, or not-paused.
+
+  5) pending->head != NULL && pending->spill != NULL. no content in file
+
+     THEORETICAL.
+     
+     If a spill file gets created, then *some* content will be
+     written into the file. The content will not be read/removed
+     from the file until the memory buffer is exhausted. Thus, this
+     state is not possible since the spill file could not be
+     emptied since the membuf has not been emptied.
+     
+     Also, once the spill file has been created, we will never
+     write into the memory buffer (for ordering reasons). Thus, we
+     cannot empty both membuf and spill file, and place more
+     content into the memory buffer.
+     
+     At some point in the future, we may decide to place arriving
+     content back into the membuf after the spill file has been
+     exhausted. The code does not do this today.
+     
+     The parser may be paused, or not-paused.
+
+  6) pending->head == NULL && pending->spill != NULL. content in file
+
+     At some point, enough content arrived to construct a spill
+     file. Since that point, the memory buffer contents have been
+     injected into the parser, emptying the membuf.
+     
+     The parser may be paused, or not-paused.
+
+  7) pending->head == NULL && pending->spill != NULL. no content in file
+
+     At some point, enough content arrived to construct a spill
+     file. Since that point, all content (from memory and file) has
+     been injected into the parser.
+     
+     The parser may be paused, or not-paused.
+
+Note that all states are doubled, based on the PAUSED flag.
+
+There are four operations that occur:
+
+  1) network content is present
+     a) If parser is paused, then append content to PENDING. All six(*)
+        PAUSED states must be considered.
+     b) If parser is NOT paused, then:
+        i) If PENDING contains data, then append content to
+           PENDING. Three of the NOT-PAUSED states must be
+           considered: (3), (4), (6)
+        ii) PENDING is empty, so inject content into the parser
+
+  2) network content is not present [at this time]
+     a) Exit network processing. The PENDING states are irrelevant.
+
+  3) network content completed
+     a) Exit network processing. The PENDING states are irrelevant.
+
+  4) process content from the pending structures
+     a) When parser is NOT paused, and PENDING contains data, then
+        take content from the start of PENDING and inject it into the
+        parser. Three of the NOT-PAUSED states must be considered:
+        (3), (4), (6)
+
+
+(*) we don't need to test state (5).
+
+
+
+INDIVIDUAL TESTS
+
+Normal operation will cover: 1(b)(ii), (2), and (3). Thus, we must
+arrange to test:
+
+  1) operation 1(a) with six states
+  2) operation 1(b)(i) with three states
+  3) operation 4(a) with three states
+
+
+TEST 1.1
+
+Force the parser to pause the first time, then have arriving content
+saved to the pending data.
+
+Exits in state (3).
+
+
+TEST 1.2
+
+We need to force the parser to pause, then we need content saved (to
+reach state (3)), then unpause the parser and inject all the content,
+returning to state (2). Then force the parser to pause again, and
+stash some data to pending.
+
+Exits in state (3).
+
+
+TEST 1.3
+
+Two blocks of content from the network must arrive while the parser is
+paused, and assume no spill file. The first block moves us from state
+(1) or (2) into state (3). The second block performs this test.
+
+Exits in state (3) or (4).
+
+Note: while technically, we want to test the transition to *both*
+states (3) and (4), the setup requirements for 1.4 tests the second
+condition. We merely want to add more memory content while already in
+state (3).
+
+
+TEST 1.4
+
+Pause the parser, then force enough content into pending to create a
+spill file (now in state (4)). Then have one more block arrive.
+
+Exits in state (4).
+
+
+TEST 1.6
+
+Pause the parser, then force enough content into pending to create a
+spill file (state (4)). Then unpause the parser and force the
+injection of the memory content (but not the spill file) into the
+parser to move to state (6). Then pause the parser again and get one
+more block of content.
+
+Exits in state (6).
+
+
+TEST 1.7
+
+Pause the parser, then force enough content into pending to create a
+spill file (state (4)). Then unpause the parser and force the
+injection of ALL that content (memory and disk) to move into state
+(7). Then pause the parser again and save one more block to pending.
+
+Exits in state (6).
+
+
+TEST 2.3
+
+Pause the parser, then save one block of content to move to state
+(3). Unpause the parser and receive one more block of content (before
+injecting the saved content).
+
+Exits in state (3).
+
+
+TEST 2.4
+
+Pause the parser, then save enough content to state (4).  Unpause the
+parser and receive one more block of content.
+
+Exits in state (4).
+
+
+TEST 2.6
+
+Pause the parser, then save enough content to reach state (4). Unpause
+the parser and inject all the memory content, moving to state
+(6). Stop the injection, then receive one block of content from the
+network.
+
+Exits in state (6).
+
+
+TEST 3.3
+
+Pause the parser, then save enough content to reach state (3). Unpause
+the parser and inject some content.
+
+Exits in state (2) or (3).
+
+
+TEST 3.4
+
+Pause the parser, then save enough content to reach state (4). Unpause
+the parser and inject some content.
+
+Exits in state (2), (3), (4), (6), or (7).
+
+Note: if we merely inject from memory, then we exit in (4) or (6).
+
+
+TEST 3.6
+
+Pause the parser, then save enough content to reach state (4). Unpause
+the parser and inject all memory content to reach state (6). Then
+inject some disk content.
+
+Exits in state (6) or (7).
+
+
+OVERALL TEST MECHANISM
+
+If we can get a "large enough" [update] report, then we could create
+one large internal test that will move through all the necessary
+states to perform each of the operations. We need control over
+incoming network blocks, the pause/unpause, and when to process
+PENDING data. These controls are typically based on the number of
+outstanding requests in the upate processing. These variables can be
+precisely controlled except for the network content. Thankfully, serf
+does tend to "spill out" of serf_context_run() often enough that we
+may be able to sequence through the test as desired.
+
+At the moment, serf states that a response handler (e.g our handler
+that shoves the incoming data into the XML parser) must consume all
+content found on the network. A future version of serf may allow the
+repsonse handler to push back on that. For now, we're applying the
+push-back as application-level logic.
+
+We can implement the entire test suite in libsvn_ra_serf/util.c as a
+sequence of actions to take for each step. This can be controlled by a
+global variable to track the step, and an array of actions to take at
+each step. The code will use a special #define to enable it, and the
+test will be run manually by a developer by building the appropriate
+subversion, then executing an "svn checkout". When the steps conclude,
+the logic will revert to normal.
+
+Following are the list of steps. We attempt to minimize this list in
+order to get the system tested with as few steps/transitions as
+possible.
+
+1. paused. content arrival is TEST 1.1. step on state (3).
+2. paused. content arrival is TEST 1.3. [no spill]
+3a. network: unpaused. content arrival is TEST 2.3. [no spill]
+3b. loop: no injection
+4a. network: unpaused. extra content is TEST 2.3. [no spill]
+4b. loop: unpaused. inject all memory content. TEST 3.3. step on state (2).
+5. paused. content arrival is TEST 1.2. step on state (3).
+6. paused. content arrival is spilled. step on state (4).
+7. paused. content arrival is TEST 1.4.
+8a. network: unpaused. content arrival is TEST 2.4.
+8b. loop: no injection
+9a. network: unpaused. extra content is TEST 1.4.
+9b. loop: unpaused. inject all memory content. TEST 3.4. step on state (6)
+10. paused. content arrival is TEST 1.6.
+11a. network: unpaused. content arrival is TEST 2.6.
+11b. loop: no injection
+12a. network: unpaused. extra content is TEST 2.6.
+12b. loop: unpaused. inject all disk content. TEST 3.6. step on state (7)
+13. paused. content arrival is TEST 1.7. step on state (6)
+14. return to default/normal processing
+
+note: "extra content" means that TEST has been previously tested, so
+      we don't really need this particular test. but since the network
+      content is uncontrolled, we may end up (re)testing.
+note: we advance the step when reaching a particular state. if the
+      state is not mentioned, then we advance once new content has
+      been received (which actually means the same state as before),
+      or we advance after injection to the parser.
+note: we cannot detect whether content exists in the spill file due to
+      the information we (currently) record. thus, we have to do the
+      transition manually:
+        step 6: writing the spill moves us to state (4)
+        step 9b: injecting all moves us to state (6)
+        step 12b: injecting all moves us to state (7)
+        step 13: appending to spill moves us to state (6)
+note: after each injection of pending content into the parser, we
+      will pause the parser. that will immediately cause the
+      processing of the PENDING data to stop.
+
+
+IMPLEMENTATION NOTES
+
+* gotta figure out low-impact (this can all live in util.c)
+* array of structures with: paused, inject, force_spill
+* set ->paused on each step increment since we don't know if the next
+  entry point will be the network or the processing loop
+* set ->paused on each return from the xml parser callbacks so that we
+  do not have to invade update.c (which wouldn't know when we turn off
+  the debugging at step 14)
+* the processing loop may clear ->paused and call the pending
+  processing function, which can then reset ->paused and exit if
+  necessary for the current step
+* there are three content injection steps. transition to next step is
+  straight-forward after injection is complete
+* transition based on network has three transitions from the unpaused
+  state.
+* when paused, there are seven network transitions. exit upon reaching
+  a state? yes. occurs *after* network content is saved (the saving of
+  the content is of of the TEST scenarios)
+* when force_spill is defined, the pending content goes right to disk,
+  independent of the memory_size. since we will put further pending
+  data into the spill file, we don't need to check force_spill ever
+  again. oh... we can just look for step==6 rather than a flag.
+* transitions occur on five of the seven states (not 1 or 5)
+

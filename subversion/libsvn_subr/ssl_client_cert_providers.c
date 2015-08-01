@@ -3,17 +3,22 @@
  * SVN_AUTH_CRED_SSL_CLIENT_CERT
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -24,6 +29,7 @@
 /*** Includes. ***/
 
 #include <apr_pools.h>
+#include "svn_hash.h"
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_config.h"
@@ -43,12 +49,10 @@ ssl_client_cert_file_first_credentials(void **credentials_p,
                                        const char *realmstring,
                                        apr_pool_t *pool)
 {
-  svn_config_t *cfg = apr_hash_get(parameters, 
-                                   SVN_AUTH_PARAM_CONFIG,
-                                   APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get(parameters,
-                                          SVN_AUTH_PARAM_SERVER_GROUP,
-                                          APR_HASH_KEY_STRING);
+  svn_config_t *cfg = svn_hash_gets(parameters,
+                                    SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS);
+  const char *server_group = svn_hash_gets(parameters,
+                                           SVN_AUTH_PARAM_SERVER_GROUP);
   const char *cert_file;
 
   cert_file =
@@ -60,7 +64,7 @@ ssl_client_cert_file_first_credentials(void **credentials_p,
     {
       svn_auth_cred_ssl_client_cert_t *cred =
         apr_palloc(pool, sizeof(*cred));
-      
+
       cred->cert_file = cert_file;
       cred->may_save = FALSE;
       *credentials_p = cred;
@@ -75,13 +79,12 @@ ssl_client_cert_file_first_credentials(void **credentials_p,
 }
 
 
-static const svn_auth_provider_t ssl_client_cert_file_provider =
-  {
-    SVN_AUTH_CRED_SSL_CLIENT_CERT,
-    ssl_client_cert_file_first_credentials,
-    NULL,
-    NULL
-  };
+static const svn_auth_provider_t ssl_client_cert_file_provider = {
+  SVN_AUTH_CRED_SSL_CLIENT_CERT,
+  ssl_client_cert_file_first_credentials,
+  NULL,
+  NULL
+};
 
 
 /*** Public API to SSL file providers. ***/
@@ -100,7 +103,7 @@ void svn_auth_get_ssl_client_cert_file_provider
 
 /* Baton type for prompting to send client ssl creds.
    There is no iteration baton type. */
-typedef struct
+typedef struct ssl_client_cert_prompt_provider_baton_t
 {
   svn_auth_ssl_client_cert_prompt_func_t prompt_func;
   void *prompt_baton;
@@ -110,7 +113,7 @@ typedef struct
 } ssl_client_cert_prompt_provider_baton_t;
 
 /* Iteration baton. */
-typedef struct
+typedef struct ssl_client_cert_prompt_iter_baton_t
 {
   /* The original provider baton */
   ssl_client_cert_prompt_provider_baton_t *pb;
@@ -134,9 +137,8 @@ ssl_client_cert_prompt_first_cred(void **credentials_p,
   ssl_client_cert_prompt_provider_baton_t *pb = provider_baton;
   ssl_client_cert_prompt_iter_baton_t *ib =
     apr_pcalloc(pool, sizeof(*ib));
-  const char *no_auth_cache = apr_hash_get(parameters, 
-                                           SVN_AUTH_PARAM_NO_AUTH_CACHE,
-                                           APR_HASH_KEY_STRING);
+  const char *no_auth_cache = svn_hash_gets(parameters,
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE);
 
   SVN_ERR(pb->prompt_func((svn_auth_cred_ssl_client_cert_t **) credentials_p,
                           pb->prompt_baton, realmstring, ! no_auth_cache,
@@ -160,11 +162,10 @@ ssl_client_cert_prompt_next_cred(void **credentials_p,
                                  apr_pool_t *pool)
 {
   ssl_client_cert_prompt_iter_baton_t *ib = iter_baton;
-  const char *no_auth_cache = apr_hash_get(parameters, 
-                                           SVN_AUTH_PARAM_NO_AUTH_CACHE,
-                                           APR_HASH_KEY_STRING);
+  const char *no_auth_cache = svn_hash_gets(parameters,
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE);
 
-  if (ib->retries >= ib->pb->retry_limit)
+  if ((ib->pb->retry_limit >= 0) && (ib->retries >= ib->pb->retry_limit))
     {
       /* give up, go on to next provider. */
       *credentials_p = NULL;
@@ -172,11 +173,9 @@ ssl_client_cert_prompt_next_cred(void **credentials_p,
     }
   ib->retries++;
 
-  SVN_ERR(ib->pb->prompt_func((svn_auth_cred_ssl_client_cert_t **)
-                              credentials_p, ib->pb->prompt_baton,
-                              ib->realmstring, ! no_auth_cache, pool));
-
-  return SVN_NO_ERROR;
+  return ib->pb->prompt_func((svn_auth_cred_ssl_client_cert_t **)
+                             credentials_p, ib->pb->prompt_baton,
+                             ib->realmstring, ! no_auth_cache, pool);
 }
 
 

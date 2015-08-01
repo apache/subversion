@@ -1,0 +1,94 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 40278d28-80c2-4ce3-9606-68ce4b659d51
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2012-06-24T14:02:12.037632Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 105
+Content-length: 105
+
+K 10
+svn:author
+V 7
+jrandom
+K 8
+svn:date
+V 27
+2012-06-24T14:02:13.264066Z
+K 7
+svn:log
+V 4
+init
+PROPS-END
+
+Revision-number: 2
+Prop-content-length: 115
+Content-length: 115
+
+K 10
+svn:author
+V 7
+jrandom
+K 8
+svn:date
+V 27
+2012-06-24T14:02:14.070370Z
+K 7
+svn:log
+V 13
+make a branch
+PROPS-END
+
+Node-path: branch1
+Node-kind: dir
+Node-action: add
+Prop-content-length: 41
+Content-length: 41
+
+K 4
+soup
+V 16
+No soup for you!
+PROPS-END
+
+
+Node-path: branch1/foo
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 20
+Text-content-md5: 6f2d0469e1b4e16adf755b7e18f09d8a
+Text-content-sha1: 3df9ea3dfa67b8dea7968ecfd30e726285a2b383
+Content-length: 30
+
+PROPS-END
+This is file 'foo'.
+
+
+Revision-number: 3
+Prop-content-length: 112
+Content-length: 112
+
+K 10
+svn:author
+V 7
+jrandom
+K 8
+svn:date
+V 27
+2012-06-24T14:02:15.135672Z
+K 7
+svn:log
+V 10
+prop delta
+PROPS-END
+

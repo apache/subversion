@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -21,10 +26,22 @@ package org.tigris.subversion.javahl;
 /**
  * Encapsulates version information about the underlying native
  * libraries.  Basically a wrapper for <a
- * href="http://svn.collab.net/repos/svn/trunk/subversion/include/svn_version.h"><code>svn_version.h</code></a>.
+ * href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/svn_version.h"><code>svn_version.h</code></a>.
  */
 public class Version
 {
+    private org.apache.subversion.javahl.types.Version aVersion;
+
+    public Version()
+    {
+        aVersion = new org.apache.subversion.javahl.types.Version();
+    }
+
+    public Version(org.apache.subversion.javahl.types.Version aVersion)
+    {
+        this.aVersion = aVersion;
+    }
+
     /**
      * @return The full version string for the loaded JavaHL library,
      * as defined by <code>MAJOR.MINOR.PATCH INFO</code>.
@@ -32,33 +49,36 @@ public class Version
      */
     public String toString()
     {
-        StringBuffer version = new StringBuffer();
-        version.append(getMajor())
-            .append('.').append(getMinor())
-            .append('.').append(getPatch())
-            .append(getNumberTag())
-            .append(getTag());
-        return version.toString();
+        return aVersion.toString();
     }
 
     /**
      * @return The major version number for the loaded JavaHL library.
      * @since 1.4.0
      */
-    public native int getMajor();
+    public int getMajor()
+    {
+        return aVersion.getMajor();
+    }
 
     /**
      * @return The minor version number for the loaded JavaHL library.
      * @since 1.4.0
      */
-    public native int getMinor();
+    public int getMinor()
+    {
+        return aVersion.getMinor();
+    }
 
     /**
      * @return The patch-level version number for the loaded JavaHL
      * library.
      * @since 1.4.0
      */
-    public native int getPatch();
+    public int getPatch()
+    {
+        return aVersion.getPatch();
+    }
 
     /**
      * @return Whether the JavaHL native library version is at least
@@ -67,26 +87,6 @@ public class Version
      */
     public boolean isAtLeast(int major, int minor, int patch)
     {
-        int actualMajor = getMajor();
-        int actualMinor = getMinor();
-        return ((major < actualMajor)
-                || (major == actualMajor && minor < actualMinor)
-                || (major == actualMajor && minor == actualMinor &&
-                    patch <= getPatch()));
+        return aVersion.isAtLeast(major, minor, patch);
     }
-
-    /**
-     * @return Some text further describing the library version
-     * (e.g. <code>" (r1234)"</code>, <code>" (Alpha 1)"</code>,
-     * <code>" (dev build)"</code>, etc.).
-     * @since 1.4.0
-     */
-    private native String getTag();
-
-    /**
-     * @return Some text further describing the library version
-     * (e.g. "r1234", "Alpha 1", "dev build", etc.).
-     * @since 1.4.0
-     */
-    private native String getNumberTag();
 }

@@ -3,6 +3,12 @@
 #
 # svnmirror-test.sh
 #
+# Script for testing svn-mirror.sh
+#
+# License:
+#    The same as svn itself. for latest version check:
+#    http://svn.apache.org/repos/asf/subversion/trunk/subversion/LICENSE
+#
 #######################################################################
 
 SVNMIRROR="$PWD/svnmirror.sh"
@@ -113,7 +119,7 @@ for P in ${PARAMS}; do
 	svn mkdir "$SRCWC/branches" > /dev/null
 	svn mkdir "$SRCWC/tags" > /dev/null
 	svn ci "$SRCWC" -m "add trunk branches and tags." > /dev/null
-	mirror_check 0 "successfull completed." ""
+	mirror_check 0 "successfully completed." ""
 
 	echo "Test 3: filter check."
 	svn ls "file://$SRCREPOS" > "$TMPOUT"

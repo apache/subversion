@@ -1,5 +1,5 @@
 This document has been moved to:
 
-   http://svn.collab.net/repos/svn/trunk/notes/dump-load-format.txt
+   http://svn.apache.org/repos/asf/subversion/trunk/notes/dump-load-format.txt
 
 (This forwarding pointer is just for link-compatibility.)

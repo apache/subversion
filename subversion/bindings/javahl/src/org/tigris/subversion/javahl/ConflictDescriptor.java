@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  */
@@ -29,9 +34,16 @@ public class ConflictDescriptor
     private String path;
 
     /**
-     * @see org.tigris.subversion.javahl.NodeKind
+     * @see .Kind
+     */
+    private int conflictKind;
+
+    /**
+     * @see NodeKind
      */
     private int nodeKind;
+
+    private String propertyName;
 
     private boolean isBinary;
     private String mimeType;
@@ -60,25 +72,65 @@ public class ConflictDescriptor
     // files will be in repository-normal form (LF line endings and
     // contracted keywords).
     private String basePath;
-    private String reposPath;
-    private String userPath;
+    private String theirPath;
+    private String myPath;
     private String mergedPath;
 
-    ConflictDescriptor(String path, int nodeKind, boolean isBinary,
-                       String mimeType, int action, int reason,
-                       String basePath, String reposPath,
-                       String userPath, String mergedPath)
+    /**
+     * @see Operation
+     */
+    private int operation;
+
+    /**
+     * @see ConflictVersion
+     */
+    private ConflictVersion srcLeftVersion;
+
+    /**
+     * @see ConflictVersion
+     */
+    private ConflictVersion srcRightVersion;
+
+    /** This constructor should only be called from JNI code. */
+    ConflictDescriptor(String path, int conflictKind, int nodeKind,
+                       String propertyName, boolean isBinary, String mimeType,
+                       int action, int reason, int operation,
+                       String basePath, String theirPath,
+                       String myPath, String mergedPath,
+                       ConflictVersion srcLeft, ConflictVersion srcRight)
     {
         this.path = path;
+        this.conflictKind = conflictKind;
         this.nodeKind = nodeKind;
+        this.propertyName = propertyName;
         this.isBinary = isBinary;
         this.mimeType = mimeType;
         this.action = action;
         this.reason = reason;
         this.basePath = basePath;
-        this.reposPath = reposPath;
-        this.userPath = userPath;
+        this.theirPath = theirPath;
+        this.myPath = myPath;
         this.mergedPath = mergedPath;
+        this.operation = operation;
+        this.srcLeftVersion = srcLeft;
+        this.srcRightVersion = srcRight;
+    }
+
+    public ConflictDescriptor(org.apache.subversion.javahl.ConflictDescriptor
+                                                                aDesc)
+    {
+        this(aDesc.getPath(), aDesc.getKind().ordinal(),
+             NodeKind.fromApache(aDesc.getNodeKind()),
+             aDesc.getPropertyName(), aDesc.isBinary(), aDesc.getMIMEType(),
+             aDesc.getAction().ordinal(), aDesc.getReason().ordinal(),
+             aDesc.getOperation().ordinal(), aDesc.getBasePath(),
+             aDesc.getTheirPath(), aDesc.getMyPath(), aDesc.getMergedPath(),
+             aDesc.getSrcLeftVersion() != null
+               ? new ConflictVersion(aDesc.getSrcLeftVersion())
+               : null,
+             aDesc.getSrcRightVersion() != null
+               ? new ConflictVersion(aDesc.getSrcRightVersion())
+               : null);
     }
 
     public String getPath()
@@ -87,11 +139,24 @@ public class ConflictDescriptor
     }
 
     /**
-     * @see org.tigris.subversion.javahl.NodeKind
+     * @see .Kind
+     */
+    public int getKind()
+    {
+        return conflictKind;
+    }
+
+    /**
+     * @see NodeKind
      */
     public int getNodeKind()
     {
         return nodeKind;
+    }
+
+    public String getPropertyName()
+    {
+        return propertyName;
     }
 
     public boolean isBinary()
@@ -105,7 +170,7 @@ public class ConflictDescriptor
     }
 
     /**
-     * @see #Action
+     * @see .Action
      */
     public int getAction()
     {
@@ -113,7 +178,7 @@ public class ConflictDescriptor
     }
 
     /**
-     * @see #Reason
+     * @see .Reason
      */
     public int getReason()
     {
@@ -125,19 +190,50 @@ public class ConflictDescriptor
         return basePath;
     }
 
-    public String getReposPath()
+    public String getTheirPath()
     {
-        return reposPath;
+        return theirPath;
     }
 
-    public String getUserPath()
+    public String getMyPath()
     {
-        return userPath;
+        return myPath;
     }
 
     public String getMergedPath()
     {
         return mergedPath;
+    }
+
+    public int getOperation()
+    {
+        return operation;
+    }
+
+    public ConflictVersion getSrcLeftVersion()
+    {
+        return srcLeftVersion;
+    }
+
+    public ConflictVersion getSrcRightVersion()
+    {
+        return srcRightVersion;
+    }
+
+    /**
+     * Poor man's enum for <code>svn_wc_conflict_kind_t</code>.
+     */
+    public final class Kind
+    {
+        /**
+         * Attempting to change text or props.
+         */
+        public static final int text = 0;
+
+        /**
+         * Attempting to add object.
+         */
+        public static final int property = 1;
     }
 
     /**
@@ -190,5 +286,11 @@ public class ConflictDescriptor
          * Object is unversioned.
          */
         public static final int unversioned = 4;
+
+        /**
+         * Object is already added or schedule-add.
+         * @since New in 1.6.
+         */
+        public static final int added = 5;
     }
 }

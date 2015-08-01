@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #
 # Author: Archie Cobbs <archie at awarix dot com>
 # Rewritten in Python by: Giovanni Bajo <rasky at develer dot com>
@@ -27,6 +27,8 @@
 #   Blair Zajac <blair at orcaware dot com> - random improvements
 #   Raman Gupta <rocketraman at fastmail dot fm> - bidirectional and transitive
 #     merging support
+#   Dustin J. Mitchell <dustin at zmanda dot com> - support for multiple
+#     location identifier formats
 #
 # $HeadURL$
 # $LastChangedDate$
@@ -40,8 +42,8 @@
 # Differences from svnmerge.sh:
 # - More portable: tested as working in FreeBSD and OS/2.
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
-# - "svnmerge avail" now only shows commits in source, not also commits in other
-#   parts of the repository.
+# - "svnmerge avail" now only shows commits in source, not also commits in
+#   other parts of the repository.
 # - Add "svnmerge block" to flag some revisions as blocked, so that
 #   they will not show up anymore in the available list.  Added also
 #   the complementary "svnmerge unblock".
@@ -53,6 +55,7 @@
 # - Add --force option to skip working copy check
 # - Add --record-only option to "svnmerge merge" to avoid performing
 #   an actual merge, yet record that a merge happened.
+# - Can use a variety of location-identifier formats
 #
 # TODO:
 #  - Add "svnmerge avail -R": show logs in reverse order
@@ -68,7 +71,7 @@
 #  A "target" is generally user-specified, and may be a working copy or
 #  a URL.
 
-import sys, os, getopt, re, types, tempfile, time, popen2
+import sys, os, getopt, re, types, tempfile, time, locale
 from bisect import bisect
 from xml.dom import pulldom
 
@@ -89,8 +92,16 @@ LOG_SEPARATOR_RE = re.compile('^((%s)+)' % re.escape(LOG_SEPARATOR),
 # Each line of the embedded log messages will be prefixed by LOG_LINE_PREFIX.
 LOG_LINE_PREFIX = 2 * ' '
 
-# We expect non-localized output from SVN
-os.environ["LC_ALL"] = "C"
+# Set python to the default locale as per environment settings, same as svn
+# TODO we should really parse config and if log-encoding is specified, set
+# the locale to match that encoding
+locale.setlocale(locale.LC_ALL, '')
+
+# We want the svn output (such as svn info) to be non-localized
+# Using LC_MESSAGES should not affect localized output of svn log, for example
+if os.environ.has_key("LC_ALL"):
+    del os.environ["LC_ALL"]
+os.environ["LC_MESSAGES"] = "C"
 
 ###############################################################################
 # Support for older Python versions
@@ -156,6 +167,7 @@ default_opts = {
     "prop": NAME + "-integrated",
     "block-prop": NAME + "-blocked",
     "commit-verbose": True,
+    "verbose": 0,
 }
 logs = {}
 
@@ -183,10 +195,11 @@ def console_width():
         pass
 
     # Parse the output of stty -a
-    out = os.popen("stty -a").read()
-    m = re.search(r"columns (\d+);", out)
-    if m:
-        return int(m.group(1))
+    if os.isatty(1):
+        out = os.popen("stty -a").read()
+        m = re.search(r"columns (\d+);", out)
+        if m:
+            return int(m.group(1))
 
     # sensible default
     return 80
@@ -207,6 +220,13 @@ def prefix_lines(prefix, lines):
     The input must be terminated by a newline."""
     assert lines[-1] == "\n"
     return prefix + lines[:-1].replace("\n", "\n"+prefix) + "\n"
+
+def recode_stdout_to_file(s):
+    if locale.getdefaultlocale()[1] is None or not hasattr(sys.stdout, "encoding") \
+            or sys.stdout.encoding is None:
+        return s
+    u = s.decode(sys.stdout.encoding)
+    return u.encode(locale.getdefaultlocale()[1])
 
 class LaunchError(Exception):
     """Signal a failure in execution of an external command. Parameters are the
@@ -262,6 +282,7 @@ except ImportError:
     # support versions of python before 2.4 (slower on some systems)
     def launch(cmd, split_lines=True):
         if os.name not in ['nt', 'os2']:
+            import popen2
             p = popen2.Popen4(cmd)
             p.tochild.close()
             if split_lines:
@@ -288,17 +309,15 @@ except ImportError:
 
 def launchsvn(s, show=False, pretend=False, **kwargs):
     """Launch SVN and grab its output."""
-    username = opts.get("username", None)
-    password = opts.get("password", None)
-    if username:
-        username = " --username=" + username
-    else:
-        username = ""
-    if password:
-        password = " --password=" + password
-    else:
-        password = ""
-    cmd = opts["svn"] + username + password + " " + s
+    username = password = configdir = ""
+    if opts.get("username", None):
+        username = "--username=" + opts["username"]
+    if opts.get("password", None):
+        password = "--password=" + opts["password"]
+    if opts.get("config-dir", None):
+        configdir = "--config-dir=" + opts["config-dir"]
+    cmd = ' '.join(filter(None, [opts["svn"], "--non-interactive",
+                                 username, password, configdir, s]))
     if show or opts["verbose"] >= 2:
         print cmd
     if pretend:
@@ -323,10 +342,170 @@ def check_dir_clean(dir):
     # Checking with -q does not show unversioned files or external
     # directories.  Though it displays a debug message for external
     # directories, after a blank line.  So, practically, the first line
-    # matters: if it's non-empty there is a modification.
+    # matters: if it's non-empty there is a modification. (Lines starting
+    # with "X" must be skipped, since they just indicate externals.)
     out = launchsvn("status -q %s" % dir)
-    if out and out[0].strip():
-        error('"%s" has local modifications; it must be clean' % dir)
+    while out and out[0].strip():
+        if not out[0].startswith("X"):
+            error('"%s" has local modifications; it must be clean' % dir)
+        out.pop(0)
+
+class PathIdentifier:
+    """Abstraction for a path identifier, so that we can start talking
+    about it before we know the form that it takes in the properties (its
+    external_form).  Objects are referenced in the class variable 'locobjs',
+    keyed by all known forms."""
+
+    # a map of UUID (or None) to repository root URL.
+    repo_hints = {}
+
+    # a map from any known string form to the corresponding PathIdentifier
+    locobjs = {}
+
+    def __init__(self, repo_relative_path, uuid=None, url=None, external_form=None):
+        self.repo_relative_path = repo_relative_path
+        self.uuid = uuid
+        self.url = url
+        self.external_form = external_form
+
+    def __repr__(self):
+        return "<PathIdentifier " + ', '.join(['%s=%r' % i for i in self.__dict__.items()]) + '>'
+
+    def __str__(self):
+        """Return a printable string representation"""
+        if self.external_form:
+            return self.external_form
+        if self.url:
+            return self.format('url')
+        if self.uuid:
+            return self.format('uuid')
+        return self.format('path')
+
+    def from_pathid(pathid_str):
+        """convert pathid_str to a PathIdentifier"""
+        if not PathIdentifier.locobjs.has_key(pathid_str):
+            if is_url(pathid_str):
+                # we can determine every form; PathIdentifier.hint knows how to do that
+                PathIdentifier.hint(pathid_str)
+            elif pathid_str[:7] == 'uuid://':
+                mo = re.match('uuid://([^/]*)(.*)', pathid_str)
+                if not mo:
+                    error("Invalid path identifier '%s'" % pathid_str)
+                uuid, repo_relative_path = mo.groups()
+                pathid = PathIdentifier(repo_relative_path, uuid=uuid)
+                # we can cache this by uuid:// pathid and by repo-relative path
+                PathIdentifier.locobjs[pathid_str] = PathIdentifier.locobjs[repo_relative_path] = pathid
+            elif pathid_str and pathid_str[0] == '/':
+                # strip any trailing slashes
+                pathid_str = pathid_str.rstrip('/')
+                pathid = PathIdentifier(repo_relative_path=pathid_str)
+                # we can only cache this by repo-relative path
+                PathIdentifier.locobjs[pathid_str] = pathid
+            else:
+                if not opts["ignore-invalid-entries"]:
+                    error("Invalid path identifier '%s'" % pathid_str)
+        if PathIdentifier.locobjs.has_key(pathid_str):
+            return PathIdentifier.locobjs[pathid_str]
+        return None
+    from_pathid = staticmethod(from_pathid)
+
+    def from_target(target):
+        """Convert a target (either a working copy path or an URL) into a
+        path identifier."""
+        # prime the cache first if we don't know about this target yet
+        if not PathIdentifier.locobjs.has_key(target):
+            PathIdentifier.hint(target)
+
+        try:
+            return PathIdentifier.locobjs[target]
+        except KeyError:
+            error("Could not recognize path identifier '%s'" % target)
+    from_target = staticmethod(from_target)
+
+    def hint(target):
+        """Cache some information about target, as it may be referenced by
+        repo-relative path in subversion properties; the cache can help to
+        expand such a relative path to a full path identifier."""
+        if PathIdentifier.locobjs.has_key(target): return
+        if not is_url(target) and not is_wc(target): return
+
+        url = target_to_url(target)
+
+        root = get_repo_root(url)
+        assert root[-1] != "/"
+        assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
+        repo_relative_path = url[len(root):]
+
+        try:
+            uuid = get_svninfo(target)['Repository UUID']
+            uuid_pathid = 'uuid://%s%s' % (uuid, repo_relative_path)
+        except KeyError:
+            uuid = None
+            uuid_pathid = None
+
+        locobj = PathIdentifier.locobjs.get(url) or \
+                 (uuid_pathid and PathIdentifier.locobjs.get(uuid_pathid))
+        if not locobj:
+            locobj = PathIdentifier(repo_relative_path, uuid=uuid, url=url)
+
+        PathIdentifier.repo_hints[uuid] = root # (uuid may be None)
+
+        PathIdentifier.locobjs[target] = locobj
+        PathIdentifier.locobjs[url] = locobj
+        if uuid_pathid:
+            PathIdentifier.locobjs[uuid_pathid] = locobj
+        if not PathIdentifier.locobjs.has_key(repo_relative_path):
+            PathIdentifier.locobjs[repo_relative_path] = locobj
+    hint = staticmethod(hint)
+
+    def format(self, fmt):
+        if fmt == 'path':
+            return self.repo_relative_path
+        elif fmt == 'uuid':
+            return "uuid://%s%s" % (self.uuid, self.repo_relative_path)
+        elif fmt == 'url':
+            return self.url
+        else:
+            error("Unkonwn path type '%s'" % fmt)
+
+    def match_substring(self, str):
+        """Test whether str is a substring of any representation of this
+        PathIdentifier."""
+        if self.repo_relative_path.find(str) >= 0:
+            return True
+
+        if self.uuid:
+            if ("uuid://%s%s" % (self.uuid, self.repo_relative_path)).find(str) >= 0:
+                return True
+
+        if self.url:
+            if (self.url + self.repo_relative_path).find(str) >= 0:
+                return True
+
+        return False
+
+    def get_url(self):
+        """Convert a pathid into a URL.  If this is not possible, error out."""
+        if self.url:
+            return self.url
+        # if we have a uuid and happen to know the URL for it, use that
+        elif self.uuid and PathIdentifier.repo_hints.has_key(self.uuid):
+            self.url = PathIdentifier.repo_hints[self.uuid] + self.repo_relative_path
+            PathIdentifier.locobjs[self.url] = self
+            return self.url
+        # if we've only seen one rep, use that (a guess, but an educated one)
+        elif not self.uuid and len(PathIdentifier.repo_hints) == 1:
+            uuid, root = PathIdentifier.repo_hints.items()[0]
+            if uuid:
+                self.uuid = uuid
+                PathIdentifier.locobjs['uuid://%s%s' % (uuid, self.repo_relative_path)] = self
+            self.url = root + self.repo_relative_path
+            PathIdentifier.locobjs[self.url] = self
+            report("Guessing that '%s' refers to '%s'" % (self, self.url))
+            return self.url
+        else:
+            error("Cannot determine URL for '%s'; " % self +
+                  "Explicit source argument (-S/--source) required.\n")
 
 class RevisionLog:
     """
@@ -354,12 +533,12 @@ class RevisionLog:
         # Read the log to look for revision numbers and merge-tracking info
         self.revs = []
         self.propchange_revs = []
-        repos_pathid = target_to_pathid(url)
+        repos_pathid = PathIdentifier.from_target(url)
         for chg in SvnLogParser(launchsvn("log %s" % log_opts,
                                           split_lines=False)):
             self.revs.append(chg.revision())
             for p in chg.paths():
-                if p.action() == 'M' and p.pathid() == repos_pathid:
+                if p.action() == 'M' and p.pathid() == repos_pathid.repo_relative_path:
                     self.propchange_revs.append(chg.revision())
 
         # Save the range of the log
@@ -479,7 +658,7 @@ class VersionedProperty:
                 self._changed_values.append(new_value)
                 self.revs.append(rev)
                 self.values.append(new_value)
-                new_value = old_value
+                old_value = new_value
 
         # Indicate that we know nothing about the value of the property
         # after the range of the log.
@@ -532,7 +711,7 @@ class VersionedProperty:
     def initialized_revs(self):
         """
         Get a list of the revisions in which keys were added or
-        removed in this property. 
+        removed in this property.
         """
         initialized_revs = []
         old_len = len(self._initial_value)
@@ -570,10 +749,10 @@ class RevisionSet:
                 for R in parm.split(","):
                     rev_or_revs = re.split(revision_range_split_re, R)
                     if len(rev_or_revs) == 1:
-                        self._revs[int(rev_or_revs[0])] = 1
+                        self._revs[int(lstrip(rev_or_revs[0], 'r'))] = 1
                     elif len(rev_or_revs) == 2:
-                        for rev in range(int(rev_or_revs[0]),
-                                         int(rev_or_revs[1])+1):
+                        for rev in range(int(lstrip(rev_or_revs[0], 'r')),
+                                         int(lstrip(rev_or_revs[1], 'r'))+1):
                             self._revs[rev] = 1
                     else:
                         raise ValueError, 'Ill formatted revision range: ' + R
@@ -660,8 +839,14 @@ def dict_from_revlist_prop(propvalue):
     # Multiple sources are separated by any whitespace.
     for L in propvalue.split():
         # We use rsplit to play safe and allow colons in pathids.
-        source, revs = rsplit(L.strip(), ":", 1)
-        prop[source] = revs
+        pathid_str, revs = rsplit(L.strip(), ":", 1)
+
+        pathid = PathIdentifier.from_pathid(pathid_str)
+
+        # cache the "external" form we saw
+        if pathid:
+            pathid.external_form = pathid_str
+            prop[pathid] = revs
     return prop
 
 def get_revlist_prop(url_or_dir, propname, rev=None):
@@ -702,7 +887,7 @@ def format_merge_props(props, sep=" "):
     props.sort()
     L = []
     for h, r in props:
-        L.append(h + ":" + r)
+        L.append("%s:%s" % (h, r))
     return sep.join(L)
 
 def _run_propset(dir, prop, value):
@@ -730,7 +915,12 @@ def set_props(dir, name, props):
     if props:
         _run_propset(dir, name, props)
     else:
-        svn_command('propdel "%s" "%s"' % (name, dir))
+        # Check if NAME exists on DIR before trying to delete it.
+        # As of 1.6 propdel no longer supports deleting a
+        # non-existent property.
+        out = launchsvn('propget "%s" "%s"' % (name, dir))
+        if out:
+            svn_command('propdel "%s" "%s"' % (name, dir))
 
 def set_merge_props(dir, props):
     set_props(dir, opts["prop"], props)
@@ -747,8 +937,15 @@ def set_blocked_revs(dir, source_pathid, revs):
     set_block_props(dir, props)
 
 def is_url(url):
-    """Check if url is a valid url."""
-    return re.search(r"^[a-zA-Z][-+\.\w]*://", url) is not None
+    """Check if url looks like a valid url."""
+    return re.search(r"^[a-zA-Z][-+\.\w]*://[^\s]+$", url) is not None and url[:4] != 'uuid'
+
+def check_url(url):
+    """Similar to is_url, but actually invoke get_svninfo to find out"""
+    return get_svninfo(url) != {}
+
+def is_pathid(pathid):
+    return isinstance(pathid, PathIdentifier)
 
 def is_wc(dir):
     """Check if a directory is a working copy."""
@@ -808,10 +1005,11 @@ def get_repo_root(target):
     # Try using "svn info URL". This works only on SVN clients >= 1.2
     try:
         info = get_svninfo(url)
+        # info may be {}, in which case we'll see KeyError here
         root = info["Repository Root"]
         _cache_reporoot[root] = None
         return root
-    except LaunchError:
+    except (KeyError, LaunchError):
         pass
 
     # Constrained to older svn clients, we are stuck with this ugly
@@ -823,19 +1021,10 @@ def get_repo_root(target):
             launchsvn('proplist "%s"' % temp)
         except LaunchError:
             _cache_reporoot[url] = None
-            return url
+            return rstrip(url, "/")
         url = temp
 
-    assert False, "svn repos root not found"
-
-def target_to_pathid(target):
-    """Convert a target (either a working copy path or an URL) into a
-    path identifier."""
-    root = get_repo_root(target)
-    url = target_to_url(target)
-    assert root[-1] != "/"
-    assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
-    return url[len(root):]
+    error("svn repos root of %s not found" % target)
 
 class SvnLogParser:
     """
@@ -855,7 +1044,7 @@ class SvnLogParser:
         def __init__(self, xmlnode):
             self.n = xmlnode
         def revision(self):
-            return self.n.getAttribute("revision")
+            return int(self.n.getAttribute("revision"))
         def author(self):
             return self.n.getElementsByTagName("author")[0].firstChild.data
         def paths(self):
@@ -877,21 +1066,21 @@ class SvnLogParser:
                 except KeyError: return None
 
 def get_copyfrom(target):
-    """Get copyfrom info for a given target (it represents the directory from
-    where it was branched). NOTE: repos root has no copyfrom info. In this case
-    None is returned.  
-    
+    """Get copyfrom info for a given target (it represents the
+    repository-relative path from where it was branched). NOTE:
+    repos root has no copyfrom info. In this case None is returned.
+
     Returns the:
         - source file or directory from which the copy was made
         - revision from which that source was copied
         - revision in which the copy was committed
     """
-    repos_path = target_to_pathid(target)
+    repos_path = PathIdentifier.from_target(target).repo_relative_path
     for chg in SvnLogParser(launchsvn('log -v --xml --stop-on-copy "%s"'
                                       % target, split_lines=False)):
         for p in chg.paths():
             if p.action() == 'A' and p.pathid() == repos_path:
-                # These values will be None if the corresponding elements are 
+                # These values will be None if the corresponding elements are
                 # not found in the log.
                 return p.copyfrom_pathid(), p.copyfrom_rev(), chg.revision()
     return None,None,None
@@ -899,7 +1088,10 @@ def get_copyfrom(target):
 def get_latest_rev(url):
     """Get the latest revision of the repository of which URL is part."""
     try:
-        return get_svninfo(url)["Revision"]
+        info = get_svninfo(url)
+        if not info.has_key("Revision"):
+            error("Not a valid URL: %s" % url)
+        return info["Revision"]
     except LaunchError:
         # Alternative method for latest revision checking (for svn < 1.2)
         report('checking latest revision of "%s"' % url)
@@ -933,7 +1125,7 @@ def get_commit_log(url, revnum):
     """Return the log message for a specific integer revision
     number."""
     out = launchsvn("log --incremental -r%d %s" % (revnum, url))
-    return "".join(out[1:])
+    return recode_stdout_to_file("".join(out[1:]))
 
 def construct_merged_log_message(url, revnums):
     """Return a commit log message containing all the commit messages
@@ -968,7 +1160,7 @@ def get_default_source(branch_target, branch_props):
         error("no integration info available")
 
     props = branch_props.copy()
-    pathid = target_to_pathid(branch_target)
+    pathid = PathIdentifier.from_target(branch_target)
 
     # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
@@ -981,34 +1173,21 @@ def get_default_source(branch_target, branch_props):
         err_msg += "Explicit source argument (-S/--source) required.\n"
         err_msg += "The merge sources available are:"
         for prop in props:
-          err_msg += "\n  " + prop
+          err_msg += "\n  " + str(prop)
         error(err_msg)
 
     return props.keys()[0]
 
-def check_old_prop_version(branch_target, branch_props):
-    """Check if branch_props (of branch_target) are svnmerge properties in
-    old format, and emit an error if so."""
+def should_find_reflected(branch_dir):
+    should_find_reflected = opts["bidirectional"]
 
-    # Previous svnmerge versions allowed trailing /'s in the repository
-    # local path.  Newer versions of svnmerge will trim trailing /'s
-    # appearing in the command line, so if there are any properties with
-    # trailing /'s, they will not be properly matched later on, so require
-    # the user to change them now.
-    fixed = {}
-    changed = False
-    for source, revs in branch_props.items():
-        src = rstrip(source, "/")
-        fixed[src] = revs
-        if src != source:
-            changed = True
+    # If the source has integration info for the target, set find_reflected
+    # even if --bidirectional wasn't specified
+    if not should_find_reflected:
+        source_props = get_merge_props(opts["source-url"])
+        should_find_reflected = source_props.has_key(PathIdentifier.from_target(branch_dir))
 
-    if changed:
-        err_msg = "old property values detected; an upgrade is required.\n\n"
-        err_msg += "Please execute and commit these changes to upgrade:\n\n"
-        err_msg += 'svn propset "%s" "%s" "%s"' % \
-                   (opts["prop"], format_merge_props(fixed), branch_target)
-        error(err_msg)
+    return should_find_reflected
 
 def analyze_revs(target_pathid, url, begin=1, end=None,
                  find_reflected=False):
@@ -1062,7 +1241,7 @@ def analyze_source_revs(branch_target, source_url, **kwargs):
     """For the given branch and source, extract the real and phantom
     source revisions."""
     branch_url = target_to_url(branch_target)
-    branch_pathid = target_to_pathid(branch_target)
+    branch_pathid = PathIdentifier.from_target(branch_target)
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
@@ -1124,7 +1303,12 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
         for start,end in revs.normalized():
             svn_command('log --incremental -v -r %d:%d %s' % \
                         (start, end, source_url))
-    elif display_style == "diffs":
+    elif display_style in ("diffs", "summarize"):
+        if display_style == 'summarize':
+            summarize = '--summarize '
+        else:
+            summarize = ''
+
         for start, end in revs.normalized():
             print
             if start == end:
@@ -1136,7 +1320,8 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
 
             # Note: the starting revision number to 'svn diff' is
             # NOT inclusive so we have to subtract one from ${START}.
-            svn_command("diff -r %d:%d %s" % (start - 1, end, source_url))
+            svn_command("diff -r %d:%d %s %s" % (start - 1, end, summarize,
+                                                 source_url))
     else:
         assert False, "unhandled display style: %s" % display_style
 
@@ -1145,59 +1330,81 @@ def action_init(target_dir, target_props):
     # Check that directory is ready for being modified
     check_dir_clean(target_dir)
 
+    target_pathid = PathIdentifier.from_target(target_dir)
+    source_pathid = opts['source-pathid']
+    if source_pathid == target_pathid:
+        error("cannot init integration source path '%s'\nIts path identifier does not "
+              "differ from the path identifier of the current directory, '%s'."
+              % (source_pathid, target_pathid))
+
+    source_url = opts['source-url']
+
     # If the user hasn't specified the revisions to use, see if the
     # "source" is a copy from the current tree and if so, we can use
     # the version data obtained from it.
     revision_range = opts["revision"]
     if not revision_range:
-        # Determining a default endpoint for the revision range that "init"
-        # will use, since none was provided by the user.
-        cf_source, cf_rev, copy_committed_in_rev = \
-                                            get_copyfrom(opts["source-url"])
-        target_path = target_to_pathid(target_dir)
+        # If source was originally copied from target, and we are merging
+        # changes from source to target (the copy target is the merge source,
+        # and the copy source is the merge target), then we want to mark as
+        # integrated up to the rev in which the copy was committed which
+        # created the merge source:
+        cf_source, cf_rev, copy_committed_in_rev = get_copyfrom(source_url)
 
-        if target_path == cf_source:
-            # If source was originally copyied from target, and we are merging
-            # changes from source to target (the copy target is the merge
-            # source, and the copy source is the merge target), then we want to
-            # mark as integrated up to the rev in which the copy was committed
-            # which created the merge source:
-            report('the source "%s" is a branch of "%s"' %
-                   (opts["source-url"], target_dir))
-            revision_range = "1-" + copy_committed_in_rev
-        else:
-            # If the copy source is the merge source, and 
-            # the copy target is the merge target, then we want to
-            # mark as integrated up to the specific rev of the merge
-            # target from which the merge source was copied. Longer
-            # discussion here:
-            # http://subversion.tigris.org/issues/show_bug.cgi?id=2810
-            target_url = target_to_url(target_dir)
-            source_path = target_to_pathid(opts["source-url"])
-            cf_source_path, cf_rev, copy_committed_in_rev = get_copyfrom(target_url)
-            if source_path == cf_source_path:
-                report('the merge source "%s" is the copy source of "%s"' %
-                       (opts["source-url"], target_dir))
-                revision_range = "1-" + cf_rev
+        cf_pathid = None
+        if cf_source:
+            cf_url = get_repo_root(source_url) + cf_source
+            if is_url(cf_url) and check_url(cf_url):
+                cf_pathid = PathIdentifier.from_target(cf_url)
 
-    # When neither the merge source nor target is a copy of the other, and 
-    # the user did not specify a revision range, then choose a default which is 
-    # the current revision; saying, in effect, "everything has been merged, so 
+        if target_pathid == cf_pathid:
+            report('the source "%s" was copied from "%s" in rev %s and committed in rev %s' %
+                   (source_url, target_dir, cf_rev, copy_committed_in_rev))
+            revision_range = "1-" + str(copy_committed_in_rev)
+
+    if not revision_range:
+        # If the reverse is true: copy source is the merge source, and
+        # the copy target is the merge target, then we want to mark as
+        # integrated up to the specific rev of the merge target from
+        # which the merge source was copied.  (Longer discussion at:
+        # http://subversion.tigris.org/issues/show_bug.cgi?id=2810  )
+        cf_source, cf_rev, copy_committed_in_rev = get_copyfrom(target_dir)
+
+        cf_pathid = None
+        if cf_source:
+            cf_url = get_repo_root(target_dir) + cf_source
+            if is_url(cf_url) and check_url(cf_url):
+                cf_pathid = PathIdentifier.from_target(cf_url)
+
+        source_pathid = PathIdentifier.from_target(source_url)
+        if source_pathid == cf_pathid:
+            report('the target "%s" was copied the source "%s" in rev %s and committed in rev %s' %
+                   (target_dir, source_url, cf_rev, copy_committed_in_rev))
+            revision_range = "1-" + cf_rev
+
+    # When neither the merge source nor target is a copy of the other, and
+    # the user did not specify a revision range, then choose a default which is
+    # the current revision; saying, in effect, "everything has been merged, so
     # mark as integrated up to the latest rev on source url).
-    revs = revision_range or "1-" + get_latest_rev(opts["source-url"])
-    revs = RevisionSet(revs)
+    if not revision_range:
+        revision_range = "1-" + get_latest_rev(source_url)
+
+    revs = RevisionSet(revision_range)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
-           (target_dir, revs, opts["source-url"]))
+           (target_dir, revs, source_url))
 
     revs = str(revs)
-    # If the local svnmerge-integrated property already has an entry 
+    # If the local svnmerge-integrated property already has an entry
     # for the source-pathid, simply error out.
-    if not opts["force"] and target_props.has_key(opts["source-pathid"]):
+    if not opts["force"] and target_props.has_key(source_pathid):
         error('Repository-relative path %s has already been initialized at %s\n'
-              'Use --force to re-initialize'
-              % (opts["source-pathid"], target_dir))
-    target_props[opts["source-pathid"]] = revs
+              'Use --force to re-initialize' % (source_pathid, target_dir))
+    # set the pathid's external_form based on the user's options
+    source_pathid.external_form = source_pathid.format(opts['location-type'])
+
+    revs = str(revs)
+    target_props[source_pathid] = revs
 
     # Set property
     set_merge_props(target_dir, target_props)
@@ -1207,7 +1414,7 @@ def action_init(target_dir, target_props):
         f = open(opts["commit-file"], "w")
         print >>f, 'Initialized merge tracking via "%s" with revisions "%s" from ' \
             % (NAME, revs)
-        print >>f, '%s' % opts["source-url"]
+        print >>f, '%s' % source_url
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
@@ -1215,7 +1422,8 @@ def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
     source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
-                                   find_reflected=opts["bidirectional"])
+                                   find_reflected=
+                                       should_find_reflected(branch_dir))
     report('skipping phantom revisions: %s' % phantom_revs)
     if reflected_revs:
         report('skipping reflected revisions: %s' % reflected_revs)
@@ -1249,7 +1457,6 @@ def action_integrated(branch_dir, branch_props):
     creation revision."""
     # Extract the integration info for the branch_dir
     branch_props = get_merge_props(branch_dir)
-    check_old_prop_version(branch_dir, branch_props)
     revs = merge_props_to_revision_set(branch_props, opts["source-pathid"])
 
     # Lookup the oldest revision on the branch path.
@@ -1275,7 +1482,8 @@ def action_merge(branch_dir, branch_props):
 
     source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
-                                   find_reflected=opts["bidirectional"])
+                                   find_reflected=
+                                       should_find_reflected(branch_dir))
 
     if opts["revision"]:
         revs = RevisionSet(opts["revision"])
@@ -1348,10 +1556,10 @@ def action_merge(branch_dir, branch_props):
         f = open(opts["commit-file"], "w")
         if record_only:
             print >>f, 'Recorded merge of revisions %s via %s from ' % \
-                  (revs | phantom_revs, NAME)
+                  (revs, NAME)
         else:
             print >>f, 'Merged revisions %s via %s from ' % \
-                  (revs | phantom_revs, NAME)
+                  (revs, NAME)
         print >>f, '%s' % opts["source-url"]
         if opts["commit-verbose"]:
             print >>f
@@ -1435,7 +1643,6 @@ def action_rollback(branch_dir, branch_props):
 
     # Extract the integration info for the branch_dir
     branch_props = get_merge_props(branch_dir)
-    check_old_prop_version(branch_dir, branch_props)
     # Get the list of all revisions already merged into this source-pathid.
     merged_revs = merge_props_to_revision_set(branch_props,
                                               opts["source-pathid"])
@@ -1498,7 +1705,7 @@ def action_rollback(branch_dir, branch_props):
         report('wrote commit message to "%s"' % opts["commit-file"])
 
     # Update the set of merged revisions.
-    merged_revs = merged_revs - revs 
+    merged_revs = merged_revs - revs
     branch_props[opts["source-pathid"]] = str(merged_revs)
     set_merge_props(branch_dir, branch_props)
 
@@ -1826,6 +2033,8 @@ global_opts = [
                 "implies --show-changes"),
     Option("-s", "--show-changes",
            help="show subversion commands that make changes"),
+    Option("-i", "--ignore-invalid-entries",
+           help="ignore invalid svnmerge indexes"),
     Option("-v", "--verbose",
            help="verbose mode: output more information about progress"),
     OptionArg("-u", "--username",
@@ -1834,13 +2043,17 @@ global_opts = [
     OptionArg("-p", "--password",
               default=None,
               help="invoke subversion commands with the supplied password"),
+    OptionArg("-c", "--config-dir", metavar="DIR",
+              default=None,
+              help="cause subversion commands to consult runtime config directory DIR"),
 ]
 
 common_opts = [
     Option("-b", "--bidirectional",
            value=True,
            default=False,
-           help="remove reflected and initialized revisions from merge candidates"),
+           help="remove reflected and initialized revisions from merge candidates.  "
+                "Not required but may be specified to speed things up slightly"),
     OptionArg("-f", "--commit-file", metavar="FILE",
               default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
@@ -1858,9 +2071,9 @@ common_opts = [
     OptionArg("-S", "--source", "--head",
               default=None,
               help="specify a merge source for this branch.  It can be either "
-                   "a path, a full URL, or an unambiguous substring of one "
-                   "of the paths for which merge tracking was already "
-                   "initialized.  Needed only to disambiguate in case of "
+                   "a working directory path, a full URL, or an unambiguous "
+                   "substring of one of the locations for which merge tracking was "
+                   "already initialized.  Needed only to disambiguate in case of "
                    "multiple merge sources"),
 ]
 
@@ -1880,6 +2093,12 @@ command_table = {
     the branch point (unless you teach it with --revision).""" % NAME,
     [
         "-f", "-r", # import common opts
+        OptionArg("-L", "--location-type",
+               dest="location-type",
+               default="path",
+               help="Use this type of location identifier in the new " +
+                    "Subversion properties; 'uuid', 'url', or 'path' " +
+                    "(default)"),
     ]),
 
     "avail": (action_avail,
@@ -1893,9 +2112,8 @@ command_table = {
     forth and back: e.g., if you committed a merge of a certain
     revision of the branch into the source, you do not want that commit
     to appear as available to merged into the branch (as the code
-    originated in the branch itself!).  svnmerge can not show these
-    so-called "reflected" revisions if you specify the --bidirectional
-    or -b command line option.""",
+    originated in the branch itself!).  svnmerge will automatically
+    exclude these so-called "reflected" revisions.""",
     [
         Option("-A", "--all",
                dest="avail-showwhat",
@@ -1913,6 +2131,10 @@ command_table = {
                value="diffs",
                default="revisions",
                help="show corresponding diff instead of revision list"),
+        Option("--summarize",
+               dest="avail-display",
+               value="summarize",
+               help="show summarized diff instead of revision list"),
         Option("-l", "--log",
                dest="avail-display",
                value="logs",
@@ -1966,9 +2188,8 @@ command_table = {
     forth and back: e.g., if you committed a merge of a certain
     revision of the branch into the source, you do not want that commit
     to appear as available to merged into the branch (as the code
-    originated in the branch itself!).  svnmerge can skip these
-    so-called "reflected" revisions if you specify the --bidirectional
-    or -b command line option.
+    originated in the branch itself!).  svnmerge will automatically
+    exclude these so-called "reflected" revisions.
 
     When manually merging changes across branches, --record-only can
     be used to instruct %s that a manual merge of a certain revision
@@ -2047,11 +2268,30 @@ def main(args):
 
     # Validate branch_dir
     if not is_wc(branch_dir):
-        error('"%s" is not a subversion working directory' % branch_dir)
+        if str(cmd) == "avail":
+            info = None
+            # it should be noted here that svn info does not error exit
+            # if an invalid target is specified to it (as is
+            # intuitive). so the try, except code is not absolutely
+            # necessary. but, I retain it to indicate the intuitive
+            # handling.
+            try:
+                info = get_svninfo(branch_dir)
+            except LaunchError:
+                pass
+            # test that we definitely targeted a subversion directory,
+            # mirroring the purpose of the earlier is_wc() call
+            if info is None or not info.has_key("Node Kind") or info["Node Kind"] != "directory":
+                error('"%s" is neither a valid URL, nor a working directory' % branch_dir)
+        else:
+            error('"%s" is not a subversion working directory' % branch_dir)
+
+    # give out some hints as to potential pathids
+    PathIdentifier.hint(branch_dir)
+    if source: PathIdentifier.hint(source)
 
     # Extract the integration info for the branch_dir
     branch_props = get_merge_props(branch_dir)
-    check_old_prop_version(branch_dir, branch_props)
 
     # Calculate source_url and source_path
     report("calculate source path for the branch")
@@ -2061,15 +2301,17 @@ def main(args):
             if not cf_source:
                 error('no copyfrom info available. '
                       'Explicit source argument (-S/--source) required.')
-            opts["source-pathid"] = cf_source
+            opts["source-url"] = get_repo_root(branch_dir) + cf_source
+            opts["source-pathid"] = PathIdentifier.from_target(opts["source-url"])
+
             if not opts["revision"]:
                 opts["revision"] = "1-" + cf_rev
         else:
             opts["source-pathid"] = get_default_source(branch_dir, branch_props)
+            opts["source-url"] = opts["source-pathid"].get_url()
 
-        # (assumes pathid is a repository-relative-path)
-        assert opts["source-pathid"][0] == '/'
-        opts["source-url"] = get_repo_root(branch_dir) + opts["source-pathid"]
+        assert is_pathid(opts["source-pathid"])
+        assert is_url(opts["source-url"])
     else:
         # The source was given as a command line argument and is stored in
         # SOURCE.  Ensure that the specified source does not end in a /,
@@ -2082,19 +2324,22 @@ def main(args):
             # within the branch properties.
             found = []
             for pathid in branch_props.keys():
-                if pathid.find(source) > 0:
+                if pathid.match_substring(source):
                     found.append(pathid)
             if len(found) == 1:
                 # (assumes pathid is a repository-relative-path)
-                source = get_repo_root(branch_dir) + found[0]
+                source_pathid = found[0]
+                source = source_pathid.get_url()
             else:
                 error('"%s" is neither a valid URL, nor an unambiguous '
                       'substring of a repository path, nor a working directory'
                       % source)
+        else:
+            source_pathid = PathIdentifier.from_target(source)
 
-        source_pathid = target_to_pathid(source)
+        source_pathid = PathIdentifier.from_target(source)
         if str(cmd) == "init" and \
-               source_pathid == target_to_pathid("."):
+               source_pathid == PathIdentifier.from_target("."):
             error("cannot init integration source path '%s'\n"
                   "Its repository-relative path must differ from the "
                   "repository-relative path of the current directory."

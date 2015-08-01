@@ -2,30 +2,44 @@
 #
 #  trans_tests.py:  testing eol conversion and keyword substitution
 #
-#  Subversion is a tool for revision control. 
-#  See http://subversion.tigris.org for more information.
-#    
+#  Subversion is a tool for revision control.
+#  See http://subversion.apache.org for more information.
+#
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 
 # General modules
-import os, re
+import os, re, logging, sys
+
+logger = logging.getLogger()
 
 # Our testing module
 import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -38,7 +52,7 @@ Item = svntest.wc.StateItem
 # status level 1:
 #    enable translation, status
 #    (now throw local text mods into the picture)
-#   
+#
 # commit level 1:
 #    enable translation, commit
 #    (now throw local text mods into the picture)
@@ -80,25 +94,27 @@ def check_keywords(actual_kw, expected_kw, name):
   """A Helper function to compare two keyword lists"""
 
   if len(actual_kw) != len(expected_kw):
-    print "Keyword lists are different by size"
+    logger.warn("Keyword lists are different by size")
     raise svntest.Failure
 
   for i in range(0,len(actual_kw)):
     if actual_kw[i] != expected_kw[i]:
-      print '%s item %s, Expected: %s' % (name, i, expected_kw[i][:-1])
-      print '%s item %s, Got:      %s' % (name, i, actual_kw[i][:-1])
+      logger.warn('%s item %s, Expected: %s', name, i, expected_kw[i][:-1])
+      logger.warn('%s item %s, Got:      %s', name, i, actual_kw[i][:-1])
       raise svntest.Failure
- 
+
 def setup_working_copy(wc_dir, value_len):
   """Setup a standard test working copy, then create (but do not add)
   various files for testing translation."""
-  
+
   global author_rev_unexp_path
   global author_rev_exp_path
   global url_unexp_path
   global url_exp_path
   global id_unexp_path
   global id_exp_path
+  global header_unexp_path
+  global header_exp_path
   global bogus_keywords_path
   global embd_author_rev_unexp_path
   global embd_author_rev_exp_path
@@ -118,6 +134,8 @@ def setup_working_copy(wc_dir, value_len):
   url_exp_path = os.path.join(wc_dir, 'url_exp')
   id_unexp_path = os.path.join(wc_dir, 'id_unexp')
   id_exp_path = os.path.join(wc_dir, 'id_exp')
+  header_unexp_path = os.path.join(wc_dir, 'header_unexp')
+  header_exp_path = os.path.join(wc_dir, 'header_exp')
   bogus_keywords_path = os.path.join(wc_dir, 'bogus_keywords')
   embd_author_rev_unexp_path = os.path.join(wc_dir, 'embd_author_rev_unexp')
   embd_author_rev_exp_path = os.path.join(wc_dir, 'embd_author_rev_exp')
@@ -132,6 +150,8 @@ def setup_working_copy(wc_dir, value_len):
   svntest.main.file_append(url_exp_path, "$URL: blah $")
   svntest.main.file_append(id_unexp_path, "$Id$")
   svntest.main.file_append(id_exp_path, "$Id: blah $")
+  svntest.main.file_append(header_unexp_path, "$Header$")
+  svntest.main.file_append(header_exp_path, "$Header: blah $")
   svntest.main.file_append(bogus_keywords_path, "$Arthur$\n$Rev0$")
   svntest.main.file_append(embd_author_rev_unexp_path,
                            "one\nfish\n$Author$ two fish\n red $Rev$\n fish")
@@ -162,23 +182,24 @@ def setup_working_copy(wc_dir, value_len):
     svntest.main.file_append(fixed_length_keywords_path, i)
 
   svntest.main.file_append(id_with_space_path, "$Id$")
-  svntest.main.file_append(id_exp_with_dollar_path, 
+  svntest.main.file_append(id_exp_with_dollar_path,
                    "$Id: id_exp with_$_sign 1 2006-06-10 11:10:00Z jrandom $")
 
 
 ### Helper functions for setting/removing properties
 
 # Set the property keyword for PATH.  Turn on all possible keywords.
-# ### todo: Later, take list of keywords to set.
+### todo: Later, take list of keywords to set.
 def keywords_on(path):
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
-                                     "svn:keywords", "Author Rev Date URL Id",
+  svntest.actions.run_and_verify_svn(None, [], 'propset',
+                                     "svn:keywords",
+                                     "Author Rev Date URL Id Header",
                                      path)
 
 # Delete property NAME from versioned PATH in the working copy.
-# ### todo: Later, take list of keywords to remove from the propval?
+### todo: Later, take list of keywords to remove from the propval?
 def keywords_off(path):
-  svntest.actions.run_and_verify_svn(None, None, [], 'propdel',
+  svntest.actions.run_and_verify_svn(None, [], 'propdel',
                                      "svn:keywords", path)
 
 
@@ -203,7 +224,7 @@ def keywords_from_birth(sbox):
     url_expand_test_data = canonical_repo_url + '/fixed_length_keywords'
   else:
     url_expand_test_data = canonical_repo_url + 'fixed_length_keywords'
-  
+
   setup_working_copy(wc_dir, len(url_expand_test_data))
 
   # Add all the files
@@ -215,6 +236,8 @@ def keywords_from_birth(sbox):
     'url_exp' : Item(status='A ', wc_rev=0),
     'id_unexp' : Item(status='A ', wc_rev=0),
     'id_exp' : Item(status='A ', wc_rev=0),
+    'header_unexp' : Item(status='A ', wc_rev=0),
+    'header_exp' : Item(status='A ', wc_rev=0),
     'bogus_keywords' : Item(status='A ', wc_rev=0),
     'embd_author_rev_unexp' : Item(status='A ', wc_rev=0),
     'embd_author_rev_exp' : Item(status='A ', wc_rev=0),
@@ -230,6 +253,8 @@ def keywords_from_birth(sbox):
   svntest.main.run_svn(None, 'add', url_exp_path)
   svntest.main.run_svn(None, 'add', id_unexp_path)
   svntest.main.run_svn(None, 'add', id_exp_path)
+  svntest.main.run_svn(None, 'add', header_unexp_path)
+  svntest.main.run_svn(None, 'add', header_exp_path)
   svntest.main.run_svn(None, 'add', bogus_keywords_path)
   svntest.main.run_svn(None, 'add', embd_author_rev_unexp_path)
   svntest.main.run_svn(None, 'add', embd_author_rev_exp_path)
@@ -246,6 +271,8 @@ def keywords_from_birth(sbox):
   keywords_on(url_exp_path)
   keywords_on(id_unexp_path)
   keywords_on(id_exp_path)
+  keywords_on(header_unexp_path)
+  keywords_on(header_exp_path)
   keywords_on(embd_author_rev_exp_path)
   keywords_on(fixed_length_keywords_path)
   keywords_on(id_with_space_path)
@@ -259,6 +286,8 @@ def keywords_from_birth(sbox):
     'url_exp' : Item(verb='Adding'),
     'id_unexp' : Item(verb='Adding'),
     'id_exp' : Item(verb='Adding'),
+    'header_unexp' : Item(verb='Adding'),
+    'header_exp' : Item(verb='Adding'),
     'bogus_keywords' : Item(verb='Adding'),
     'embd_author_rev_unexp' : Item(verb='Adding'),
     'embd_author_rev_exp' : Item(verb='Adding'),
@@ -269,15 +298,15 @@ def keywords_from_birth(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None,
-                                        None, None, None, None, wc_dir)
+                                        None)
 
   # Make sure the unexpanded URL keyword got expanded correctly.
   fp = open(url_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
-    print "URL expansion failed for", url_unexp_path
+          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+                        lines[0]))):
+    logger.warn("URL expansion failed for %s", url_unexp_path)
     raise svntest.Failure
   fp.close()
 
@@ -285,8 +314,9 @@ def keywords_from_birth(sbox):
   fp = open(url_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
-    print "URL expansion failed for", url_exp_path
+          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+                        lines[0]))):
+    logger.warn("URL expansion failed for %s", url_exp_path)
     raise svntest.Failure
   fp.close()
 
@@ -295,7 +325,7 @@ def keywords_from_birth(sbox):
   lines = fp.readlines()
   if not ((len(lines) == 1)
           and (re.match("\$Id: id_unexp", lines[0]))):
-    print "Id expansion failed for", id_exp_path
+    logger.warn("Id expansion failed for %s", id_exp_path)
     raise svntest.Failure
   fp.close()
 
@@ -304,10 +334,30 @@ def keywords_from_birth(sbox):
   lines = fp.readlines()
   if not ((len(lines) == 1)
           and (re.match("\$Id: id_exp", lines[0]))):
-    print "Id expansion failed for", id_exp_path
+    logger.warn("Id expansion failed for %s", id_exp_path)
     raise svntest.Failure
   fp.close()
-  
+
+  # Make sure the unexpanded Header keyword got expanded correctly.
+  fp = open(header_unexp_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
+                        lines[0]))):
+    logger.warn("Header expansion failed for %s", header_unexp_path)
+    raise svntest.Failure
+  fp.close()
+
+  # Make sure the preexpanded Header keyword got reexpanded correctly.
+  fp = open(header_exp_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
+                        lines[0]))):
+    logger.warn("Header expansion failed for %s", header_exp_path)
+    raise svntest.Failure
+  fp.close()
+
   # Check fixed length keywords.
   kw_workingcopy = [
     '$URL::$\n',
@@ -342,19 +392,18 @@ def keywords_from_birth(sbox):
     '$URL:: %sx$\n' % (' ' * len(url_expand_test_data)),
     '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
     ]
-  
-  fp = open(os.path.join(wc_dir, svntest.main.get_admin_name(),
-                         'text-base', 'fixed_length_keywords.svn-base'), 'r')
+
+  fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
   actual_textbase_kw = fp.readlines()
   fp.close()
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
-  
+
   # Check the Id keyword for filename with spaces.
   fp = open(id_with_space_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
           and (re.match("\$Id: .*id with space", lines[0]))):
-    print "Id expansion failed for", id_with_space_path
+    logger.warn("Id expansion failed for %s", id_with_space_path)
     raise svntest.Failure
   fp.close()
 
@@ -362,10 +411,10 @@ def keywords_from_birth(sbox):
   fp = open(id_exp_with_dollar_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: .*id_exp with_\$_sign [^$]* jrandom \$", 
+          and (re.match("\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
                         lines[0]))):
-    print "Id expansion failed for", id_exp_with_dollar_path
-    
+    logger.warn("Id expansion failed for %s", id_exp_with_dollar_path)
+
     raise svntest.Failure
   fp.close()
 
@@ -400,9 +449,7 @@ def keywords_from_birth(sbox):
 # This is a slight rewrite of his test, to use the run_and_verify_* API.
 # This is for issue #631.
 
-def do_nothing(x, y):
-  return 0
-
+@Issue(631)
 def update_modified_with_translation(sbox):
   "update modified file with eol-style 'native'"
 
@@ -412,7 +459,7 @@ def update_modified_with_translation(sbox):
   # Replace contents of rho and set eol translation to 'native'
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n5\n6\n7\n8\n9\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:eol-style', 'native',
                                      rho_path)
 
@@ -429,21 +476,19 @@ def update_modified_with_translation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        rho_path)
+                                        [], rho_path)
 
   # Change rho again
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n")
 
-  # Commit revision 3 
+  # Commit revision 3
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', wc_rev=3, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        rho_path)
+                                        [], rho_path)
 
   # Locally modify rho again.
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n")
@@ -467,6 +512,17 @@ def update_modified_with_translation(sbox):
                                           "8",
                                           "9",
                                           "10",
+                                          "||||||| .r3",
+                                          "1",
+                                          "2",
+                                          "3",
+                                          "4",
+                                          "4.5",
+                                          "5",
+                                          "6",
+                                          "7",
+                                          "8",
+                                          "9",
                                           "=======",
                                           "This is the file 'rho'.",
                                           ">>>>>>> .r1",
@@ -474,13 +530,14 @@ def update_modified_with_translation(sbox):
 
   # Updating back to revision 1 should not error; the merge should
   # work, with eol-translation turned on.
+  extra_files = ['rho.r1', 'rho.r3', 'rho.mine']
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        None, None,
-                                        do_nothing, None,
-                                        None, None,
-                                        0, '-r', '1', wc_dir)
+                                        None,
+                                        [], False,
+                                        '-r', '1', wc_dir,
+                                        extra_files=extra_files)
 
 
 #----------------------------------------------------------------------
@@ -493,10 +550,10 @@ def update_modified_with_translation(sbox):
 # contents are transmitted to the server during commit, and b) that
 # after the commit, the file and its text-base have been changed to
 # have the new line-ending style.
-
+@Issue(1085)
 def eol_change_is_text_mod(sbox):
   "committing eol-style change forces text send"
-  
+
   sbox.build()
 
   wc_dir = sbox.wc_dir
@@ -511,26 +568,28 @@ def eol_change_is_text_mod(sbox):
   f.close()
 
   # commit the file
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', foo_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', 'log msg',
+  svntest.actions.run_and_verify_svn(None, [], 'add', foo_path)
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'ci', '-m', 'log msg',
                                      foo_path)
-  
+
   if svntest.main.windows:
-    svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+    svntest.actions.run_and_verify_svn(None, [], 'propset',
                                        'svn:eol-style', 'LF', foo_path)
   else:
-    svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+    svntest.actions.run_and_verify_svn(None, [], 'propset',
                                        'svn:eol-style', 'CRLF', foo_path)
 
   # check 1: did new contents get transmitted?
   expected_output = ["Sending        " + foo_path + "\n",
-                     "Transmitting file data .\n",
+                     "Transmitting file data .done\n",
+                     "Committing transaction...\n",
                      "Committed revision 3.\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'ci', '-m', 'log msg', foo_path)
 
   # check 2: do the files have the right contents now?
-  contents = svntest.main.file_read(foo_path, 'rb')
+  contents = open(foo_path, 'rb').read()
   if svntest.main.windows:
     if contents != "1\n2\n3\n4\n5\n6\n7\n8\n9\n":
       raise svntest.Failure
@@ -538,16 +597,15 @@ def eol_change_is_text_mod(sbox):
     if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
 
-  foo_base_path = os.path.join(wc_dir, svntest.main.get_admin_name(),
-                               'text-base', 'foo.svn-base')
-  base_contents = svntest.main.file_read(foo_base_path, 'rb')
+  foo_base_path = svntest.wc.text_base_path(foo_path)
+  base_contents = open(foo_base_path, 'rb').read()
   if contents != base_contents:
     raise svntest.Failure
-  
+
 #----------------------------------------------------------------------
 # Regression test for issue #1151.  A single file in a directory
 # didn't get keywords expanded on checkout.
-
+@Issue(1151)
 def keyword_expanded_on_checkout(sbox):
   "keyword expansion for lone file in directory"
 
@@ -557,22 +615,20 @@ def keyword_expanded_on_checkout(sbox):
   # The bug didn't occur if there were multiple files in the
   # directory, so setup an empty directory.
   Z_path = os.path.join(wc_dir, 'Z')
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', Z_path)
-  
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir', Z_path)
+
   # Add the file that has the keyword to be expanded
   url_path = os.path.join(Z_path, 'url')
   svntest.main.file_append(url_path, "$URL$")
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', url_path)
+  svntest.actions.run_and_verify_svn(None, [], 'add', url_path)
   keywords_on(url_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg', wc_dir)
 
   other_wc_dir = sbox.add_wc_path('other')
   other_url_path = os.path.join(other_wc_dir, 'Z', 'url')
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
                                      sbox.repo_url,
                                      other_wc_dir)
 
@@ -581,8 +637,9 @@ def keyword_expanded_on_checkout(sbox):
   fp = open(other_url_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
-    print "URL expansion failed for", other_url_path
+          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+                        lines[0]))):
+    logger.warn("URL expansion failed for %s", other_url_path)
     raise svntest.Failure
   fp.close()
 
@@ -598,7 +655,7 @@ def cat_keyword_expansion(sbox):
 
   # Set up A/mu to do $Rev$ keyword expansion
   svntest.main.file_append(mu_path , "$Rev$\n$Author$")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:keywords', 'Rev Author',
                                      mu_path)
 
@@ -608,44 +665,39 @@ def cat_keyword_expansion(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        expected_output, expected_status)
 
   # Change the author to value which will get truncated on expansion
-  full_author = "x" * 400 
+  full_author = "x" * 400
   key_author = "x" * 244
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', '--revprop', '-r2',
                                      'svn:author', full_author,
                                      sbox.wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ full_author ], [],
+  svntest.actions.run_and_verify_svn([ full_author ], [],
                                      'propget', '--revprop', '-r2',
-                                     'svn:author', '--strict',
+                                     'svn:author', '--no-newline',
                                      sbox.wc_dir)
 
   # Make another commit so that the last changed revision for A/mu is
   # not HEAD.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'foo', 'bar', lambda_path)
   expected_output = wc.State(wc_dir, {
     'A/B/lambda' : Item(verb='Sending'),
     })
   expected_status.tweak('A/B/lambda', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        expected_output, expected_status)
 
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
-  svntest.actions.run_and_verify_svn(None,
-                                     [ "This is the file 'mu'.\n",
+  svntest.actions.run_and_verify_svn([ "This is the file 'mu'.\n",
                                        "$Rev: 2 $\n",
                                        "$Author: " + key_author + " $"], [],
                                      'cat', '-r', 'HEAD', mu_path)
-  
+
 
 #----------------------------------------------------------------------
 def copy_propset_commit(sbox):
@@ -657,8 +709,8 @@ def copy_propset_commit(sbox):
   mu2_path = os.path.join(wc_dir, 'A', 'mu2')
 
   # Copy and propset
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy', mu_path, mu2_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [], 'copy', mu_path, mu2_path)
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:eol-style', 'native',
                                      mu2_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -673,9 +725,7 @@ def copy_propset_commit(sbox):
     })
   expected_status.tweak('A/mu2', status='  ', wc_rev=2, copied=None)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        expected_output, expected_status)
 
 #----------------------------------------------------------------------
 #      Create a greek tree, commit a keyword into one file,
@@ -697,12 +747,10 @@ def propset_commit_checkout_nocrash(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        expected_output, expected_status)
 
   # Set property to do keyword expansion on A/mu, commit.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:keywords', 'Rev', mu_path)
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
@@ -710,26 +758,22 @@ def propset_commit_checkout_nocrash(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        expected_output, expected_status)
 
   # Check out into another wc dir
   other_wc_dir = sbox.add_wc_path('other')
   mu_other_path = os.path.join(other_wc_dir, 'A', 'mu')
-  
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
+
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
                                      sbox.repo_url,
                                      other_wc_dir)
 
-  mu_other_contents = svntest.main.file_read(mu_other_path)
+  mu_other_contents = open(mu_other_path).read()
   if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":
-    print "'%s' does not have the expected contents" % mu_other_path
+    logger.warn("'%s' does not have the expected contents", mu_other_path)
     raise svntest.Failure
 
-  
+
 #----------------------------------------------------------------------
 #      Add the keyword property to a file, svn revert the file
 #      This should not display any error message
@@ -743,18 +787,167 @@ def propset_revert_noerror(sbox):
   # Set the Rev keyword for the mu file
   # could use the keywords_on()/keywords_off() functions to
   # set/del all svn:keywords
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'svn:keywords', 'Rev', mu_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status=' M')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Revert the propset
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', mu_path)
+  svntest.actions.run_and_verify_svn(None, [], 'revert', mu_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  
+
+def props_only_file_update(sbox):
+  "retranslation occurs on a props-only update"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  content = ["This is the file 'iota'.\n",
+             "$Author$\n",
+             ]
+  content_expanded = ["This is the file 'iota'.\n",
+                      "$Author: jrandom $\n",
+                      ]
+
+  # Create r2 with iota's contents and svn:keywords modified
+  open(iota_path, 'w').writelines(content)
+  svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Author', iota_path)
+
+  expected_output = wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status)
+
+  # Create r3 that drops svn:keywords
+
+  # put the content back to its untranslated form
+  open(iota_path, 'w').writelines(content)
+
+  svntest.main.run_svn(None, 'propdel', 'svn:keywords', iota_path)
+
+  expected_status.tweak('iota', wc_rev=3)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status)
+
+  # Now, go back to r2. iota should have the Author keyword expanded.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=''.join(content_expanded))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, expected_status,
+                                        [], False,
+                                        wc_dir, '-r', '2')
+
+  if open(iota_path).read() != ''.join(content_expanded):
+    raise svntest.Failure("$Author$ is not expanded in 'iota'")
+
+  # Update to r3. this should retranslate iota, dropping the keyword expansion
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=''.join(content))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, expected_disk, expected_status)
+
+  if open(iota_path).read() != ''.join(content):
+    raise svntest.Failure("$Author$ is not contracted in 'iota'")
+
+  # We used to leave some temporary files around. Make sure that we don't.
+  temps = os.listdir(os.path.join(wc_dir, svntest.main.get_admin_name(), 'tmp'))
+  if os.path.exists(os.path.join(wc_dir, svntest.main.get_admin_name(),
+                                 'tmp', 'props')):
+    temps.remove('prop-base')
+    temps.remove('props')
+  if temps:
+    logger.warn('Temporary files leftover: %s', (', '.join(temps),))
+    raise svntest.Failure
+
+@XFail()
+@Issues(4327)
+def autoprops_inconsistent_eol(sbox):
+  "able to handle inconsistent eols on add"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  text = 'line with NL\n' + \
+         'line with CR\r' + \
+         'line with CRLF\r\n' + \
+         'line with LFCR (or is that not a line? ;-)\n\r'
+
+  # Compensate for python smartness
+  if sys.platform == 'win32':
+    expected_text = text.replace('\r\n', '\n')
+  else:
+    expected_text = text
+
+  sbox.simple_add_text(text, 'add.c')
+  sbox.simple_add_text(text, 'add-force.c')
+
+  svntest.actions.run_and_verify_svn(None, '.*inconsistent newlines.*',
+                                     'ps', 'svn:eol-style', 'native',
+                                     sbox.ospath('add.c'))
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'ps', 'svn:eol-style', 'native', '--force',
+                                     sbox.ospath('add.c'))
+
+  expected_disk = svntest.main.greek_state.copy()
+
+  expected_disk.add({
+    'add-force.c'  : Item(contents=expected_text),
+    'add.c'        : Item(contents=expected_text),
+  })
+
+  # Verify that both add and add-force haven't been changed
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+  sbox.simple_propset('svn:auto-props', '*.c = svn:eol-style=native', '')
+
+
+  svntest.main.file_write(sbox.ospath('auto.c'), text, mode='wb')
+
+  expected_output = ['A         %s\n' % sbox.ospath('auto.c')]
+
+  # Fails with svn: E200009: File '.*auto.c' has inconsistent newlines
+  svntest.actions.run_and_verify_svn(expected_output,
+                                     [], 'add', sbox.ospath('auto.c'))
+
+@XFail()
+@Issues(4327)
+def autoprops_inconsistent_mime(sbox):
+  "able to handle inconsistent mime on add"
+
+  sbox.build(read_only = True)
+
+  sbox.simple_propset('svn:auto-props',
+                      '*.c = svn:eol-style=native\n'
+                      'c.* = svn:mime-type=application/octet-stream', '')
+
+  sbox.simple_append('c.iota.c', '')
+
+  expected_output = ['A         %s\n' % sbox.ospath('c.iota.c')]
+
+  # Fails with svn: E200009: File '.*c.iota.c' has binary mime type property
+  svntest.actions.run_and_verify_svn(expected_output,
+                                     [], 'add', sbox.ospath('c.iota.c'))
+
+
 ########################################################################
 # Run the tests
 
@@ -771,7 +964,10 @@ test_list = [ None,
               cat_keyword_expansion,
               copy_propset_commit,
               propset_commit_checkout_nocrash,
-              propset_revert_noerror, 
+              propset_revert_noerror,
+              props_only_file_update,
+              autoprops_inconsistent_eol,
+              autoprops_inconsistent_mime,
              ]
 
 if __name__ == '__main__':

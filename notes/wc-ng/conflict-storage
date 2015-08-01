@@ -1,0 +1,308 @@
+                                                                -*- Text -*-
+
+Conflict meta data storage in wc-ng
+===================================
+
+Conflict meta data is stored in the ACTUAL_NODE table, within the
+'conflict_data' column. The data in this column is a skel containing
+conflict information (meaning the node is in conflict, and the details
+are inside), or NULL (meaning no conflict is present).
+
+The conflict skel has the form:
+
+  (OPERATION (KIND KIND-SPECIFIC) (KIND KIND-SPECIFIC) ...)
+
+OPERATION indicates the operation which caused the conflict(s) and is
+detailed below.
+
+KIND indicates the kind of conflict description that follows and is one
+of:
+
+  "text" - meaning a text conflict of the whole text of the node (which
+    must be a file), with left/right/mine full texts saved, and (unless
+    it's "binary") conflict markers in the working text;
+  "prop" - meaning a "normal" property conflict, with left/right/mine full
+    values saved;
+  "tree" - meaning a tree conflict;
+  "reject" - meaning a text conflict for a single hunk of unidiff text,
+    with the source being a patch file (rather than left/right full texts),
+    and with a "reject" file being saved containing the unidiff text;
+  "obstructed" - meaning ### TODO
+
+KIND-SPECIFIC is specific to each KIND, and is detailed below.
+
+There are restrictions on what mixture of conflicts can meaningfully be
+recorded - e.g. there must not be two "text" nor one "text" and one
+"reject".  These restrictions are implied by the nature of operations
+creating the conflicts but not spelled out here.
+
+If the 'conflict_data' column is not NULL, then at least one
+KIND of conflict skel must exist, describing the conflict(s).
+
+Contrary to wc-1, wc-ng records sufficient information to help users
+understand, in hindsight, which operation led to the conflict (as long
+as all conflict information is exposed by the UI).
+
+Some information which wc-1 was storing in entries has no direct
+equivalent in wc-ng conflict storage (such as paths to temporary files),
+but this information can be deduced from the information stored
+(e.g. conflict-old and friends; foo.r42 is now 'foo' + '.r' + left_rev)
+
+### BH: We have to store the exact name of the conflict marker files. If we
+### just 'guess' how conflict markers are named by using their revision
+### numbers, we can't handle situations where there are existing files with
+### these names. The WC-1.0 code uses a unique name function to generate a
+### unique marker file name which happens to match this pattern if there are
+### no conflicts, but sometimes explicitly preserves the existing file
+### extension to help diff tools. (See 'preserved-conflict-file-exts' in our
+### config). I think we can move the names of the markers into the skel and/or
+### keep them in their own columns. (These names are needed on filling a
+### svn_wc_entry_t)
+
+Operation skel
+--------------
+
+Meaning:  The Operation skel indicates what kind of operation was being
+performed that resulted in a conflict, including the format and content
+(or reference to content) of the conflicting change that was being
+applied to this node.
+
+The OPERATION skel has the following form:
+
+  (NAME OPERATION-SPECIFIC)
+
+NAME is one of:
+
+  "update" - meaning a 3-way merge as in "svn update";
+  "switch" - meaning a 3-way merge as in "svn switch";
+  "merge" - meaning a 3(4?)-way merge as in "svn merge";
+  "patch" - meaning application of a unidiff patch, as in "svn patch".
+
+OPERATION-SPECIFIC is as follows:
+
+To record an "update" operation, the skel has the form:
+
+  ("update" BASE_REV TARGET_REV)
+
+  BASE_REV is the base revision prior to the update.
+  TARGET_REV is the revision being updated to.
+
+### sbutler: What about mixed-revision working copies?  Let's record
+### the equivalent of svn_wc_revision_status_t, plus the target rev: 
+###
+###   ("update" MIN_REV MAX_REV SWITCHED MODIFIED TARGET_REV)
+###
+### Otherwise, the user may get the mistaken impression that the local
+### tree is entirely at the URL and revision of the victim dir.
+
+For "switch", the skel has the form:
+
+  ("switch" BASE_REV TARGET_REV REPOS_RELPATH)
+
+  BASE_REV and TARGET_REV are as for "update" above.
+  REPOS_RELPATH is the path in the repository being switched to.
+
+For "merge", the skel has the form:
+
+  ("merge" LEFT_REV RIGHT_REV REPOS_UUID REPOS_ROOT_URL
+   (LEFT_REPOS_RELPATH LEFT_PEG_REV)
+   (RIGHT_REPOS_RELPATH RIGHT_PEG_REV) )
+
+  LEFT_REV is the merge-left revision, and RIGHT_REV is the merge-right
+    revision of a continuous revision range which was merged (merge tracking
+    might split a merge up into multiple merges of continuous revision ranges).
+
+  REPOS_UUID is the UUID of the repository being merged from, in order to
+    recognize merges from foreign repositories.
+
+  REPOS_ROOT_URL is the repository root URL the repository being merged from.
+
+  {LEFT,RIGHT}_REPOS_RELPATH is the path in the repository of the {left,right}
+    version of the item.
+
+  {LEFT,RIGHT}_CONFLICT_REV is the revision in which to find the
+    {left,right} version of the item which caused the conflict.
+    These are usually LEFT_REV or RIGHT_REV, but in some cases they
+    may differ (a simple example is if a file was replaced in revision rX
+    somewhere between LEFT_REV and RIGHT_REV, and the conflict is due to
+    events which happened between LEFT_REV and rX).
+
+For "patch", the skel has the form:
+
+  ("patch" PATCH_SOURCE_LABEL)
+
+  PATCH_SOURCE_LABEL is (typically) the absolute path of the patch
+  file the application of which led to conflicts. In the future, it
+  may also be something like "<stdin>".
+
+
+Text conflicts
+--------------
+
+Text conflicts only exist on files. The following skel represents the
+"text" KIND of conflict:
+
+  ("text" ORIGINAL_SHA1 MINE_SHA1 INCOMING_SHA1)
+
+{ORIGINAL,MINE}_SHA1 are SHA1 checksums of the full texts of
+the {original (BASE), mine (WORKING)} version of the file.
+
+INCOMING_SHA1 is the SHA1 checksum of the incoming version of the file.
+### Need INCOMING_{LEFT,RIGHT}_SHA1 for 4-way merge?
+
+File version's content can be obtained from the pristine store.
+
+### BH: We need some marker here, but these values must also be stored
+###     in the older_checksum, left_checksum, right_checksum colums of ACTUAL
+###     to allow pristine store cleanups.
+
+### BH: What about symlinks?
+### stsp: I guess we can say that all SHA1 sums refer to proper files,
+###   and symlinks are resolved before the SHA1 is calculated and
+###   stored in the db?
+
+
+Property conflicts
+--------------
+
+Property conflicts can exist on files, directories and symlinks.
+There can be one or more property conflicts on the node, represented
+by one or more "prop" KIND conflicts. Each "prop" conflict has the
+following form:
+
+  ("prop" PROPERTY_NAME
+          ([ORIGINAL_VALUE])
+          ([MINE_VALUE])
+          ([INCOMING_VALUE])
+          ([INCOMING_BASE_VALUE]))
+
+PROPERTY_NAME is the name of the property, such as "svn:eol-style".
+
+Each property value ({ORIGINAL,MINE,INCOMING,INCOMING_BASE}_VALUE) is
+represented as an empty list indicating the property did not exist in
+that version, or a 1-item list containing the particular value.
+
+ORIGINAL_VALUE is the property that was checked out
+MINE_VALUE is the current/ACTUAL value in the working copy
+INCOMING_VALUE is the new/target value from an update/merge/etc
+INCOMING_BASE_VALUE is used during merges, as an incoming property
+  change is expressed as "change from INCOMING_BASE to INCOMING"
+
+### stsp: What's the size limit of a prop value?
+### HKW: In theory, there isn't one.  In practice, we used to caution people
+###   against having too large of props, but I don't know if that is
+###   true anymore.
+
+
+Tree conflicts
+--------------
+
+Tree conflicts exist on files or directories.
+
+### JAF: And symlinks, I presume - or, if not, why not?
+### stsp: Symlinks are resolved before retrieving conflict information.
+
+The following information is stored if there is a tree conflict on the node:
+
+  ("tree" LOCAL_STATE INCOMING_STATE)
+
+  LOCAL_STATE := (LOCAL_CHANGE ORIGINAL_NODE_KIND MINE_NODE_KIND
+                  [ORIGINAL_SHA1 MINE_SHA1])
+  INCOMING_STATE := (INCOMING_CHANGE INCOMING_NODE_KIND [INCOMING_SHA1])
+
+LOCAL_CHANGE is the local change which conflicted with the
+incoming change during the operation. Possible values are "edit", "add",
+"delete", "rename", "replace", "obstructed", "missing", "unversioned",
+"moved-away", "moved-here", and "copied-here".
+
+### possibly collapse "unversioned" with "obstructed"?
+
+### what is "replace"? we should probably have "replace-add",
+### "replace-moved-away", "replace-moved-here", and "replace-copied-here"
+### hrm. this probably isn't the right representation. "replace-add"
+### says how the new node arrived, but not how the original departed.
+### was it a deleted or moved-away? for example, a local-deleted
+### followed by an add, followed by an incoming-delete should probably
+### be deemed "no conflict".
+
+ORIGINAL_NODE_KIND is the kind of the node in the BASE tree.
+MINE_NODE_KIND is the kind of the node from the WORKING tree at the
+time the conflict was flagged.
+
+INCOMING_CHANGE is the incoming change which conflicted with the
+local change during the operation. Possible values are "edit", "add",
+"delete", "rename", "replace", "moved-away", "moved-here", and
+"copied-here".
+### see concerns above about LOCAL_CHANGE.
+
+The *_SHA1 sum fields are only present if {ORIGINAL,MINE,INCOMING}_NODE_KIND
+is "file".
+
+ORIGINAL_SHA1 is the SHA1 of the BASE version of the tree conflict victim
+file in the working copy. MINE_SHA1 is the SHA1 of the WORKING version
+of the tree conflict victim file as of the time the conflict was flagged.
+
+If INCOMING_KIND is "file", INCOMING_SHA1 is the SHA1 of the file
+which the operation was attempting to install in the working copy.
+
+The file version's content can be obtained from the pristine store.
+
+### BH: We need to duplicate the sha1 values in the older_checksum,
+###     left_checksum, right_checksum columns of ACTUAL
+###     to allow pristine store cleanups.
+
+### BH: Can we share some of the sha1 logic with the text conflicts to
+###     allow resolving this in the same way?
+###     (We should keep the history of the node valid via replace vs update)
+### stsp: I don't really understand your question. Can you be more specific?
+
+
+(Unversioned) Obstructions
+--------------------------
+
+When an update introduces a new node where an existing unversioned node is
+stored locally we need to add some marker to allow the operation to update
+the BASE_NODE table.
+
+There is no particular data which needs to be recorded for an
+obstruction. Thus, the "obstructed" conflict skel has the form:
+
+  ("obstructed")
+
+
+Reject conflicts
+----------------
+For patches, the content of the left and right versions is not fully known,
+so the conflict is not a diff3-style text conflict. Rather, the conflict
+is the failure to find a match for a hunk's context in the patch target.
+There can be one or more reject conflicts on a node. Each "reject" conflict
+has the following form:
+
+  REJECTED_HUNK_LIST := (HUNK_ORIGINAL_OFFSET HUNK_ORIGINAL_LENGTH
+                         HUNK_MODIFIED_OFFSET HUNK_MODIFIED_LENGTH)*
+
+  ("reject" REJECT_FILE TARGET_PATCH_SHA1 REJECTED_HUNK_LIST)
+
+REJECT_FILE is ...
+
+TARGET_PATCH_SHA1 is <selection of patch file applying to target>
+the sha1 of the unidiff content of the rejected
+hunk as written to the .svnpatch.rej file. The actual unidiff content
+(which can be large!) can be retrieved from the pristine store.
+
+HUNK_{ORIGINAL,MODIFIED}_OFFSET and HUNK_{ORIGINAL,MODIFIED}_LENGTH
+are the hunk header values as parsed from the patch file (i.e. the "ID"
+of the hunk within the patch file). These also occur in the reject
+diff text but are stored here for easy retrieval.
+
+### BH: Using a sha1 here, makes it impossible to cleanup the pristine store
+###     The pristine store needs all references to be stored in a DB column.
+###     To support this we would need an extra table.
+### stsp: I'm fine with not storing the reject diff text if we don't
+###   have a good location for it. However, keeping it around in case
+###   the user deletes the tempfile would be nice. And I don't see an issue
+###   with also storing the SHA1 sum in the ACTUAL table. We do this for
+###   text conflicts as well. Why would it need an extra table?
+
+  ("prop-reject" REJECT_FILE
+   (PROPERTY_NAME TARGET_PATCH_SHA1 REJECTED_HUNK_LIST)* )

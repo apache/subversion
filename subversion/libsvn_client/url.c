@@ -2,17 +2,22 @@
  * url.c:  converting paths to urls
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -20,37 +25,39 @@
 
 #include <apr_pools.h>
 
+#include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_types.h"
+#include "svn_opt.h"
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
-#include "client.h"
 
+#include "private/svn_wc_private.h"
+#include "client.h"
+#include "svn_private_config.h"
 
 
 
 svn_error_t *
-svn_client_url_from_path(const char **url,
-                         const char *path_or_url,
-                         apr_pool_t *pool)
+svn_client_url_from_path2(const char **url,
+                          const char *path_or_url,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
-  svn_wc_adm_access_t *adm_access;          
-  const svn_wc_entry_t *entry;  
-  svn_boolean_t is_url = svn_path_is_url(path_or_url);
-  
-  if (is_url)
+  if (!svn_path_is_url(path_or_url))
     {
-      *url = path_or_url;
+      SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url,
+                                      scratch_pool));
+
+      return svn_error_trace(
+                 svn_wc__node_get_url(url, ctx->wc_ctx, path_or_url,
+                                      result_pool, scratch_pool));
     }
   else
-    {
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                     FALSE, 0, NULL, NULL, pool));
-      SVN_ERR(svn_wc_entry(&entry, path_or_url, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
-      
-      *url = entry ? entry->url : NULL;
-    }
+    *url = svn_uri_canonicalize(path_or_url, result_pool);
 
   return SVN_NO_ERROR;
 }

@@ -1,0 +1,97 @@
+svn, version 1.9.0-dev (under development)
+   compiled Feb 26 2014, 15:15:42 on x86_64-unknown-openbsd5.5
+
+Copyright (C) 2012 The Apache Software Foundation.
+This software consists of contributions made by many people;
+see the NOTICE file for more information.
+Subversion is open source software, see http://subversion.apache.org/
+
+The following repository access (RA) modules are available:
+
+* ra_svn : Module for accessing a repository using the svn network protocol.
+  - with Cyrus SASL authentication
+  - handles 'svn' scheme
+* ra_local : Module for accessing a repository on local disk.
+  - handles 'file' scheme
+* ra_serf : Module for accessing a repository via WebDAV protocol using serf.
+  - using serf 1.3.3
+  - handles 'http' scheme
+  - handles 'https' scheme
+
+The following authentication credential caches are available:
+
+* Plaintext cache in /home/stsp/.subversion
+* Gnome Keyring
+* GPG-Agent
+
+System information:
+
+* running on i386-apple-darwin11.4.0
+  - Mac OS X 10.7.4 Lion, build 11E53
+* linked dependencies:
+  - APR 1.4.2 (compiled with 1.4.2)
+  - APR-Util 1.3.10 (compiled with 1.3.10)
+  - SQLite 3.7.13 (compiled with 3.7.13)
+* loaded shared libraries:
+  - /opt/subversion/bin/svn   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_client-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_wc-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_ra-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_diff-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_ra_local-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_repos-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_fs-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_fs_fs-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_fs_base-1.0.dylib   (Intel 64-bit)
+  - /usr/local/lib/libdb-5.3.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_fs_util-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_ra_svn-1.0.dylib   (Intel 64-bit)
+  - /usr/lib/libsasl2.2.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_ra_serf-1.0.dylib   (Intel 64-bit)
+  - /usr/local/lib/libserf-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_delta-1.0.dylib   (Intel 64-bit)
+  - /opt/subversion/lib/libsvn_subr-1.0.dylib   (Intel 64-bit)
+  - /usr/lib/libexpat.1.dylib   (Intel 64-bit)
+  - /usr/lib/libz.1.dylib   (Intel 64-bit)
+  - /usr/local/lib/libsqlite3.0.8.6.dylib   (Intel 64-bit)
+  - /usr/local/lib/libmagic.1.dylib   (Intel 64-bit)
+  - /usr/lib/libaprutil-1.0.dylib   (Intel 64-bit)
+  - /usr/lib/libapr-1.0.dylib   (Intel 64-bit)
+  - /usr/lib/libSystem.B.dylib   (Intel 64-bit)
+  - /usr/lib/libiconv.2.dylib   (Intel 64-bit)
+  - /usr/lib/libpq.5.dylib   (Intel 64-bit)
+  - /usr/lib/libsqlite3.dylib   (Intel 64-bit)
+  - /usr/lib/libresolv.9.dylib   (Intel 64-bit)
+  - /usr/lib/libssl.0.9.8.dylib   (Intel 64-bit)
+  - /usr/lib/libcrypto.0.9.8.dylib   (Intel 64-bit)
+  - /usr/lib/libicucore.A.dylib   (Intel 64-bit)
+  - /usr/lib/libauto.dylib   (Intel 64-bit)
+  - /usr/lib/libobjc.A.dylib   (Intel 64-bit)
+  - /usr/lib/libstdc++.6.dylib   (Intel 64-bit)
+  - /usr/lib/libpam.2.dylib   (Intel 64-bit)
+  - /usr/lib/libbsm.0.dylib   (Intel 64-bit)
+  - /usr/lib/libxar-nossl.dylib   (Intel 64-bit)
+  - /usr/lib/libc++.1.dylib   (Intel 64-bit)
+  - /usr/lib/libc++abi.dylib   (Intel 64-bit)
+  - /usr/lib/libDiagnosticMessagesClient.dylib   (Intel 64-bit)
+  - /usr/lib/libbz2.1.0.dylib   (Intel 64-bit)
+  - /usr/lib/libxml2.2.dylib   (Intel 64-bit)
+  - /usr/lib/liblangid.dylib   (Intel 64-bit)
+  - /usr/lib/libCRFSuite.dylib   (Intel 64-bit)
+  - /usr/lib/libxslt.1.dylib   (Intel 64-bit)
+  - /usr/lib/sasl2/apop.so   (Intel 64-bit)
+  - /usr/lib/sasl2/dhx.so   (Intel 64-bit)
+  - /usr/lib/sasl2/digestmd5WebDAV.so   (Intel 64-bit)
+  - /usr/lib/sasl2/libanonymous.2.so   (Intel 64-bit)
+  - /usr/lib/sasl2/libcrammd5.2.so   (Intel 64-bit)
+  - /usr/lib/sasl2/libdigestmd5.2.so   (Intel 64-bit)
+  - /usr/lib/sasl2/libgssapiv2.2.so   (Intel 64-bit)
+  - /usr/lib/sasl2/login.so   (Intel 64-bit)
+  - /usr/lib/sasl2/libntlm.so   (Intel 64-bit)
+  - /usr/lib/sasl2/libotp.2.so   (Intel 64-bit)
+  - /usr/lib/sasl2/libplain.2.so   (Intel 64-bit)
+  - /usr/lib/sasl2/libpps.so   (Intel 64-bit)
+  - /usr/lib/sasl2/mschapv2.so   (Intel 64-bit)
+  - /usr/lib/sasl2/shadow_auxprop.so   (Intel 64-bit)
+  - /usr/lib/sasl2/smb_nt.so   (Intel 64-bit)
+  - /usr/lib/sasl2/smb_ntlmv2.so   (Intel 64-bit)

@@ -1,4 +1,17 @@
 #!/usr/bin/env python
+# ====================================================================
+# Copyright (c) 2004-2005 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
 
 import sys
 import os
@@ -24,7 +37,7 @@ def test_props(props):
 def test_path_change(path, change):
   """Validate the CHANGE made to PATH in the transaction.  Return 0
   if all is well, non-zero otherwise."""
-  
+
   # The svn_node_kind of the path.
   item_kind = change.item_kind
 
@@ -73,7 +86,7 @@ def main(pool, repos_dir, txn):
     retval = test_path_change(path, change)
     if retval:
       return retval
-    
+
   return 0
 
 
@@ -86,4 +99,4 @@ if __name__ == '__main__':
   if len(sys.argv) < 3:
     _usage_and_exit()
   sys.exit(core.run_app(main, sys.argv[1], sys.argv[2]))
-  
+

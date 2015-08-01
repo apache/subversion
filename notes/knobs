@@ -1,0 +1,533 @@
+0 Content
+=========
+
+1 Introduction
+2 Condensed list of defines and environment variables
+3 Defines tweaking SVN defaults
+4 Defines enabling or disabling features
+5 Defines controlling debug support
+6 Defines that affect unit tests
+7 Environment variables
+
+
+1 Introduction
+==============
+
+This is a document intended for use by Subversion developers only.
+In particular, interface naming rules do not apply here. I.e. even
+SVN_* identifiers are not part of the public API unless declared
+as public in some public header file.
+
+The SVN source code boasts a number of environment variable or C pre-
+processor enabled tweaks that are mainly aimed at developer support.
+If you introduce new ones, please document them here.
+
+Macros documented in the configure-generated ../subversion/svn_private_config.h
+file are not repeated here.
+
+
+2 Defines and Environment Variables
+===================================
+
+2.1 Defaults
+
+DEFAULT_FS_TYPE
+DEFAULT_HTTP_LIBRARY
+MAX_SECS_TO_LINGER
+SUFFIX_LINES_TO_KEEP
+SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
+SVN_FS_FS_MAX_LINEAR_DELTIFICATION
+SVN_FS_FS_MAX_DELTIFICATION_WALK
+SVN_UNALIGNED_ACCESS_IS_OK
+
+2.2 Features
+
+CHECK_FOR_SAME_FILE
+SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
+SVN_DISABLE_ENTRY_CACHE
+SVN_MERGE__ALLOW_ALL_FORWARD_MERGES_FROM_SELF
+SVN_USE_WIN32_CRASHHANDLER
+SVN_DAV_SEND_VTXN_NAME
+SVN_DISABLE_PREFIX_SUFFIX_SCANNING
+SVN_FS_FS_DELTIFY_DIRECTORIES
+SVN_FS_FS_DELTIFY_PROPS
+SVN_SQLITE_MIN_VERSION_NUMBER
+SVN_SQLITE_MIN_VERSION
+SVN_SERF_NO_LOGGING
+SVN_ALLOW_SHORT_INTS
+SVN_ALLOW_NON_8_BIT_CHARS
+
+2.3 Debugging Support
+
+SVN_DBG_QUIET
+SVN_DEBUG
+SVN_CLIENT_COMMIT_DEBUG
+SVN_DEBUG_CACHE_DUMP_STATS
+SVN_DEBUG_CACHE_MEMBUFFER
+SVN_DEBUG_DSO
+SVN_DEBUG_WORK_QUEUE
+PACK_AFTER_EVERY_COMMIT [removed]
+DEBUG_DOUBLE_FREE
+SERF_VERBOSE
+SSL_VERBOSE
+SVN_DEPRECATED
+SVN_FS__TRAIL_DEBUG
+SVN_FS_FS__LOG_ACCESS
+SVN_UTF_NO_UNINITIALISED_ACCESS
+
+2.4 Test-only
+
+QUOPRINT_SVNDIFFS
+SVN_ENABLE_DEPRECATION_WARNINGS_IN_TESTS
+TEST16K_ADD
+
+2.5 Environment Variables
+
+SVNSYNC_UNSUPPORTED_STRIP_MERGEINFO
+SVNSYNC_UNSUPPORTED_MIGRATE_SVNMERGE
+SVN_CMDLINE_DISABLE_CRASH_HANDLER
+SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
+SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
+SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS
+SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
+
+
+3 Defines tweaking SVN defaults
+===============================
+
+3.1 DEFAULT_FS_TYPE
+
+  Scope:     (global)
+  Purpose:   selects the default FS type to be used for a new repository
+             if no type is provided
+  Range:     strings "fsfs", "bdb"
+  Default:   "fsfs"
+  Suggested: "fsfs"
+
+3.2 DEFAULT_HTTP_LIBRARY
+
+  Scope:     (global)
+  Purpose:   selects the default http library to be used for accessing
+             remote repositories using http/https protocol
+  Range:     strings "serf", "neon"
+  Default:   "serf"
+  Suggested: "serf"
+
+3.3 MAX_SECS_TO_LINGER
+
+  Scope:     svn protocol
+  Purpose:   
+  Range:     
+  Default:   30
+  Suggested: 
+
+3.4 SUFFIX_LINES_TO_KEEP
+
+  Scope:     libsvn_diff
+  Purpose:   control the identical prefix / identical suffix diff(blame)
+             optimizations.
+  Range:     natural integers
+  Default:   50
+  Suggested: 0, 1, 999999
+
+3.5 SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
+
+  Scope:     libsvn_fs_fs
+  Purpose:   set fsfs default shard size
+  Default:   1000
+  Range:     natural integers
+  Suggested: 1, 2, 3, 4, 5, 7, 11
+
+3.6 SVN_FS_FS_MAX_LINEAR_DELTIFICATION
+
+  Scope:     libsvn_fs_fs
+  Purpose:   Controls the space efficiency vs. reconstruction costs tradeoff
+             of rep deltification.  Defines the max length of the linear
+             deltification history before skip-deltification kicks in.
+             Values < 2 result in skip-delta-only behavior.
+  Default:   16
+  Range:     natural integers; should be a power of 2
+  Suggested: 1, 4, 8, 16, 32, 64
+
+3.7 SVN_FS_FS_MAX_DELTIFICATION_WALK
+
+  Scope:     libsvn_fs_fs
+  Purpose:   Limits the skip deltification range to provide commit runtime
+             guarantees. Change histories longer than that will be restarted
+             with a fulltext.  Values < 1 disable deltification.
+  Default:   1023
+  Range:     natural integers; should be a power of 2 minus one
+  Suggested: 0, 63, 1023, 4095, 16383
+
+3.8 SVN_UNALIGNED_ACCESS_IS_OK
+
+  Scope:     (global)
+  Purpose:   enable data accesss optimizations.
+             If your target CPU supports unaligned memory access without
+             significant performance penalties, you should enable this
+             optimization as it allows for processing 4 or 8 bytes at
+             once instead of just one byte at a time. 
+  Range:     0 1
+  Default:   platform dependant (see svn_types.h)
+  Suggested: 0
+
+
+4 Defines enabling or disabling features
+========================================
+
+4.1 CHECK_FOR_SAME_FILE
+
+  Scope:     libsvn_subr (file copy)
+  Purpose:   Test whether we try to do no-op file copies. If defined, 
+             svn_io_copy_file() will return an error when source and
+             destination are the same file.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined
+
+4.2 SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
+
+  Scope:     libsvn_subr
+  Purpose:   
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+4.3 SVN_DISABLE_ENTRY_CACHE
+
+  Scope:     libsvn_wc
+  Purpose:   If defined, ADM entries will not be cached.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+4.4 SVN_MERGE__ALLOW_ALL_FORWARD_MERGES_FROM_SELF
+
+  Scope:     libsvn_client
+  Purpose:   
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined
+
+4.5 SVN_USE_WIN32_CRASHHANDLER
+
+  Scope:     libsvn_subr
+  Purpose:   Define this in the Win32 platform if you want to enable the
+             crash handler allowing for post-mortem analysis after fatal
+             application failures.
+  Range:     definedness
+  Default:   defined (Windows only), not defined (elsewhere)
+  Suggested: defined (Windows only), not defined
+
+4.6 SVN_DAV_SEND_VTXN_NAME
+
+  Scope:     libsvn_ra_serf, libsvn_ra_neon
+  Purpose:   Testing VTXN name for v2 commits.
+             Defining this causes the client to send a VTXN name header.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+4.7 SVN_DISABLE_PREFIX_SUFFIX_SCANNING
+
+  Scope:     libsvn_diff
+  Purpose:   Define this symbol to disable the prefix/suffix scanning
+             of the diff processing, letting all lines be handled by the
+             full-fledged diff algorithm (with LCS algorithm). This define
+             can be useful for focusing on testing the LCS algorithm, or
+             for comparing diff performance with and without prefix/suffix
+             scanning.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined
+
+4.8 SVN_FS_FS_DELTIFY_DIRECTORIES
+
+  Scope:     libsvn_fs_fs
+  Purpose:   Define this symbol to enable directory deltification in FSFS.
+             When activated, previous versions of Subversion will still be
+             able to read from and write to this repository.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined
+
+4.9 SVN_FS_FS_DELTIFY_PROPS
+
+  Scope:     libsvn_fs_fs
+  Purpose:   Define this symbol to enable node property deltification in
+             FSFS.  When activated, previous versions of Subversion will
+             still be able to read from and write to this repository.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined
+
+4.10 SVN_SQLITE_MIN_VERSION_NUMBER
+
+  Scope:     libsvn_subr
+  Purpose:   The minimum SQLite version to have run-time support for.
+  Range:     SQLite version numbers, as packed integers
+  Default:   SQLITE_VERSION_NUMBER (i.e., the compile-time-sqlite version)
+  Suggested: not defined (to use default)
+
+4.11 SVN_SQLITE_MIN_VERSION
+
+  Scope:     libsvn_subr
+  Purpose:   See SVN_SQLITE_MIN_VERSION_NUMBER.  The two must be overridden
+             (or not overridden) together; defining one but leaving the other
+             at its default will cause undefined behaviour.
+  Range:     SQLite versions, as string literals
+  Default:   SQLITE_VERSION
+  Suggested: not defined (to use default)
+
+4.11 SVN_ALLOW_SHORT_INTS
+
+  Scope:     global
+  Purpose:   Disables the size check for the 'int' type.  We assume ints to
+             be large enough (32 bits) to index various container objects.
+             16 ints will break that assumption.  Defining this option will
+             allow SVN to be compiled even if the size check would fail for
+             some reason.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined (to ensure correct behaviour)
+
+4.12 SVN_ALLOW_NON_8_BIT_CHARS
+
+  Scope:     global
+  Purpose:   Disables the size check for the 'char' type.  We assume char
+             has exactly 8 bits.  Other values may break the code reading,
+             interpreting and writing repository files.  Defining this option
+             will allow SVN to be compiled even if the size check would fail
+             for some reason.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined (to ensure correct behaviour)
+
+
+5 Defines controlling debug support
+==================================
+
+5.1 SVN_DBG_QUIET
+
+  Scope:     (global)
+  Purpose:   Reduce noise created by SVN_DBG() statements.
+             Defining this symbol in the source file, before including
+             svn_debug.h, will switch off the debug output issued by 
+             SVN_DBG. Calls will still be made to svn_dbg__preamble() 
+             for breakpoints.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.2 SVN_DEBUG
+
+  Scope:     (global)
+  Purpose:   Enables various, debug-mode-only checks and other development
+             code. Never define this in release builds.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.3 SVN_CLIENT_COMMIT_DEBUG
+
+  Scope:     libsvn_client
+  Purpose:   Enables detailed client-side SVN_DBG output during commits.
+  Range:     definedness
+             (if defined, SVN_DEBUG must be defined as well)
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.4 SVN_DEBUG_CACHE_DUMP_STATS
+
+  Scope:     FSFS
+  Purpose:   Monitor FSFS object cache effectiveness.
+             If defined, FSFS sessions will dump caching statistics
+             to stdout just before the end of that session.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.5 SVN_DEBUG_CACHE_MEMBUFFER
+
+  Scope:     membuffer_cache
+  Purpose:   Detecting logic issues like key collisions etc. within
+             the membuffer_cache.
+             If you define this macro, the getter functions of the
+             membuffer_cache will performed expensive checks on the 
+             cached items, requested keys and entry types. If any 
+             mismatch is detected, therespective getter will return
+             an error.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.6 SVN_DEBUG_DSO
+
+  Scope:     libsvn_subr (dso)
+  Purpose:   detection of failures of dynamic loading of libraries
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.7 SVN_DEBUG_WORK_QUEUE
+
+  Scope:     libsvn_wc (workqueue)
+  Purpose:   protocol workqueue operations via SVN_DBG
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.8 PACK_AFTER_EVERY_COMMIT [removed]
+
+  *** REMOVED in r1602871 (1.9-dev) ***
+
+  Scope:     libsvn_fs (only affects libsvn_fs_fs)
+  Purpose:   stress test 
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.9 DEBUG_DOUBLE_FREE
+
+  Scope:     serf
+  Purpose:   detect double-free calls to serf_bucket_mem_free()
+  Range:     definedness
+  Default:   defined
+  Suggested: defined, not defined
+
+5.10 SERF_VERBOSE
+
+  Scope:     serf
+  Purpose:   write protocol handling debug information to stdout
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.11 SSL_VERBOSE
+
+  Scope:     serf
+  Purpose:   write SSL bucket handling debug information to stdout
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.12 SVN_DEPRECATED
+
+  Scope:     (everywhere)
+  Purpose:   disable "deprecated function calls" warnings
+  Range:     function declaration decorator
+  Default:   (compiler dependant)
+  Suggested: "" (disable deprecation warnings), or compiler-specific decorators
+
+5.13 SVN_FS__TRAIL_DEBUG
+
+  Scope:     libsvn_fs_base
+  Purpose:   
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.14 SVN_FS_FS__LOG_ACCESS
+  
+  Scope:     libsvn_fs_fs/cached_data.c
+  Purpose:   logs type and location info for any fsfs data access above the
+             cache layer to console (i.e. what data gets requested from FSFS
+             rather than disk)
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.15 SVN_UTF_NO_UNINITIALISED_ACCESS
+
+  Scope:     libsvn_subr
+  Purpose:   Disables some code that triggers warnings in memory tools
+             such as valgrind and address sanitizer.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+6 Defines that affect unit tests
+================================
+
+6.1 QUOPRINT_SVNDIFFS
+
+  Scope:     svndiff-test
+  Purpose:   
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+6.2 SVN_ENABLE_DEPRECATION_WARNINGS_IN_TESTS
+
+  Scope:     (all tests)
+  Purpose:   
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+6.3 TEST16K_ADD
+
+  Scope:     client-test
+  Purpose:   If defined, an expensive test will be activated that adds
+             16384 files in single folder and commits that. This is used
+             to detect performance abnormalies. Typical runtimes are 20
+             to 200 seconds.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+
+7 Environment variables:
+========================
+
+7.1 SVNSYNC_UNSUPPORTED_STRIP_MERGEINFO
+
+  Scope:     
+  Purpose:   
+
+7.2 SVNSYNC_UNSUPPORTED_MIGRATE_SVNMERGE
+
+  Scope:     
+  Purpose:   
+
+7.3. SVN_CMDLINE_DISABLE_CRASH_HANDLER
+
+  Scope:     All command line executables. Windows specific.
+  Purpose:   Setting any value disables internal Subversion crash handler
+             for creating minidump and stack trace information on failure on
+             Windows.
+
+7.4 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
+
+  Scope:     
+  Purpose:   
+
+7.5 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
+
+  Scope:     
+  Purpose:   
+
+7.6 SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS
+
+  Scope:     
+  Purpose:   
+
+7.7 SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
+
+  Scope:     libsvn_ra_neon and libsvn_ra_serf, if SVN_DEBUG
+  Purpose:   A "yes" value causes the RA modules to ignore the server's
+             advertisement of HTTPv2 protocol support (if any), effectively
+             causing them to only speak our original HTTP protocol.
+
+7.8 SVN_SVNMUCC_IS_SVNSYITF
+
+  Scope:     'make install-tools'
+  Purpose:   Symlinks $prefix/bin/svnsyitf to $prefix/bin/svnmucc
+
+7.9 SVN_X_DOES_NOT_MARK_THE_SPOT
+
+  Scope:     svn_cache__t subsystem (used by FSFS, svnserve, etc)
+  Purpose:   Disable the subsystem.  Requires -D SVN_DEBUG.
+
+* (TODO: others)
+

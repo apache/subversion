@@ -100,7 +100,7 @@ base revision will be $rev, which should be a number.
 Generate a unique lock-token using C<$fs>.
 
 TODO - translate this to apply to Perl:
-This can be used in to populate lock->token before calling
+This can be used in to populate lock-E<gt>token before calling
 svn_fs_attach_lock().
 
 =item $fs-E<gt>get_access()
@@ -166,10 +166,10 @@ The oldest revision in any filesystem is numbered zero.
 
 =cut
 
-our @methods = qw/youngest_rev revision_root revision_prop revision_proplist
-		  change_rev_prop list_transactions open_txn begin_txn
-		  get_uuid set_uuid set_access get_access
-                  lock unlock get_lock get_locks generate_lock_token path/;
+our @methods = qw/ youngest_rev revision_root revision_prop revision_proplist
+                   change_rev_prop list_transactions open_txn begin_txn
+                   get_uuid set_uuid set_access get_access
+                   lock unlock get_lock get_locks generate_lock_token path /;
 
 for (@methods) {
     no strict 'refs';
@@ -270,14 +270,14 @@ For transaction roots, returns C<$SVN::Core::INVALID_REVNUM>.
 
 =cut
 
-our @methods = qw/apply_textdelta apply_text change_node_prop
-		 check_path close_root copied_from copy
-		 dir_entries delete file_contents closest_copy
-		 file_length file_md5_checksum is_dir is_file
-		 is_revision_root is_txn_root make_dir make_file
-		 node_created_rev node_history node_id node_prop
-		 node_proplist paths_changed revision_link
-		 revision_root_revision/;
+our @methods = qw/ apply_textdelta apply_text change_node_prop
+                   check_path close_root copied_from copy
+                   dir_entries delete file_contents closest_copy
+                   file_length file_md5_checksum is_dir is_file
+                   is_revision_root is_txn_root make_dir make_file
+                   node_created_rev node_history node_id node_prop
+                   node_proplist paths_changed revision_link
+                   revision_root_revision /;
 
 *fs = *SVN::Fs::root_fs;
 *txn_name = *_p_svn_fs_txn_t::root_name;
@@ -475,6 +475,25 @@ True if the properties were modified.
 True if the text (content) was modified.
 
 =back
+
+=head1 COPYRIGHT
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
 
 =cut
 

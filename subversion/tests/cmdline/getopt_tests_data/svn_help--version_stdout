@@ -3,6 +3,6 @@ usage: help [SUBCOMMAND...]
 
 Valid options:
   --version                : print client version info
-  -q [--quiet]             : print as little as possible
+  -q [--quiet]             : print nothing, or only summary information
   --config-dir ARG         : read user configuration files from directory ARG
 

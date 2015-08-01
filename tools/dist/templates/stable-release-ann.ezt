@@ -1,0 +1,30 @@
+I'm happy to announce the release of Apache Subversion [version].
+Please choose the mirror closest to you by visiting:
+
+    http://subversion.apache.org/download/#[anchor]
+
+The SHA1 checksums are:
+
+[for sha1info]    [sha1info.sha1] [sha1info.filename]
+[end]
+PGP Signatures are available at:
+
+    http://www.apache.org/dist/subversion/subversion-[version].tar.bz2.asc
+    http://www.apache.org/dist/subversion/subversion-[version].tar.gz.asc
+    http://www.apache.org/dist/subversion/subversion-[version].zip.asc
+
+For this release, the following people have provided PGP signatures:
+
+[siginfo]
+Release notes for the [major-minor].x release series may be found at:
+
+    http://subversion.apache.org/docs/release-notes/[major-minor].html
+
+You can find the list of changes between [version] and earlier versions at:
+
+    http://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES
+
+Questions, comments, and bug reports to users@subversion.apache.org.
+
+Thanks,
+- The Subversion Team

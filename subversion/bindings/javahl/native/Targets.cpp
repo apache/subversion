@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -20,7 +25,6 @@
  */
 
 #include "Targets.h"
-#include "Pool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include <apr_tables.h>
@@ -30,101 +34,72 @@
 
 Targets::~Targets()
 {
-  if (m_targetArray != NULL)
-    JNIUtil::getEnv()->DeleteLocalRef(m_targetArray);
 }
 
-Targets::Targets(const char *path)
+Targets::Targets(const char *path, SVN::Pool &in_pool)
+    : m_subpool(in_pool)
 {
-  m_targetArray = NULL;
-  m_targets.push_back (path);
-  m_error_occured = NULL;
-  m_doesNotContainsPath = false;
+  m_strArray = NULL;
+  m_targets.push_back(apr_pstrdup(m_subpool.getPool(), path));
+  m_error_occurred = NULL;
 }
 
 void Targets::add(const char *path)
 {
-  m_targets.push_back (path);
+  m_targets.push_back(path);
 }
 
-const apr_array_header_t *Targets::array(const Pool &pool)
+const apr_array_header_t *Targets::array(const SVN::Pool &pool)
 {
-  if (m_targetArray != NULL)
+  if (m_strArray != NULL)
     {
-      JNIEnv *env = JNIUtil::getEnv();
-      jint arraySize = env->GetArrayLength(m_targetArray);
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
+      const std::vector<std::string> &vec = m_strArray->vector();
 
-      jclass clazz = env->FindClass("java/lang/String");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-      for (int i = 0; i < arraySize; ++i)
+      std::vector<std::string>::const_iterator it;
+      for (it = vec.begin(); it < vec.end(); ++it)
         {
-          jobject elem = env->GetObjectArrayElement(m_targetArray, i);
-          if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-          if (env->IsInstanceOf(elem, clazz))
+          const char *tt = it->c_str();
+          svn_error_t *err = JNIUtil::preprocessPath(tt, pool.getPool());
+          if (err != NULL)
             {
-              JNIStringHolder text((jstring)elem);
-              if (JNIUtil::isJavaExceptionThrown())
-                return NULL;
-
-              const char *tt = (const char *)text;
-              if (!m_doesNotContainsPath)
-                {
-                  svn_error_t *err = JNIUtil::preprocessPath(tt,
-                                                             pool.pool());
-                  if (err != NULL)
-                    {
-                      m_error_occured = err;
-                      break;
-                    }
-                }
-              m_targets.push_back(tt);
+              m_error_occurred = err;
+              break;
             }
-          if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-          env->DeleteLocalRef(elem);
+          m_targets.push_back(tt);
         }
-      env->DeleteLocalRef(clazz);
-      //JNIUtil::getEnv()->DeleteLocalRef(m_targetArray);
-      m_targetArray = NULL;
     }
 
-  std::vector<Path>::const_iterator it;
+  std::vector<const char*>::const_iterator it;
 
-  apr_pool_t *apr_pool = pool.pool ();
-  apr_array_header_t *apr_targets = apr_array_make (apr_pool,
-                                                    m_targets.size(),
-                                                    sizeof(const char *));
+  apr_pool_t *apr_pool = pool.getPool();
+  apr_array_header_t *apr_targets
+    = apr_array_make(apr_pool, static_cast<int>(m_targets.size()),
+                               sizeof(const char *));
 
   for (it = m_targets.begin(); it != m_targets.end(); ++it)
     {
-      const Path &path = *it;
-      const char *target =
-        apr_pstrdup (apr_pool, path.c_str());
-      (*((const char **) apr_array_push (apr_targets))) = target;
+      const char *target = *it;
+
+      svn_error_t *err = JNIUtil::preprocessPath(target, pool.getPool());
+      if (err != NULL)
+        {
+            m_error_occurred = err;
+            break;
+        }
+      APR_ARRAY_PUSH(apr_targets, const char *) = target;
     }
 
   return apr_targets;
 }
 
-Targets::Targets(jobjectArray jtargets)
+Targets::Targets(StringArray &strArray, SVN::Pool &in_pool)
+    : m_subpool(in_pool)
 {
-  m_targetArray = jtargets;
-  m_error_occured = NULL;
+  m_strArray = &strArray;
+  m_error_occurred = NULL;
 }
 
-svn_error_t *Targets::error_occured()
+svn_error_t *Targets::error_occurred()
 {
-  return m_error_occured;
-}
-
-void Targets::setDoesNotContainsPath()
-{
-  m_doesNotContainsPath = true;
+  return m_error_occurred;
 }

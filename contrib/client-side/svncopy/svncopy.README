@@ -98,7 +98,7 @@ trunk/              5195
         X common    http://svn/repos/trunk/common
         X inc       http://svn/repos/trunk/inc
         X public    http://someserver/repos/public
-        
+
 i.e. both proj_foo and proj_bar have svn:externals set to:
 
 common    http://svn/repos/trunk/common

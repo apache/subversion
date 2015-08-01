@@ -2,17 +2,22 @@
  * ctype.c:  Character classification routines
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  */
 
@@ -20,6 +25,23 @@
 
 #include "svn_ctype.h"
 
+#ifndef WIN32
+static
+#else
+/* This variable is exported as 'CONSTANT' in our .def file for libsvn_subr,
+   with the name svn_ctype_table.
+
+   This long deprecated construct will export *a pointer to* the
+   variable exported.
+
+   See http://support.microsoft.com/kb/90530/en-us for the ugly details on
+   this system that was already deprecated when we started Subversion and
+   on why we should have used __declspec(dllexport) when initially exporting
+   this variable. (It would allow avoiding the pointer transformation).
+
+   But to keep backwards compatibility this symbol will have to stay public
+   on Windows until Subversion 2.0. */
+#endif
 const apr_uint32_t svn_ctype_table_internal[256] =
   {
     /* **** DO NOT EDIT! ****
@@ -283,3 +305,32 @@ const apr_uint32_t svn_ctype_table_internal[256] =
   };
 
 const apr_uint32_t *const svn_ctype_table = svn_ctype_table_internal;
+
+static const unsigned char casefold_table[256] =
+  {
+    /* Identity, except {97:122} => {65:90} */
+      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+     32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+     64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+     80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
+     96, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+     80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,123,124,125,126,127,
+    128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,
+    144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,
+    160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,
+    176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
+    192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,
+    208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,
+    224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,
+    240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255
+  };
+
+int
+svn_ctype_casecmp(int a, int b)
+{
+  const int A = casefold_table[(unsigned char)a];
+  const int B = casefold_table[(unsigned char)b];
+  return A - B;
+}

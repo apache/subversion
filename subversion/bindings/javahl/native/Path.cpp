@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -22,18 +27,24 @@
 #include <jni.h>
 #include "Path.h"
 #include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "JNIUtil.h"
+#include "JNIStringHolder.h"
 #include "Pool.h"
+#include "svn_private_config.h"
 
 /**
  * Constructor
  *
- * @see Path::Path(const std::string &)
+ * @see PathBase::PathBase(const std::string &)
  * @param path Path string
  */
-Path::Path(const char *pi_path)
+PathBase::PathBase(const char *pi_path,
+                   svn_error_t* initfunc(const char*&, SVN::Pool&),
+                   SVN::Pool &in_pool)
+  : m_error_occurred(NULL)
 {
-  init(pi_path);
+  init(pi_path, initfunc, in_pool);
 }
 
 /**
@@ -43,19 +54,26 @@ Path::Path(const char *pi_path)
  *
  * @param path Path string
  */
-Path::Path(const std::string &pi_path)
+PathBase::PathBase(const std::string &pi_path,
+                   svn_error_t* initfunc(const char*&, SVN::Pool&),
+                   SVN::Pool &in_pool)
+  : m_error_occurred(NULL)
 {
-  init(pi_path.c_str());
+  init(pi_path.c_str(), initfunc, in_pool);
 }
 
 /**
- * Copy constructor
- *
- * @param path Path to be copied
+ * Constructor from a Java string.
  */
-Path::Path(const Path &pi_path)
+PathBase::PathBase(jstring jpath,
+                   svn_error_t* initfunc(const char*&, SVN::Pool&),
+                   SVN::Pool &in_pool)
+  : m_error_occurred(NULL)
 {
-  init(pi_path.c_str());
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  init(path, initfunc, in_pool);
 }
 
 /**
@@ -64,19 +82,13 @@ Path::Path(const Path &pi_path)
  * @param path Path string
  */
 void
-Path::init(const char *pi_path)
+PathBase::init(const char *pi_path,
+               svn_error_t* initfunc(const char*&, SVN::Pool&),
+               SVN::Pool &in_pool)
 {
-  if (*pi_path == 0)
+  if (pi_path && *pi_path)
     {
-      m_error_occured = NULL;
-      m_path = "";
-    }
-  else
-    {
-      m_error_occured =
-        JNIUtil::preprocessPath(pi_path,
-                                JNIUtil::getRequestPool()->pool() );
-
+      m_error_occurred = initfunc(pi_path, in_pool);
       m_path = pi_path;
     }
 }
@@ -85,7 +97,7 @@ Path::init(const char *pi_path)
  * @return Path string
  */
 const std::string &
-Path::path() const
+PathBase::path() const
 {
   return m_path;
 }
@@ -94,7 +106,7 @@ Path::path() const
  * @return Path string as a C string
  */
 const char *
-Path::c_str() const
+PathBase::c_str() const
 {
   return m_path.c_str();
 }
@@ -102,25 +114,27 @@ Path::c_str() const
 /**
  * Assignment operator
  */
-Path&
-Path::operator=(const Path &pi_path)
+PathBase&
+PathBase::operator=(const PathBase &pi_path)
 {
-  init(pi_path.c_str());
+  m_error_occurred = NULL;
+  m_path = pi_path.m_path;
+
   return *this;
 }
 
-  svn_error_t *Path::error_occured() const
+svn_error_t *PathBase::error_occurred() const
 {
-  return m_error_occured;
+  return m_error_occurred;
 }
 
-jboolean Path::isValid(const char *p)
+jboolean PathBase::isValid(const char *p)
 {
   if (p == NULL)
     return JNI_FALSE;
 
-  Pool requestPool;
-  svn_error_t *err = svn_path_check_valid(p, requestPool.pool());
+  SVN::Pool requestPool;
+  svn_error_t *err = svn_path_check_valid(p, requestPool.getPool());
   if (err == SVN_NO_ERROR)
     {
       return JNI_TRUE;
@@ -130,4 +144,26 @@ jboolean Path::isValid(const char *p)
       svn_error_clear(err);
       return JNI_FALSE;
     }
+}
+
+svn_error_t*
+Path::initfunc(const char*& path, SVN::Pool& pool)
+{
+  return JNIUtil::preprocessPath(path, pool.getPool());
+}
+
+svn_error_t*
+URL::initfunc(const char*& path, SVN::Pool& pool)
+{
+  if (svn_path_is_url(path))
+    return JNIUtil::preprocessPath(path, pool.getPool());
+  return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                           _("Not an URL: %s"), path);
+}
+
+svn_error_t*
+Relpath::initfunc(const char*& path, SVN::Pool& pool)
+{
+  path = svn_relpath__internal_style(path, pool.getPool());
+  return SVN_NO_ERROR;
 }

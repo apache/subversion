@@ -1,0 +1,66 @@
+[define COPYRIGHT]
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+[end]Microsoft Visual Studio Solution File, Format Version [version]
+# Visual Studio [vs_version]
+[is version "12.00"]VisualStudioVersion = 12.3.4.5
+MinimumVisualStudioVersion = 10.0.40219.1
+[end][for targets]Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "[targets.name]", "[targets.path]", "[targets.guid]"
+[is dependency_location "solution"]	ProjectSection(ProjectDependencies) = postProject
+[for targets.depends]		[targets.depends.guid] = [targets.depends.guid]
+[end]	EndProjectSection
+[end]EndProject
+[end]Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{F6BDBE6F-7C7B-458B-8801-0B351C85ED6E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dlls", "Dlls", "{2F13BEE6-AA51-4882-9015-DCE38AB8E474}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Swig", "Swig", "{9D82B7A1-8C6E-4FB1-895C-DEE6E244CB21}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Java", "Java", "{B604B17D-DC50-44D4-AD41-088A67CFB89E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Programs", "Programs", "{01A6F906-A386-4E8D-B080-49A3373A7158}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{630535D0-22D7-4D7C-8850-CB468739AFAC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+[for configs][for platforms]		[configs.name]|[platforms] = [configs.name]|[platforms]
+[end][end]	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+[for guids][for platforms][for configs]		[guids].[configs.name]|[platforms].ActiveCfg = [configs.name]|[platforms]
+[end][for configs]		[guids].[configs.name]|[platforms].Build.0 = [configs.name]|[platforms]
+[end][end][end]	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+[for targets][is targets.group "exe"]		[targets.guid] = {01A6F906-A386-4E8D-B080-49A3373A7158}
+[end][is targets.group "lib"]		[targets.guid] = {F6BDBE6F-7C7B-458B-8801-0B351C85ED6E}
+[end][is targets.group "dll"]		[targets.guid] = {2F13BEE6-AA51-4882-9015-DCE38AB8E474}
+[end][is targets.group "swiglib"]		[targets.guid] = {9D82B7A1-8C6E-4FB1-895C-DEE6E244CB21}
+[end][is targets.group "test"]		[targets.guid] = {630535D0-22D7-4D7C-8850-CB468739AFAC}
+[end][is targets.group "java"]		[targets.guid] = {B604B17D-DC50-44D4-AD41-088A67CFB89E}
+[end][end]		{9D82B7A1-8C6E-4FB1-895C-DEE6E244CB21} = {F6BDBE6F-7C7B-458B-8801-0B351C85ED6E}
+		{2F13BEE6-AA51-4882-9015-DCE38AB8E474} = {F6BDBE6F-7C7B-458B-8801-0B351C85ED6E}
+		{B604B17D-DC50-44D4-AD41-088A67CFB89E} = {F6BDBE6F-7C7B-458B-8801-0B351C85ED6E}
+	EndGlobalSection
+EndGlobal

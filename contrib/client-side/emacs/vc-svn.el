@@ -3,17 +3,27 @@
 
 ;;; #########################################################################
 ;;; ##                                                                     ##
-;;; ##          NOTE: THIS IS NOT THE MASTER VERSION OF VC-SVN.EL          ##
+;;; ##                NOTE: THIS FILE IS ONLY FOR EMACS 21                 ##
 ;;; ##                                                                     ##
-;;; ## The canonical vc-svn.el now lives in the FSF Emacs tree, at         ##
-;;; ## http://savannah.gnu.org/cgi-bin/viewcvs/emacs/emacs/lisp/vc-svn.el. ##
-;;; ## The version here is maintained only because it is compatible with   ##
-;;; ## older releases of Emacs, since (as of this writing) the one in the  ##
-;;; ## FSF tree hasn't made it into an official release of Emacs yet.      ##
-;;; ## Eventually it will, though, and sometime after that the version     ##
-;;; ## here will go away.                                                  ##
+;;; ## Emacs 21 does not come with a working vc-mode for Subversion, and   ##
+;;; ## in particular, dsvn.el needs one. This file is provided for those   ##
+;;; ## who use that Emacs version.					   ##
 ;;; ##                                                                     ##
+;;; ## Emacs 22 and newer versions come with a Subversion-capable vc-mode  ##
+;;; ## and should not use this file.					   ##
+;;; ##									   ##
+;;; ## This file is a mild fork of vc-svn.el from the Emacs source tree.   ##
+;;; ## It may go away at some undetermined point in the future, when	   ##
+;;; ## support of Emacs 21 becomes completely irrelevant.		   ##
+;;; ## 									   ##
+;;; ## Maintenance of the vc-mode for Subversion should be done first and  ##
+;;; ## foremost in the Emacs tree, and changes done to this file only	   ##
+;;; ## when necessary.							   ##
+;;; ## 									   ##
 ;;; #########################################################################
+
+(if (> emacs-major-version 21)
+    (error "This file should only be used by Emacs versions 21 and earlier"))
 
 ;;; Writing this back end has shown up some problems in VC: bugs,
 ;;; shortcomings in the back end interface, and so on.  But I want to
@@ -32,12 +42,12 @@
 
 
 ;;; To do here:
-;;; Provide more of the optional VC backend functions: 
+;;; Provide more of the optional VC backend functions:
 ;;; - dir-state
 ;;; - merge across arbitrary revisions
 ;;;
-;;; Maybe we want more info in mode-line-string.  Status of props?  Status 
-;;; compared to what's in the repository (svn st -u) ? 
+;;; Maybe we want more info in mode-line-string.  Status of props?  Status
+;;; compared to what's in the repository (svn st -u) ?
 ;;;
 ;;; VC passes the vc-svn-register function a COMMENT argument, which
 ;;; is like the file description in CVS and RCS.  Could we store the
@@ -78,7 +88,7 @@
 ;;; Make sure vc's documentation for `workfile-unchanged-p' default
 ;;; function mentions that it must not run asynchronously, and the
 ;;; symptoms if it does.
-;;; 
+;;;
 ;;; Fix logic for finding log entries.
 ;;;
 ;;; Allow historical diff to choose an appropriate default previous
@@ -115,10 +125,7 @@
 
 (defun vc-svn-registered (file)
   "Return true if FILE is registered under Subversion."
-  ;; First, a quick false positive test: is there a `.svn/entries' file?
-  (and (file-exists-p (expand-file-name ".svn/entries"
-                                        (file-name-directory file)))
-       (not (null (vc-svn-run-status file)))))
+  (not (null (vc-svn-run-status file))))
 
 
 (put 'vc-svn-with-output-buffer 'lisp-indent-function 0)
@@ -151,11 +158,11 @@ See `vc-svn-parse-status' for a description of the result."
     ;; error status if FILE isn't under its control, and we want to
     ;; return that as nil, not display it to the user.  We can tell
     ;; vc-do-command to
-    
+
     (let ((status (apply 'call-process vc-svn-program-name nil t nil
                          (append '("status" "-v")
                                  (if update '("-u") '())
-                                 (list file)))))
+                                 (list (concat file "@"))))))
       (goto-char (point-min))
       (if (not (equal 0 status)) ; not zerop; status can be a string
           ;; If you ask for the status of a file that isn't even in a
@@ -190,15 +197,16 @@ If the file is newly added, LOCAL is \"0\" and CHANGED is nil."
     (cond
      ((not state) nil)
      ;; A newly added file has no revision.
-     ((looking-at "....\\s-+\\(\\*\\s-+\\)?[-0]\\s-+\\(\\?\\|[0-9]+\\)")
+     ((looking-at ".......\\s-+\\(\\*\\s-+\\)?[-0]\\s-+\\(\\?\\|[0-9]+\\)")
       (list state "0" nil))
-     ((looking-at "....\\s-+\\(\\*\\s-+\\)?\\([0-9]+\\)\\s-+\\([0-9]+\\)")
+     ((looking-at ".......\\s-+\\(\\*\\s-+\\)?\\([0-9]+\\)\\s-+\\([0-9]+\\)")
       (list state
             (match-string 2)
             (match-string 3)))
      ((looking-at "^I +") nil)       ;; An ignored file
      ((looking-at " \\{40\\}") nil)  ;; A file that is not in the wc nor svn?
-     (t (error "Couldn't parse output from `svn status -v'")))))
+     ;; Since svn status is run on every file, don't complain if it fails.
+     (t nil))))
 
 
 (defun vc-svn-parse-state-only ()
@@ -294,7 +302,7 @@ COMMENT is an initial description of the file; currently this is ignored."
 
 
 (defun vc-svn-checkin (file rev comment)
-  (apply 'vc-do-command nil 0 vc-svn-program-name file 
+  (apply 'vc-do-command nil 0 vc-svn-program-name file
          "commit" (if comment (list "-m" comment) '())))
 
 
@@ -303,7 +311,7 @@ COMMENT is an initial description of the file; currently this is ignored."
 
 If EDITABLE is non-nil, do a regular update, otherwise check out the
 requested REV to temp file DESTFILE.  If both EDITABLE and DESTFILE
-are non-nil, raise an error. 
+are non-nil, raise an error.
 
 If REV is non-nil, that is the revision to check out (default is
 current workfile version).  If REV is the empty string, that means to
@@ -340,13 +348,13 @@ conflict markers into the file and leaves additional temporary files
 containing the `ancestor', `mine', and `other' files.
 
 You may need to run `svn resolved' by hand once these conflicts have
-been resolved.  
+been resolved.
 
 Returns a vc status, which is used to determine whether conflicts need
 to be merged."
   (prog1
       (vc-do-command nil 0 vc-svn-program-name file "update")
-    
+
     ;; This file may not have changed in the revisions which were
     ;; merged, which means that its mtime on disk will not have been
     ;; updated.  However, the workfile version may still have been
@@ -391,7 +399,7 @@ This function returns a status of either 0 (no differences found), or
          (status (vc-svn-run-status file))
          (local (elt status 1))
          (changed (elt status 2))
-         
+
          ;; If rev1 is the default (the base revision) set it to nil.
          ;; This is nice because it lets us recognize when the diff
          ;; will run locally, and thus when we shouldn't bother to run
@@ -426,7 +434,7 @@ This function returns a status of either 0 (no differences found), or
           1 0))))
 
 (defun vc-svn-find-version (file rev buffer)
-  (vc-do-command buffer 0 vc-svn-program-name file 
+  (vc-do-command buffer 0 vc-svn-program-name file
          "cat" "-r" rev))
 
 (defun vc-svn-annotate-command (file buffer &optional version)

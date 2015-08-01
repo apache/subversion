@@ -1,0 +1,95 @@
+The Berlin '11 hackathon will be held at the elego offices in Berlin, Germany
+on May 16-20.  elego has generously donated office space and $BEVERAGE for
+the duration of the week, and several committers will be on hand to hack,
+discuss, and make themselves merry.
+
+[ should we include an expected attendee list? ]
+
+POTENTIAL ITEMS FOR DISCUSSION
+==============================
+
+ * Let's finish Subversion 1.7
+ * Externals discussion
+ * ra_serf issues
+   - Should we leave serf as default http library?
+   - Checkout/update editor memory and performance issues. May be
+     it is worth implementing non-skelta update editor mode in ra_serf.
+   - Serf request ordering problem when re-submitting for authn.
+   - Lack of HTTPS proxy support.
+ * The P-word
+   - How important is performance of SVN in comparison to other
+     qualities like maintainability etc.
+   - What is a reasonable long-term performance goal for SVN?
+ * 'svn resolve --accept {mine,theirs}-full' for tree conflicts
+   - Now that update skips no tree conflicts, we have a fighting chance.
+ * Python test timing
+   - Identify slow tests
+   - Sort tests into short- and long-running sets, for convenience.
+ * Making blame faster (1.8+ probably)
+   - Implementing reverse blame
+   - Making diff faster (see notes/diff-optimizations.txt)
+   - Calculating blame info on server side?
+   - Caching/saving changed-line-info on server side?
+ * [insert item here]
+
+
+DISCUSSION NOTES
+================
+
+>  * Let's finish Subversion 1.7
+
+Hyrum has proposed a branch and release plan on the dev-list:
+http://svn.haxx.se/dev/archive-2011-05/0579.shtml
+
+>  * Externals discussion
+
+With regards to the plan for externals, Bert is forsaking his original
+plan to carve externals out of NODES, and is instead using a smaller
+EXTERNALS table to meet the needs.  He anticipates completing is work
+here soon.  (At this point the collective sigh of relief in the room
+was too noisy to hear anything else.)
+
+>  * ra_serf issues
+
+We discussed the general merits of ra_serf (for users, admins, devs,
+etc.).  General consensus seems to be that serf is good enough to
+remain the default, but if we get to the 1.7 branch point and we don't
+have ra_serf in a release-ready state (that is, no blocking issues),
+we will revert to ra_neon as the default (on the branch only).
+ra_neon performance has vastly improved recently, and Ivan has still
+more plans for improvement there.  But ultimately we know that Serf is
+the path forward, so the sooner we can get the world on it, the more
+quickly we can work out the edge cases.
+
+>  * The P-word ("performance")
+
+We're generally accepting of performance changes, but not really at
+the cost of maintainability.  That said, "maintainability" isn't the
+opposite of algorithmic complexity.  Good documentation and minimal
+obfuscation go a long way toward making complex algorithms and
+approaches maintainable.  Also, isolating that complexity helps
+maintainability (versus propagating obscure concepts all over the
+codebase in public APIs, etc.).
+
+As for long-term performance, the oft-asked question is, "Why is
+Subversion so slow when Git is so fast?"  We understand that our
+problem space is much more complex than Git's, what with mixed
+revision working copies, path-based authorization, etc.  It's not
+realistic to believe that we'll ever be as fast as Git in that
+respect.  However, we have already identified several improvements
+that we believe can be made in this area (albeit not in the 1.7
+timeframe).
+
+C-Mike feels that comparison against another tool isn't necessarily
+interesting.  It's in the comparison against our users' expectations
+that our battles are lost or won.
+
+The general feel across the group is that 1.7 performance today is,
+for the most part, very pleasing, and arguably ready for release,
+perhaps with a small handful of exceptions ('checkout', for example).
+
+>  * 'svn resolve --accept {mine,theirs}-full' for tree conflicts
+>    - Now that update skips no tree conflicts, we have a fighting chance.
+
+Stephen Butler is looking at this stuff, but it's not considered a 1.7
+blocker.

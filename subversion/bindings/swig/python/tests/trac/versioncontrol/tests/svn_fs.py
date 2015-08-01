@@ -1,15 +1,51 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
 #
 # Copyright (C) 2005 Edgewall Software
 # Copyright (C) 2005 Christopher Lenz <cmlenz@gmx.de>
 #
-# This software is licensed as described in the file
-# LICENSE_FOR_PYTHON_BINDINGS, which you should have received as part
-# of this distribution.  The terms are also available at
-# < http://subversion.tigris.org/license-for-python-bindings.html >.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+# All rights reserved.
 #
-# Author: Christopher Lenz <cmlenz@gmx.de>
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. The name of the author may not be used to endorse or promote
+#    products derived from this software without specific prior written
+#    permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS
+# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+# IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os.path
 import stat
@@ -19,9 +55,14 @@ import tempfile
 import unittest
 from urllib import pathname2url
 
-try:
+if sys.version_info[0] >= 3:
+  # Python >=3.0
+  from io import StringIO
+else:
+  # Python <3.0
+  try:
     from cStringIO import StringIO
-except ImportError:
+  except ImportError:
     from StringIO import StringIO
 
 from svn import core, repos
@@ -30,8 +71,11 @@ from trac.test import TestSetup
 from trac.versioncontrol import Changeset, Node
 from trac.versioncontrol.svn_fs import SubversionRepository
 
-REPOS_PATH = os.path.join(tempfile.gettempdir(), 'trac-svnrepos')
-REPOS_URL = pathname2url(REPOS_PATH)
+temp_path = tempfile.mktemp("-trac-svnrepos")
+REPOS_PATH = core.svn_dirent_internal_style(temp_path)
+REPOS_URL = pathname2url(temp_path)
+del temp_path
+
 if REPOS_URL.startswith("///"):
   # Don't add extra slashes if they're already present.
   # (This is important for Windows compatibility).
@@ -41,12 +85,13 @@ else:
   # extra slashes to make it a valid 'file://' URL
   REPOS_URL = "file://" + REPOS_URL
 
+REPOS_URL = core.svn_uri_canonicalize(REPOS_URL)
 
 class SubversionRepositoryTestSetup(TestSetup):
 
     def setUp(self):
         dumpfile = open(os.path.join(os.path.split(__file__)[0],
-                                     'svnrepos.dump'))
+                                     'svnrepos.dump'), 'rb')
 
         # Remove the trac-svnrepos directory, so that we can
         # ensure a fresh start.
@@ -54,7 +99,7 @@ class SubversionRepositoryTestSetup(TestSetup):
 
         r = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
         repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
-                                repos.svn_repos_load_uuid_default, '',
+                                repos.svn_repos_load_uuid_ignore, '',
                                 0, 0, None)
 
     def tearDown(self):
@@ -144,7 +189,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual('native', props['svn:eol-style'])
         self.assertEqual('text/plain', props['svn:mime-type'])
 
-    # Revision Log / node history 
+    # Revision Log / node history
 
     def test_get_node_history(self):
         node = self.repos.get_node('/trunk/README2.txt')
@@ -162,7 +207,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(('trunk/README.txt', 2, 'add'), history.next())
         self.assertRaises(StopIteration, history.next)
 
-    # Revision Log / path history 
+    # Revision Log / path history
 
     def test_get_path_history(self):
         history = self.repos.get_path_history('/trunk/README2.txt', None)
@@ -175,7 +220,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(('tags/v1/README.txt', 7, 'copy'), history.next())
         self.assertEqual(('trunk/README.txt', 3, 'unknown'), history.next())
         self.assertRaises(StopIteration, history.next)
-        
+
     def test_get_path_history_copied_dir(self):
         history = self.repos.get_path_history('/branches/v1x', None)
         self.assertEqual(('branches/v1x', 12, 'copy'), history.next())
@@ -196,7 +241,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
             new = self.repos.get_node(*expected[1])
             self.assertEqual((new.path, new.rev), (got[1].path, got[1].rev))
         self.assertEqual(expected[2], (got[2], got[3]))
-        
+
     def test_diff_file_different_revs(self):
         diffs = self.repos.get_deltas('trunk/README.txt', 2, 'trunk/README.txt', 3)
         self._cmp_diff((('trunk/README.txt', 2),
@@ -216,40 +261,60 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         diffs = self.repos.get_deltas('trunk/README.txt', 7,
                                       'tags/v1/README.txt', 7)
         self.assertRaises(StopIteration, diffs.next)
- 
+
     def test_diff_dir_different_revs(self):
         diffs = self.repos.get_deltas('trunk', 4, 'trunk', 8)
-        self._cmp_diff((None, ('trunk/dir1/dir2', 8),
-                        (Node.DIRECTORY, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('trunk/dir1/dir3', 8),
-                        (Node.DIRECTORY, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('trunk/README2.txt', 6),
-                        (Node.FILE, Changeset.ADD)), diffs.next())
-        self._cmp_diff((('trunk/dir2', 4), None,
-                        (Node.DIRECTORY, Changeset.DELETE)), diffs.next())
-        self._cmp_diff((('trunk/dir3', 4), None,
-                        (Node.DIRECTORY, Changeset.DELETE)), diffs.next())
+        expected = [
+          (None, ('trunk/README2.txt', 6),
+           (Node.FILE, Changeset.ADD)),
+          (None, ('trunk/dir1/dir2', 8),
+           (Node.DIRECTORY, Changeset.ADD)),
+          (None, ('trunk/dir1/dir3', 8),
+           (Node.DIRECTORY, Changeset.ADD)),
+          (('trunk/dir2', 4), None,
+           (Node.DIRECTORY, Changeset.DELETE)),
+          (('trunk/dir3', 4), None,
+           (Node.DIRECTORY, Changeset.DELETE)),
+        ]
+        actual = [diffs.next() for i in range(5)]
+        actual = sorted(actual,
+                        key=lambda diff: ((diff[0] or diff[1]).path,
+                                          (diff[0] or diff[1]).rev))
+        self.assertEqual(len(expected), len(actual))
+        for e,a in zip(expected, actual):
+          self._cmp_diff(e,a)
         self.assertRaises(StopIteration, diffs.next)
 
     def test_diff_dir_different_dirs(self):
         diffs = self.repos.get_deltas('trunk', 1, 'branches/v1x', 12)
-        self._cmp_diff((None, ('branches/v1x/dir1', 12),
-                        (Node.DIRECTORY, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('branches/v1x/dir1/dir2', 12),
-                        (Node.DIRECTORY, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('branches/v1x/dir1/dir3', 12),
-                        (Node.DIRECTORY, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('branches/v1x/README.txt', 12),
-                        (Node.FILE, Changeset.ADD)), diffs.next())
-        self._cmp_diff((None, ('branches/v1x/README2.txt', 12),
-                        (Node.FILE, Changeset.ADD)), diffs.next())
+        expected = [
+          (None, ('branches/v1x/README.txt', 12),
+           (Node.FILE, Changeset.ADD)),
+          (None, ('branches/v1x/README2.txt', 12),
+           (Node.FILE, Changeset.ADD)),
+          (None, ('branches/v1x/dir1', 12),
+           (Node.DIRECTORY, Changeset.ADD)),
+          (None, ('branches/v1x/dir1/dir2', 12),
+           (Node.DIRECTORY, Changeset.ADD)),
+          (None, ('branches/v1x/dir1/dir3', 12),
+           (Node.DIRECTORY, Changeset.ADD)),
+        ]
+        actual = [diffs.next() for i in range(5)]
+        actual = sorted(actual, key=lambda diff: (diff[1].path, diff[1].rev))
+        # for e,a in zip(expected, actual):
+        #   t.write("%r\n" % (e,))
+        #   t.write("%r\n" % ((None, (a[1].path, a[1].rev), (a[2], a[3])),) )
+        #   t.write('\n')
+        self.assertEqual(len(expected), len(actual))
+        for e,a in zip(expected, actual):
+          self._cmp_diff(e,a)
         self.assertRaises(StopIteration, diffs.next)
 
     def test_diff_dir_no_change(self):
         diffs = self.repos.get_deltas('trunk', 7,
                                       'tags/v1', 7)
         self.assertRaises(StopIteration, diffs.next)
-        
+
     # Changesets
 
     def test_changeset_repos_creation(self):
@@ -316,8 +381,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
-                              suiteClass=SubversionRepositoryTestSetup)
+    loader = unittest.TestLoader()
+    loader.suiteClass = SubversionRepositoryTestSetup
+    return loader.loadTestsFromTestCase(SubversionRepositoryTestCase)
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

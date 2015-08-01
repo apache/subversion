@@ -4,20 +4,26 @@
 #               the filesystem.
 #
 ######################################################################
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license-1.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
-#
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 ######################################################################
 #
 
 import sys
-import string
 import time
 import re
 from cmd import Cmd
@@ -38,12 +44,12 @@ class SVNShell(Cmd):
     self.path = "/"
     self._setup_prompt()
     self.cmdloop()
-    
+
   def precmd(self, line):
     if line == "EOF":
       # Ctrl-D is a command without a newline.  Print a newline, so the next
       # shell prompt is not on the same line as the last svnshell prompt.
-      print
+      print("")
       return "exit"
     return line
 
@@ -57,37 +63,37 @@ class SVNShell(Cmd):
              "Ehh...I don't think so, chief."]
 
   def default(self, line):
-    print self._errors[randint(0, len(self._errors) - 1)]
-    
+    print(self._errors[randint(0, len(self._errors) - 1)])
+
   def do_cat(self, arg):
     """dump the contents of a file"""
     if not len(arg):
-      print "You must supply a file path."
+      print("You must supply a file path.")
       return
     catpath = self._parse_path(arg)
     kind = fs.check_path(self.root, catpath)
     if kind == core.svn_node_none:
-      print "Path '%s' does not exist." % catpath
+      print("Path '%s' does not exist." % catpath)
       return
     if kind == core.svn_node_dir:
-      print "Path '%s' is not a file." % catpath
+      print("Path '%s' is not a file." % catpath)
       return
     ### be nice to get some paging in here.
     stream = fs.file_contents(self.root, catpath)
-    while 1:
+    while True:
       data = core.svn_stream_read(stream, core.SVN_STREAM_CHUNK_SIZE)
       sys.stdout.write(data)
       if len(data) < core.SVN_STREAM_CHUNK_SIZE:
         break
-    
+
   def do_cd(self, arg):
     """change directory"""
     newpath = self._parse_path(arg)
-    
+
     # make sure that path actually exists in the filesystem as a directory
     kind = fs.check_path(self.root, newpath)
     if kind != core.svn_node_dir:
-      print "Path '%s' is not a valid filesystem directory." % newpath
+      print("Path '%s' is not a valid filesystem directory." % newpath)
       return
     self.path = newpath
 
@@ -108,21 +114,20 @@ class SVNShell(Cmd):
         parts = self._path_to_parts(newpath)
         name = parts.pop(-1)
         parent = self._parts_to_path(parts)
-        print parent + ':' + name
+        print(parent + ':' + name)
         tmpentries = fs.dir_entries(self.root, parent)
         if not tmpentries.get(name, None):
           return
         entries = {}
         entries[name] = tmpentries[name]
       else:
-        print "Path '%s' not found." % newpath
+        print("Path '%s' not found." % newpath)
         return
-      
-    keys = entries.keys()
-    keys.sort()
 
-    print "   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME"
-    print "----------------------------------------------------------------------------"
+    keys = sorted(entries.keys())
+
+    print("   REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME")
+    print("----------------------------------------------------------------------------")
 
     for entry in keys:
       fullpath = parent + '/' + entry
@@ -145,23 +150,22 @@ class SVNShell(Cmd):
         date = ""
       else:
         date = self._format_date(date)
-     
-      print "%6s %8s %12s %8s %12s %s" % (created_rev, author[:8],
-                                          node_id, size, date, name)
-  
+
+      print("%6s %8s %12s %8s %12s %s" % (created_rev, author[:8],
+                                          node_id, size, date, name))
+
   def do_lstxns(self, arg):
     """list the transactions available for browsing"""
-    txns = fs.list_transactions(self.fs_ptr)
-    txns.sort()
+    txns = sorted(fs.list_transactions(self.fs_ptr))
     counter = 0
     for txn in txns:
       counter = counter + 1
-      print "%8s  " % txn,
+      sys.stdout.write("%8s   " % txn)
       if counter == 6:
-        print ""
+        print("")
         counter = 0
-    print ""
-    
+    print("")
+
   def do_pcat(self, arg):
     """list the properties of a path"""
     catpath = self.path
@@ -169,18 +173,18 @@ class SVNShell(Cmd):
       catpath = self._parse_path(arg)
     kind = fs.check_path(self.root, catpath)
     if kind == core.svn_node_none:
-      print "Path '%s' does not exist." % catpath
+      print("Path '%s' does not exist." % catpath)
       return
     plist = fs.node_proplist(self.root, catpath)
     if not plist:
       return
     for pkey, pval in plist.items():
-      print 'K ' + str(len(pkey))
-      print pkey
-      print 'P ' + str(len(pval))
-      print pval
-    print 'PROPS-END'
-    
+      print('K ' + str(len(pkey)))
+      print(pkey)
+      print('P ' + str(len(pval)))
+      print(pval)
+    print('PROPS-END')
+
   def do_setrev(self, arg):
     """set the current revision to view"""
     try:
@@ -190,7 +194,7 @@ class SVNShell(Cmd):
         rev = int(arg)
       newroot = fs.revision_root(self.fs_ptr, rev)
     except:
-      print "Error setting the revision to '" + arg + "'."
+      print("Error setting the revision to '" + arg + "'.")
       return
     fs.close_root(self.root)
     self.root = newroot
@@ -204,27 +208,27 @@ class SVNShell(Cmd):
       txnobj = fs.open_txn(self.fs_ptr, arg)
       newroot = fs.txn_root(txnobj)
     except:
-      print "Error setting the transaction to '" + arg + "'."
+      print("Error setting the transaction to '" + arg + "'.")
       return
     fs.close_root(self.root)
     self.root = newroot
     self.txn = arg
     self.is_rev = 0
     self._do_path_landing()
-  
+
   def do_youngest(self, arg):
     """list the youngest revision available for browsing"""
     rev = fs.youngest_rev(self.fs_ptr)
-    print rev
+    print(rev)
 
   def do_exit(self, arg):
     sys.exit(0)
 
   def _path_to_parts(self, path):
-    return filter(None, string.split(path, '/'))
+    return [_f for _f in path.split('/') if _f]
 
   def _parts_to_path(self, parts):
-    return '/' + string.join(parts, '/')
+    return '/' + '/'.join(parts)
 
   def _parse_path(self, path):
     # cleanup leading, trailing, and duplicate '/' characters
@@ -250,12 +254,12 @@ class SVNShell(Cmd):
 
     # finally, return the calculated path
     return self._parts_to_path(finalparts)
-    
+
   def _format_date(self, date):
     date = core.svn_time_from_cstring(date)
     date = time.asctime(time.localtime(date / 1000000))
     return date[4:-8]
-  
+
   def _do_path_landing(self):
     """try to land on self.path as a directory in root, failing up to '/'"""
     not_found = 1
@@ -277,20 +281,20 @@ class SVNShell(Cmd):
     else:
       self.prompt = "<txn: " + self.txn
     self.prompt += " " + self.path + ">$ "
-  
+
   def _complete(self, text, line, begidx, endidx, limit_node_kind=None):
     """Generic tab completer.  Takes the 4 standard parameters passed to a
     cmd.Cmd completer function, plus LIMIT_NODE_KIND, which should be a
     svn.core.svn_node_foo constant to restrict the returned completions to, or
     None for no limit.  Catches and displays exceptions, because otherwise
-    they are silently ignored - which is quite frustrating when debugging!""" 
+    they are silently ignored - which is quite frustrating when debugging!"""
     try:
       args = line.split()
       if len(args) > 1:
         arg = args[1]
       else:
         arg = ""
-      dirs = arg.split('/')  
+      dirs = arg.split('/')
       user_elem = dirs[-1]
       user_dir = "/".join(dirs[:-1] + [''])
 
@@ -319,7 +323,7 @@ class SVNShell(Cmd):
       traceback.print_tb(ei[2])
       sys.stderr.write("%s: %s\n" % (ei[0], ei[1]))
       raise
-    
+
   def complete_cd(self, text, line, begidx, endidx):
     return self._complete(text, line, begidx, endidx, core.svn_node_dir)
 
@@ -335,7 +339,7 @@ class SVNShell(Cmd):
 
 def _basename(path):
   "Return the basename for a '/'-separated path."
-  idx = string.rfind(path, '/')
+  idx = path.rfind('/')
   if idx == -1:
     return path
   return path[idx+1:]

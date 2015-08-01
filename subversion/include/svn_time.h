@@ -1,17 +1,22 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * This software consists of voluntary contributions made by many
- * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://subversion.tigris.org/.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
  * ====================================================================
  * @endcopyright
  *
@@ -36,18 +41,24 @@ extern "C" {
  * in @a pool.  Use svn_time_from_cstring() for the reverse
  * conversion.
  */
-const char *svn_time_to_cstring(apr_time_t when, apr_pool_t *pool);
+const char *
+svn_time_to_cstring(apr_time_t when,
+                    apr_pool_t *pool);
 
 /** Convert @a data to an @c apr_time_t @a when.
  * Use @a pool for temporary memory allocation.
  */
-svn_error_t *svn_time_from_cstring(apr_time_t *when, const char *data,
-                                   apr_pool_t *pool);
+svn_error_t *
+svn_time_from_cstring(apr_time_t *when,
+                      const char *data,
+                      apr_pool_t *pool);
 
 /** Convert @a when to a <tt>const char *</tt> representation allocated
  * in @a pool, suitable for human display in UTF8.
  */
-const char *svn_time_to_human_cstring(apr_time_t when, apr_pool_t *pool);
+const char *
+svn_time_to_human_cstring(apr_time_t when,
+                          apr_pool_t *pool);
 
 
 /** Convert a human-readable date @a text into an @c apr_time_t, using
@@ -59,14 +70,22 @@ const char *svn_time_to_human_cstring(apr_time_t when, apr_pool_t *pool);
  * error (rather than a simple parse error) occurs.
  */
 svn_error_t *
-svn_parse_date(svn_boolean_t *matched, apr_time_t *result, const char *text,
-               apr_time_t now, apr_pool_t *pool);
+svn_parse_date(svn_boolean_t *matched,
+               apr_time_t *result,
+               const char *text,
+               apr_time_t now,
+               apr_pool_t *pool);
 
 
 /** Sleep until the next second, to ensure that any files modified
  * after we exit have a different timestamp than the one we recorded.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ * Use svn_io_sleep_for_timestamps() instead.
  */
-void svn_sleep_for_timestamps(void);
+SVN_DEPRECATED
+void
+svn_sleep_for_timestamps(void);
 
 #ifdef __cplusplus
 }
