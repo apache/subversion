@@ -325,25 +325,14 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is 1.\n"
         "                             "
         "[used only with --threads]")},
-#if (APR_SIZEOF_VOIDP <= 4)
     {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
      N_("Maximum number of server threads, even if there\n"
         "                             "
         "are more connections.  Minimum value is 1.\n"
         "                             "
-        "Default is 64.\n"
+        "Default is " APR_STRINGIFY(THREADPOOL_MAX_SIZE) ".\n"
         "                             "
         "[used only with --threads]")},
-#else
-    {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
-     N_("Maximum number of server threads, even if there\n"
-        "                             "
-        "are more connections.  Minimum value is 1.\n"
-        "                             "
-        "Default is 256.\n"
-        "                             "
-        "[used only with --threads]")},
-#endif
 #endif
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
      N_("run in foreground (useful for debugging)\n"
