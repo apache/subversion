@@ -43,6 +43,13 @@ Candidate changes:
                    change that can't be backported. I would call it a bugfix
                    that should be backported)
 
+ * r1693886
+   Fix an error leak in FSFS verification.
+   Justification:
+     Don't have memory leaks.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
