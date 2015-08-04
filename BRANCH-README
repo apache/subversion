@@ -7,7 +7,7 @@ Steps:
 
 - [DONE] Implement parse-diff.c support
 - [DONE] Implement "make it executable" support, with tests
-- [TODO] Implement "make it non-executable" support, with tests
+- [DONE] Implement "make it non-executable" support, with tests
 - [TODO] Write tests for adding/remove svn:executable using the normal
          'svn diff' property add/removal syntax
 - [TODO] parser: Review handling of modes other than 0644/0755

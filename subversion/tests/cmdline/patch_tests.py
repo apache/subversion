@@ -5696,6 +5696,40 @@ def patch_adds_executability_yescontents(sbox):
                                        expected_status, expected_skip,
                                        check_props=True)
 
+def patch_deletes_executability(sbox):
+  """patch deletes svn:executable"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  ## Set up the basic state.
+  sbox.simple_propset('svn:executable', 'yes', 'iota')
+  sbox.simple_commit(target='iota', message="Make 'iota' executable.")
+
+  unidiff_patch = (
+    "diff --git a/iota b/iota\n"
+    "old mode 100755\n"
+    "new mode 100644\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = [
+    ' U        %s\n' % sbox.ospath('iota'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota') # props=None by default
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M', wc_rev=2)
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       check_props=True)
+
 ########################################################################
 #Run the tests
 
@@ -5759,6 +5793,7 @@ test_list = [ None,
               patch_obstructing_symlink_traversal,
               patch_adds_executability_nocontents,
               patch_adds_executability_yescontents,
+              patch_deletes_executability,
             ]
 
 if __name__ == '__main__':
