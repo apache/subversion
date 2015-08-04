@@ -1545,6 +1545,12 @@ def is_mod_dav_url_quoting_broken():
         return (options.httpd_version in __mod_dav_url_quoting_broken_versions)
     return None
 
+def is_httpd_authz_provider_enabled():
+    if is_ra_type_dav():
+      v = options.httpd_version.split('.')
+      return (v[0] == '2' and int(v[1]) >= 3) or int(v[0]) > 2
+    return None
+
 ######################################################################
 
 
