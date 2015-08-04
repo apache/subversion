@@ -1582,6 +1582,8 @@ def _create_parser():
                          'useful during test development!')
   parser.add_option('--srcdir', action='store', dest='srcdir',
                     help='Source directory.')
+  parser.add_option('--httpd-version', action='store',
+                    help='Assume HTTPD is this version.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
