@@ -5634,7 +5634,6 @@ def patch_adds_executability_nocontents(sbox):
   patch_file_path = make_patch_path(sbox)
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
-  ### Patch applies through the unversioned symlink
   expected_output = [
     ' U        %s\n' % sbox.ospath('iota'),
   ]
@@ -5677,7 +5676,6 @@ def patch_adds_executability_yescontents(sbox):
   patch_file_path = make_patch_path(sbox)
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
-  ### Patch applies through the unversioned symlink
   expected_output = [
     'UU        %s\n' % sbox.ospath('A/mu'),
   ]

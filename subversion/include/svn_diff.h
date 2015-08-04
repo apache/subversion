@@ -1254,6 +1254,8 @@ typedef struct svn_patch_t {
    *
    * #svn_tristate_unknown indicates the patch does not specify the
    * corresponding bit.
+   *
+   * @since New in 1.10.
    */
   /* ### This is currently not parsed out of "index" lines (where it
    * ### serves as an assertion of the executability state, without
