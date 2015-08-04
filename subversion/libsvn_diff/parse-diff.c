@@ -110,6 +110,12 @@ svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
   hunk->original_text_range.current = 0;
   hunk->original_text_range.end = 0;
 
+  hunk->original_start = 0;
+  hunk->original_length = 0;
+
+  hunk->modified_start = 1;
+  hunk->modified_length = 1;
+
   hunk->modified_text_range.start = STRLEN_LITERAL(hunk_header);
   hunk->modified_text_range.current = STRLEN_LITERAL(hunk_header);
   hunk->modified_text_range.end = end;
