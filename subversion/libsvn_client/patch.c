@@ -2480,7 +2480,11 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
             break;
 
           case svn_diff_op_deleted:
-            SVN__NOT_IMPLEMENTED();
+            SVN_ERR(svn_diff_hunk__create_deletes_single_line(&hunk, value,
+                                                              patch,
+                                                              result_pool,
+                                                              iterpool));
+            break;
 
           case svn_diff_op_unchanged:
             /* ### What to do? */

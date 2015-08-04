@@ -83,18 +83,24 @@ struct svn_diff_hunk_t {
   svn_linenum_t trailing_context;
 };
 
+/* Common guts of svn_diff_hunk__create_adds_single_line() and
+ * svn_diff_hunk__create_deletes_single_line().
+ *
+ * ADD is TRUE if adding and FALSE if deleting.
+ */
 svn_error_t *
-svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
-                                       const char *line,
-                                       svn_patch_t *patch,
-                                       apr_pool_t *result_pool,
-                                       apr_pool_t *scratch_pool)
+add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
+                          const char *line,
+                          svn_patch_t *patch,
+                          svn_boolean_t add,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   svn_diff_hunk_t *hunk = apr_palloc(result_pool, sizeof(*hunk));
-  static const char hunk_header[] = "@@ -0,0 +1 @@\n";
+  static const char *hunk_header[] = { "@@ -1 +0,0 @@\n", "@@ -0,0 +1 @@\n" };
   const unsigned len = strlen(line);
   /* The +1 is for the 'plus' start-of-line character. */
-  const apr_off_t end = STRLEN_LITERAL(hunk_header) + (1 + len);
+  const apr_off_t end = STRLEN_LITERAL(hunk_header[add]) + (1 + len);
   /* The +1 is for the second \n. */
   svn_stringbuf_t *buf = svn_stringbuf_create_ensure(end + 1, scratch_pool);
 
@@ -102,31 +108,51 @@ svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
 
   /* hunk->apr_file is created below. */
 
-  hunk->diff_text_range.start = STRLEN_LITERAL(hunk_header);
-  hunk->diff_text_range.current = STRLEN_LITERAL(hunk_header);
+  hunk->diff_text_range.start = STRLEN_LITERAL(hunk_header[add]);
+  hunk->diff_text_range.current = STRLEN_LITERAL(hunk_header[add]);
   hunk->diff_text_range.end = end;
 
-  hunk->original_text_range.start = 0; /* There's no "original" text. */
-  hunk->original_text_range.current = 0;
-  hunk->original_text_range.end = 0;
+  if (add)
+    {
+      hunk->original_text_range.start = 0; /* There's no "original" text. */
+      hunk->original_text_range.current = 0;
+      hunk->original_text_range.end = 0;
 
-  hunk->original_start = 0;
-  hunk->original_length = 0;
+      hunk->modified_text_range.start = STRLEN_LITERAL(hunk_header[add]);
+      hunk->modified_text_range.current = STRLEN_LITERAL(hunk_header[add]);
+      hunk->modified_text_range.end = end;
 
-  hunk->modified_start = 1;
-  hunk->modified_length = 1;
+      hunk->original_start = 0;
+      hunk->original_length = 0;
 
-  hunk->modified_text_range.start = STRLEN_LITERAL(hunk_header);
-  hunk->modified_text_range.current = STRLEN_LITERAL(hunk_header);
-  hunk->modified_text_range.end = end;
+      hunk->modified_start = 1;
+      hunk->modified_length = 1;
+    }
+  else /* delete */
+    {
+      hunk->original_text_range.start = STRLEN_LITERAL(hunk_header[add]);
+      hunk->original_text_range.current = STRLEN_LITERAL(hunk_header[add]);
+      hunk->original_text_range.end = end;
+
+      hunk->modified_text_range.start = 0; /* There's no "original" text. */
+      hunk->modified_text_range.current = 0;
+      hunk->modified_text_range.end = 0;
+
+      hunk->original_start = 1;
+      hunk->original_length = 1;
+
+      hunk->modified_start = 0;
+      hunk->modified_length = 0; /* setting to '1' works too */
+    }
 
   hunk->leading_context = 0;
   hunk->trailing_context = 0;
 
   /* Create APR_FILE and put just a hunk in it (without a diff header).
    * Save the offset of the last byte of the diff line. */
-  svn_stringbuf_appendbytes(buf, hunk_header, STRLEN_LITERAL(hunk_header));
-  svn_stringbuf_appendbyte(buf, '+');
+  svn_stringbuf_appendbytes(buf, hunk_header[add],
+                            STRLEN_LITERAL(hunk_header[add]));
+  svn_stringbuf_appendbyte(buf, add ? '+' : '-');
   svn_stringbuf_appendbytes(buf, line, len);
   svn_stringbuf_appendbyte(buf, '\n');
 
@@ -140,6 +166,30 @@ svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
   /* No need to seek. */
 
   *hunk_out = hunk;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
+                                       const char *line,
+                                       svn_patch_t *patch,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
+{
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, TRUE,
+                                    result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff_hunk__create_deletes_single_line(svn_diff_hunk_t **hunk_out,
+                                          const char *line,
+                                          svn_patch_t *patch,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, FALSE,
+                                    result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
 
