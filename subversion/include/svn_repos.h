@@ -2989,6 +2989,12 @@ svn_repos_verify_fs(svn_repos_t *repos,
  * be done with full plain text.  A dump with @a use_deltas set cannot
  * be loaded by Subversion 1.0.x.
  *
+ * If @a include_revprops is @c TRUE, output the revision properties as
+ * well, otherwise omit them.
+ *
+ * If @a include_changes is @c TRUE, output the revision contents, i.e.
+ * tree and node changes.
+ *
  * If @a notify_func is not null, then call it with @a notify_baton and
  * with a notification structure in which the fields are set as follows.
  * (For a warning or error notification that does not apply to a specific
@@ -3020,8 +3026,31 @@ svn_repos_verify_fs(svn_repos_t *repos,
  *
  * Use @a scratch_pool for temporary allocation.
  *
- * @since New in 1.7.
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_repos_dump_fs4(svn_repos_t *repos,
+                   svn_stream_t *stream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   svn_boolean_t incremental,
+                   svn_boolean_t use_deltas,
+                   svn_boolean_t include_revprops,
+                   svn_boolean_t include_changes,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_dump_fs4(), but with @a include_revprops and 
+ * @a include_changes both set to @c TRUE.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_dump_fs3(svn_repos_t *repos,
                    svn_stream_t *dumpstream,

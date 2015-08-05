@@ -240,8 +240,9 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
                      " (%ld)"), youngest), );
     }
 
-  SVN_JNI_ERR(svn_repos_dump_fs3(repos, dataOut.getStream(requestPool),
+  SVN_JNI_ERR(svn_repos_dump_fs4(repos, dataOut.getStream(requestPool),
                                  lower, upper, incremental, useDeltas,
+                                 true, true,
                                  notifyCallback != NULL
                                     ? ReposNotifyCallback::notify
                                     : NULL,

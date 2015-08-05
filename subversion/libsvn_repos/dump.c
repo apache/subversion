@@ -1919,33 +1919,44 @@ get_dump_editor(const svn_delta_editor_t **editor,
 /* Helper for svn_repos_dump_fs.
 
    Write a revision record of REV in FS to writable STREAM, using POOL.
+   Dump revision properties as well if INCLUDE_REVPROPS has been set.
  */
 static svn_error_t *
 write_revision_record(svn_stream_t *stream,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
+                      svn_boolean_t include_revprops,
                       apr_pool_t *pool)
 {
   apr_hash_t *props;
   apr_time_t timetemp;
   svn_string_t *datevalue;
 
-  SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, pool));
-
-  /* Run revision date properties through the time conversion to
-     canonicalize them. */
-  /* ### Remove this when it is no longer needed for sure. */
-  datevalue = svn_hash_gets(props, SVN_PROP_REVISION_DATE);
-  if (datevalue)
+  if (include_revprops)
     {
-      SVN_ERR(svn_time_from_cstring(&timetemp, datevalue->data, pool));
-      datevalue = svn_string_create(svn_time_to_cstring(timetemp, pool),
-                                    pool);
-      svn_hash_sets(props, SVN_PROP_REVISION_DATE, datevalue);
+      SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, pool));
+
+      /* Run revision date properties through the time conversion to
+        canonicalize them. */
+      /* ### Remove this when it is no longer needed for sure. */
+      datevalue = svn_hash_gets(props, SVN_PROP_REVISION_DATE);
+      if (datevalue)
+        {
+          SVN_ERR(svn_time_from_cstring(&timetemp, datevalue->data, pool));
+          datevalue = svn_string_create(svn_time_to_cstring(timetemp, pool),
+                                        pool);
+          svn_hash_sets(props, SVN_PROP_REVISION_DATE, datevalue);
+        }
+    }
+   else
+    {
+      /* Although we won't use it, we still need this container for the
+         call below. */
+      props = apr_hash_make(pool);
     }
 
   SVN_ERR(svn_repos__dump_revision_record(stream, rev, NULL, props,
-                                          TRUE /*props_section_always*/,
+                                          include_revprops,
                                           pool));
   return SVN_NO_ERROR;
 }
@@ -1954,12 +1965,14 @@ write_revision_record(svn_stream_t *stream,
 
 /* The main dumper. */
 svn_error_t *
-svn_repos_dump_fs3(svn_repos_t *repos,
+svn_repos_dump_fs4(svn_repos_t *repos,
                    svn_stream_t *stream,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
                    svn_boolean_t incremental,
                    svn_boolean_t use_deltas,
+                   svn_boolean_t include_revprops,
+                   svn_boolean_t include_changes,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
@@ -2036,11 +2049,13 @@ svn_repos_dump_fs3(svn_repos_t *repos,
         SVN_ERR(cancel_func(cancel_baton));
 
       /* Write the revision record. */
-      SVN_ERR(write_revision_record(stream, fs, rev, subpool));
+      SVN_ERR(write_revision_record(stream, fs, rev, include_revprops,
+                                    subpool));
 
       /* When dumping revision 0, we just write out the revision record.
-         The parser might want to use its properties. */
-      if (rev == 0)
+         The parser might want to use its properties.
+         If we don't want revision changes at all, skip in any case. */
+      if (rev == 0 || !include_changes)
         goto loop_end;
 
       /* Fetch the editor which dumps nodes to a file.  Regardless of
