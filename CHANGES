@@ -747,6 +747,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.14
       of user and revision after 'svn up' (r1680242)
 
   - Server-side bugfixes:
+    * mod_authz_svn: do not leak information in mixed anonymous/authenticated
+      httpd (dav) configurations (CVE-2015-3184)
+    * do not leak paths that were hidden by path-based authz (CVE-2015-3187)
     * mod_dav_svn: do not ignore skel parsing errors (r1658168)
     * detect invalid svndiff data earlier (r1684077)
     * prevent possible repository corruption on power/disk failures (r1680819)
@@ -1616,6 +1619,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.21
       non-deltas dumpfile (r1652182 et al.)
 
   - Server-side bugfixes:
+    * mod_authz_svn: do not leak information in mixed anonymous/authenticated
+      httpd (dav) configurations (CVE-2015-3184)
+    * do not leak paths that were hidden by path-based authz (CVE-2015-3187)
     * fix 'svnadmin recover' for pre-1.4 FSFS repositories (r1561419)
 
  Developer-visible changes:
