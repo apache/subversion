@@ -320,7 +320,7 @@ static const apr_getopt_option_t svnserve__options[] =
     {"min-threads",      SVNSERVE_OPT_MIN_THREADS, 1,
      N_("Minimum number of server threads, even if idle.\n"
         "                             "
-        "Caped to max-threads; minimum value is 0.\n"
+        "Capped to max-threads; minimum value is 0.\n"
         "                             "
         "Default is 1.\n"
         "                             "

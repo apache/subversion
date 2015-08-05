@@ -55,11 +55,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1694023
-   Fix typo in help string.
-   Justification:
-     Obvious fix.
-   Votes:
-     +1: danielsh
-
