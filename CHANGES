@@ -1,6 +1,14 @@
+Version 1.7.22
+(12 Aug 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.22
+
+ Developer-visible changes:
+  - General:
+    * fix the regression test suite which was broken in 1.7.21 (r1694012)
+
 Version 1.7.21
 (5 Aug 2015, from /branches/1.7.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.8.21
+http://svn.apache.org/repos/asf/subversion/tags/1.7.21
 
  User-visible changes:
   - Client-side bugfixes:
