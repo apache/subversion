@@ -3473,7 +3473,7 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
+svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_revnum_t start_rev,
