@@ -317,22 +317,32 @@ static const apr_getopt_option_t svnserve__options[] =
      * ### this option never exists when --service exists. */
     {"threads",          'T', 0, N_("use threads instead of fork "
                                     "[mode: daemon]")},
+#endif
+#ifdef APR_HAS_THREADS
     {"min-threads",      SVNSERVE_OPT_MIN_THREADS, 1,
      N_("Minimum number of server threads, even if idle.\n"
         "                             "
         "Capped to max-threads; minimum value is 0.\n"
         "                             "
-        "Default is 1.\n"
+        "Default is 1."
+#ifdef CONNECTION_HAVE_THREAD_OPTION
+        "\n"
         "                             "
-        "[used only with --threads]")},
+        "[used only with --threads]"
+#endif
+        )},
     {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
      N_("Maximum number of server threads, even if there\n"
         "                             "
         "are more connections.  Minimum value is 1.\n"
         "                             "
-        "Default is " APR_STRINGIFY(THREADPOOL_MAX_SIZE) ".\n"
+        "Default is " APR_STRINGIFY(THREADPOOL_MAX_SIZE)
+#ifdef CONNECTION_HAVE_THREAD_OPTION
+        ".\n"
         "                             "
-        "[used only with --threads]")},
+        "[used only with --threads]"
+#endif
+        )},
 #endif
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
      N_("run in foreground (useful for debugging)\n"
