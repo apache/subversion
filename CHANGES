@@ -9,7 +9,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
   - Major new features:
     * fsfs: new format 7 with more efficient on-disk layout (r1547045 et al)
-    * resolve: improve interactive conflict resolution menus
     * blame: support showing prospective as well as previous changes
     * info: support printing of individual values with --show-item (r1662620)
     * svn auth: new subcommand to manage cached credentials and certs
