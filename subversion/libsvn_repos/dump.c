@@ -1983,7 +1983,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
   void *dump_edit_baton = NULL;
   svn_revnum_t rev;
   svn_fs_t *fs = svn_repos_fs(repos);
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   svn_revnum_t youngest;
   const char *uuid;
   int version;
@@ -2042,7 +2042,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
       svn_fs_root_t *to_root;
       svn_boolean_t use_deltas_for_rev;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       /* Check for cancellation. */
       if (cancel_func)
@@ -2050,7 +2050,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
 
       /* Write the revision record. */
       SVN_ERR(write_revision_record(stream, fs, rev, include_revprops,
-                                    subpool));
+                                    iterpool));
 
       /* When dumping revision 0, we just write out the revision record.
          The parser might want to use its properties.
@@ -2067,10 +2067,10 @@ svn_repos_dump_fs4(svn_repos_t *repos,
                               &found_old_mergeinfo, NULL,
                               notify_func, notify_baton,
                               start_rev, use_deltas_for_rev, FALSE, FALSE,
-                              subpool));
+                              iterpool));
 
       /* Drive the editor in one way or another. */
-      SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, subpool));
+      SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, iterpool));
 
       /* If this is the first revision of a non-incremental dump,
          we're in for a full tree dump.  Otherwise, we want to simply
@@ -2079,7 +2079,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
         {
           /* Compare against revision 0, so everything appears to be added. */
           svn_fs_root_t *from_root;
-          SVN_ERR(svn_fs_revision_root(&from_root, fs, 0, subpool));
+          SVN_ERR(svn_fs_revision_root(&from_root, fs, 0, iterpool));
           SVN_ERR(svn_repos_dir_delta2(from_root, "", "",
                                        to_root, "",
                                        dump_editor, dump_edit_baton,
@@ -2089,25 +2089,25 @@ svn_repos_dump_fs4(svn_repos_t *repos,
                                        svn_depth_infinity,
                                        FALSE, /* don't send entry props */
                                        FALSE, /* don't ignore ancestry */
-                                       subpool));
+                                       iterpool));
         }
       else
         {
           /* The normal case: compare consecutive revs. */
           SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                     dump_editor, dump_edit_baton,
-                                    NULL, NULL, subpool));
+                                    NULL, NULL, iterpool));
 
           /* While our editor close_edit implementation is a no-op, we still
              do this for completeness. */
-          SVN_ERR(dump_editor->close_edit(dump_edit_baton, subpool));
+          SVN_ERR(dump_editor->close_edit(dump_edit_baton, iterpool));
         }
 
     loop_end:
       if (notify_func)
         {
           notify->revision = rev;
-          notify_func(notify_baton, notify, subpool);
+          notify_func(notify_baton, notify, iterpool);
         }
     }
 
@@ -2118,12 +2118,12 @@ svn_repos_dump_fs4(svn_repos_t *repos,
          warning, since the inline warnings already issued might easily be
          missed. */
 
-      notify = svn_repos_notify_create(svn_repos_notify_dump_end, subpool);
-      notify_func(notify_baton, notify, subpool);
+      notify = svn_repos_notify_create(svn_repos_notify_dump_end, iterpool);
+      notify_func(notify_baton, notify, iterpool);
 
       if (found_old_reference)
         {
-          notify_warning(subpool, notify_func, notify_baton,
+          notify_warning(iterpool, notify_func, notify_baton,
                          svn_repos_notify_warning_found_old_reference,
                          _("The range of revisions dumped "
                            "contained references to "
@@ -2135,7 +2135,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
          in dumped mergeinfo. */
       if (found_old_mergeinfo)
         {
-          notify_warning(subpool, notify_func, notify_baton,
+          notify_warning(iterpool, notify_func, notify_baton,
                          svn_repos_notify_warning_found_old_mergeinfo,
                          _("The range of revisions dumped "
                            "contained mergeinfo "
@@ -2144,7 +2144,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
         }
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
