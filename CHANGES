@@ -137,7 +137,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnfsfs: new expert tool (r1594860)
     * mod_dav_svn: allow server admin to GET the FSFS global cache stats
       (r1595160)
-    * patch: support of svn:mergeinfo (issue #3747)
     * diff: support git-like binary file diffs with '--git' (r1599552)
     * diff: support arbitrary context size for internal diff tool with
       '-U' option (r1603847, 1603871)
