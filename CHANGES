@@ -1599,6 +1599,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * add missing API functions to JavaHL bindings (issue #4326)
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
+Version 1.7.22
+(12 Aug 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.22
+
+ Developer-visible changes:
+  - General:
+    * fix the regression test suite which was broken in 1.7.21 (r1694012)
 
 Version 1.7.21
 (5 Aug 2015, from /branches/1.7.x)
