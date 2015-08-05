@@ -731,6 +731,33 @@ repos_notify_handler(void *baton,
   }
 }
 
+svn_error_t *
+svn_repos_dump_fs3(svn_repos_t *repos,
+                   svn_stream_t *stream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   svn_boolean_t incremental,
+                   svn_boolean_t use_deltas,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_dump_fs4(repos,
+                                            stream,
+                                            start_rev,
+                                            end_rev,
+                                            incremental,
+                                            use_deltas,
+                                            TRUE,
+                                            TRUE,
+                                            notify_func,
+                                            notify_baton,
+                                            cancel_func,
+                                            cancel_baton,
+                                            pool));
+}
 
 svn_error_t *
 svn_repos_dump_fs2(svn_repos_t *repos,
