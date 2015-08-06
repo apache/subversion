@@ -746,7 +746,7 @@ request_body_to_string(svn_string_t **request_str,
   int seen_eos;
   apr_status_t status;
   apr_off_t total_read = 0;
-  apr_off_t limit_req_body = ap_get_limit_req_body(r);
+  apr_off_t limit_req_body = ap_get_limit_xml_body(r);
   int result = HTTP_BAD_REQUEST;
   const char *content_length_str;
   char *endp;

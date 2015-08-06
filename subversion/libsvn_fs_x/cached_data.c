@@ -1030,22 +1030,14 @@ get_cached_window_sizes(window_sizes_t **sizes,
                         svn_boolean_t *is_cached,
                         apr_pool_t *pool)
 {
-  if (! rs->window_cache)
-    {
-      /* txdelta window has not been enabled */
-      *is_cached = FALSE;
-    }
-  else
-    {
-      svn_fs_x__window_cache_key_t key = { 0 };
-      SVN_ERR(svn_cache__get_partial((void **)sizes,
-                                     is_cached,
-                                     rs->window_cache,
-                                     get_window_key(&key, rs),
-                                     get_cached_window_sizes_func,
-                                     NULL,
-                                     pool));
-    }
+  svn_fs_x__window_cache_key_t key = { 0 };
+  SVN_ERR(svn_cache__get_partial((void **)sizes,
+                                 is_cached,
+                                 rs->window_cache,
+                                 get_window_key(&key, rs),
+                                 get_cached_window_sizes_func,
+                                 NULL,
+                                 pool));
 
   return SVN_NO_ERROR;
 }
@@ -1058,33 +1050,25 @@ get_cached_window(svn_txdelta_window_t **window_p,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  if (! rs->window_cache)
-    {
-      /* txdelta window has not been enabled */
-      *is_cached = FALSE;
-    }
-  else
-    {
-      /* ask the cache for the desired txdelta window */
-      svn_fs_x__txdelta_cached_window_t *cached_window;
-      svn_fs_x__window_cache_key_t key = { 0 };
-      get_window_key(&key, rs);
-      key.chunk_index = chunk_index;
-      SVN_ERR(svn_cache__get((void **) &cached_window,
-                             is_cached,
-                             rs->window_cache,
-                             &key,
-                             result_pool));
+  /* ask the cache for the desired txdelta window */
+  svn_fs_x__txdelta_cached_window_t *cached_window;
+  svn_fs_x__window_cache_key_t key = { 0 };
+  get_window_key(&key, rs);
+  key.chunk_index = chunk_index;
+  SVN_ERR(svn_cache__get((void **) &cached_window,
+                         is_cached,
+                         rs->window_cache,
+                         &key,
+                         result_pool));
 
-      if (*is_cached)
-        {
-          /* found it. Pass it back to the caller. */
-          *window_p = cached_window->window;
+  if (*is_cached)
+    {
+      /* found it. Pass it back to the caller. */
+      *window_p = cached_window->window;
 
-          /* manipulate the RS as if we just read the data */
-          rs->current = cached_window->end_offset;
-          rs->chunk_index = chunk_index;
-        }
+      /* manipulate the RS as if we just read the data */
+      rs->current = cached_window->end_offset;
+      rs->chunk_index = chunk_index;
     }
 
   return SVN_NO_ERROR;
@@ -1100,23 +1084,20 @@ set_cached_window(svn_txdelta_window_t *window,
                   apr_off_t start_offset,
                   apr_pool_t *scratch_pool)
 {
-  if (rs->window_cache)
-    {
-      /* store the window and the first offset _past_ it */
-      svn_fs_x__txdelta_cached_window_t cached_window;
-      svn_fs_x__window_cache_key_t key = {0};
+  /* store the window and the first offset _past_ it */
+  svn_fs_x__txdelta_cached_window_t cached_window;
+  svn_fs_x__window_cache_key_t key = {0};
 
-      cached_window.window = window;
-      cached_window.start_offset = start_offset - rs->start;
-      cached_window.end_offset = rs->current;
+  cached_window.window = window;
+  cached_window.start_offset = start_offset - rs->start;
+  cached_window.end_offset = rs->current;
 
-      /* but key it with the start offset because that is the known state
-       * when we will look it up */
-      SVN_ERR(svn_cache__set(rs->window_cache,
-                             get_window_key(&key, rs),
-                             &cached_window,
-                             scratch_pool));
-    }
+  /* but key it with the start offset because that is the known state
+   * when we will look it up */
+  SVN_ERR(svn_cache__set(rs->window_cache,
+                         get_window_key(&key, rs),
+                         &cached_window,
+                         scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1133,23 +1114,13 @@ get_cached_combined_window(svn_stringbuf_t **window_p,
                            svn_boolean_t *is_cached,
                            apr_pool_t *pool)
 {
-  if (! rs->combined_cache)
-    {
-      /* txdelta window has not been enabled */
-      *is_cached = FALSE;
-    }
-  else
-    {
-      /* ask the cache for the desired txdelta window */
-      svn_fs_x__window_cache_key_t key = { 0 };
-      return svn_cache__get((void **)window_p,
-                            is_cached,
-                            rs->combined_cache,
-                            get_window_key(&key, rs),
-                            pool);
-    }
-
-  return SVN_NO_ERROR;
+  /* ask the cache for the desired txdelta window */
+  svn_fs_x__window_cache_key_t key = { 0 };
+  return svn_cache__get((void **)window_p,
+                        is_cached,
+                        rs->combined_cache,
+                        get_window_key(&key, rs),
+                        pool);
 }
 
 /* Store the WINDOW read for the rep state RS in the current FSX session's
@@ -1160,18 +1131,13 @@ set_cached_combined_window(svn_stringbuf_t *window,
                            rep_state_t *rs,
                            apr_pool_t *scratch_pool)
 {
-  if (rs->combined_cache)
-    {
-      /* but key it with the start offset because that is the known state
-       * when we will look it up */
-      svn_fs_x__window_cache_key_t key = { 0 };
-      return svn_cache__set(rs->combined_cache,
-                            get_window_key(&key, rs),
-                            window,
-                            scratch_pool);
-    }
-
-  return SVN_NO_ERROR;
+  /* but key it with the start offset because that is the known state
+   * when we will look it up */
+  svn_fs_x__window_cache_key_t key = { 0 };
+  return svn_cache__set(rs->combined_cache,
+                        get_window_key(&key, rs),
+                        window,
+                        scratch_pool);
 }
 
 /* Build an array of rep_state structures in *LIST giving the delta
@@ -1701,13 +1667,12 @@ read_rep_header(svn_fs_x__rep_header_t **rep_header,
   svn_boolean_t is_cached = FALSE;
 
   SVN_ERR(svn_cache__get((void**)rep_header, &is_cached,
-                          ffd->rep_header_cache, key, pool));
+                         ffd->rep_header_cache, key, pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_fs_x__rev_file_stream(&stream, file));
   SVN_ERR(svn_fs_x__read_rep_header(rep_header, stream, pool, pool));
-
   SVN_ERR(svn_cache__set(ffd->rep_header_cache, key, *rep_header, pool));
 
   return SVN_NO_ERROR;
@@ -2140,7 +2105,7 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
       /* Make the stream attempt fulltext cache lookups if the fulltext
        * is cacheable.  If it is not, then also don't try to buffer and
        * cache it. */
-      if (ffd->fulltext_cache && cache_fulltext
+      if (   cache_fulltext
           && SVN_IS_VALID_REVNUM(revision)
           && fulltext_size_is_cachable(ffd, len))
         {
@@ -2211,8 +2176,7 @@ svn_fs_x__try_process_file_contents(svn_boolean_t *success,
 
       fulltext_cache_key.revision = svn_fs_x__get_revnum(rep->id.change_set);
       fulltext_cache_key.second = rep->id.number;
-      if (ffd->fulltext_cache
-          && SVN_IS_VALID_REVNUM(fulltext_cache_key.revision)
+      if (   SVN_IS_VALID_REVNUM(fulltext_cache_key.revision)
           && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
           cache_access_wrapper_baton_t wrapper_baton;
@@ -2298,12 +2262,11 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   svn_stream_t *source_stream, *target_stream;
   rep_state_t *rep_state;
   svn_fs_x__rep_header_t *rep_header;
-  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   /* Try a shortcut: if the target is stored as a delta against the source,
      then just use that delta.  However, prefer using the fulltext cache
      whenever that is available. */
-  if (target->data_rep && (source || !ffd->fulltext_cache))
+  if (target->data_rep && source)
     {
       /* Read target's base rep if any. */
       SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
@@ -2608,23 +2571,19 @@ svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
 
   /* find the cache we may use */
   svn_cache__t *cache = locate_dir_cache(fs, &key, noderev);
-  if (cache)
-    {
-      svn_boolean_t found;
+  svn_boolean_t found;
 
-      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, &key,
-                             result_pool));
-      if (found)
-        return SVN_NO_ERROR;
-    }
+  SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, &key,
+                         result_pool));
+  if (found)
+    return SVN_NO_ERROR;
 
   /* Read in the directory contents. */
   SVN_ERR(get_dir_contents(entries_p, fs, noderev, result_pool,
                            scratch_pool));
 
   /* Update the cache, if we are to use one. */
-  if (cache)
-    SVN_ERR(svn_cache__set(cache, &key, *entries_p, scratch_pool));
+  SVN_ERR(svn_cache__set(cache, &key, *entries_p, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2653,25 +2612,22 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
   /* find the cache we may use */
   svn_fs_x__id_t key;
   svn_cache__t *cache = locate_dir_cache(fs, &key, noderev);
-  if (cache)
-    {
-      svn_fs_x__ede_baton_t baton;
-      baton.hint = *hint;
-      baton.name = name;
+  svn_fs_x__ede_baton_t baton;
+  baton.hint = *hint;
+  baton.name = name;
 
-      /* Cache lookup. */
-      SVN_ERR(svn_cache__get_partial((void **)dirent,
-                                     &found,
-                                     cache,
-                                     &key,
-                                     svn_fs_x__extract_dir_entry,
-                                     &baton,
-                                     result_pool));
+  /* Cache lookup. */
+  SVN_ERR(svn_cache__get_partial((void **)dirent,
+                                 &found,
+                                 cache,
+                                 &key,
+                                 svn_fs_x__extract_dir_entry,
+                                 &baton,
+                                 result_pool));
 
-      /* Remember the new clue only if we found something at that spot. */
-      if (found)
-        *hint = baton.hint;
-    }
+  /* Remember the new clue only if we found something at that spot. */
+  if (found)
+    *hint = baton.hint;
 
   /* fetch data from disk if we did not find it in the cache */
   if (! found)
@@ -2732,7 +2688,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
 
       key.revision = svn_fs_x__get_revnum(rep->id.change_set);
       key.second = rep->id.number;
-      if (ffd->properties_cache && SVN_IS_VALID_REVNUM(key.revision))
+      if (SVN_IS_VALID_REVNUM(key.revision))
         {
           svn_boolean_t is_cached;
           SVN_ERR(svn_cache__get((void **) proplist_p, &is_cached,
@@ -2748,7 +2704,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
                              result_pool));
       SVN_ERR(svn_stream_close(stream));
 
-      if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->id.change_set))
+      if (SVN_IS_VALID_REVNUM(rep->id.change_set))
         SVN_ERR(svn_cache__set(ffd->properties_cache, &key, proplist,
                                scratch_pool));
     }
@@ -2839,14 +2795,10 @@ block_read_contents(svn_fs_t *fs,
                     apr_off_t max_offset,
                     apr_pool_t *scratch_pool)
 {
-  svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_fs_x__representation_cache_key_t header_key = { 0 };
   rep_state_t rs = { 0 };
   svn_filesize_t fulltext_len;
   svn_fs_x__rep_header_t *rep_header;
-
-  if (!ffd->txdelta_window_cache || !ffd->combined_window_cache)
-    return SVN_NO_ERROR;
 
   header_key.revision = (apr_int32_t)key->revision;
   header_key.is_packed = svn_fs_x__is_packed_rev(fs, header_key.revision);
@@ -2924,6 +2876,7 @@ block_read_changes(apr_array_header_t **changes,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
   svn_revnum_t revision = svn_fs_x__get_revnum(entry->items[0].change_set);
+  apr_size_t estimated_size;
 
   /* we don't support containers, yet */
   SVN_ERR_ASSERT(entry->item_count == 1);
@@ -2941,24 +2894,20 @@ block_read_changes(apr_array_header_t **changes,
   SVN_ERR(read_item(&stream, fs, rev_file, entry, scratch_pool));
 
   /* read changes from revision file */
-
   SVN_ERR(svn_fs_x__read_changes(changes, stream, result_pool, scratch_pool));
 
   /* cache for future reference */
 
-  if (ffd->changes_cache)
-    {
-      /* Guesstimate for the size of the in-cache representation. */
-      apr_size_t estimated_size = (apr_size_t)250 * (*changes)->nelts;
+  /* Guesstimate for the size of the in-cache representation. */
+  estimated_size = (apr_size_t)250 * (*changes)->nelts;
 
-      /* Don't even serialize data that probably won't fit into the
-        * cache.  This often implies that either CHANGES is very
-        * large, memory is scarce or both.  Having a huge temporary
-        * copy would not be a good thing in either case. */
-      if (svn_cache__is_cachable(ffd->changes_cache, estimated_size))
-        SVN_ERR(svn_cache__set(ffd->changes_cache, &revision, *changes,
-                               scratch_pool));
-    }
+  /* Don't even serialize data that probably won't fit into the
+   * cache.  This often implies that either CHANGES is very
+   * large, memory is scarce or both.  Having a huge temporary
+   * copy would not be a good thing in either case. */
+  if (svn_cache__is_cachable(ffd->changes_cache, estimated_size))
+    SVN_ERR(svn_cache__set(ffd->changes_cache, &revision, *changes,
+                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3004,7 +2953,6 @@ block_read_changes_container(apr_array_header_t **changes,
   if (must_read)
     SVN_ERR(svn_fs_x__changes_get_list(changes, container, sub_item,
                                        result_pool));
-
   SVN_ERR(svn_cache__set(ffd->changes_container_cache, &key, container,
                          scratch_pool));
 

@@ -211,6 +211,17 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_MAX_THREADS     272
 #define SVNSERVE_OPT_BLOCK_READ      273
 
+/* Text macro because we can't use #ifdef sections inside a N_("...")
+   macro expansion. */
+#ifdef CONNECTION_HAVE_THREAD_OPTION
+#define ONLY_AVAILABLE_WITH_THEADS \
+        "\n" \
+        "                             "\
+        "[used only with --threads]"
+#else
+#define ONLY_AVAILABLE_WITH_THEADS ""
+#endif
+
 static const apr_getopt_option_t svnserve__options[] =
   {
     {"daemon",           'd', 0, N_("daemon mode")},
@@ -317,33 +328,22 @@ static const apr_getopt_option_t svnserve__options[] =
      * ### this option never exists when --service exists. */
     {"threads",          'T', 0, N_("use threads instead of fork "
                                     "[mode: daemon]")},
+#endif
+#ifdef APR_HAS_THREADS
     {"min-threads",      SVNSERVE_OPT_MIN_THREADS, 1,
      N_("Minimum number of server threads, even if idle.\n"
         "                             "
-        "Caped to max-threads; minimum value is 0.\n"
+        "Capped to max-threads; minimum value is 0.\n"
         "                             "
-        "Default is 1.\n"
-        "                             "
-        "[used only with --threads]")},
-#if (APR_SIZEOF_VOIDP <= 4)
+        "Default is 1."
+        ONLY_AVAILABLE_WITH_THEADS)},
     {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
      N_("Maximum number of server threads, even if there\n"
         "                             "
         "are more connections.  Minimum value is 1.\n"
         "                             "
-        "Default is 64.\n"
-        "                             "
-        "[used only with --threads]")},
-#else
-    {"max-threads",      SVNSERVE_OPT_MAX_THREADS, 1,
-     N_("Maximum number of server threads, even if there\n"
-        "                             "
-        "are more connections.  Minimum value is 1.\n"
-        "                             "
-        "Default is 256.\n"
-        "                             "
-        "[used only with --threads]")},
-#endif
+        "Default is " APR_STRINGIFY(THREADPOOL_MAX_SIZE) "."
+        ONLY_AVAILABLE_WITH_THEADS)},
 #endif
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
      N_("run in foreground (useful for debugging)\n"

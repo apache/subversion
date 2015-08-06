@@ -1153,19 +1153,22 @@ set_txn_proplist(svn_fs_t *fs,
                  apr_hash_t *props,
                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *buf;
-  svn_stream_t *stream;
+  svn_stream_t *tmp_stream;
+  const char *tmp_path;
+  const char *final_path = path_txn_props(fs, txn_id, pool);
 
-  /* Write out the new file contents to BUF. */
-  buf = svn_stringbuf_create_ensure(1024, pool);
-  stream = svn_stream_from_stringbuf(buf, pool);
-  SVN_ERR(svn_hash_write2(props, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(svn_stream_close(stream));
+  /* Write the new contents into a temporary file. */
+  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path,
+                                 svn_dirent_dirname(final_path, pool),
+                                 svn_io_file_del_none,
+                                 pool, pool));
 
-  /* Open the transaction properties file and write new contents to it. */
-  SVN_ERR(svn_io_write_atomic(path_txn_props(fs, txn_id, pool),
-                              buf->data, buf->len,
-                              NULL /* copy_perms_path */, pool));
+  /* Replace the old file with the new one. */
+  SVN_ERR(svn_hash_write2(props, tmp_stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(tmp_stream));
+
+  SVN_ERR(svn_io_file_rename(tmp_path, final_path, pool));
+
   return SVN_NO_ERROR;
 }
 
