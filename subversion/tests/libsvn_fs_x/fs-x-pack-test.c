@@ -25,6 +25,7 @@
 #include <apr_pools.h>
 
 #include "../svn_test.h"
+#include "../../libsvn_fs_x/batch_fsync.h"
 #include "../../libsvn_fs_x/fs.h"
 #include "../../libsvn_fs_x/reps.h"
 
@@ -657,8 +658,8 @@ recover_fully_packed(const svn_test_opts_t *opts,
   /* Now, delete the youngest revprop file, and recover again.  This
      time we want to see an error! */
   SVN_ERR(svn_io_remove_file2(
-              svn_dirent_join_many(pool, REPO_NAME, PATH_REVPROPS_DIR,
-                                   apr_psprintf(pool, "%ld/%ld",
+              svn_dirent_join_many(pool, REPO_NAME, PATH_REVS_DIR,
+                                   apr_psprintf(pool, "%ld/p%ld",
                                                 after_rev / SHARD_SIZE,
                                                 after_rev),
                                    SVN_VA_NULL),
@@ -844,6 +845,87 @@ pack_shard_size_one(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 #undef MAX_REV
 /* ------------------------------------------------------------------------ */
+#define REPO_NAME "test-repo-fsx-batch-fsync"
+static svn_error_t *
+test_batch_fsync(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  const char *abspath;
+  svn_fs_x__batch_fsync_t *batch;
+  int i;
+
+  /* Create an empty working directory and let it be cleaned up by the test
+   * harness. */
+  SVN_ERR(svn_dirent_get_absolute(&abspath, REPO_NAME, pool));
+
+  SVN_ERR(svn_io_remove_dir2(abspath, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(abspath, pool));
+  svn_test_add_dir_cleanup(abspath);
+
+  /* Initialize infrastructure with a pool that lives as long as this
+   * application. */
+  SVN_ERR(svn_fs_x__batch_fsync_init());
+
+  /* We use and re-use the same batch object throughout this test. */
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, pool));
+
+  /* The working directory is new. */
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, abspath, pool));
+
+  /* 1st run: Has to fire up worker threads etc. */
+  for (i = 0; i < 10; ++i)
+    {
+      apr_file_t *file;
+      const char *path = svn_dirent_join(abspath,
+                                         apr_psprintf(pool, "file%i", i),
+                                         pool);
+      apr_size_t len = strlen(path);
+
+      SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, path, pool));
+      SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, pool));
+
+      SVN_ERR(svn_io_file_write(file, path, &len, pool));
+    }
+
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, pool));
+
+  /* 2nd run: Running a batch must leave the container in an empty,
+   * re-usable state. Hence, try to re-use it. */
+  for (i = 0; i < 10; ++i)
+    {
+      apr_file_t *file;
+      const char *path = svn_dirent_join(abspath,
+                                         apr_psprintf(pool, "new%i", i),
+                                         pool);
+      apr_size_t len = strlen(path);
+
+      SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, path, pool));
+      SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, pool));
+
+      SVN_ERR(svn_io_file_write(file, path, &len, pool));
+    }
+
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, pool));
+
+  /* 3rd run: Schedule but don't execute. POOL cleanup shall not fail. */
+  for (i = 0; i < 10; ++i)
+    {
+      apr_file_t *file;
+      const char *path = svn_dirent_join(abspath,
+                                         apr_psprintf(pool, "another%i", i),
+                                         pool);
+      apr_size_t len = strlen(path);
+
+      SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, path, pool));
+      SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, pool));
+
+      SVN_ERR(svn_io_file_write(file, path, &len, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -876,6 +958,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test representations container"),
     SVN_TEST_OPTS_PASS(pack_shard_size_one,
                        "test packing with shard size = 1"),
+    SVN_TEST_OPTS_PASS(test_batch_fsync,
+                       "test batch fsync"),
     SVN_TEST_NULL
   };
 

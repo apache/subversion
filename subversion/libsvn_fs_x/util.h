@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__UTIL_H
-#define SVN_LIBSVN_FS__UTIL_H
+#ifndef SVN_LIBSVN_FS_X_UTIL_H
+#define SVN_LIBSVN_FS_X_UTIL_H
 
 #include "svn_fs.h"
 #include "id.h"
@@ -102,6 +102,12 @@ const char *
 svn_fs_x__path_current(svn_fs_t *fs,
                        apr_pool_t *result_pool);
 
+/* Return the path to the 'next' file in FS.
+   Perform allocation in RESULT_POOL. */
+const char *
+svn_fs_x__path_next(svn_fs_t *fs,
+                    apr_pool_t *result_pool);
+
 /* Return the full path of the "uuid" file in FS.
  * The result will be allocated in RESULT_POOL.
  */
@@ -115,6 +121,13 @@ svn_fs_x__path_uuid(svn_fs_t *fs,
 const char *
 svn_fs_x__path_txn_current(svn_fs_t *fs,
                            apr_pool_t *result_pool);
+
+/* Return the full path of the "txn-next" file in FS.
+ * The result will be allocated in RESULT_POOL.
+ */
+const char *
+svn_fs_x__path_txn_next(svn_fs_t *fs,
+                        apr_pool_t *result_pool);
 
 /* Return the full path of the "txn-current-lock" file in FS.
  * The result will be allocated in RESULT_POOL.
@@ -158,9 +171,9 @@ svn_fs_x__path_rev_packed(svn_fs_t *fs,
  * revision REV in FS.  Allocate the result in RESULT_POOL.
  */
 const char *
-svn_fs_x__path_rev_shard(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *result_pool);
+svn_fs_x__path_shard(svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_pool_t *result_pool);
 
 /* Return the full path of the non-packed rev file containing revision REV
  * in FS.  Allocate the result in RESULT_POOL.
@@ -183,23 +196,13 @@ svn_fs_x__path_rev_absolute(svn_fs_t *fs,
                             svn_revnum_t rev,
                             apr_pool_t *result_pool);
 
-/* Return the full path of the revision properties shard directory that
- * will contain the properties of revision REV in FS.
- * Allocate the result in RESULT_POOL.
+/* Return the full path of the pack shard directory that will contain the
+ * packed revision REV in FS.  Allocate the result in RESULT_POOL.
  */
 const char *
-svn_fs_x__path_revprops_shard(svn_fs_t *fs,
-                              svn_revnum_t rev,
-                              apr_pool_t *result_pool);
-
-/* Return the full path of the revision properties pack shard directory
- * that will contain the packed properties of revision REV in FS.
- * Allocate the result in RESULT_POOL.
- */
-const char *
-svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
-                                   svn_revnum_t rev,
-                                   apr_pool_t *result_pool);
+svn_fs_x__path_pack_shard(svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          apr_pool_t *result_pool);
 
 /* Return the full path of the non-packed revision properties file that
  * contains the props for revision REV in FS.
@@ -286,15 +289,6 @@ const char *
 svn_fs_x__path_txn_props(svn_fs_t *fs,
                          svn_fs_x__txn_id_t txn_id,
                          apr_pool_t *result_pool);
-
-/* Return the path of the file containing the "final" transaction
- * properties for the transaction identified by TXN_ID in FS.
- * The result will be allocated in RESULT_POOL.
- */
-const char *
-svn_fs_x__path_txn_props_final(svn_fs_t *fs,
-                               svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *result_pool);
 
 /* Return the path of the file containing the node and copy ID counters for
  * the transaction identified by TXN_ID in FS.

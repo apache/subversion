@@ -110,11 +110,24 @@ svn_fs_x__path_current(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_x__path_next(svn_fs_t *fs,
+                       apr_pool_t *result_pool)
+{
+  return svn_dirent_join(fs->path, PATH_NEXT, result_pool);
+}
+
+const char *
 svn_fs_x__path_txn_current(svn_fs_t *fs,
                            apr_pool_t *result_pool)
 {
-  return svn_dirent_join(fs->path, PATH_TXN_CURRENT,
-                         result_pool);
+  return svn_dirent_join(fs->path, PATH_TXN_CURRENT, result_pool);
+}
+
+const char *
+svn_fs_x__path_txn_next(svn_fs_t *fs,
+                           apr_pool_t *result_pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXN_NEXT, result_pool);
 }
 
 const char *
@@ -147,23 +160,18 @@ svn_fs_x__path_revprop_generation(svn_fs_t *fs,
 
 /* Return the full path of the file FILENAME within revision REV's shard in
  * FS.  If FILENAME is NULL, return the shard directory directory itself.
- * REVPROPS indicates the parent of the shard parent folder ("revprops" or
- * "revs").  PACKED says whether we want the packed shard's name.
+ * PACKED says whether we want the packed shard's name.
  *
  * Allocate the result in RESULT_POOL.
  */static const char*
 construct_shard_sub_path(svn_fs_t *fs,
                          svn_revnum_t rev,
-                         svn_boolean_t revprops,
                          svn_boolean_t packed,
                          const char *filename,
                          apr_pool_t *result_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
   char buffer[SVN_INT64_BUFFER_SIZE + sizeof(PATH_EXT_PACKED_SHARD)] = { 0 };
-
-  /* Select the appropriate parent path constant. */
-  const char *parent = revprops ? PATH_REVPROPS_DIR : PATH_REVS_DIR;
 
   /* String containing the shard number. */
   apr_size_t len = svn__i64toa(buffer, rev / ffd->max_files_per_dir);
@@ -173,7 +181,7 @@ construct_shard_sub_path(svn_fs_t *fs,
     strncpy(buffer + len, PATH_EXT_PACKED_SHARD, sizeof(buffer) - len - 1);
 
   /* This will also work for NULL FILENAME as well. */
-  return svn_dirent_join_many(result_pool, fs->path, parent, buffer,
+  return svn_dirent_join_many(result_pool, fs->path, PATH_REVS_DIR, buffer,
                               filename, SVN_VA_NULL);
 }
 
@@ -184,15 +192,15 @@ svn_fs_x__path_rev_packed(svn_fs_t *fs,
                           apr_pool_t *result_pool)
 {
   assert(svn_fs_x__is_packed_rev(fs, rev));
-  return construct_shard_sub_path(fs, rev, FALSE, TRUE, kind, result_pool);
+  return construct_shard_sub_path(fs, rev, TRUE, kind, result_pool);
 }
 
 const char *
-svn_fs_x__path_rev_shard(svn_fs_t *fs,
-                         svn_revnum_t rev,
-                         apr_pool_t *result_pool)
+svn_fs_x__path_shard(svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_pool_t *result_pool)
 {
-  return construct_shard_sub_path(fs, rev, FALSE, FALSE, NULL, result_pool);
+  return construct_shard_sub_path(fs, rev, FALSE, NULL, result_pool);
 }
 
 const char *
@@ -200,11 +208,12 @@ svn_fs_x__path_rev(svn_fs_t *fs,
                    svn_revnum_t rev,
                    apr_pool_t *result_pool)
 {
-  char buffer[SVN_INT64_BUFFER_SIZE];
-  svn__i64toa(buffer, rev);
+  char buffer[SVN_INT64_BUFFER_SIZE + 1];
+  buffer[0] = 'r';
+  svn__i64toa(buffer + 1, rev);
 
   assert(! svn_fs_x__is_packed_rev(fs, rev));
-  return construct_shard_sub_path(fs, rev, FALSE, FALSE, buffer, result_pool);
+  return construct_shard_sub_path(fs, rev, FALSE, buffer, result_pool);
 }
 
 const char *
@@ -218,19 +227,11 @@ svn_fs_x__path_rev_absolute(svn_fs_t *fs,
 }
 
 const char *
-svn_fs_x__path_revprops_shard(svn_fs_t *fs,
-                              svn_revnum_t rev,
-                              apr_pool_t *result_pool)
-{
-  return construct_shard_sub_path(fs, rev, TRUE, FALSE, NULL, result_pool);
-}
-
-const char *
-svn_fs_x__path_revprops_pack_shard(svn_fs_t *fs,
+svn_fs_x__path_pack_shard(svn_fs_t *fs,
                                    svn_revnum_t rev,
                                    apr_pool_t *result_pool)
 {
-  return construct_shard_sub_path(fs, rev, TRUE, TRUE, NULL, result_pool);
+  return construct_shard_sub_path(fs, rev, TRUE, NULL, result_pool);
 }
 
 const char *
@@ -238,11 +239,17 @@ svn_fs_x__path_revprops(svn_fs_t *fs,
                         svn_revnum_t rev,
                         apr_pool_t *result_pool)
 {
-  char buffer[SVN_INT64_BUFFER_SIZE];
-  svn__i64toa(buffer, rev);
+  char buffer[SVN_INT64_BUFFER_SIZE + 1];
+  buffer[0] = 'p';
+  svn__i64toa(buffer + 1, rev);
 
   assert(! svn_fs_x__is_packed_revprop(fs, rev));
-  return construct_shard_sub_path(fs, rev, TRUE, FALSE, buffer, result_pool);
+
+  /* Revprops for packed r0 are not packed, yet stored in the packed shard.
+     Hence, the second flag must check for packed _rev_ - not revprop. */
+  return construct_shard_sub_path(fs, rev,
+                                  svn_fs_x__is_packed_rev(fs, rev) /* sic! */,
+                                  buffer, result_pool);
 }
 
 const char *
@@ -338,14 +345,6 @@ svn_fs_x__path_txn_props(svn_fs_t *fs,
                          apr_pool_t *result_pool)
 {
   return construct_txn_path(fs, txn_id, PATH_TXN_PROPS, result_pool);
-}
-
-const char *
-svn_fs_x__path_txn_props_final(svn_fs_t *fs,
-                               svn_fs_x__txn_id_t txn_id,
-                               apr_pool_t *result_pool)
-{
-  return construct_txn_path(fs, txn_id, PATH_TXN_PROPS_FINAL, result_pool);
 }
 
 const char*
@@ -583,15 +582,20 @@ svn_fs_x__write_current(svn_fs_t *fs,
 {
   char *buf;
   const char *tmp_name, *name;
+  apr_file_t *file;
 
   /* Now we can just write out this line. */
   buf = apr_psprintf(scratch_pool, "%ld\n", rev);
 
   name = svn_fs_x__path_current(fs, scratch_pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name,
-                              svn_dirent_dirname(name, scratch_pool),
-                              buf, strlen(buf),
-                              svn_io_file_del_none, scratch_pool));
+  tmp_name = svn_fs_x__path_next(fs, scratch_pool);
+
+  SVN_ERR(svn_io_file_open(&file, tmp_name,
+                           APR_WRITE | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, scratch_pool));
+  SVN_ERR(svn_io_file_write_full(file, buf, strlen(buf), NULL,
+                                 scratch_pool));
+  SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   return svn_fs_x__move_into_place(tmp_name, name, name, scratch_pool);
 }

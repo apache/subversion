@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__TRANSACTION_H
-#define SVN_LIBSVN_FS__TRANSACTION_H
+#ifndef SVN_LIBSVN_FS_X_TRANSACTION_H
+#define SVN_LIBSVN_FS_X_TRANSACTION_H
 
 #include "fs.h"
 
@@ -128,7 +128,7 @@ svn_fs_x__reserve_copy_id(svn_fs_x__id_t *copy_id_p,
 /* Create an entirely new mutable node in the filesystem FS, whose
    node-revision is NODEREV.  COPY_ID is the copy_id to use in the
    node revision ID.  TXN_ID is the Subversion transaction  under
-   which this occurs. */
+   which this occurs.  Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__create_node(svn_fs_t *fs,
                       svn_fs_x__noderev_t *noderev,

@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__TEMP_SERIALIZER_H
-#define SVN_LIBSVN_FS__TEMP_SERIALIZER_H
+#ifndef SVN_LIBSVN_FS_X_TEMP_SERIALIZER_H
+#define SVN_LIBSVN_FS_X_TEMP_SERIALIZER_H
 
 #include "private/svn_temp_serializer.h"
 #include "fs.h"
@@ -29,28 +29,12 @@
 /**
  * Prepend the @a number to the @a string in a space efficient way such that
  * no other (number,string) combination can produce the same result.
- * Allocate temporaries as well as the result from @a pool.
+ * Allocate the result from @a result_pool.
  */
 const char*
 svn_fs_x__combine_number_and_string(apr_int64_t number,
                                     const char *string,
-                                    apr_pool_t *pool);
-
-/**
- * Serialize a @a noderev_p within the serialization @a context.
- */
-void
-svn_fs_x__noderev_serialize(struct svn_temp_serializer__context_t *context,
-                            svn_fs_x__noderev_t * const *noderev_p);
-
-/**
- * Deserialize a @a noderev_p within the @a buffer and associate it with
- * @a pool.
- */
-void
-svn_fs_x__noderev_deserialize(void *buffer,
-                              svn_fs_x__noderev_t **noderev_p,
-                              apr_pool_t *pool);
+                                    apr_pool_t *result_pool);
 
 /**
  * Serialize APR array @a *a within the serialization @a context.
@@ -62,12 +46,12 @@ svn_fs_x__serialize_apr_array(struct svn_temp_serializer__context_t *context,
 
 /**
  * Deserialize APR @a *array within the @a buffer.  Set its pool member to
- * @a pool.  The elements within the array must not contain pointers.
+ * @a result_pool.  The elements within the array must not contain pointers.
  */
 void
 svn_fs_x__deserialize_apr_array(void *buffer,
                                 apr_array_header_t **array,
-                                apr_pool_t *pool);
+                                apr_pool_t *result_pool);
 
 
 /**
@@ -104,7 +88,7 @@ svn_error_t *
 svn_fs_x__deserialize_txdelta_window(void **item,
                                      void *buffer,
                                      apr_size_t buffer_size,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *result_pool);
 
 /**
  * Implements #svn_cache__serialize_func_t for a manifest
@@ -124,7 +108,7 @@ svn_error_t *
 svn_fs_x__deserialize_manifest(void **out,
                                void *data,
                                apr_size_t data_len,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool);
 
 /**
  * Implements #svn_cache__serialize_func_t for a properties hash
@@ -144,7 +128,7 @@ svn_error_t *
 svn_fs_x__deserialize_properties(void **out,
                                  void *data,
                                  apr_size_t data_len,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool);
 
 /**
  * Implements #svn_cache__serialize_func_t for #svn_fs_x__noderev_t
@@ -162,7 +146,7 @@ svn_error_t *
 svn_fs_x__deserialize_node_revision(void **item,
                                     void *buffer,
                                     apr_size_t buffer_size,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *result_pool);
 
 /**
  * Implements #svn_cache__serialize_func_t for a directory contents array
@@ -180,7 +164,7 @@ svn_error_t *
 svn_fs_x__deserialize_dir_entries(void **out,
                                   void *data,
                                   apr_size_t data_len,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *result_pool);
 
 /**
  * Implements #svn_cache__partial_getter_func_t.  Set (apr_off_t) @a *out
@@ -258,7 +242,7 @@ svn_error_t *
 svn_fs_x__deserialize_rep_header(void **out,
                                  void *data,
                                  apr_size_t data_len,
-                                 apr_pool_t *pool);
+                                 apr_pool_t *result_pool);
 
 /**
  * Implements #svn_cache__serialize_func_t for an #apr_array_header_t of
@@ -278,24 +262,6 @@ svn_error_t *
 svn_fs_x__deserialize_changes(void **out,
                               void *data,
                               apr_size_t data_len,
-                              apr_pool_t *pool);
-
-/**
- * Implements #svn_cache__serialize_func_t for #svn_mergeinfo_t objects.
- */
-svn_error_t *
-svn_fs_x__serialize_mergeinfo(void **data,
-                              apr_size_t *data_len,
-                              void *in,
-                              apr_pool_t *pool);
-
-/**
- * Implements #svn_cache__deserialize_func_t for #svn_mergeinfo_t objects.
- */
-svn_error_t *
-svn_fs_x__deserialize_mergeinfo(void **out,
-                                void *data,
-                                apr_size_t data_len,
-                                apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 #endif
