@@ -303,7 +303,6 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
       stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
       SVN_ERR(svn_fs_x__read_noderev(noderev_p, stream,
                                      result_pool, scratch_pool));
-      SVN_ERR(svn_stream_close(stream));
     }
   else
     {
