@@ -1407,7 +1407,7 @@ svn_config_get_user_config_path(const char **path,
     if (! homedir)
       return SVN_NO_ERROR;
     *path = svn_dirent_join_many(pool,
-                               svn_dirent_canonicalize(homedir, pool),
+                                 homedir,
                                SVN_CONFIG__USR_DIRECTORY, fname, SVN_VA_NULL);
   }
 #endif /* WIN32 */

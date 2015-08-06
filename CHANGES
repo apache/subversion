@@ -1,5 +1,5 @@
 Version 1.9.0
-(?? ??? 2015, from /branches/1.9.x)
+(5 Aug 2015, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
  User-visible changes:
@@ -9,7 +9,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
   - Major new features:
     * fsfs: new format 7 with more efficient on-disk layout (r1547045 et al)
-    * resolve: improve interactive conflict resolution menus
     * blame: support showing prospective as well as previous changes
     * info: support printing of individual values with --show-item (r1662620)
     * svn auth: new subcommand to manage cached credentials and certs
@@ -137,7 +136,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnfsfs: new expert tool (r1594860)
     * mod_dav_svn: allow server admin to GET the FSFS global cache stats
       (r1595160)
-    * patch: support of svn:mergeinfo (issue #3747)
     * diff: support git-like binary file diffs with '--git' (r1599552)
     * diff: support arbitrary context size for internal diff tool with
       '-U' option (r1603847, 1603871)
@@ -196,6 +194,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * warn when the '--config-option' FILE:SECTION:OPTION combination may
       be invalid. (r1674301 et al)
     * ensure full key matching in membuffer cache (r1678950 et al)
+    * mod_dav_svn: expose cache statistics via HTTP (r1595160)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
@@ -306,6 +305,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * merge: raise a tree conflict on root of obstructing dir (r1666690)
     * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
     * status: fix incorrect output with file externals (issue #4580)
+    * merge: fix part of issue #4582 (r1686175, r1687029, r1688258)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
@@ -390,6 +390,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: fix 'EOF found' error when reading repo (issue #4577)
     * svnadmin freeze: unlock rep-cache.db as part of unfreezing
       (r1679169, r1679287)
+    * fsfs: improve stability in the presence of power or network
+      disk failures during 'svnadmin pack' (r1683378)
+    * detect invalid svndiff data earlier (r1684077)
 
   - Client-side and server-side bugfixes:
     * use less memory when retrieving extension from filename (r1548480)
@@ -443,9 +446,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * bash_completion: stop offering deprecated options (r1662291)
     * bash_completion: add '--show-item' and '--no-newline' (r1662622)
     * svnbench: add null-blame command (r1673785, r1673803, r1674015)
+    * svnbench: install with default 'make install' (r1685085)
 
  Developer-visible changes:
   - General:
+    * require Python 2.7+ for development and testing (r1691712, r1691713, r1692448)
     * include symbolic names for error codes in maintainer mode (r1467643)
     * include symbolic names for warning codes in maintainer mode (r1469855)
     * support YouCompleteMe vim plugin (r1476374 et al)
@@ -513,11 +518,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fix bugs and performance issues using svn_wc_walk_entries3() (r1661110)
     * support using Python 3 for building (r1661247)
     * don't add -lstdc++ on FreeBSD 10 (r1662329)
-    * add build support for Visual Studio 2015 (r1663183, r1663184)
+    * add build support for Visual Studio 2015 (r1663183, r1663184, r1689721 et al.)
     * fix test failures when running from a directory whose name contains
       characters that must be escaped when used in a URL. (r1664997)
     * fix breakage of the serf ra session with svn_ra_get_dir2() and
       svn_ra_get_log2().  (r1665213, r1665259, r1665609)
+    * resolve a race condition in some test suite cleanup code (r1683303)
+    * fix some tests on non-US default locale on Windows (r1684034)
+    * document the meaning of "XFAIL" for users building from source (r1683071)
 
   - API changes:
     * new RA callbacks for managing ra_svn tunnels:
@@ -644,6 +652,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svn_ra_get_file_revs2() now handles SVN_INVALID_REVNUM as HEAD (r1660463)
     * new API svn_error_quick_wrapf() (r1662668)
     * new API svn_fs_node_has_props() (r1673170, r1673172, r1673692, r1673746)
+    * new API svn_repos_verify_fs3() (r1492651 ... r1687769)
 
   - Bindings:
     * javahl: add support for the RA layer (r1494650 et al)
@@ -720,7 +729,43 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       with newer versions of SWIG (1675149)
     * javahl: requires Java 1.6 (r1677003)
     * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
+    * javahl: allow compiling with a C++11 compiler (r1684412)
 
+
+Version 1.8.14
+(5 Aug 2015, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.14
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * document svn:autoprops (r1678494 et al.)
+    * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
+    * resolve: improve conflict prompts for binary files (r1667228 et al.)
+    * ls: improve performance of '-v' on tag directories (r1673153)
+    * improved Sqlite 3.8.9 query performance regression on externals (r1672295 et al.)
+    * fixed issue #4580: 'svn -v st' on file externals reports "?" instead
+      of user and revision after 'svn up' (r1680242)
+
+  - Server-side bugfixes:
+    * mod_authz_svn: do not leak information in mixed anonymous/authenticated
+      httpd (dav) configurations (CVE-2015-3184)
+    * do not leak paths that were hidden by path-based authz (CVE-2015-3187)
+    * mod_dav_svn: do not ignore skel parsing errors (r1658168)
+    * detect invalid svndiff data earlier (r1684077)
+    * prevent possible repository corruption on power/disk failures (r1680819)
+    * fixed issue #4577: Read error with nodes whose DELTA chain starts with
+      a PLAIN rep (r1676667, r1677267)
+    * fixed issue #4531: server-side copy (over dav) is slow and uses
+      too much memory (r1674627)
+
+ Developer-visible changes:
+  - General:
+    * support building on Windows with Visual Studio 2015 (r1692785)
+    * avoid failing some tests on versions of Python with a very old sqlite (r1674522)
+    * fix Ruby tests so they don't use the users real configuration (r1597884)
+
+  - Bindings:
+    * swig-pl: fix some stack memory problems (r1668618, 1671388)
 
 Version 1.8.13
 (31 Mar 2015, from /branches/1.8.x)
@@ -1555,6 +1600,36 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * add missing API functions to JavaHL bindings (issue #4326)
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
+Version 1.7.22
+(12 Aug 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.22
+
+ Developer-visible changes:
+  - General:
+    * fix the regression test suite which was broken in 1.7.21 (r1694012)
+
+Version 1.7.21
+(5 Aug 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.21
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * cp: fix 'svn cp ^/A/D/H@1 ^/A' to properly create A (r1674455, r1674456)
+    * fix issue #4551: svnrdump load commits wrong properties, or fails, on a
+      non-deltas dumpfile (r1652182 et al.)
+
+  - Server-side bugfixes:
+    * mod_authz_svn: do not leak information in mixed anonymous/authenticated
+      httpd (dav) configurations (CVE-2015-3184)
+    * do not leak paths that were hidden by path-based authz (CVE-2015-3187)
+    * fix 'svnadmin recover' for pre-1.4 FSFS repositories (r1561419)
+
+ Developer-visible changes:
+  - General:
+    * support building on Windows with Visual Studio 2012, 2013 and 2015 (r1687158, r1692783)
+
+  - Bindings:
+    * swig-pl: fix some stack memory problems (r1668618, 1671388)
 
 Version 1.7.20
 (31 Mar 2015, from /branches/1.7.x)

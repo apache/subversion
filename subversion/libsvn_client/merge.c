@@ -2794,12 +2794,6 @@ merge_dir_opened(void **new_dir_baton,
 
               db->tree_conflict_reason = added ? svn_wc_conflict_reason_added
                                                : svn_wc_conflict_reason_obstructed;
-
-              if ((merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
-                  && !(pdb && pdb->shadowed))
-                {
-                  store_path(merge_b->skipped_abspaths, local_abspath);
-                }
             }
         }
 
@@ -5396,14 +5390,6 @@ record_skips_in_mergeinfo(const char *mergeinfo_path,
                                         iterpool));
       if (obstruction_state == svn_wc_notify_state_obstructed
           || obstruction_state == svn_wc_notify_state_missing)
-        continue;
-
-      /* Make sure this is not a tree-conflicted path either. We don't
-       * want to add mergeinfo on such nodes since it causes problems down
-       * the line (see issue #4582, "reintegrate complains about missing
-       * ranges from node unrelated to branch") */
-      if (svn_hash_gets(merge_b->tree_conflicted_abspaths,
-                        skipped_abspath) != NULL)
         continue;
 
       /* Add an empty range list for this path.
