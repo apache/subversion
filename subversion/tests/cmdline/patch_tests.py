@@ -5623,7 +5623,7 @@ def patch_obstructing_symlink_traversal(sbox):
 def patch_adds_executability_nocontents(sbox):
   """patch adds svn:executable, without contents"""
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   unidiff_patch = (
@@ -5654,7 +5654,7 @@ def patch_adds_executability_nocontents(sbox):
 def patch_adds_executability_yescontents(sbox):
   """patch adds svn:executable, with contents"""
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   mu_new_contents = (
@@ -5697,12 +5697,12 @@ def patch_adds_executability_yescontents(sbox):
 def patch_deletes_executability(sbox):
   """patch deletes svn:executable"""
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   ## Set up the basic state.
   sbox.simple_propset('svn:executable', 'yes', 'iota')
-  sbox.simple_commit(target='iota', message="Make 'iota' executable.")
+  #sbox.simple_commit(target='iota', message="Make 'iota' executable.")
 
   unidiff_patch = (
     "diff --git a/iota b/iota\n"
@@ -5719,7 +5719,7 @@ def patch_deletes_executability(sbox):
   expected_disk.tweak('iota') # props=None by default
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status=' M', wc_rev=2)
+  expected_status.tweak('iota', status='  ')
 
   expected_skip = wc.State('', { })
 
