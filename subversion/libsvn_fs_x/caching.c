@@ -23,8 +23,7 @@
 #include "fs.h"
 #include "fs_x.h"
 #include "id.h"
-#include "dag.h"
-#include "tree.h"
+#include "dag_cache.h"
 #include "index.h"
 #include "changes.h"
 #include "noderevs.h"
@@ -418,22 +417,6 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                               apr_pool_cleanup_null);
 #endif
 
-  /* Rough estimate: revision DAG nodes have size around 320 bytes, so
-   * let's put 16 on a page. */
-  SVN_ERR(create_cache(&(ffd->rev_node_cache),
-                       NULL,
-                       membuffer,
-                       1024, 16,
-                       svn_fs_x__dag_serialize,
-                       svn_fs_x__dag_deserialize,
-                       APR_HASH_KEY_STRING,
-                       apr_pstrcat(scratch_pool, prefix, "DAG", SVN_VA_NULL),
-                       SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
-                       has_namespace,
-                       fs,
-                       no_handler, FALSE,
-                       fs->pool, scratch_pool));
-
   /* 1st level DAG node cache */
   ffd->dag_node_cache = svn_fs_x__create_dag_cache(fs->pool);
 
@@ -543,36 +526,6 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        apr_pstrcat(scratch_pool, prefix, "PROP",
                                    SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                       has_namespace,
-                       fs,
-                       no_handler, !cache_fulltexts,
-                       fs->pool, scratch_pool));
-
-  SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
-                       NULL,
-                       membuffer,
-                       0, 0, /* Do not use inprocess cache */
-                       svn_fs_x__serialize_mergeinfo,
-                       svn_fs_x__deserialize_mergeinfo,
-                       APR_HASH_KEY_STRING,
-                       apr_pstrcat(scratch_pool, prefix, "MERGEINFO",
-                                   SVN_VA_NULL),
-                       0,
-                       has_namespace,
-                       fs,
-                       no_handler, !cache_fulltexts,
-                       fs->pool, scratch_pool));
-
-  SVN_ERR(create_cache(&(ffd->mergeinfo_existence_cache),
-                       NULL,
-                       membuffer,
-                       0, 0, /* Do not use inprocess cache */
-                       /* Values are svn_stringbuf_t */
-                       NULL, NULL,
-                       APR_HASH_KEY_STRING,
-                       apr_pstrcat(scratch_pool, prefix, "HAS_MERGEINFO",
-                                   SVN_VA_NULL),
-                       0,
                        has_namespace,
                        fs,
                        no_handler, !cache_fulltexts,

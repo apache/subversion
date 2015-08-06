@@ -95,13 +95,28 @@ check_format(int format)
 {
   /* Put blacklisted versions here. */
 
-  /* We support all formats from 1-current simultaneously */
-  if (1 <= format && format <= SVN_FS_X__FORMAT_NUMBER)
+  /* We support any format if it matches the current format. */
+  if (format == SVN_FS_X__FORMAT_NUMBER)
+    return SVN_NO_ERROR;
+
+  /* Experimental formats are only supported if they match the current, but
+   * that case has already been handled. So, reject any experimental format.
+   */
+  if (SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER >= format)
+    return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+      _("Unsupported experimental FSX format '%d' found; current format is '%d'"),
+      format, SVN_FS_X__FORMAT_NUMBER);
+    return SVN_NO_ERROR;
+
+  /* By default, we will support any non-experimental format released so far.
+   */
+  if (format <= SVN_FS_X__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
   return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-     _("Expected FS format between '1' and '%d'; found format '%d'"),
-     SVN_FS_X__FORMAT_NUMBER, format);
+     _("Expected FSX format between '%d' and '%d'; found format '%d'"),
+     SVN_FS_X__EXPERIMENTAL_FORMAT_NUMBER + 1, SVN_FS_X__FORMAT_NUMBER,
+     format);
 }
 
 /* Read the format file at PATH and set *PFORMAT to the format version found
@@ -850,6 +865,7 @@ write_revision_zero(svn_fs_t *fs,
   apr_array_header_t *index_entries;
   svn_fs_x__p2l_entry_t *entry;
   svn_fs_x__revision_file_t *rev_file;
+  apr_file_t *apr_file;
   const char *l2p_proto_index, *p2l_proto_index;
 
   /* Construct a skeleton r0 with no indexes. */
@@ -896,15 +912,16 @@ write_revision_zero(svn_fs_t *fs,
 
   /* Now re-open r0, create proto-index files from our entries and
       rewrite the index section of r0. */
-  SVN_ERR(svn_fs_x__open_pack_or_rev_file_writable(&rev_file, fs, 0,
-                                                   subpool, subpool));
+  SVN_ERR(svn_fs_x__rev_file_open_writable(&rev_file, fs, 0,
+                                           subpool, subpool));
   SVN_ERR(svn_fs_x__p2l_index_from_p2l_entries(&p2l_proto_index, fs,
                                                rev_file, index_entries,
                                                subpool, subpool));
   SVN_ERR(svn_fs_x__l2p_index_from_p2l_entries(&l2p_proto_index, fs,
                                                index_entries,
                                                subpool, subpool));
-  SVN_ERR(svn_fs_x__add_index_data(fs, rev_file->file, l2p_proto_index,
+  SVN_ERR(svn_fs_x__rev_file_get(&apr_file, rev_file));
+  SVN_ERR(svn_fs_x__add_index_data(fs, apr_file, l2p_proto_index,
                                    p2l_proto_index, 0, subpool));
   SVN_ERR(svn_fs_x__close_revision_file(rev_file));
 
@@ -935,13 +952,8 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
 
   /* Create the revision data directories. */
   SVN_ERR(svn_io_make_dir_recursively(
-                              svn_fs_x__path_rev_shard(fs, 0, scratch_pool),
+                              svn_fs_x__path_shard(fs, 0, scratch_pool),
                               scratch_pool));
-
-  /* Create the revprops directory. */
-  SVN_ERR(svn_io_make_dir_recursively(
-                         svn_fs_x__path_revprops_shard(fs, 0, scratch_pool),
-                         scratch_pool));
 
   /* Create the transaction directory. */
   SVN_ERR(svn_io_make_dir_recursively(
@@ -1213,8 +1225,11 @@ svn_fs_x__info_format(int *fs_format,
     {
     case 1:
       break;
+    case 2:
+      (*supports_version)->minor = 10;
+      break;
 #ifdef SVN_DEBUG
-# if SVN_FS_X__FORMAT_NUMBER != 1
+# if SVN_FS_X__FORMAT_NUMBER != 2
 #  error "Need to add a 'case' statement here"
 # endif
 #endif
