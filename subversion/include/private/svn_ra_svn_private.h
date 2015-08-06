@@ -347,7 +347,7 @@ svn_error_t *
 svn_ra_svn__write_cmd_open_root(svn_ra_svn_conn_t *conn,
                                 apr_pool_t *pool,
                                 svn_revnum_t rev,
-                                const char *token);
+                                const svn_string_t *token);
 
 /** Send a "delete-entry" command over connection @a conn.  Delete the
  * @a path at optional revision @a rev below @a parent_token.
@@ -358,7 +358,7 @@ svn_ra_svn__write_cmd_delete_entry(svn_ra_svn_conn_t *conn,
                                    apr_pool_t *pool,
                                    const char *path,
                                    svn_revnum_t rev,
-                                   const char *parent_token);
+                                   const svn_string_t *parent_token);
 
 /** Send a "add-dir" command over connection @a conn.  Add a new directory
  * node named @a path under the directory identified by @a parent_token.
@@ -370,8 +370,8 @@ svn_error_t *
 svn_ra_svn__write_cmd_add_dir(svn_ra_svn_conn_t *conn,
                               apr_pool_t *pool,
                               const char *path,
-                              const char *parent_token,
-                              const char *token,
+                              const svn_string_t *parent_token,
+                              const svn_string_t *token,
                               const char *copy_path,
                               svn_revnum_t copy_rev);
 
@@ -384,8 +384,8 @@ svn_error_t *
 svn_ra_svn__write_cmd_open_dir(svn_ra_svn_conn_t *conn,
                                apr_pool_t *pool,
                                const char *path,
-                               const char *parent_token,
-                               const char *token,
+                               const svn_string_t *parent_token,
+                               const svn_string_t *token,
                                svn_revnum_t rev);
 
 /** Send a "change-dir-prop" command over connection @a conn.  Set the
@@ -395,7 +395,7 @@ svn_ra_svn__write_cmd_open_dir(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_cmd_change_dir_prop(svn_ra_svn_conn_t *conn,
                                       apr_pool_t *pool,
-                                      const char *token,
+                                      const svn_string_t *token,
                                       const char *name,
                                       const svn_string_t *value);
 
@@ -406,7 +406,7 @@ svn_ra_svn__write_cmd_change_dir_prop(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_cmd_close_dir(svn_ra_svn_conn_t *conn,
                                 apr_pool_t *pool,
-                                const char *token);
+                                const svn_string_t *token);
 
 /** Send a "absent-dir" command over connection @a conn.  Directory node
  * named @a path under the directory identified by @a parent_token is
@@ -416,7 +416,7 @@ svn_error_t *
 svn_ra_svn__write_cmd_absent_dir(svn_ra_svn_conn_t *conn,
                                  apr_pool_t *pool,
                                  const char *path,
-                                 const char *parent_token);
+                                 const svn_string_t *parent_token);
 
 /** Send a "add-file" command over connection @a conn.  Add a new file
  * node named @a path under the directory identified by @a parent_token.
@@ -428,8 +428,8 @@ svn_error_t *
 svn_ra_svn__write_cmd_add_file(svn_ra_svn_conn_t *conn,
                                apr_pool_t *pool,
                                const char *path,
-                               const char *parent_token,
-                               const char *token,
+                               const svn_string_t *parent_token,
+                               const svn_string_t *token,
                                const char *copy_path,
                                svn_revnum_t copy_rev);
 
@@ -442,8 +442,8 @@ svn_error_t *
 svn_ra_svn__write_cmd_open_file(svn_ra_svn_conn_t *conn,
                                 apr_pool_t *pool,
                                 const char *path,
-                                const char *parent_token,
-                                const char *token,
+                                const svn_string_t *parent_token,
+                                const svn_string_t *token,
                                 svn_revnum_t rev);
 
 /** Send a "change-file-prop" command over connection @a conn.  Set the
@@ -453,7 +453,7 @@ svn_ra_svn__write_cmd_open_file(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_cmd_change_file_prop(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
-                                       const char *token,
+                                       const svn_string_t *token,
                                        const char *name,
                                        const svn_string_t *value);
 
@@ -465,7 +465,7 @@ svn_ra_svn__write_cmd_change_file_prop(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_cmd_close_file(svn_ra_svn_conn_t *conn,
                                  apr_pool_t *pool,
-                                 const char *token,
+                                 const svn_string_t *token,
                                  const char *text_checksum);
 
 /** Send a "absent-file" command over connection @a conn.  File node
@@ -476,7 +476,7 @@ svn_error_t *
 svn_ra_svn__write_cmd_absent_file(svn_ra_svn_conn_t *conn,
                                   apr_pool_t *pool,
                                   const char *path,
-                                  const char *parent_token);
+                                  const svn_string_t *parent_token);
 
 /** Send a "apply-textdelta" command over connection @a conn.  Starts a
  * series of text deltas to be applied to the file identified by @a token.
@@ -486,7 +486,7 @@ svn_ra_svn__write_cmd_absent_file(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_cmd_apply_textdelta(svn_ra_svn_conn_t *conn,
                                       apr_pool_t *pool,
-                                      const char *token,
+                                      const svn_string_t *token,
                                       const char *base_checksum);
 
 /** Send a "textdelta-chunk" command over connection @a conn.  Apply
@@ -496,7 +496,7 @@ svn_ra_svn__write_cmd_apply_textdelta(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_cmd_textdelta_chunk(svn_ra_svn_conn_t *conn,
                                       apr_pool_t *pool,
-                                      const char *token,
+                                      const svn_string_t *token,
                                       const svn_string_t *chunk);
 
 /** Send a "textdelta-end" command over connection @a conn.  Ends the
@@ -506,7 +506,7 @@ svn_ra_svn__write_cmd_textdelta_chunk(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_cmd_textdelta_end(svn_ra_svn_conn_t *conn,
                                     apr_pool_t *pool,
-                                    const char *token);
+                                    const svn_string_t *token);
 
 /** Send a "close-edit" command over connection @a conn.  Ends the editor
  * drive (successfully).  Use @a pool for allocations.
@@ -790,7 +790,7 @@ svn_error_t *
 svn_ra_svn__write_cmd_unlock(svn_ra_svn_conn_t *conn,
                              apr_pool_t *pool,
                              const char *path,
-                             const char *token,
+                             const svn_string_t *token,
                              svn_boolean_t break_lock);
 
 /** Send a "get-lock" command over connection @a conn.

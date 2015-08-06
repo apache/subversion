@@ -39,8 +39,11 @@
 #include "svn_pools.h"
 #include "svn_private_config.h"
 
+#include "private/svn_atomic.h"
 #include "private/svn_fspath.h"
 #include "private/svn_editor.h"
+#include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 #include "ra_svn.h"
 
@@ -57,7 +60,7 @@ typedef struct ra_svn_edit_baton_t {
   svn_ra_svn_conn_t *conn;
   svn_ra_svn_edit_callback callback;    /* Called on successful completion. */
   void *callback_baton;
-  int next_token;
+  apr_uint64_t next_token;
   svn_boolean_t got_status;
 } ra_svn_edit_baton_t;
 
@@ -66,13 +69,19 @@ typedef struct ra_svn_baton_t {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;
   ra_svn_edit_baton_t *eb;
-  const char *token;
+  svn_string_t *token;
 } ra_svn_baton_t;
+
+/* Forward declaration. */
+typedef struct ra_svn_token_entry_t ra_svn_token_entry_t;
 
 typedef struct ra_svn_driver_state_t {
   const svn_delta_editor_t *editor;
   void *edit_baton;
   apr_hash_t *tokens;
+
+  /* Entry for the last token seen.  May be NULL. */
+  ra_svn_token_entry_t *last_token;
   svn_boolean_t *aborted;
   svn_boolean_t done;
   apr_pool_t *pool;
@@ -90,26 +99,33 @@ typedef struct ra_svn_driver_state_t {
    field in this structure is vestigial for files, and we use it for a
    different purpose instead: at apply-textdelta time, we set it to a
    subpool of the file pool, which is destroyed in textdelta-end. */
-typedef struct ra_svn_token_entry_t {
+struct ra_svn_token_entry_t {
   svn_string_t *token;
   void *baton;
   svn_boolean_t is_file;
   svn_stream_t *dstream;  /* svndiff stream for apply_textdelta */
   apr_pool_t *pool;
-} ra_svn_token_entry_t;
+};
 
 /* --- CONSUMING AN EDITOR BY PASSING EDIT OPERATIONS OVER THE NET --- */
 
-static const char *make_token(char type, ra_svn_edit_baton_t *eb,
-                              apr_pool_t *pool)
+static svn_string_t *
+make_token(char type,
+           ra_svn_edit_baton_t *eb,
+           apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "%c%d", type, eb->next_token++);
+  apr_size_t len;
+  char buffer[1 + SVN_INT64_BUFFER_SIZE];
+  buffer[0] = type;
+  len = 1 + svn__ui64toa(&buffer[1], eb->next_token++);
+  
+  return svn_string_ncreate(buffer, len, pool);
 }
 
 static ra_svn_baton_t *ra_svn_make_baton(svn_ra_svn_conn_t *conn,
                                          apr_pool_t *pool,
                                          ra_svn_edit_baton_t *eb,
-                                         const char *token)
+                                         svn_string_t *token)
 {
   ra_svn_baton_t *b;
 
@@ -171,7 +187,7 @@ static svn_error_t *ra_svn_open_root(void *edit_baton, svn_revnum_t rev,
                                      apr_pool_t *pool, void **root_baton)
 {
   ra_svn_edit_baton_t *eb = edit_baton;
-  const char *token = make_token('d', eb, pool);
+  svn_string_t *token = make_token('d', eb, pool);
 
   SVN_ERR(check_for_error(eb, pool));
   SVN_ERR(svn_ra_svn__write_cmd_open_root(eb->conn, pool, rev, token));
@@ -196,7 +212,7 @@ static svn_error_t *ra_svn_add_dir(const char *path, void *parent_baton,
                                    apr_pool_t *pool, void **child_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('d', b->eb, pool);
+  svn_string_t *token = make_token('d', b->eb, pool);
 
   SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
                  || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
@@ -212,7 +228,7 @@ static svn_error_t *ra_svn_open_dir(const char *path, void *parent_baton,
                                     void **child_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('d', b->eb, pool);
+  svn_string_t *token = make_token('d', b->eb, pool);
 
   SVN_ERR(check_for_error(b->eb, pool));
   SVN_ERR(svn_ra_svn__write_cmd_open_dir(b->conn, pool, path, b->token,
@@ -265,7 +281,7 @@ static svn_error_t *ra_svn_add_file(const char *path,
                                     void **file_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('c', b->eb, pool);
+  svn_string_t *token = make_token('c', b->eb, pool);
 
   SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
                  || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
@@ -283,7 +299,7 @@ static svn_error_t *ra_svn_open_file(const char *path,
                                      void **file_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('c', b->eb, pool);
+  svn_string_t *token = make_token('c', b->eb, pool);
 
   SVN_ERR(check_for_error(b->eb, b->pool));
   SVN_ERR(svn_ra_svn__write_cmd_open_file(b->conn, pool, path, b->token,
@@ -480,6 +496,7 @@ static ra_svn_token_entry_t *store_token(ra_svn_driver_state_t *ds,
   entry->pool = pool;
 
   apr_hash_set(ds->tokens, entry->token->data, entry->token->len, entry);
+  ds->last_token = entry;
 
   return entry;
 }
@@ -489,7 +506,16 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds,
                                  svn_boolean_t is_file,
                                  ra_svn_token_entry_t **entry)
 {
-  *entry = apr_hash_get(ds->tokens, token->data, token->len);
+  if (ds->last_token && svn_string_compare(ds->last_token->token, token))
+    {
+      *entry = ds->last_token;
+    }
+  else
+    {
+      *entry = apr_hash_get(ds->tokens, token->data, token->len);
+      ds->last_token = *entry;
+    }
+
   if (!*entry || (*entry)->is_file != is_file)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Invalid file or dir token during edit"));
@@ -883,11 +909,15 @@ static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Common function signature for all editor command handlers. */
+typedef svn_error_t *(*cmd_handler_t)(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const apr_array_header_t *params,
+                                      ra_svn_driver_state_t *ds);
+
 static const struct {
   const char *cmd;
-  svn_error_t *(*handler)(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                          const apr_array_header_t *params,
-                          ra_svn_driver_state_t *ds);
+  cmd_handler_t handler;
 } ra_svn_edit_cmds[] = {
   { "change-file-prop", ra_svn_handle_change_file_prop },
   { "open-file",        ra_svn_handle_open_file },
@@ -910,6 +940,92 @@ static const struct {
   { "close-edit",       ra_svn_handle_close_edit },
   { NULL }
 };
+
+/* All editor commands are kept in a collision-free hash table. */
+
+/* Hash table entry.
+   It is similar to ra_svn_edit_cmds but uses our SVN string type. */
+typedef struct cmd_t {
+  svn_string_t cmd;
+  cmd_handler_t handler;
+} cmd_t;
+
+/* The actual hash table.  It will be filled once before first usage.
+
+   If you add more commands, you may have to tweak the table size to
+   eliminate collisions.  Alternatively, you may modify the hash function.
+
+   Be sure to initialize all elements with 0 as the has conflict detection
+   will rely on it (see init_cmd_hash).
+ */
+#define CMD_HASH_SIZE 67
+static cmd_t cmd_hash[CMD_HASH_SIZE] = { { { NULL } } };
+
+/* Init flag that controls CMD_HASH's atomic initialization. */
+static volatile svn_atomic_t cmd_hash_initialized = FALSE;
+
+/* Super-fast hash function that works very well with the structure of our
+   command words.  It produces no conflicts for them.
+
+   Return the index within CMD_HASH that a command NAME of LEN chars would
+   be found.  LEN > 0.
+ */
+static apr_size_t
+cmd_hash_func(const char *name,
+              apr_size_t len)
+{
+  apr_size_t value =     (apr_byte_t)(name[0] - 'a') % 8
+                   + 1 * (apr_byte_t)(name[len - 1] - 'a') % 8
+                   + 10 * (len - 7);
+  return value % CMD_HASH_SIZE;
+}
+
+/* svn_atomic__init_once callback that fills the CMD_HASH table.  It will
+   error out on hash collisions.  BATON and POOL are not used. */
+static svn_error_t *
+init_cmd_hash(void *baton,
+              apr_pool_t *pool)
+{
+  int i;
+  for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
+    {
+      apr_size_t len = strlen(ra_svn_edit_cmds[i].cmd);
+      apr_size_t value = cmd_hash_func(ra_svn_edit_cmds[i].cmd, len);
+      SVN_ERR_ASSERT(cmd_hash[value].cmd.data == NULL);
+
+      cmd_hash[value].cmd.data = ra_svn_edit_cmds[i].cmd;
+      cmd_hash[value].cmd.len = len;
+      cmd_hash[value].handler = ra_svn_edit_cmds[i].handler;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Return the command handler function for the command name CMD.
+   Return NULL if no such handler exists */
+static cmd_handler_t
+cmd_lookup(const char *cmd)
+{
+  apr_size_t value;
+  apr_size_t len = strlen(cmd);
+
+  /* Malicious data that our hash function may not like? */
+  if (len == 0)
+    return NULL;
+
+  /* Hash lookup. */
+  value = cmd_hash_func(cmd, len);
+
+  /* Hit? */
+  if (cmd_hash[value].cmd.len != len)
+    return NULL;
+
+  if (memcmp(cmd_hash[value].cmd.data, cmd, len))
+    return NULL;
+
+  /* Yes! */
+  return cmd_hash[value].handler;
+}
 
 static svn_error_t *blocked_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   void *baton)
@@ -939,13 +1055,16 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   ra_svn_driver_state_t state;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *cmd;
-  int i;
   svn_error_t *err, *write_err;
   apr_array_header_t *params;
 
+  SVN_ERR(svn_atomic__init_once(&cmd_hash_initialized, init_cmd_hash, NULL,
+                                pool));
+
   state.editor = editor;
   state.edit_baton = edit_baton;
-  state.tokens = apr_hash_make(pool);
+  state.tokens = svn_hash__make(pool);
+  state.last_token = NULL;
   state.aborted = aborted;
   state.done = FALSE;
   state.pool = pool;
@@ -958,13 +1077,12 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
       svn_pool_clear(subpool);
       if (editor)
         {
+          cmd_handler_t handler;
           SVN_ERR(svn_ra_svn__read_tuple(conn, subpool, "wl", &cmd, &params));
-          for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
-              if (strcmp(cmd, ra_svn_edit_cmds[i].cmd) == 0)
-                break;
+          handler = cmd_lookup(cmd);
 
-          if (ra_svn_edit_cmds[i].cmd)
-            err = (*ra_svn_edit_cmds[i].handler)(conn, subpool, params, &state);
+          if (handler)
+            err = (*handler)(conn, subpool, params, &state);
           else if (strcmp(cmd, "failure") == 0)
             {
               /* While not really an editor command this can occur when
