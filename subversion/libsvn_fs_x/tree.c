@@ -4084,16 +4084,13 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
 
   cache_key = mergeinfo_cache_key(path, rev_root, inherit,
                                   adjust_inherited_mergeinfo, scratch_pool);
-  if (ffd->mergeinfo_existence_cache)
-    {
-      SVN_ERR(svn_cache__get((void **)&mergeinfo_exists, &found,
-                             ffd->mergeinfo_existence_cache,
-                             cache_key, result_pool));
-      if (found && mergeinfo_exists->data[0] == '1')
-        SVN_ERR(svn_cache__get((void **)mergeinfo, &found,
-                              ffd->mergeinfo_cache,
-                              cache_key, result_pool));
-    }
+  SVN_ERR(svn_cache__get((void **)&mergeinfo_exists, &found,
+                         ffd->mergeinfo_existence_cache,
+                         cache_key, result_pool));
+  if (found && mergeinfo_exists->data[0] == '1')
+    SVN_ERR(svn_cache__get((void **)mergeinfo, &found,
+                          ffd->mergeinfo_cache,
+                          cache_key, result_pool));
 
   if (! found)
     {
@@ -4101,16 +4098,13 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                                               inherit,
                                               adjust_inherited_mergeinfo,
                                               result_pool, scratch_pool));
-      if (ffd->mergeinfo_existence_cache)
-        {
-          mergeinfo_exists = svn_stringbuf_create(*mergeinfo ? "1" : "0",
-                                                  scratch_pool);
-          SVN_ERR(svn_cache__set(ffd->mergeinfo_existence_cache,
-                                 cache_key, mergeinfo_exists, scratch_pool));
-          if (*mergeinfo)
-            SVN_ERR(svn_cache__set(ffd->mergeinfo_cache,
-                                  cache_key, *mergeinfo, scratch_pool));
-        }
+      mergeinfo_exists = svn_stringbuf_create(*mergeinfo ? "1" : "0",
+                                              scratch_pool);
+      SVN_ERR(svn_cache__set(ffd->mergeinfo_existence_cache,
+                             cache_key, mergeinfo_exists, scratch_pool));
+      if (*mergeinfo)
+        SVN_ERR(svn_cache__set(ffd->mergeinfo_cache,
+                               cache_key, *mergeinfo, scratch_pool));
     }
 
   return SVN_NO_ERROR;
