@@ -959,6 +959,39 @@ choose_target_filename(const svn_patch_t *patch)
   return (old < new) ? patch->old_filename : patch->new_filename;
 }
 
+/* Return whether the svn:executable proppatch and the out-of-band
+ * executability metadata contradict each other, assuming both are present.
+ */
+svn_boolean_t
+contradictory_executability(const svn_patch_t *patch,
+                            const prop_patch_target_t *target)
+{
+  switch (target->operation)
+    {
+      case svn_diff_op_added:
+        return patch->new_executable_p == svn_tristate_false;
+
+      case svn_diff_op_deleted:
+        return patch->new_executable_p == svn_tristate_true;
+
+      case svn_diff_op_unchanged:
+        /* ### Can this happen? */
+        return (patch->old_executable_p != svn_tristate_unknown
+                && patch->new_executable_p != svn_tristate_unknown
+                && patch->old_executable_p == patch->new_executable_p);
+
+      case svn_diff_op_modified:
+        return (patch->old_executable_p != svn_tristate_unknown
+                && patch->new_executable_p != svn_tristate_unknown
+                && patch->old_executable_p != patch->new_executable_p);
+
+      default:
+        /* Can't happen: the proppatch parser never generates other values. */
+        SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+}
+
+
 /* Attempt to initialize a *PATCH_TARGET structure for a target file
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
@@ -1192,6 +1225,7 @@ init_patch_target(patch_target_t **patch_target,
       if (! target->skipped)
         {
           apr_hash_index_t *hi;
+          prop_patch_target_t *prop_executable_target;
 
           for (hi = apr_hash_first(result_pool, patch->prop_patches);
                hi;
@@ -1209,8 +1243,29 @@ init_patch_target(patch_target_t **patch_target,
               svn_hash_sets(target->prop_targets, prop_name, prop_target);
             }
 
+          /* Now, check for an out-of-band mode change and convert it to
+           * an svn:executable property patch. */
+          prop_executable_target = svn_hash_gets(target->prop_targets,
+                                                 SVN_PROP_EXECUTABLE);
           if (patch->new_executable_p != svn_tristate_unknown
-              && !svn_hash_gets(target->prop_targets, SVN_PROP_EXECUTABLE))
+              && prop_executable_target)
+            {
+              if (contradictory_executability(patch, prop_executable_target))
+                /* Invalid input: specifies both git-like "new mode" lines and
+                 * svn-like addition/removal of svn:executable.
+                 *
+                 * If this were merely a hunk that didn't apply, we'd reject it
+                 * and move on.  However, this is a self-contradictory hunk;
+                 * it has no unambiguous interpretation.  Therefore: */
+                return svn_error_createf(SVN_ERR_INVALID_INPUT, NULL,
+                                         _("Invalid patch: specifies "
+                                           "contradicting mode changes and "
+                                           "%s changes (for '%s')"),
+                                         SVN_PROP_EXECUTABLE,
+                                         target->local_abspath);
+            }
+          else if (patch->new_executable_p != svn_tristate_unknown
+                   && !prop_executable_target)
             {
               svn_diff_operation_kind_t operation;
               svn_boolean_t nothing_to_do = FALSE;
@@ -2413,7 +2468,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
   /* Match property hunks. */
   for (hash_index = apr_hash_first(scratch_pool, patch->prop_patches);
-       /* ### will be skipped for SVN_PROP_EXECUTABLE; okay? */
        hash_index;
        hash_index = apr_hash_next(hash_index))
     {
