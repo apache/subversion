@@ -1252,6 +1252,11 @@ typedef struct svn_patch_t {
 
   /** The old and new executability bits, as retrieved from the patch file.
    *
+   * A patch may specify an executability change via @a old_executable_p and
+   * / @a new_executable_p, via a #SVN_PROP_EXECUTABLE propchange hunk, or both
+   * ways; however, if both ways are used, they must specify the same semantic
+   * change.
+   *
    * #svn_tristate_unknown indicates the patch does not specify the
    * corresponding bit.
    *
