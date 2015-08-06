@@ -1497,12 +1497,14 @@ svn_auth_get_keychain_ssl_client_cert_pw_provider
 #endif /* DARWIN */
 
 #if !defined(WIN32)
+#ifdef SVN_HAVE_GPG_AGENT
 void
 svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool)
 {
   svn_auth__get_gpg_agent_simple_provider(provider, pool);
 }
+#endif /* SVN_HAVE_GPG_AGENT */
 #endif /* !WIN32 */
 
 svn_error_t *
