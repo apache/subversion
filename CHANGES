@@ -173,8 +173,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * patch: improve command to be more capable as compared to GNU patch
       (issue #4533)
     * limit server caches to avoid running out of memory if server admin
-      configured caches largely then they can possibly be on the platform
-      (r1645572)
+      configured caches larger than supported by the platform (r1645572)
     * mod_authz_svn: log implicit read access failures with INFO log level;
       Explicit read access failures are still logged with ERROR log level
       (r1653032)
