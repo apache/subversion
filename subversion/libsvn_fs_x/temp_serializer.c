@@ -120,7 +120,7 @@ serialize_svn_string(svn_temp_serializer__context_t *context,
 /* Utility function to deserialize the STRING inside the BUFFER.
  */
 static void
-deserialize_svn_string(void *buffer, svn_string_t **string)
+deserialize_svn_string(const void *buffer, svn_string_t **string)
 {
   svn_temp_deserializer__resolve(buffer, (void **)string);
   if (*string == NULL)
