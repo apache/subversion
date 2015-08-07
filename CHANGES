@@ -165,6 +165,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnadmin setrevprop: add '--transaction' option (r1631435)
     * svnadmin delrevprop: new subcommand (1592723)
     * svnadmin verify: validate the index data against checksums (r1631598)
+    * svnadmin verify: new option '--metadata-only' (r1593753)
     * cp: improve performance of local copies (r1632284, et al)
     * fsfs: speed up operations that use revision properties (r1634875,
       r1634879)
@@ -332,7 +333,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnserve: fix potential integer overflow in Cyrus SASL support (r1570434)
     * bdb: fix potential integer overflow and underflow (r1570701)
     * bdb: prevent silent propogation of some corruption (r1570778)
-    * svnadmin verify: new option '--metadata-only' (r1593753)
     * svnadmin hotcopy: do not corrupt db/current contents when copying old
       FSFS repos (r1603485)
     * svnadmin hotcopy: don't produce broken copies when a concurrent pack
