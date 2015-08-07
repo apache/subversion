@@ -854,6 +854,12 @@ test_batch_fsync(const svn_test_opts_t *opts,
   svn_fs_x__batch_fsync_t *batch;
   int i;
 
+  /* Disable this test for non FSX backends because it has no relevance to
+   * them. */
+  if (strcmp(opts->fs_type, "fsx") != 0)
+      return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+      "this will test FSX repositories only");
+
   /* Create an empty working directory and let it be cleaned up by the test
    * harness. */
   SVN_ERR(svn_dirent_get_absolute(&abspath, REPO_NAME, pool));
