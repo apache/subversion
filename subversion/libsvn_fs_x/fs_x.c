@@ -106,7 +106,6 @@ check_format(int format)
     return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
       _("Unsupported experimental FSX format '%d' found; current format is '%d'"),
       format, SVN_FS_X__FORMAT_NUMBER);
-    return SVN_NO_ERROR;
 
   /* By default, we will support any non-experimental format released so far.
    */
