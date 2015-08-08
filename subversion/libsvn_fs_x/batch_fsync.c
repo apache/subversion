@@ -44,7 +44,7 @@
 
 
 /* A simple SVN-wrapper around the apr_thread_cond_* API */
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
 typedef apr_thread_cond_t svn_thread_cond__t;
 #else
 typedef int svn_thread_cond__t;
@@ -54,7 +54,7 @@ static svn_error_t *
 svn_thread_cond__create(svn_thread_cond__t **cond,
                         apr_pool_t *result_pool)
 {
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
 
   WRAP_APR_ERR(apr_thread_cond_create(cond, result_pool),
                _("Can't create condition variable"));
@@ -71,7 +71,7 @@ svn_thread_cond__create(svn_thread_cond__t **cond,
 static svn_error_t *
 svn_thread_cond__broadcast(svn_thread_cond__t *cond)
 {
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
 
   WRAP_APR_ERR(apr_thread_cond_broadcast(cond),
                _("Can't broadcast condition variable"));
@@ -85,7 +85,7 @@ static svn_error_t *
 svn_thread_cond__wait(svn_thread_cond__t *cond,
                       svn_mutex__t *mutex)
 {
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
 
   WRAP_APR_ERR(apr_thread_cond_wait(cond, svn_mutex__get(mutex)),
                _("Can't broadcast condition variable"));
@@ -208,7 +208,7 @@ struct svn_fs_x__batch_fsync_t
 /* Data structures for concurrent fsync execution are only available if
  * we have threading support.
  */
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
 
 /* Number of microseconds that an unused thread remains in the pool before
  * being terminated.
@@ -246,7 +246,7 @@ thread_pool_pre_cleanup(void *data)
 svn_error_t *
 svn_fs_x__batch_fsync_init(void)
 {
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
   /* The thread-pool must be allocated from a thread-safe pool.
      GLOBAL_POOL may be single-threaded, though. */
   apr_pool_t *pool = svn_pool_create(NULL);
