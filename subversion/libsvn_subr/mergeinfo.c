@@ -2359,7 +2359,7 @@ svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
           svn_stringbuf_appendcstr(output_buf, "\n");
         }
     }
-#if SVN_DEBUG
+#ifdef SVN_DEBUG
   else if (!catalog)
     {
       output_buf = svn_stringbuf_create(key_prefix ? key_prefix : "", pool);
