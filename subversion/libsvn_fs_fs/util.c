@@ -674,7 +674,7 @@ svn_fs_fs__move_into_place(const char *old_filename,
   if (err)
     return svn_error_trace(err);
 
-#if SVN_ON_POSIX
+#ifdef SVN_ON_POSIX
   {
     /* On POSIX, the file name is stored in the file's directory entry.
        Hence, we need to fsync() that directory as well.
