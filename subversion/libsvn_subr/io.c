@@ -3888,7 +3888,7 @@ svn_io_write_atomic(const char *final_path,
                                                       scratch_pool));
     }
 
-#if SVN_ON_POSIX
+#ifdef SVN_ON_POSIX
   {
     /* On POSIX, the file name is stored in the file's directory entry.
        Hence, we need to fsync() that directory as well.

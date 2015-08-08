@@ -90,12 +90,8 @@ extern "C" {
         || (defined(__APPLE__) && defined(__MACH__)))  /* UNIX-style OS? */
 #  include <unistd.h>
 #  if defined(_POSIX_VERSION)
-#    define SVN_ON_POSIX 1
-#  else
-#    define SVN_ON_POSIX 0
+#    define SVN_ON_POSIX
 #  endif
-#else
-#  define SVN_ON_POSIX 0
 #endif
 #endif
 

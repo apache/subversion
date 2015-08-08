@@ -378,7 +378,7 @@ svn_fs_x__batch_fsync_new_path(svn_fs_x__batch_fsync_t *batch,
 {
   apr_file_t *file;
 
-#if SVN_ON_POSIX
+#ifdef SVN_ON_POSIX
 
   /* On POSIX, we need to sync the parent directory because it contains
    * the name for the file / folder given by PATH. */
