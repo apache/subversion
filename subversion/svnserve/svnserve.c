@@ -329,7 +329,7 @@ static const apr_getopt_option_t svnserve__options[] =
     {"threads",          'T', 0, N_("use threads instead of fork "
                                     "[mode: daemon]")},
 #endif
-#ifdef APR_HAS_THREADS
+#if APR_HAS_THREADS
     {"min-threads",      SVNSERVE_OPT_MIN_THREADS, 1,
      N_("Minimum number of server threads, even if idle.\n"
         "                             "
