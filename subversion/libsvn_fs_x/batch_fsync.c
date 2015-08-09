@@ -230,6 +230,8 @@ static apr_thread_pool_t *thread_pool = NULL;
 /* We open non-directory files with these flags. */
 #define FILE_FLAGS (APR_READ | APR_WRITE | APR_BUFFERED | APR_CREATE)
 
+#if APR_HAS_THREADS
+
 /* Destructor function that implicitly cleans up any running threads
    in the thread_pool given as DATA and releases their memory pools
    before they get destroyed themselves.
@@ -242,6 +244,8 @@ thread_pool_pre_cleanup(void *data)
   apr_thread_pool_t *tp = data;
   return apr_thread_pool_destroy(tp);
 }
+
+#endif
 
 svn_error_t *
 svn_fs_x__batch_fsync_init(void)
