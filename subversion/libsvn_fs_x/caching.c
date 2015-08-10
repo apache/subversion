@@ -435,23 +435,6 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        no_handler, FALSE,
                        fs->pool, scratch_pool));
 
-  /* Only 16 bytes per entry (a revision number + the corresponding offset).
-     Since we want ~8k pages, that means 512 entries per page. */
-  SVN_ERR(create_cache(&(ffd->packed_offset_cache),
-                       NULL,
-                       membuffer,
-                       32, 1,
-                       svn_fs_x__serialize_manifest,
-                       svn_fs_x__deserialize_manifest,
-                       sizeof(svn_revnum_t),
-                       apr_pstrcat(scratch_pool, prefix, "PACK-MANIFEST",
-                                   SVN_VA_NULL),
-                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
-                       has_namespace,
-                       fs,
-                       no_handler, FALSE,
-                       fs->pool, scratch_pool));
-
   /* initialize node revision cache, if caching has been enabled */
   SVN_ERR(create_cache(&(ffd->node_revision_cache),
                        NULL,

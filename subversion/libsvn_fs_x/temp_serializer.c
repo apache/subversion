@@ -480,39 +480,6 @@ svn_fs_x__deserialize_txdelta_window(void **item,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_x__serialize_manifest(void **data,
-                             apr_size_t *data_len,
-                             void *in,
-                             apr_pool_t *pool)
-{
-  apr_array_header_t *manifest = in;
-
-  *data_len = sizeof(apr_off_t) *manifest->nelts;
-  *data = apr_palloc(pool, *data_len);
-  memcpy(*data, manifest->elts, *data_len);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_x__deserialize_manifest(void **out,
-                               void *data,
-                               apr_size_t data_len,
-                               apr_pool_t *result_pool)
-{
-  apr_array_header_t *manifest
-    = apr_array_make(result_pool, 1, sizeof(apr_off_t));
-
-  manifest->nelts = (int) (data_len / sizeof(apr_off_t));
-  manifest->nalloc = (int) (data_len / sizeof(apr_off_t));
-  manifest->elts = (char*)data;
-
-  *out = manifest;
-
-  return SVN_NO_ERROR;
-}
-
 /* Auxiliary structure representing the content of a properties hash.
    This structure is much easier to (de-)serialize than an apr_hash.
  */

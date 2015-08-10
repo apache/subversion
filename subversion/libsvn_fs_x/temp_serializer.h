@@ -91,26 +91,6 @@ svn_fs_x__deserialize_txdelta_window(void **item,
                                      apr_pool_t *result_pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for a manifest
- * (@a in is an #apr_array_header_t of apr_off_t elements).
- */
-svn_error_t *
-svn_fs_x__serialize_manifest(void **data,
-                             apr_size_t *data_len,
-                             void *in,
-                             apr_pool_t *pool);
-
-/**
- * Implements #svn_cache__deserialize_func_t for a manifest
- * (@a *out is an #apr_array_header_t of apr_off_t elements).
- */
-svn_error_t *
-svn_fs_x__deserialize_manifest(void **out,
-                               void *data,
-                               apr_size_t data_len,
-                               apr_pool_t *result_pool);
-
-/**
  * Implements #svn_cache__serialize_func_t for a properties hash
  * (@a in is an #apr_hash_t of svn_string_t elements, keyed by const char*).
  */

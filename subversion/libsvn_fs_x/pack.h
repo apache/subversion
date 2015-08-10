@@ -39,17 +39,6 @@ svn_fs_x__pack(svn_fs_t *fs,
                void *cancel_baton,
                apr_pool_t *scratch_pool);
 
-/**
- * For the packed revision REV in FS,  determine the offset within the
- * revision pack file and return it in REV_OFFSET.
- * Use SCRATCH_POOL for temporary allocations.
- */
-svn_error_t *
-svn_fs_x__get_packed_offset(apr_off_t *rev_offset,
-                            svn_fs_t *fs,
-                            svn_revnum_t rev,
-                            apr_pool_t *scratch_pool);
-
 /* Return the svn_dir_entry_t* objects of DIRECTORY in an APR array
  * allocated in RESULT_POOL with entries added in storage (on-disk) order.
  * FS' format will be used to pick the optimal ordering strategy.  Use
