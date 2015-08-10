@@ -1528,7 +1528,7 @@ find_entry(svn_membuffer_t *cache,
            */
           for (i = 0; i < GROUP_SIZE; ++i)
             if (entry != &to_shrink->entries[i])
-              let_entry_age(cache, entry);
+              let_entry_age(cache, &to_shrink->entries[i]);
 
           drop_entry(cache, entry);
         }
