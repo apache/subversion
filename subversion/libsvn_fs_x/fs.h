@@ -305,12 +305,6 @@ typedef struct svn_fs_x__data_t
   /* Node properties cache.  Maps from rep key to apr_hash_t. */
   svn_cache__t *properties_cache;
 
-  /* Pack manifest cache; a cache mapping (svn_revnum_t) shard number to
-     a manifest; and a manifest is a mapping from (svn_revnum_t) revision
-     number offset within a shard to (apr_off_t) byte-offset in the
-     respective pack file. */
-  svn_cache__t *packed_offset_cache;
-
   /* Cache for txdelta_window_t objects;
    * the key is svn_fs_x__window_cache_key_t */
   svn_cache__t *txdelta_window_cache;
