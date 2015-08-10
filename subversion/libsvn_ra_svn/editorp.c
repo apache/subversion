@@ -522,6 +522,18 @@ static svn_error_t *lookup_token(ra_svn_driver_state_t *ds,
   return SVN_NO_ERROR;
 }
 
+/* Remove a TOKEN entry from DS. */
+static void remove_token(ra_svn_driver_state_t *ds,
+                         svn_string_t *token)
+{
+  apr_hash_set(ds->tokens, token->data, token->len, NULL);
+
+  /* Reset this unconditionally.  In most cases, LAST_TOKEN->TOKEN will
+     match TOKEN anyway and if it doesn't, lookup_token() will suffer only
+     a minor performance hit. */
+  ds->last_token = NULL;
+}
+
 static svn_error_t *ra_svn_handle_target_rev(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
                                              const apr_array_header_t *params,
@@ -659,7 +671,7 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
 
   /* Close the directory and destroy the baton. */
   SVN_CMD_ERR(ds->editor->close_directory(entry->baton, pool));
-  apr_hash_set(ds->tokens, token->data, token->len, NULL);
+  remove_token(ds, token);
   svn_pool_destroy(entry->pool);
   return SVN_NO_ERROR;
 }
@@ -838,7 +850,7 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
 
   /* Close the file and destroy the baton. */
   SVN_CMD_ERR(ds->editor->close_file(entry->baton, text_checksum, pool));
-  apr_hash_set(ds->tokens, token->data, token->len, NULL);
+  remove_token(ds, token);
   if (--ds->file_refs == 0)
     svn_pool_clear(ds->file_pool);
   return SVN_NO_ERROR;
