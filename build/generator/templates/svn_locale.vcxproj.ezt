@@ -34,6 +34,7 @@
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="Configuration">
     <ConfigurationType>Utility</ConfigurationType>
     <CLRSupport>false</CLRSupport>
+    <PlatformToolset>[toolset_version]</PlatformToolset>
   </PropertyGroup>
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
