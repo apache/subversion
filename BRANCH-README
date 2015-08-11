@@ -9,7 +9,7 @@ Steps:
 - [DONE] Implement "make it executable" support, with tests
 - [DONE] Implement "make it non-executable" support, with tests
 - [DONE] Handle svn:executable and 'new mode' lines both present
-- [TODO] parser: Review handling of modes other than 0644/0755
+- [DONE] parser: Review handling of modes other than 0644/0755
                  Consider checking "mode & 0111"
 
 - [TODO] Support symlinks as well (mode 120000)

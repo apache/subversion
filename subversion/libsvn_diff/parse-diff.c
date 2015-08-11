@@ -1276,6 +1276,19 @@ parse_bits_into_executability(svn_tristate_t *executable_p,
                                 0 /* min */,
                                 0777777 /* max: six octal digits */,
                                 010 /* radix (octal) */));
+
+  /* Note: 0644 and 0755 are the only modes that can occur for plain files.
+   * We deliberately choose to parse only those values: we are strict in what
+   * we accept _and_ in what we produce.
+   *
+   * (Having said that, though, we could consider relaxing the parser to also
+   * map
+   *     (mode & 0111) == 0000 -> svn_tristate_false
+   *     (mode & 0111) == 0111 -> svn_tristate_true
+   *        [anything else]    -> svn_tristate_unknown
+   * .)
+   */
+
   switch (mode & 0777)
     {
       case 0644:
