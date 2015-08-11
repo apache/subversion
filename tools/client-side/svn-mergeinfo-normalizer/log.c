@@ -139,7 +139,7 @@ log_entry_receiver(void *baton,
                          log->pool);
       APR_ARRAY_PUSH(entry->paths, const char *) = path;
 
-      if (change->action == 'D')
+      if (change->action == 'D' || change->action == 'R')
         {
           if (!entry->deletions)
             entry->deletions = apr_array_make(result_pool, 4,
