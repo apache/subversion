@@ -249,6 +249,7 @@ show_removed_branch(const char *subtree_path,
 static svn_error_t *
 remove_obsolete_line(svn_boolean_t *deleted,
                      svn_min__branch_lookup_t *lookup,
+                     svn_min__log_t *log,
                      svn_mergeinfo_t mergeinfo,
                      const char *path,
                      svn_min__opt_state_t *opt_state,
@@ -264,6 +265,26 @@ remove_obsolete_line(svn_boolean_t *deleted,
 
   SVN_ERR(svn_min__branch_lookup(deleted, lookup, path, local_only,
                                  scratch_pool));
+  if (*deleted && log)
+    {
+      svn_revnum_t creation_rev, deletion_rev;
+
+      /* Look for an explicit deletion since the last creation
+       * (or parent creation).  Otherwise, the PATH never existed
+       * but is implied and may be needed as soon as there is a
+       * catch-up merge. */
+      creation_rev = svn_min__find_copy(log, path, SVN_INVALID_REVNUM,
+                                        0, scratch_pool);
+      deletion_rev = svn_min__find_deletion(log, path, creation_rev,
+                                            SVN_INVALID_REVNUM,
+                                            scratch_pool);
+
+      if (!SVN_IS_VALID_REVNUM(deletion_rev))
+        {
+          *deleted = FALSE;
+        }
+    }
+
   if (*deleted)
     {
       svn_hash_sets(mergeinfo, path, NULL);
@@ -278,6 +299,7 @@ remove_obsolete_line(svn_boolean_t *deleted,
 
 static svn_error_t *
 remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
+                      svn_min__log_t *log,
                       svn_mergeinfo_t mergeinfo,
                       svn_min__opt_state_t *opt_state,
                       progress_t *progress,
@@ -301,7 +323,7 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
       svn_boolean_t deleted;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(remove_obsolete_line(&deleted, lookup, mergeinfo, path,
+      SVN_ERR(remove_obsolete_line(&deleted, lookup, log, mergeinfo, path,
                                    opt_state, progress, local_only,
                                    iterpool));
     }
@@ -455,9 +477,9 @@ remove_lines(svn_min__log_t *log,
 
       /* Maybe, this branch is known to be obsolete anyway.
          Do a quick check based on previous lookups. */
-      SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                   subtree_path, opt_state, NULL, TRUE,
-                                   iterpool));
+      SVN_ERR(remove_obsolete_line(&deleted, lookup, log,
+                                   subtree_mergeinfo, subtree_path,
+                                   opt_state, NULL, TRUE, iterpool));
       if (deleted)
         continue;
 
@@ -473,9 +495,9 @@ remove_lines(svn_min__log_t *log,
           /* There is none.  Before we flag that as a problem, maybe the
              branch has been deleted after all?  This time contact the
              repository. */
-          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                       subtree_path, opt_state, NULL, FALSE,
-                                       iterpool));
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, log,
+                                       subtree_mergeinfo, subtree_path,
+                                       opt_state, NULL, FALSE, iterpool));
 
           /* If still relevant, we need to keep the whole m/i on this node.
              Therefore, report the problem. */
@@ -493,9 +515,9 @@ remove_lines(svn_min__log_t *log,
         {
           /* We really found a reverse revision range!?
              Try to get rid of it. */
-          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                       subtree_path, opt_state, NULL, FALSE,
-                                       iterpool));
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, log,
+                                       subtree_mergeinfo, subtree_path,
+                                       opt_state, NULL, FALSE, iterpool));
           if (!deleted)
             SVN_ERR(show_reverse_ranges(subtree_path, reverse_ranges,
                                         opt_state, iterpool));
@@ -511,9 +533,9 @@ remove_lines(svn_min__log_t *log,
         {
           /* We really found non-recursive merges?
              Try to get rid of them. */
-          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                       subtree_path, opt_state, NULL, FALSE,
-                                       iterpool));
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, log,
+                                       subtree_mergeinfo, subtree_path,
+                                       opt_state, NULL, FALSE, iterpool));
           if (!deleted)
             SVN_ERR(show_non_recursive_ranges(subtree_path,
                                               non_recursive_ranges,
@@ -528,13 +550,13 @@ remove_lines(svn_min__log_t *log,
         {
           /* We really found non-recursive merges at the parent?
              Try to get rid of them at the parent and sub-node alike. */
-          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                       parent_path, opt_state, NULL, FALSE,
-                                       iterpool));
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, log,
+                                       subtree_mergeinfo, parent_path,
+                                       opt_state, NULL, FALSE, iterpool));
           if (deleted)
-            SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                        subtree_path, opt_state, NULL, FALSE,
-                                        iterpool));
+            SVN_ERR(remove_obsolete_line(&deleted, lookup, log,
+                                         subtree_mergeinfo, subtree_path,
+                                         opt_state, NULL, FALSE, iterpool));
           if (!deleted)
             SVN_ERR(show_non_recursive_ranges(parent_path,
                                               non_recursive_ranges,
@@ -582,9 +604,9 @@ remove_lines(svn_min__log_t *log,
           || operative_in_subtree->nelts)
         {
           /* This branch can't be elided.  Maybe, it is obsolete anyway. */
-          SVN_ERR(remove_obsolete_line(&deleted, lookup, subtree_mergeinfo,
-                                       subtree_path, opt_state, NULL, FALSE,
-                                       iterpool));
+          SVN_ERR(remove_obsolete_line(&deleted, lookup, log,
+                                       subtree_mergeinfo, subtree_path,
+                                       opt_state, NULL, FALSE, iterpool));
           if (deleted)
             continue;
         }
@@ -901,7 +923,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
               /* We have to keep the sub-tree m/i but we can remove entries
                  for deleted branches from it. */
               SVN_ERR(show_removing_obsoletes(opt_state, iterpool));
-              SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo,
+              SVN_ERR(remove_obsolete_lines(lookup, log, subtree_mergeinfo,
                                             opt_state, &progress, FALSE,
                                             iterpool));
             }
@@ -909,8 +931,9 @@ normalize(apr_array_header_t *wc_mergeinfo,
       else
         {
           /* Eliminate deleted branches. */
-          SVN_ERR(remove_obsolete_lines(lookup, subtree_mergeinfo, opt_state,
-                                        &progress, FALSE, iterpool));
+          SVN_ERR(remove_obsolete_lines(lookup, log, subtree_mergeinfo,
+                                        opt_state, &progress, FALSE,
+                                        iterpool));
         }
 
       /* Reduce the number of remaining ranges. */
@@ -992,14 +1015,14 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
   if (!paths->nelts)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
-                            _("\nNo deleted branches were detected.\n\n")));
+                            _("\nNo missing branches were detected.\n\n")));
       return SVN_NO_ERROR;
     }
 
   iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_cmdline_printf(iterpool,
-                             _("\nDetected %d deleted branches:\n"),
+                             _("\nDetected %d missing branches:\n"),
                              paths->nelts));
   for (i = 0; i < paths->nelts; ++i)
     {
@@ -1007,14 +1030,28 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(iterpool);
-      deletion_rev = log ? svn_min__find_deletion(log, path, 0,
-                                                  SVN_INVALID_REVNUM,
-                                                  iterpool)
-                         : SVN_INVALID_REVNUM;
+      if (log)
+        {
+          /* Look for a deletion since the last creation
+           * (or parent creation). */
+          svn_revnum_t creation_rev = svn_min__find_copy(log, path,
+                                                         SVN_INVALID_REVNUM,
+                                                         0, iterpool);
+          deletion_rev = svn_min__find_deletion(log, path, creation_rev,
+                                                SVN_INVALID_REVNUM,
+                                                iterpool);
+        }
+      else
+        {
+          deletion_rev = SVN_INVALID_REVNUM;
+        }
 
       if (SVN_IS_VALID_REVNUM(deletion_rev))
         SVN_ERR(svn_cmdline_printf(iterpool, _("    [r%ld] %s\n"),
                                    deletion_rev, path));
+      else if (log)
+        SVN_ERR(svn_cmdline_printf(iterpool, _("    [implied, kept] %s\n"),
+                                   path));
       else
         SVN_ERR(svn_cmdline_printf(iterpool, _("    %s\n"), path));
     }

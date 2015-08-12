@@ -607,6 +607,25 @@ next_copy(svn_min__log_t *log,
   return copy;
 }
 
+svn_revnum_t
+svn_min__find_copy(svn_min__log_t *log,
+                   const char *path,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   apr_pool_t *scratch_pool)
+{
+  const copy_t *copy;
+
+  if (!SVN_IS_VALID_REVNUM(start_rev))
+    start_rev = log->head_rev;
+
+  copy = next_copy(log, path, start_rev, scratch_pool);
+  if (copy && copy->revision >= end_rev)
+    return copy->revision;
+
+  return SVN_NO_ERROR;
+}
+
 apr_array_header_t *
 svn_min__get_history(svn_min__log_t *log,
                      const char *path,
