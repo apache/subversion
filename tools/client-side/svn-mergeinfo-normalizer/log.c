@@ -653,19 +653,6 @@ svn_min__get_history(svn_min__log_t *log,
   return result;
 }
 
-static int
-compare_history_revision(const void *lhs,
-                         const void *rhs)
-{
-  const segment_t *segment = *(const segment_t * const *)lhs;
-  svn_revnum_t revision = *(const svn_revnum_t *)rhs;
-
-  if (segment->start < revision)
-    return -1;
-
-  return segment->start == revision ? 0 : 1;
-}
-
 apr_array_header_t *
 svn_min__intersect_history(apr_array_header_t *lhs,
                            apr_array_header_t *rhs,
