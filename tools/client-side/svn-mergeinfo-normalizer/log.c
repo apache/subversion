@@ -464,18 +464,18 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
 svn_revnum_t
 svn_min__find_deletion(svn_min__log_t *log,
                        const char *path,
-                       svn_revnum_t lower_rev,
-                       svn_revnum_t upper_rev,
+                       svn_revnum_t start_rev,
+                       svn_revnum_t end_rev,
                        apr_pool_t *scratch_pool)
 {
   svn_revnum_t latest = SVN_INVALID_REVNUM;
 
   deletion_t *to_find = apr_pcalloc(scratch_pool, sizeof(*to_find));
   to_find->path = path;
-  to_find->revision = lower_rev;
+  to_find->revision = end_rev;
 
-  if (!SVN_IS_VALID_REVNUM(upper_rev))
-    upper_rev = log->head_rev;
+  if (!SVN_IS_VALID_REVNUM(start_rev))
+    start_rev = log->head_rev;
 
   if (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
     {
@@ -489,7 +489,7 @@ svn_min__find_deletion(svn_min__log_t *log,
                                                      const deletion_t *);
           if (strcmp(deletion->path, to_find->path))
             break;
-          if (deletion->revision > upper_rev)
+          if (deletion->revision > start_rev)
             break;
 
           latest = deletion->revision;
