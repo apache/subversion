@@ -171,7 +171,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       # API but the installation may have been patched.
       AC_ARG_ENABLE(broken-httpd-auth,
         AS_HELP_STRING([--enable-broken-httpd-auth],
-                       [Force build and against httpd 2.4 with broken auth]),
+                       [Force build against httpd 2.4 with broken auth]),
         [broken_httpd_auth=$enableval],[broken_httpd_auth=no])
       AC_MSG_CHECKING([for ap_some_authn_required])
       old_CPPFLAGS="$CPPFLAGS"
