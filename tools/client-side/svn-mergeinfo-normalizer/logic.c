@@ -303,9 +303,9 @@ remove_obsolete_line(deletion_state_t *state,
            * catch-up merge. */
           creation_rev = svn_min__find_copy(log, path, SVN_INVALID_REVNUM,
                                             0, scratch_pool);
-          deletion_rev = svn_min__find_deletion(log, path, creation_rev,
+          deletion_rev = svn_min__find_deletion(log, path,
                                                 SVN_INVALID_REVNUM,
-                                                scratch_pool);
+                                                creation_rev, scratch_pool);
 
           *state = SVN_IS_VALID_REVNUM(deletion_rev) ? ds_deleted
                                                      : ds_implied;
@@ -1082,9 +1082,9 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
           svn_revnum_t creation_rev = svn_min__find_copy(log, path,
                                                          SVN_INVALID_REVNUM,
                                                          0, iterpool);
-          deletion_rev = svn_min__find_deletion(log, path, creation_rev,
+          deletion_rev = svn_min__find_deletion(log, path,
                                                 SVN_INVALID_REVNUM,
-                                                iterpool);
+                                                creation_rev, iterpool);
         }
       else
         {
