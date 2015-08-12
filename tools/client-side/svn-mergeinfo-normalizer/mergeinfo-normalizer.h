@@ -200,6 +200,13 @@ svn_min__find_deletions(svn_min__log_t *log,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+svn_revnum_t
+svn_min__find_copy(svn_min__log_t *log,
+                   const char *path,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   apr_pool_t *scratch_pool);
+
 apr_array_header_t *
 svn_min__get_history(svn_min__log_t *log,
                      const char *path,
