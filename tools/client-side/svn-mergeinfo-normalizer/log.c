@@ -47,7 +47,6 @@ typedef struct log_entry_t
   svn_revnum_t revision;
   const char *common_base;
   apr_array_header_t *paths;
-  apr_array_header_t *deletions;
 } log_entry_t;
 
 typedef struct copy_t
@@ -59,6 +58,12 @@ typedef struct copy_t
   svn_revnum_t copyfrom_revision;
 } copy_t;
 
+typedef struct deletion_t
+{
+  const char *path;
+  svn_revnum_t revision;
+} deletion_t;
+
 struct svn_min__log_t
 {
   apr_hash_t *unique_paths;
@@ -69,6 +74,7 @@ struct svn_min__log_t
   apr_array_header_t *entries;
 
   apr_array_header_t *copies;
+  apr_array_header_t *deletions;
 
   svn_boolean_t quiet;
 };
@@ -88,6 +94,23 @@ copy_order(const void *lhs,
     return -1;
 
   return lhs_copy->revision == rhs_copy->revision ? 0 : 1;
+}
+
+static int
+deletion_order(const void *lhs,
+               const void *rhs)
+{
+  const deletion_t *lhs_deletion = *(const deletion_t * const *)lhs;
+  const deletion_t *rhs_deletion = *(const deletion_t * const *)rhs;
+
+  int diff = strcmp(lhs_deletion->path, rhs_deletion->path);
+  if (diff)
+    return diff;
+
+  if (lhs_deletion->revision < rhs_deletion->revision)
+    return -1;
+
+  return lhs_deletion->revision == rhs_deletion->revision ? 0 : 1;
 }
 
 static const char *
@@ -126,7 +149,6 @@ log_entry_receiver(void *baton,
   entry->paths = apr_array_make(result_pool,
                                 apr_hash_count(log_entry->changed_paths),
                                 sizeof(const char *));
-  entry->deletions = NULL;
 
   for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths);
        hi;
@@ -141,11 +163,11 @@ log_entry_receiver(void *baton,
 
       if (change->action == 'D' || change->action == 'R')
         {
-          if (!entry->deletions)
-            entry->deletions = apr_array_make(result_pool, 4,
-                                              sizeof(const char *));
+          deletion_t *deletion = apr_pcalloc(log->pool, sizeof(*deletion));
+          deletion->path = path;
+          deletion->revision = log_entry->revision;
 
-          APR_ARRAY_PUSH(entry->deletions, const char *) = path;
+          APR_ARRAY_PUSH(log->deletions, deletion_t *) = deletion;
         }
 
       if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
@@ -229,6 +251,7 @@ svn_min__log(svn_min__log_t **log,
   result->head_rev = SVN_INVALID_REVNUM;
   result->entries = apr_array_make(result_pool, 1024, sizeof(log_entry_t *));
   result->copies = apr_array_make(result_pool, 1024, sizeof(copy_t *));
+  result->deletions = apr_array_make(result_pool, 1024, sizeof(deletion_t *));
   result->quiet = baton->opt_state->quiet;
 
   if (!baton->opt_state->quiet)
@@ -254,6 +277,7 @@ svn_min__log(svn_min__log_t **log,
 
   svn_sort__array_reverse(result->entries, scratch_pool);
   svn_sort__array(result->copies, copy_order);
+  svn_sort__array(result->deletions, deletion_order);
 
   if (!baton->opt_state->quiet)
     {
@@ -440,62 +464,91 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
 svn_revnum_t
 svn_min__find_deletion(svn_min__log_t *log,
                        const char *path,
-                       svn_revnum_t end_rev)
+                       svn_revnum_t lower_rev,
+                       svn_revnum_t upper_rev,
+                       apr_pool_t *scratch_pool)
 {
-  int i, k;
-  for (i = log->entries->nelts - 1; i >= 0; --i)
+  svn_revnum_t latest = SVN_INVALID_REVNUM;
+
+  deletion_t *to_find = apr_pcalloc(scratch_pool, sizeof(*to_find));
+  to_find->path = path;
+  to_find->revision = lower_rev;
+
+  if (!SVN_IS_VALID_REVNUM(upper_rev))
+    upper_rev = log->head_rev;
+
+  if (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
     {
-      const log_entry_t *entry = APR_ARRAY_IDX(log->entries, i,
-                                               const log_entry_t *);
-      if (entry->revision < end_rev)
-        break;
-
-      if (!entry->deletions)
-        continue;
-
-      if (!is_relevant(entry->common_base, path, NULL))
-        continue;
-
-      for (k = 0; k < entry->deletions->nelts; ++k)
+      int i;
+      for (i = svn_sort__bsearch_lower_bound(log->deletions, &to_find,
+                                             deletion_order);
+           i < log->deletions->nelts;
+           ++i)
         {
-          const char *deleted_path
-            = APR_ARRAY_IDX(entry->paths, k, const char *);
+          const deletion_t *deletion = APR_ARRAY_IDX(log->deletions, i,
+                                                     const deletion_t *);
+          if (strcmp(deletion->path, to_find->path))
+            break;
+          if (deletion->revision > upper_rev)
+            break;
 
-          if (in_subtree(path, deleted_path, NULL))
-            return entry->revision;
+          latest = deletion->revision;
+          to_find->revision = deletion->revision;
         }
+
+      to_find->path = svn_fspath__dirname(to_find->path, scratch_pool);
     }
 
-  return SVN_INVALID_REVNUM;
+  return latest;
 }
 
 apr_array_header_t *
 svn_min__find_deletions(svn_min__log_t *log,
                         const char *path,
-                        apr_pool_t *result_pool)
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   apr_array_header_t *result = apr_array_make(result_pool, 0,
                                               sizeof(svn_revnum_t));
-  int i, k;
-  for (i = log->entries->nelts - 1; i >= 0; --i)
+  int source, dest;
+
+  deletion_t *to_find = apr_pcalloc(scratch_pool, sizeof(*to_find));
+  to_find->path = path;
+  to_find->revision = 0;
+
+  if (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
     {
-      const log_entry_t *entry = APR_ARRAY_IDX(log->entries, i,
-                                               const log_entry_t *);
-      if (!entry->deletions)
-        continue;
-
-      if (!is_relevant(entry->common_base, path, NULL))
-        continue;
-
-      for (k = 0; k < entry->deletions->nelts; ++k)
+      int i;
+      for (i = svn_sort__bsearch_lower_bound(log->deletions, &to_find,
+                                             deletion_order);
+           i < log->deletions->nelts;
+           ++i)
         {
-          const char *deleted_path
-            = APR_ARRAY_IDX(entry->paths, k, const char *);
+          const deletion_t *deletion = APR_ARRAY_IDX(log->deletions, i,
+                                                     const deletion_t *);
+          if (strcmp(deletion->path, to_find->path))
+            break;
 
-          if (in_subtree(path, deleted_path, NULL))
-            APR_ARRAY_PUSH(result, svn_revnum_t) = entry->revision;
+          APR_ARRAY_PUSH(result, svn_revnum_t) = deletion->revision;
+        }
+
+      to_find->path = svn_fspath__dirname(to_find->path, scratch_pool);
+    }
+
+  svn_sort__array(result, svn_sort_compare_revisions);
+  for (source = 1, dest = 0; source < result->nelts; ++source)
+    {
+      svn_revnum_t source_rev = APR_ARRAY_IDX(result, source, svn_revnum_t);
+      svn_revnum_t dest_rev = APR_ARRAY_IDX(result, dest, svn_revnum_t);
+      if (source_rev != dest_rev)
+        {
+          ++dest_rev;
+          APR_ARRAY_IDX(result, dest, svn_revnum_t) = source_rev;
         }
     }
+
+  if (result->nelts)
+    result->nelts = dest + 1;
 
   return result;
 }

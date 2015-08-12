@@ -369,7 +369,8 @@ remove_overlapping_history(svn_rangelist_t **removed,
 
   /* Collect the deletion revisions, i.e. the revisons separating different
      branches with the same name. */
-  deletions = svn_min__find_deletions(log, source_path, scratch_pool);
+  deletions = svn_min__find_deletions(log, source_path, scratch_pool,
+                                      scratch_pool);
   next_deletion = SVN_INVALID_REVNUM;
 
   /* Get the history of each of these branches up to the point where the
@@ -867,8 +868,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
       SVN_ERR(show_elision_header(parent_path, relpath, opt_state,
                                   scratch_pool));
 
-      /* Modify only a copy of the mergeinfo - until we know it can all
-         be removed. */
+      /* Modify the mergeinfo here. */
       subtree_mergeinfo_copy = svn_mergeinfo_dup(subtree_mergeinfo,
                                                  iterpool);
 
@@ -1007,7 +1007,9 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(iterpool);
-      deletion_rev = log ? svn_min__find_deletion(log, path, 0)
+      deletion_rev = log ? svn_min__find_deletion(log, path, 0,
+                                                  SVN_INVALID_REVNUM,
+                                                  iterpool)
                          : SVN_INVALID_REVNUM;
 
       if (SVN_IS_VALID_REVNUM(deletion_rev))

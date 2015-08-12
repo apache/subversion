@@ -188,14 +188,17 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
                                    apr_pool_t *result_pool);
 
 svn_revnum_t
-svn_min__find_deletion(svn_min__log_t* log,
-                       const char* path,
-                       svn_revnum_t end_rev);
+svn_min__find_deletion(svn_min__log_t *log,
+                       const char *path,
+                       svn_revnum_t lower_rev,
+                       svn_revnum_t upper_rev,
+                       apr_pool_t *scratch_pool);
 
 apr_array_header_t *
 svn_min__find_deletions(svn_min__log_t *log,
                         const char *path,
-                        apr_pool_t *result_pool);
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 apr_array_header_t *
 svn_min__get_history(svn_min__log_t *log,
