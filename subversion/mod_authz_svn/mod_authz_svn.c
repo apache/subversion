@@ -84,20 +84,18 @@ typedef struct authz_svn_config_rec {
   const char *force_username_case;
 } authz_svn_config_rec;
 
-#if AP_MODULE_MAGIC_AT_LEAST(20060110,0) /* version where
-                                            ap_some_auth_required breaks */
-#  if AP_MODULE_MAGIC_AT_LEAST(20120211,47) /* first version with
-                                               force_authn hook and
-                                               ap_some_authn_required() which
-                                               allows us to work without
-                                               ap_some_auth_required() */
+/* version where ap_some_auth_required breaks */
+#if AP_MODULE_MAGIC_AT_LEAST(20060110,0)
+/* first version with force_authn hook and ap_some_authn_required()
+   which allows us to work without ap_some_auth_required() */
+#  if AP_MODULE_MAGIC_AT_LEAST(20120211,47) || defined(SVN_USE_FORCE_AUTHN)
 #    define USE_FORCE_AUTHN 1
 #    define IN_SOME_AUTHN_NOTE "authz_svn-in-some-authn"
 #    define FORCE_AUTHN_NOTE "authz_svn-force-authn"
 #  else 
      /* ap_some_auth_required() is busted and no viable alternative exists */
 #    ifndef SVN_ALLOW_BROKEN_HTTPD_AUTH
-#      error This version of httpd has a security hole with mod_authz_svn
+#      error This Apache httpd has broken auth (CVE-2015-3185)
 #    else
        /* user wants to build anyway */
 #      define USE_FORCE_AUTHN 0
