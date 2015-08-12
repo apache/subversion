@@ -164,19 +164,42 @@ if test -n "$APXS" && test "$APXS" != "no"; then
 
     AC_CHECK_HEADERS(unistd.h, [AC_CHECK_FUNCS(getpid)], [])
 
+    MMN_MAJOR=`$SED -ne '/^#define MODULE_MAGIC_NUMBER_MAJOR/p' "$APXS_INCLUDE/ap_mmn.h" | $SED -e 's/^.*MAJOR *//'`
+    MMN_MINOR=`$SED -ne '/^#define MODULE_MAGIC_NUMBER_MINOR/p' "$APXS_INCLUDE/ap_mmn.h" | $SED -e 's/^.*MINOR *//' | $SED -e 's/ .*//'`
+    if test "$MMN_MAJOR" = "20120211" && test "$MMN_MINOR" -lt "47" ; then
+      # This is httpd 2.4 and it doesn't appear to have the required
+      # API but the installation may have been patched.
+      AC_ARG_ENABLE(broken-httpd-auth,
+        AS_HELP_STRING([--enable-broken-httpd-auth],
+                       [Force build and against httpd 2.4 with broken auth]),
+        [broken_httpd_auth=$enableval],[broken_httpd_auth=no])
+      AC_MSG_CHECKING([for ap_some_authn_required])
+      old_CPPFLAGS="$CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $APACHE_INCLUDES $SVN_APR_INCLUDES"
+      AC_EGREP_CPP([int.*\sap_some_authn_required\s*\(],
+                   [#include "http_request.h"],
+                   [AC_MSG_RESULT([yes])
+                    working_auth=yes],
+                   [AC_MSG_RESULT([no])])
+      CPPFLAGS="$old_CPPFLAGS"
+      if test "$working_auth" = "yes" ; then
+        AC_DEFINE(SVN_USE_FORCE_AUTHN, 1,
+                  [Defined to build with patched httpd 2.4 and working auth])
+      elif test "$enable_broken_httpd_auth" = "yes"; then
+        AC_MSG_WARN([==============================================])
+        AC_MSG_WARN([Apache httpd $HTTPD_VERSION MMN $MMN_MAJOR.$MMN_MINOR])
+        AC_MSG_WARN([Subversion will be vulnerable to CVE-2015-3185])
+        AC_MSG_WARN([==============================================])
+        AC_DEFINE(SVN_ALLOW_BROKEN_HTTPD_AUTH, 1,
+                  [Defined to build against httpd 2.4 with broken auth])
+      else
+        AC_MSG_ERROR([Apache httpd $HTTPD_VERSION MMN $MMN_MAJOR.$MMN_MINOR has broken auth (CVE-2015-3185)])
+      fi
+    fi
+
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
     INSTALL_APACHE_MODS=true
-    AC_ARG_ENABLE(broken-httpd-auth,
-      AS_HELP_STRING([--enable-broken-httpd-auth],
-                     [Allow building against httpd 2.4 with broken auth]),
-      [broken_httpd_auth=$enableval],[broken_httpd_auth=no])
-    if test "$enable_broken_httpd_auth" = "yes"; then
-      AC_MSG_NOTICE([Building with broken httpd auth])
-      AC_DEFINE(SVN_ALLOW_BROKEN_HTTPD_AUTH, 1,
-                [Defined to allow building against httpd 2.4 with broken auth])
-    fi
-
     case $host in
       *-*-cygwin*)
         APACHE_LDFLAGS="-shrext .so"
