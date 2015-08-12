@@ -924,6 +924,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
       svn_mergeinfo_t parent_mergeinfo;
       svn_mergeinfo_t subtree_mergeinfo;
       svn_mergeinfo_t subtree_mergeinfo_copy;
+      svn_mergeinfo_t mergeinfo_to_report;
 
       svn_pool_clear(iterpool);
       progress.nodes_todo = i;
@@ -943,6 +944,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
       if (opt_state->remove_redundants && parent_mergeinfo)
         {
           svn_mergeinfo_t parent_mergeinfo_copy;
+          mergeinfo_to_report = subtree_mergeinfo_copy;
 
           /* Try to elide the mergeinfo for all branches. */
           parent_mergeinfo_copy = svn_mergeinfo_dup(parent_mergeinfo,
@@ -976,6 +978,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
       else
         {
           /* Eliminate deleted branches. */
+          mergeinfo_to_report = subtree_mergeinfo;
           SVN_ERR(remove_obsolete_lines(lookup, log, subtree_mergeinfo,
                                         opt_state, &progress, FALSE,
                                         iterpool));
@@ -986,7 +989,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
                             iterpool));
 
       /* Display what's left. */
-      SVN_ERR(show_elision_result(parent_mergeinfo, subtree_mergeinfo_copy,
+      SVN_ERR(show_elision_result(parent_mergeinfo, mergeinfo_to_report,
                                   opt_state, scratch_pool));
 
       /* Print progress info. */
