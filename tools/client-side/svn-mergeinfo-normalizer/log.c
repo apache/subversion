@@ -477,7 +477,7 @@ svn_min__find_deletion(svn_min__log_t *log,
   if (!SVN_IS_VALID_REVNUM(start_rev))
     start_rev = log->head_rev;
 
-  if (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
+  while (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
     {
       int i;
       for (i = svn_sort__bsearch_lower_bound(log->deletions, &to_find,
