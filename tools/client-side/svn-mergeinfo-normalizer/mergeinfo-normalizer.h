@@ -167,6 +167,15 @@ svn_min__print_mergeinfo_stats(apr_array_header_t *wc_mergeinfo,
 
 typedef struct svn_min__log_t svn_min__log_t;
 
+typedef struct svn_min__copy_t
+{
+  const char *path;
+  svn_revnum_t revision;
+
+  const char *copyfrom_path;
+  svn_revnum_t copyfrom_revision;
+} svn_min__copy_t;
+
 svn_error_t *
 svn_min__log(svn_min__log_t **log,
              const char *url,

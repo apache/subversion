@@ -49,15 +49,6 @@ typedef struct log_entry_t
   apr_array_header_t *paths;
 } log_entry_t;
 
-typedef struct copy_t
-{
-  const char *path;
-  svn_revnum_t revision;
-
-  const char *copyfrom_path;
-  svn_revnum_t copyfrom_revision;
-} copy_t;
-
 typedef struct deletion_t
 {
   const char *path;
@@ -83,8 +74,8 @@ static int
 copy_order(const void *lhs,
            const void *rhs)
 {
-  const copy_t *lhs_copy = *(const copy_t * const *)lhs;
-  const copy_t *rhs_copy = *(const copy_t * const *)rhs;
+  const svn_min__copy_t *lhs_copy = *(const svn_min__copy_t * const *)lhs;
+  const svn_min__copy_t *rhs_copy = *(const svn_min__copy_t * const *)rhs;
 
   int diff = strcmp(lhs_copy->path, rhs_copy->path);
   if (diff)
@@ -172,7 +163,7 @@ log_entry_receiver(void *baton,
 
       if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
         {
-          copy_t *copy = apr_pcalloc(log->pool, sizeof(*copy));
+          svn_min__copy_t *copy = apr_pcalloc(log->pool, sizeof(*copy));
           copy->path = path;
           copy->revision = log_entry->revision;
           copy->copyfrom_path = internalize(log->unique_paths,
@@ -181,7 +172,7 @@ log_entry_receiver(void *baton,
                                             log->pool);
           copy->copyfrom_revision = change->copyfrom_rev;
 
-          APR_ARRAY_PUSH(log->copies, copy_t *) = copy;
+          APR_ARRAY_PUSH(log->copies, svn_min__copy_t *) = copy;
         }
     }
 
@@ -250,7 +241,8 @@ svn_min__log(svn_min__log_t **log,
   result->first_rev = SVN_INVALID_REVNUM;
   result->head_rev = SVN_INVALID_REVNUM;
   result->entries = apr_array_make(result_pool, 1024, sizeof(log_entry_t *));
-  result->copies = apr_array_make(result_pool, 1024, sizeof(copy_t *));
+  result->copies = apr_array_make(result_pool, 1024,
+                                  sizeof(svn_min__copy_t *));
   result->deletions = apr_array_make(result_pool, 1024, sizeof(deletion_t *));
   result->quiet = baton->opt_state->quiet;
 
@@ -560,16 +552,16 @@ typedef struct segment_t
   svn_revnum_t end;
 } segment_t;
 
-static const copy_t *
+static const svn_min__copy_t *
 next_copy(svn_min__log_t *log,
           const char *path,
           svn_revnum_t revision,
           apr_pool_t *scratch_pool)
 {
-  const copy_t *copy = NULL;
+  const svn_min__copy_t *copy = NULL;
   int idx;
 
-  copy_t *to_find = apr_pcalloc(scratch_pool, sizeof(*to_find));
+  svn_min__copy_t *to_find = apr_pcalloc(scratch_pool, sizeof(*to_find));
   to_find->path = path;
   to_find->revision = revision;
  
@@ -577,7 +569,7 @@ next_copy(svn_min__log_t *log,
   if (idx < log->copies->nelts)
     {
       /* Found an exact match? */
-      copy = APR_ARRAY_IDX(log->copies, idx, const copy_t *);
+      copy = APR_ARRAY_IDX(log->copies, idx, const svn_min__copy_t *);
       if (copy->revision != revision || strcmp(copy->path, path))
         copy = NULL;
     }
@@ -585,7 +577,7 @@ next_copy(svn_min__log_t *log,
   if (!copy && idx > 0)
     {
       /* No exact match. The predecessor may be the closest copy. */
-      copy = APR_ARRAY_IDX(log->copies, idx - 1, const copy_t *);
+      copy = APR_ARRAY_IDX(log->copies, idx - 1, const svn_min__copy_t *);
       if (strcmp(copy->path, path))
         copy = NULL;
     }
@@ -594,7 +586,7 @@ next_copy(svn_min__log_t *log,
      We implicitly recurse up the tree. */
   if (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
     {
-      const copy_t *parent_copy;
+      const svn_min__copy_t *parent_copy;
       to_find->path = svn_fspath__dirname(to_find->path, scratch_pool);
 
       parent_copy = next_copy(log, to_find->path, revision, scratch_pool);
@@ -614,7 +606,7 @@ svn_min__find_copy(svn_min__log_t *log,
                    svn_revnum_t end_rev,
                    apr_pool_t *scratch_pool)
 {
-  const copy_t *copy;
+  const svn_min__copy_t *copy;
 
   if (!SVN_IS_VALID_REVNUM(start_rev))
     start_rev = log->head_rev;
@@ -635,7 +627,7 @@ svn_min__get_history(svn_min__log_t *log,
                      apr_pool_t *scratch_pool)
 {
   segment_t *segment;
-  const copy_t *copy;
+  const svn_min__copy_t *copy;
   apr_array_header_t *result = apr_array_make(result_pool, 16,
                                               sizeof(segment_t *));
 
