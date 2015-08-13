@@ -38,6 +38,22 @@
 
 #include "svn_private_config.h"
 
+/* Set *EXISTS to TRUE, if the revision / pack file for REV exists in FS.
+   Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+revision_file_exists(svn_boolean_t *exists,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  const char *path = svn_fs_x__path_rev_absolute(fs, rev, scratch_pool);
+  SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+
+  *exists = kind == svn_node_file;
+  return SVN_NO_ERROR;
+}
+
 /* Part of the recovery procedure.  Return the largest revision *REV in
    filesystem FS.  Use SCRATCH_POOL for temporary allocation. */
 static svn_error_t *
@@ -56,19 +72,12 @@ recover_get_largest_revision(svn_fs_t *fs,
   /* Keep doubling right, until we find a revision that doesn't exist. */
   while (1)
     {
-      svn_error_t *err;
-      svn_fs_x__revision_file_t *file;
+      svn_boolean_t exists;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_x__open_pack_or_rev_file(&file, fs, right, iterpool,
-                                            iterpool);
-      if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
-        {
-          svn_error_clear(err);
-          break;
-        }
-      else
-        SVN_ERR(err);
+      SVN_ERR(revision_file_exists(&exists, fs, right, iterpool));
+      if (!exists)
+        break;
 
       right <<= 1;
     }
@@ -80,22 +89,14 @@ recover_get_largest_revision(svn_fs_t *fs,
   while (left + 1 < right)
     {
       svn_revnum_t probe = left + ((right - left) / 2);
-      svn_error_t *err;
-      svn_fs_x__revision_file_t *file;
+      svn_boolean_t exists;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_x__open_pack_or_rev_file(&file, fs, probe, iterpool,
-                                            iterpool);
-      if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
-        {
-          svn_error_clear(err);
-          right = probe;
-        }
+      SVN_ERR(revision_file_exists(&exists, fs, probe, iterpool));
+      if (exists)
+        left = probe;
       else
-        {
-          SVN_ERR(err);
-          left = probe;
-        }
+        right = probe;
     }
 
   svn_pool_destroy(iterpool);
