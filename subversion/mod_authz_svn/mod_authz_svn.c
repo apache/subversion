@@ -95,7 +95,7 @@ typedef struct authz_svn_config_rec {
 #  else 
      /* ap_some_auth_required() is busted and no viable alternative exists */
 #    ifndef SVN_ALLOW_BROKEN_HTTPD_AUTH
-#      error This Apache httpd has broken auth (CVE-2015-3185)
+#      error This Apache httpd has broken auth (CVE-2015-3184)
 #    else
        /* user wants to build anyway */
 #      define USE_FORCE_AUTHN 0
