@@ -236,6 +236,7 @@ typedef enum deletion_state_t
 {
   ds_exists,
   ds_implied,
+  ds_has_copies,
   ds_deleted
 } deletion_state_t;
 
@@ -244,6 +245,7 @@ show_removed_branch(const char *subtree_path,
                     svn_min__opt_state_t *opt_state,
                     deletion_state_t deletion_state,
                     svn_boolean_t report_non_removals,
+                    const char *surviving_copy,
                     apr_pool_t *scratch_pool)
 {
   if (opt_state->verbose)
@@ -262,9 +264,84 @@ show_removed_branch(const char *subtree_path,
                                        subtree_path));
           break;
 
+        case ds_has_copies:
+          if (report_non_removals)
+            {
+              SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                        _("    has SURVIVING COPIES: %s\n"),
+                                        subtree_path));
+              SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                         _("        e.g.: %s\n"),
+                                        surviving_copy));
+            }
+          break;
+
         default:
           break;
       }
+
+  return SVN_NO_ERROR;
+}
+
+static const char *
+get_copy_target_path(const char *source,
+                     const svn_min__copy_t *copy,
+                     apr_pool_t *result_pool)
+{
+  if (svn_dirent_is_ancestor(copy->copyfrom_path, source))
+    {
+      const char *relpath = svn_dirent_skip_ancestor(copy->copyfrom_path,
+                                                     source);
+      return svn_dirent_join(copy->path, relpath, result_pool);
+    }
+
+  return apr_pstrdup(result_pool, copy->path);
+}
+
+static svn_error_t*
+find_surviving_copy(const char **surviver,
+                    svn_min__log_t *log,
+                    const char *path,
+                    svn_revnum_t start_rev,
+                    svn_revnum_t end_rev,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *copies = svn_min__get_copies(log, path, start_rev,
+                                                   end_rev, scratch_pool,
+                                                   scratch_pool);
+
+  int i;
+  *surviver = NULL;
+  for (i = 0; (i < copies->nelts) && !*surviver; ++i)
+    {
+      const char *copy_target;
+      const svn_min__copy_t *copy;
+      svn_revnum_t deletion_rev;
+      svn_pool_clear(iterpool);
+
+      copy = APR_ARRAY_IDX(copies, i, const svn_min__copy_t *);
+      copy_target = get_copy_target_path(path, copy, iterpool);
+
+      /* Is this a surviving copy? */
+      deletion_rev = svn_min__find_deletion(log, copy_target,
+                                            SVN_INVALID_REVNUM,
+                                            copy->revision, iterpool);
+      if (SVN_IS_VALID_REVNUM(deletion_rev))
+        {
+          /* Are there surviving sub-copies? */
+          SVN_ERR(find_surviving_copy(surviver, log, copy_target,
+                                      copy->revision, deletion_rev - 1,
+                                      result_pool, iterpool));
+        }
+      else
+        {
+          *surviver = apr_pstrdup(result_pool, copy_target);
+        }
+    }
+ 
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -282,6 +359,7 @@ remove_obsolete_line(deletion_state_t *state,
                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t deleted;
+  const char *surviving_copy = NULL;
 
   if (!opt_state->remove_obsoletes)
     {
@@ -307,8 +385,22 @@ remove_obsolete_line(deletion_state_t *state,
                                                 SVN_INVALID_REVNUM,
                                                 creation_rev, scratch_pool);
 
-          *state = SVN_IS_VALID_REVNUM(deletion_rev) ? ds_deleted
-                                                     : ds_implied;
+          SVN_ERR(find_surviving_copy(&surviving_copy, log, path,
+                                      SVN_IS_VALID_REVNUM(deletion_rev) 
+                                        ? deletion_rev - 1
+                                        : deletion_rev,
+                                      creation_rev,
+                                      scratch_pool, scratch_pool));
+
+          if (surviving_copy)
+            {
+              *state = ds_has_copies;
+            }
+          else
+            {
+              *state = SVN_IS_VALID_REVNUM(deletion_rev) ? ds_deleted
+                                                         : ds_implied;
+            }
         }
       else
         {
@@ -330,7 +422,7 @@ remove_obsolete_line(deletion_state_t *state,
     }
 
   SVN_ERR(show_removed_branch(path, opt_state, *state, report_non_removals,
-                              scratch_pool));
+                              surviving_copy, scratch_pool));
 
   return SVN_NO_ERROR;
 }
