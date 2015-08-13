@@ -298,23 +298,22 @@ get_copy_target_path(const char *source,
   return apr_pstrdup(result_pool, copy->path);
 }
 
-static svn_error_t*
-find_surviving_copy(const char **surviver,
-                    svn_min__log_t *log,
+static const char *
+find_surviving_copy(svn_min__log_t *log,
                     const char *path,
                     svn_revnum_t start_rev,
                     svn_revnum_t end_rev,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
+  const char *surviver = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *copies = svn_min__get_copies(log, path, start_rev,
                                                    end_rev, scratch_pool,
                                                    scratch_pool);
 
   int i;
-  *surviver = NULL;
-  for (i = 0; (i < copies->nelts) && !*surviver; ++i)
+  for (i = 0; (i < copies->nelts) && !surviver; ++i)
     {
       const char *copy_target;
       const svn_min__copy_t *copy;
@@ -331,21 +330,20 @@ find_surviving_copy(const char **surviver,
       if (SVN_IS_VALID_REVNUM(deletion_rev))
         {
           /* Are there surviving sub-copies? */
-          SVN_ERR(find_surviving_copy(surviver, log, copy_target,
-                                      copy->revision, deletion_rev - 1,
-                                      result_pool, iterpool));
+          surviver = find_surviving_copy(log, copy_target,
+                                         copy->revision, deletion_rev - 1,
+                                         result_pool, iterpool);
         }
       else
         {
-          *surviver = apr_pstrdup(result_pool, copy_target);
+          surviver = apr_pstrdup(result_pool, copy_target);
         }
     }
  
   svn_pool_destroy(iterpool);
 
-  return SVN_NO_ERROR;
+  return surviver;
 }
-
 
 static void
 find_surviving_copies(apr_array_header_t *survivers,
@@ -431,13 +429,12 @@ remove_obsolete_line(deletion_state_t *state,
           deletion_rev = svn_min__find_deletion(log, path,
                                                 SVN_INVALID_REVNUM,
                                                 creation_rev, scratch_pool);
-
-          SVN_ERR(find_surviving_copy(&surviving_copy, log, path,
-                                      SVN_IS_VALID_REVNUM(deletion_rev) 
-                                        ? deletion_rev - 1
-                                        : deletion_rev,
-                                      creation_rev,
-                                      scratch_pool, scratch_pool));
+          surviving_copy = find_surviving_copy(log, path,
+                                               SVN_IS_VALID_REVNUM(deletion_rev)
+                                                 ? deletion_rev - 1
+                                                 : deletion_rev,
+                                               creation_rev,
+                                               scratch_pool, scratch_pool);
 
           if (surviving_copy)
             {
