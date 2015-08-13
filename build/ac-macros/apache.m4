@@ -188,12 +188,12 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       elif test "$enable_broken_httpd_auth" = "yes"; then
         AC_MSG_WARN([==============================================])
         AC_MSG_WARN([Apache httpd $HTTPD_VERSION MMN $MMN_MAJOR.$MMN_MINOR])
-        AC_MSG_WARN([Subversion will be vulnerable to CVE-2015-3185])
+        AC_MSG_WARN([Subversion will be vulnerable to CVE-2015-3184])
         AC_MSG_WARN([==============================================])
         AC_DEFINE(SVN_ALLOW_BROKEN_HTTPD_AUTH, 1,
                   [Defined to build against httpd 2.4 with broken auth])
       else
-        AC_MSG_ERROR([Apache httpd $HTTPD_VERSION MMN $MMN_MAJOR.$MMN_MINOR has broken auth (CVE-2015-3185)])
+        AC_MSG_ERROR([Apache httpd $HTTPD_VERSION MMN $MMN_MAJOR.$MMN_MINOR has broken auth (CVE-2015-3184)])
       fi
     fi
 
