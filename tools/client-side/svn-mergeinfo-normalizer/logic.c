@@ -230,6 +230,8 @@ typedef struct progress_t
   apr_int64_t nodes_removed;
   apr_int64_t obsoletes_removed;
   apr_int64_t ranges_removed;
+
+  svn_boolean_t needs_header;
 } progress_t;
 
 typedef enum deletion_state_t
@@ -241,17 +243,38 @@ typedef enum deletion_state_t
 } deletion_state_t;
 
 static svn_error_t *
+show_removing_obsoletes(svn_min__opt_state_t *opt_state,
+                        progress_t *progress,
+                        apr_pool_t *scratch_pool)
+{
+  if (   opt_state->remove_obsoletes
+      && opt_state->verbose
+      && progress
+      && progress->needs_header)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                _("\n    Removing obsolete entries ...\n")));
+      progress->needs_header = FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 show_removed_branch(const char *subtree_path,
                     svn_min__opt_state_t *opt_state,
                     deletion_state_t deletion_state,
                     svn_boolean_t report_non_removals,
                     const char *surviving_copy,
+                    progress_t *progress,
                     apr_pool_t *scratch_pool)
 {
   if (opt_state->verbose)
     switch (deletion_state)
       {
         case ds_deleted:
+          SVN_ERR(show_removing_obsoletes(opt_state, progress,
+                                          scratch_pool));
           SVN_ERR(svn_cmdline_printf(scratch_pool,
                                      _("    remove deleted branch %s\n"),
                                      subtree_path));
@@ -259,14 +282,20 @@ show_removed_branch(const char *subtree_path,
 
         case ds_implied:
           if (report_non_removals)
-            SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                       _("    keep POTENTIAL branch %s\n"),
-                                       subtree_path));
+            {
+              SVN_ERR(show_removing_obsoletes(opt_state, progress,
+                                              scratch_pool));
+              SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                         _("    keep POTENTIAL branch %s\n"),
+                                         subtree_path));
+            }
           break;
 
         case ds_has_copies:
           if (report_non_removals)
             {
+              SVN_ERR(show_removing_obsoletes(opt_state, progress,
+                                              scratch_pool));
               SVN_ERR(svn_cmdline_printf(scratch_pool,
                                         _("    has SURVIVING COPIES: %s\n"),
                                         subtree_path));
@@ -466,18 +495,7 @@ remove_obsolete_line(deletion_state_t *state,
     }
 
   SVN_ERR(show_removed_branch(path, opt_state, *state, report_non_removals,
-                              surviving_copy, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-show_removing_obsoletes(svn_min__opt_state_t *opt_state,
-                        apr_pool_t *scratch_pool)
-{
-  if (opt_state->remove_obsoletes && opt_state->verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool,
-                               _("\n    Removing obsolete entries ...\n")));
+                              surviving_copy, progress, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -498,12 +516,12 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
   if (!opt_state->remove_obsoletes)
     return SVN_NO_ERROR;
 
-  SVN_ERR(show_removing_obsoletes(opt_state, scratch_pool));
-
   iterpool = svn_pool_create(scratch_pool);
   sorted_mi = svn_sort__hash(mergeinfo,
                              svn_sort_compare_items_lexically,
                              scratch_pool);
+
+  progress->needs_header = TRUE;
   for (i = 0; i < sorted_mi->nelts; ++i)
     {
       const char *path = APR_ARRAY_IDX(sorted_mi, i, svn_sort__item_t).key;
@@ -515,6 +533,7 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
                                    iterpool));
     }
 
+  progress->needs_header = FALSE;
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
