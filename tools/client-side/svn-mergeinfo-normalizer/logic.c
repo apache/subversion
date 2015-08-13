@@ -472,6 +472,17 @@ remove_obsolete_line(deletion_state_t *state,
 }
 
 static svn_error_t *
+show_removing_obsoletes(svn_min__opt_state_t *opt_state,
+                        apr_pool_t *scratch_pool)
+{
+  if (opt_state->remove_obsoletes && opt_state->verbose)
+    SVN_ERR(svn_cmdline_printf(scratch_pool,
+                               _("\n    Removing obsolete entries ...\n")));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
                       svn_min__log_t *log,
                       svn_mergeinfo_t mergeinfo,
@@ -486,6 +497,8 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
 
   if (!opt_state->remove_obsoletes)
     return SVN_NO_ERROR;
+
+  SVN_ERR(show_removing_obsoletes(opt_state, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   sorted_mi = svn_sort__hash(mergeinfo,
@@ -967,17 +980,6 @@ show_elision_header(const char *parent_path,
 }
 
 static svn_error_t *
-show_removing_obsoletes(svn_min__opt_state_t *opt_state,
-                        apr_pool_t *scratch_pool)
-{
-  if (opt_state->remove_obsoletes && opt_state->verbose)
-    SVN_ERR(svn_cmdline_printf(scratch_pool,
-                               _("\n    Removing obsolete entries ...\n")));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 show_elision_result(svn_mergeinfo_t parent_mergeinfo,
                     svn_mergeinfo_t subtree_mergeinfo,
                     svn_min__opt_state_t *opt_state,
@@ -1105,7 +1107,6 @@ normalize(apr_array_header_t *wc_mergeinfo,
             {
               /* We have to keep the sub-tree m/i but we can remove entries
                  for deleted branches from it. */
-              SVN_ERR(show_removing_obsoletes(opt_state, iterpool));
               SVN_ERR(remove_obsolete_lines(lookup, log, subtree_mergeinfo,
                                             opt_state, &progress, FALSE,
                                             iterpool));
