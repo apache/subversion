@@ -124,7 +124,7 @@ Candidate changes:
      Constructor result is not correct as REVISION gets partially overwritten
      by PEG_REVISION. May also result in segfaults.
    Votes:
-     +1: stefan2
+     +1: stefan2, philip
 
  * r1687304,1687389,1693135,1693138,1693159,1695600,1695606,1695681
    Better configure detection of httpd version and auth fix.
