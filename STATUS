@@ -115,7 +115,7 @@ Candidate changes:
      Also nominated for 1.9.x.
      Trunk has a better fix, but less suitable for backporting, in r1691952.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
 
  * r1694929
    Fix memory corruption in SWIG bindings' svn_client_copy_source_t
