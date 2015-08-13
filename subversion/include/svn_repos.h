@@ -247,7 +247,10 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_hotcopy_rev_range,
 
   /** The repository pack did not do anything. @since New in 1.10. */
-  svn_repos_notify_pack_noop
+  svn_repos_notify_pack_noop,
+
+  /** The revision properties got set. @since New in 1.10. */
+  svn_repos_notify_load_revprop_set
 } svn_repos_notify_action_t;
 
 /** The type of warning occurring.
@@ -2986,6 +2989,12 @@ svn_repos_verify_fs(svn_repos_t *repos,
  * be done with full plain text.  A dump with @a use_deltas set cannot
  * be loaded by Subversion 1.0.x.
  *
+ * If @a include_revprops is @c TRUE, output the revision properties as
+ * well, otherwise omit them.
+ *
+ * If @a include_changes is @c TRUE, output the revision contents, i.e.
+ * tree and node changes.
+ *
  * If @a notify_func is not null, then call it with @a notify_baton and
  * with a notification structure in which the fields are set as follows.
  * (For a warning or error notification that does not apply to a specific
@@ -3017,8 +3026,31 @@ svn_repos_verify_fs(svn_repos_t *repos,
  *
  * Use @a scratch_pool for temporary allocation.
  *
- * @since New in 1.7.
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_repos_dump_fs4(svn_repos_t *repos,
+                   svn_stream_t *stream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   svn_boolean_t incremental,
+                   svn_boolean_t use_deltas,
+                   svn_boolean_t include_revprops,
+                   svn_boolean_t include_changes,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_dump_fs4(), but with @a include_revprops and 
+ * @a include_changes both set to @c TRUE.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_dump_fs3(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
@@ -3222,6 +3254,52 @@ svn_repos_load_fs(svn_repos_t *repos,
                   void *cancel_baton,
                   apr_pool_t *pool);
 
+/**
+ * Read and parse dumpfile-formatted @a dumpstream, extracting the
+ * revision properties from it and apply them to the already-open
+ * @a repos.  Use @a scratch_pool for temporary allocations.
+ *
+ * If, after filtering by the @a start_rev and @a end_rev, the dumpstream
+ * contains revisions missing in @a repos, an error will be thrown.
+ *
+ * @a start_rev and @a end_rev act as filters, the lower and upper
+ * (inclusive) range values of revisions in @a dumpstream which will
+ * be loaded.  Either both of these values are #SVN_INVALID_REVNUM (in
+ * which case no revision-based filtering occurs at all), or both are
+ * valid revisions (where @a start_rev is older than or equivalent to
+ * @a end_rev).
+ *
+ * If @a validate_props is set, then validate Subversion revision
+ * properties (those in the svn: namespace) against established
+ * rules for those things.
+ *
+ * If @a ignore_dates is set, ignore any revision datestamps found in
+ * @a dumpstream, keeping whatever timestamps the revisions currently
+ * have.
+ *
+ * If non-NULL, use @a notify_func and @a notify_baton to send notification
+ * of events to the caller.
+ *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * the load.
+ *
+ * @remark No repository hooks will be triggered.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_repos_load_fs_revprops(svn_repos_t *repos,
+                           svn_stream_t *dumpstream,
+                           svn_revnum_t start_rev,
+                           svn_revnum_t end_rev,
+                           svn_boolean_t validate_props,
+                           svn_boolean_t ignore_dates,
+                           svn_repos_notify_func_t notify_func,
+                           void *notify_baton,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *scratch_pool);
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream3().
@@ -3424,7 +3502,7 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
+svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_revnum_t start_rev,

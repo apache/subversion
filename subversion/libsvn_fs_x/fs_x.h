@@ -1,4 +1,4 @@
-/* fs_x.h : interface to the native filesystem layer
+/* fs_x.h : interface to the FSX layer
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__FS_X_H
-#define SVN_LIBSVN_FS__FS_X_H
+#ifndef SVN_LIBSVN_FS_X_FS_X_H
+#define SVN_LIBSVN_FS_X_FS_X_H
 
 #include "fs.h"
 

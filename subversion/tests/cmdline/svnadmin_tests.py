@@ -2012,6 +2012,14 @@ def mergeinfo_race(sbox):
   "concurrent mergeinfo commits invalidate pred-count"
   sbox.build()
 
+  # This test exercises two commit-time race condition bugs:
+  #
+  # (a) metadata corruption when concurrent commits change svn:mergeinfo (issue #4129)
+  # (b) false positive SVN_ERR_FS_CONFLICT error with httpv1 commits
+  #     https://mail-archives.apache.org/mod_mbox/subversion-dev/201507.mbox/%3C20150731234536.GA5395@tarsus.local2%3E
+  #
+  # Both bugs are timing-dependent and might not reproduce 100% of the time.
+
   wc_dir = sbox.wc_dir
   wc2_dir = sbox.add_wc_path('2')
 
@@ -2735,7 +2743,10 @@ def verify_quickly(sbox):
   "verify quickly using metadata"
 
   sbox.build(create_wc = False)
-  rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
+  if svntest.main.is_fs_type_fsfs():
+    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
+  else:
+    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', 'r1'), 'r+b')
 
   # set new contents
   rev_file.seek(8)

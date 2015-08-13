@@ -955,6 +955,8 @@ II.   INSTALLATION
 
       *Note: Use "call ms\do_nasm" if you have nasm instead of MASM, or
              "call ms\do_ms" if you don't have an assembler.
+             Also if you are using OpenSSL >= 1.0.0 masm is no longer
+             supported. You will have to use do_nasm or do_ms in this case.
 
       Apache 2
 

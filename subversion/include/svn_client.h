@@ -4361,8 +4361,18 @@ svn_client_revert(const apr_array_header_t *paths,
  * @{
  */
 
+/**
+ * An opaque type which represents a conflicted node in the working copy.
+ *
+ * @since New in 1.10.
+ */
 typedef struct svn_client_conflict_t svn_client_conflict_t;
 
+/**
+ * An opaque type which represents a resolution option for a conflict.
+ *
+ * @since New in 1.10.
+ */
 typedef struct svn_client_conflict_option_t svn_client_conflict_option_t;
 
 /**
@@ -4380,11 +4390,41 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_working_text,
   svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
   svn_client_conflict_option_working_text_for_conflicted_hunks_only,
-  svn_client_conflict_option_merged_text, /* unsupported */
+  svn_client_conflict_option_merged_text,
   svn_client_conflict_option_unspecified
   /* Values derived from svn_wc_conflict_choice_t end here. */
 
 } svn_client_conflict_option_id_t;
+
+/**
+ * Set a merged property value on @a option to @a merged_propval.
+ * 
+ * Setting the merged value is required before resolving the property
+ * conflict using an option with ID svn_client_conflict_option_merged_text.
+ *
+ * The contents of @a merged_propval are not copied, so the storage it
+ * points to needs to remain valid until svn_client_conflict_prop_resolve()
+ * has been called with @a option.
+ *
+ * @since New in 1.10.
+ */
+void
+svn_client_conflict_option_set_merged_propval(
+  svn_client_conflict_option_t *option,
+  const svn_string_t *merged_propval);
+
+/**
+ * Given an @a option_id, try to find the corresponding option in @a options,
+ * which is an array of svn_client_conflict_option_t * elements.
+ *
+ * Return NULL if no corresponding option can be be found.
+ *
+ * @since New in 1.10.
+ */
+svn_client_conflict_option_t *
+svn_client_conflict_option_find_by_id(
+  apr_array_header_t *options,
+  svn_client_conflict_option_id_t option_id);
 
 /**
  * Return a conflict for the conflicted path @a local_abspath.
@@ -4411,12 +4451,43 @@ svn_client_conflict_from_wc_description2_t(
   apr_pool_t *scratch_pool);
 
 /**
+ * Callback for svn_client_conflict_walk_conflicts();
+ * 
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(svn_client_conflict_walk_func_t)(
+  void *baton,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Walk all conflicts within the specified @a depth of @a local_abspath.
+ * Pass each conflict found during the walk to the @conflict_walk_func
+ * callback, along with @a conflict_walk_func_baton.
+ * Use cancellation and notification support provided by client context @a ctx.
+ * 
+ * This callback may choose to resolve the conflict. If the act of resolving
+ * a conflict creates new conflicts within the walked working copy (as might
+ * be the case for some tree conflicts), the callback will be invoked for each
+ * such new conflict as well.
+ * 
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_walk(const char *local_abspath,
+                         svn_depth_t depth,
+                         svn_client_conflict_walk_func_t conflict_walk_func,
+                         void *conflict_walk_func_baton,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
+
+/**
 * Indicate the types of conflicts present on the working copy node
 * described by @a conflict. Any output argument may be @c NULL if
 * the caller is not interested in the status of a particular type.
 *
 * The returned @a *props_conflicted array is allocated in @a result_pool.
-* It contains the names of conflicted properties. If no property conflit
+* It contains the names of conflicted properties. If no property conflict
 * exists, the array will contain no elements.
 *
 * @since New in 1.10. 
@@ -4492,16 +4563,6 @@ svn_client_conflict_option_describe(const char **description,
                                     svn_client_conflict_option_t *option,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
-
-/**
- * Resolve @a conflict using resolution option @a option.
- *
- * @since New in 1.10.
- */
-svn_error_t *
-svn_client_conflict_resolve(svn_client_conflict_t *conflict,
-                            svn_client_conflict_option_t *option,
-                            apr_pool_t *scratch_pool);
 
 /**
  * Return the kind of conflict (text conflict, property conflict,
@@ -4631,6 +4692,40 @@ svn_client_conflict_tree_get_victim_node_kind(
   const svn_client_conflict_t *conflict);
 
 /**
+ * Resolve a tree @a conflict using resolution option @a option.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_tree_resolve(svn_client_conflict_t *conflict,
+                                 svn_client_conflict_option_t *option,
+                                 apr_pool_t *scratch_pool);
+
+/**
+ * If the provided @a option_id is the ID of an option which resolves
+ * @a conflict, resolve the tree conflict using that option.
+ * Else, return an error.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_tree_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Return the ID of the option this tree @a conflict has been resolved to.
+ * If the conflict has not been resolved yet, then return
+ * @c svn_client_conflict_option_undefined.
+ *
+ * @since New in 1.10.
+ */
+svn_client_conflict_option_id_t
+svn_client_conflict_tree_get_resolution(const svn_client_conflict_t *conflict);
+
+
+/**
  * Return the name of the conflicted property represented by @a conflict.
  *
  * @since New in 1.10.
@@ -4671,6 +4766,44 @@ svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
                                       apr_pool_t *result_pool);
 
 /**
+ * Resolve a property @a conflict in property @a propname using resolution
+ * option @a option. To resolve all properties to the same option at once,
+ * set @a propname to the empty string "".
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
+                                 const char *propname,
+                                 svn_client_conflict_option_t *option,
+                                 apr_pool_t *scratch_pool);
+/**
+ * If the provided @a option_id is the ID of an option which resolves
+ * @a conflict, resolve the property conflict in property @a propname
+ * using that option. Else, return an error.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_prop_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  const char *propname,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Return the ID of the option this property @a conflict in property
+ * @a propname has been resolved to.
+ * If the conflict has not been resolved yet, then return
+ * @c svn_client_conflict_option_undefined.
+ *
+ * @since New in 1.10.
+ */
+svn_client_conflict_option_id_t
+svn_client_conflict_prop_get_resolution(const svn_client_conflict_t *conflict,
+                                        const char *propname);
+
+/**
  * Return the MIME-type of the working version of the text-conflicted file
  * described by @a conflict.
  *
@@ -4697,6 +4830,39 @@ svn_client_conflict_text_get_contents(const char **base_abspath,
                                       const svn_client_conflict_t *conflict,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
+
+/**
+ * Resolve a text @a conflict using resolution option @a option.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
+                                 svn_client_conflict_option_t *option,
+                                 apr_pool_t *scratch_pool);
+
+/**
+ * If the provided @a option_id is the ID of an option which resolves
+ * @a conflict, resolve the text conflict using that option.
+ * Else, return an error.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_text_resolve_by_id(
+  svn_client_conflict_t *conflict,
+  svn_client_conflict_option_id_t option_id,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Return the ID of the option this text @a conflict has been resolved to.
+ * If the conflict has not been resolved yet, then return
+ * @c svn_client_conflict_option_undefined.
+ *
+ * @since New in 1.10.
+ */
+svn_client_conflict_option_id_t
+svn_client_conflict_text_get_resolution(const svn_client_conflict_t *conflict);
 
 /** @} */
 

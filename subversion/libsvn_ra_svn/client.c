@@ -2291,7 +2291,7 @@ static svn_error_t *ra_svn_unlock_compat(svn_ra_session_t *session,
       const void *key;
       const char *path;
       void *val;
-      const char *token;
+      const svn_string_t *token;
       svn_error_t *err, *callback_err = NULL;
 
       svn_pool_clear(iterpool);
@@ -2299,7 +2299,7 @@ static svn_error_t *ra_svn_unlock_compat(svn_ra_session_t *session,
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
       if (strcmp(val, "") != 0)
-        token = val;
+        token = svn_string_create(val, iterpool);
       else
         token = NULL;
 

@@ -104,6 +104,17 @@ do {                                                    \
   SVN_ERR(svn_mutex__unlock(svn_mutex__m, (expr)));     \
 } while (0)
 
+#if APR_HAS_THREADS
+
+/** Return the APR mutex encapsulated in @a mutex.
+ *
+ * @note This function should only be called by APR wrapper code.
+ */
+apr_thread_mutex_t *
+svn_mutex__get(svn_mutex__t *mutex);
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
