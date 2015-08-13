@@ -65,6 +65,7 @@ struct svn_min__log_t
   apr_array_header_t *entries;
 
   apr_array_header_t *copies;
+  apr_array_header_t *copies_by_source;
   apr_array_header_t *deletions;
 
   svn_boolean_t quiet;
@@ -85,6 +86,23 @@ copy_order(const void *lhs,
     return -1;
 
   return lhs_copy->revision == rhs_copy->revision ? 0 : 1;
+}
+
+static int
+copy_by_source_order(const void *lhs,
+                     const void *rhs)
+{
+  const svn_min__copy_t *lhs_copy = *(const svn_min__copy_t * const *)lhs;
+  const svn_min__copy_t *rhs_copy = *(const svn_min__copy_t * const *)rhs;
+
+  int diff = strcmp(lhs_copy->copyfrom_path, rhs_copy->copyfrom_path);
+  if (diff)
+    return diff;
+
+  if (lhs_copy->copyfrom_revision < rhs_copy->copyfrom_revision)
+    return -1;
+
+  return lhs_copy->copyfrom_revision == rhs_copy->copyfrom_revision ? 0 : 1;
 }
 
 static int
@@ -267,8 +285,11 @@ svn_min__log(svn_min__log_t **log,
                           ctx,
                           scratch_pool));
 
+  result->copies_by_source = apr_array_copy(result_pool, result->copies);
+
   svn_sort__array_reverse(result->entries, scratch_pool);
   svn_sort__array(result->copies, copy_order);
+  svn_sort__array(result->copies_by_source, copy_by_source_order);
   svn_sort__array(result->deletions, deletion_order);
 
   if (!baton->opt_state->quiet)
@@ -616,6 +637,57 @@ svn_min__find_copy(svn_min__log_t *log,
     return copy->revision;
 
   return SVN_NO_ERROR;
+}
+
+apr_array_header_t *
+svn_min__get_copies(svn_min__log_t *log,
+                    const char *path,
+                    svn_revnum_t start_rev,
+                    svn_revnum_t end_rev,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *result = apr_array_make(result_pool, 0,
+                                              sizeof(svn_min__copy_t *));
+  const svn_min__copy_t **copies = (void *)log->copies_by_source->elts;
+  int idx;
+
+  /* Find all sub-tree copies, including PATH. */
+  svn_min__copy_t *to_find = apr_pcalloc(scratch_pool, sizeof(*to_find));
+  to_find->copyfrom_path = path;
+  to_find->copyfrom_revision = end_rev;
+
+  for (idx = svn_sort__bsearch_lower_bound(log->copies_by_source,
+                                           &to_find,
+                                           copy_by_source_order);
+          (idx < log->copies->nelts)
+       && svn_dirent_is_ancestor(path, copies[idx]->copyfrom_path);
+       ++idx)
+    {
+      if (copies[idx]->copyfrom_revision <= start_rev)
+        APR_ARRAY_PUSH(result, const svn_min__copy_t *) = copies[idx];
+    }
+ 
+  /* Find all parent copies. */
+  while (!svn_fspath__is_root(to_find->copyfrom_path,
+                              strlen(to_find->copyfrom_path)))
+    {
+      to_find->copyfrom_path = svn_fspath__dirname(to_find->copyfrom_path,
+                                                   scratch_pool);
+
+      for (idx = svn_sort__bsearch_lower_bound(log->copies_by_source,
+                                               &to_find,
+                                               copy_by_source_order);
+              (idx < log->copies->nelts)
+           && !strcmp(copies[idx]->copyfrom_path, to_find->copyfrom_path)
+           && (copies[idx]->copyfrom_revision <= start_rev);
+           ++idx)
+        {
+          APR_ARRAY_PUSH(result, const svn_min__copy_t *) = copies[idx];
+        }
+    }
+
+  return result;
 }
 
 apr_array_header_t *
