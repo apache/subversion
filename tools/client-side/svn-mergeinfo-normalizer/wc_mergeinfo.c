@@ -44,15 +44,31 @@
 
 
 
+/* Our internal mergeinfo structure
+ * It decorates the standard svn_mergeinfo_t with path and parent info. */
 typedef struct mergeinfo_t
 {
+  /* The abspath of the working copy node that has this MERGINFO. */
   const char *local_path;
+
+  /* The corresponding FS path. */
   const char *fs_path;
+
+  /* The full URL of that node in the repository. */
   const char *url;
+
+  /* Pointer to the closest parent mergeinfo that we found in the working
+   * copy.  May be NULL. */
   struct mergeinfo_t *parent;
+
+  /* The parsed mergeinfo. */
   svn_mergeinfo_t mergeinfo;
 } mergeinfo_t;
 
+/* Parse the mergeinfo in PROPS as returned by svn_client_propget5,
+ * construct our internal mergeinfo representation, allocated in
+ * RESULT_POOL from it and return it *RESULT_P.  Use SCRATCH_POOL for
+ * temporary allocations. */
 static svn_error_t *
 parse_mergeinfo(apr_array_header_t **result_p,
                 apr_hash_t *props,
@@ -86,6 +102,7 @@ parse_mergeinfo(apr_array_header_t **result_p,
   return SVN_NO_ERROR;
 }
 
+/* Ordering function comparing two mergeinfo_t * by local abspath. */
 static int
 compare_mergeinfo(const void *lhs,
                   const void *rhs)
@@ -96,6 +113,8 @@ compare_mergeinfo(const void *lhs,
   return strcmp(lhs_mi->local_path, rhs_mi->local_path);
 }
 
+/* Implements svn_client_info_receiver2_t.
+ * Updates the mergeinfo_t * given as BATON with the incoming INFO. */
 static svn_error_t *
 get_urls(void *baton,
          const char *target,
@@ -113,6 +132,9 @@ get_urls(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Sort the nodes in MERGEINFO, sub-nodes first, add working copy info to
+ * it and link nodes to their respective closest parents.  BATON provides
+ * the client context.  SCRATCH_POOL is used for temporaries. */
 static svn_error_t *
 link_parents(apr_array_header_t *mergeinfo,
              svn_min__cmd_baton_t *baton,
@@ -219,12 +241,15 @@ svn_min__common_parent(apr_array_header_t *mergeinfo,
       mergeinfo_t *entry = APR_ARRAY_IDX(mergeinfo, i, mergeinfo_t *);
 
       svn_pool_clear(iterpool);
+
+      /* Make common base path cover the wc's FS path. */
       if (result == NULL)
         result = apr_pstrdup(result_pool, entry->fs_path);
       else if (!svn_dirent_is_ancestor(result, entry->fs_path))
         result = svn_dirent_get_longest_ancestor(result, entry->fs_path,
                                                  result_pool);
 
+      /* Cover the branch FS paths mentioned in the mergeinfo. */
       for (hi = apr_hash_first(scratch_pool, entry->mergeinfo);
            hi;
            hi = apr_hash_next(hi))
@@ -309,6 +334,8 @@ svn_min__write_mergeinfo(svn_min__cmd_baton_t *baton,
       targets = apr_array_make(iterpool, 1, sizeof(const char *));
       APR_ARRAY_PUSH(targets, const char *) = entry->local_path;
 
+      /* If the mergeinfo is empty, keep the NULL PROPVAL to actually
+       * delete the property. */
       if (apr_hash_count(entry->mergeinfo))
         SVN_ERR(svn_mergeinfo_to_string(&propval, entry->mergeinfo,
                                         iterpool));
@@ -353,6 +380,7 @@ svn_min__print_mergeinfo_stats(apr_array_header_t *wc_mergeinfo,
   int branch_count = 0;
   int range_count = 0;
 
+  /* Aggregate numbers. */
   int i;
   for (i = 0; i < wc_mergeinfo->nelts; ++i)
     {
@@ -372,6 +400,7 @@ svn_min__print_mergeinfo_stats(apr_array_header_t *wc_mergeinfo,
         }
     }
 
+  /* Show them. */
   SVN_ERR(svn_cmdline_printf(scratch_pool,
                              _("    Found mergeinfo on %d nodes.\n"),
                              wc_mergeinfo->nelts));
