@@ -1301,7 +1301,7 @@ init_patch_target(patch_target_t **patch_target,
 
                   default:
                     /* NOTREACHED */
-                    abort();
+                    SVN_ERR_MALFUNCTION();
                 }
 
               if (! nothing_to_do)
