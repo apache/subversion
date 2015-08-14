@@ -330,8 +330,7 @@ svn_min__log(svn_min__log_t **log,
 static void
 append_rev_to_ranges(svn_rangelist_t *ranges,
                      svn_revnum_t revision,
-                     svn_boolean_t inheritable,
-                     apr_pool_t *result_pool)
+                     svn_boolean_t inheritable)
 {
   svn_merge_range_t *range;
   if (ranges->nelts)
@@ -344,7 +343,7 @@ append_rev_to_ranges(svn_rangelist_t *ranges,
         }
     }
 
-  range = apr_pcalloc(result_pool, sizeof(*range));
+  range = apr_pcalloc(ranges->pool, sizeof(*range));
   range->start = revision - 1;
   range->end = revision;
   range->inheritable = inheritable;
@@ -467,7 +466,7 @@ filter_ranges(svn_min__log_t *log,
               if (path_relavent(changed_path, path, baton))
                 {
                   append_rev_to_ranges(result, entry->revision,
-                                       range.inheritable, result_pool);
+                                       range.inheritable);
                   break;
                 }
             }
