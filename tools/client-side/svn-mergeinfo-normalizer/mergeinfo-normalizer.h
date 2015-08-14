@@ -237,18 +237,22 @@ svn_rangelist_t *
 svn_min__history_ranges(apr_array_header_t *history,
                         apr_pool_t *result_pool);
 
-svn_error_t *
-svn_min__print_log_stats(svn_min__log_t *log,
-                         apr_pool_t *scratch_pool);
-
 svn_min__branch_lookup_t *
 svn_min__branch_lookup_create(svn_ra_session_t *session,
                               apr_pool_t *result_pool);
 
+/* Allocate a new path lookup object in RESULT_POOL and set the list of
+ * missing paths to PATHS.  This object will never contact the repository. */
 svn_min__branch_lookup_t *
 svn_min__branch_lookup_from_paths(apr_array_header_t *paths,
                                   apr_pool_t *result_pool);
 
+/* Set *DELETED to TRUE, if we can confirm using LOOKUP that BRANCH does
+ * not exist @HEAD.  If LOCAL_ONLY is set or if LOOKUP has not been created
+ * with a repository session, base that judgement on information in LOOKUP
+ * alone and report FALSE for unknonw path.  Otherwise contact the
+ * repository for unknown paths and store the result in LOOKUP.
+ * Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_min__branch_lookup(svn_boolean_t *deleted,
                        svn_min__branch_lookup_t *lookup,
@@ -256,11 +260,17 @@ svn_min__branch_lookup(svn_boolean_t *deleted,
                        svn_boolean_t local_only,
                        apr_pool_t *scratch_pool);
 
+/* Return an array of const char *, allocated in RESULT_POOL, of all deleted
+ * FS paths we encountered using LOOKUP.  We only return the respective
+ * top-most missing paths - not any of their sub-nodes.  Use SCRATCH_POOL
+ * for temporary allocations. */
 apr_array_header_t *
 svn_min__branch_deleted_list(svn_min__branch_lookup_t *lookup,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Run our common processing code shared between all sub-commands.
+ * Take the sub-command behaviour from the flags in BATON. */
 svn_error_t *
 svn_min__run_normalize(void *baton,
                        apr_pool_t *pool);
