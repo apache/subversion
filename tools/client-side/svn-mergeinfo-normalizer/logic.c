@@ -1319,10 +1319,8 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
   return SVN_NO_ERROR;
 }
 
-/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_min__run_normalize(apr_getopt_t *os,
-                       void *baton,
+svn_min__run_normalize(void *baton,
                        apr_pool_t *pool)
 {
   svn_min__cmd_baton_t *cmd_baton = baton;
