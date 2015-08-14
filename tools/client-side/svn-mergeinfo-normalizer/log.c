@@ -72,7 +72,9 @@ typedef struct deletion_t
  */
 struct svn_min__log_t
 {
-  /* Dictionary of all FS paths used in this log. */
+  /* Dictionary of all FS paths used in this log.
+   * The hash itself is only temporary and will be destroyed after the log
+   * has been constructed and all paths got internalized. */
   apr_hash_t *unique_paths;
 
   /* Oldest revision we received. */
