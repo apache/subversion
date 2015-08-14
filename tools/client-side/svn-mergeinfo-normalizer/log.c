@@ -58,7 +58,6 @@ typedef struct deletion_t
 struct svn_min__log_t
 {
   apr_hash_t *unique_paths;
-  apr_pool_t *pool;
 
   svn_revnum_t first_rev;
   svn_revnum_t head_rev;
@@ -171,7 +170,7 @@ log_entry_receiver(void *baton,
 
       if (change->action == 'D' || change->action == 'R')
         {
-          deletion_t *deletion = apr_pcalloc(log->pool, sizeof(*deletion));
+          deletion_t *deletion = apr_pcalloc(result_pool, sizeof(*deletion));
           deletion->path = path;
           deletion->revision = log_entry->revision;
 
@@ -180,7 +179,7 @@ log_entry_receiver(void *baton,
 
       if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
         {
-          svn_min__copy_t *copy = apr_pcalloc(log->pool, sizeof(*copy));
+          svn_min__copy_t *copy = apr_pcalloc(result_pool, sizeof(*copy));
           copy->path = path;
           copy->revision = log_entry->revision;
           copy->copyfrom_path = internalize(log->unique_paths,
@@ -280,7 +279,6 @@ svn_min__log(svn_min__log_t **log,
 
   result = apr_pcalloc(result_pool, sizeof(*result));
   result->unique_paths = svn_hash__make(scratch_pool);
-  result->pool = result_pool;
   result->first_rev = SVN_INVALID_REVNUM;
   result->head_rev = SVN_INVALID_REVNUM;
   result->entries = apr_array_make(result_pool, 1024, sizeof(log_entry_t *));
