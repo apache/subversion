@@ -42,6 +42,8 @@
 
 /*** Code. ***/
 
+/* Scan RANGES for reverse merge ranges and return a copy of them,
+ * allocated in RESULT_POOL. */
 static svn_rangelist_t *
 find_reverse_ranges(svn_rangelist_t *ranges,
                     apr_pool_t *result_pool)
@@ -61,6 +63,8 @@ find_reverse_ranges(svn_rangelist_t *ranges,
   return result;
 }
 
+/* Scan RANGES for non-recursive merge ranges and return a copy of them,
+ * allocated in RESULT_POOL. */
 static svn_rangelist_t *
 find_non_recursive_ranges(svn_rangelist_t *ranges,
                           apr_pool_t *result_pool)
@@ -80,6 +84,8 @@ find_non_recursive_ranges(svn_rangelist_t *ranges,
   return result;
 }
 
+/* Print RANGES, prefixed by TITLE to console.  Use SCRATCH_POOL for
+ * temporary allocations. */
 static svn_error_t *
 print_ranges(svn_rangelist_t *ranges,
              const char *title,
@@ -94,12 +100,17 @@ print_ranges(svn_rangelist_t *ranges,
   return SVN_NO_ERROR;
 }
 
+/* Depending on the settings in OPT_STATE, write a message on console
+ * that SUBTREE_PATH is not mentioned in the parent mergeinfo.  If the
+ * MISALIGNED flag is set, then the relative path did not match.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 show_missing_parent(const char *subtree_path,
                     svn_boolean_t misaligned,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
+  /* Be quiet in normal processing mode. */
   if (!opt_state->verbose && !opt_state->run_analysis)
     return SVN_NO_ERROR;
 
@@ -115,6 +126,9 @@ show_missing_parent(const char *subtree_path,
   return SVN_NO_ERROR;
 }
 
+/* If REVERSE_RANGES is not empty and depending on the options in OPT_STATE,
+ * show those ranges as "reverse ranges" for path SUBTREE_PATH.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 show_reverse_ranges(const char *subtree_path,
                     svn_rangelist_t *reverse_ranges,
@@ -135,6 +149,9 @@ show_reverse_ranges(const char *subtree_path,
   return SVN_NO_ERROR;
 }
 
+/* If NON_RECURSIVE_RANGES is not empty and depending on the options in
+ * OPT_STATE, show those ranges as "reverse ranges" for path SUBTREE_PATH.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 show_non_recursive_ranges(const char *subtree_path,
                           svn_rangelist_t *non_recursive_ranges,
@@ -155,6 +172,12 @@ show_non_recursive_ranges(const char *subtree_path,
   return SVN_NO_ERROR;
 }
 
+/* Show the elision result of a single BRANCH (for a single node) on
+ * console filtered by the OPT_STATE.  OPERATIVE_OUTSIDE_SUBTREE and
+ * OPERATIVE_IN_SUBTREE are the revision ranges that prevented an elision.
+ * SUBTREE_ONLY and PARENT_ONLY were differences that have been adjusted.
+ * IMPLIED_IN_PARENT and IMPLIED_IN_SUBTREE are differences that could be
+ * ignored.   Uses SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 show_branch_elision(const char *branch,
                     svn_rangelist_t *subtree_only,
@@ -222,26 +245,51 @@ show_branch_elision(const char *branch,
   return SVN_NO_ERROR;
 }
 
+/* Progress tacking data structure. */
 typedef struct progress_t
 {
+  /* Number of nodes with mergeinfo that we need to process. */
   int nodes_total;
+
+  /* Number of nodes still to process. */
   int nodes_todo;
 
+  /* Counter for nodes where the mergeinfo could be removed entirely. */
   apr_int64_t nodes_removed;
+
+  /* Number mergeinfo lines removed because the respective branches had
+   * been deleted. */
   apr_int64_t obsoletes_removed;
+
+  /* Number of ranges combined so far. */
   apr_int64_t ranges_removed;
 
+  /* Transient flag used to indicate whether we still have to print a
+   * header before showing various details. */
   svn_boolean_t needs_header;
 } progress_t;
 
+/* Describes the "deletion" state of a branch. */
 typedef enum deletion_state_t
 {
+  /* Path still exists. */
   ds_exists,
+
+  /* Path does not exist but has not been deleted.
+   * Catch-up merges etc. may introduce the path. */
   ds_implied,
+
+  /* A (possibly indirect) copy of the path or one of its sub-nodes still
+   * exists. */
   ds_has_copies,
+
+  /* The path has been deleted (explicitly or indirectly via parent) and
+   * no copy exists @HEAD. */
   ds_deleted
 } deletion_state_t;
 
+/* Show the "removing obsoletes" header depending on OPT_STATE and PROGRESS.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 show_removing_obsoletes(svn_min__opt_state_t *opt_state,
                         progress_t *progress,
@@ -260,6 +308,14 @@ show_removing_obsoletes(svn_min__opt_state_t *opt_state,
   return SVN_NO_ERROR;
 }
 
+/* If in verbose mode according to OPT_STATE, print the deletion status
+ * DELETION_STATE for SUBTREE_PATH to the console.  If REPORT_NON_REMOVALS
+ * is set, report missing branches that can't be removed from mergeinfo.
+ * In that case, show a SURVIVING_COPY when appropriate.
+ *
+ * Prefix the output with the appropriate section header based on the state
+ * tracked in PROGRESS.  Use SCRATCH_POOL for temporaries.
+ */
 static svn_error_t *
 show_removed_branch(const char *subtree_path,
                     svn_min__opt_state_t *opt_state,
@@ -312,6 +368,9 @@ show_removed_branch(const char *subtree_path,
   return SVN_NO_ERROR;
 }
 
+/* If COPY copies SOURCE or one of its ancestors, return the path that the
+ * node has in the copy target, allocated in RESULT_POOL.  Otherwise,
+ * simply return the copy target, allocated in RESULT_POOL. */
 static const char *
 get_copy_target_path(const char *source,
                      const svn_min__copy_t *copy,
@@ -327,6 +386,11 @@ get_copy_target_path(const char *source,
   return apr_pstrdup(result_pool, copy->path);
 }
 
+/* Scan LOG for a copies of PATH or one of its sub-nodes from the segment
+ * starting at START_REV down to END_REV.  Follow those copies until we
+ * find one that has not been deleted @HEAD.  If none exist, return NULL.
+ * Otherwise the return first such copy we find, allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporaries. */
 static const char *
 find_surviving_copy(svn_min__log_t *log,
                     const char *path,
@@ -335,14 +399,14 @@ find_surviving_copy(svn_min__log_t *log,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  const char *surviver = NULL;
+  const char * survivor = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *copies = svn_min__get_copies(log, path, start_rev,
                                                    end_rev, scratch_pool,
                                                    scratch_pool);
 
   int i;
-  for (i = 0; (i < copies->nelts) && !surviver; ++i)
+  for (i = 0; (i < copies->nelts) && !survivor; ++i)
     {
       const char *copy_target;
       const svn_min__copy_t *copy;
@@ -359,23 +423,27 @@ find_surviving_copy(svn_min__log_t *log,
       if (SVN_IS_VALID_REVNUM(deletion_rev))
         {
           /* Are there surviving sub-copies? */
-          surviver = find_surviving_copy(log, copy_target,
+          survivor = find_surviving_copy(log, copy_target,
                                          copy->revision, deletion_rev - 1,
                                          result_pool, iterpool);
         }
       else
         {
-          surviver = apr_pstrdup(result_pool, copy_target);
+          survivor = apr_pstrdup(result_pool, copy_target);
         }
     }
  
   svn_pool_destroy(iterpool);
 
-  return surviver;
+  return survivor;
 }
 
+/* Scan LOG for a copies of PATH or one of its sub-nodes from the segment
+ * starting at START_REV down to END_REV.  Follow those copies and collect
+ * those that have not been deleted @HEAD.  Return them in *SURVIVORS,
+ * allocated in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations. */
 static void
-find_surviving_copies(apr_array_header_t *survivers,
+find_surviving_copies(apr_array_header_t *survivors,
                       svn_min__log_t *log,
                       const char *path,
                       svn_revnum_t start_rev,
@@ -406,13 +474,13 @@ find_surviving_copies(apr_array_header_t *survivers,
       if (SVN_IS_VALID_REVNUM(deletion_rev))
         {
           /* Are there surviving sub-copies? */
-          find_surviving_copies(survivers, log, copy_target,
+          find_surviving_copies(survivors, log, copy_target,
                                 copy->revision, deletion_rev - 1,
                                 result_pool, iterpool);
         }
       else
         {
-          APR_ARRAY_PUSH(survivers, const char *) = apr_pstrdup(result_pool,
+          APR_ARRAY_PUSH(survivors, const char *) = apr_pstrdup(result_pool,
                                                                 copy_target);
         }
     }
@@ -420,6 +488,18 @@ find_surviving_copies(apr_array_header_t *survivers,
   svn_pool_destroy(iterpool);
 }
 
+/* Using LOOKUP and LOG, determine the deletion *STATE of PATH.  OPT_STATE,
+ * PROGRESS and REPORT_NON_REMOVALS control the console output.  OPT_STATE
+ * also makes this a no-op if removal of deleted branches is not been
+ * enabled in it.
+ *
+ * If LOCAL_ONLY is set, only remove branches that are known to have been
+ * deleted as per LOOKUP - this is for quick checks.  Track progress in
+ * PROGRESS and update MERGEINFO is we can remove the info for branch PATH
+ * from it.
+ *
+ * Use SCRATCH_POOL for temporaries.
+ */
 static svn_error_t *
 remove_obsolete_line(deletion_state_t *state,
                      svn_min__branch_lookup_t *lookup,
@@ -435,6 +515,7 @@ remove_obsolete_line(deletion_state_t *state,
   svn_boolean_t deleted;
   const char *surviving_copy = NULL;
 
+  /* Skip if removal of deleted branches has not been . */
   if (!opt_state->remove_obsoletes)
     {
       *state = ds_exists;
@@ -500,6 +581,15 @@ remove_obsolete_line(deletion_state_t *state,
   return SVN_NO_ERROR;
 }
 
+/* If enabled in OPT_STATE, use LOG and LOOKUP to remove all lines form
+ * MERGEINFO that refer to deleted branches.
+ *
+ * If LOCAL_ONLY is set, only remove branches that are known to have been
+ * deleted as per LOOKUP - this is for quick checks.  Track progress in
+ * PROGRESS.
+ *
+ * Use SCRATCH_POOL for temporaries.
+ */
 static svn_error_t *
 remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
                       svn_min__log_t *log,
@@ -513,15 +603,21 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
   apr_array_header_t *sorted_mi;
   apr_pool_t *iterpool;
 
+  /* Skip if removal of deleted branches has not been . */
   if (!opt_state->remove_obsoletes)
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(scratch_pool);
+
+  /* Sort branches by name to ensure a nicely sorted operations log. */
   sorted_mi = svn_sort__hash(mergeinfo,
                              svn_sort_compare_items_lexically,
                              scratch_pool);
 
+  /* Only show the section header if we removed at least one line. */
   progress->needs_header = TRUE;
+
+  /* Simply iterate over all branches mentioned in the mergeinfo. */
   for (i = 0; i < sorted_mi->nelts; ++i)
     {
       const char *path = APR_ARRAY_IDX(sorted_mi, i, svn_sort__item_t).key;
@@ -539,6 +635,9 @@ remove_obsolete_lines(svn_min__branch_lookup_t *lookup,
   return SVN_NO_ERROR;
 }
 
+/* Return the ancestor of CHILD such that adding RELPATH to it leads to
+ * CHILD.  Return an empty string if no such ancestor exists.  Allocate the
+ * result in RESULT_POOL. */
 static const char *
 get_parent_path(const char *child,
                 const char *relpath,
@@ -558,11 +657,12 @@ get_parent_path(const char *child,
   return "";
 }
 
-/* Remove all ranges from RANGES where the history of SOURCE_PATH@RANGE and
-   TARGET_PATH@HEAD overlap.  Return the list of removed ranges.
-
-   Note that SOURCE_PATH@RANGE may actually refer to different branches
-   created or re-created and then deleted at different points in time.
+/* Remove all ranges from *RANGES where the history of SOURCE_PATH@RANGE
+ * and TARGET_PATH@HEAD overlap.  Return the list of *REMOVED ranges,
+ * allocated in RESULT_POOL.  Use SCRATCH_POOL for temporary allocations.
+ *
+ * Note that SOURCE_PATH@RANGE may actually refer to different branches
+ * created or re-created and then deleted at different points in time.
  */
 static svn_error_t *
 remove_overlapping_history(svn_rangelist_t **removed,
@@ -648,6 +748,12 @@ remove_overlapping_history(svn_rangelist_t **removed,
   return SVN_NO_ERROR;
 }
 
+/* Try to elide as many lines from SUBTREE_MERGEINFO for node at FS_PATH as
+ * possible using LOG and LOOKUP.  OPT_STATE determines if we may remove
+ * deleted branches.  Elision happens by comparing the node's mergeinfo
+ * with the PARENT_MERGEINFO using REL_PATH to match up the branch paths.
+ * Use SCRATCH_POOL for temporaries.
+ */
 static svn_error_t *
 remove_lines(svn_min__log_t *log,
              svn_min__branch_lookup_t *lookup,
@@ -848,6 +954,8 @@ remove_lines(svn_min__log_t *log,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE if revisions START to END are inoperative on PATH, according
+ * to LOG.  Use SCRATCH_POOL for temporaries. */
 static svn_boolean_t
 inoperative(svn_min__log_t *log,
             const char *path,
@@ -865,6 +973,11 @@ inoperative(svn_min__log_t *log,
   return svn_min__operative(log, path, ranges, scratch_pool)->nelts == 0;
 }
 
+/* Use LOG to determine what revision ranges in MERGEINFO can be combined
+ * because the revisions in between them are inoperative on the respective
+ * branch (sub-)path.   Combine those revision ranges and update PROGRESS.
+ * Make this a no-op  if it has not been enabled in OPT_STATE.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 shorten_lines(svn_mergeinfo_t mergeinfo,
               svn_min__log_t *log,
@@ -875,9 +988,11 @@ shorten_lines(svn_mergeinfo_t mergeinfo,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
 
+  /* Skip if this operation has not been enabled. */
   if (!opt_state->combine_ranges)
     return SVN_NO_ERROR;
 
+  /* Process each branch independently. */
   for (hi = apr_hash_first(scratch_pool, mergeinfo);
        hi;
        hi = apr_hash_next(hi))
@@ -886,9 +1001,11 @@ shorten_lines(svn_mergeinfo_t mergeinfo,
       const char *path = apr_hash_this_key(hi);
       svn_rangelist_t *ranges = apr_hash_this_val(hi);
 
+      /* Skip edge cases. */
       if (ranges->nelts < 2 || find_reverse_ranges(ranges, iterpool)->nelts)
         continue;
 
+      /* Merge ranges where possible. */
       for (source = 1, dest = 0; source < ranges->nelts; ++source)
         {
           svn_merge_range_t *source_range
@@ -912,6 +1029,7 @@ shorten_lines(svn_mergeinfo_t mergeinfo,
             }
         }
 
+      /* Update progress. */
       progress->ranges_removed += ranges->nelts - dest - 1;
       ranges->nelts = dest + 1;
     }
@@ -919,7 +1037,9 @@ shorten_lines(svn_mergeinfo_t mergeinfo,
   return SVN_NO_ERROR;
 }
 
-
+/* Construct a 1-line progress info based on the PROGRESS and selected
+ * processing options in OPT_STATE.  Allocate the result in RESULT_POOL
+ * and use SCRATCH_POOL for temporaries. */
 static const char *
 progress_string(const progress_t *progress,
                 svn_min__opt_state_t *opt_state,
@@ -964,6 +1084,10 @@ progress_string(const progress_t *progress,
   return result->data;
 }
 
+/* Depending on the options in OPT_STATE, print the header to be shown
+ * before processing the m/i at REL_PATH relative to the parent mergeinfo
+ * at PARENT_PATH.  If there is no parent m/i, RELPATH is empty. 
+ * Use SCRATCH_POOL temporary allocations.*/
 static svn_error_t *
 show_elision_header(const char *parent_path,
                     const char *relpath,
@@ -972,6 +1096,7 @@ show_elision_header(const char *parent_path,
 {
   if (opt_state->verbose)
     {
+      /* In verbose mode, be specific of what gets elided to where. */
       if (*relpath)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
                                   _("Trying to elide mergeinfo from path\n"
@@ -989,6 +1114,8 @@ show_elision_header(const char *parent_path,
     }
   else if (opt_state->run_analysis)
     {
+      /* If we are not in analysis mode, only the progress would be shown
+       * and we would stay quiet here. */
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                 _("Trying to elide mergeinfo at path %s\n"),
                                 svn_dirent_join(parent_path, relpath,
@@ -998,6 +1125,10 @@ show_elision_header(const char *parent_path,
   return SVN_NO_ERROR;
 }
 
+/* Given the PARENT_MERGEINFO and the current nodes's SUBTREE_MERGEINFO
+ * after the processing / elision attempt, print a summary of the results
+ * to console.  Get the verbosity setting from OPT_STATE.  Use SCRATCH_POOL
+ * for temporary allocations. */
 static svn_error_t *
 show_elision_result(svn_mergeinfo_t parent_mergeinfo,
                     svn_mergeinfo_t subtree_mergeinfo,
@@ -1006,6 +1137,7 @@ show_elision_result(svn_mergeinfo_t parent_mergeinfo,
 {
   if (opt_state->verbose)
     {
+      /* In verbose mode, tell the user what branches survived. */
       if (apr_hash_count(subtree_mergeinfo))
         {
           apr_array_header_t *sorted_mi;
@@ -1043,6 +1175,8 @@ show_elision_result(svn_mergeinfo_t parent_mergeinfo,
     }
   else if (opt_state->run_analysis)
     {
+      /* If we are not in analysis mode, only the progress would be shown
+       * and we would stay quiet here. */
       if (apr_hash_count(subtree_mergeinfo))
         {
           if (parent_mergeinfo)
@@ -1061,6 +1195,16 @@ show_elision_result(svn_mergeinfo_t parent_mergeinfo,
   return SVN_NO_ERROR;
 }
 
+/* Main normalization function. Process all mergeinfo in WC_MERGEINFO, one
+ * by one, bottom-up and try to elide it by comparing it with and aligning
+ * it to the respective parent mergeinfo.  This modified the contents of
+ * WC_MERGEINFO.
+ *
+ * LOG and LOOKUP provide the repository info needed to perform the
+ * normalization steps selected in OPT_STATE.  LOG and LOOKUP may be NULL.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
 static svn_error_t *
 normalize(apr_array_header_t *wc_mergeinfo,
           svn_min__log_t *log,
@@ -1161,19 +1305,23 @@ normalize(apr_array_header_t *wc_mergeinfo,
   return SVN_NO_ERROR;
 }
 
-
+/* Return TRUE, if the operations selected in OPT_STATE require the log. */
 static svn_boolean_t
 needs_log(svn_min__opt_state_t *opt_state)
 {
   return opt_state->combine_ranges || opt_state->remove_redundants;
 }
 
+/* Return TRUE, if the operations selected in OPT_STATE require a
+ * connection (session) to the repository. */
 static svn_boolean_t
 needs_session(svn_min__opt_state_t *opt_state)
 {
   return opt_state->remove_obsoletes;
 }
 
+/* Based on the operation selected in OPT_STATE, return a descriptive
+ * string of what we plan to do.  Allocate that string in RESULT_POOL. */
 static const char *
 processing_title(svn_min__opt_state_t *opt_state,
                  apr_pool_t *result_pool)
@@ -1202,6 +1350,8 @@ processing_title(svn_min__opt_state_t *opt_state,
   return result->data;
 }
 
+/* Sort paths in PATHS and remove all paths whose ancestors are also in
+ * PATHS. */
 static void
 eliminate_subpaths(apr_array_header_t *paths)
 {
@@ -1226,6 +1376,9 @@ eliminate_subpaths(apr_array_header_t *paths)
   paths->nelts = dest + 1;
 }
 
+/* If enabled by OPT_STATE, show the list of missing paths encountered by
+ * LOOKUP and use LOG to determine their fate.  LOG may be NULL. 
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
                        svn_min__log_t *log,
@@ -1236,9 +1389,11 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
   apr_pool_t *iterpool;
   int i;
 
+  /* Skip when summary has not been enabled */
   if (!opt_state->run_analysis || !opt_state->remove_obsoletes)
     return SVN_NO_ERROR;
 
+  /* Get list of all missing paths.  Early exist if there are none. */
   paths = svn_min__branch_deleted_list(lookup, scratch_pool, scratch_pool);
   if (!paths->nelts)
     {
@@ -1247,6 +1402,7 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
       return SVN_NO_ERROR;
     }
 
+  /* Process them all. */
   iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_cmdline_printf(iterpool,
@@ -1258,6 +1414,7 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
       apr_array_header_t *surviving_copies = NULL;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
+      /* For PATH, gather deletion and copy survival info. */
       svn_pool_clear(iterpool);
       surviving_copies = apr_array_make(iterpool, 16, sizeof(const char *));
       if (log)
@@ -1282,11 +1439,16 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
           deletion_rev = SVN_INVALID_REVNUM;
         }
 
+      /* Show state / results to the extend we've got them. */
       if (surviving_copies->nelts)
         {
           int k;
+
+          /* There maybe thousands of surviving (sub-node) copies.
+           * Restrict the output unless the user asked us to be verbose. */
           int limit = opt_state->verbose ? INT_MAX : 4;
 
+          /* Reasonably reduce the output. */
           eliminate_subpaths(surviving_copies);
           SVN_ERR(svn_cmdline_printf(iterpool,
                                      _("    [copied or moved] %s\n"),
@@ -1369,6 +1531,7 @@ svn_min__run_normalize(void *baton,
       const char *url;
       const char *common_path;
 
+      /* next target */
       svn_pool_clear(iterpool);
       SVN_ERR(add_wc_info(baton, i, iterpool, subpool));
 
