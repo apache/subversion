@@ -153,17 +153,18 @@ deletion_order(const void *lhs,
 }
 
 /* Return the string stored in UNIQUE_PATHS with the value PATH of PATH_LEN
- * characters.  If the hash does not have a matching entry, add one. */
+ * characters.  If the hash does not have a matching entry, add one.
+ * Allocate all strings in RESULT_POOL. */
 static const char *
 internalize(apr_hash_t *unique_paths,
             const char *path,
-            apr_ssize_t path_len)
+            apr_ssize_t path_len,
+            apr_pool_t *result_pool)
 {
   const char *result = apr_hash_get(unique_paths, path, path_len);
   if (result == NULL)
     {
-      apr_pool_t *pool = apr_hash_pool_get(unique_paths);
-      result = apr_pstrmemdup(pool, path, path_len);
+      result = apr_pstrmemdup(result_pool, path, path_len);
       apr_hash_set(unique_paths, result, path_len, result);
     }
 
@@ -202,7 +203,8 @@ log_entry_receiver(void *baton,
       const char *path = apr_hash_this_key(hi);
       svn_log_changed_path_t *change = apr_hash_this_val(hi);
 
-      path = internalize(log->unique_paths, path, apr_hash_this_key_len(hi));
+      path = internalize(log->unique_paths, path, apr_hash_this_key_len(hi),
+                         result_pool);
       APR_ARRAY_PUSH(entry->paths, const char *) = path;
 
       if (change->action == 'D' || change->action == 'R')
@@ -221,7 +223,8 @@ log_entry_receiver(void *baton,
           copy->revision = log_entry->revision;
           copy->copyfrom_path = internalize(log->unique_paths,
                                             change->copyfrom_path,
-                                            strlen(change->copyfrom_path));
+                                            strlen(change->copyfrom_path),
+                                            result_pool);
           copy->copyfrom_revision = change->copyfrom_rev;
 
           APR_ARRAY_PUSH(log->copies, svn_min__copy_t *) = copy;
@@ -243,7 +246,7 @@ log_entry_receiver(void *baton,
                       APR_ARRAY_IDX(entry->paths, count - 1, const char *),
                       scratch_pool);
       entry->common_base = internalize(log->unique_paths, common_base,
-                                       strlen(common_base));
+                                       strlen(common_base), result_pool);
     }
 
   /* Done with that reivison. */
