@@ -392,8 +392,7 @@ restrict_range(svn_min__log_t *log,
 
 static svn_boolean_t
 is_relevant(const char *changed_path,
-            const char *path,
-            const void *baton)
+            const char *path)
 {
   return  svn_dirent_is_ancestor(changed_path, path)
        || svn_dirent_is_ancestor(path, changed_path);
@@ -453,7 +452,7 @@ filter_ranges(svn_min__log_t *log,
           if (entry->revision > range.end)
             break;
 
-          if (!is_relevant(entry->common_base, path, NULL))
+          if (!is_relevant(entry->common_base, path))
             continue;
 
           for (l = 0; l < entry->paths->nelts; ++l)
