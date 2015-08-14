@@ -53,7 +53,7 @@ svn_min__analyze(apr_getopt_t *os,
   cmd_baton->opt_state->run_analysis = TRUE;
   cmd_baton->opt_state->dry_run = TRUE;
 
-  SVN_ERR(svn_min__run_normalize(os, baton, pool));
+  SVN_ERR(svn_min__run_normalize(baton, pool));
 
   return SVN_NO_ERROR;
 }

@@ -53,7 +53,7 @@ svn_min__remove_branches(apr_getopt_t *os,
   cmd_baton->opt_state->remove_obsoletes = TRUE;
   cmd_baton->lookup = svn_min__branch_lookup_from_paths(branches, pool);
 
-  SVN_ERR(svn_min__run_normalize(os, baton, pool));
+  SVN_ERR(svn_min__run_normalize(baton, pool));
 
   return SVN_NO_ERROR;
 }
