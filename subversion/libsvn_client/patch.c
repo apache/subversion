@@ -962,7 +962,7 @@ choose_target_filename(const svn_patch_t *patch)
 /* Return whether the svn:executable proppatch and the out-of-band
  * executability metadata contradict each other, assuming both are present.
  */
-svn_boolean_t
+static svn_boolean_t
 contradictory_executability(const svn_patch_t *patch,
                             const prop_patch_target_t *target)
 {

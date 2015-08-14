@@ -88,7 +88,7 @@ struct svn_diff_hunk_t {
  *
  * ADD is TRUE if adding and FALSE if deleting.
  */
-svn_error_t *
+static svn_error_t *
 add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
                           const char *line,
                           svn_patch_t *patch,
