@@ -367,13 +367,12 @@ compare_rev_log_entry(const void *lhs,
 static void
 restrict_range(svn_min__log_t *log,
                svn_merge_range_t *range,
-               svn_rangelist_t *ranges,
-               apr_pool_t *result_pool)
+               svn_rangelist_t *ranges)
 {
   if (range->start + 1 < log->first_rev)
     {
       svn_merge_range_t *new_range
-        = apr_pmemdup(result_pool, range, sizeof(*range));
+        = apr_pmemdup(ranges->pool, range, sizeof(*range));
       new_range->end = MIN(new_range->end, log->first_rev - 1);
 
       APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = new_range;
@@ -383,7 +382,7 @@ restrict_range(svn_min__log_t *log,
   if (range->end > log->head_rev)
     {
       svn_merge_range_t *new_range
-        = apr_pmemdup(result_pool, range, sizeof(*range));
+        = apr_pmemdup(ranges->pool, range, sizeof(*range));
       new_range->start = log->head_rev;
 
       APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = new_range;
@@ -441,7 +440,7 @@ filter_ranges(svn_min__log_t *log,
     {
       svn_merge_range_t range
         = *APR_ARRAY_IDX(ranges, i, const svn_merge_range_t *);
-      restrict_range(log, &range, result, result_pool);
+      restrict_range(log, &range, result);
 
       ++range.start;
       for (k = svn_sort__bsearch_lower_bound(log->entries, &range.start,
