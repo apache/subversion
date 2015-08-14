@@ -287,13 +287,6 @@ svn_min__get_mergeinfo(apr_array_header_t *mergeinfo,
   return APR_ARRAY_IDX(mergeinfo, idx, mergeinfo_t *)->mergeinfo;
 }
 
-const char *
-svn_min__get_mergeinfo_path(apr_array_header_t *mergeinfo,
-                            int idx)
-{
-  return APR_ARRAY_IDX(mergeinfo, idx, mergeinfo_t *)->local_path;
-}
-
 svn_error_t *
 svn_min__write_mergeinfo(svn_min__cmd_baton_t *baton,
                          apr_array_header_t *mergeinfo,
