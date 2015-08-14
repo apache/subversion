@@ -141,7 +141,7 @@ svn_editor3__insert_shims(
                         &shim_connector,
                         old_deditor, old_dedit_baton,
                         branching_txn,
-                        repos_root, base_relpath,
+                        repos_root,
                         fetch_func, fetch_baton,
                         NULL, NULL /*cancel*/,
                         result_pool, scratch_pool));
@@ -508,8 +508,8 @@ svn_editor3__delta_from_ev3_for_update(
  *     number: see comment in apply_change().
  *
  * ### Have we got our rel-paths in order? Ev1, Ev3 and callbacks may
- *     all expect different paths. 'repos_relpath' or relative to
- *     eb->base_relpath? Leading slash (unimplemented 'send_abs_paths'
+ *     all expect different paths. Are they relative to repos root or to
+ *     some base path? Leading slash (unimplemented 'send_abs_paths'
  *     feature), etc.
  *
  * ### May be tidier for OPEN_ROOT_FUNC callback (see open_root_ev3())
@@ -547,8 +547,6 @@ typedef struct ev3_from_delta_baton_t
   /* Repository root URL
      ### Some code allows this to be null -- but is that valid? */
   const char *repos_root_url;
-  /* Path of the root of the edit, relative to the repository root. */
-  const char *base_relpath;
 
   /* Ev1 changes recorded so far: REPOS_RELPATH -> change_node_ev3_t */
   apr_hash_t *changes;
@@ -559,32 +557,19 @@ typedef struct ev3_from_delta_baton_t
   apr_pool_t *edit_pool;
 } ev3_from_delta_baton_t;
 
-/* Get all the (Ev1) paths that have changes. Return only paths at or below
- * BASE_RELPATH, and return them relative to BASE_RELPATH.
- *
- * ### Instead, we should probably avoid adding paths outside BASE_RELPATH
- *     to CHANGES in the first place, and not allow them here.
+/* Get all the (Ev1) paths that have changes.
  */
 static const apr_array_header_t *
 get_unsorted_paths(apr_hash_t *changes,
-                   const char *base_relpath,
                    apr_pool_t *scratch_pool)
 {
   svn_array_t *paths = svn_array_make(scratch_pool);
   apr_hash_index_t *hi;
 
-  /* Build a new array with just the paths, trimmed to relative paths for
-     the Ev1 drive.  */
   for (hi = apr_hash_first(scratch_pool, changes); hi; hi = apr_hash_next(hi))
     {
       const char *this_path = apr_hash_this_key(hi);
-      const char *this_relpath = svn_relpath_skip_ancestor(base_relpath,
-                                                           this_path);
-
-      if (this_relpath)
-        {
-          SVN_ARRAY_PUSH(paths) = this_relpath;
-        }
+      SVN_ARRAY_PUSH(paths) = this_path;
     }
 
   return paths;
@@ -775,7 +760,7 @@ drive_ev1_props(const char *repos_relpath,
 }
 
 /* Drive the Ev1 editor with the change recorded in EB->changes for the
- * path EV1_RELPATH (which is relative to EB->base_relpath).
+ * path EV1_RELPATH.
  *
  * Conforms to svn_delta_path_driver_cb_func_t.
  */
@@ -788,9 +773,7 @@ apply_change(void **dir_baton,
 {
   apr_pool_t *scratch_pool = result_pool;
   const ev3_from_delta_baton_t *eb = callback_baton;
-  const char *relpath = svn_relpath_join(eb->base_relpath, ev1_relpath,
-                                         scratch_pool);
-  const change_node_t *change = svn_hash_gets(eb->changes, relpath);
+  const change_node_t *change = svn_hash_gets(eb->changes, ev1_relpath);
   void *file_baton = NULL;
   apr_hash_t *base_props;
 
@@ -800,7 +783,7 @@ apply_change(void **dir_baton,
   /* Typically, we are not creating new directory batons.  */
   *dir_baton = NULL;
 
-  SVN_ERR(fetch_base_props(&base_props, eb->changes, relpath,
+  SVN_ERR(fetch_base_props(&base_props, eb->changes, ev1_relpath,
                            eb->fetch_func, eb->fetch_baton,
                            scratch_pool, scratch_pool));
 
@@ -812,7 +795,7 @@ apply_change(void **dir_baton,
 
       /* Only property edits are allowed on the root.  */
       SVN_ERR_ASSERT(change->action == RESTRUCTURE_NONE);
-      SVN_ERR(drive_ev1_props(relpath, change, base_props,
+      SVN_ERR(drive_ev1_props(ev1_relpath, change, base_props,
                               eb->deditor, *dir_baton, scratch_pool));
 
       /* No further action possible for the root.  */
@@ -914,10 +897,10 @@ apply_change(void **dir_baton,
 
   /* Apply any properties in CHANGE to the node.  */
   if (change->kind == svn_node_dir)
-    SVN_ERR(drive_ev1_props(relpath, change, base_props,
+    SVN_ERR(drive_ev1_props(ev1_relpath, change, base_props,
                             eb->deditor, *dir_baton, scratch_pool));
   else
-    SVN_ERR(drive_ev1_props(relpath, change, base_props,
+    SVN_ERR(drive_ev1_props(ev1_relpath, change, base_props,
                             eb->deditor, file_baton, scratch_pool));
 
   /* Send the text content delta, if new text content is provided. */
@@ -952,24 +935,33 @@ apply_change(void **dir_baton,
  * Old-repository storage paths for branch elements
  * ========================================================================
  *
- *   B0    e0   =>  ^/
- *   B0    e9   =>  ^/.../foo
- *   B0.12 e12  =>  ^/.../trunk
- *   B0.12 e13  =>  ^/.../trunk/.../bar
- *
- * TODO: To support top-level branches, this needs to return disjoint sets
- * of paths for different top-level branches:
+ * To support top-level branches, we map each top-level branch to its own
+ * directory in the old repository, with each nested branch in a subdirectory:
  *
  *   B0  =>  ^/top0/...
  *           ^/top0/.../trunk/...  <= B0.12
  *   B1  =>  ^/top1/...
  *
- * Ultimately it may be better to put each branch in a separate top-level dir:
+ * It may be better to put each branch in its own directory:
  *
  *   B0     =>  ^/B0/...
  *   B0.12  =>  ^/B0.12/...
  *   B1     =>  ^/B1/...
+ *
+ * (A branch root is not necessarily a directory, it could be a file.)
  */
+
+/*  */
+static int
+branch_get_top_num(const svn_branch_state_t *branch,
+                   apr_pool_t *scratch_pool)
+{
+  while (branch->outer_branch)
+    {
+      branch = branch->outer_branch;
+    }
+  return branch->outer_eid;
+}
 
 /* Get the old-repository path for the storage of the root element of BRANCH.
  *
@@ -980,7 +972,11 @@ static const char *
 branch_get_storage_root_rrpath(const svn_branch_state_t *branch,
                                apr_pool_t *result_pool)
 {
-  return svn_branch_get_root_rrpath(branch, result_pool);
+  int top_branch_num = branch_get_top_num(branch, result_pool);
+  const char *top_path = apr_psprintf(result_pool, "top%d", top_branch_num);
+  const char *nested_path = svn_branch_get_root_rrpath(branch, result_pool);
+
+  return svn_relpath_join(top_path, nested_path, result_pool);
 }
 
 /* Get the old-repository path for the storage of element EID of BRANCH.
@@ -1697,16 +1693,27 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
         3. modify/delete/add/replace as needed at each path.
    */
   paths_final = apr_hash_make(scratch_pool);
-  /* ### TODO: map paths of non-0 top-level branch to a hidden path space */
   convert_branch_to_paths_r(paths_final,
                             root_branch,
                             scratch_pool, scratch_pool);
 
   {
-    svn_pathrev_t current = { -1, "" };
+    const char *top_path = branch_get_storage_root_rrpath(root_branch,
+                                                          scratch_pool);
+    svn_pathrev_t current;
 
     current.rev = eb->edited_rev_root->base_rev;
-    SVN_ERR(drive_changes_r("", &current,
+    current.relpath = top_path;
+
+    /* Make it appear that B0 was created (as an empty dir) in r0. */
+    if (current.rev == 0)
+      {
+        change_node_t *change;
+
+        SVN_ERR(insert_change(&change, eb->changes, top_path, RESTRUCTURE_ADD));
+        change->kind = svn_node_dir;
+      }
+    SVN_ERR(drive_changes_r(top_path, &current,
                             paths_final, root_branch->outer_eid,
                             eb, scratch_pool));
   }
@@ -1718,17 +1725,16 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
 
   /* Make the path driver visit the root dir of the edit. Otherwise, it
      will attempt an open_root() instead, which we already did. */
-  if (! svn_hash_gets(eb->changes, eb->base_relpath))
+  if (! svn_hash_gets(eb->changes, ""))
     {
       change_node_t *change;
 
-      SVN_ERR(insert_change(&change, eb->changes, eb->base_relpath,
-                            RESTRUCTURE_NONE));
+      SVN_ERR(insert_change(&change, eb->changes, "", RESTRUCTURE_NONE));
       change->kind = svn_node_dir;
     }
 
   /* Apply the appropriate Ev1 change to each Ev1-relative path. */
-  paths = get_unsorted_paths(eb->changes, eb->base_relpath, scratch_pool);
+  paths = get_unsorted_paths(eb->changes, scratch_pool);
   SVN_ERR(svn_delta_path_driver2(eb->deditor, eb->dedit_baton,
                                  paths, TRUE /*sort*/,
                                  apply_change, (void *)eb,
@@ -1820,6 +1826,52 @@ editor3_mem_abort(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Baton for wrap_fetch_func. */
+typedef struct wrap_fetch_baton_t
+{
+  /* Wrapped fetcher */
+  svn_editor3__shim_fetch_func_t fetch_func;
+  void *fetch_baton;
+} wrap_fetch_baton_t;
+
+/* The purpose of this fetcher-wrapper is to make it appear that B0
+ * was created (as an empty dir) in r0.
+ */
+static svn_error_t *
+wrap_fetch_func(svn_node_kind_t *kind,
+                apr_hash_t **props,
+                svn_stringbuf_t **file_text,
+                apr_hash_t **children_names,
+                void *baton,
+                const char *repos_relpath,
+                svn_revnum_t revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  wrap_fetch_baton_t *b = baton;
+
+  if (revision == 0 && strcmp(repos_relpath, "top0") == 0)
+    {
+      if (kind)
+        *kind = svn_node_dir;
+      if (props)
+        *props = apr_hash_make(result_pool);
+      if (file_text)
+        *file_text = NULL;
+      if (children_names)
+        *children_names = apr_hash_make(result_pool);
+    }
+  else
+    {
+      SVN_ERR(b->fetch_func(kind, props, file_text, children_names,
+                            b->fetch_baton,
+                            repos_relpath, revision,
+                            result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_editor3_in_memory(svn_editor3_t **editor_p,
                       svn_branch_revision_root_t *branching_txn,
@@ -1840,13 +1892,17 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
     editor3_mem_abort
   };
   ev3_from_delta_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
+  wrap_fetch_baton_t *wb = apr_pcalloc(result_pool, sizeof(*wb));
 
   *editor_p = svn_editor3_create(&editor_funcs, eb,
                                  NULL, NULL /*cancel*/, result_pool);
 
   eb->edited_rev_root = branching_txn;
-  eb->fetch_func = fetch_func;
-  eb->fetch_baton = fetch_baton;
+
+  wb->fetch_func = fetch_func;
+  wb->fetch_baton = fetch_baton;
+  eb->fetch_func = wrap_fetch_func;
+  eb->fetch_baton = wb;
 
   return SVN_NO_ERROR;
 }
@@ -1859,7 +1915,6 @@ svn_editor3__ev3_from_delta_for_commit(
                         void *dedit_baton,
                         svn_branch_revision_root_t *branching_txn,
                         const char *repos_root_url,
-                        const char *base_relpath,
                         svn_editor3__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
@@ -1880,29 +1935,25 @@ svn_editor3__ev3_from_delta_for_commit(
     editor3_abort
   };
   ev3_from_delta_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
+  wrap_fetch_baton_t *wb = apr_pcalloc(result_pool, sizeof(*wb));
 
   eb->deditor = deditor;
   eb->dedit_baton = dedit_baton;
 
   eb->repos_root_url = apr_pstrdup(result_pool, repos_root_url);
-  eb->base_relpath = apr_pstrdup(result_pool, base_relpath);
 
   eb->changes = apr_hash_make(result_pool);
 
-  eb->fetch_func = fetch_func;
-  eb->fetch_baton = fetch_baton;
+  wb->fetch_func = fetch_func;
+  wb->fetch_baton = fetch_baton;
+  eb->fetch_func = wrap_fetch_func;
+  eb->fetch_baton = wb;
 
   eb->edit_pool = result_pool;
 
   *editor_p = svn_editor3_create(&editor_funcs, eb,
                                  cancel_func, cancel_baton, result_pool);
 
-  /* Find what branch we are editing, based on BASE_RELPATH, and capture
-     its initial state.
-     ### TODO: Instead, have edit operations specify the branch(es) they
-         are operating on, since operations such as "branch"
-         and those that recurse into sub-branches operate on more than one.
-   */
   eb->edited_rev_root = branching_txn;
 
   if (shim_connector)
@@ -1955,7 +2006,7 @@ svn_editor3__ev3_from_delta_for_update(
                         &update_editor->editor,
                         &shim_connector,
                         deditor, dedit_baton,
-                        branching_txn, repos_root_url, base_repos_relpath,
+                        branching_txn, repos_root_url,
                         fetch_func, fetch_baton,
                         cancel_func, cancel_baton,
                         result_pool, scratch_pool));

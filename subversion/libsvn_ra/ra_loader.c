@@ -1023,11 +1023,9 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
 
   /* Convert to Ev3 */
   {
-    const char *repos_root_url, *session_url, *base_relpath;
+    const char *repos_root_url;
 
     SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
-    SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
-    base_relpath = svn_uri_skip_ancestor(repos_root_url, session_url, pool);
 
     /*if (! svn_dbg__quiet_mode())
       SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
@@ -1036,7 +1034,7 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                         editor,
                         &shim_connector,
                         deditor, dedit_baton, branching_txn,
-                        repos_root_url, base_relpath,
+                        repos_root_url,
                         fetch_func, fetch_baton,
                         NULL, NULL /*cancel*/,
                         pool, pool));

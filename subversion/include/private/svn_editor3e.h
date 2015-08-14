@@ -1110,9 +1110,7 @@ typedef struct svn_editor3__shim_connector_t svn_editor3__shim_connector_t;
  * returned *SHIM_CONNECTOR value to svn_delta__delta_from_ev3_for_commit().
  * SHIM_CONNECTOR may be null if not wanted.
  *
- * REPOS_ROOT_URL is the repository root URL, and BASE_RELPATH is the
- * relative path within the repository of the root directory of the edit.
- * (An Ev1 edit must be rooted at a directory, not at a file.)
+ * REPOS_ROOT_URL is the repository root URL.
  *
  * FETCH_FUNC/FETCH_BATON is a callback by which the shim may retrieve the
  * original or copy-from kind/properties/text for a path being committed.
@@ -1132,7 +1130,6 @@ svn_editor3__ev3_from_delta_for_commit(
                         void *dedit_baton,
                         svn_branch_revision_root_t *branching_txn,
                         const char *repos_root_url,
-                        const char *base_relpath,
                         svn_editor3__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,

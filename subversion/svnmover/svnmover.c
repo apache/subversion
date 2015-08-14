@@ -245,6 +245,7 @@ wc_create(svnmover_wc_t **wc_p,
                                  result_pool));
   SVN_ERR(svn_ra_get_latest_revnum(wc->ra_session, &wc->head_revision,
                                    scratch_pool));
+  SVN_ERR(svn_ra_reparent(wc->ra_session, wc->repos_root_url, scratch_pool));
 
   SVN_ERR(wc_checkout(wc, base_revision, scratch_pool));
   *wc_p = wc;
