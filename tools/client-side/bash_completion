@@ -423,6 +423,7 @@ _svn()
 		else
 			# show schemas
 			COMPREPLY=( $(compgen -W "$urlSchemas" -- $cur) )
+			compopt -o nospace
 			return
 		fi
 	fi
@@ -440,10 +441,12 @@ _svn()
 	    elif [[ "$here" == */trunk* ]] ; then
 	      # we guess that it is a merge from a branch
 	      COMPREPLY=( $(compgen -W ${here/\/trunk*/\/branches\/} -- $cur ) )
+	      compopt -o nospace
 	      return 0
 	    else
 	      # no se, let us suggest the repository root...
-	      COMPREPLY=( $(compgen -W $(_svn_info Root) -- $cur ) )
+	      COMPREPLY=( $(compgen -W $(_svn_info Root)/ -- $cur ) )
+	      compopt -o nospace
 	      return 0
 	    fi
 	  elif [[ $URL == */branches/* && $here == */trunk* && \
