@@ -132,15 +132,6 @@ svn_min__check_cancel(void *baton);
 
 /*** Internal API linking the various modules. ***/
 
-/* Set the path and url members in BATON to handle the IDX-th target
- * specified at the command line.  Allocate the paths in RESULT_POOL and
- * use SCRATCH_POOL for temporaries. */
-svn_error_t *
-svn_min__add_wc_info(svn_min__cmd_baton_t* baton,
-                     int idx,
-                     apr_pool_t* result_pool,
-                     apr_pool_t* scratch_pool);
-
 /* Scan the working copy sub-tree specified in BATON for mergeinfo and
  * return them in *RESULT, allocated in RESULT_POOL.  The element type is
  * opaque.  Use SCRATCH_POOL for temporary allocations. */

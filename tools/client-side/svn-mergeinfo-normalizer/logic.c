@@ -1319,6 +1319,39 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
   return SVN_NO_ERROR;
 }
 
+/* Set the path and url members in BATON to handle the IDX-th target
+ * specified at the command line.  Allocate the paths in RESULT_POOL and
+ * use SCRATCH_POOL for temporaries. */
+static svn_error_t *
+add_wc_info(svn_min__cmd_baton_t *baton,
+            int idx,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  svn_min__opt_state_t *opt_state = baton->opt_state;
+  const char *target = APR_ARRAY_IDX(opt_state->targets, idx, const char *);
+  const char *truepath;
+  svn_opt_revision_t peg_revision;
+
+  if (svn_path_is_url(target))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'%s' is not a local path"), target);
+
+  SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
+                             scratch_pool));
+  SVN_ERR(svn_dirent_get_absolute(&baton->local_abspath, truepath,
+                                  result_pool));
+
+  SVN_ERR(svn_client_get_wc_root(&baton->wc_root, baton->local_abspath,
+                                 baton->ctx, result_pool, scratch_pool));
+  SVN_ERR(svn_client_get_repos_root(&baton->repo_root, NULL,
+                                    baton->local_abspath, baton->ctx,
+                                    result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_min__run_normalize(void *baton,
                        apr_pool_t *pool)
@@ -1337,7 +1370,7 @@ svn_min__run_normalize(void *baton,
       const char *common_path;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_min__add_wc_info(baton, i, iterpool, subpool));
+      SVN_ERR(add_wc_info(baton, i, iterpool, subpool));
 
       /* scan working copy */
       svn_pool_clear(subpool);
@@ -1366,7 +1399,7 @@ svn_min__run_normalize(void *baton,
           svn_ra_session_t *session;
 
           svn_pool_clear(subpool);
-          SVN_ERR(svn_min__add_wc_info(baton, i, iterpool, subpool));
+          SVN_ERR(add_wc_info(baton, i, iterpool, subpool));
           SVN_ERR(svn_client_open_ra_session2(&session, cmd_baton->repo_root,
                                               NULL, cmd_baton->ctx, iterpool,
                                               subpool));
