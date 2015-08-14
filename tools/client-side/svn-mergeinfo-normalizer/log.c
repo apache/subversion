@@ -40,36 +40,64 @@
 #include "svn_private_config.h"
 
 
-/*** Code. ***/
 
+/* Describes all changes of a single revision.
+ * Note that all strings are shared within a given svn_min__log_t instance.
+ */
 typedef struct log_entry_t
 {
+  /* Revision being described. */
   svn_revnum_t revision;
+
+  /* FS path that is equal or a parent of any in PATHS. */
   const char *common_base;
+
+  /* Sorted list of all FS paths touched. Elements are const char*. */
   apr_array_header_t *paths;
 } log_entry_t;
 
+/* Describes a deletion.
+ * Note that replacements are treated as additions + deletions.
+ */
 typedef struct deletion_t
 {
+  /* Path being deleted (or replaced). */
   const char *path;
+
+  /* Revision in which this deletion happened.*/
   svn_revnum_t revision;
 } deletion_t;
 
+/* Note that all FS paths are internalized and shared within this object.
+ */
 struct svn_min__log_t
 {
+  /* Dictionary of all FS paths used in this log. */
   apr_hash_t *unique_paths;
 
+  /* Oldest revision we received. */
   svn_revnum_t first_rev;
+
+  /* Latest revision we received. */
   svn_revnum_t head_rev;
+
+  /* Log contents we received.  Entries are log_entry_t *. */
   apr_array_header_t *entries;
 
+  /* List of all copy operations we encountered, sorted by target&rev. */
   apr_array_header_t *copies;
+
+  /* Like COPIES but sorted by source&source-rev. */
   apr_array_header_t *copies_by_source;
+
+  /* List of all deletions we encountered, sorted by path&rev. */
   apr_array_header_t *deletions;
 
+  /* If set, don't show progress nor summary. */
   svn_boolean_t quiet;
 };
 
+/* Comparison function defining the order in svn_min__log_t.COPIES. */
 static int
 copy_order(const void *lhs,
            const void *rhs)
@@ -87,6 +115,8 @@ copy_order(const void *lhs,
   return lhs_copy->revision == rhs_copy->revision ? 0 : 1;
 }
 
+/* Comparison function defining the order in svn_min__log_t.COPIES_BY_SOURCE.
+ */
 static int
 copy_by_source_order(const void *lhs,
                      const void *rhs)
@@ -104,6 +134,7 @@ copy_by_source_order(const void *lhs,
   return lhs_copy->copyfrom_revision == rhs_copy->copyfrom_revision ? 0 : 1;
 }
 
+/* Comparison function defining the order in svn_min__log_t.DELETIONS. */
 static int
 deletion_order(const void *lhs,
                const void *rhs)
@@ -121,6 +152,8 @@ deletion_order(const void *lhs,
   return lhs_deletion->revision == rhs_deletion->revision ? 0 : 1;
 }
 
+/* Return the string stored in UNIQUE_PATHS with the value PATH of PATH_LEN
+ * characters.  If the hash does not have a matching entry, add one. */
 static const char *
 internalize(apr_hash_t *unique_paths,
             const char *path,
@@ -137,6 +170,8 @@ internalize(apr_hash_t *unique_paths,
   return result;
 }
 
+/* Implements svn_log_entry_receiver_t.  Copies the info of LOG_ENTRY into
+ * (svn_min__log_t *)BATON. */
 static svn_error_t *
 log_entry_receiver(void *baton,
                    svn_log_entry_t *log_entry,
@@ -149,9 +184,11 @@ log_entry_receiver(void *baton,
   const char *common_base;
   int count;
 
+  /* Don't care about empty revisions. Skip them. */
   if (!log_entry->changed_paths || !apr_hash_count(log_entry->changed_paths))
     return SVN_NO_ERROR;
 
+  /* Copy changed paths list. Collect deletions and copies. */
   entry = apr_pcalloc(result_pool, sizeof(*entry));
   entry->revision = log_entry->revision;
   entry->paths = apr_array_make(result_pool,
@@ -191,6 +228,7 @@ log_entry_receiver(void *baton,
         }
     }
 
+  /* Determine the common base of all changed paths. */
   count = entry->paths->nelts;
   if (count == 1)
     {
@@ -208,12 +246,15 @@ log_entry_receiver(void *baton,
                                        strlen(common_base));
     }
 
+  /* Done with that reivison. */
   APR_ARRAY_PUSH(log->entries, log_entry_t *) = entry;
 
+  /* Update log-global state. */
   log->first_rev = log_entry->revision;
   if (log->head_rev == SVN_INVALID_REVNUM)
     log->head_rev = log_entry->revision;
 
+  /* Show progress. */
   if (log->entries->nelts % 1000 == 0 && !log->quiet)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool, "."));
@@ -223,6 +264,8 @@ log_entry_receiver(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Print some statistics about LOG to console. Use SCRATCH_POOL for
+ * temporary allocations. */
 static svn_error_t *
 print_log_stats(svn_min__log_t *log,
                 apr_pool_t *scratch_pool)
@@ -251,7 +294,6 @@ print_log_stats(svn_min__log_t *log,
   return SVN_NO_ERROR;
 }
 
-/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_min__log(svn_min__log_t **log,
              const char *url,
@@ -262,6 +304,9 @@ svn_min__log(svn_min__log_t **log,
   svn_client_ctx_t *ctx = baton->ctx;
   svn_min__log_t *result;
 
+  /* Prepare API parameters for fetching the full log for URL,
+   * including changed paths, excluding revprops.
+   */
   apr_array_header_t *targets;
   apr_array_header_t *revisions;
   apr_array_header_t *revprops;
@@ -277,6 +322,7 @@ svn_min__log(svn_min__log_t **log,
 
   revprops = apr_array_make(scratch_pool, 0, sizeof(const char *));
 
+  /* The log objec to fill. */
   result = apr_pcalloc(result_pool, sizeof(*result));
   result->unique_paths = svn_hash__make(scratch_pool);
   result->first_rev = SVN_INVALID_REVNUM;
@@ -308,6 +354,7 @@ svn_min__log(svn_min__log_t **log,
                           ctx,
                           scratch_pool));
 
+  /* Complete arrays in RESULT. */
   result->copies_by_source = apr_array_copy(result_pool, result->copies);
 
   svn_sort__array_reverse(result->entries, scratch_pool);
@@ -315,6 +362,7 @@ svn_min__log(svn_min__log_t **log,
   svn_sort__array(result->copies_by_source, copy_by_source_order);
   svn_sort__array(result->deletions, deletion_order);
 
+  /* Show that we are done. */
   if (!baton->opt_state->quiet)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
@@ -327,11 +375,14 @@ svn_min__log(svn_min__log_t **log,
   return SVN_NO_ERROR;
 }
 
+/* Append REVISION with the INHERITABLE setting to RANGES.  RANGES must be
+ * sorted and REVISION must be larger than the largest revision in RANGES. */
 static void
 append_rev_to_ranges(svn_rangelist_t *ranges,
                      svn_revnum_t revision,
                      svn_boolean_t inheritable)
 {
+  /* In many cases, we can save memory by simply extending the last range. */
   svn_merge_range_t *range;
   if (ranges->nelts)
     {
@@ -343,6 +394,7 @@ append_rev_to_ranges(svn_rangelist_t *ranges,
         }
     }
 
+  /* We need to add a new range. */
   range = apr_pcalloc(ranges->pool, sizeof(*range));
   range->start = revision - 1;
   range->end = revision;
@@ -351,6 +403,9 @@ append_rev_to_ranges(svn_rangelist_t *ranges,
   APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = range;
 }
 
+/* Comparison function comparing the log_entry_t * in *LHS with the
+ * svn_revnum_t in *rhs.
+ */
 static int
 compare_rev_log_entry(const void *lhs,
                       const void *rhs)
@@ -364,11 +419,14 @@ compare_rev_log_entry(const void *lhs,
   return entry->revision == revision ? 0 : 1;
 }
 
+/* Restrict RANGE to the range of revisions covered by LOG. Cut-off from
+ * both sides will be added to RANGES. */
 static void
 restrict_range(svn_min__log_t *log,
                svn_merge_range_t *range,
                svn_rangelist_t *ranges)
 {
+  /* Cut off at the earliest revision. */
   if (range->start + 1 < log->first_rev)
     {
       svn_merge_range_t *new_range
@@ -379,6 +437,7 @@ restrict_range(svn_min__log_t *log,
       range->start = new_range->end;
     }
 
+  /* Cut off at log HEAD. */
   if (range->end > log->head_rev)
     {
       svn_merge_range_t *new_range
@@ -390,6 +449,8 @@ restrict_range(svn_min__log_t *log,
     }
 }
 
+/* Return TRUE if PATH is either equal to, a parent of or sub-path of
+ * CHANGED_PATH. */
 static svn_boolean_t
 is_relevant(const char *changed_path,
             const char *path)
@@ -398,6 +459,9 @@ is_relevant(const char *changed_path,
        || svn_dirent_is_ancestor(path, changed_path);
 }
 
+/* Return TRUE if PATH is either equal to, a parent of or sub-path of
+ * SUB_TREE.  Ignore BATON but keep it for a unified signature to be
+ * used with filter_ranges. */
 static svn_boolean_t
 in_subtree(const char *changed_path,
            const char *sub_tree,
@@ -406,6 +470,9 @@ in_subtree(const char *changed_path,
   return svn_dirent_is_ancestor(sub_tree, changed_path);
 }
 
+/* Return TRUE if
+ * - CHANGED_PATH is is either equal to or a sub-node of PATH, and
+ * - CHNAGED_PATH is outside the sub-tree given as BATON. */
 static svn_boolean_t
 below_path_outside_subtree(const char *changed_path,
                            const char *path,
@@ -419,6 +486,10 @@ below_path_outside_subtree(const char *changed_path,
         && strcmp(path, changed_path);
 }
 
+/* In LOG, scan the revisions given in RANGES and return the revision /
+ * ranges that are relevant to PATH with respect to the PATH_RELEVANT
+ * criterion using BATON.  Keep revisions that lie outside what is covered
+ * by LOG. Allocate the result in RESULT_POOL. */
 static svn_rangelist_t *
 filter_ranges(svn_min__log_t *log,
               const char *path,
@@ -431,16 +502,19 @@ filter_ranges(svn_min__log_t *log,
   svn_rangelist_t *result;
   int i, k, l;
 
+  /* Auto-complete parameters. */
   if (!SVN_IS_VALID_REVNUM(log->first_rev))
     return svn_rangelist_dup(ranges, result_pool);
 
   result = apr_array_make(result_pool, 0, ranges->elt_size);
   for (i = 0; i < ranges->nelts; ++i)
     {
+      /* Next revision range to scan. */
       svn_merge_range_t range
         = *APR_ARRAY_IDX(ranges, i, const svn_merge_range_t *);
       restrict_range(log, &range, result);
 
+      /* Find the range start and scan the range linearly. */
       ++range.start;
       for (k = svn_sort__bsearch_lower_bound(log->entries, &range.start,
                                              compare_rev_log_entry);
@@ -452,15 +526,16 @@ filter_ranges(svn_min__log_t *log,
           if (entry->revision > range.end)
             break;
 
+          /* Skip revisions no relevant to PATH. */
           if (!is_relevant(entry->common_base, path))
             continue;
 
+          /* Look for any changed path that meets the filter criterion. */
           for (l = 0; l < entry->paths->nelts; ++l)
             {
               const char *changed_path
                 = APR_ARRAY_IDX(entry->paths, l, const char *);
 
-              /* Is this a change _below_ PATH but not within SUBTREE? */
               if (path_relavent(changed_path, path, baton))
                 {
                   append_rev_to_ranges(result, entry->revision,
@@ -507,9 +582,12 @@ svn_min__find_deletion(svn_min__log_t *log,
   to_find->path = path;
   to_find->revision = end_rev;
 
+  /* Auto-complete parameters. */
   if (!SVN_IS_VALID_REVNUM(start_rev))
     start_rev = log->head_rev;
 
+  /* Walk up the tree and find the latest deletion of PATH or any of
+   * its parents. */
   while (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
     {
       int i;
@@ -549,6 +627,7 @@ svn_min__find_deletions(svn_min__log_t *log,
   to_find->path = path;
   to_find->revision = 0;
 
+  /* Find deletions for PATH and its parents. */
   if (!svn_fspath__is_root(to_find->path, strlen(to_find->path)))
     {
       int i;
@@ -568,6 +647,7 @@ svn_min__find_deletions(svn_min__log_t *log,
       to_find->path = svn_fspath__dirname(to_find->path, scratch_pool);
     }
 
+  /* Remove any duplicates (unlikely but possible). */
   svn_sort__array(result, svn_sort_compare_revisions);
   for (source = 1, dest = 0; source < result->nelts; ++source)
     {
@@ -586,13 +666,10 @@ svn_min__find_deletions(svn_min__log_t *log,
   return result;
 }
 
-typedef struct segment_t
-{
-  const char *path;
-  svn_revnum_t start;
-  svn_revnum_t end;
-} segment_t;
-
+/* Starting at REVISION, scan LOG for the next (in REVISION or older) copy
+ * that creates PATH explicitly or implicitly by creating a parent of it.
+ * Return the copy operation found or NULL if none exists.  Use SCRATCH_POOL
+ * for temporary allocations. */
 static const svn_min__copy_t *
 next_copy(svn_min__log_t *log,
           const char *path,
@@ -605,7 +682,7 @@ next_copy(svn_min__log_t *log,
   svn_min__copy_t *to_find = apr_pcalloc(scratch_pool, sizeof(*to_find));
   to_find->path = path;
   to_find->revision = revision;
- 
+
   idx = svn_sort__bsearch_lower_bound(log->copies, &to_find, copy_order);
   if (idx < log->copies->nelts)
     {
@@ -649,9 +726,11 @@ svn_min__find_copy(svn_min__log_t *log,
 {
   const svn_min__copy_t *copy;
 
+  /* Auto-complete parameters. */
   if (!SVN_IS_VALID_REVNUM(start_rev))
     start_rev = log->head_rev;
 
+  /* The actual lookup. */
   copy = next_copy(log, path, start_rev, scratch_pool);
   if (copy && copy->revision >= end_rev)
     return copy->revision;
@@ -710,6 +789,21 @@ svn_min__get_copies(svn_min__log_t *log,
   return result;
 }
 
+/* A history segment.  Simply a FS path plus the revision range that it is
+ * part of the history of the node. */
+typedef struct segment_t
+{
+  /* FS path at which the node lives in this segment */
+  const char *path;
+
+  /* Revision that it appears in or that the history was truncated to. */
+  svn_revnum_t start;
+
+  /* Revision from which the node was copied to the next segment or the
+   * revision that the history was truncated to. */
+  svn_revnum_t end;
+} segment_t;
+
 apr_array_header_t *
 svn_min__get_history(svn_min__log_t *log,
                      const char *path,
@@ -723,9 +817,12 @@ svn_min__get_history(svn_min__log_t *log,
   apr_array_header_t *result = apr_array_make(result_pool, 16,
                                               sizeof(segment_t *));
 
+  /* Auto-complete parameters. */
   if (!SVN_IS_VALID_REVNUM(start_rev))
     start_rev = log->head_rev;
 
+  /* Simply follow all copies, each time adding a segment from "here" to
+   * the next copy. */
   for (copy = next_copy(log, path, start_rev, scratch_pool);
        copy && start_rev >= end_rev;
        copy = next_copy(log, path, start_rev, scratch_pool))
@@ -743,6 +840,7 @@ svn_min__get_history(svn_min__log_t *log,
                               scratch_pool);
     }
 
+  /* The final segment has no copy-from. */
   if (start_rev >= end_rev)
     {
       segment = apr_pcalloc(result_pool, sizeof(*segment));
