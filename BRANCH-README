@@ -11,13 +11,24 @@ Steps:
 - [DONE] Handle svn:executable and 'new mode' lines both present
 - [DONE] parser: Review handling of modes other than 0644/0755
                  Consider checking "mode & 0111"
+- [TODO] check rename/copy with mode change; ensure test coverage
+- [TODO] Teach 'svn diff --git' to emit mode information (executability)
+  - In addition to the standard propchange form used for all user properties,
+    for compatibility with released 'svn patch' versions
+  - Consider the case of an unversioned file being one side of the diff.
+  - Use-case?  Who are the current consumers of 'svn diff --git'?
 
 - [TODO] Support symlinks as well (mode 120000)
          - add the 'svn:special' property0
          - map the link target representation svn to/from git
+  - [TODO] teach parse-diff.c to parse mode 120000
+  - [TODO] forbid mode=120000 and svn:special on one file
+           (don't know how to parse file contents)
+  - [TODO] munge hunks: repository normal form ↔ just the symlink target
+  - [TODO] add symlink, remove symlink
+  - [TODO] parse mode from "index" lines on file hunks [required for next item]
+  - [TODO] change symlink target
+  - [TODO] change plain file to symlink
+  - [TODO] change symlink to plain file
+  - [TODO] teach 'svn diff --git' to emit mode information (symlinks)
   [supporting symlinks is orthogonal to supporting mode changes]
-
-- [TODO] Teach 'svn diff --git' to emit the new form?
-         (possibly in addition to the stadard propchange form used for all
-         user properties, for compatibility with released 'svn patch' versions)
-         Consider the case of an unversioned file being one side of the diff.
