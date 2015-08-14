@@ -226,6 +226,33 @@ log_entry_receiver(void *baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+print_log_stats(svn_min__log_t *log,
+                apr_pool_t *scratch_pool)
+{
+  int change_count = 0;
+
+  int i;
+  for (i = 0; i < log->entries->nelts; ++i)
+    {
+      const log_entry_t *entry = APR_ARRAY_IDX(log->entries, i,
+                                               const log_entry_t *);
+      change_count += entry->paths->nelts;
+    }
+
+  SVN_ERR(svn_cmdline_printf(scratch_pool,
+                             _("    Received %d revisions from %ld to %ld.\n"),
+                             log->entries->nelts, log->first_rev,
+                             log->head_rev));
+  SVN_ERR(svn_cmdline_printf(scratch_pool,
+                             _("    Received %d path changes.\n"),
+                             change_count));
+  SVN_ERR(svn_cmdline_printf(scratch_pool,
+                             _("    Pool has %u different paths.\n\n"),
+                             apr_hash_count(log->unique_paths)));
+
+  return SVN_NO_ERROR;
+}
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -295,7 +322,7 @@ svn_min__log(svn_min__log_t **log,
   if (!baton->opt_state->quiet)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
-      SVN_ERR(svn_min__print_log_stats(result, scratch_pool));
+      SVN_ERR(print_log_stats(result, scratch_pool));
     }
 
   result->unique_paths = NULL;
@@ -811,32 +838,4 @@ svn_min__history_ranges(apr_array_header_t *history,
     }
 
   return result;
-}
-
-svn_error_t *
-svn_min__print_log_stats(svn_min__log_t *log,
-                         apr_pool_t *scratch_pool)
-{
-  int change_count = 0;
-
-  int i;
-  for (i = 0; i < log->entries->nelts; ++i)
-    {
-      const log_entry_t *entry = APR_ARRAY_IDX(log->entries, i,
-                                               const log_entry_t *);
-      change_count += entry->paths->nelts;
-    }
-
-  SVN_ERR(svn_cmdline_printf(scratch_pool,
-                             _("    Received %d revisions from %ld to %ld.\n"),
-                             log->entries->nelts, log->first_rev,
-                             log->head_rev));
-  SVN_ERR(svn_cmdline_printf(scratch_pool,
-                             _("    Received %d path changes.\n"),
-                             change_count));
-  SVN_ERR(svn_cmdline_printf(scratch_pool,
-                             _("    Pool has %u different paths.\n\n"),
-                             apr_hash_count(log->unique_paths)));
-
-  return SVN_NO_ERROR;
 }
