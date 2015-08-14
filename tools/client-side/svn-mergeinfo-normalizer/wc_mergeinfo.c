@@ -284,6 +284,7 @@ svn_mergeinfo_t
 svn_min__get_mergeinfo(apr_array_header_t *mergeinfo,
                        int idx)
 {
+  SVN_ERR_ASSERT_NO_RETURN(idx >= 0 && idx < mergeinfo->nelts);
   return APR_ARRAY_IDX(mergeinfo, idx, mergeinfo_t *)->mergeinfo;
 }
 
