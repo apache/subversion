@@ -125,13 +125,13 @@ deletion_order(const void *lhs,
 static const char *
 internalize(apr_hash_t *unique_paths,
             const char *path,
-            apr_ssize_t path_len,
-            apr_pool_t *result_pool)
+            apr_ssize_t path_len)
 {
   const char *result = apr_hash_get(unique_paths, path, path_len);
   if (result == NULL)
     {
-      result = apr_pstrmemdup(result_pool, path, path_len);
+      apr_pool_t *pool = apr_hash_pool_get(unique_paths);
+      result = apr_pstrmemdup(pool, path, path_len);
       apr_hash_set(unique_paths, result, path_len, result);
     }
 
@@ -166,8 +166,7 @@ log_entry_receiver(void *baton,
       const char *path = apr_hash_this_key(hi);
       svn_log_changed_path_t *change = apr_hash_this_val(hi);
 
-      path = internalize(log->unique_paths, path, apr_hash_this_key_len(hi),
-                         log->pool);
+      path = internalize(log->unique_paths, path, apr_hash_this_key_len(hi));
       APR_ARRAY_PUSH(entry->paths, const char *) = path;
 
       if (change->action == 'D' || change->action == 'R')
@@ -186,8 +185,7 @@ log_entry_receiver(void *baton,
           copy->revision = log_entry->revision;
           copy->copyfrom_path = internalize(log->unique_paths,
                                             change->copyfrom_path,
-                                            strlen(change->copyfrom_path),
-                                            log->pool);
+                                            strlen(change->copyfrom_path));
           copy->copyfrom_revision = change->copyfrom_rev;
 
           APR_ARRAY_PUSH(log->copies, svn_min__copy_t *) = copy;
@@ -208,7 +206,7 @@ log_entry_receiver(void *baton,
                       APR_ARRAY_IDX(entry->paths, count - 1, const char *),
                       scratch_pool);
       entry->common_base = internalize(log->unique_paths, common_base,
-                                       strlen(common_base), log->pool);
+                                       strlen(common_base));
     }
 
   APR_ARRAY_PUSH(log->entries, log_entry_t *) = entry;
