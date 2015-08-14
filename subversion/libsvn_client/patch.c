@@ -978,12 +978,14 @@ contradictory_executability(const svn_patch_t *patch,
         /* ### Can this happen? */
         return (patch->old_executable_p != svn_tristate_unknown
                 && patch->new_executable_p != svn_tristate_unknown
-                && patch->old_executable_p == patch->new_executable_p);
+                && patch->old_executable_p != patch->new_executable_p);
 
       case svn_diff_op_modified:
+        /* Can't happen: the property should only ever be added or deleted,
+         * but never modified from one valid value to another. */
         return (patch->old_executable_p != svn_tristate_unknown
                 && patch->new_executable_p != svn_tristate_unknown
-                && patch->old_executable_p != patch->new_executable_p);
+                && patch->old_executable_p == patch->new_executable_p);
 
       default:
         /* Can't happen: the proppatch parser never generates other values. */
