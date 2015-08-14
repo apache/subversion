@@ -177,19 +177,19 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
   if not any(map(_commit_re.match, outlines)):
     raise svntest.main.SVNLineUnequal(str(outlines))
 
-  # Now, run 'svn log -vq -rHEAD'
-  changed_paths = []
-  exit_code, outlines, errlines = \
-    svntest.main.run_svn(None, 'log', '-vqrHEAD', repo_url)
-  if errlines:
-    raise svntest.Failure("Unable to verify commit with 'svn log': %s"
-                          % (str(errlines)))
-  for line in outlines:
-    match = _log_re.match(line)
-    if match:
-      changed_paths.append(match.group(1).rstrip('\n\r'))
-
   if expected_path_changes is not None:
+    # Now, run 'svn log -vq -rHEAD'
+    changed_paths = []
+    exit_code, outlines, errlines = \
+      svntest.main.run_svn(None, 'log', '-vqrHEAD', repo_url)
+    if errlines:
+      raise svntest.Failure("Unable to verify commit with 'svn log': %s"
+                            % (str(errlines)))
+    for line in outlines:
+      match = _log_re.match(line)
+      if match:
+        changed_paths.append(match.group(1).rstrip('\n\r'))
+
     expected_path_changes.sort()
     changed_paths.sort()
     if changed_paths != expected_path_changes:
@@ -254,30 +254,30 @@ def basic_svnmover(sbox):
 
   # revision 2
   test_svnmover(sbox.repo_url,
-                ['A /foo'
+                ['A /top0/foo'
                  ], # ---------
                 'mkdir foo')
 
   # revision 3
   test_svnmover(sbox.repo_url,
-                ['A /z.c',
+                ['A /top0/z.c',
                  ], # ---------
                 'put', empty_file, 'z.c')
 
   # revision 4
   test_svnmover(sbox.repo_url,
-                ['A /foo/z.c (from /z.c:3)',
-                 'A /foo/bar (from /foo:3)',
+                ['A /top0/foo/z.c (from /top0/z.c:3)',
+                 'A /top0/foo/bar (from /top0/foo:3)',
                  ], # ---------
                 'cp 3 z.c foo/z.c',
                 'cp 3 foo foo/bar')
 
   # revision 5
   test_svnmover(sbox.repo_url,
-                ['A /zig (from /foo:4)',
-                 'D /zig/bar',
-                 'D /foo',
-                 'A /zig/zag (from /foo:4)',
+                ['A /top0/zig (from /top0/foo:4)',
+                 'D /top0/zig/bar',
+                 'D /top0/foo',
+                 'A /top0/zig/zag (from /top0/foo:4)',
                  ], # ---------
                 'cp 4 foo zig',
                 'rm zig/bar',
@@ -285,28 +285,28 @@ def basic_svnmover(sbox):
 
   # revision 6
   test_svnmover(sbox.repo_url,
-                ['D /z.c',
-                 'A /zig/zag/bar/y.c (from /z.c:5)',
-                 'A /zig/zag/bar/x.c (from /z.c:3)',
+                ['D /top0/z.c',
+                 'A /top0/zig/zag/bar/y.c (from /top0/z.c:5)',
+                 'A /top0/zig/zag/bar/x.c (from /top0/z.c:3)',
                  ], # ---------
                 'mv z.c zig/zag/bar/y.c',
                 'cp 3 z.c zig/zag/bar/x.c')
 
   # revision 7
   test_svnmover(sbox.repo_url,
-                ['D /zig/zag/bar/y.c',
-                 'A /zig/zag/bar/y_y.c (from /zig/zag/bar/y.c:6)',
-                 'A /zig/zag/bar/y%20y.c (from /zig/zag/bar/y.c:6)',
+                ['D /top0/zig/zag/bar/y.c',
+                 'A /top0/zig/zag/bar/y_y.c (from /top0/zig/zag/bar/y.c:6)',
+                 'A /top0/zig/zag/bar/y%20y.c (from /top0/zig/zag/bar/y.c:6)',
                  ], # ---------
                 'mv zig/zag/bar/y.c zig/zag/bar/y_y.c',
                 'cp HEAD zig/zag/bar/y.c zig/zag/bar/y%20y.c')
 
   # revision 8
   test_svnmover(sbox.repo_url,
-                ['D /zig/zag/bar/y_y.c',
-                 'A /zig/zag/bar/z_z1.c (from /zig/zag/bar/y_y.c:7)',
-                 'A /zig/zag/bar/z%20z.c (from /zig/zag/bar/y%20y.c:7)',
-                 'A /zig/zag/bar/z_z2.c (from /zig/zag/bar/y_y.c:7)',
+                ['D /top0/zig/zag/bar/y_y.c',
+                 'A /top0/zig/zag/bar/z_z1.c (from /top0/zig/zag/bar/y_y.c:7)',
+                 'A /top0/zig/zag/bar/z%20z.c (from /top0/zig/zag/bar/y%20y.c:7)',
+                 'A /top0/zig/zag/bar/z_z2.c (from /top0/zig/zag/bar/y_y.c:7)',
                  ], #---------
                 'mv zig/zag/bar/y_y.c zig/zag/bar/z_z1.c',
                 'cp HEAD zig/zag/bar/y%20y.c zig/zag/bar/z%20z.c',
@@ -315,11 +315,11 @@ def basic_svnmover(sbox):
 
   # revision 9
   test_svnmover(sbox.repo_url,
-                ['D /zig/zag',
-                 'A /zig/foo (from /zig/zag:8)',
-                 'D /zig/foo/bar/z%20z.c',
-                 'D /zig/foo/bar/z_z2.c',
-                 'R /zig/foo/bar/z_z1.c (from /zig/zag/bar/x.c:6)',
+                ['D /top0/zig/zag',
+                 'A /top0/zig/foo (from /top0/zig/zag:8)',
+                 'D /top0/zig/foo/bar/z%20z.c',
+                 'D /top0/zig/foo/bar/z_z2.c',
+                 'R /top0/zig/foo/bar/z_z1.c (from /top0/zig/zag/bar/x.c:6)',
                  ], #---------
                 'mv zig/zag zig/foo',
                 'rm zig/foo/bar/z_z1.c',
@@ -329,15 +329,15 @@ def basic_svnmover(sbox):
 
   # revision 10
   test_svnmover(sbox.repo_url,
-                ['R /zig/foo/bar (from /zig/z.c:9)',
+                ['R /top0/zig/foo/bar (from /top0/zig/z.c:9)',
                  ], #---------
                 'rm zig/foo/bar',
                 'cp 9 zig/z.c zig/foo/bar')
 
   # revision 11
   test_svnmover(sbox.repo_url,
-                ['R /zig/foo/bar (from /zig/foo/bar:9)',
-                 'D /zig/foo/bar/z_z1.c',
+                ['R /top0/zig/foo/bar (from /top0/zig/foo/bar:9)',
+                 'D /top0/zig/foo/bar/z_z1.c',
                  ], #---------
                 'rm zig/foo/bar',
                 'cp 9 zig/foo/bar zig/foo/bar',
@@ -345,19 +345,19 @@ def basic_svnmover(sbox):
 
   # revision 12
   test_svnmover(sbox.repo_url,
-                ['R /zig/foo (from /zig/foo/bar:11)',
+                ['R /top0/zig/foo (from /top0/zig/foo/bar:11)',
                  ], #---------
                 'rm zig/foo',
                 'cp head zig/foo/bar zig/foo')
 
   # revision 13
   test_svnmover(sbox.repo_url,
-                ['D /zig',
-                 'A /foo (from /foo:4)',
-                 'A /foo/foo (from /foo:4)',
-                 'A /foo/foo/foo (from /foo:4)',
-                 'D /foo/foo/bar',
-                 'R /foo/foo/foo/bar (from /foo:4)',
+                ['D /top0/zig',
+                 'A /top0/foo (from /top0/foo:4)',
+                 'A /top0/foo/foo (from /top0/foo:4)',
+                 'A /top0/foo/foo/foo (from /top0/foo:4)',
+                 'D /top0/foo/foo/bar',
+                 'R /top0/foo/foo/foo/bar (from /top0/foo:4)',
                  ], #---------
                 'rm zig',
                 'cp 4 foo foo',
@@ -369,9 +369,9 @@ def basic_svnmover(sbox):
 
   # revision 14
   test_svnmover(sbox.repo_url,
-                ['A /boozle (from /foo:4)',
-                 'A /boozle/buz',
-                 'A /boozle/buz/nuz',
+                ['A /top0/boozle (from /top0/foo:4)',
+                 'A /top0/boozle/buz',
+                 'A /top0/boozle/buz/nuz',
                  ], #---------
                 'cp 4 foo boozle',
                 'mkdir boozle/buz',
@@ -379,9 +379,9 @@ def basic_svnmover(sbox):
 
   # revision 15
   test_svnmover(sbox.repo_url,
-                ['A /boozle/buz/svnmover-test.py',
-                 'A /boozle/guz (from /boozle/buz:14)',
-                 'A /boozle/guz/svnmover-test.py',
+                ['A /top0/boozle/buz/svnmover-test.py',
+                 'A /top0/boozle/guz (from /top0/boozle/buz:14)',
+                 'A /top0/boozle/guz/svnmover-test.py',
                  ], #---------
                 'put', empty_file, 'boozle/buz/svnmover-test.py',
                 'cp 14 boozle/buz boozle/guz',
@@ -389,7 +389,7 @@ def basic_svnmover(sbox):
 
   # revision 16
   test_svnmover(sbox.repo_url,
-                ['R /boozle/guz/svnmover-test.py',
+                ['R /top0/boozle/guz/svnmover-test.py',
                  ], #---------
                 'put', empty_file, 'boozle/buz/svnmover-test.py',
                 'rm boozle/guz/svnmover-test.py',
@@ -453,16 +453,16 @@ rm A/B/C/Y
 
   # ### TODO: need a smarter run_and_verify_log() that verifies copyfrom
   expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
-    '   R /A (from /X/Y/Z:1)',
-    '   A /A/B (from /A/B:1)',
-    '   R /A/B/C (from /X:1)',
-    '   R /M (from /A/B/C:1)',
-    '   A /M/N (from /M/N:1)',
-    '   R /M/N/O (from /A:1)',
-    '   R /X (from /M/N/O:1)',
-    '   A /X/Y (from /X/Y:1)',
-    '   R /X/Y/Z (from /M:1)',
-    '   D /A/B/C/Y',
+    '   R /top0/A (from /top0/X/Y/Z:1)',
+    '   A /top0/A/B (from /top0/A/B:1)',
+    '   R /top0/A/B/C (from /top0/X:1)',
+    '   R /top0/M (from /top0/A/B/C:1)',
+    '   A /top0/M/N (from /top0/M/N:1)',
+    '   R /top0/M/N/O (from /top0/A:1)',
+    '   R /top0/X (from /top0/M/N/O:1)',
+    '   A /top0/X/Y (from /top0/X/Y:1)',
+    '   R /top0/X/Y/Z (from /top0/M:1)',
+    '   D /top0/A/B/C/Y',
   ]) + [
     '^-', '^r2', '^-', '^Changed paths:',
   ])
