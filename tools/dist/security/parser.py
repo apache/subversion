@@ -25,6 +25,7 @@ from __future__ import absolute_import
 
 
 import os
+import re
 import ast
 import base64
 import quopri
@@ -49,15 +50,15 @@ class Notification(object):
         CULPRIT_SERVER = 'server'
         CULPRIT_CLIENT = 'client'
 
-        __culprits = ((CULPRIT_SERVER, CULPRIT_CLIENT,
+        __CULPRITS = ((CULPRIT_SERVER, CULPRIT_CLIENT,
                       (CULPRIT_SERVER, CULPRIT_CLIENT),
                       (CULPRIT_CLIENT, CULPRIT_SERVER)))
 
         def __init__(self, basedir, tracking_id,
                      title, culprit, advisory, patches):
-            if culprit not in self.__culprits:
+            if culprit not in self.__CULPRITS:
                 raise ValueError('Culprit should be one of: '
-                                 + ', '.join(repr(x) for x in self.__culprits))
+                                 + ', '.join(repr(x) for x in self.__CULPRITS))
             if not isinstance(culprit, tuple):
                 culprit = (culprit,)
 
@@ -69,9 +70,7 @@ class Notification(object):
             for base_version, patchfile in patches.items():
                 patch = Patch(base_version, os.path.join(basedir, patchfile))
                 self.__patches.append(patch)
-            self.__patches.sort(reverse=True,
-                                key=lambda x: tuple(
-                                    int(q) for q in x.base_version.split('.')))
+            self.__patches.sort(reverse=True, key=lambda x: x.base_version_key)
 
         @property
         def tracking_id(self):
@@ -99,8 +98,13 @@ class Notification(object):
         Create the security notification for all TRACKING_IDS.
         The advisories and patches for each tracking ID must be
         in the appropreiately named subdirectory of ROOTDIR.
+
+        The notification text assumes that RELEASE_VERSIONS will
+        be published on RELEASE_DATE and that the tarballs are
+        available in DIST_REVISION of the dist repository.
         """
 
+        assert(len(tracking_ids) > 0)
         self.__advisories = []
         for tid in tracking_ids:
             self.__advisories.append(self.__parse_advisory(rootdir, tid))
@@ -112,6 +116,10 @@ class Notification(object):
         return len(self.__advisories)
 
     def __parse_advisory(self, rootdir, tracking_id):
+        """
+        Parse a single advisory named TRACKING_ID in ROOTDIR.
+        """
+
         basedir = os.path.join(rootdir, tracking_id)
         with open(os.path.join(basedir, 'metadata'), 'rt') as md:
             metadata = ast.literal_eval(md.read())
@@ -122,31 +130,48 @@ class Notification(object):
                              metadata['advisory'],
                              metadata['patches'])
 
+    def base_version_keys(self):
+        """
+        Return the set of base-version keys of all the patches.
+        """
+
+        base_version_keys = set()
+        for metadata in self:
+            for patch in metadata.patches:
+                base_version_keys.add(patch.base_version_key)
+        return base_version_keys
+
 
 class __Part(object):
-    def __init__(self, path):
-        self.__text = self.__load_file(path)
+    def __init__(self, path, text=None):
+        """
+        Create a text object with contents from the file at PATH.
+        If self.TEXTMODE is True, strip whitespace from the end of
+        all lines and strip empty lines from the end of the file.
+
+        Alternatively, if PATH is None, set the contents to TEXT,
+        which must be convertible to bytes.
+        """
+
+        assert (path is None) is not (text is None)
+        if path:
+            self.__text = self.__load_file(path)
+        else:
+            self.__text = bytes(text)
 
     def __load_file(self, path):
-        """
-        Load a file at PATH into memory as an array of lines.
-        if self.TEXTMODE is True, strip whitespace from the end of
-        all lines and strip empty lines from the end of the file.
-        """
-
-        text = []
         with open(path, 'rb') as src:
-            for line in src:
-                if self.TEXTMODE:
-                    line = line.rstrip() + b'\n'
-                text.append(line)
+            if not self.TEXTMODE:
+                return src.read()
 
-        # Strip trailing empty lines in text mode
-        if self.TEXTMODE:
+            text = []
+            for line in src:
+                text.append(line.rstrip() + b'\n')
+
+            # Strip trailing empty lines in text mode
             while len(text) and not text[-1]:
                 del text[-1]
-
-        return b''.join(text)
+            return b''.join(text)
 
     @property
     def text(self):
@@ -204,11 +229,52 @@ class Patch(__Part):
     def __init__(self, base_version, path):
         super(Patch, self).__init__(path)
         self.__base_version = base_version
+        self.__base_version_key = self.split_version(base_version)
 
     @property
     def base_version(self):
         return self.__base_version
 
     @property
+    def base_version_key(self):
+        return self.__base_version_key
+
+    @property
     def quoted_printable(self):
         raise NotImplementedError('Quoted-printable patches? Really?')
+
+
+    __SPLIT_VERSION_RX = re.compile(r'^(\d+)(?:\.(\d+))?(?:\.(\d+))?(.+)?$')
+
+    @classmethod
+    def split_version(cls, version):
+        """
+        Splits a version number in the form n.n.n-tag into a tuple
+        of its components.
+        """
+        def splitv(version):
+            for s in cls.__SPLIT_VERSION_RX.match(version).groups():
+                if s is None:
+                    continue
+                try:
+                    n = int(s)
+                except ValueError:
+                    n = s
+                yield n
+        return tuple(splitv(version))
+
+    @classmethod
+    def join_version(cls, version_tuple):
+        """
+        Joins a version number tuple returned by Patch.split_version
+        into a string.
+        """
+
+        def joinv(version_tuple):
+            prev = None
+            for n in version_tuple:
+                if isinstance(n, int) and prev is not None:
+                    yield '.'
+                prev = n
+                yield str(n)
+        return ''.join(joinv(version_tuple))
