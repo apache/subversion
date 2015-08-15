@@ -806,26 +806,6 @@ remove_lines(svn_min__log_t *log,
       subtree_ranges = item->value;
       parent_ranges = svn_hash_gets(parent_mergeinfo, parent_path);
 
-      /* Is there any? */
-      if (!parent_ranges)
-        {
-          /* There is none.  Before we flag that as a problem, maybe the
-             branch has been deleted after all?  This time contact the
-             repository. */
-          SVN_ERR(remove_obsolete_line(&state, lookup, log,
-                                       subtree_mergeinfo, subtree_path,
-                                       opt_state, NULL, FALSE, FALSE,
-                                       iterpool));
-
-          /* If still relevant, we need to keep the whole m/i on this node.
-             Therefore, report the problem. */
-          if (state != ds_deleted)
-            SVN_ERR(show_missing_parent(subtree_path, !*parent_path,
-                                        opt_state, scratch_pool));
-
-          continue;
-        }
-
       /* We don't know how to handle reverse ranges (there should be none).
          So, we must check for them - just to be sure. */
       reverse_ranges = find_reverse_ranges(subtree_ranges, iterpool);
@@ -864,25 +844,48 @@ remove_lines(svn_min__log_t *log,
           continue;
         }
 
-      non_recursive_ranges = find_non_recursive_ranges(parent_ranges,
-                                                       iterpool);
-      if (non_recursive_ranges->nelts)
+      if (parent_ranges && parent_ranges->nelts)
         {
-          /* We really found non-recursive merges at the parent?
-             Try to get rid of them at the parent and sub-node alike. */
+          non_recursive_ranges = find_non_recursive_ranges(parent_ranges,
+                                                          iterpool);
+          if (non_recursive_ranges->nelts)
+            {
+              /* We really found non-recursive merges at the parent?
+                Try to get rid of them at the parent and sub-node alike. */
+              SVN_ERR(remove_obsolete_line(&state, lookup, log,
+                                          subtree_mergeinfo, parent_path,
+                                          opt_state, NULL, FALSE, FALSE,
+                                          iterpool));
+              if (state == ds_deleted)
+                SVN_ERR(remove_obsolete_line(&state, lookup, log,
+                                            subtree_mergeinfo, subtree_path,
+                                            opt_state, NULL, FALSE, FALSE,
+                                            iterpool));
+              if (state != ds_deleted)
+                SVN_ERR(show_non_recursive_ranges(parent_path,
+                                                  non_recursive_ranges,
+                                                  opt_state, iterpool));
+
+              continue;
+            }
+        }
+
+      /* Are there any parent ranges to which to elide sub-tree m/i? */
+      if (!parent_ranges)
+        {
+          /* There is none.  Before we flag that as a problem, maybe the
+             branch has been deleted after all?  This time contact the
+             repository. */
           SVN_ERR(remove_obsolete_line(&state, lookup, log,
-                                       subtree_mergeinfo, parent_path,
+                                       subtree_mergeinfo, subtree_path,
                                        opt_state, NULL, FALSE, FALSE,
                                        iterpool));
-          if (state == ds_deleted)
-            SVN_ERR(remove_obsolete_line(&state, lookup, log,
-                                         subtree_mergeinfo, subtree_path,
-                                         opt_state, NULL, FALSE, FALSE,
-                                         iterpool));
+
+          /* If still relevant, we need to keep the whole m/i on this node.
+             Therefore, report the problem. */
           if (state != ds_deleted)
-            SVN_ERR(show_non_recursive_ranges(parent_path,
-                                              non_recursive_ranges,
-                                              opt_state, iterpool));
+            SVN_ERR(show_missing_parent(subtree_path, !*parent_path,
+                                        opt_state, scratch_pool));
 
           continue;
         }
