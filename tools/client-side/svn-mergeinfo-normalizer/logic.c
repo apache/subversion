@@ -214,7 +214,11 @@ show_branch_elision(const char *branch,
                                   scratch_pool));
         }
     }
-  else if (opt_state->verbose)
+  else if (   opt_state->verbose
+           || opt_state->run_analysis && (  implied_in_parent->nelts
+                                          || subtree_only->nelts
+                                          || implied_in_subtree->nelts
+                                          || parent_only->nelts))
     {
       SVN_ERR(svn_rangelist_remove(&subtree_only, implied_in_parent,
                                    subtree_only, TRUE, scratch_pool));
