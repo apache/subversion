@@ -881,11 +881,41 @@ remove_lines(svn_min__log_t *log,
                                        opt_state, NULL, FALSE, FALSE,
                                        iterpool));
 
-          /* If still relevant, we need to keep the whole m/i on this node.
-             Therefore, report the problem. */
-          if (state != ds_deleted)
-            SVN_ERR(show_missing_parent(subtree_path, !*parent_path,
-                                        opt_state, scratch_pool));
+          if (state == ds_deleted)
+            continue;
+
+          /* Find revs that are missing in the sub-tree- m/i but affect
+             paths in the sub-tree. */
+          subtree_only = subtree_ranges;
+          operative_in_subtree
+            = svn_min__operative(log, subtree_path, subtree_only, iterpool);
+          SVN_ERR(remove_overlapping_history(&implied_in_subtree,
+                                             &operative_in_subtree, log,
+                                             subtree_path, fs_path,
+                                             iterpool, iterpool));
+
+          if (operative_in_subtree->nelts)
+            {
+              /* If still relevant, we need to keep the whole m/i on this
+                 node.  Therefore, report the problem. */
+              SVN_ERR(show_missing_parent(subtree_path, !*parent_path,
+                                          opt_state, scratch_pool));
+            }
+          else
+            {
+              /* This branch entry is some sort of artefact that doesn't
+                 refer to any actual changes and can therefore be removed.
+                 Report why that is. */
+              apr_array_header_t *empty = operative_in_subtree;
+              SVN_ERR(svn_rangelist_remove(&subtree_only, implied_in_subtree,
+                                           subtree_only, TRUE, iterpool));
+              SVN_ERR(show_branch_elision(subtree_path, empty,
+                                          subtree_only, empty, empty, empty,
+                                          implied_in_subtree, opt_state,
+                                          iterpool));
+
+              svn_hash_sets(subtree_mergeinfo, subtree_path, NULL);
+            }
 
           continue;
         }
