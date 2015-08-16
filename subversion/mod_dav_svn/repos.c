@@ -2067,7 +2067,7 @@ parse_querystring(request_rec *r, const char *query,
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Couldn't trace history.", pool);
 
-      newpath = apr_hash_get(locations, &working_rev, sizeof(svn_revnum_t));
+      newpath = apr_hash_get(locations, &working_rev, sizeof(working_rev));
       if (! newpath)
         return dav_svn__new_error(pool, HTTP_NOT_FOUND, 0, 0,
                                   "path doesn't exist in that revision.");
