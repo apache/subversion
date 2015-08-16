@@ -1550,6 +1550,43 @@ add_wc_info(svn_min__cmd_baton_t *baton,
   return SVN_NO_ERROR;
 }
 
+/* Set *URL to a URL within CMD_BATON's repository that covers all FS paths
+ * in WC_MERGEINFO.  Use SESSION to access the repository.  Allocate *URL
+ * in RESULT_POOL and use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+get_url(const char **url,
+        apr_array_header_t *wc_mergeinfo,
+        svn_ra_session_t *session,
+        svn_min__cmd_baton_t *cmd_baton,
+        apr_pool_t *result_pool,
+        apr_pool_t *scratch_pool)
+{
+  /* This is the deepest FS path that we may use. */
+  const char *path = svn_min__common_parent(wc_mergeinfo, scratch_pool,
+                                            scratch_pool);
+  SVN_ERR_ASSERT(*path == '/');
+  ++path;
+
+  /* While we are not at the repository root, check that PATH actually
+   * exists @HEAD.  If it doesn't retry with its parent. */
+  while (strlen(path))
+    {
+      svn_node_kind_t kind;
+      SVN_ERR(svn_ra_check_path(session, path, SVN_INVALID_REVNUM, &kind,
+                                scratch_pool));
+      if (kind != svn_node_none)
+        break;
+
+      path = svn_dirent_dirname(path, scratch_pool);
+    }
+
+  /* Construct the result. */
+  *url = svn_path_url_add_component2(cmd_baton->repo_root, path,
+                                     result_pool);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_min__run_normalize(void *baton,
@@ -1564,9 +1601,8 @@ svn_min__run_normalize(void *baton,
     {
       apr_array_header_t *wc_mergeinfo;
       svn_min__log_t *log = NULL;
+      svn_ra_session_t *session = NULL;
       svn_min__branch_lookup_t *lookup = cmd_baton->lookup;
-      const char *url;
-      const char *common_path;
 
       /* next target */
       svn_pool_clear(iterpool);
@@ -1581,29 +1617,29 @@ svn_min__run_normalize(void *baton,
       if (wc_mergeinfo->nelts == 0)
         continue;
 
-      /* fetch log */
-      if (needs_log(cmd_baton->opt_state))
+      /* Open RA session.  Even if we don't need it for LOOKUP, checking
+       * the url for the LOG will require the session object. */
+      if (   (!lookup && needs_session(cmd_baton->opt_state))
+          || needs_log(cmd_baton->opt_state))
         {
-          svn_pool_clear(subpool);
-          common_path = svn_min__common_parent(wc_mergeinfo, subpool, subpool);
-          SVN_ERR_ASSERT(*common_path == '/');
-          url = svn_path_url_add_component2(cmd_baton->repo_root,
-                                            common_path + 1,
-                                            subpool);
-          SVN_ERR(svn_min__log(&log, url, cmd_baton, iterpool, subpool));
-        }
-
-      /* open RA session */
-      if (!lookup && needs_session(cmd_baton->opt_state))
-        {
-          svn_ra_session_t *session;
-
           svn_pool_clear(subpool);
           SVN_ERR(add_wc_info(baton, i, iterpool, subpool));
           SVN_ERR(svn_client_open_ra_session2(&session, cmd_baton->repo_root,
                                               NULL, cmd_baton->ctx, iterpool,
                                               subpool));
-          lookup = svn_min__branch_lookup_create(session, iterpool);
+          if (!lookup)
+            lookup = svn_min__branch_lookup_create(session, iterpool);
+        }
+
+      /* fetch log */
+      if (needs_log(cmd_baton->opt_state))
+        {
+          const char *url;
+
+          svn_pool_clear(subpool);
+          SVN_ERR(get_url(&url, wc_mergeinfo, session, cmd_baton, subpool,
+                          subpool));
+          SVN_ERR(svn_min__log(&log, url, cmd_baton, iterpool, subpool));
         }
 
       /* actual normalization */
