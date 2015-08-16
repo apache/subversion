@@ -224,7 +224,7 @@ serialize_dir_entry(svn_temp_serializer__context_t *context,
 
   svn_temp_serializer__push(context,
                             (const void * const *)entry_p,
-                            sizeof(svn_fs_x__dirent_t));
+                            sizeof(**entry_p));
 
   svn_temp_serializer__add_string(context, &entry->name);
 
@@ -1108,7 +1108,7 @@ svn_fs_x__serialize_changes(void **data,
 
   svn_temp_serializer__push(context,
                             (const void * const *)&changes.changes,
-                            changes.count * sizeof(svn_fs_x__change_t*));
+                            changes.count * sizeof(**changes.changes));
 
   for (i = 0; i < changes.count; ++i)
     serialize_change(context, &changes.changes[i]);
