@@ -2999,7 +2999,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
 {
   apr_hash_t *ht = baton;
   const char *author;
-  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(svn_revnum_t));
+  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(rev));
 
   if (!file_rev)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -3017,7 +3017,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
 
   /* Remove this revision from this list so we'll be able to verify that we
      have seen all expected revisions. */
-  apr_hash_set(ht, &rev, sizeof(svn_revnum_t), NULL);
+  apr_hash_set(ht, &rev, sizeof(rev), NULL);
 
   return SVN_NO_ERROR;
 }
@@ -3680,7 +3680,7 @@ verify_locations(apr_hash_t *actual,
   for (hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
     {
       const svn_revnum_t *rev = apr_hash_this_key(hi);
-      const char *path = apr_hash_get(actual, rev, sizeof(svn_revnum_t));
+      const char *path = apr_hash_get(actual, rev, sizeof(*rev));
 
       if (!path)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -3696,7 +3696,7 @@ verify_locations(apr_hash_t *actual,
   for (hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
     {
       const svn_revnum_t *rev = apr_hash_this_key(hi);
-      const char *path = apr_hash_get(expected, rev, sizeof(svn_revnum_t));
+      const char *path = apr_hash_get(expected, rev, sizeof(*rev));
 
       if (!path)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -3723,7 +3723,7 @@ set_expected(apr_hash_t *expected,
 {
   svn_revnum_t *rp = apr_palloc(pool, sizeof(svn_revnum_t));
   *rp = rev;
-  apr_hash_set(expected, rp, sizeof(svn_revnum_t), path);
+  apr_hash_set(expected, rp, sizeof(*rp), path);
 }
 
 static svn_error_t *
