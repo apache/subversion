@@ -327,7 +327,7 @@ svn_min__log(svn_min__log_t **log,
 
   revprops = apr_array_make(scratch_pool, 0, sizeof(const char *));
 
-  /* The log objec to fill. */
+  /* The log object to fill. */
   result = apr_pcalloc(result_pool, sizeof(*result));
   result->unique_paths = svn_hash__make(scratch_pool);
   result->first_rev = SVN_INVALID_REVNUM;
