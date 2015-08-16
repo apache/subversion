@@ -1488,8 +1488,8 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
           /* Reasonably reduce the output. */
           eliminate_subpaths(surviving_copies);
           SVN_ERR(svn_cmdline_printf(iterpool,
-                                     _("    [copied or moved] %s\n"),
-                                     path));
+                                     _("    [r%ld, copied or moved] %s\n"),
+                                     deletion_rev, path));
           for (k = 0; k < surviving_copies->nelts && k < limit; ++k)
             {
               path = APR_ARRAY_IDX(surviving_copies, k, const char *);
