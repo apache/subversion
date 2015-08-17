@@ -1602,14 +1602,9 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "check how ra layers handle errors from callbacks"),
     SVN_TEST_OPTS_PASS(ra_list_has_props,
                        "check list has_props performance"),
-#ifndef WIN32
     SVN_TEST_OPTS_PASS(tunnel_run_checkout,
                        "verify checkout over a tunnel"),
-#else
-    SVN_TEST_OPTS_XFAIL(tunnel_run_checkout,
-                       "verify checkout over a tunnel"),
-#endif
-  SVN_TEST_NULL
+    SVN_TEST_NULL
   };
 
 SVN_TEST_MAIN
