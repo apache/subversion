@@ -1348,27 +1348,3 @@ svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_branch_copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
-                        svn_branch_state_t *to_branch,
-                        svn_branch_eid_t to_parent_eid,
-                        const char *to_name,
-                        apr_pool_t *scratch_pool)
-{
-  SVN_DBG(("cp subtree from e%d to e%d/%s",
-           from_el_rev->eid, to_parent_eid, to_name));
-
-  /* copy the subtree, assigning new EIDs */
-  SVN_ERR(svn_branch_map_add_subtree(to_branch, -1 /*to_eid*/,
-                                     to_parent_eid, to_name,
-                                     *svn_branch_get_subtree(
-                                       from_el_rev->branch, from_el_rev->eid,
-                                       scratch_pool),
-                                     scratch_pool));
-
-  /* handle any subbranches under FROM_BRANCH:FROM_EID */
-  /* ### Later. */
-
-  return SVN_NO_ERROR;
-}
-
