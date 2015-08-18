@@ -45,6 +45,7 @@
 #include "svn_version.h"
 
 #include "private/svn_sqlite.h"
+#include "private/svn_subr_private.h"
 
 #include "sysinfo.h"
 #include "svn_private_config.h"
@@ -125,7 +126,7 @@ const apr_array_header_t *
 svn_sysinfo__linked_libs(apr_pool_t *pool)
 {
   svn_version_ext_linked_lib_t *lib;
-  apr_array_header_t *array = apr_array_make(pool, 3, sizeof(*lib));
+  apr_array_header_t *array = apr_array_make(pool, 5, sizeof(*lib));
 
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "APR";
@@ -142,6 +143,11 @@ svn_sysinfo__linked_libs(apr_pool_t *pool)
 #endif
 
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "Expat";
+  lib->compiled_version = apr_pstrdup(pool, svn_xml__compiled_version());
+  lib->runtime_version = apr_pstrdup(pool, svn_xml__runtime_version());
+
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "SQLite";
   lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
 #ifdef SVN_SQLITE_INLINE
@@ -149,6 +155,11 @@ svn_sysinfo__linked_libs(apr_pool_t *pool)
 #else
   lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
 #endif
+
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "ZLib";
+  lib->compiled_version = apr_pstrdup(pool, svn_zlib__compiled_version());
+  lib->runtime_version = apr_pstrdup(pool, svn_zlib__runtime_version());
 
   return array;
 }

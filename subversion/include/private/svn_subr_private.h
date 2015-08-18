@@ -689,6 +689,19 @@ svn_dso__pool(void);
 
 /** @} */
 
+
+/* Return the xml (expat) version we compiled against. */
+const char *svn_xml__compiled_version(void);
+
+/* Return the xml (expat) version we run against. */
+const char *svn_xml__runtime_version(void);
+
+/* Return the zlib version we compiled against. */
+const char *svn_zlib__compiled_version(void);
+
+/* Return the zlib version we run against. */
+const char *svn_zlib__runtime_version(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
