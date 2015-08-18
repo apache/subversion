@@ -629,29 +629,6 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
                            svn_branch_subtree_t new_subtree,
                            apr_pool_t *scratch_pool);
 
-/* Copy a subtree.
- *
- * Adjust TO_BRANCH and its subbranches (recursively), to reflect a copy
- * of a subtree from FROM_EL_REV to TO_PARENT_EID:TO_NAME.
- *
- * FROM_EL_REV must be an existing element. (It may be a branch root.)
- *
- * ### TODO:
- * If FROM_EL_REV is the root of a subbranch and/or contains nested
- * subbranches, also copy them ...
- * ### What shall we do with a subbranch? Make plain copies of its raw
- *     elements; make a subbranch by branching the source subbranch?
- *
- * TO_PARENT_EID must be a directory element in TO_BRANCH, and TO_NAME a
- * non-existing path in it.
- */
-svn_error_t *
-svn_branch_copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
-                        svn_branch_state_t *to_branch,
-                        svn_branch_eid_t to_parent_eid,
-                        const char *to_name,
-                        apr_pool_t *scratch_pool);
-
 /* Return the root repos-relpath of BRANCH.
  *
  * ### TODO: Clarify sequencing requirements.

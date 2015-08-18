@@ -1200,6 +1200,46 @@ editor3_copy_one(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Copy a subtree.
+ *
+ * Adjust TO_BRANCH and its subbranches (recursively), to reflect a copy
+ * of a subtree from FROM_EL_REV to TO_PARENT_EID:TO_NAME.
+ *
+ * FROM_EL_REV must be an existing element. (It may be a branch root.)
+ *
+ * ### TODO:
+ * If FROM_EL_REV is the root of a subbranch and/or contains nested
+ * subbranches, also copy them ...
+ * ### What shall we do with a subbranch? Make plain copies of its raw
+ *     elements; make a subbranch by branching the source subbranch?
+ *
+ * TO_PARENT_EID must be a directory element in TO_BRANCH, and TO_NAME a
+ * non-existing path in it.
+ */
+static svn_error_t *
+copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
+             svn_branch_state_t *to_branch,
+             svn_branch_eid_t to_parent_eid,
+             const char *to_name,
+             apr_pool_t *scratch_pool)
+{
+  SVN_DBG(("cp subtree from e%d to e%d/%s",
+           from_el_rev->eid, to_parent_eid, to_name));
+
+  /* copy the subtree, assigning new EIDs */
+  SVN_ERR(svn_branch_map_add_subtree(to_branch, -1 /*to_eid*/,
+                                     to_parent_eid, to_name,
+                                     *svn_branch_get_subtree(
+                                       from_el_rev->branch, from_el_rev->eid,
+                                       scratch_pool),
+                                     scratch_pool));
+
+  /* handle any subbranches under FROM_BRANCH:FROM_EID */
+  /* ### Later. */
+
+  return SVN_NO_ERROR;
+}
+
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_copy_tree(void *baton,
@@ -1212,7 +1252,7 @@ editor3_copy_tree(void *baton,
   SVN_DBG(("copy_tree(e%d -> e%d/%s)",
            src_el_rev->eid, new_parent_eid, new_name));
 
-  SVN_ERR(svn_branch_copy_subtree(src_el_rev,
+  SVN_ERR(copy_subtree(src_el_rev,
                                   to_branch, new_parent_eid, new_name,
                                   scratch_pool));
 
