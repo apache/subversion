@@ -765,29 +765,6 @@ svn_error_t *
 svn_branch_state_serialize(svn_stream_t *stream,
                            svn_branch_state_t *branch,
                            apr_pool_t *scratch_pool);
-  
-/* Branch all or part of an existing branch, making a new branch.
- *
- * Branch the subtree of FROM_BRANCH found at FROM_EID, to create
- * a new branch at TO_OUTER_BRANCH:TO_OUTER_PARENT_EID:NEW_NAME.
- *
- * FROM_BRANCH must be an immediate sub-branch of TO_OUTER_BRANCH.
- *
- * FROM_BRANCH:FROM_EID must be an existing element. It may be the
- * root of FROM_BRANCH. It must not be the root of a subbranch of
- * FROM_BRANCH.
- *
- * TO_OUTER_BRANCH:TO_OUTER_PARENT_EID must be an existing directory
- * and NEW_NAME must be nonexistent in that directory.
- */
-svn_error_t *
-svn_branch_branch(svn_branch_state_t **new_branch_p,
-                  svn_branch_state_t *from_branch,
-                  int from_eid,
-                  svn_branch_state_t *to_outer_branch,
-                  svn_branch_eid_t to_outer_parent_eid,
-                  const char *new_name,
-                  apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
