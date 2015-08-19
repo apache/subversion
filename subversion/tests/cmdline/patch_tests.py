@@ -2996,11 +2996,11 @@ def patch_git_empty_files(sbox):
     "Index: new\n",
     "===================================================================\n",
     "diff --git a/new b/new\n",
-    "new file mode 10644\n",
+    "new file mode 100644\n",
     "Index: iota\n",
     "===================================================================\n",
     "diff --git a/iota b/iota\n",
-    "deleted file mode 10644\n",
+    "deleted file mode 100644\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))

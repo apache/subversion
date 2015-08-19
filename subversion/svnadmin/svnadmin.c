@@ -166,11 +166,13 @@ static svn_opt_subcommand_t
   subcommand_delrevprop,
   subcommand_deltify,
   subcommand_dump,
+  subcommand_dump_revprops,
   subcommand_freeze,
   subcommand_help,
   subcommand_hotcopy,
   subcommand_info,
   subcommand_load,
+  subcommand_load_revprops,
   subcommand_list_dblogs,
   subcommand_list_unused_dblogs,
   subcommand_lock,
@@ -392,6 +394,15 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "changed in those revisions.)\n"),
   {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M'} },
 
+  {"dump-revprops", subcommand_dump_revprops, {0}, N_
+   ("usage: svnadmin dump-revprops REPOS_PATH [-r LOWER[:UPPER]]\n\n"
+    "Dump the revision properties of filesystem to stdout in a 'dumpfile'\n"
+    "portable format, sending feedback to stderr.  Dump revisions\n"
+    "LOWER rev through UPPER rev.  If no revisions are given, dump the\n"
+    "properties for all revisions.  If only LOWER is given, dump the\n"
+    "properties for that one revision.\n"),
+  {'r', 'q'} },
+
   {"freeze", subcommand_freeze, {0}, N_
    ("usage: 1. svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n"
     "               2. svnadmin freeze -F FILE PROGRAM [ARG...]\n\n"
@@ -443,6 +454,15 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     svnadmin__ignore_dates,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
     svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M'} },
+
+  {"load-revprops", subcommand_load_revprops, {0}, N_
+   ("usage: svnadmin load-revprops REPOS_PATH\n\n"
+    "Read a 'dumpfile'-formatted stream from stdin, setting the revision\n"
+    "properties in the repository's filesystem.  Revisions not found in the\n"
+    "repository will cause an error.  Progress feedback is sent to stdout.\n"
+    "If --revision is specified, limit the loaded revisions to only those\n"
+    "in the dump stream whose revision numbers match the specified range.\n"),
+   {'q', 'r', svnadmin__force_uuid, svnadmin__bypass_prop_validation} },
 
   {"lock", subcommand_lock, {0}, N_
    ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
@@ -1139,6 +1159,12 @@ repos_notify_handler(void *baton,
         }
       return;
 
+    case svn_repos_notify_load_revprop_set:
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                        _("Properties set on revision %ld.\n"),
+                        notify->new_revision));
+      return;
+
     default:
       return;
   }
@@ -1184,6 +1210,48 @@ recode_stream_create(FILE *std_stream, apr_pool_t *pool)
   return rw_stream;
 }
 
+/* Read the min / max revision from the OPT_STATE, verify them against REPOS
+   and return them in *LOWER and *UPPER, respectively.  Use SCRATCH_POOL
+   for temporary allocations. */
+static svn_error_t *
+get_dump_range(svn_revnum_t *lower,
+               svn_revnum_t *upper,
+               svn_repos_t *repos,
+               struct svnadmin_opt_state *opt_state,
+               apr_pool_t *scratch_pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t youngest;
+
+  *lower = SVN_INVALID_REVNUM;
+  *upper = SVN_INVALID_REVNUM;
+
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, scratch_pool));
+
+  /* Find the revision numbers at which to start and end. */
+  SVN_ERR(get_revnum(lower, &opt_state->start_revision,
+                     youngest, repos, scratch_pool));
+  SVN_ERR(get_revnum(upper, &opt_state->end_revision,
+                     youngest, repos, scratch_pool));
+
+  /* Fill in implied revisions if necessary. */
+  if (*lower == SVN_INVALID_REVNUM)
+    {
+      *lower = 0;
+      *upper = youngest;
+    }
+  else if (*upper == SVN_INVALID_REVNUM)
+    {
+      *upper = *lower;
+    }
+
+  if (*lower > *upper)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+       _("First revision cannot be higher than second"));
+
+  return SVN_NO_ERROR;
+}
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -1191,39 +1259,15 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-  svn_fs_t *fs;
   svn_stream_t *stdout_stream;
-  svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
-  svn_revnum_t youngest;
+  svn_revnum_t lower, upper;
   svn_stream_t *feedback_stream = NULL;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs(repos);
-  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
-
-  /* Find the revision numbers at which to start and end. */
-  SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
-                     youngest, repos, pool));
-  SVN_ERR(get_revnum(&upper, &opt_state->end_revision,
-                     youngest, repos, pool));
-
-  /* Fill in implied revisions if necessary. */
-  if (lower == SVN_INVALID_REVNUM)
-    {
-      lower = 0;
-      upper = youngest;
-    }
-  else if (upper == SVN_INVALID_REVNUM)
-    {
-      upper = lower;
-    }
-
-  if (lower > upper)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       _("First revision cannot be higher than second"));
+  SVN_ERR(get_dump_range(&lower, &upper, repos, opt_state, pool));
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
@@ -1231,8 +1275,39 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     feedback_stream = recode_stream_create(stderr, pool);
 
-  SVN_ERR(svn_repos_dump_fs3(repos, stdout_stream, lower, upper,
+  SVN_ERR(svn_repos_dump_fs4(repos, stdout_stream, lower, upper,
                              opt_state->incremental, opt_state->use_deltas,
+                             TRUE, TRUE,
+                             !opt_state->quiet ? repos_notify_handler : NULL,
+                             feedback_stream, check_cancel, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_dump_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_stream_t *stdout_stream;
+  svn_revnum_t lower, upper;
+  svn_stream_t *feedback_stream = NULL;
+
+  /* Expect no more arguments. */
+  SVN_ERR(parse_args(NULL, os, 0, 0, pool));
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(get_dump_range(&lower, &upper, repos, opt_state, pool));
+
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+
+  /* Progress feedback goes to STDERR, unless they asked to suppress it. */
+  if (! opt_state->quiet)
+    feedback_stream = recode_stream_create(stderr, pool);
+
+  SVN_ERR(svn_repos_dump_fs4(repos, stdout_stream, lower, upper,
+                             FALSE, FALSE, TRUE, FALSE,
                              !opt_state->quiet ? repos_notify_handler : NULL,
                              feedback_stream, check_cancel, NULL, pool));
 
@@ -1374,6 +1449,38 @@ optrev_to_revnum(svn_revnum_t *revnum, const svn_opt_revision_t *opt_rev)
   return SVN_NO_ERROR;
 }
 
+/* Read the min / max revision from the OPT_STATE, verify them and return
+   them in *LOWER and *UPPER, respectively. */
+static svn_error_t *
+get_load_range(svn_revnum_t *lower,
+               svn_revnum_t *upper,
+               struct svnadmin_opt_state *opt_state)
+{
+  /* Find the revision numbers at which to start and end.  We only
+     support a limited set of revision kinds: number and unspecified. */
+  SVN_ERR(optrev_to_revnum(lower, &opt_state->start_revision));
+  SVN_ERR(optrev_to_revnum(upper, &opt_state->end_revision));
+
+  /* Fill in implied revisions if necessary. */
+  if ((*upper == SVN_INVALID_REVNUM) && (*lower != SVN_INVALID_REVNUM))
+    {
+      *upper = *lower;
+    }
+  else if ((*upper != SVN_INVALID_REVNUM) && (*lower == SVN_INVALID_REVNUM))
+    {
+      *lower = *upper;
+    }
+
+  /* Ensure correct range ordering. */
+  if (*lower > *upper)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("First revision cannot be higher than second"));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -1382,7 +1489,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_error_t *err;
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-  svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
+  svn_revnum_t lower, upper;
   svn_stream_t *stdin_stream;
   svn_stream_t *feedback_stream = NULL;
 
@@ -1391,25 +1498,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Find the revision numbers at which to start and end.  We only
      support a limited set of revision kinds: number and unspecified. */
-  SVN_ERR(optrev_to_revnum(&lower, &opt_state->start_revision));
-  SVN_ERR(optrev_to_revnum(&upper, &opt_state->end_revision));
-
-  /* Fill in implied revisions if necessary. */
-  if ((upper == SVN_INVALID_REVNUM) && (lower != SVN_INVALID_REVNUM))
-    {
-      upper = lower;
-    }
-  else if ((upper != SVN_INVALID_REVNUM) && (lower == SVN_INVALID_REVNUM))
-    {
-      lower = upper;
-    }
-
-  /* Ensure correct range ordering. */
-  if (lower > upper)
-    {
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("First revision cannot be higher than second"));
-    }
+  SVN_ERR(get_load_range(&lower, &upper, opt_state));
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
@@ -1437,6 +1526,47 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return err;
 }
 
+static svn_error_t *
+subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_revnum_t lower, upper;
+  svn_stream_t *stdin_stream;
+
+  svn_stream_t *feedback_stream = NULL;
+
+  /* Expect no more arguments. */
+  SVN_ERR(parse_args(NULL, os, 0, 0, pool));
+
+  /* Find the revision numbers at which to start and end.  We only
+     support a limited set of revision kinds: number and unspecified. */
+  SVN_ERR(get_load_range(&lower, &upper, opt_state));
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+
+  /* Read the stream from STDIN.  Users can redirect a file. */
+  SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
+
+  /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
+  if (! opt_state->quiet)
+    feedback_stream = recode_stream_create(stdout, pool);
+
+  err = svn_repos_load_fs_revprops(repos, stdin_stream, lower, upper,
+                                   !opt_state->bypass_prop_validation,
+                                   opt_state->ignore_dates,
+                                   opt_state->quiet ? NULL
+                                                    : repos_notify_handler,
+                                   feedback_stream, check_cancel, NULL, pool);
+  if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
+    return svn_error_quick_wrap(err,
+                                _("Invalid property value found in "
+                                  "dumpstream; consider repairing the source "
+                                  "or using --bypass-prop-validation while "
+                                  "loading."));
+  return err;
+}
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *

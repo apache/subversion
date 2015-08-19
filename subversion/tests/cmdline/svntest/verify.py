@@ -853,7 +853,7 @@ def make_git_diff_header(target_path, repos_relpath,
   if add:
     output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
-      "new file mode 10644\n",
+      "new file mode 100644\n",
     ])
     if text_changes:
       output.extend([
@@ -863,7 +863,7 @@ def make_git_diff_header(target_path, repos_relpath,
   elif delete:
     output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
-      "deleted file mode 10644\n",
+      "deleted file mode 100644\n",
     ])
     if text_changes:
       output.extend([

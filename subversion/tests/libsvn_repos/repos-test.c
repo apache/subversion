@@ -750,8 +750,7 @@ check_locations_info(apr_hash_t *locations, const struct locations_info *info)
   unsigned int i;
   for (i = 0; info->rev != 0; ++i, ++info)
     {
-      const char *p = apr_hash_get(locations, &info->rev, sizeof
-                                   (svn_revnum_t));
+      const char *p = apr_hash_get(locations, &info->rev, sizeof(info->rev));
       if (!p)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Missing path for revision %ld", info->rev);
@@ -2999,7 +2998,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
 {
   apr_hash_t *ht = baton;
   const char *author;
-  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(svn_revnum_t));
+  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(rev));
 
   if (!file_rev)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -3017,7 +3016,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
 
   /* Remove this revision from this list so we'll be able to verify that we
      have seen all expected revisions. */
-  apr_hash_set(ht, &rev, sizeof(svn_revnum_t), NULL);
+  apr_hash_set(ht, &rev, sizeof(rev), NULL);
 
   return SVN_NO_ERROR;
 }
@@ -3055,16 +3054,16 @@ test_get_file_revs(const svn_test_opts_t *opts,
 
   for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
     apr_hash_set(ht_trunk_results, &trunk_results[i].rev,
-                 sizeof(svn_revnum_t), &trunk_results[i]);
+                 sizeof(trunk_results[i].rev), &trunk_results[i]);
 
   for (i = 0; i < sizeof(branch_results) / sizeof(branch_results[0]); i++)
     apr_hash_set(ht_branch_results, &branch_results[i].rev,
-                 sizeof(svn_revnum_t), &branch_results[i]);
+                 sizeof(branch_results[i].rev), &branch_results[i]);
 
   for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
     if (!trunk_results[i].result_of_merge)
       apr_hash_set(ht_reverse_results, &trunk_results[i].rev,
-                   sizeof(svn_revnum_t), &trunk_results[i]);
+                   sizeof(trunk_results[i].rev), &trunk_results[i]);
 
   /* Check for feature support */
   if (opts->server_minor_version && (opts->server_minor_version < 5))
@@ -3680,7 +3679,7 @@ verify_locations(apr_hash_t *actual,
   for (hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
     {
       const svn_revnum_t *rev = apr_hash_this_key(hi);
-      const char *path = apr_hash_get(actual, rev, sizeof(svn_revnum_t));
+      const char *path = apr_hash_get(actual, rev, sizeof(*rev));
 
       if (!path)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -3696,7 +3695,7 @@ verify_locations(apr_hash_t *actual,
   for (hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
     {
       const svn_revnum_t *rev = apr_hash_this_key(hi);
-      const char *path = apr_hash_get(expected, rev, sizeof(svn_revnum_t));
+      const char *path = apr_hash_get(expected, rev, sizeof(*rev));
 
       if (!path)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -3723,7 +3722,7 @@ set_expected(apr_hash_t *expected,
 {
   svn_revnum_t *rp = apr_palloc(pool, sizeof(svn_revnum_t));
   *rp = rev;
-  apr_hash_set(expected, rp, sizeof(svn_revnum_t), path);
+  apr_hash_set(expected, rp, sizeof(*rp), path);
 }
 
 static svn_error_t *

@@ -2176,7 +2176,7 @@ do_logs(svn_fs_t *fs,
           if (rev_mergeinfo)
             {
               struct added_deleted_mergeinfo *add_and_del_mergeinfo =
-                apr_hash_get(rev_mergeinfo, &current, sizeof(svn_revnum_t));
+                apr_hash_get(rev_mergeinfo, &current, sizeof(current));
               added_mergeinfo = add_and_del_mergeinfo->added_mergeinfo;
               deleted_mergeinfo = add_and_del_mergeinfo->deleted_mergeinfo;
               has_children = (apr_hash_count(added_mergeinfo) > 0
