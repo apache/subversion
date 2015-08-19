@@ -2743,7 +2743,10 @@ def verify_quickly(sbox):
   "verify quickly using metadata"
 
   sbox.build(create_wc = False)
-  rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
+  if svntest.main.is_fs_type_fsfs():
+    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
+  else:
+    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', 'r1'), 'r+b')
 
   # set new contents
   rev_file.seek(8)

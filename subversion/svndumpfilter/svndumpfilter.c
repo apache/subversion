@@ -640,7 +640,7 @@ new_node_record(void **node_baton,
               cf_orig_rev = SVN_STR_TO_REV(val);
               cf_renum_val = apr_hash_get(pb->renumber_history,
                                           &cf_orig_rev,
-                                          sizeof(svn_revnum_t));
+                                          sizeof(cf_orig_rev));
               if (! (cf_renum_val && SVN_IS_VALID_REVNUM(cf_renum_val->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
@@ -730,14 +730,14 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
                                                        svn_merge_range_t *);
 
               revmap_start = apr_hash_get(pb->renumber_history,
-                                          &range->start, sizeof(svn_revnum_t));
+                                          &range->start, sizeof(range->start));
               if (! (revmap_start && SVN_IS_VALID_REVNUM(revmap_start->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                    _("No valid revision range 'start' in filtered stream"));
 
               revmap_end = apr_hash_get(pb->renumber_history,
-                                        &range->end, sizeof(svn_revnum_t));
+                                        &range->end, sizeof(range->end));
               if (! (revmap_end && SVN_IS_VALID_REVNUM(revmap_end->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,

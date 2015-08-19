@@ -32,6 +32,7 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_pools.h"
+#include "batch_fsync.h"
 #include "fs.h"
 #include "fs_x.h"
 #include "pack.h"
@@ -662,6 +663,8 @@ svn_fs_x__init(const svn_version_t *loader_version,
                              _("Unsupported FS loader version (%d) for fsx"),
                              loader_version->major);
   SVN_ERR(svn_ver_check_list2(x_version(), checklist, svn_ver_equal));
+
+  SVN_ERR(svn_fs_x__batch_fsync_init());
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;

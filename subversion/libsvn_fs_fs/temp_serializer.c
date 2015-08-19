@@ -103,9 +103,7 @@ serialize_svn_string(svn_temp_serializer__context_t *context,
   if (string == NULL)
     return;
 
-  svn_temp_serializer__push(context,
-                            (const void * const *)s,
-                            sizeof(*string));
+  svn_temp_serializer__push(context, (const void * const *)s, sizeof(**s));
 
   /* the "string" content may actually be arbitrary binary data.
    * Thus, we cannot use svn_temp_serializer__add_string. */
@@ -143,7 +141,7 @@ serialize_representation(svn_temp_serializer__context_t *context,
   /* serialize the representation struct itself */
   svn_temp_serializer__add_leaf(context,
                                 (const void * const *)representation,
-                                sizeof(*rep));
+                                sizeof(**representation));
 }
 
 /* auxiliary structure representing the content of a directory array */
@@ -191,7 +189,7 @@ serialize_dir_entry(svn_temp_serializer__context_t *context,
 
   svn_temp_serializer__push(context,
                             (const void * const *)entry_p,
-                            sizeof(svn_fs_dirent_t));
+                            sizeof(**entry_p));
 
   svn_fs_fs__id_serialize(context, &entry->id);
   svn_temp_serializer__add_string(context, &entry->name);
@@ -216,8 +214,9 @@ serialize_dir(svn_fs_fs__dir_data_t *dir, apr_pool_t *pool)
   /* calculate sizes */
   int count = entries->nelts;
   apr_size_t over_provision = 2 + count / 4;
-  apr_size_t entries_len = (count + over_provision) * sizeof(svn_fs_dirent_t*);
-  apr_size_t lengths_len = (count + over_provision) * sizeof(apr_uint32_t);
+  apr_size_t total_count = count + over_provision;
+  apr_size_t entries_len = total_count * sizeof(*dir_data.entries);
+  apr_size_t lengths_len = total_count * sizeof(*dir_data.lengths);
 
   /* copy the hash entries to an auxiliary struct of known layout */
   dir_data.count = count;
@@ -416,7 +415,7 @@ serialize_txdelta_ops(svn_temp_serializer__context_t *context,
   /* the ops form a contiguous chunk of memory with no further references */
   svn_temp_serializer__add_leaf(context,
                                 (const void * const *)ops,
-                                count * sizeof(svn_txdelta_op_t));
+                                count * sizeof(**ops));
 }
 
 /* Utility function to serialize W in the given serialization CONTEXT.
@@ -428,9 +427,7 @@ serialize_txdeltawindow(svn_temp_serializer__context_t *context,
   svn_txdelta_window_t *window = *w;
 
   /* serialize the window struct itself */
-  svn_temp_serializer__push(context,
-                            (const void * const *)w,
-                            sizeof(svn_txdelta_window_t));
+  svn_temp_serializer__push(context, (const void * const *)w, sizeof(**w));
 
   /* serialize its sub-structures */
   serialize_txdelta_ops(context, &window->ops, window->num_ops);
@@ -1088,7 +1085,7 @@ svn_fs_fs__serialize_rep_header(void **data,
   svn_fs_fs__rep_header_t *copy = apr_palloc(pool, sizeof(*copy));
   *copy = *(svn_fs_fs__rep_header_t *)in;
 
-  *data_len = sizeof(svn_fs_fs__rep_header_t);
+  *data_len = sizeof(*copy);
   *data = copy;
 
   return SVN_NO_ERROR;
