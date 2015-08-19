@@ -184,6 +184,10 @@ dbg_log_access(svn_fs_t *fs,
              description);
     }
 
+  /* We don't know when SCRATCH_POOL will be cleared, so close the rev file
+     explicitly. */
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
+
 #endif
 
   return SVN_NO_ERROR;
