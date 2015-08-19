@@ -57,7 +57,7 @@ block_read(void **result,
            apr_pool_t *scratch_pool);
 
 
-/* Defined this to enable access logging via dgb__log_access
+/* Define this to enable access logging via dbg_log_access
 #define SVN_FS_FS__LOG_ACCESS
  */
 
@@ -91,7 +91,7 @@ dbg_log_access(svn_fs_t *fs,
   svn_fs_fs__revision_file_t *rev_file;
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision,
-                                           scratch_pool));
+                                           scratch_pool, scratch_pool));
 
   /* determine rev / pack file offset */
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, revision, NULL,
@@ -158,7 +158,8 @@ dbg_log_access(svn_fs_t *fs,
     {
       /* reverse index lookup: get item description in ENTRY */
       SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, revision,
-                                          offset, scratch_pool));
+                                          offset, scratch_pool,
+                                          scratch_pool));
       if (entry)
         {
           /* more details */
