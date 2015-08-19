@@ -346,14 +346,19 @@ svn_branch_get_id(svn_branch_state_t *branch,
 /* Create a new branch at OUTER_BRANCH:OUTER_EID, with no elements
  * (not even a root element).
  *
- * Do not require that a subbranch root element exists in OUTER_BRANCH,
- * nor create one.
+ * Create and return a new branch object. Register its existence in REV_ROOT.
+ *
+ * If OUTER_BRANCH is NULL, create a top-level branch with OUTER_EID
+ * as its top-level branch number. Otherise, create a branch that claims
+ * to be nested under OUTER_BRANCH:OUTER_EID, but do not require that
+ * a subbranch root element exists there, nor create one.
  *
  * Set the root element to ROOT_EID, or, if ROOT_EID is -1, allocate a new
  * EID for the root element.
  */
 svn_branch_state_t *
-svn_branch_add_new_branch(svn_branch_state_t *outer_branch,
+svn_branch_add_new_branch(svn_branch_revision_root_t *rev_root,
+                          svn_branch_state_t *outer_branch,
                           int outer_eid,
                           int root_eid,
                           apr_pool_t *scratch_pool);
@@ -595,17 +600,22 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
 
 /* Create a new branch of a given subtree.
  *
- * Instantiate a new branch of the subtree FROM_SUBTREE, at the
- * existing subbranch-root element TO_OUTER_BRANCH:TO_OUTER_EID.
+ * Create a new branch object. Register its existence in REV_ROOT.
+ * Instantiate the subtree FROM_SUBTREE in this new branch. In the new
+ * branch, create new subbranches corresponding to any subbranches
+ * specified in FROM_SUBTREE, recursively.
  *
- * Also branch the subbranches in FROM_SUBTREE, creating corresponding new
- * subbranches in TO_BRANCH, recursively.
+ * If TO_OUTER_BRANCH is NULL, create a top-level branch with TO_OUTER_EID
+ * as its top-level branch number. Otherise, create a branch that claims
+ * to be nested under TO_OUTER_BRANCH:TO_OUTER_EID, but do not require that
+ * a subbranch root element exists there, nor create one.
  *
  * Set *NEW_BRANCH_P to the new branch (the one at TO_OUTER_BRANCH:TO_OUTER_EID).
  */
 svn_error_t *
 svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
                           svn_branch_subtree_t from_subtree,
+                          svn_branch_revision_root_t *rev_root,
                           svn_branch_state_t *to_outer_branch,
                           svn_branch_eid_t to_outer_eid,
                           apr_pool_t *scratch_pool);

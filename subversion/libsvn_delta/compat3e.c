@@ -1741,18 +1741,26 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
     const char *top_path = branch_get_storage_root_rrpath(root_branch,
                                                           scratch_pool);
     svn_pathrev_t current;
+    svn_branch_state_t *base_root_branch
+      = svn_branch_repos_get_root_branch(eb->edited_rev_root->repos,
+                                         eb->edited_rev_root->base_rev,
+                                         root_branch->outer_eid /*top_branch_num*/);
+    svn_boolean_t branch_is_new = !base_root_branch;
 
     current.rev = eb->edited_rev_root->base_rev;
     current.relpath = top_path;
 
-    /* Make it appear that B0 was created (as an empty dir) in r0. */
-    if (current.rev == 0)
+    /* Create the top-level storage node if the branch is new, or if this is
+       the first commit to branch B0 which was created in r0 but had no
+       storage node there. */
+    if (branch_is_new || current.rev == 0)
       {
         change_node_t *change;
 
         SVN_ERR(insert_change(&change, eb->changes, top_path, RESTRUCTURE_ADD));
         change->kind = svn_node_dir;
       }
+
     SVN_ERR(drive_changes_r(top_path, &current,
                             paths_final, root_branch->outer_eid,
                             eb, scratch_pool));
