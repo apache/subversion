@@ -110,7 +110,7 @@ Candidate changes:
      Without this patch operations like checkout just fail with an error.
      This is a regression as older Subversion releases ignored the error.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1696387
    Expose expat and zlib versions in svn --version --verbose
