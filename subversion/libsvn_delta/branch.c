@@ -794,6 +794,7 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
         /* branch this subbranch into NEW_BRANCH (recursing) */
         SVN_ERR(svn_branch_branch_subtree(NULL,
                                           *this_subtree,
+                                          to_branch->rev_root,
                                           to_branch, this_outer_eid,
                                           bi->iterpool));
       }
@@ -837,25 +838,31 @@ svn_branch_get_subbranch_at_eid(svn_branch_state_t *branch,
 }
 
 svn_branch_state_t *
-svn_branch_add_new_branch(svn_branch_state_t *outer_branch,
+svn_branch_add_new_branch(svn_branch_revision_root_t *rev_root,
+                          svn_branch_state_t *outer_branch,
                           int outer_eid,
                           int root_eid,
                           apr_pool_t *scratch_pool)
 {
   svn_branch_state_t *new_branch;
 
-  if (root_eid == -1)
-    root_eid = svn_branch_allocate_new_eid(outer_branch->rev_root);
+  SVN_ERR_ASSERT_NO_RETURN(!outer_branch || outer_branch->rev_root == rev_root);
 
-  new_branch = svn_branch_state_create(root_eid, outer_branch->rev_root,
+  if (root_eid == -1)
+    root_eid = svn_branch_allocate_new_eid(rev_root);
+
+  new_branch = svn_branch_state_create(root_eid, rev_root,
                                        outer_branch, outer_eid,
-                                       outer_branch->rev_root->repos->pool);
+                                       rev_root->repos->pool);
 
   /* A branch must not already exist at this outer element */
-  SVN_ERR_ASSERT_NO_RETURN(svn_branch_get_subbranch_at_eid(
+  SVN_ERR_ASSERT_NO_RETURN(!outer_branch ||
+                           svn_branch_get_subbranch_at_eid(
                              outer_branch, outer_eid, scratch_pool) == NULL);
 
-  SVN_ARRAY_PUSH(new_branch->rev_root->branches) = new_branch;
+  SVN_ARRAY_PUSH(rev_root->branches) = new_branch;
+  if (!outer_branch)
+    SVN_ARRAY_PUSH(rev_root->root_branches) = new_branch;
 
   return new_branch;
 }
@@ -883,6 +890,17 @@ svn_branch_revision_root_delete_branch(
           break;
         }
     }
+  for (SVN_ARRAY_ITER(bi, rev_root->root_branches, scratch_pool))
+    {
+      if (bi->val == branch)
+        {
+          SVN_DBG(("deleting root-branch b%s e%d",
+                   svn_branch_get_id(bi->val, bi->iterpool),
+                   bi->val->root_eid));
+          svn_sort__array_delete(rev_root->root_branches, bi->i, 1);
+          break;
+        }
+    }
 }
 
 void
@@ -897,7 +915,7 @@ svn_branch_delete_branch_r(svn_branch_state_t *branch,
       svn_branch_delete_branch_r(bi->val, bi->iterpool);
     }
 
-  svn_branch_revision_root_delete_branch(branch->outer_branch->rev_root,
+  svn_branch_revision_root_delete_branch(branch->rev_root,
                                          branch, scratch_pool);
 }
 
@@ -1294,6 +1312,10 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                              _("No such revision %ld"), revnum);
 
   root_branch = svn_branch_repos_get_root_branch(repos, revnum, top_branch_num);
+  if (! root_branch)
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                             _("Top-level branch B%d not found in r%ld"),
+                             top_branch_num, revnum);
   el_rev->rev = revnum;
   svn_branch_find_nested_branch_element_by_rrpath(&el_rev->branch, &el_rev->eid,
                                                   root_branch, rrpath,
@@ -1328,14 +1350,16 @@ svn_branch_get_id(svn_branch_state_t *branch,
 svn_error_t *
 svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
                           svn_branch_subtree_t from_subtree,
+                          svn_branch_revision_root_t *rev_root,
                           svn_branch_state_t *to_outer_branch,
                           svn_branch_eid_t to_outer_eid,
                           apr_pool_t *scratch_pool)
 {
   svn_branch_state_t *new_branch;
 
-  /* create new inner branch */
-  new_branch = svn_branch_add_new_branch(to_outer_branch, to_outer_eid,
+  /* create new branch */
+  new_branch = svn_branch_add_new_branch(rev_root,
+                                         to_outer_branch, to_outer_eid,
                                          from_subtree.root_eid,
                                          scratch_pool);
 

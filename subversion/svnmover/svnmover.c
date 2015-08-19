@@ -406,6 +406,7 @@ svn_branch_replay(svn_editor3_t *editor,
           else
             {
               edit_subbranch = svn_branch_add_new_branch(
+                                 edit_branch->rev_root,
                                  edit_branch, this_eid,
                                  this_s_right->root_eid, scratch_pool);
             }
@@ -458,7 +459,7 @@ typedef struct commit_callback_baton_t
 {
   svn_branch_revision_root_t *edit_txn;
   const char *wc_base_branch_id;
-  const char *wc_working_branch_id;
+  const char *wc_commit_branch_id;
   svn_editor3_t *editor;
 
   /* just-committed revision */
@@ -491,6 +492,7 @@ wc_commit(svn_revnum_t *new_rev_p,
   svn_editor3_t *commit_editor;
   commit_callback_baton_t ccbb;
   svn_boolean_t change_detected;
+  svn_branch_state_t *edit_root_branch;
 
   /* Choose whether to store branching info in a local dir or in revprops.
      (For now, just to exercise the options, we choose local files for
@@ -516,22 +518,44 @@ wc_commit(svn_revnum_t *new_rev_p,
                                                &change_detected,
                                                commit_editor,
                                                scratch_pool));
-  ccbb.edit_txn = commit_txn;
-  ccbb.wc_base_branch_id = svn_branch_get_id(wc->base_branch, scratch_pool);
-  ccbb.wc_working_branch_id = svn_branch_get_id(wc->working_branch, scratch_pool);
-  ccbb.editor = commit_editor;
   /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
 
-  /* ### See do_update() for how to choose correct root-branches.
-     Should we replay a whole txn or just the edited branch (and children)? */
+  edit_root_branch = svn_branch_revision_root_get_branch_by_id(
+                       commit_txn, wc->working_branch_id, scratch_pool);
+
+  /* We might be creating a new top-level branch in this commit. That is the
+     only case in which the working branch will not be found in EDIT_TXN.
+     (Creating any other branch can only be done inside a checkout of a
+     parent branch.) So, maybe create a new top-level branch. */
+  if (! edit_root_branch)
+    {
+      /* Create a new top-level branch in the edited state. (It will have
+         an independent new top-level branch number.) */
+      int top_branch_num = commit_txn->root_branches->nelts;
+
+      SVN_ERR(svn_branch_branch_subtree(&edit_root_branch,
+                                        *svn_branch_get_subtree(
+                                          wc->base_branch,
+                                          wc->base_branch->root_eid,
+                                          scratch_pool),
+                                        commit_txn,
+                                        wc->working_branch->outer_branch,
+                                        top_branch_num /*outer_eid*/,
+                                        scratch_pool));
+    }
   SVN_ERR(replay(commit_editor,
-                 svn_branch_revision_root_get_branch_by_id(
-                   ccbb.edit_txn, ccbb.wc_working_branch_id, scratch_pool),
+                 edit_root_branch,
                  wc->base_branch,
                  wc->working_branch,
                  scratch_pool));
   if (change_detected)
     {
+      ccbb.edit_txn = commit_txn;
+      ccbb.wc_base_branch_id = wc->base_branch_id;
+      ccbb.wc_commit_branch_id = svn_branch_get_id(edit_root_branch,
+                                                   scratch_pool);
+      ccbb.editor = commit_editor;
+
       SVN_ERR(svn_editor3_complete(commit_editor));
       SVN_ERR(display_diff_of_commit(&ccbb, scratch_pool));
 
@@ -555,6 +579,7 @@ typedef enum action_code_t {
   ACTION_LIST_BRANCHES,
   ACTION_LIST_BRANCHES_R,
   ACTION_LS,
+  ACTION_TBRANCH,
   ACTION_BRANCH,
   ACTION_BRANCH_INTO,
   ACTION_MKBRANCH,
@@ -590,6 +615,9 @@ static const action_defn_t action_defn[] =
     "list elements in the branch found at PATH"},
   {ACTION_LOG,              "log", 2, "FROM@REV TO@REV",
     "show per-revision diffs between FROM and TO"},
+  {ACTION_TBRANCH,          "tbranch", 1, "SRC",
+    "branch the branch-root or branch-subtree at SRC" NL
+    "to make a new top-level branch"},
   {ACTION_BRANCH,           "branch", 2, "SRC DST",
     "branch the branch-root or branch-subtree at SRC" NL
     "to make a new branch at DST"},
@@ -647,7 +675,8 @@ typedef struct action_t {
  * Return the location of the element in that branch, or with
  * EID=-1 if no element exists there.
  *
- * The result will never be NULL, as every path is within at least the root
+ * Return an error if B<TOP_BRANCH_NUM> does not exist in r<REVNUM>; otherwise,
+ * the result will never be NULL, as every path is within at least the root
  * branch.
  */
 static svn_error_t *
@@ -1273,6 +1302,7 @@ merge_subbranch(svn_editor3_t *editor,
 
       SVN_ERR(svn_branch_branch_subtree(NULL,
                 *from_subtree,
+                tgt->branch->rev_root,
                 tgt->branch, eid,
                 scratch_pool));
     }
@@ -2134,6 +2164,7 @@ mk_branch(svn_branch_state_t **new_branch_p,
                           outer_parent_eid, outer_name,
                           NULL /*new_payload*/));
   new_branch = svn_branch_add_new_branch(
+                 outer_branch->rev_root,
                  outer_branch, new_outer_eid, -1/*new_root_eid*/,
                  iterpool);
   svn_branch_update_element(new_branch, new_branch->root_eid,
@@ -2191,7 +2222,42 @@ do_branch(svn_branch_state_t **new_branch_p,
 
   SVN_ERR(svn_branch_branch_subtree(new_branch_p,
                                     *from_subtree,
+                                    to_outer_branch->rev_root,
                                     to_outer_branch, to_outer_eid,
+                                    scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+do_topbranch(svn_branch_state_t **new_branch_p,
+             svn_branch_revision_root_t *rev_root,
+             svn_branch_state_t *from_branch,
+             int from_eid,
+             apr_pool_t *scratch_pool)
+{
+  svn_branch_subtree_t *from_subtree;
+  int to_outer_eid; /* ### top-level branch number */
+
+  /* Source element must exist */
+  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("cannot branch from b%s e%d: "
+                                 "does not exist"),
+                               svn_branch_get_id(
+                                 from_branch, scratch_pool), from_eid);
+    }
+
+  from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
+
+  /* assign new top-level branch number to new branch */
+  to_outer_eid = from_branch->rev_root->root_branches->nelts;
+
+  SVN_ERR(svn_branch_branch_subtree(new_branch_p,
+                                    *from_subtree,
+                                    rev_root,
+                                    NULL /*to_outer_branch*/, to_outer_eid,
                                     scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2267,7 +2333,7 @@ display_diff_of_commit(const commit_callback_baton_t *ccbb,
                                                 scratch_pool);
   svn_branch_state_t *committed_branch
     = svn_branch_revision_root_get_branch_by_id(ccbb->edit_txn,
-                                                ccbb->wc_working_branch_id,
+                                                ccbb->wc_commit_branch_id,
                                                 scratch_pool);
   svn_branch_el_rev_id_t *el_rev_left
     = svn_branch_el_rev_id_create(base_branch, base_branch->root_eid,
@@ -2702,6 +2768,24 @@ execute(svnmover_wc_t *wc,
                                                    arg[0]->el_rev->branch,
                                                    iterpool));
               }
+          }
+          break;
+
+        case ACTION_TBRANCH:
+          VERIFY_EID_EXISTS("tbranch", 0);
+          {
+            svn_branch_state_t *new_branch;
+
+            SVN_ERR(do_topbranch(&new_branch,
+                                 wc->working_branch->rev_root,
+                                 arg[0]->el_rev->branch, arg[0]->el_rev->eid,
+                                 iterpool));
+            notify_v("A+  %s",
+                     branch_str(new_branch, iterpool));
+            /* Switch the WC working state to this new branch */
+            wc->top_branch_num = new_branch->outer_eid;
+            wc->working_branch_id = svn_branch_get_id(new_branch, wc->pool);
+            wc->working_branch = new_branch;
           }
           break;
 
