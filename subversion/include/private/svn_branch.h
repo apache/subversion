@@ -348,8 +348,8 @@ svn_branch_get_id(svn_branch_state_t *branch,
  *
  * Create and return a new branch object. Register its existence in REV_ROOT.
  *
- * If OUTER_BRANCH is NULL, create a top-level branch with OUTER_EID
- * as its top-level branch number. Otherise, create a branch that claims
+ * If OUTER_BRANCH is NULL, create a top-level branch with a new top-level
+ * branch number, ignoring OUTER_EID. Otherise, create a branch that claims
  * to be nested under OUTER_BRANCH:OUTER_EID, but do not require that
  * a subbranch root element exists there, nor create one.
  *
@@ -605,8 +605,8 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
  * branch, create new subbranches corresponding to any subbranches
  * specified in FROM_SUBTREE, recursively.
  *
- * If TO_OUTER_BRANCH is NULL, create a top-level branch with TO_OUTER_EID
- * as its top-level branch number. Otherise, create a branch that claims
+ * If TO_OUTER_BRANCH is NULL, create a top-level branch with a new top-level
+ * branch number, ignoring TO_OUTER_EID. Otherise, create a branch that claims
  * to be nested under TO_OUTER_BRANCH:TO_OUTER_EID, but do not require that
  * a subbranch root element exists there, nor create one.
  *

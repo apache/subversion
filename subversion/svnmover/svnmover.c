@@ -533,16 +533,13 @@ wc_commit(svn_revnum_t *new_rev_p,
     {
       /* Create a new top-level branch in the edited state. (It will have
          an independent new top-level branch number.) */
-      int top_branch_num = commit_txn->root_branches->nelts;
-
       SVN_ERR(svn_branch_branch_subtree(&edit_root_branch,
                                         *svn_branch_get_subtree(
                                           wc->base->branch,
                                           wc->base->branch->root_eid,
                                           scratch_pool),
                                         commit_txn,
-                                        NULL /*outer_branch*/,
-                                        top_branch_num /*outer_eid*/,
+                                        NULL, 0, /*outer_branch,outer_eid*/
                                         scratch_pool));
     }
   SVN_ERR(replay(commit_editor,
@@ -2239,7 +2236,6 @@ do_topbranch(svn_branch_state_t **new_branch_p,
              apr_pool_t *scratch_pool)
 {
   svn_branch_subtree_t *from_subtree;
-  int to_outer_eid; /* ### top-level branch number */
 
   /* Source element must exist */
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
@@ -2253,13 +2249,10 @@ do_topbranch(svn_branch_state_t **new_branch_p,
 
   from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
 
-  /* assign new top-level branch number to new branch */
-  to_outer_eid = from_branch->rev_root->root_branches->nelts;
-
   SVN_ERR(svn_branch_branch_subtree(new_branch_p,
                                     *from_subtree,
                                     rev_root,
-                                    NULL /*to_outer_branch*/, to_outer_eid,
+                                    NULL, 0, /*outer_branch,outer_eid*/
                                     scratch_pool));
 
   return SVN_NO_ERROR;
