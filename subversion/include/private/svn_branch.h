@@ -144,6 +144,16 @@ svn_branch_repos_get_root_branch(const svn_branch_repos_t *repos,
                                  svn_revnum_t revnum,
                                  int top_branch_num);
 
+/* Set *BRANCH_P to the branch found in REPOS : REVNUM : BRANCH_ID.
+ *
+ * Return an error if REVNUM or BRANCH_ID is not found.
+ */
+svn_error_t *
+svn_branch_repos_get_branch_by_id(svn_branch_state_t **branch_p,
+                                  const svn_branch_repos_t *repos,
+                                  svn_revnum_t revnum,
+                                  const char *branch_id,
+                                  apr_pool_t *scratch_pool);
 /* Set *EL_REV_P to the el-rev-id of the element at branch id BRANCH_ID,
  * element id EID, in revision REVNUM in REPOS.
  *
@@ -163,8 +173,8 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
-/* Set *EL_REV_P to the el-rev-id of the element at repos-relpath RRPATH
- * in revision REVNUM in REPOS.
+/* Set *EL_REV_P to the el-rev-id of the element at relative path RELPATH
+ * anywhere in or under branch BRANCH_ID in revision REVNUM in REPOS.
  *
  * If there is no element there, set *EL_REV_P to point to an id in which
  * the BRANCH field is the nearest enclosing branch of RRPATH and the EID
@@ -177,10 +187,10 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
  */
 svn_error_t *
 svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
-                                const char *rrpath,
-                                int top_branch_num,
-                                svn_revnum_t revnum,
                                 const svn_branch_repos_t *repos,
+                                svn_revnum_t revnum,
+                                const char *branch_id,
+                                const char *relpath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
@@ -701,27 +711,27 @@ svn_branch_get_eid_by_rrpath(svn_branch_state_t *branch,
                              const char *rrpath,
                              apr_pool_t *scratch_pool);
 
-/* Find the (deepest) branch of which the path RRPATH is either the root
+/* Find the (deepest) branch of which the path RELPATH is either the root
  * path or a normal, non-sub-branch path. An element need not exist at
- * RRPATH.
+ * RELPATH.
  *
  * Set *BRANCH_P to the deepest branch within ROOT_BRANCH (recursively,
- * including itself) that contains the path RRPATH.
+ * including itself) that contains the path RELPATH.
  *
- * If EID_P is not null then set *EID_P to the element id of RRPATH in
- * *BRANCH_P, or to -1 if no element exists at RRPATH in that branch.
+ * If EID_P is not null then set *EID_P to the element id of RELPATH in
+ * *BRANCH_P, or to -1 if no element exists at RELPATH in that branch.
  *
- * If RRPATH is not within any branch in ROOT_BRANCH, set *BRANCH_P to
+ * If RELPATH is not within any branch in ROOT_BRANCH, set *BRANCH_P to
  * NULL and (if EID_P is not null) *EID_P to -1.
  *
  * ### TODO: Clarify sequencing requirements.
  */
 void
-svn_branch_find_nested_branch_element_by_rrpath(
+svn_branch_find_nested_branch_element_by_relpath(
                                 svn_branch_state_t **branch_p,
                                 int *eid_p,
                                 svn_branch_state_t *root_branch,
-                                const char *rrpath,
+                                const char *relpath,
                                 apr_pool_t *scratch_pool);
 
 /* Get the default branching metadata for r0 of a new repository.
