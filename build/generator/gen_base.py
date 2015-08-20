@@ -590,6 +590,7 @@ class TargetLinked(Target):
     self.external_lib = options.get('external-lib')
     self.external_project = options.get('external-project')
     self.msvc_libs = options.get('msvc-libs', '').split()
+    self.msvc_delayload_targets = []
 
   def add_dependencies(self):
     if self.external_lib or self.external_project:
@@ -690,6 +691,7 @@ class TargetLib(TargetLinked):
     self.link_cmd = options.get('link-cmd', '$(LINK_LIB)')
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
+    self.msvc_delayload = options.get('msvc-delayload') == 'yes' # Delay dll load
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
     self.msvc_export = options.get('msvc-export', '').split()
 

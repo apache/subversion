@@ -209,14 +209,22 @@ class Generator(gen_win.WinGeneratorBase):
 
       deplist = [ ]
       for i in range(len(depends)):
-        if depends[i].fname.startswith(self.projfilesdir):
-          path = depends[i].fname[len(self.projfilesdir) + 1:]
+        dp = depends[i]
+        if dp.fname.startswith(self.projfilesdir):
+          path = dp.fname[len(self.projfilesdir) + 1:]
         else:
           path = os.path.join(os.path.relpath('.', self.projfilesdir),
-                              depends[i].fname)
+                              dp.fname)
+
+        if isinstance(dp, gen_base.TargetLib) and dp.msvc_delayload \
+           and isinstance(target, gen_base.TargetLinked):
+          delayload = self.get_output_name(dp)
+        else:
+          delayload = None
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            path=path,
+                                           delayload=delayload
                                            ))
 
       fname = self.get_external_project(target, self.vcproj_extension[1:])

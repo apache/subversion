@@ -271,6 +271,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                   'msvc-name' : dep.name + "_dll" },
                                 self)
     target.msvc_export = dep.msvc_export
+    target.msvc_delayload = dep.msvc_delayload
 
     # move the description from the static library target to the dll.
     target.desc = dep.desc
@@ -279,6 +280,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # The dependency should now be static.
     dep.msvc_export = None
     dep.msvc_static = True
+    dep.msvc_delayload = False
 
     # Remove the 'lib' prefix, so that the static library will be called
     # svn_foo.lib
