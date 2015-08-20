@@ -1489,7 +1489,7 @@ static svn_error_t *
 drive_changes_r(const char *rrpath,
                 svn_pathrev_t *pred_loc,
                 apr_hash_t *paths_final,
-                int top_branch_num,
+                const char *top_branch_id,
                 ev3_from_delta_baton_t *eb,
                 apr_pool_t *scratch_pool)
 {
@@ -1540,12 +1540,11 @@ drive_changes_r(const char *rrpath,
     {
       svn_branch_el_rev_id_t *pred_el_rev;
 
-      SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(
-                                            &pred_el_rev,
-                                            pred_loc->relpath,
-                                            top_branch_num,
-                                            pred_loc->rev,
+      SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(&pred_el_rev,
                                             eb->edited_rev_root->repos,
+                                            pred_loc->rev,
+                                            top_branch_id,
+                                            pred_loc->relpath,
                                             scratch_pool, scratch_pool));
 
       succession = (pred_el_rev->eid == final_el_rev->eid);
@@ -1702,7 +1701,7 @@ drive_changes_r(const char *rrpath,
 
               SVN_ERR(drive_changes_r(this_rrpath,
                                       child_pred,
-                                      paths_final, top_branch_num,
+                                      paths_final, top_branch_id,
                                       eb, scratch_pool));
             }
         }
@@ -1762,7 +1761,8 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
       }
 
     SVN_ERR(drive_changes_r(top_path, &current,
-                            paths_final, root_branch->outer_eid,
+                            paths_final, svn_branch_get_id(root_branch,
+                                                           scratch_pool),
                             eb, scratch_pool));
   }
 

@@ -1217,51 +1217,74 @@ svn_branch_revision_root_serialize(svn_stream_t *stream,
  */
 
 void
-svn_branch_find_nested_branch_element_by_rrpath(
+svn_branch_find_nested_branch_element_by_relpath(
                                 svn_branch_state_t **branch_p,
                                 int *eid_p,
                                 svn_branch_state_t *root_branch,
-                                const char *rrpath,
+                                const char *relpath,
                                 apr_pool_t *scratch_pool)
 {
-  const char *branch_root_path = svn_branch_get_root_rrpath(root_branch,
-                                                            scratch_pool);
-  SVN_ITER_T(svn_branch_state_t) *bi;
-
-  if (! svn_relpath_skip_ancestor(branch_root_path, rrpath))
-    {
-      /* The path we're looking for is not (path-wise) in this branch. */
-      *branch_p = NULL;
-      if (eid_p)
-        *eid_p = -1;
-      return;
-    }
-
   /* The path we're looking for is (path-wise) in this branch. See if it
-     is also in a sub-branch (recursively). */
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_immediate_subbranches(
-                            root_branch, scratch_pool, scratch_pool),
-                      scratch_pool))
+     is also in a sub-branch. */
+  while (TRUE)
     {
-      svn_branch_state_t *subbranch;
-      int subbranch_eid;
+      SVN_ITER_T(svn_branch_state_t) *bi;
+      svn_boolean_t found = FALSE;
 
-      svn_branch_find_nested_branch_element_by_rrpath(&subbranch,
-                                                      &subbranch_eid,
-                                                      bi->val, rrpath,
-                                                      bi->iterpool);
-      if (subbranch)
+      for (SVN_ARRAY_ITER(bi, svn_branch_get_immediate_subbranches(
+                                root_branch, scratch_pool, scratch_pool),
+                          scratch_pool))
         {
-           *branch_p = subbranch;
-           if (eid_p)
-             *eid_p = subbranch_eid;
-           return;
-         }
+          svn_branch_state_t *subbranch = bi->val;
+          const char *relpath_to_subbranch;
+          const char *relpath_in_subbranch;
+
+          relpath_to_subbranch
+            = svn_branch_get_path_by_eid(root_branch, subbranch->outer_eid,
+                                         scratch_pool);
+
+          relpath_in_subbranch
+            = svn_relpath_skip_ancestor(relpath_to_subbranch, relpath);
+          if (relpath_in_subbranch)
+            {
+              root_branch = subbranch;
+              relpath = relpath_in_subbranch;
+              found = TRUE;
+              break;
+            }
+        }
+      if (! found)
+        {
+          break;
+        }
     }
 
   *branch_p = root_branch;
   if (eid_p)
-    *eid_p = svn_branch_get_eid_by_rrpath(root_branch, rrpath, scratch_pool);
+    *eid_p = svn_branch_get_eid_by_path(root_branch, relpath, scratch_pool);
+}
+
+svn_error_t *
+svn_branch_repos_get_branch_by_id(svn_branch_state_t **branch_p,
+                                  const svn_branch_repos_t *repos,
+                                  svn_revnum_t revnum,
+                                  const char *branch_id,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_branch_revision_root_t *rev_root;
+
+  if (revnum < 0 || revnum >= repos->rev_roots->nelts)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld"), revnum);
+
+  rev_root = svn_branch_repos_get_revision(repos, revnum);
+  *branch_p = svn_branch_revision_root_get_branch_by_id(rev_root, branch_id,
+                                                        scratch_pool);
+  if (! *branch_p)
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                             _("Branch %s not found in r%ld"),
+                             branch_id, revnum);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1274,17 +1297,11 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
                                    apr_pool_t *scratch_pool)
 {
   svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
-  const svn_branch_revision_root_t *rev_root;
 
-  if (revnum < 0 || revnum >= repos->rev_roots->nelts)
-    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                             _("No such revision %ld"), revnum);
-
-  rev_root = svn_branch_repos_get_revision(repos, revnum);
   el_rev->rev = revnum;
-  el_rev->branch
-    = svn_branch_revision_root_get_branch_by_id(rev_root, branch_id,
-                                                scratch_pool);
+  SVN_ERR(svn_branch_repos_get_branch_by_id(&el_rev->branch,
+                                            repos, revnum, branch_id,
+                                            scratch_pool));
   if (svn_branch_get_element(el_rev->branch, eid))
     {
       el_rev->eid = eid;
@@ -1299,31 +1316,26 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
 
 svn_error_t *
 svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
-                                const char *rrpath,
-                                int top_branch_num,
-                                svn_revnum_t revnum,
                                 const svn_branch_repos_t *repos,
+                                svn_revnum_t revnum,
+                                const char *branch_id,
+                                const char *relpath,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
   svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
-  svn_branch_state_t *root_branch;
+  svn_branch_state_t *branch;
 
-  if (revnum < 0 || revnum >= repos->rev_roots->nelts)
-    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                             _("No such revision %ld"), revnum);
-
-  root_branch = svn_branch_repos_get_root_branch(repos, revnum, top_branch_num);
-  if (! root_branch)
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("Top-level branch B%d not found in r%ld"),
-                             top_branch_num, revnum);
+  SVN_ERR(svn_branch_repos_get_branch_by_id(&branch,
+                                            repos, revnum, branch_id,
+                                            scratch_pool));
   el_rev->rev = revnum;
-  svn_branch_find_nested_branch_element_by_rrpath(&el_rev->branch, &el_rev->eid,
-                                                  root_branch, rrpath,
-                                                  scratch_pool);
+  svn_branch_find_nested_branch_element_by_relpath(&el_rev->branch,
+                                                   &el_rev->eid,
+                                                   branch, relpath,
+                                                   scratch_pool);
 
-  /* Any path must at least be within the repository root branch */
+  /* Any relpath must at least be within the originally given branch */
   SVN_ERR_ASSERT_NO_RETURN(el_rev->branch);
   *el_rev_p = el_rev;
   return SVN_NO_ERROR;

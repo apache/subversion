@@ -54,7 +54,6 @@ typedef struct svnmover_wc_t
 
   svn_ra_session_t *ra_session;
   svn_editor3_t *editor;
-  int top_branch_num;
 
   /* Base and working versions. */
   svnmover_wc_version_t *base, *working;

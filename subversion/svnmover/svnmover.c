@@ -234,7 +234,6 @@ static svn_error_t *
 wc_create(svnmover_wc_t **wc_p,
           const char *anchor_url,
           svn_revnum_t base_revision,
-          int top_branch_num,
           const char *base_branch_id,
           svn_client_ctx_t *ctx,
           apr_pool_t *result_pool,
@@ -243,7 +242,6 @@ wc_create(svnmover_wc_t **wc_p,
   apr_pool_t *wc_pool = svn_pool_create(result_pool);
   svnmover_wc_t *wc = apr_pcalloc(wc_pool, sizeof(*wc));
 
-  wc->top_branch_num = top_branch_num;
   wc->pool = wc_pool;
   wc->ctx = ctx;
 
@@ -659,22 +657,27 @@ typedef struct action_t {
   /* argument revisions */
   svn_opt_revision_t rev_spec[3];
 
+  const char *branch_id[3];
+
   /* argument paths */
   const char *relpath[3];
 } action_t;
 
 /* ====================================================================== */
 
-/* Find the deepest branch in the repository of which REVNUM:RRPATH is
- * either the root element or a normal, non-sub-branch element.
+/* Find the deepest branch in the repository of which REVNUM:BRANCH_ID:RELPATH
+ * is either the root element or a normal, non-sub-branch element.
  *
- * RRPATH is a repository-relative path. REVNUM is a revision number, or
+ * RELPATH is a repository-relative path. REVNUM is a revision number, or
  * SVN_INVALID_REVNUM meaning the current txn.
  *
  * Return the location of the element in that branch, or with
  * EID=-1 if no element exists there.
  *
- * Return an error if B<TOP_BRANCH_NUM> does not exist in r<REVNUM>; otherwise,
+ * If BRANCH_ID is null, the default is the WC base branch when REVNUM is
+ * specified, and the WC working branch when REVNUM is SVN_INVALID_REVNUM.
+ *
+ * Return an error if branch BRANCH_ID does not exist in r<REVNUM>; otherwise,
  * the result will never be NULL, as every path is within at least the root
  * branch.
  */
@@ -682,7 +685,8 @@ static svn_error_t *
 find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
                           svnmover_wc_t *wc,
                           svn_revnum_t revnum,
-                          const char *rrpath,
+                          const char *branch_id,
+                          const char *relpath,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
@@ -690,21 +694,30 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
     {
       const svn_branch_repos_t *repos = wc->working->branch->rev_root->repos;
 
-      SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(el_rev_p,
-                                                       rrpath,
-                                                       wc->top_branch_num,
-                                                       revnum, repos,
+      if (! branch_id)
+        branch_id = wc->base->branch_id;
+      SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(el_rev_p, repos,
+                                                       revnum,
+                                                       branch_id,
+                                                       relpath,
                                                        result_pool,
                                                        scratch_pool));
     }
   else
     {
+      svn_branch_state_t *branch
+        = branch_id ? svn_branch_revision_root_get_branch_by_id(
+                        wc->working->branch->rev_root, branch_id, scratch_pool)
+                    : wc->working->branch;
       svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
 
-      svn_branch_find_nested_branch_element_by_rrpath(
+      if (! branch)
+        return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                 _("Branch %s not found in working state"),
+                                 branch_id);
+      svn_branch_find_nested_branch_element_by_relpath(
         &el_rev->branch, &el_rev->eid,
-        wc->working->branch,
-        rrpath, scratch_pool);
+        branch, relpath, scratch_pool);
       el_rev->rev = SVN_INVALID_REVNUM;
       *el_rev_p = el_rev;
     }
@@ -2654,10 +2667,14 @@ execute(svnmover_wc_t *wc,
 
               arg[j]->path_name = svn_relpath_basename(rrpath, NULL);
               SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->el_rev, wc,
-                                                arg[j]->revnum, rrpath,
+                                                arg[j]->revnum,
+                                                action->branch_id[j],
+                                                rrpath,
                                                 iterpool, iterpool));
               SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->parent_el_rev, wc,
-                                                arg[j]->revnum, parent_rrpath,
+                                                arg[j]->revnum,
+                                                action->branch_id[j],
+                                                parent_rrpath,
                                                 iterpool, iterpool));
             }
         }
@@ -2778,7 +2795,6 @@ execute(svnmover_wc_t *wc,
             notify_v("A+  %s",
                      branch_str(new_branch, iterpool));
             /* Switch the WC working state to this new branch */
-            wc->top_branch_num = new_branch->outer_eid;
             wc->working->branch_id = svn_branch_get_id(new_branch, wc->pool);
             wc->working->branch = new_branch;
           }
@@ -3322,6 +3338,16 @@ parse_actions(apr_array_header_t **actions,
                                        "Argument '%s' is a URL; use "
                                        "--root-url (-U) instead", path);
             }
+          /* Parse "^B<branch-id>/path" syntax. */
+          if (strncmp("^B", path, 2) == 0)
+            {
+              const char *slash = strchr(path, '/');
+
+              action->branch_id[k]
+                = slash ? apr_pstrndup(pool, path + 1, slash - (path + 1))
+                        : path + 1;
+              path = slash ? slash + 1 : "";
+            }
           /* These args must be relpaths, except for the 'local file' arg
              of a 'put' command. */
           if (! svn_relpath_is_canonical(path)
@@ -3731,7 +3757,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   SVN_ERR(wc_create(&wc,
                     anchor_url, base_revision,
-                    atoi(branch_id + 1) /*top_branch_num*/, branch_id,
+                    branch_id,
                     ctx, pool, pool));
 
   do
