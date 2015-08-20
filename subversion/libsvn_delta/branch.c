@@ -848,6 +848,8 @@ svn_branch_add_new_branch(svn_branch_revision_root_t *rev_root,
 
   SVN_ERR_ASSERT_NO_RETURN(!outer_branch || outer_branch->rev_root == rev_root);
 
+  if (! outer_branch)
+    outer_eid = rev_root->root_branches->nelts;
   if (root_eid == -1)
     root_eid = svn_branch_allocate_new_eid(rev_root);
 
