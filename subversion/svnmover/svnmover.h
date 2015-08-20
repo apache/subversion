@@ -38,21 +38,27 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+typedef struct svnmover_wc_version_t
+{
+  svn_revnum_t revision;  /* always SVN_INVALID_REVNUM in working version */
+  const char *branch_id;
+  svn_branch_state_t *branch;
+} svnmover_wc_version_t;
+
 typedef struct svnmover_wc_t
 {
   apr_pool_t *pool;
   const char *repos_root_url;
   /*const char *anchor_repos_relpath;*/
   svn_revnum_t head_revision;
-  svn_revnum_t base_revision;
 
   svn_ra_session_t *ra_session;
   svn_editor3_t *editor;
   int top_branch_num;
-  const char *base_branch_id;
-  svn_branch_state_t *base_branch;
-  const char *working_branch_id;
-  svn_branch_state_t *working_branch;
+
+  /* Base and working versions. */
+  svnmover_wc_version_t *base, *working;
+
   svn_client_ctx_t *ctx;
 
 } svnmover_wc_t;
