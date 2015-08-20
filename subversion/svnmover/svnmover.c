@@ -163,13 +163,11 @@ wc_checkout(svnmover_wc_t *wc,
 
   /* Validate and store the new base revision number */
   if (! SVN_IS_VALID_REVNUM(base_revision))
-    wc->base_revision = wc->head_revision;
+    base_revision = wc->head_revision;
   else if (base_revision > wc->head_revision)
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld (HEAD is %ld)"),
                              base_revision, wc->head_revision);
-  else
-    wc->base_revision = base_revision;
 
   /* Choose whether to store branching info in a local dir or in revprops.
      (For now, just to exercise the options, we choose local files for
@@ -188,25 +186,29 @@ wc_checkout(svnmover_wc_t *wc,
   SVN_ERR(svn_ra_load_branching_state(&edit_txn,
                                       &fetch_func, &fetch_baton,
                                       wc->ra_session, branch_info_dir,
-                                      wc->base_revision,
+                                      base_revision,
                                       wc->pool, scratch_pool));
 
   /* Store the WC base state */
   base_txn = svn_branch_revision_root_get_base(edit_txn);
-  wc->base_branch_id = base_branch_id;
-  wc->base_branch
-    = svn_branch_revision_root_get_branch_by_id(base_txn, wc->base_branch_id,
+  wc->base = apr_pcalloc(wc->pool, sizeof(*wc->base));
+  wc->base->revision = base_revision;
+  wc->base->branch_id = base_branch_id;
+  wc->base->branch
+    = svn_branch_revision_root_get_branch_by_id(base_txn, wc->base->branch_id,
                                                 scratch_pool);
-  if (! wc->base_branch)
+  if (! wc->base->branch)
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                              "Cannot check out WC: branch %s not found in r%ld",
-                             wc->base_branch_id, wc->base_revision);
+                             base_branch_id, base_revision);
 
-  wc->working_branch_id = wc->base_branch_id;
-  wc->working_branch
-    = svn_branch_revision_root_get_branch_by_id(edit_txn, wc->working_branch_id,
+  wc->working = apr_pcalloc(wc->pool, sizeof(*wc->working));
+  wc->working->revision = SVN_INVALID_REVNUM;
+  wc->working->branch_id = wc->base->branch_id;
+  wc->working->branch
+    = svn_branch_revision_root_get_branch_by_id(edit_txn, wc->working->branch_id,
                                                 scratch_pool);
-  SVN_ERR_ASSERT(wc->working_branch);
+  SVN_ERR_ASSERT(wc->working->branch);
 
   SVN_ERR(svn_editor3_in_memory(&wc->editor,
                                 edit_txn,
@@ -521,7 +523,7 @@ wc_commit(svn_revnum_t *new_rev_p,
   /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
 
   edit_root_branch = svn_branch_revision_root_get_branch_by_id(
-                       commit_txn, wc->working_branch_id, scratch_pool);
+                       commit_txn, wc->working->branch_id, scratch_pool);
 
   /* We might be creating a new top-level branch in this commit. That is the
      only case in which the working branch will not be found in EDIT_TXN.
@@ -535,23 +537,23 @@ wc_commit(svn_revnum_t *new_rev_p,
 
       SVN_ERR(svn_branch_branch_subtree(&edit_root_branch,
                                         *svn_branch_get_subtree(
-                                          wc->base_branch,
-                                          wc->base_branch->root_eid,
+                                          wc->base->branch,
+                                          wc->base->branch->root_eid,
                                           scratch_pool),
                                         commit_txn,
-                                        wc->working_branch->outer_branch,
+                                        NULL /*outer_branch*/,
                                         top_branch_num /*outer_eid*/,
                                         scratch_pool));
     }
   SVN_ERR(replay(commit_editor,
                  edit_root_branch,
-                 wc->base_branch,
-                 wc->working_branch,
+                 wc->base->branch,
+                 wc->working->branch,
                  scratch_pool));
   if (change_detected)
     {
       ccbb.edit_txn = commit_txn;
-      ccbb.wc_base_branch_id = wc->base_branch_id;
+      ccbb.wc_base_branch_id = wc->base->branch_id;
       ccbb.wc_commit_branch_id = svn_branch_get_id(edit_root_branch,
                                                    scratch_pool);
       ccbb.editor = commit_editor;
@@ -689,7 +691,7 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
 {
   if (SVN_IS_VALID_REVNUM(revnum))
     {
-      const svn_branch_repos_t *repos = wc->working_branch->rev_root->repos;
+      const svn_branch_repos_t *repos = wc->working->branch->rev_root->repos;
 
       SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(el_rev_p,
                                                        rrpath,
@@ -704,7 +706,7 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
 
       svn_branch_find_nested_branch_element_by_rrpath(
         &el_rev->branch, &el_rev->eid,
-        wc->working_branch,
+        wc->working->branch,
         rrpath, scratch_pool);
       el_rev->rev = SVN_INVALID_REVNUM;
       *el_rev_p = el_rev;
@@ -1590,15 +1592,15 @@ do_update(svnmover_wc_t *wc,
           apr_pool_t *scratch_pool)
 {
   /* Keep hold of the previous WC txn */
-  svn_branch_state_t *previous_base_br = wc->base_branch;
-  svn_branch_state_t *previous_working_br = wc->working_branch;
+  svn_branch_state_t *previous_base_br = wc->base->branch;
+  svn_branch_state_t *previous_working_br = wc->working->branch;
   svn_branch_el_rev_id_t *yca, *src, *tgt;
 
   /* Complete the old edit drive into the 'WC' txn */
   SVN_ERR(svn_editor3_complete(wc->editor));
 
   /* Check out a new WC, re-using the same data object */
-  SVN_ERR(wc_checkout(wc, revision, wc->base_branch_id,
+  SVN_ERR(wc_checkout(wc, revision, wc->base->branch_id,
                       scratch_pool));
 
   /* Merge changes from the old into the new WC */
@@ -1609,8 +1611,8 @@ do_update(svnmover_wc_t *wc,
   src = svn_branch_el_rev_id_create(previous_working_br,
                                     previous_working_br->root_eid,
                                     SVN_INVALID_REVNUM, scratch_pool);
-  tgt = svn_branch_el_rev_id_create(wc->working_branch,
-                                    wc->working_branch->root_eid,
+  tgt = svn_branch_el_rev_id_create(wc->working->branch,
+                                    wc->working->branch->root_eid,
                                     SVN_INVALID_REVNUM, scratch_pool);
   SVN_ERR(svn_branch_merge(wc->editor, src, tgt, yca,
                            scratch_pool));
@@ -2378,7 +2380,7 @@ do_commit(svn_revnum_t *new_rev_p,
   /* Check out a new WC if a commit was performed */
   if (SVN_IS_VALID_REVNUM(new_rev))
     {
-      SVN_ERR(wc_checkout(wc, new_rev, wc->working_branch_id,
+      SVN_ERR(wc_checkout(wc, new_rev, wc->working->branch_id,
                           scratch_pool));
     }
 
@@ -2395,9 +2397,9 @@ do_revert(svnmover_wc_t *wc,
 {
   /* Replay the inverse of the current edit txn, into the current edit txn */
   SVN_ERR(replay(wc->editor,
-                 wc->working_branch,
-                 wc->working_branch,
-                 wc->base_branch,
+                 wc->working->branch,
+                 wc->working->branch,
+                 wc->base->branch,
                  scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2645,7 +2647,7 @@ execute(svnmover_wc_t *wc,
               else if (action->rev_spec[j].kind == svn_opt_revision_base
                        || action->rev_spec[j].kind == svn_opt_revision_committed)
                 {
-                  arg[j]->revnum = wc->base_revision;
+                  arg[j]->revnum = wc->base->revision;
                 }
               else
                 return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -2685,11 +2687,11 @@ execute(svnmover_wc_t *wc,
           {
             svn_branch_el_rev_id_t *from, *to;
 
-            from = svn_branch_el_rev_id_create(wc->base_branch,
-                                               wc->base_branch->root_eid,
-                                               wc->base_revision, iterpool);
-            to = svn_branch_el_rev_id_create(wc->working_branch,
-                                             wc->working_branch->root_eid,
+            from = svn_branch_el_rev_id_create(wc->base->branch,
+                                               wc->base->branch->root_eid,
+                                               wc->base->revision, iterpool);
+            to = svn_branch_el_rev_id_create(wc->working->branch,
+                                             wc->working->branch->root_eid,
                                              SVN_INVALID_REVNUM, iterpool);
             SVN_ERR(branch_diff_r(editor,
                                       from, to,
@@ -2736,13 +2738,13 @@ execute(svnmover_wc_t *wc,
                 SVN_ERR(svn_stream_for_stdout(&stream, iterpool));
                 SVN_ERR(svn_branch_revision_root_serialize(
                           stream,
-                          wc->working_branch->rev_root,
+                          wc->working->branch->rev_root,
                           iterpool));
               }
             else
               {
                 /* Note: BASE_REVISION is always a real revision number, here */
-                SVN_ERR(list_all_branches(wc->working_branch->rev_root, TRUE,
+                SVN_ERR(list_all_branches(wc->working->branch->rev_root, TRUE,
                                           iterpool));
               }
           }
@@ -2777,15 +2779,15 @@ execute(svnmover_wc_t *wc,
             svn_branch_state_t *new_branch;
 
             SVN_ERR(do_topbranch(&new_branch,
-                                 wc->working_branch->rev_root,
+                                 wc->working->branch->rev_root,
                                  arg[0]->el_rev->branch, arg[0]->el_rev->eid,
                                  iterpool));
             notify_v("A+  %s",
                      branch_str(new_branch, iterpool));
             /* Switch the WC working state to this new branch */
             wc->top_branch_num = new_branch->outer_eid;
-            wc->working_branch_id = svn_branch_get_id(new_branch, wc->pool);
-            wc->working_branch = new_branch;
+            wc->working->branch_id = svn_branch_get_id(new_branch, wc->pool);
+            wc->working->branch = new_branch;
           }
           break;
 
