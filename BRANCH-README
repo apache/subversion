@@ -80,7 +80,7 @@ Work on this branch:
       diff
       merge
       commit
-      update
+      update, switch
       revert
 
     UI things to do:
@@ -93,8 +93,6 @@ Work on this branch:
       provide a way to specify a mixed-rev base state
 
       provide a UI for element-based addressing ('mv e101:foo e103:foo'?)
-
-      "switch" command
 
       "mktbranch" -- make a new (empty, unrelated) top-level branch
 
