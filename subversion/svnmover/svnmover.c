@@ -589,6 +589,7 @@ typedef enum action_code_t {
   ACTION_RM,
   ACTION_COMMIT,
   ACTION_UPDATE,
+  ACTION_SWITCH,
   ACTION_STATUS,
   ACTION_REVERT,
   ACTION_MIGRATE
@@ -646,6 +647,8 @@ static const action_defn_t action_defn[] =
     "commit the changes"},
   {ACTION_UPDATE,           "update", 1, ".@REV",
     "update to revision REV, keeping local changes"},
+  {ACTION_SWITCH,           "switch", 1, "TARGET[@REV]",
+    "switch to another branch and/or revision, keeping local changes"},
   {ACTION_STATUS,           "status", 0, "",
     "same as 'diff .@base .'"},
   {ACTION_REVERT,           "revert", 0, "",
@@ -1591,47 +1594,63 @@ svn_branch_merge(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
+/* Switch the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD)
+ * and branch BRANCH_ID.
  *
  * Merge any changes in the existing txn into the new txn.
- *
- * ### If current WC branch doesn't exist in target rev, should
- *     'update' follow to a different branch? By following merge graph?
- *     Presently it would try to update to a state of nonexistence.
  */
 static svn_error_t *
-do_update(svnmover_wc_t *wc,
+do_switch(svnmover_wc_t *wc,
           svn_revnum_t revision,
+          svn_branch_state_t *target_branch,
           apr_pool_t *scratch_pool)
 {
+  const char *target_branch_id
+    = svn_branch_get_id(target_branch, scratch_pool);
   /* Keep hold of the previous WC txn */
   svn_branch_state_t *previous_base_br = wc->base->branch;
   svn_branch_state_t *previous_working_br = wc->working->branch;
-  svn_branch_el_rev_id_t *yca, *src, *tgt;
+  svn_boolean_t has_local_changes = TRUE /* ### wc_has_local_changes(wc) */;
+
+  if (has_local_changes
+      && target_branch->root_eid != previous_base_br->root_eid)
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Cannot switch to branch '%s' and preserve "
+                                 "local changes as the new root element e%d "
+                                 "is not related to the old root element e%d"),
+                               target_branch_id,
+                               target_branch->root_eid,
+                               previous_base_br->root_eid);
+    }
 
   /* Complete the old edit drive into the 'WC' txn */
   SVN_ERR(svn_editor3_complete(wc->editor));
 
   /* Check out a new WC, re-using the same data object */
-  SVN_ERR(wc_checkout(wc, revision, wc->base->branch_id,
-                      scratch_pool));
+  SVN_ERR(wc_checkout(wc, revision, target_branch_id, scratch_pool));
 
-  /* Merge changes from the old into the new WC */
-  yca = svn_branch_el_rev_id_create(previous_base_br,
-                                    previous_base_br->root_eid,
-                                    previous_base_br->rev_root->rev,
-                                    scratch_pool);
-  src = svn_branch_el_rev_id_create(previous_working_br,
-                                    previous_working_br->root_eid,
-                                    SVN_INVALID_REVNUM, scratch_pool);
-  tgt = svn_branch_el_rev_id_create(wc->working->branch,
-                                    wc->working->branch->root_eid,
-                                    SVN_INVALID_REVNUM, scratch_pool);
-  SVN_ERR(svn_branch_merge(wc->editor, src, tgt, yca,
-                           scratch_pool));
-  /* ### TODO: If the merge raises conflicts, either revert to the
-         pre-update state or store and handle the conflicts. Currently
-         this just leaves the merge partially done and raises an error. */
+  if (has_local_changes)
+    {
+      svn_branch_el_rev_id_t *yca, *src, *tgt;
+
+      /* Merge changes from the old into the new WC */
+      yca = svn_branch_el_rev_id_create(previous_base_br,
+                                        previous_base_br->root_eid,
+                                        previous_base_br->rev_root->rev,
+                                        scratch_pool);
+      src = svn_branch_el_rev_id_create(previous_working_br,
+                                        previous_working_br->root_eid,
+                                        SVN_INVALID_REVNUM, scratch_pool);
+      tgt = svn_branch_el_rev_id_create(wc->working->branch,
+                                        wc->working->branch->root_eid,
+                                        SVN_INVALID_REVNUM, scratch_pool);
+      SVN_ERR(svn_branch_merge(wc->editor, src, tgt, yca,
+                               scratch_pool));
+      /* ### TODO: If the merge raises conflicts, either revert to the
+             pre-update state or store and handle the conflicts. Currently
+             this just leaves the merge partially done and raises an error. */
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3028,12 +3047,25 @@ execute(svnmover_wc_t *wc,
           break;
 
         case ACTION_UPDATE:
+          /* ### If current WC branch doesn't exist in target rev, should
+             'update' follow to a different branch? By following merge graph?
+             Presently it would try to update to a state of nonexistence. */
           /* path (or eid) is currently required for syntax, but ignored */
           VERIFY_EID_EXISTS("update", 0);
           VERIFY_REV_SPECIFIED("update", 0);
           {
-              SVN_ERR(do_update(wc, arg[0]->revnum, iterpool));
-              editor = wc->editor;
+            SVN_ERR(do_switch(wc, arg[0]->revnum, wc->base->branch,
+                              iterpool));
+            editor = wc->editor;
+          }
+          break;
+
+        case ACTION_SWITCH:
+          VERIFY_EID_EXISTS("switch", 0);
+          {
+            SVN_ERR(do_switch(wc, arg[0]->revnum, arg[0]->el_rev->branch,
+                              iterpool));
+            editor = wc->editor;
           }
           break;
 
