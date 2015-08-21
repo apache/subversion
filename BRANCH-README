@@ -96,7 +96,15 @@ Work on this branch:
 
       "switch" command
 
+      "mktbranch" -- make a new (empty, unrelated) top-level branch
+
+      "rmtbranch" -- remove a top-level branch
+
     Bigger things to do:
+
+      Concept of a "branch" as having ancestry. It should be possible
+      to trace from a current branch back past branching points to a
+      historical version in a branch it was branched from.
 
       "Replay" API: convert committed changes to an edit drive
 
@@ -132,10 +140,6 @@ Work on this branch:
       Make machine parsable serial input and output for diffs etc.
         - This may help with prototyping by allowing easier connection to
           external scripts etc.
-
-      Provide a way to create and access branches of the repo root branch
-      that are outside the default repository paths name-space.
-        - This style of whole-repo branching closely matches most DVCSs.
 
       Persist WC on disk.
 
