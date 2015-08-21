@@ -571,6 +571,7 @@ wc_commit(svn_revnum_t *new_rev_p,
 }
 
 typedef enum action_code_t {
+  ACTION_INFO_WC,
   ACTION_DIFF,
   ACTION_LOG,
   ACTION_LIST_BRANCHES,
@@ -604,6 +605,8 @@ typedef struct action_defn_t {
 #define NL "\n                           "
 static const action_defn_t action_defn[] =
 {
+  {ACTION_INFO_WC,          "info-wc", 0, "",
+    "print information about the WC"},
   {ACTION_LIST_BRANCHES,    "branches", 1, "PATH",
     "list all branches rooted at the same element as PATH"},
   {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0, "",
@@ -2681,6 +2684,13 @@ execute(svnmover_wc_t *wc,
 
       switch (action->action)
         {
+        case ACTION_INFO_WC:
+          printf("Repository Root: %s\n", wc->repos_root_url);
+          printf("Base Revision: %ld\n", wc->base->revision);
+          printf("Base Branch:    %s\n", wc->base->branch_id);
+          printf("Working Branch: %s\n", wc->working->branch_id);
+          break;
+
         case ACTION_DIFF:
           VERIFY_EID_EXISTS("diff", 0);
           VERIFY_EID_EXISTS("diff", 1);
