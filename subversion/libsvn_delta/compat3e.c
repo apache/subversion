@@ -1713,16 +1713,12 @@ drive_changes_r(const char *rrpath,
 /*
  * Drive svn_delta_editor_t (actions: add/copy/delete/modify) from
  * a before-and-after element mapping.
- *
- * Process a single hierarchy of nested branches, rooted in the top-level
- * branch ROOT_BRANCH.
  */
 static svn_error_t *
-drive_changes_branch(ev3_from_delta_baton_t *eb,
-                     svn_branch_state_t *root_branch,
-                     apr_pool_t *scratch_pool)
+drive_changes(ev3_from_delta_baton_t *eb,
+              apr_pool_t *scratch_pool)
 {
-  apr_hash_t *paths_final;
+  int i;
   const apr_array_header_t *paths;
 
   /* Convert the element mappings to an svn_delta_editor_t traversal.
@@ -1731,40 +1727,47 @@ drive_changes_branch(ev3_from_delta_baton_t *eb,
         2. traverse paths in depth-first order.
         3. modify/delete/add/replace as needed at each path.
    */
-  paths_final = apr_hash_make(scratch_pool);
-  convert_branch_to_paths_r(paths_final,
-                            root_branch,
-                            scratch_pool, scratch_pool);
 
-  {
-    const char *top_path = branch_get_storage_root_rrpath(root_branch,
-                                                          scratch_pool);
-    svn_pathrev_t current;
-    svn_branch_state_t *base_root_branch
-      = svn_branch_repos_get_root_branch(eb->edited_rev_root->repos,
-                                         eb->edited_rev_root->base_rev,
-                                         root_branch->outer_eid /*top_branch_num*/);
-    svn_boolean_t branch_is_new = !base_root_branch;
+  /* Process one hierarchy of nested branches at a time. */
+  for (i = 0; i < eb->edited_rev_root->root_branches->nelts; i++)
+    {
+      svn_branch_state_t *root_branch
+        = svn_branch_revision_root_get_root_branch(eb->edited_rev_root, i);
+      apr_hash_t *paths_final;
 
-    current.rev = eb->edited_rev_root->base_rev;
-    current.relpath = top_path;
+      const char *top_path = branch_get_storage_root_rrpath(root_branch,
+                                                            scratch_pool);
+      svn_pathrev_t current;
+      svn_branch_state_t *base_root_branch
+        = svn_branch_repos_get_root_branch(eb->edited_rev_root->repos,
+                                           eb->edited_rev_root->base_rev,
+                                           root_branch->outer_eid /*top_branch_num*/);
+      svn_boolean_t branch_is_new = !base_root_branch;
 
-    /* Create the top-level storage node if the branch is new, or if this is
-       the first commit to branch B0 which was created in r0 but had no
-       storage node there. */
-    if (branch_is_new || current.rev == 0)
-      {
-        change_node_t *change;
+      paths_final = apr_hash_make(scratch_pool);
+      convert_branch_to_paths_r(paths_final,
+                                root_branch,
+                                scratch_pool, scratch_pool);
 
-        SVN_ERR(insert_change(&change, eb->changes, top_path, RESTRUCTURE_ADD));
-        change->kind = svn_node_dir;
-      }
+      current.rev = eb->edited_rev_root->base_rev;
+      current.relpath = top_path;
 
-    SVN_ERR(drive_changes_r(top_path, &current,
-                            paths_final, svn_branch_get_id(root_branch,
-                                                           scratch_pool),
-                            eb, scratch_pool));
-  }
+      /* Create the top-level storage node if the branch is new, or if this is
+         the first commit to branch B0 which was created in r0 but had no
+         storage node there. */
+      if (branch_is_new || current.rev == 0)
+        {
+          change_node_t *change;
+
+          SVN_ERR(insert_change(&change, eb->changes, top_path, RESTRUCTURE_ADD));
+          change->kind = svn_node_dir;
+        }
+
+      SVN_ERR(drive_changes_r(top_path, &current,
+                              paths_final, svn_branch_get_id(root_branch,
+                                                             scratch_pool),
+                              eb, scratch_pool));
+    }
 
   /* If the driver has not explicitly opened the root directory via the
      start_edit (aka open_root) callback, do so now. */
@@ -1815,21 +1818,11 @@ editor3_complete(void *baton,
                  apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  int i;
   svn_error_t *err;
 
   SVN_ERR(editor3_sequence_point(baton, scratch_pool));
 
-  /* Drive the tree we've created. */
-  for (i = 0; i < eb->edited_rev_root->root_branches->nelts; i++)
-    {
-      svn_branch_state_t *b
-        = svn_branch_revision_root_get_root_branch(eb->edited_rev_root, i);
-
-      err = drive_changes_branch(eb, b, scratch_pool);
-      if (err)
-        break;
-    }
+  err = drive_changes(eb, scratch_pool);
 
   if (!err)
      {
