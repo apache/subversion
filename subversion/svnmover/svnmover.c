@@ -302,6 +302,13 @@ subtree_replay(svn_editor3_t *editor,
                      || svn_element_payload_invariants(e1->payload));
       if (e0 || e1)
         {
+          /* ### Ensure the requested EIDs are allocated... This is not the
+                 right way to do it. Instead the Editor should map 'to be
+                 created' EIDs to new EIDs? See BRANCH-README. */
+          while (eid >= edit_branch->rev_root->next_eid
+                 || (e1 && e1->parent_eid >= edit_branch->rev_root->next_eid))
+            svn_branch_allocate_new_eid(edit_branch->rev_root);
+
           if (e0 && e1)
             {
               SVN_DBG(("replay: alter e%d", eid));
