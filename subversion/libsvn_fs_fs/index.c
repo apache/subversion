@@ -3207,17 +3207,10 @@ svn_fs_fs__l2p_index_from_p2l_entries(const char **protoname,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   svn_revnum_t last_revision = SVN_INVALID_REVNUM;
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
 
   /* L2P index must be written in revision order.
    * Sort ENTRIES accordingly. */
   svn_sort__array(entries, compare_p2l_entry_revision);
-
-  /* Find the first revision in the index
-   * (must exist since no truly empty revs are allowed). */
-  for (i = 0; i < entries->nelts && !SVN_IS_VALID_REVNUM(revision); ++i)
-    revision = APR_ARRAY_IDX(entries, i, const svn_fs_fs__p2l_entry_t *)
-               ->item.revision;
 
   /* Create the temporary proto-rev file. */
   SVN_ERR(svn_io_open_unique_file3(NULL, protoname, NULL,
