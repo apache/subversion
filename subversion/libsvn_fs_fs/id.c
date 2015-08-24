@@ -610,7 +610,9 @@ svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
   if (id == NULL)
     return;
 
-  /* serialize the id data struct itself */
+  /* Serialize the id data struct itself.
+   * Note that the structure behind IN is actually larger than a mere
+   * svn_fs_id_t . */
   svn_temp_serializer__add_leaf(context,
                                 (const void * const *)in,
                                 sizeof(fs_fs__id_t));

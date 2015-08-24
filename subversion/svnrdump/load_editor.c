@@ -167,8 +167,7 @@ set_revision_mapping(apr_hash_t *rev_map,
                                          sizeof(svn_revnum_t) * 2);
   mapped_revs[0] = from_rev;
   mapped_revs[1] = to_rev;
-  apr_hash_set(rev_map, mapped_revs,
-               sizeof(svn_revnum_t), mapped_revs + 1);
+  apr_hash_set(rev_map, mapped_revs, sizeof(*mapped_revs), mapped_revs + 1);
 }
 
 /* Return the revision to which FROM_REV maps in REV_MAP, or
