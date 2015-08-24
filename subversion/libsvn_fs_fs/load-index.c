@@ -29,6 +29,39 @@
 #include "util.h"
 #include "transaction.h"
 
+/* Make sure that the svn_fs_fs__p2l_entry_t* in ENTRIES are consecutive
+ * and non-overlapping.  Use SCRATCH_POOL for temporaries. */
+static svn_error_t *
+check_all_covered(apr_array_header_t *entries,
+                  apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_off_t expected = 0;
+  for (i = 0; i < entries->nelts; ++i)
+    {
+      const svn_fs_fs__p2l_entry_t *entry
+        = APR_ARRAY_IDX(entries, i, const svn_fs_fs__p2l_entry_t *);
+
+      if (entry->offset < expected)
+        return svn_error_createf(SVN_ERR_INVALID_INPUT, NULL,
+                                 "Overlapping index data for offset %s",
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                              (apr_uint64_t)expected));
+
+      if (entry->offset > expected)
+        return svn_error_createf(SVN_ERR_INVALID_INPUT, NULL,
+                                 "Missing index data for offset %s",
+                                 apr_psprintf(scratch_pool,
+                                              "%" APR_UINT64_T_HEX_FMT,
+                                              (apr_uint64_t)expected));
+
+      expected = entry->offset + entry->size;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* A svn_sort__array compatible comparator function, sorting the
  * svn_fs_fs__p2l_entry_t** given in LHS, RHS by offset. */
 static int
@@ -68,6 +101,9 @@ svn_fs_fs__load_index(svn_fs_t *fs,
       const char *l2p_proto_index;
       const char *p2l_proto_index;
       svn_fs_fs__revision_file_t *rev_file;
+
+      /* Ensure that the index data is complete. */
+      SVN_ERR(check_all_covered(entries, scratch_pool));
 
       /* Open rev / pack file & trim indexes + footer off it. */
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file_writable(&rev_file, fs,
