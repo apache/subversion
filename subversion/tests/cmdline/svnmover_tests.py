@@ -1083,8 +1083,7 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
   # This is a form of 'branching'. We want to create new branched content in
   # the existing target branch rather than a separate new branch nested inside
   # the existing branch. Conceptually this is a form of 'branch' or 'merge' or
-  # 'instantiate'. With the current 'svnmover' UI, we achieve this by a variant
-  # of the 'mv' command, where it performs moving by 'branch-and-delete'.
+  # 'instantiate'. With the current 'svnmover' UI it is called 'branch-into'.
   for proj in ['proj1', 'proj2']:
     test_svnmover2(sbox, '',
                    reported_br_diff('') +
