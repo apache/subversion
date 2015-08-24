@@ -2768,6 +2768,15 @@ typedef struct arg_t
                              _("%s: Element not found at path '%s'"),   \
                              op, svn_relpath_dirname(action->relpath[i], pool));
 
+#define VERIFY_NOT_CHILD_OF_SELF(op, i, j, pool)                        \
+  if (svn_relpath_skip_ancestor(                                        \
+        svn_branch_get_rrpath_by_eid(arg[i]->el_rev->branch,            \
+                                     arg[i]->el_rev->eid, pool),        \
+        svn_branch_get_rrpath_by_eid(arg[j]->parent_el_rev->branch,     \
+                                     arg[j]->parent_el_rev->eid, pool))) \
+    return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
+                             _("%s: Cannot move to child of self"), op);
+
 /* If EL_REV is the root element of a branch, return the corresponding
  * subbranch-root element of its outer branch.
  *
@@ -3068,14 +3077,12 @@ execute(svnmover_wc_t *wc,
             return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                      _("mv: cannot move the repository root"));
 
-          if (svn_relpath_skip_ancestor(action->relpath[0], action->relpath[1]))
-            return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                                     _("mv: cannot move to child of self"));
           VERIFY_REV_UNSPECIFIED("mv", 0);
           VERIFY_EID_EXISTS("mv", 0);
           VERIFY_REV_UNSPECIFIED("mv", 1);
           VERIFY_EID_NONEXISTENT("mv", 1);
           VERIFY_PARENT_EID_EXISTS("mv", 1);
+          VERIFY_NOT_CHILD_OF_SELF("mv", 0, 1, iterpool);
           SVN_ERR(do_move(editor, arg[0]->el_rev, arg[1]->parent_el_rev, arg[1]->path_name,
                           iterpool));
           break;
