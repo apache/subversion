@@ -65,7 +65,9 @@ ssl_convert_serf_failures(int failures)
   apr_uint32_t svn_failures = 0;
   apr_size_t i;
 
-  for (i = 0; i < sizeof(serf_failure_map) / (2 * sizeof(apr_uint32_t)); ++i)
+  for (i = 0;
+       i < sizeof(serf_failure_map) / (sizeof(serf_failure_map[0]));
+       ++i)
     {
       if (failures & serf_failure_map[i][0])
         {

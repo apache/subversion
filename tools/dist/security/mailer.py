@@ -23,6 +23,11 @@ Generator of signed advisory mails
 
 from __future__ import absolute_import
 
+import re
+import uuid
+import hashlib
+import smtplib
+import textwrap
 import email.utils
 
 from email.mime.multipart import MIMEMultipart
@@ -33,15 +38,21 @@ try:
 except ImportError:
     import security._gnupg as gnupg
 
+import security.parser
+
 
 class Mailer(object):
     """
     Constructs signed PGP/MIME advisory mails.
     """
 
-    def __init__(self, notification):
+    def __init__(self, notification, sender, message_template,
+                 release_date, dist_revision, *release_versions):
         assert len(notification) > 0
+        self.__sender = sender
         self.__notification = notification
+        self.__message_content = self.__message_content(
+            message_template, release_date, dist_revision, release_versions)
 
     def __subject(self):
         """
@@ -78,6 +89,79 @@ class Mailer(object):
 
         return template.format(**kwargs)
 
+    def __message_content(self, message_template,
+                          release_date, dist_revision, release_versions):
+        """
+        Construct the message from the notification mail template.
+        """
+
+        # Construct the replacement arguments for the notification template
+        culprits = set()
+        advisories = []
+        base_version_keys = self.__notification.base_version_keys()
+        for metadata in self.__notification:
+            culprits |= metadata.culprit
+            advisories.append(
+                '  * {}\n    {}'.format(metadata.tracking_id, metadata.title))
+        release_version_keys = set(security.parser.Patch.split_version(n)
+                                   for n in release_versions)
+
+        multi = (len(self.__notification) > 1)
+        kwargs = dict(multiple=(multi and 'multiple ' or 'a '),
+                      alert=(multi and 'alerts' or 'alert'),
+                      culprits=self.__culprits(culprits),
+                      advisories='\n'.join(advisories),
+                      release_date=release_date.strftime('%d %B %Y'),
+                      release_day=release_date.strftime('%d %B'),
+                      base_versions = self.__versions(base_version_keys),
+                      release_versions = self.__versions(release_version_keys),
+                      dist_revision=str(dist_revision))
+
+        # Parse, interpolate and rewrap the notification template
+        wrapped = []
+        content = security.parser.Text(message_template)
+        for line in content.text.format(**kwargs).split('\n'):
+            if len(line) > 0 and not line[0].isspace():
+                for part in textwrap.wrap(line,
+                                          break_long_words=False,
+                                          break_on_hyphens=False):
+                    wrapped.append(part)
+            else:
+                wrapped.append(line)
+        return security.parser.Text(None, '\n'.join(wrapped).encode('utf-8'))
+
+    def __versions(self, versions):
+        """
+        Return a textual representation of the set of VERSIONS
+        suitable for inclusion in a notification mail.
+        """
+
+        text = tuple(security.parser.Patch.join_version(n)
+                     for n in sorted(versions))
+        assert len(text) > 0
+        if len(text) == 1:
+            return text[0]
+        elif len(text) == 2:
+            return ' and '.join(text)
+        else:
+            return ', '.join(text[:-1]) + ' and ' + text[-1]
+
+    def __culprits(self, culprits):
+        """
+        Return a textual representation of the set of CULPRITS
+        suitable for inclusion in a notification mail.
+        """
+
+        if self.__notification.Metadata.CULPRIT_CLIENT in culprits:
+            if self.__notification.Metadata.CULPRIT_SERVER in culprits:
+                return 'clients and servers'
+            else:
+                return 'clients'
+        elif self.__notification.Metadata.CULPRIT_SERVER in culprits:
+            return 'servers'
+        else:
+            raise ValueError('Unknown culprit ' + repr(culprits))
+
     def __attachments(self):
         filenames = set()
 
@@ -109,6 +193,60 @@ class Mailer(object):
                                + ' Patch for Subversion ' + patch.base_version)
                 yield attachment(filename, description, 'base64', patch.base64)
 
+    def generate_message(self):
+        message = SignedMessage(
+            self.__message_content,
+            self.__attachments())
+        message['From'] = self.__sender
+        message['Reply-To'] = self.__sender
+        message['To'] = self.__sender     # Will be replaced later
+        message['Subject'] = self.__subject()
+        message['Date'] = email.utils.formatdate()
+
+        # Try to make the message-id refer to the sender's domain
+        address = email.utils.parseaddr(self.__sender)[1]
+        if not address:
+            domain = None
+        else:
+            domain = address.split('@')[1]
+            if not domain:
+                domain = None
+
+        idstring = uuid.uuid1().hex
+        try:
+            msgid = email.utils.make_msgid(idstring, domain=domain)
+        except TypeError:
+            # The domain keyword was added in Python 3.2
+            msgid = email.utils.make_msgid(idstring)
+        message["Message-ID"] = msgid
+        return message
+
+    def send_mail(self, message, username, password, recipients=None,
+                  host='mail-relay.apache.org', starttls=True, port=None):
+        if not port and starttls:
+            port = 587
+        server = smtplib.SMTP(host, port)
+        if starttls:
+            server.starttls()
+        if username and password:
+            server.login(username, password)
+
+        def send(message):
+            server.sendmail("From: " + message['From'],
+                            "To: " + message['To'],
+                            message.as_string())
+
+        if recipients is None:
+            # Test mode, send message back to originator to checck
+            # that contents and signature are OK.
+            message.replace_header('To', message['From'])
+            send(message)
+        else:
+            for recipient in recipients:
+                message.replace_header('To', recipient)
+                send(message)
+        server.quit()
+
 
 class SignedMessage(MIMEMultipart):
     """
@@ -132,7 +270,7 @@ class SignedMessage(MIMEMultipart):
             payload, gpgbinary, gnupghome, use_agent, keyring, keyid)
 
         self.set_param('protocol', 'application/pgp-signature')
-        self.set_param('micalg', 'pgp-sha512')   ####!!!
+        self.set_param('micalg', 'pgp-sha512')   ####!!! GET THIS FROM KEY!
         self.preamble = 'This is an OpenPGP/MIME signed message.'
         self.attach(payload)
         self.attach(signature)
@@ -162,9 +300,13 @@ class SignedMessage(MIMEMultipart):
         a MIME attachment.
         """
 
+        # RFC3156 section 5 says line endings in the signed message
+        # must be canonical <CR><LF>.
+        cleartext = re.sub(r'\r?\n', '\r\n', payload.as_string())
+
         gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gnupghome,
                         use_agent=use_agent, keyring=keyring)
-        signature = gpg.sign(payload.as_string(),
+        signature = gpg.sign(cleartext,
                              keyid=keyid, detach=True, clearsign=False)
         sig = MIMEText('')
         sig.set_type('application/pgp-signature')

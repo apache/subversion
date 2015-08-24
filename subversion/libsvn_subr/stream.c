@@ -942,8 +942,9 @@ static svn_error_t *
 data_available_handler_apr(void *baton, svn_boolean_t *data_available)
 {
   struct baton_apr *btn = baton;
-  apr_pollfd_t pfd;
   apr_status_t status;
+#if !defined(WIN32) || APR_FILES_AS_SOCKETS
+  apr_pollfd_t pfd;
   int n;
 
   pfd.desc_type = APR_POLL_FILE;
@@ -973,6 +974,24 @@ data_available_handler_apr(void *baton, svn_boolean_t *data_available)
                                     "failed")),
                               NULL);
     }
+#else
+  HANDLE h;
+  DWORD dwAvail;
+  status = apr_os_file_get(&h, btn->file);
+
+  if (status)
+    return svn_error_wrap_apr(status, NULL);
+
+  if (PeekNamedPipe(h, NULL, 0, NULL, &dwAvail, NULL))
+    {
+      *data_available = (dwAvail > 0);
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_create(SVN_ERR_STREAM_NOT_SUPPORTED,
+                          svn_error_wrap_apr(apr_get_os_error(), NULL),
+                          _("Windows doesn't support polling on files"));
+#endif
 }
 
 static svn_boolean_t

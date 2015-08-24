@@ -75,6 +75,7 @@
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <DelayLoadDLLs>[for depends][if-any depends.delayload][depends.delayload];[end][end]</DelayLoadDLLs>
       <SubSystem>Console</SubSystem>
       <EnableUAC>true</EnableUAC>
       <OptimizeReferences>true</OptimizeReferences>
@@ -85,6 +86,7 @@
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <DelayLoadDLLs>[for depends][if-any depends.delayload][depends.delayload];[end][end]</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>[is configs.name "Debug"]msvcrt.lib[end][is configs.name "Release"]msvcrtd.lib[end]</IgnoreSpecificDefaultLibraries>
 [if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>

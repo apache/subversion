@@ -96,9 +96,9 @@ I.    INTRODUCTION
          These diff streams are used everywhere -- over the network,
          in the repository, and in the client's working copy.
 
-      * libserf  (OPTIONAL for client)
+      * Apache Serf  (OPTIONAL for client)
 
-         The Serf library allows the Subversion client to send HTTP
+         The Apache Serf library allows the Subversion client to send HTTP
          requests.  This is necessary if you want your client to access
          a repository served by the Apache HTTP server.  There is an
          alternate 'svnserve' server as well, though, and clients
@@ -110,7 +110,7 @@ I.    INTRODUCTION
       * OpenSSL (OPTIONAL for client and server)
 
          OpenSSL enables your client to access SSL-encrypted https://
-         URLs (using libserf) in addition to unencrypted http:// URLs.
+         URLs (using Apache Serf) in addition to unencrypted http:// URLs.
          To use SSL with Subversion's WebDAV server, Apache needs to be
          compiled with OpenSSL as well.
 
@@ -313,11 +313,11 @@ I.    INTRODUCTION
       newer. The autogen.sh script knows about that.
 
 
-      5.  Serf library 1.3.4 or newer (OPTIONAL)
+      5.  Apache Serf library 1.3.4 or newer (OPTIONAL)
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
-      serf.  Though optional, we strongly recommend this.
+      Apache Serf.  Though optional, we strongly recommend this.
 
       In order to use ra_serf, you must install serf, and run Subversion's
       ./configure with the argument --with-serf.  If serf is installed in a
@@ -327,31 +327,31 @@ I.    INTRODUCTION
 
       instead.
 
-      Serf can be obtained via your system's package distribution
+      Apache Serf can be obtained via your system's package distribution
       system or directly from http://code.google.com/p/serf/.
 
-      For more information on serf and Subversion's ra_serf, see the file
-      subversion/libsvn_ra_serf/README.
+      For more information on Apache Serf and Subversion's ra_serf, see the
+      file subversion/libsvn_ra_serf/README.
 
       6. OpenSSL  (OPTIONAL)
 
-      ### needs some updates. I think serf automagically handles
+      ### needs some updates. I think Apache Serf automagically handles
       ### finding OpenSSL, but we may need more docco here. and w.r.t
       ### zlib.
 
-      The Serf library has support for SSL encryption by relying on the
+      The Apache Serf library has support for SSL encryption by relying on the
       OpenSSL library.
 
-        a. Using OpenSSL on the client through Serf
+        a. Using OpenSSL on the client through Apache Serf
 
-          On Unix systems, to build Serf with OpenSSL, you need OpenSSL
+          On Unix systems, to build Apache Serf with OpenSSL, you need OpenSSL
           installed on your system, and you must add "--with-ssl" as a
           "./configure" parameter.  If your OpenSSL installation is hard
-          for Serf to find, you may need to use "--with-libs=/path/to/lib"
-          in addition.  In particular, on Red Hat (but not Fedora Core) it
-          is necessary to specify "--with-libs=/usr/kerberos" for OpenSSL
-          to be found.  You can also specify a path to the zlib library
-          using "--with-libs".
+          for Apache Serf to find, you may need to use
+          "--with-libs=/path/to/lib" in addition.  In particular, on Red Hat
+          (but not Fedora Core) it is necessary to specify
+          "--with-libs=/usr/kerberos" for OpenSSL to be found.  You can also
+          specify a path to the zlib library using "--with-libs".
 
           Under Windows, you can specify the paths to these libraries by
           passing the options --with-zlib and --with-openssl to gen-make.py.
@@ -822,8 +822,8 @@ II.   INSTALLATION
 
   E.2 Notes
 
-      The Serf library supports secure connections with OpenSSL and
-      on-the-wire compression with zlib. If you want to use the
+      The Apache Serf library supports secure connections with OpenSSL
+      and on-the-wire compression with zlib. If you want to use the
       secure connections feature, you should pass the option
       "--with-openssl" to the gen-make.py script. See Section I.C.6 for
       more details.
@@ -872,7 +872,7 @@ II.   INSTALLATION
         want to build and/or test the server modules.
       * [Optional] If you checked out Subversion from the repository and want
         to build Subversion with http/https access support then install the
-        serf sources into SVN\src-trunk\serf.
+        Apache Serf sources into SVN\src-trunk\serf.
       * [Optional] If you want BDB backend support, extract the Berkeley DB
         files into SVN\src-trunk\db4-win32. It's a good idea to add
         SVN\src-trunk\db4-win32\bin to your PATH, so that Subversion can find
@@ -902,9 +902,8 @@ II.   INSTALLATION
             SVN\apr-util, and SVN\apr-iconv respectively.
       * Extract the ZLib sources into SVN\zlib if you are not using the zlib
         included in the dependencies zip file.
-      * [Optional] If you want secure connection (https) client support, or if
-        you are building with enabled support for serf extract openssl into
-        SVN\openssl-x.x.x
+      * [Optional] If you want secure connection (https) client support extract
+        openssl into SVN\openssl-x.x.x
       * [Optional] If you want localized message support, extract
         svn-win32-libintl.zip into SVN\svn-win32-libintl and extract
         gettext-x.x.x-bin.zip and gettext-x.x.x-dep.zip into
@@ -998,11 +997,11 @@ II.   INSTALLATION
       Note that you'd make sure to define ZLIB_WINAPI in the ZLib config
       header and move the lib-file into the zlib root-directory.
 
-      Serf
+      Apache Serf
 
-      ### Section about serf might be required/useful to add.
-      ### scons is required too and serf needs to be configured prior to be
-      ### able to build Subversion using:
+      ### Section about Apache Serf might be required/useful to add.
+      ### scons is required too and Apache Serf needs to be configured prior to
+      ### be able to build Subversion using:
       ### scons APR=[PATH_TO_APR] APU=[PATH_TO_APU] OPENSSL=[PATH_TO_OPENSSL]
       ### ZLIB=[PATH_TO_ZLIB] PREFIX=[PATH_TO_SERF_DEST]
       ### scons check
