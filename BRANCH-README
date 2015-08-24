@@ -35,13 +35,6 @@ The model:
     for a description.
 
 
-BUGS:
-
-  * In 'do_move()' svnmover always performs a cross-branch move by
-    branch-and-delete, never by copy-and-delete. Is that right? If so,
-    delete the 'if' and the 'else' code block.
-
-
 Work on this branch:
 
   * 'svnmover'
