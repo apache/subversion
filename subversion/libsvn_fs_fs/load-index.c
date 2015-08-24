@@ -29,6 +29,20 @@
 #include "util.h"
 #include "transaction.h"
 
+/* From the ENTRIES array of svn_fs_fs__p2l_entry_t*, sorted by offset,
+ * return the first offset behind the last item. */
+static apr_off_t
+get_max_covered(apr_array_header_t *entries)
+{
+  const svn_fs_fs__p2l_entry_t *entry;
+  if (entries->nelts == 0)
+    return -1;
+
+  entry = APR_ARRAY_IDX(entries, entries->nelts - 1,
+                        const svn_fs_fs__p2l_entry_t *);
+  return entry->offset + entry->size;
+}
+
 /* Make sure that the svn_fs_fs__p2l_entry_t* in ENTRIES are consecutive
  * and non-overlapping.  Use SCRATCH_POOL for temporaries. */
 static svn_error_t *
@@ -101,6 +115,8 @@ svn_fs_fs__load_index(svn_fs_t *fs,
       const char *l2p_proto_index;
       const char *p2l_proto_index;
       svn_fs_fs__revision_file_t *rev_file;
+      svn_error_t *err;
+      apr_off_t max_covered = get_max_covered(entries);
 
       /* Ensure that the index data is complete. */
       SVN_ERR(check_all_covered(entries, scratch_pool));
@@ -109,9 +125,33 @@ svn_fs_fs__load_index(svn_fs_t *fs,
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file_writable(&rev_file, fs,
                                                         revision, iterpool,
                                                         iterpool));
-      SVN_ERR(svn_fs_fs__auto_read_footer(rev_file));
-      SVN_ERR(svn_io_file_trunc(rev_file->file, rev_file->l2p_offset,
-                                iterpool));
+
+      /* Remove the existing index info. */
+      err = svn_fs_fs__auto_read_footer(rev_file);
+      if (err)
+        {
+          /* Even the index footer cannot be read, even less be trusted.
+           * Take the range of valid data from the new index data. */
+          svn_error_clear(err);
+          SVN_ERR(svn_io_file_trunc(rev_file->file, max_covered,
+                                    iterpool));
+        }
+      else
+        {
+          /* We assume that the new index data covers all contents.
+           * Error out if it doesn't.  The user can always truncate
+           * the file themselves. */
+          if (max_covered != rev_file->l2p_offset)
+            return svn_error_createf(SVN_ERR_INVALID_INPUT, NULL,
+                       "New index data ends at %s, old index ended at %s",
+                       apr_psprintf(scratch_pool, "%" APR_UINT64_T_HEX_FMT,
+                                    (apr_uint64_t)max_covered),
+                       apr_psprintf(scratch_pool, "%" APR_UINT64_T_HEX_FMT,
+                                    (apr_uint64_t) rev_file->l2p_offset));
+
+          SVN_ERR(svn_io_file_trunc(rev_file->file, rev_file->l2p_offset,
+                                    iterpool));
+        }
 
       /* Create proto index files for the new index data
        * (will be cleaned up automatically with iterpool). */
