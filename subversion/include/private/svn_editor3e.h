@@ -859,17 +859,6 @@ typedef svn_error_t *(*svn_editor3_cb_add_t)(
   const svn_element_payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_instantiate(), #svn_editor3_t
- */
-typedef svn_error_t *(*svn_editor3_cb_instantiate_t)(
-  void *baton,
-  svn_branch_state_t *branch,
-  svn_branch_eid_t eid,
-  svn_branch_eid_t new_parent_eid,
-  const char *new_name,
-  const svn_element_payload_t *new_payload,
-  apr_pool_t *scratch_pool);
-
 /** @see svn_editor3_copy_one(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_copy_one_t)(
