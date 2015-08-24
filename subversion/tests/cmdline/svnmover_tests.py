@@ -753,9 +753,10 @@ def simple_moves_within_a_branch(sbox):
                 'mv lib/README.txt README'
                 )
 
-# Exercise moves from one branch to another. 'svnmover'
-# executes these by branch-and-delete. In this test, the elements being moved
-# do not already exist in the target branch.
+# Exercise moving content from one branch to another by means of
+# 'branch-into-and-delete' (which I previously called 'branch-and-delete').
+# In this test, the elements being moved do not already exist in the target
+# branch.
 def move_to_related_branch(sbox):
   "move to related branch"
   sbox_build_svnmover(sbox, content=initial_content_in_trunk)
@@ -797,17 +798,17 @@ def move_to_related_branch(sbox):
                  reported_add('subdir/lib2/foo/x') +
                  reported_add('y2'),
                  # keeping same relpath
-                 'mv trunk/README branches/br1/README',
+                 'branch-into-and-delete trunk/README branches/br1/README',
                  # with a move-within-branch and rename as well
-                 'mv trunk/lib/foo/y branches/br1/y2',
+                 'branch-into-and-delete trunk/lib/foo/y branches/br1/y2',
                  # dir with children, also renaming and moving within branch
                  'mkdir branches/br1/subdir',
-                 'mv trunk/lib branches/br1/subdir/lib2')
+                 'branch-into-and-delete trunk/lib branches/br1/subdir/lib2')
 
-# Exercise moves from one branch to another. 'svnmover'
-# executes these by branch-and-delete. In this test, there are existing
-# instances of the same elements in the target branch, which should be
-# overwritten.
+# Exercise moving content from one branch to another by means of
+# 'branch-into-and-delete' (which I previously called 'branch-and-delete').
+# In this test, there are existing instances of the same elements in the
+# target branch, which should be overwritten.
 def move_to_related_branch_element_already_exists(sbox):
   "move to related branch; element already exists"
   sbox_build_svnmover(sbox, content=initial_content_in_trunk)
@@ -826,7 +827,7 @@ def move_to_related_branch_element_already_exists(sbox):
                  reported_br_diff('branches/br1') +
                  reported_move('README', 'README2'),
                  # single file: element already exists, at different relpath
-                 'mv trunk/README branches/br1/README2')
+                 'branch-into-and-delete trunk/README branches/br1/README2')
   test_svnmover2(sbox, '',
                  reported_br_diff('branches/br1') +
                  reported_move('lib', 'lib2') +
@@ -838,10 +839,10 @@ def move_to_related_branch_element_already_exists(sbox):
                  reported_del('lib/foo/y'),
                 # dir: child elements already exist (at different relpaths)
                 'mv branches/br1/lib/foo/x branches/br1/x2',
-                'mv trunk/lib branches/br1/lib2')
+                'branch-into-and-delete trunk/lib branches/br1/lib2')
 
-# Exercise moves from one branch to an unrelated branch (different family).
-# 'svnmover' executes these by copy-and-delete.
+# Exercise moving content by copy-and-delete from one branch to another.
+# In this test the branches have no elements in common.
 def move_to_unrelated_branch(sbox):
   "move to unrelated branch"
   sbox_build_svnmover(sbox, content=initial_content_in_trunk)
@@ -865,12 +866,12 @@ def move_to_unrelated_branch(sbox):
                  reported_add('subdir/lib2/foo/x') +
                  reported_add('subdir'),
                  # keeping same relpath
-                 'mv trunk/README README',
+                 'copy-and-delete trunk/README README',
                  # with a move-within-branch and rename as well
-                 'mv trunk/lib/foo/y y2',
+                 'copy-and-delete trunk/lib/foo/y y2',
                  # dir with children, also renaming and moving within branch
                  'mkdir subdir',
-                 'mv trunk/lib subdir/lib2')
+                 'copy-and-delete trunk/lib subdir/lib2')
 
 # Move a whole branch within the same parent branch.
 def move_branch_within_same_parent_branch(sbox):
@@ -1433,8 +1434,8 @@ def move_to_related_branch_2(sbox):
                  'mkdir Y/A/B/by ')
 
   # X and Y are related, X/A/B contains X/A/B/bx, Y/A/B contains Y/A/B/by.
-  # Moving X/A/B to Y/B, i.e. from X to Y, results in Y/B that contains
-  # both bx and by.
+  # Moving X/A/B to Y/B, i.e. from X to Y, by branch-into-and-delete,
+  # results in Y/B that contains both bx and by.
   expected_eids.rename({'X/A/B' : 'Y/B'})
   expected_eids.remove('Y/A/B', 'Y/A/B/by')
   expected_eids.add({
@@ -1448,7 +1449,7 @@ def move_to_related_branch_2(sbox):
                  reported_move('A/B', 'B') +
                  reported_add('B/bx'),
                  expected_eids,
-                 'mv X/A/B Y/B')
+                 'branch-into-and-delete X/A/B Y/B')
 
 ######################################################################
 

@@ -590,6 +590,9 @@ typedef enum action_code_t {
   ACTION_PUT_FILE,
   ACTION_CP,
   ACTION_RM,
+  ACTION_CP_RM,
+  ACTION_BR_RM,
+  ACTION_BR_INTO_RM,
   ACTION_COMMIT,
   ACTION_UPDATE,
   ACTION_SWITCH,
@@ -641,6 +644,12 @@ static const action_defn_t action_defn[] =
     "move SRC to DST"},
   {ACTION_RM,               "rm", 1, "PATH",
     "delete PATH"},
+  {ACTION_CP_RM,            "copy-and-delete", 2, "SRC DST",
+    "copy-and-delete SRC to DST"},
+  {ACTION_BR_RM,            "branch-and-delete", 2, "SRC DST",
+    "branch-and-delete SRC to DST"},
+  {ACTION_BR_INTO_RM,       "branch-into-and-delete", 2, "SRC DST",
+    "merge-and-delete SRC to DST"},
   {ACTION_MKDIR,            "mkdir", 1, "PATH",
     "create new directory PATH"},
   {ACTION_PUT_FILE,         "put", 2, "LOCAL_FILE PATH",
@@ -2149,147 +2158,6 @@ do_put_file(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/* Move by branch-and-delete into an existing target branch.
- *
- * The target branch is different from the source branch.
- *
- *      delete elements from source branch
- *      instantiate (or update) same elements in target branch
- *
- * For each element being moved, if the element already exists in TO_BRANCH,
- * the effect is as if the existing element in TO_BRANCH was first deleted.
- */
-static svn_error_t *
-move_by_branch_and_delete(svn_editor3_t *editor,
-                          svn_branch_el_rev_id_t *el_rev,
-                          svn_branch_state_t *to_branch,
-                          int to_parent_eid,
-                          const char *to_name,
-                          apr_pool_t *scratch_pool)
-{
-  svn_branch_subtree_t *subtree
-    = svn_branch_get_subtree(el_rev->branch, el_rev->eid, scratch_pool);
-
-  /* This is supposed to be used for moving to a *different* branch.
-     In fact, this method would also work for moving within one
-     branch, but we don't currently want to use it for that purpose. */
-  SVN_ERR_ASSERT(! BRANCH_IS_SAME_BRANCH(el_rev->branch, to_branch,
-                                         scratch_pool));
-
-  /* Delete the source subtree. If it's a whole branch, do so by deleting
-     its root from the outer branch instead. */
-  if (el_rev->eid != el_rev->branch->root_eid)
-    {
-      SVN_ERR(svn_editor3_delete(editor,
-                                 el_rev->branch, el_rev->eid));
-    }
-  else
-    {
-      SVN_ERR(svn_editor3_delete(editor,
-                                 el_rev->branch->outer_branch, el_rev->branch->outer_eid));
-    }
-  SVN_ERR(svn_branch_instantiate_subtree(to_branch,
-                                         to_parent_eid, to_name, *subtree,
-                                         scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Move by copy-and-delete.
- *
- * The target branch is different from the source branch.
- *
- *      copy source elements to target branch
- *      delete elements from source branch
- *
- * For each element being moved, if the element already exists in TO_BRANCH,
- * the effect is as if the existing element in TO_BRANCH was first deleted.
- */
-static svn_error_t *
-move_by_copy_and_delete(svn_editor3_t *editor,
-                        svn_branch_el_rev_id_t *el_rev,
-                        svn_branch_state_t *to_branch,
-                        int to_parent_eid,
-                        const char *to_name,
-                        apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_editor3_copy_tree(editor, el_rev,
-                                to_branch,
-                                to_parent_eid, to_name));
-  SVN_ERR(svn_editor3_delete(editor,
-                             el_rev->branch, el_rev->eid));
-  return SVN_NO_ERROR;
-}
-
-/* Move in the 'best' way possible.
- *
- *    if target is in same branch:
- *      move the element
- *    else [target is in another branch]:
- *      delete from source branch
- *      instantiate in target branch
- *    [else:
- *      copy into target branch
- *      delete from source branch]
- */
-static svn_error_t *
-do_move(svn_editor3_t *editor,
-        svn_branch_el_rev_id_t *el_rev,
-        svn_branch_el_rev_id_t *to_parent_el_rev,
-        const char *to_name,
-        apr_pool_t *scratch_pool)
-{
-  /* Simple move/rename within same branch, if possible */
-  if (BRANCH_IS_SAME_BRANCH(to_parent_el_rev->branch, el_rev->branch,
-                            scratch_pool))
-    {
-      /* New payload shall be the same as before */
-      svn_branch_el_rev_content_t *existing_element
-        = svn_branch_get_element(el_rev->branch, el_rev->eid);
-
-      SVN_ERR(svn_editor3_alter(editor,
-                                el_rev->branch, el_rev->eid,
-                                to_parent_el_rev->eid, to_name,
-                                existing_element->payload));
-      return SVN_NO_ERROR;
-    }
-
-  /* Instantiate same elements in another branch */
-  if (1 /*###*/)
-    {
-      notify_v(
-        "mv: Moving by branch-and-delete, because the target of the requested "
-        "move is in a different branch.\n"
-        "In the current implementation of this experimental UI, each element "
-        "instance from the source branch subtree will overwrite any instance "
-        "of the same element that already exists in the target branch."
-        );
-      /* We could instead either throw an error or fall back to copy-and-delete
-         if any moved element already exists in target branch. */
-
-      SVN_ERR(move_by_branch_and_delete(editor, el_rev,
-                                        to_parent_el_rev->branch,
-                                        to_parent_el_rev->eid, to_name,
-                                        scratch_pool));
-      return SVN_NO_ERROR;
-    }
-
-  /* Move by copy-and-delete */
-  notify_v("mv: moving by copy-and-delete");
-
-  SVN_ERR(move_by_copy_and_delete(editor, el_rev,
-                                  to_parent_el_rev->branch,
-                                  to_parent_el_rev->eid, to_name,
-                                  scratch_pool));
-
-  notify_v("V    %s (from %s)",
-           branch_peid_name_to_path(to_parent_el_rev->branch,
-                                    to_parent_el_rev->eid, to_name,
-                                    scratch_pool),
-           el_rev_id_to_path(el_rev, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 /*  */
 static svn_error_t *
 svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t **new_el_rev_p,
@@ -2507,6 +2375,198 @@ do_branch_into(svn_branch_state_t *from_branch,
   notify_v("A+   %s (subtree)",
            svn_branch_get_path_by_eid(to_branch, from_eid, scratch_pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Copy-and-delete.
+ *
+ *      copy the subtree at EL_REV to TO_BRANCH:TO_PARENT_EID:TO_NAME
+ *      delete the subtree at EL_REV
+ */
+static svn_error_t *
+do_copy_and_delete(svn_editor3_t *editor,
+                   svn_branch_el_rev_id_t *el_rev,
+                   svn_branch_state_t *to_branch,
+                   int to_parent_eid,
+                   const char *to_name,
+                   apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
+
+  SVN_ERR(do_copy(editor, el_rev, to_branch, to_parent_eid, to_name,
+                  scratch_pool));
+  SVN_ERR(do_delete(editor, el_rev->branch, el_rev->eid, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Branch-and-delete.
+ *
+ *      branch the subtree at EL_REV creating a new nested branch at
+ *        TO_BRANCH:TO_PARENT_EID:TO_NAME,
+ *        or creating a new top-level branch if TO_BRANCH is null;
+ *      delete the subtree at EL_REV
+ */
+static svn_error_t *
+do_branch_and_delete(svn_editor3_t *editor,
+                     svn_branch_el_rev_id_t *el_rev,
+                     svn_branch_state_t *to_outer_branch,
+                     int to_outer_parent_eid,
+                     const char *to_name,
+                     apr_pool_t *scratch_pool)
+{
+  svn_branch_state_t *new_branch;
+
+  SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
+
+  SVN_ERR(do_branch(&new_branch, el_rev->branch, el_rev->eid,
+                    to_outer_branch, to_outer_parent_eid, to_name,
+                    scratch_pool));
+
+  SVN_ERR(do_delete(editor, el_rev->branch, el_rev->eid, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Branch-into-and-delete.
+ *
+ * (Previously, confusingly, called 'branch-and-delete'.)
+ *
+ * The target branch is different from the source branch.
+ *
+ *      delete elements from source branch
+ *      instantiate (or update) same elements in target branch
+ *
+ * For each element being moved, if the element already exists in TO_BRANCH,
+ * the effect is as if the existing element in TO_BRANCH was first deleted.
+ */
+static svn_error_t *
+do_branch_into_and_delete(svn_editor3_t *editor,
+                          svn_branch_el_rev_id_t *el_rev,
+                          svn_branch_state_t *to_branch,
+                          int to_parent_eid,
+                          const char *to_name,
+                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
+
+  /* This is supposed to be used for moving to a *different* branch.
+     In fact, this method would also work for moving within one
+     branch, but we don't currently want to use it for that purpose. */
+  SVN_ERR_ASSERT(! BRANCH_IS_SAME_BRANCH(el_rev->branch, to_branch,
+                                         scratch_pool));
+
+  /* Merge the "creation of the source" to the target (aka branch-into) */
+  SVN_ERR(do_branch_into(el_rev->branch, el_rev->eid,
+                         to_branch, to_parent_eid, to_name,
+                         scratch_pool));
+
+  SVN_ERR(do_delete(editor, el_rev->branch, el_rev->eid, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Interactive options for moving to another branch.
+ */
+static svn_error_t *
+do_interactive_cross_branch_move(svn_editor3_t *editor,
+                                 svn_branch_el_rev_id_t *el_rev,
+                                 svn_branch_el_rev_id_t *to_parent_el_rev,
+                                 const char *to_name,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  const char *input;
+
+  if (0 /*### if non-interactive*/)
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+        _("mv: The source and target are in different branches. "
+          "Some ways to move content to a different branch are, "
+          "depending on the effect you want to achieve: "
+          "copy-and-delete, branch-and-delete, branch-into-and-delete"));
+    }
+
+  notify_v(
+    _("mv: The source and target are in different branches. "
+      "Some ways to move content to a different branch are, "
+      "depending on the effect you want to achieve:\n"
+      "  c: copy-and-delete: cp SOURCE TARGET; rm SOURCE\n"
+      "  b: branch-and-delete: branch SOURCE TARGET; rm SOURCE\n"
+      "  i: branch-into-and-delete: branch-into SOURCE TARGET; rm SOURCE\n"
+      "We can do one of these for you now if you wish.\n"
+    ));
+
+  err = svn_cmdline_prompt_user2(
+          &input,
+          "Your choice (c, b, i, or just <enter> to do nothing): ",
+          NULL, scratch_pool);
+  if (err && (err->apr_err == SVN_ERR_CANCELLED || err->apr_err == APR_EOF))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
+  if (input[0] == 'c' || input[0] == 'C')
+    {
+      notify_v("Performing 'copy-and-delete SOURCE TARGET'");
+
+      SVN_ERR(do_copy_and_delete(editor, el_rev,
+                                 to_parent_el_rev->branch,
+                                 to_parent_el_rev->eid, to_name,
+                                 scratch_pool));
+    }
+  else if (input[0] == 'b' || input[0] == 'B')
+    {
+      notify_v("Performing 'branch-and-delete SOURCE TARGET'");
+
+      SVN_ERR(do_branch_and_delete(editor, el_rev,
+                                   to_parent_el_rev->branch,
+                                   to_parent_el_rev->eid, to_name,
+                                   scratch_pool));
+    }
+  else if (input[0] == 'i' || input[0] == 'I')
+    {
+      notify_v("Performing 'branch-into-and-delete SOURCE TARGET'");
+      notify_v(
+        "In the current implementation of this experimental UI, each element "
+        "instance from the source branch subtree will overwrite any instance "
+        "of the same element that already exists in the target branch."
+        );
+      /* We could instead either throw an error or fall back to copy-and-delete
+         if any moved element already exists in target branch. */
+
+      SVN_ERR(do_branch_into_and_delete(editor, el_rev,
+                                        to_parent_el_rev->branch,
+                                        to_parent_el_rev->eid, to_name,
+                                        scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Move.
+ */
+static svn_error_t *
+do_move(svn_editor3_t *editor,
+        svn_branch_el_rev_id_t *el_rev,
+        svn_branch_el_rev_id_t *to_parent_el_rev,
+        const char *to_name,
+        apr_pool_t *scratch_pool)
+{
+  /* New payload shall be the same as before */
+  svn_branch_el_rev_content_t *existing_element
+    = svn_branch_get_element(el_rev->branch, el_rev->eid);
+
+  SVN_ERR(svn_editor3_alter(editor,
+                            el_rev->branch, el_rev->eid,
+                            to_parent_el_rev->eid, to_name,
+                            existing_element->payload));
+  notify_v("V    %s (from %s)",
+           branch_peid_name_to_path(to_parent_el_rev->branch,
+                                    to_parent_el_rev->eid, to_name,
+                                    scratch_pool),
+           el_rev_id_to_path(el_rev, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -2775,7 +2835,8 @@ typedef struct arg_t
         svn_branch_get_rrpath_by_eid(arg[j]->parent_el_rev->branch,     \
                                      arg[j]->parent_el_rev->eid, pool))) \
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
-                             _("%s: Cannot move to child of self"), op);
+                             _("%s: The specified target is nested "    \
+                               "inside the source"), op);
 
 /* If EL_REV specifies the root element of a nested branch, change EL_REV
  * to specify the corresponding subbranch-root element of its outer branch.
@@ -3075,8 +3136,24 @@ execute(svnmover_wc_t *wc,
           VERIFY_EID_NONEXISTENT("mv", 1);
           VERIFY_PARENT_EID_EXISTS("mv", 1);
           VERIFY_NOT_CHILD_OF_SELF("mv", 0, 1, iterpool);
-          SVN_ERR(do_move(editor, arg[0]->el_rev, arg[1]->parent_el_rev, arg[1]->path_name,
-                          iterpool));
+
+          /* Simple move/rename within same branch, if possible */
+          if (BRANCH_IS_SAME_BRANCH(arg[1]->parent_el_rev->branch,
+                                    arg[0]->el_rev->branch,
+                                    iterpool))
+            {
+              SVN_ERR(do_move(editor, arg[0]->el_rev,
+                              arg[1]->parent_el_rev, arg[1]->path_name,
+                              iterpool));
+              notify_v("V    %s (from %s)",
+                       action->relpath[1], action->relpath[0]);
+            }
+
+          SVN_ERR(do_interactive_cross_branch_move(editor,
+                                                   arg[0]->el_rev,
+                                                   arg[1]->parent_el_rev,
+                                                   arg[1]->path_name,
+                                                   iterpool));
           break;
 
         case ACTION_CP:
@@ -3101,6 +3178,63 @@ execute(svnmover_wc_t *wc,
           SVN_ERR(do_delete(editor,
                             arg[0]->el_rev->branch, arg[0]->el_rev->eid,
                             iterpool));
+          break;
+
+        case ACTION_CP_RM:
+          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev,
+                                                 "copy-and-delete"));
+
+          VERIFY_REV_UNSPECIFIED("copy-and-delete", 0);
+          VERIFY_EID_EXISTS("copy-and-delete", 0);
+          VERIFY_REV_UNSPECIFIED("copy-and-delete", 1);
+          VERIFY_EID_NONEXISTENT("copy-and-delete", 1);
+          VERIFY_PARENT_EID_EXISTS("copy-and-delete", 1);
+          VERIFY_NOT_CHILD_OF_SELF("copy-and-delete", 0, 1, iterpool);
+
+          SVN_ERR(do_copy_and_delete(editor,
+                                     arg[0]->el_rev,
+                                     arg[1]->parent_el_rev->branch,
+                                     arg[1]->parent_el_rev->eid,
+                                     arg[1]->path_name,
+                                     iterpool));
+          break;
+
+        case ACTION_BR_RM:
+          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev,
+                                                 "branch-and-delete"));
+
+          VERIFY_REV_UNSPECIFIED("branch-and-delete", 0);
+          VERIFY_EID_EXISTS("branch-and-delete", 0);
+          VERIFY_REV_UNSPECIFIED("branch-and-delete", 1);
+          VERIFY_EID_NONEXISTENT("branch-and-delete", 1);
+          VERIFY_PARENT_EID_EXISTS("branch-and-delete", 1);
+          VERIFY_NOT_CHILD_OF_SELF("branch-and-delete", 0, 1, iterpool);
+
+          SVN_ERR(do_branch_and_delete(editor,
+                                       arg[0]->el_rev,
+                                       arg[1]->parent_el_rev->branch,
+                                       arg[1]->parent_el_rev->eid,
+                                       arg[1]->path_name,
+                                       iterpool));
+          break;
+
+        case ACTION_BR_INTO_RM:
+          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev,
+                                                 "branch-into-and-delete"));
+
+          VERIFY_REV_UNSPECIFIED("branch-into-and-delete", 0);
+          VERIFY_EID_EXISTS("branch-into-and-delete", 0);
+          VERIFY_REV_UNSPECIFIED("branch-into-and-delete", 1);
+          VERIFY_EID_NONEXISTENT("branch-into-and-delete", 1);
+          VERIFY_PARENT_EID_EXISTS("branch-into-and-delete", 1);
+          VERIFY_NOT_CHILD_OF_SELF("branch-into-and-delete", 0, 1, iterpool);
+
+          SVN_ERR(do_branch_into_and_delete(editor,
+                                            arg[0]->el_rev,
+                                            arg[1]->parent_el_rev->branch,
+                                            arg[1]->parent_el_rev->eid,
+                                            arg[1]->path_name,
+                                            iterpool));
           break;
 
         case ACTION_MKDIR:
