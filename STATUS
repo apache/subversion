@@ -74,15 +74,7 @@ Candidate changes:
      RA_svn is basically unusuable on that platform.
    Votes:
      +1: stefan2
-
- * r1694929
-   Fix memory corruption in SWIG bindings' svn_client_copy_source_t
-   constructor.
-   Justification:
-     Constructor result is not correct as REVISION gets partially overwritten
-     by PEG_REVISION. May also result in segfaults.
-   Votes:
-     +1: stefan2, philip
+     +1: rhuijben (Would prefer clarity over the tiny performance improvement)
 
  * r1695022
    Fix incomplete membuffer cache initialization.
@@ -143,3 +135,13 @@ Approved changes:
      This is a regression as older Subversion releases ignored the error.
    Votes:
      +1: rhuijben, brane, stefan2
+
+ * r1694929
+   Fix memory corruption in SWIG bindings' svn_client_copy_source_t
+   constructor.
+   Justification:
+     Constructor result is not correct as REVISION gets partially overwritten
+     by PEG_REVISION. May also result in segfaults.
+   Votes:
+     +1: stefan2, philip
+     +0.5: rhuijben (Minimal review)
