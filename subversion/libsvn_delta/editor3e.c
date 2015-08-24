@@ -300,13 +300,6 @@ svn_editor3_alter(svn_editor3_t *editor,
   SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
   VERIFY(alter, new_parent_eid != eid);
 
-  /* ### Ensure the requested EIDs are allocated... This is not the
-         right way to do it. Should instead map 'to be created' EIDs
-         to new EIDs? See BRANCH-README. */
-  while (eid >= branch->rev_root->next_eid
-         || new_parent_eid >= branch->rev_root->next_eid)
-    svn_branch_allocate_new_eid(branch->rev_root);
-
   DO_CALLBACK(editor, cb_alter,
               5(branch, eid,
                 new_parent_eid, new_name,
