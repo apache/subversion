@@ -99,7 +99,7 @@ svn_fs_fs__load_index(svn_fs_t *fs,
                       apr_array_header_t *entries,
                       apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   /* Check the FS format number. */
   if (! svn_fs_fs__use_log_addressing(fs))
@@ -123,8 +123,8 @@ svn_fs_fs__load_index(svn_fs_t *fs,
 
       /* Open rev / pack file & trim indexes + footer off it. */
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file_writable(&rev_file, fs,
-                                                        revision, iterpool,
-                                                        iterpool));
+                                                        revision, subpool,
+                                                        subpool));
 
       /* Remove the existing index info. */
       err = svn_fs_fs__auto_read_footer(rev_file);
@@ -134,7 +134,7 @@ svn_fs_fs__load_index(svn_fs_t *fs,
            * Take the range of valid data from the new index data. */
           svn_error_clear(err);
           SVN_ERR(svn_io_file_trunc(rev_file->file, max_covered,
-                                    iterpool));
+                                    subpool));
         }
       else
         {
@@ -150,25 +150,25 @@ svn_fs_fs__load_index(svn_fs_t *fs,
                                     (apr_uint64_t) rev_file->l2p_offset));
 
           SVN_ERR(svn_io_file_trunc(rev_file->file, rev_file->l2p_offset,
-                                    iterpool));
+                                    subpool));
         }
 
       /* Create proto index files for the new index data
        * (will be cleaned up automatically with iterpool). */
       SVN_ERR(svn_fs_fs__p2l_index_from_p2l_entries(&p2l_proto_index, fs,
                                                     rev_file, entries,
-                                                    iterpool, iterpool));
+                                                    subpool, subpool));
       SVN_ERR(svn_fs_fs__l2p_index_from_p2l_entries(&l2p_proto_index, fs,
-                                                    entries, iterpool,
-                                                    iterpool));
+                                                    entries, subpool,
+                                                    subpool));
 
       /* Combine rev data with new index data. */
       SVN_ERR(svn_fs_fs__add_index_data(fs, rev_file->file, l2p_proto_index,
                                         p2l_proto_index,
-                                        rev_file->start_revision, iterpool));
+                                        rev_file->start_revision, subpool));
     }
 
-  svn_pool_destroy(iterpool);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
