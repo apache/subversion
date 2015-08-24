@@ -66,7 +66,8 @@ svn_fs_fs__load_index(svn_fs_t *fs,
 
       /* Combine rev data with new index data. */
       SVN_ERR(svn_fs_fs__add_index_data(fs, rev_file->file, l2p_proto_index,
-                                        p2l_proto_index, revision, iterpool));
+                                        p2l_proto_index,
+                                        rev_file->start_revision, iterpool));
     }
 
   svn_pool_destroy(iterpool);
