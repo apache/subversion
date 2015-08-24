@@ -129,6 +129,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1697381, r1697384, r1697387
+   Make 'svnfsfs load-index' work as advertised in the documentation
+   Justification:
+     svnfsfs load-index would only ever be used in high-stress situations
+     like desaster recovery.  So, while workarounds are possible, having
+     people jump though a few extra hoops is a bad thing in that context.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
