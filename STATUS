@@ -104,14 +104,6 @@ Candidate changes:
    Votes:
      +1: philip, stefan2
 
- * r1696222, r1696225
-   Implement polling on named pipes on Windows to resolve svn+ssh:// problems
-   Justification:
-     Without this patch operations like checkout just fail with an error.
-     This is a regression as older Subversion releases ignored the error.
-   Votes:
-     +1: rhuijben, brane
-
  * r1696387
    Expose expat and zlib versions in svn --version --verbose
    Justification:
@@ -143,3 +135,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1696222, r1696225
+   Implement polling on named pipes on Windows to resolve svn+ssh:// problems
+   Justification:
+     Without this patch operations like checkout just fail with an error.
+     This is a regression as older Subversion releases ignored the error.
+   Votes:
+     +1: rhuijben, brane, stefan2
