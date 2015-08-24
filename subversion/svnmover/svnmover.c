@@ -2777,31 +2777,28 @@ typedef struct arg_t
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,                   \
                              _("%s: Cannot move to child of self"), op);
 
-/* If EL_REV is the root element of a branch, return the corresponding
- * subbranch-root element of its outer branch.
+/* If EL_REV specifies the root element of a nested branch, change EL_REV
+ * to specify the corresponding subbranch-root element of its outer branch.
  *
- * If it is the repository root, return null.
- *
- * Otherwise, return itself.
+ * If EL_REV specifies the root element of a top-level branch, return an
+ * error.
  */
-static svn_branch_el_rev_id_t *
+static svn_error_t *
 point_to_outer_element_instead(svn_branch_el_rev_id_t *el_rev,
-                               apr_pool_t *result_pool)
+                               const char *op)
 {
-  svn_branch_el_rev_id_t *new_el_rev = el_rev;
-
   if (is_branch_root_element(el_rev->branch, el_rev->eid))
     {
       if (! el_rev->branch->outer_branch)
-        return NULL;
+        return svn_error_createf(SVN_ERR_BRANCHING, NULL, "%s: %s", op,
+                                 _("svnmover cannot delete or move a "
+                                   "top-level branch"));
 
-      new_el_rev = svn_branch_el_rev_id_create(el_rev->branch->outer_branch,
-                                               el_rev->branch->outer_eid,
-                                               el_rev->rev,
-                                               result_pool);
+      el_rev->eid = el_rev->branch->outer_eid;
+      el_rev->branch = el_rev->branch->outer_branch;
     }
 
-  return new_el_rev;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -3070,12 +3067,7 @@ execute(svnmover_wc_t *wc,
           break;
 
         case ACTION_MV:
-          /* If given a branch root element, look instead at the
-             subbranch-root element within the outer branch. */
-          arg[0]->el_rev = point_to_outer_element_instead(arg[0]->el_rev, iterpool);
-          if (! arg[0]->el_rev)
-            return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                                     _("mv: cannot move the repository root"));
+          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev, "mv"));
 
           VERIFY_REV_UNSPECIFIED("mv", 0);
           VERIFY_EID_EXISTS("mv", 0);
@@ -3102,12 +3094,7 @@ execute(svnmover_wc_t *wc,
           break;
 
         case ACTION_RM:
-          /* If given a branch root element, look instead at the
-             subbranch-root element within the outer branch. */
-          arg[0]->el_rev = point_to_outer_element_instead(arg[0]->el_rev, iterpool);
-          if (! arg[0]->el_rev)
-            return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                                     _("rm: cannot remove the repository root"));
+          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev, "rm"));
 
           VERIFY_REV_UNSPECIFIED("rm", 0);
           VERIFY_EID_EXISTS("rm", 0);
