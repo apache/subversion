@@ -2562,7 +2562,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
 static svn_error_t *
 repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
                         const apr_array_header_t *copy_pairs,
-                        const char *top_dst_path,
+                        const char *top_dst_abspath,
                         svn_boolean_t ignore_externals,
                         svn_boolean_t pin_externals,
                         const apr_hash_t *externals_to_pin,
@@ -2582,7 +2582,6 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
 
   /* Decide whether the two repositories are the same or not. */
   {
-    const char *parent;
     const char *parent_abspath;
     const char *src_uuid, *dst_uuid;
 
@@ -2593,11 +2592,10 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
        not exist.  ### TODO:  we should probably walk up the wc here,
        in case the parent dir has an imaginary URL.  */
     if (copy_pairs->nelts == 1)
-      parent = svn_dirent_dirname(top_dst_path, scratch_pool);
+      parent_abspath = svn_dirent_dirname(top_dst_abspath, scratch_pool);
     else
-      parent = top_dst_path;
+      parent_abspath = top_dst_abspath;
 
-    SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent, scratch_pool));
     SVN_ERR(svn_client_get_repos_root(NULL /* root_url */, &dst_uuid,
                                       parent_abspath, ctx,
                                       iterpool, iterpool));
@@ -2638,7 +2636,7 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
                  apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  const char *top_src_url, *top_dst_path;
+  const char *top_src_url, *top_dst_abspath;
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *lock_abspath;
   int i;
@@ -2663,13 +2661,13 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
       pair->src_abspath_or_url = apr_pstrdup(pool, src);
     }
 
-  SVN_ERR(get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path,
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_abspath,
                                   NULL, pool));
-  lock_abspath = top_dst_path;
+  lock_abspath = top_dst_abspath;
   if (copy_pairs->nelts == 1)
     {
       top_src_url = svn_uri_dirname(top_src_url, pool);
-      lock_abspath = svn_dirent_dirname(top_dst_path, pool);
+      lock_abspath = svn_dirent_dirname(top_dst_abspath, pool);
     }
 
   /* Open a repository session to the longest common src ancestor.  We do not
@@ -2741,7 +2739,7 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
     repos_to_wc_copy_locked(timestamp_sleep,
-                            copy_pairs, top_dst_path, ignore_externals,
+                            copy_pairs, top_dst_abspath, ignore_externals,
                             pin_externals, externals_to_pin,
                             ra_session, ctx, pool),
     ctx->wc_ctx, lock_abspath, FALSE, pool);
