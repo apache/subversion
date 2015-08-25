@@ -1139,10 +1139,10 @@ editor3_payload_resolve(void *baton,
 static svn_error_t *
 editor3_new_eid(void *baton,
                 svn_branch_eid_t *eid_p,
-                svn_branch_state_t *branch,
                 apr_pool_t *scratch_pool)
 {
-  int eid = svn_branch_allocate_new_eid(branch->rev_root);
+  ev3_from_delta_baton_t *eb = baton;
+  int eid = svn_branch_allocate_new_eid(eb->edited_rev_root);
 
   *eid_p = eid;
   return SVN_NO_ERROR;
@@ -1151,13 +1151,18 @@ editor3_new_eid(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_add(void *baton,
-            svn_branch_state_t *branch,
+            const char *branch_id,
             svn_branch_eid_t eid,
             svn_branch_eid_t new_parent_eid,
             const char *new_name,
             const svn_element_payload_t *new_payload,
             apr_pool_t *scratch_pool)
 {
+  ev3_from_delta_baton_t *eb = baton;
+  svn_branch_state_t *branch
+    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
+                                                branch_id, scratch_pool);
+
   if (new_payload)
     {
       SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
@@ -1182,8 +1187,8 @@ editor3_add(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_copy_one(void *baton,
-                 const svn_branch_el_rev_id_t *src_el_rev,
-                 svn_branch_state_t *branch,
+                 const svn_branch_rev_bid_eid_t *src_el_rev,
+                 const char *branch_id,
                  svn_branch_eid_t eid,
                  svn_branch_eid_t new_parent_eid,
                  const char *new_name,
@@ -1243,18 +1248,41 @@ copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_copy_tree(void *baton,
-                  const svn_branch_el_rev_id_t *src_el_rev,
-                  svn_branch_state_t *to_branch,
+                  const svn_branch_rev_bid_eid_t *src_el_rev,
+                  const char *to_branch_id,
                   svn_branch_eid_t new_parent_eid,
                   const char *new_name,
                   apr_pool_t *scratch_pool)
 {
+  ev3_from_delta_baton_t *eb = baton;
+  svn_branch_state_t *src_branch;
+  svn_branch_el_rev_id_t *from_el_rev;
+  svn_branch_state_t *to_branch
+    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
+                                                to_branch_id, scratch_pool);
+
   SVN_DBG(("copy_tree(e%d -> e%d/%s)",
            src_el_rev->eid, new_parent_eid, new_name));
 
-  SVN_ERR(copy_subtree(src_el_rev,
-                                  to_branch, new_parent_eid, new_name,
-                                  scratch_pool));
+  if (SVN_IS_VALID_REVNUM(src_el_rev->rev))
+    {
+      SVN_ERR(svn_branch_repos_get_branch_by_id(&src_branch,
+                                                eb->edited_rev_root->repos,
+                                                src_el_rev->rev,
+                                                src_el_rev->bid,
+                                                scratch_pool));
+    }
+  else
+    {
+      src_branch
+        = svn_branch_revision_root_get_branch_by_id(
+            eb->edited_rev_root, src_el_rev->bid, scratch_pool);
+    }
+  from_el_rev = svn_branch_el_rev_id_create(src_branch, src_el_rev->eid,
+                                            src_el_rev->rev, scratch_pool);
+  SVN_ERR(copy_subtree(from_el_rev,
+                       to_branch, new_parent_eid, new_name,
+                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1262,10 +1290,15 @@ editor3_copy_tree(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_delete(void *baton,
-                   svn_branch_state_t *branch,
+                   const char *branch_id,
                    svn_branch_eid_t eid,
                    apr_pool_t *scratch_pool)
 {
+  ev3_from_delta_baton_t *eb = baton;
+  svn_branch_state_t *branch
+    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
+                                                branch_id, scratch_pool);
+
   SVN_DBG(("delete(b%s e%d)",
            svn_branch_get_id(branch, scratch_pool), eid));
 
@@ -1277,13 +1310,18 @@ editor3_delete(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_alter(void *baton,
-              svn_branch_state_t *branch,
+              const char *branch_id,
               svn_branch_eid_t eid,
               svn_branch_eid_t new_parent_eid,
               const char *new_name,
               const svn_element_payload_t *new_payload,
               apr_pool_t *scratch_pool)
 {
+  ev3_from_delta_baton_t *eb = baton;
+  svn_branch_state_t *branch
+    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
+                                                branch_id, scratch_pool);
+
   SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
            eid,
            new_parent_eid,

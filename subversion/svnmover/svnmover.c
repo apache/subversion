@@ -302,6 +302,9 @@ subtree_replay(svn_editor3_t *editor,
                      || svn_element_payload_invariants(e1->payload));
       if (e0 || e1)
         {
+          const char *edit_branch_id
+            = svn_branch_get_id(edit_branch, scratch_pool);
+
           /* ### Ensure the requested EIDs are allocated... This is not the
                  right way to do it. Instead the Editor should map 'to be
                  created' EIDs to new EIDs? See BRANCH-README. */
@@ -313,7 +316,7 @@ subtree_replay(svn_editor3_t *editor,
             {
               SVN_DBG(("replay: alter e%d", eid));
               SVN_ERR(svn_editor3_alter(editor,
-                                        edit_branch, eid,
+                                        edit_branch_id, eid,
                                         e1->parent_eid, e1->name,
                                         e1->payload));
             }
@@ -321,13 +324,13 @@ subtree_replay(svn_editor3_t *editor,
             {
               SVN_DBG(("replay: delete e%d", eid));
               SVN_ERR(svn_editor3_delete(editor,
-                                         edit_branch, eid));
+                                         edit_branch_id, eid));
             }
           else
             {
               SVN_DBG(("replay: instan. e%d", eid));
               SVN_ERR(svn_editor3_alter(editor,
-                                        edit_branch, eid,
+                                        edit_branch_id, eid,
                                         e1->parent_eid, e1->name,
                                         e1->payload));
             }
@@ -1504,6 +1507,8 @@ branch_merge_subtree_r(svn_editor3_t *editor,
       svn_branch_el_rev_content_t *e_tgt;
       svn_branch_el_rev_content_t *result;
       svn_boolean_t conflict;
+      const char *tgt_branch_id
+        = svn_branch_get_id(tgt->branch, scratch_pool);
 
       svn_pool_clear(iterpool);
 
@@ -1539,7 +1544,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                    eid, result->name,
                    subbranch_str(tgt->branch, eid, iterpool));
 
-          SVN_ERR(svn_editor3_alter(editor, tgt->branch, eid,
+          SVN_ERR(svn_editor3_alter(editor, tgt_branch_id, eid,
                                     result->parent_eid, result->name,
                                     result->payload));
 
@@ -1550,7 +1555,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
           notify_v("D    e%d %s%s",
                    eid, e_yca->name,
                    subbranch_str(yca->branch, eid, iterpool));
-          SVN_ERR(svn_editor3_delete(editor, tgt->branch, eid));
+          SVN_ERR(svn_editor3_delete(editor, tgt_branch_id, eid));
         }
       else if (result)
         {
@@ -1565,7 +1570,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
            * (which is not specified here, but will need to be),
            * which may be in this branch or in another branch.
            */
-          SVN_ERR(svn_editor3_alter(editor, tgt->branch, eid,
+          SVN_ERR(svn_editor3_alter(editor, tgt_branch_id, eid,
                                     result->parent_eid, result->name,
                                     result->payload));
 
@@ -2043,9 +2048,16 @@ do_copy(svn_editor3_t *editor,
         const char *new_name,
         apr_pool_t *scratch_pool)
 {
+  const char *from_branch_id = svn_branch_get_id(from_el_rev->branch,
+                                                 scratch_pool);
+  svn_branch_rev_bid_eid_t *src_el_rev
+    = svn_branch_rev_bid_eid_create(from_el_rev->rev, from_branch_id,
+                                    from_el_rev->eid, scratch_pool);
+  const char *to_branch_id = svn_branch_get_id(to_branch, scratch_pool);
+
   SVN_ERR(svn_editor3_copy_tree(editor,
-                                from_el_rev,
-                                to_branch, to_parent_eid, new_name));
+                                src_el_rev,
+                                to_branch_id, to_parent_eid, new_name));
   notify_v("A+   %s (from %s)",
            branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
                                     scratch_pool),
@@ -2061,9 +2073,10 @@ do_delete(svn_editor3_t *editor,
           svn_branch_eid_t eid,
           apr_pool_t *scratch_pool)
 {
+  const char *branch_id = svn_branch_get_id(branch, scratch_pool);
   const char *path = svn_branch_get_rrpath_by_eid(branch, eid, scratch_pool);
 
-  SVN_ERR(svn_editor3_delete(editor, branch, eid));
+  SVN_ERR(svn_editor3_delete(editor, branch_id, eid));
   notify_v("D    %s", path);
   return SVN_NO_ERROR;
 }
@@ -2076,14 +2089,15 @@ do_mkdir(svn_editor3_t *editor,
          const char *new_name,
          apr_pool_t *scratch_pool)
 {
+  const char *to_branch_id = svn_branch_get_id(to_branch, scratch_pool);
   apr_hash_t *props = apr_hash_make(scratch_pool);
   svn_element_payload_t *payload
     = svn_element_payload_create_dir(props, scratch_pool);
   int new_eid;
 
-  SVN_ERR(svn_editor3_new_eid(editor, &new_eid, to_branch));
+  SVN_ERR(svn_editor3_new_eid(editor, &new_eid));
   SVN_ERR(svn_editor3_add(editor,
-                          to_branch, new_eid,
+                          to_branch_id, new_eid,
                           to_parent_eid, new_name, payload));
   notify_v("A    %s",
            branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
@@ -2143,19 +2157,22 @@ do_put_file(svn_editor3_t *editor,
 
   if (file_el_rev->eid >= 0)
     {
+      const char *branch_id = svn_branch_get_id(file_el_rev->branch,
+                                                scratch_pool);
       SVN_ERR(svn_editor3_alter(editor,
-                                file_el_rev->branch, file_el_rev->eid,
+                                branch_id, file_el_rev->eid,
                                 parent_eid, name,
                                 payload));
     }
   else
     {
+      const char *branch_id = svn_branch_get_id(parent_el_rev->branch,
+                                                scratch_pool);
       int new_eid;
 
-      SVN_ERR(svn_editor3_new_eid(editor, &new_eid,
-                                  parent_el_rev->branch));
+      SVN_ERR(svn_editor3_new_eid(editor, &new_eid));
       SVN_ERR(svn_editor3_add(editor,
-                              parent_el_rev->branch, new_eid,
+                              branch_id, new_eid,
                               parent_eid, name,
                               payload));
       file_el_rev->eid = new_eid;
@@ -2229,12 +2246,13 @@ mk_branch(svn_branch_state_t **new_branch_p,
           svn_element_payload_t *payload,
           apr_pool_t *scratch_pool)
 {
+  const char *outer_branch_id = svn_branch_get_id(outer_branch, scratch_pool);
   int new_outer_eid;
   svn_branch_state_t *new_branch;
 
-  SVN_ERR(svn_editor3_new_eid(editor, &new_outer_eid, outer_branch));
+  SVN_ERR(svn_editor3_new_eid(editor, &new_outer_eid));
   SVN_ERR(svn_editor3_add(editor,
-                          outer_branch, new_outer_eid,
+                          outer_branch_id, new_outer_eid,
                           outer_parent_eid, outer_name,
                           NULL /*new_payload*/));
   new_branch = svn_branch_add_new_branch(
@@ -2561,12 +2579,14 @@ do_move(svn_editor3_t *editor,
         const char *to_name,
         apr_pool_t *scratch_pool)
 {
+  const char *branch_id = svn_branch_get_id(el_rev->branch,
+                                            scratch_pool);
   /* New payload shall be the same as before */
   svn_branch_el_rev_content_t *existing_element
     = svn_branch_get_element(el_rev->branch, el_rev->eid);
 
   SVN_ERR(svn_editor3_alter(editor,
-                            el_rev->branch, el_rev->eid,
+                            branch_id, el_rev->eid,
                             to_parent_el_rev->eid, to_name,
                             existing_element->payload));
   notify_v("V    %s (from %s)",
