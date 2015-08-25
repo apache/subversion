@@ -101,23 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1691928
-   Fix issue #4584, "Non-canonical $HOME crashes GPG-agent support code".
-   Justification:
-     Regression introduced in 1.8.11. Simple cause; simple fix.
-   Notes:
-     Also nominated for 1.8.x.
-     Trunk has a better fix, but less suitable for backporting, in r1691952.
-   Votes:
-     +1: julianfoad, philip, stefan2
-     +1: danielsh (either with or without r1691952; haven't tried to reproduce,
-                   only reviewed the diff)
-     +0: rhuijben (Can't test this part. +1 on the combination with r1691952.
-                   I don't see returning a properly canonicalized path
-                   instead of a potentially non canonical path as a breaking
-                   change that can't be backported. I would call it a bugfix
-                   that should be backported)
-
  * r1696222, r1696225
    Implement polling on named pipes on Windows to resolve svn+ssh:// problems
    Justification:
