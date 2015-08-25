@@ -63,17 +63,8 @@ Candidate changes:
      Without a patch these numbers aren't visible in Windows distributions,
      which usually link these dependencies statically.
    Votes:
-     +1: brane
-     +1: rhuijben, stefan2 (without r1697664)
-
- * r1696695
-   Resolve circular library reference in libsvn_fs_x
-   Justification:
-     Causes library load failures on at least some Linux setups.
-     [The only reason it doesn't fail on Windows is that we currently link
-      libsvn_fs* into a single .dll]
-   Votes:
-     +1: rhuijben, stefan2
+     +1: brane, rhuijben
+     +1: stefan2 (without r1697664)
 
  * r1697381, r1697384, r1697387
    Make 'svnfsfs load-index' work as advertised in the documentation
@@ -106,3 +97,12 @@ Approved changes:
      Don't have memory leaks.
    Votes:
      +1: stefan2, philip, brane
+
+ * r1696695
+   Resolve circular library reference in libsvn_fs_x
+   Justification:
+     Causes library load failures on at least some Linux setups.
+     [The only reason it doesn't fail on Windows is that we currently link
+      libsvn_fs* into a single .dll]
+   Votes:
+     +1: rhuijben, stefan2, brane
