@@ -44,17 +44,20 @@ extern "C" {
 
 /*
  * ===================================================================
- * Versioning Model Assumed
+ * Some Characteristics of this Versioning Model
  * ===================================================================
  *
- *   - per-node, copying-is-branching
+ *   - the versioned state of an element consists of:
+ *        its tree linkage (parent element identity, name)
+ *        its payload (props, text, link-target)
+ *
+ *   - an element can be resurrected with the same element id that it
+ *        had before it was deleted, even if it had been deleted from
+ *        all branches
+ *
  *   - copying is independent per node: a copy-child is not detectably
  *     "the same copy" as its parent, it's just copied at the same time
  *       => (cp ^/a@5 b; del b/c; cp ^/a/c@5 b/c) == (cp ^/a@5 b)
- *   - a node-rev's versioned state consists of:
- *        its tree linkage (parent element identity, name)
- *        its payload (props, text, link-target)
- *   - resurrection is supported
  *
  * ===================================================================
  * Possible contexts (uses) for an editor
@@ -488,20 +491,6 @@ extern "C" {
  * ### Is copy-from-this-revision needed?
  */
 /*#define SVN_EDITOR3_WITH_COPY_FROM_THIS_REV*/
-
-/*
- * ===================================================================
- * Resurrection
- * ===================================================================
- *
- * Resurrection is needed in a branching model where element ids are the
- * key to matching up corresponding nodes between "big branches".
- *
- * Resurrection is not needed in a per-node branching model. A copy is
- * sufficient to restore a previously deleted node, as there is no need
- * to keep its old node-branch-id.
- */
-/*#define SVN_EDITOR3_WITH_RESURRECTION*/
 
 
 /**
