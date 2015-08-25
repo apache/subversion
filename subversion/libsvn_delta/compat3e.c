@@ -1150,13 +1150,13 @@ editor3_new_eid(void *baton,
 
 /* An #svn_editor3_t method. */
 static svn_error_t *
-editor3_add(void *baton,
-            const char *branch_id,
-            svn_branch_eid_t eid,
-            svn_branch_eid_t new_parent_eid,
-            const char *new_name,
-            const svn_element_payload_t *new_payload,
-            apr_pool_t *scratch_pool)
+editor3_alter(void *baton,
+              const char *branch_id,
+              svn_branch_eid_t eid,
+              svn_branch_eid_t new_parent_eid,
+              const char *new_name,
+              const svn_element_payload_t *new_payload,
+              apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
   svn_branch_state_t *branch
@@ -1165,7 +1165,7 @@ editor3_add(void *baton,
 
   if (new_payload)
     {
-      SVN_DBG(("add(e%d): parent e%d, name '%s', kind %s",
+      SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
                eid, new_parent_eid,
                new_name, svn_node_kind_to_word(new_payload->kind)));
 
@@ -1174,7 +1174,7 @@ editor3_add(void *baton,
     }
   else
     {
-      SVN_DBG(("add subbranch-root (e%d): parent e%d, name '%s'",
+      SVN_DBG(("alter(e%d): parent e%d, name '%s', kind (subbranch)",
                eid, new_parent_eid, new_name));
 
       svn_branch_update_subbranch_root_element(branch, eid,
@@ -1303,37 +1303,6 @@ editor3_delete(void *baton,
            svn_branch_get_id(branch, scratch_pool), eid));
 
   svn_branch_delete_element(branch, eid /* ### , since_rev? */);
-
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_alter(void *baton,
-              const char *branch_id,
-              svn_branch_eid_t eid,
-              svn_branch_eid_t new_parent_eid,
-              const char *new_name,
-              const svn_element_payload_t *new_payload,
-              apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *branch
-    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
-                                                branch_id, scratch_pool);
-
-  SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
-           eid,
-           new_parent_eid,
-           new_name ? new_name : "(same)",
-           new_payload ? svn_node_kind_to_word(new_payload->kind) : "(subbranch)"));
-
-  if (new_payload)
-    svn_branch_update_element(
-      branch, eid, new_parent_eid, new_name, new_payload);
-  else
-    svn_branch_update_subbranch_root_element(
-      branch, eid, new_parent_eid, new_name);
 
   return SVN_NO_ERROR;
 }
@@ -1960,11 +1929,10 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
     editor3_new_eid,
-    editor3_add,
+    editor3_alter,
     editor3_copy_one,
     editor3_copy_tree,
     editor3_delete,
-    editor3_alter,
     editor3_payload_resolve,
     editor3_sequence_point,
     editor3_mem_complete,
@@ -2003,11 +1971,10 @@ svn_editor3__ev3_from_delta_for_commit(
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
     editor3_new_eid,
-    editor3_add,
+    editor3_alter,
     editor3_copy_one,
     editor3_copy_tree,
     editor3_delete,
-    editor3_alter,
     editor3_payload_resolve,
     editor3_sequence_point,
     editor3_complete,

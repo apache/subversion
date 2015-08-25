@@ -136,23 +136,7 @@ Work on this branch:
 
     Tidying things to do:
 
-      Combine editor3 methods 'alter' and 'add' into a single method.
-
-        They have basically the same meaning apart from the precondition
-        (element does or does not already exist). The pre-existence should
-        *not* be considered, I think, because ... idempotency?
-        Likewise, 'delete' should not care if it was already deleted.
-        The special thing about 'add' is we need a way to specify a new
-        EID; this was recently made possible by adding a 'new_eid' method.
-        Specifying a new EID is not unique to the 'add' method; it is also
-        needed sometimes when specifying a new parent-eid (in 'add' or in
-        'alter') that refers to an element that is being added. Acquiring
-        the new eid separately and combining the two methods into one will
-        remove the ordering dependency between the 'add' and the use of a
-        parent-eid that refers to it.
-
-        The unifying principle is it's communicating a partial description
-        of the new state, without reference to the old state.
+      (none listed)
 
   * The model.
 

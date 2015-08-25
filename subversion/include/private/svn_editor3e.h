@@ -593,25 +593,43 @@ svn_error_t *
 svn_editor3_new_eid(svn_editor3_t *editor,
                     svn_branch_eid_t *eid_p);
 
-/** Create a new element in branch @a branch_id.
- * 
- * Assign the new element a new element id; store this in @a *eid_p if
- * @a eid_p is not null.
+/** Specify the tree position and payload of the element of @a branch_id
+ * identified by @a eid.
+ *
+ * This may create a new element or alter an existing element.
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
  *
  * Set the payload to @a new_payload. If @a new_payload is null, create a
  * subbranch-root element instead of a normal element.
  *
+ * A no-op change MUST be accepted but, in the interest of efficiency,
+ * SHOULD NOT be sent.
+ *
  * @see #svn_editor3_t
+ *
+ * If the element ...                   we can describe the effect as ...
+ *
+ *   exists in the branch               =>  altering it;
+ *   previously existed in the branch   =>  resurrecting it;
+ *   only existed in other branches     =>  branching it;
+ *   never existed anywhere             =>  creating or adding it.
+ *
+ * However, these are imprecise descriptions and not mutually exclusive.
+ * For example, if it existed previously in this branch and another, then
+ * we may describe the result as 'resurrecting' and/or as 'branching'.
+ *
+ * ### When converting this edit to an Ev1 edit, do we need a way to specify
+ *     where the Ev1 node is to be "copied" from, when this is branching the
+ *     element?
  */
 svn_error_t *
-svn_editor3_add(svn_editor3_t *editor,
-                const char *branch_id,
-                svn_branch_eid_t eid,
-                svn_branch_eid_t new_parent_eid,
-                const char *new_name,
-                const svn_element_payload_t *new_payload);
+svn_editor3_alter(svn_editor3_t *editor,
+                  const char *branch_id,
+                  svn_branch_eid_t eid,
+                  svn_branch_eid_t new_parent_eid,
+                  const char *new_name,
+                  const svn_element_payload_t *new_payload);
 
 /** Create a new element that is copied from a pre-existing
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
@@ -730,42 +748,6 @@ svn_editor3_delete(svn_editor3_t *editor,
                    const char *branch_id,
                    svn_branch_eid_t eid);
 
-/** Specify the tree position and payload of the element of @a branch_id
- * identified by @a eid.
- *
- * Set the element's parent and name to @a new_parent_eid and @a new_name.
- *
- * Set the payload to @a new_payload. If @a new_payload is null, create a
- * subbranch-root element instead of a normal element.
- *
- * A no-op change MUST be accepted but, in the interest of efficiency,
- * SHOULD NOT be sent.
- *
- * @see #svn_editor3_t
- *
- * If the element ...                   we can describe the effect as ...
- *
- *   exists in the branch               =>  altering it;
- *   previously existed in the branch   =>  resurrecting it;
- *   only existed in other branches     =>  branching it;
- *   never existed anywhere             =>  creating it.
- *
- * However, these are imprecise descriptions and not mutually exclusive.
- * For example, if it existed previously in this branch and another, then
- * we may describe the result as 'resurrecting' and/or as 'branching'.
- *
- * ### When converting this edit to an Ev1 edit, do we need a way to specify
- *     where the Ev1 node is to be "copied" from, when this is branching the
- *     element?
- */
-svn_error_t *
-svn_editor3_alter(svn_editor3_t *editor,
-                  const char *branch_id,
-                  svn_branch_eid_t eid,
-                  svn_branch_eid_t new_parent_eid,
-                  const char *new_name,
-                  const svn_element_payload_t *new_payload);
-
 /** Fetch full payload.
  *
  * If the payload in @a element is defined only by reference (to a
@@ -846,9 +828,9 @@ typedef svn_error_t *(*svn_editor3_cb_new_eid_t)(
   svn_branch_eid_t *eid_p,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_add(), #svn_editor3_t
+/** @see svn_editor3_alter(), #svn_editor3_t
  */
-typedef svn_error_t *(*svn_editor3_cb_add_t)(
+typedef svn_error_t *(*svn_editor3_cb_alter_t)(
   void *baton,
   const char *branch_id,
   svn_branch_eid_t eid,
@@ -885,17 +867,6 @@ typedef svn_error_t *(*svn_editor3_cb_delete_t)(
   void *baton,
   const char *branch_id,
   svn_branch_eid_t eid,
-  apr_pool_t *scratch_pool);
-
-/** @see svn_editor3_alter(), #svn_editor3_t
- */
-typedef svn_error_t *(*svn_editor3_cb_alter_t)(
-  void *baton,
-  const char *branch_id,
-  svn_branch_eid_t eid,
-  svn_branch_eid_t new_parent_eid,
-  const char *new_name,
-  const svn_element_payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_payload_resolve(), #svn_editor3_t
@@ -941,11 +912,10 @@ typedef svn_error_t *(*svn_editor3_cb_abort_t)(
 typedef struct svn_editor3_cb_funcs_t
 {
   svn_editor3_cb_new_eid_t cb_new_eid;
-  svn_editor3_cb_add_t cb_add;
+  svn_editor3_cb_alter_t cb_alter;
   svn_editor3_cb_copy_one_t cb_copy_one;
   svn_editor3_cb_copy_tree_t cb_copy_tree;
   svn_editor3_cb_delete_t cb_delete;
-  svn_editor3_cb_alter_t cb_alter;
   svn_editor3_cb_payload_resolve_t cb_payload_resolve;
 
   svn_editor3_cb_sequence_point_t cb_sequence_point;

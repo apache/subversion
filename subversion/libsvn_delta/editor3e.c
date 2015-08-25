@@ -204,20 +204,22 @@ svn_editor3_new_eid(svn_editor3_t *editor,
 }
 
 svn_error_t *
-svn_editor3_add(svn_editor3_t *editor,
-                const char *branch_id,
-                svn_branch_eid_t eid,
-                svn_branch_eid_t new_parent_eid,
-                const char *new_name,
-                const svn_element_payload_t *new_payload)
+svn_editor3_alter(svn_editor3_t *editor,
+                  const char *branch_id,
+                  svn_branch_eid_t eid,
+                  svn_branch_eid_t new_parent_eid,
+                  const char *new_name,
+                  const svn_element_payload_t *new_payload)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
-  SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
-  SVN_ERR_ASSERT(VALID_NAME(new_name));
+  /*SVN_ERR_ASSERT(eid == branch->root_eid ? new_parent_eid == -1
+                                         : VALID_EID(new_parent_eid));*/
+  /*SVN_ERR_ASSERT(eid == branch->root_eid ? *new_name == '\0'
+                                         : VALID_NAME(new_name));*/
   SVN_ERR_ASSERT(!new_payload || VALID_PAYLOAD(new_payload));
   VERIFY(alter, new_parent_eid != eid);
 
-  DO_CALLBACK(editor, cb_add,
+  DO_CALLBACK(editor, cb_alter,
               5(branch_id, eid,
                 new_parent_eid, new_name,
                 new_payload));
@@ -280,30 +282,6 @@ svn_editor3_delete(svn_editor3_t *editor,
 
   DO_CALLBACK(editor, cb_delete,
               2(branch_id, eid));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_editor3_alter(svn_editor3_t *editor,
-                  const char *branch_id,
-                  svn_branch_eid_t eid,
-                  svn_branch_eid_t new_parent_eid,
-                  const char *new_name,
-                  const svn_element_payload_t *new_payload)
-{
-  SVN_ERR_ASSERT(VALID_EID(eid));
-  /*SVN_ERR_ASSERT(eid == branch->root_eid ? new_parent_eid == -1
-                                         : VALID_EID(new_parent_eid));*/
-  /*SVN_ERR_ASSERT(eid == branch->root_eid ? *new_name == '\0'
-                                         : VALID_NAME(new_name));*/
-  SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
-  VERIFY(alter, new_parent_eid != eid);
-
-  DO_CALLBACK(editor, cb_alter,
-              5(branch_id, eid,
-                new_parent_eid, new_name,
-                new_payload));
 
   return SVN_NO_ERROR;
 }
@@ -432,21 +410,23 @@ wrap_new_eid(void *baton,
 }
 
 static svn_error_t *
-wrap_add(void *baton,
-         const char *branch_id,
-         svn_branch_eid_t eid,
-         svn_branch_eid_t new_parent_eid,
-         const char *new_name,
-         const svn_element_payload_t *new_payload,
-         apr_pool_t *scratch_pool)
+wrap_alter(void *baton,
+           const char *branch_id,
+           svn_branch_eid_t eid,
+           svn_branch_eid_t new_parent_eid,
+           const char *new_name,
+           const svn_element_payload_t *new_payload,
+           apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
 
-  dbg(eb, scratch_pool, "... : add(p=%s, n=%s, c=...)",
-      eid_str(new_parent_eid, scratch_pool), new_name);
-  SVN_ERR(svn_editor3_add(eb->wrapped_editor,
-                          branch_id, eid,
-                          new_parent_eid, new_name, new_payload));
+  dbg(eb, scratch_pool, "%s : alter(p=%s, n=%s, k=%s)",
+      eid_str(eid, scratch_pool),
+      eid_str(new_parent_eid, scratch_pool), new_name,
+      new_payload ? svn_node_kind_to_word(new_payload->kind) : "subbranch");
+  SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
+                            branch_id, eid,
+                            new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
@@ -508,26 +488,6 @@ wrap_delete(void *baton,
 }
 
 static svn_error_t *
-wrap_alter(void *baton,
-           const char *branch_id,
-           svn_branch_eid_t eid,
-           svn_branch_eid_t new_parent_eid,
-           const char *new_name,
-           const svn_element_payload_t *new_payload,
-           apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  dbg(eb, scratch_pool, "%s : alter(p=%s, n=%s, c=...)",
-      eid_str(eid, scratch_pool), eid_str(eid, scratch_pool),
-      eid_str(new_parent_eid, scratch_pool), new_name);
-  SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
-                            branch_id, eid,
-                            new_parent_eid, new_name, new_payload));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 wrap_payload_resolve(void *baton,
                      svn_branch_el_rev_content_t *element,
                      apr_pool_t *scratch_pool)
@@ -579,11 +539,10 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
 {
   static const svn_editor3_cb_funcs_t wrapper_funcs = {
     wrap_new_eid,
-    wrap_add,
+    wrap_alter,
     wrap_copy_one,
     wrap_copy_tree,
     wrap_delete,
-    wrap_alter,
     wrap_payload_resolve,
     wrap_sequence_point,
     wrap_complete,
@@ -639,20 +598,20 @@ change_detection_new_eid(void *baton,
 }
 
 static svn_error_t *
-change_detection_add(void *baton,
-         const char *branch_id,
-         svn_branch_eid_t eid,
-         svn_branch_eid_t new_parent_eid,
-         const char *new_name,
-         const svn_element_payload_t *new_payload,
-         apr_pool_t *scratch_pool)
+change_detection_alter(void *baton,
+           const char *branch_id,
+           svn_branch_eid_t eid,
+           svn_branch_eid_t new_parent_eid,
+           const char *new_name,
+           const svn_element_payload_t *new_payload,
+           apr_pool_t *scratch_pool)
 {
   change_detection_baton_t *eb = baton;
 
   *eb->change_detected = TRUE;
-  SVN_ERR(svn_editor3_add(eb->wrapped_editor,
-                          branch_id, eid,
-                          new_parent_eid, new_name, new_payload));
+  SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
+                            branch_id, eid,
+                            new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
@@ -708,24 +667,6 @@ change_detection_delete(void *baton,
 }
 
 static svn_error_t *
-change_detection_alter(void *baton,
-           const char *branch_id,
-           svn_branch_eid_t eid,
-           svn_branch_eid_t new_parent_eid,
-           const char *new_name,
-           const svn_element_payload_t *new_payload,
-           apr_pool_t *scratch_pool)
-{
-  change_detection_baton_t *eb = baton;
-
-  *eb->change_detected = TRUE;
-  SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
-                            branch_id, eid,
-                            new_parent_eid, new_name, new_payload));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 change_detection_payload_resolve(void *baton,
                      svn_branch_el_rev_content_t *element,
                      apr_pool_t *scratch_pool)
@@ -775,11 +716,10 @@ svn_editor3__change_detection_editor(svn_editor3_t **editor_p,
 {
   static const svn_editor3_cb_funcs_t wrapper_funcs = {
     change_detection_new_eid,
-    change_detection_add,
+    change_detection_alter,
     change_detection_copy_one,
     change_detection_copy_tree,
     change_detection_delete,
-    change_detection_alter,
     change_detection_payload_resolve,
     change_detection_sequence_point,
     change_detection_complete,
