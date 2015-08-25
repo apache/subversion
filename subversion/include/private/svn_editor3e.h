@@ -533,15 +533,14 @@ typedef struct svn_editor3_t svn_editor3_t;
  *
  * Edit Operations:
  *
- *   operations on elements of "this" branch
- *   - add       kind          new-(parent-eid[2],name,payload)  ->  new-eid
+ *   operations on elements of a branch
+ *   - alter     br:eid[2]     new-(parent-eid[2],name,payload)
  *   - copy-one  br:eid@rev[3] new-(parent-eid[2],name,payload)  ->  new-eid
  *   - copy-tree br:eid@rev[3] new-(parent-eid[2],name)          ->  new-eid
- *   - delete    eid[1]     since-rev
- *   - alter     eid[1,2]   since-rev new-(parent-eid[2],name,payload)
+ *   - delete    br:eid[1]
  *
- *   operations on sub-branches
- *   - branch
+ *   operations on branches
+ *   - ### TODO: branch, mkbranch, rmbranch, ...?
  *
  * Preconditions:
  *
@@ -566,7 +565,8 @@ typedef struct svn_editor3_t svn_editor3_t;
  *   - Copies can be made in two ways: a copy of a single element which can
  *     be edited, or a "cheap" O(1) copy of a subtree which cannot be edited.
  *
- *   - Deleting a subtree is O(1) cheap // or not. ### To be decided.
+ *   - Deleting a subtree is O(1) cheap: when the root element of a subtree
+ *     is deleted, the rest of the subtree disappears implicitly.
  *
  *   - The commit rebase MAY (but need not) merge a repository-side move
  *     with incoming edits inside the moved subtree, and vice-versa.
