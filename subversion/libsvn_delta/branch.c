@@ -827,6 +827,31 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
+                          svn_branch_subtree_t from_subtree,
+                          svn_branch_revision_root_t *rev_root,
+                          svn_branch_state_t *to_outer_branch,
+                          svn_branch_eid_t to_outer_eid,
+                          apr_pool_t *scratch_pool)
+{
+  svn_branch_state_t *new_branch;
+
+  /* create new branch */
+  new_branch = svn_branch_add_new_branch(rev_root,
+                                         to_outer_branch, to_outer_eid,
+                                         from_subtree.root_eid,
+                                         scratch_pool);
+
+  /* Populate the new branch mapping */
+  SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", from_subtree,
+                                         scratch_pool));
+
+  if (new_branch_p)
+    *new_branch_p = new_branch;
+  return SVN_NO_ERROR;
+}
+
 apr_array_header_t *
 svn_branch_get_immediate_subbranches(const svn_branch_state_t *branch,
                                      apr_pool_t *result_pool,
@@ -1383,30 +1408,5 @@ svn_branch_get_id(svn_branch_state_t *branch,
     }
   id = apr_psprintf(result_pool, "B%d%s", branch->outer_eid, id);
   return id;
-}
-
-svn_error_t *
-svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
-                          svn_branch_subtree_t from_subtree,
-                          svn_branch_revision_root_t *rev_root,
-                          svn_branch_state_t *to_outer_branch,
-                          svn_branch_eid_t to_outer_eid,
-                          apr_pool_t *scratch_pool)
-{
-  svn_branch_state_t *new_branch;
-
-  /* create new branch */
-  new_branch = svn_branch_add_new_branch(rev_root,
-                                         to_outer_branch, to_outer_eid,
-                                         from_subtree.root_eid,
-                                         scratch_pool);
-
-  /* Populate the new branch mapping */
-  SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", from_subtree,
-                                         scratch_pool));
-
-  if (new_branch_p)
-    *new_branch_p = new_branch;
-  return SVN_NO_ERROR;
 }
 
