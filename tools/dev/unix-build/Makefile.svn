@@ -1461,6 +1461,7 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 # run svn regression tests
 HTTPD_CHECK_CONF=$(PREFIX)/httpd/conf/httpd-svn-check-$(WC).conf
 HTTPD_CHECK_USERS=$(PREFIX)/httpd/conf/httpd-svn-check-users
+HTTPD_CHECK_GROUPS=$(PREFIX)/httpd/conf/httpd-svn-check-groups
 HTTPD_CHECK_PORT=8081
 MOD_DONTDOTHAT_CONF=$(PREFIX)/httpd/conf/dontdothat
 
@@ -1470,11 +1471,17 @@ $(MOD_DONTDOTHAT_CONF):
 	echo >>$@.tmp '/ = deny'
 	mv -f $@.tmp $@
 
-$(HTTPD_CHECK_CONF): $(MOD_DONTDOTHAT_CONF)
+$(HTTPD_CHECK_GROUPS):
+	mkdir -p $(dir $@)
+	printf "random: jrandom\nconstant: jconstant\n" > $@
+
+$(HTTPD_CHECK_CONF): $(MOD_DONTDOTHAT_CONF) $(HTTPD_CHECK_GROUPS)
 	mkdir -p $(dir $@)
 	$(PREFIX)/httpd/bin/htpasswd -bc $(HTTPD_CHECK_USERS).tmp jrandom rayjandom
 	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp jconstant rayjandom
 	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp __dumpster__ __loadster__
+	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp JRANDOM rayjandom
+	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp JCONSTANT rayjandom
 	mv -f $(HTTPD_CHECK_USERS).tmp $(HTTPD_CHECK_USERS)
 	echo > $@.tmp '# httpd config for make check'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
@@ -1539,8 +1546,8 @@ endif
 	echo >>$@.tmp '# Location for tests using mod_dontdothat'
 	echo >>$@.tmp '<Location /ddt-test-work/repositories>'
 	echo >> $@.tmp 'DAV               svn'
-	echo >> $@.tmp 'SVNParentPath     "$(SVN_WC)/subversion/tests/cmdline/svn-test-work/repositories"'
-	echo >> $@.tmp 'AuthzSVNAccessFile "$(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz"'
+	echo >> $@.tmp 'SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/repositories'
+	echo >> $@.tmp 'AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
 	echo >> $@.tmp 'AuthType          Basic'
 	echo >> $@.tmp 'AuthName          "Subversion Repository"'
 	echo >> $@.tmp 'AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
@@ -1551,6 +1558,169 @@ ifeq ($(USE_HTTPV1),yes)
 endif
 	echo >> $@.tmp 'DontDoThatConfigFile "$(MOD_DONTDOTHAT_CONF)"'
 	echo >> $@.tmp '</Location>'
+
+	echo >>$@.tmp '# Several locations for mod_authz_svn test follow'
+	echo >>$@.tmp '<Location /authz-test-work/anon>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+       echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  <IfModule mod_authz_core.c>'
+	echo >>$@.tmp '    Require all granted'
+	echo >>$@.tmp '  </IfModule>'
+	echo >>$@.tmp '  <IfModule !mod_authz_core.c>'
+	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '  </IfModule>'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/mixed>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+	echo >>$@.tmp '  Satisfy Any'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/mixed-noauthwhenanon>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+	echo >>$@.tmp '  AuthzSVNNoAuthWhenAnonymousAllowed On'
+	echo >>$@.tmp '  SVNPathAuthz On'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/authn>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/authn-anonoff>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+	echo >>$@.tmp '  AuthzSVNAnonymous Off'
+	echo >>$@.tmp '  SVNPathAuthz On'
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/authn-lcuser>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+	echo >>$@.tmp '  AuthzForceUsernameCase Lower'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/authn-group>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  AuthGroupFile     $(HTTPD_CHECK_GROUPS)'
+	echo >>$@.tmp '  Require           group random'
+	echo >>$@.tmp '  AuthzSVNAuthoritative Off'
+	echo >>$@.tmp '  SVNPathAuthz On'
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<IfModule mod_authz_core.c>'
+	echo >>$@.tmp '  <Location /authz-test-work/sallrany>'
+	echo >>$@.tmp '    DAV               svn'
+	echo >>$@.tmp '    SVNParentPath     $($SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '    SVNListParentPath On'
+	echo >>$@.tmp '    AuthType          Basic'
+	echo >>$@.tmp '    AuthName          "Subversion Repository"'
+	echo >>$@.tmp '    AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    AuthzSendForbiddenOnFailure On'
+	echo >>$@.tmp '    Satisfy All'
+	echo >>$@.tmp '    <RequireAny>'
+	echo >>$@.tmp '      Require valid-user'
+	echo >>$@.tmp '      Require expr req("ALLOW") == "1"'
+	echo >>$@.tmp '    </RequireAny>'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '  </Location>'
+	echo >>$@.tmp '  <Location /authz-test-work/sallrall>'
+	echo >>$@.tmp '    DAV               svn'
+	echo >>$@.tmp '    SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '    SVNListParentPath On'
+	echo >>$@.tmp '    AuthType          Basic'
+	echo >>$@.tmp '    AuthName          "Subversion Repository"'
+	echo >>$@.tmp '    AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    AuthzSendForbiddenOnFailure On'
+	echo >>$@.tmp '    Satisfy All'
+	echo >>$@.tmp '    <RequireAll>'
+	echo >>$@.tmp '      Require valid-user'
+	echo >>$@.tmp '      Require expr req("ALLOW") == "1"'
+	echo >>$@.tmp '    </RequireAll>'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '  </Location>'
+	echo >>$@.tmp '</IfModule>'
 	echo >>$@.tmp 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'Include "conf/$(SVN_REL_WC)*-custom.conf"'
