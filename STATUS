@@ -48,7 +48,7 @@ Candidate changes:
      the application's lifetime, might get recycled / "dirty" memory blocks
      as well ending up with segfaults etc.
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
  * r1687304,1687389,1693135,1693138,1693159,1695600,1695606,1695681
    Better configure detection of httpd version and auth fix.
