@@ -101,16 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1674626, r1674785
-   On Windows: Enable memcached support in libsvn_subr on apr-util 1.3+
-   Justification:
-     Apr-Util 1.3+ always provides memcached client support, so we can just
-     support this on Windows with a trivial buildsystem change. This makes the
-     behaviour similar to that on other platforms.
-   Votes:
-     +1: rhuijben, ivan, stefan2
-     +0.9: brane (The change looks trivially correct, but I can't test it)
-
  * r1691928
    Fix issue #4584, "Non-canonical $HOME crashes GPG-agent support code".
    Justification:
