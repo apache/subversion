@@ -34,6 +34,8 @@ Candidate changes:
    Votes:
      +1: stefan2
      +1: rhuijben (Would prefer clarity over the tiny performance improvement)
+     -0: brane (the performance hack should be in apr_array_make,
+                not in Subversion.)
 
  * r1695022
    Fix incomplete membuffer cache initialization.
@@ -55,13 +57,14 @@ Candidate changes:
    Votes:
      +1: philip, stefan2
 
- * r1696387
+ * r1696387, r1697664
    Expose expat and zlib versions in svn --version --verbose
    Justification:
      Without a patch these numbers aren't visible in Windows distributions,
      which usually link these dependencies statically.
    Votes:
-     +1: rhuijben, stefan2
+     +1: brane
+     +1: rhuijben, stefan2 (without r1697664)
 
  * r1696695
    Resolve circular library reference in libsvn_fs_x
