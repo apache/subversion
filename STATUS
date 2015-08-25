@@ -101,14 +101,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1696222, r1696225
-   Implement polling on named pipes on Windows to resolve svn+ssh:// problems
-   Justification:
-     Without this patch operations like checkout just fail with an error.
-     This is a regression as older Subversion releases ignored the error.
-   Votes:
-     +1: rhuijben, brane, stefan2
-
  * r1694929
    Fix memory corruption in SWIG bindings' svn_client_copy_source_t
    constructor.
