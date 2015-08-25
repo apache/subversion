@@ -2582,15 +2582,12 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
 
   /* Decide whether the two repositories are the same or not. */
   {
-    svn_error_t *src_err, *dst_err;
     const char *parent;
     const char *parent_abspath;
     const char *src_uuid, *dst_uuid;
 
     /* Get the repository uuid of SRC_URL */
-    src_err = svn_ra_get_uuid2(ra_session, &src_uuid, iterpool);
-    if (src_err && src_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
-      return svn_error_trace(src_err);
+    SVN_ERR(svn_ra_get_uuid2(ra_session, &src_uuid, iterpool));
 
     /* Get repository uuid of dst's parent directory, since dst may
        not exist.  ### TODO:  we should probably walk up the wc here,
@@ -2601,20 +2598,11 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
       parent = top_dst_path;
 
     SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent, scratch_pool));
-    dst_err = svn_client_get_repos_root(NULL /* root_url */, &dst_uuid,
-                                        parent_abspath, ctx,
-                                        iterpool, iterpool);
-    if (dst_err && dst_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
-      return dst_err;
-
-    /* If either of the UUIDs are nonexistent, then at least one of
-       the repositories must be very old.  Rather than punish the
-       user, just assume the repositories are different, so no
-       copy-history is attempted. */
-    if (src_err || dst_err || (! src_uuid) || (! dst_uuid))
-      same_repositories = FALSE;
-    else
-      same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
+    SVN_ERR(svn_client_get_repos_root(NULL /* root_url */, &dst_uuid,
+                                      parent_abspath, ctx,
+                                      iterpool, iterpool));
+    /* ### Also check repos_root_url? */
+    same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
   }
 
   /* Perform the move for each of the copy_pairs. */
