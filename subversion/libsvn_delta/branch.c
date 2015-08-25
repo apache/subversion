@@ -215,6 +215,30 @@ svn_branch_el_rev_id_create(svn_branch_state_t *branch,
   return id;
 }
 
+svn_branch_rev_bid_eid_t *
+svn_branch_rev_bid_eid_create(svn_revnum_t rev,
+                              const char *branch_id,
+                              int eid,
+                              apr_pool_t *result_pool)
+{
+  svn_branch_rev_bid_eid_t *id = apr_palloc(result_pool, sizeof(*id));
+
+  id->bid = branch_id;
+  id->eid = eid;
+  id->rev = rev;
+  return id;
+}
+
+svn_branch_rev_bid_eid_t *
+svn_branch_rev_bid_eid_dup(const svn_branch_rev_bid_eid_t *old_id,
+                           apr_pool_t *result_pool)
+{
+  svn_branch_rev_bid_eid_t *id = apr_pmemdup(result_pool, old_id, sizeof(*id));
+
+  id->bid = apr_pstrdup(result_pool, old_id->bid);
+  return id;
+}
+
 svn_branch_el_rev_content_t *
 svn_branch_el_rev_content_create(svn_branch_eid_t parent_eid,
                                  const char *name,

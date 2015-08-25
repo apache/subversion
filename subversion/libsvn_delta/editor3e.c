@@ -176,6 +176,7 @@ check_cancel(svn_editor3_t *editor)
 #define VALID_NAME(name) ((name) && (name)[0] && svn_relpath_is_canonical(name))
 #define VALID_PAYLOAD(payload) svn_element_payload_invariants(payload)
 #define VALID_EL_REV_ID(el_rev) (el_rev && el_rev->branch && VALID_EID(el_rev->eid))
+#define VALID_REV_BID_EID(rbe) (rbe && rbe->bid && VALID_EID(rbe->eid))
 
 #define VERIFY(method, expr) \
   if (! (expr)) \
@@ -185,13 +186,12 @@ check_cancel(svn_editor3_t *editor)
 
 svn_error_t *
 svn_editor3_new_eid(svn_editor3_t *editor,
-                    svn_branch_eid_t *eid_p,
-                    svn_branch_state_t *branch)
+                    svn_branch_eid_t *eid_p)
 {
   int eid = -1;
 
   DO_CALLBACK(editor, cb_new_eid,
-              2(&eid, branch));
+              1(&eid));
 
   SVN_ERR_ASSERT(VALID_EID(eid));
 
@@ -205,7 +205,7 @@ svn_editor3_new_eid(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_add(svn_editor3_t *editor,
-                svn_branch_state_t *branch,
+                const char *branch_id,
                 svn_branch_eid_t eid,
                 svn_branch_eid_t new_parent_eid,
                 const char *new_name,
@@ -218,7 +218,7 @@ svn_editor3_add(svn_editor3_t *editor,
   VERIFY(alter, new_parent_eid != eid);
 
   DO_CALLBACK(editor, cb_add,
-              5(branch, eid,
+              5(branch_id, eid,
                 new_parent_eid, new_name,
                 new_payload));
 
@@ -227,15 +227,15 @@ svn_editor3_add(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_copy_one(svn_editor3_t *editor,
-                     const svn_branch_el_rev_id_t *src_el_rev,
-                     svn_branch_state_t *branch,
+                     const svn_branch_rev_bid_eid_t *src_el_rev,
+                     const char *branch_id,
                      svn_branch_eid_t local_eid,
                      svn_branch_eid_t new_parent_eid,
                      const char *new_name,
                      const svn_element_payload_t *new_payload)
 {
   SVN_ERR_ASSERT(VALID_EID(local_eid));
-  SVN_ERR_ASSERT(VALID_EL_REV_ID(src_el_rev));
+  SVN_ERR_ASSERT(VALID_REV_BID_EID(src_el_rev));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
@@ -243,7 +243,7 @@ svn_editor3_copy_one(svn_editor3_t *editor,
 
   DO_CALLBACK(editor, cb_copy_one,
               6(src_el_rev,
-                branch, local_eid,
+                branch_id, local_eid,
                 new_parent_eid, new_name,
                 new_payload));
 
@@ -252,56 +252,56 @@ svn_editor3_copy_one(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_copy_tree(svn_editor3_t *editor,
-                      const svn_branch_el_rev_id_t *src_el_rev,
-                      svn_branch_state_t *branch,
+                      const svn_branch_rev_bid_eid_t *src_el_rev,
+                      const char *branch_id,
                       svn_branch_eid_t new_parent_eid,
                       const char *new_name)
 {
-  SVN_ERR_ASSERT(VALID_EL_REV_ID(src_el_rev));
+  SVN_ERR_ASSERT(VALID_REV_BID_EID(src_el_rev));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
   /* TODO: verify source element exists (in a committed rev) */
 
   DO_CALLBACK(editor, cb_copy_tree,
               4(src_el_rev,
-                branch, new_parent_eid, new_name));
+                branch_id, new_parent_eid, new_name));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_editor3_delete(svn_editor3_t *editor,
-                   svn_branch_state_t *branch,
+                   const char *branch_id,
                    svn_branch_eid_t eid)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
-  SVN_ERR_ASSERT(eid != branch->root_eid);
+  /*SVN_ERR_ASSERT(eid != branch->root_eid);*/
   /* TODO: verify this element exists (in initial state) */
 
   DO_CALLBACK(editor, cb_delete,
-              2(branch, eid));
+              2(branch_id, eid));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
-                  svn_branch_state_t *branch,
+                  const char *branch_id,
                   svn_branch_eid_t eid,
                   svn_branch_eid_t new_parent_eid,
                   const char *new_name,
                   const svn_element_payload_t *new_payload)
 {
   SVN_ERR_ASSERT(VALID_EID(eid));
-  SVN_ERR_ASSERT(eid == branch->root_eid ? new_parent_eid == -1
-                                         : VALID_EID(new_parent_eid));
-  SVN_ERR_ASSERT(eid == branch->root_eid ? *new_name == '\0'
-                                         : VALID_NAME(new_name));
+  /*SVN_ERR_ASSERT(eid == branch->root_eid ? new_parent_eid == -1
+                                         : VALID_EID(new_parent_eid));*/
+  /*SVN_ERR_ASSERT(eid == branch->root_eid ? *new_name == '\0'
+                                         : VALID_NAME(new_name));*/
   SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
   VERIFY(alter, new_parent_eid != eid);
 
   DO_CALLBACK(editor, cb_alter,
-              5(branch, eid,
+              5(branch_id, eid,
                 new_parent_eid, new_name,
                 new_payload));
 
@@ -404,13 +404,11 @@ dbg(wrapper_baton_t *eb,
 
 /* Return a human-readable string representation of EL_REV. */
 static const char *
-el_rev_str(const svn_branch_el_rev_id_t *el_rev,
-           apr_pool_t *result_pool)
+rev_bid_eid_str(const svn_branch_rev_bid_eid_t *el_rev,
+                apr_pool_t *result_pool)
 {
-  const char *bid = svn_branch_get_id(el_rev->branch, result_pool);
-
   return apr_psprintf(result_pool, "r%ldb%se%d",
-                      el_rev->rev, bid, el_rev->eid);
+                      el_rev->rev, el_rev->bid, el_rev->eid);
 }
 
 /* Return a human-readable string representation of EID. */
@@ -424,19 +422,18 @@ eid_str(svn_branch_eid_t eid,
 static svn_error_t *
 wrap_new_eid(void *baton,
              svn_branch_eid_t *eid_p,
-             svn_branch_state_t *branch,
              apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
 
   SVN_ERR(svn_editor3_new_eid(eb->wrapped_editor,
-                              eid_p, branch));
+                              eid_p));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_add(void *baton,
-         svn_branch_state_t *branch,
+         const char *branch_id,
          svn_branch_eid_t eid,
          svn_branch_eid_t new_parent_eid,
          const char *new_name,
@@ -448,15 +445,15 @@ wrap_add(void *baton,
   dbg(eb, scratch_pool, "... : add(p=%s, n=%s, c=...)",
       eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_add(eb->wrapped_editor,
-                          branch, eid,
+                          branch_id, eid,
                           new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_copy_one(void *baton,
-              const svn_branch_el_rev_id_t *src_el_rev,
-              svn_branch_state_t *branch,
+              const svn_branch_rev_bid_eid_t *src_el_rev,
+              const char *branch_id,
               svn_branch_eid_t local_eid,
               svn_branch_eid_t new_parent_eid,
               const char *new_name,
@@ -466,19 +463,20 @@ wrap_copy_one(void *baton,
   wrapper_baton_t *eb = baton;
 
   dbg(eb, scratch_pool, "%s : copy_one(f=%s, p=%s, n=%s, c=...)",
-      eid_str(local_eid, scratch_pool), el_rev_str(src_el_rev, scratch_pool),
+      eid_str(local_eid, scratch_pool),
+      rev_bid_eid_str(src_el_rev, scratch_pool),
       eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_copy_one(eb->wrapped_editor,
                                src_el_rev,
-                               branch, local_eid,
+                               branch_id, local_eid,
                                new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_copy_tree(void *baton,
-               const svn_branch_el_rev_id_t *src_el_rev,
-               svn_branch_state_t *branch,
+               const svn_branch_rev_bid_eid_t *src_el_rev,
+               const char *branch_id,
                svn_branch_eid_t new_parent_eid,
                const char *new_name,
                apr_pool_t *scratch_pool)
@@ -486,17 +484,17 @@ wrap_copy_tree(void *baton,
   wrapper_baton_t *eb = baton;
 
   dbg(eb, scratch_pool, "... : copy_tree(f=%s, p=%s, n=%s)",
-      el_rev_str(src_el_rev, scratch_pool),
+      rev_bid_eid_str(src_el_rev, scratch_pool),
       eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_copy_tree(eb->wrapped_editor,
                                 src_el_rev,
-                                branch, new_parent_eid, new_name));
+                                branch_id, new_parent_eid, new_name));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_delete(void *baton,
-            svn_branch_state_t *branch,
+            const char *branch_id,
             svn_branch_eid_t eid,
             apr_pool_t *scratch_pool)
 {
@@ -505,13 +503,13 @@ wrap_delete(void *baton,
   dbg(eb, scratch_pool, "%s : delete()",
       eid_str(eid, scratch_pool));
   SVN_ERR(svn_editor3_delete(eb->wrapped_editor,
-                             branch, eid));
+                             branch_id, eid));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 wrap_alter(void *baton,
-           svn_branch_state_t *branch,
+           const char *branch_id,
            svn_branch_eid_t eid,
            svn_branch_eid_t new_parent_eid,
            const char *new_name,
@@ -524,7 +522,7 @@ wrap_alter(void *baton,
       eid_str(eid, scratch_pool), eid_str(eid, scratch_pool),
       eid_str(new_parent_eid, scratch_pool), new_name);
   SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
-                            branch, eid,
+                            branch_id, eid,
                             new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
@@ -631,19 +629,18 @@ typedef struct change_detection_baton_t
 static svn_error_t *
 change_detection_new_eid(void *baton,
              svn_branch_eid_t *eid_p,
-             svn_branch_state_t *branch,
              apr_pool_t *scratch_pool)
 {
   change_detection_baton_t *eb = baton;
 
   SVN_ERR(svn_editor3_new_eid(eb->wrapped_editor,
-                              eid_p, branch));
+                              eid_p));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 change_detection_add(void *baton,
-         svn_branch_state_t *branch,
+         const char *branch_id,
          svn_branch_eid_t eid,
          svn_branch_eid_t new_parent_eid,
          const char *new_name,
@@ -654,15 +651,15 @@ change_detection_add(void *baton,
 
   *eb->change_detected = TRUE;
   SVN_ERR(svn_editor3_add(eb->wrapped_editor,
-                          branch, eid,
+                          branch_id, eid,
                           new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 change_detection_copy_one(void *baton,
-              const svn_branch_el_rev_id_t *src_el_rev,
-              svn_branch_state_t *branch,
+              const svn_branch_rev_bid_eid_t *src_el_rev,
+              const char *branch_id,
               svn_branch_eid_t local_eid,
               svn_branch_eid_t new_parent_eid,
               const char *new_name,
@@ -674,15 +671,15 @@ change_detection_copy_one(void *baton,
   *eb->change_detected = TRUE;
   SVN_ERR(svn_editor3_copy_one(eb->wrapped_editor,
                                src_el_rev,
-                               branch, local_eid,
+                               branch_id, local_eid,
                                new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 change_detection_copy_tree(void *baton,
-               const svn_branch_el_rev_id_t *src_el_rev,
-               svn_branch_state_t *branch,
+               const svn_branch_rev_bid_eid_t *src_el_rev,
+               const char *branch_id,
                svn_branch_eid_t new_parent_eid,
                const char *new_name,
                apr_pool_t *scratch_pool)
@@ -692,13 +689,13 @@ change_detection_copy_tree(void *baton,
   *eb->change_detected = TRUE;
   SVN_ERR(svn_editor3_copy_tree(eb->wrapped_editor,
                                 src_el_rev,
-                                branch, new_parent_eid, new_name));
+                                branch_id, new_parent_eid, new_name));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 change_detection_delete(void *baton,
-            svn_branch_state_t *branch,
+            const char *branch_id,
             svn_branch_eid_t eid,
             apr_pool_t *scratch_pool)
 {
@@ -706,13 +703,13 @@ change_detection_delete(void *baton,
 
   *eb->change_detected = TRUE;
   SVN_ERR(svn_editor3_delete(eb->wrapped_editor,
-                             branch, eid));
+                             branch_id, eid));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 change_detection_alter(void *baton,
-           svn_branch_state_t *branch,
+           const char *branch_id,
            svn_branch_eid_t eid,
            svn_branch_eid_t new_parent_eid,
            const char *new_name,
@@ -723,7 +720,7 @@ change_detection_alter(void *baton,
 
   *eb->change_detected = TRUE;
   SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
-                            branch, eid,
+                            branch_id, eid,
                             new_parent_eid, new_name, new_payload));
   return SVN_NO_ERROR;
 }
