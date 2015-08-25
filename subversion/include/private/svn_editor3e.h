@@ -593,7 +593,7 @@ svn_error_t *
 svn_editor3_new_eid(svn_editor3_t *editor,
                     svn_branch_eid_t *eid_p);
 
-/** Create a new element in branch @a branch.
+/** Create a new element in branch @a branch_id.
  * 
  * Assign the new element a new element id; store this in @a *eid_p if
  * @a eid_p is not null.
@@ -686,7 +686,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
                       svn_branch_eid_t new_parent_eid,
                       const char *new_name);
 
-/** Delete the existing element of @a branch identified by @a eid.
+/** Delete the existing element of @a branch_id identified by @a eid.
  *
  * The delete is not explicitly recursive. However, unless otherwise
  * specified, the caller may assume that each element that has element
@@ -694,7 +694,7 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
  * recursively.
  *
  * If the element @a eid is a subbranch root, then delete that subbranch
- * (recursively). The element @a eid is not the root element of @a branch.
+ * (recursively). The element @a eid is not the root element of @a branch_id.
  *
  * ### Options for Out-Of-Date Checking on Rebase
  *
@@ -730,7 +730,7 @@ svn_editor3_delete(svn_editor3_t *editor,
                    const char *branch_id,
                    svn_branch_eid_t eid);
 
-/** Specify the tree position and payload of the element of @a branch
+/** Specify the tree position and payload of the element of @a branch_id
  * identified by @a eid.
  *
  * Set the element's parent and name to @a new_parent_eid and @a new_name.
