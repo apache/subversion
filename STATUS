@@ -57,15 +57,6 @@ Candidate changes:
    Votes:
      +1: philip, stefan2
 
- * r1696387, r1697664
-   Expose expat and zlib versions in svn --version --verbose
-   Justification:
-     Without a patch these numbers aren't visible in Windows distributions,
-     which usually link these dependencies statically.
-   Votes:
-     +1: brane, rhuijben
-     +1: stefan2 (without r1697664)
-
  * r1697381, r1697384, r1697387
    Make 'svnfsfs load-index' work as advertised in the documentation
    Justification:
@@ -106,3 +97,11 @@ Approved changes:
       libsvn_fs* into a single .dll]
    Votes:
      +1: rhuijben, stefan2, brane
+
+ * r1696387, r1697664
+   Expose expat and zlib versions in svn --version --verbose
+   Justification:
+     Without a patch these numbers aren't visible in Windows distributions,
+     which usually link these dependencies statically.
+   Votes:
+     +1: brane, rhuijben, stefan2
