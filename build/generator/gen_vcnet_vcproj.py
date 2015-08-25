@@ -217,7 +217,8 @@ class Generator(gen_win.WinGeneratorBase):
                               dp.fname)
 
         if isinstance(dp, gen_base.TargetLib) and dp.msvc_delayload \
-           and isinstance(target, gen_base.TargetLinked):
+           and isinstance(target, gen_base.TargetLinked) \
+           and not self.disable_shared:
           delayload = self.get_output_name(dp)
         else:
           delayload = None
