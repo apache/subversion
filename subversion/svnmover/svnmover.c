@@ -2096,9 +2096,9 @@ do_mkdir(svn_editor3_t *editor,
   int new_eid;
 
   SVN_ERR(svn_editor3_new_eid(editor, &new_eid));
-  SVN_ERR(svn_editor3_add(editor,
-                          to_branch_id, new_eid,
-                          to_parent_eid, new_name, payload));
+  SVN_ERR(svn_editor3_alter(editor,
+                            to_branch_id, new_eid,
+                            to_parent_eid, new_name, payload));
   notify_v("A    %s",
            branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
                                     scratch_pool));
@@ -2171,10 +2171,10 @@ do_put_file(svn_editor3_t *editor,
       int new_eid;
 
       SVN_ERR(svn_editor3_new_eid(editor, &new_eid));
-      SVN_ERR(svn_editor3_add(editor,
-                              branch_id, new_eid,
-                              parent_eid, name,
-                              payload));
+      SVN_ERR(svn_editor3_alter(editor,
+                                branch_id, new_eid,
+                                parent_eid, name,
+                                payload));
       file_el_rev->eid = new_eid;
     }
   notify_v("A    %s",
@@ -2251,10 +2251,10 @@ mk_branch(svn_branch_state_t **new_branch_p,
   svn_branch_state_t *new_branch;
 
   SVN_ERR(svn_editor3_new_eid(editor, &new_outer_eid));
-  SVN_ERR(svn_editor3_add(editor,
-                          outer_branch_id, new_outer_eid,
-                          outer_parent_eid, outer_name,
-                          NULL /*new_payload*/));
+  SVN_ERR(svn_editor3_alter(editor,
+                            outer_branch_id, new_outer_eid,
+                            outer_parent_eid, outer_name,
+                            NULL /*new_payload*/));
   new_branch = svn_branch_add_new_branch(
                  outer_branch->rev_root,
                  outer_branch, new_outer_eid, -1/*new_root_eid*/,
