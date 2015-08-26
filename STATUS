@@ -15,6 +15,14 @@ Status of 1.9.1:
 Candidate changes:
 ==================
 
+ * r1694481, r1697824
+   Fix Unix build on systems without GPG agent.
+   Justification:
+     This is a user-reported issue.
+   Votes:
+     +1: brane, stefan2
+     +1: philip (without r1697824)
+
  * r1694533
    Fix alignment fault in ra_svn on 32 bit SPARC machines.
    Justification:
@@ -87,11 +95,3 @@ Approved changes:
      use "parser" as the name of a local variable.
    Votes:
      +1: stefan2, brane, rhuijben
-
- * r1694481, r1697824
-   Fix Unix build on systems without GPG agent.
-   Justification:
-     This is a user-reported issue.
-   Votes:
-     +1: brane, stefan2, rhuijben
-     +1: philip (without r1697824)
