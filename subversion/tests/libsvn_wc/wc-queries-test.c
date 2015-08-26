@@ -52,7 +52,7 @@ WC_QUERIES_SQL_DECLARE_STATEMENT_INFO(wc_query_info);
 /* The first query after the normal wc queries */
 #define STMT_SCHEMA_FIRST STMT_CREATE_SCHEMA
 
-#define SQLITE_ERR(x)   \
+#define SQLITE_ERR(x) do                                         \
 {                                                                \
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
