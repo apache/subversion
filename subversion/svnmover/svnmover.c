@@ -2278,8 +2278,6 @@ mk_branch(svn_branch_state_t **new_branch_p,
  * Branch the subtree of FROM_BRANCH found at FROM_EID, to create
  * a new branch at TO_OUTER_BRANCH:TO_OUTER_PARENT_EID:NEW_NAME.
  *
- * FROM_BRANCH must be an immediate sub-branch of TO_OUTER_BRANCH.
- *
  * FROM_BRANCH:FROM_EID must be an existing element. It may be the
  * root of FROM_BRANCH. It must not be the root of a subbranch of
  * FROM_BRANCH.
@@ -2303,7 +2301,7 @@ do_branch(svn_branch_state_t **new_branch_p,
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("cannot branch from b%s e%d: "
+                               _("Cannot branch from %s e%d: "
                                  "does not exist"),
                                svn_branch_get_id(
                                  from_branch, scratch_pool), from_eid);
@@ -2346,7 +2344,7 @@ do_topbranch(svn_branch_state_t **new_branch_p,
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("cannot branch from b%s e%d: "
+                               _("Cannot branch from %s e%d: "
                                  "does not exist"),
                                svn_branch_get_id(
                                  from_branch, scratch_pool), from_eid);
