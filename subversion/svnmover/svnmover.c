@@ -45,6 +45,7 @@
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_branch_repos.h"
 #include "private/svn_editor3e.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_string_private.h"
@@ -193,7 +194,7 @@ wc_checkout(svnmover_wc_t *wc,
                                       wc->pool, scratch_pool));
 
   /* Store the WC base state */
-  base_txn = svn_branch_revision_root_get_base(edit_txn);
+  base_txn = svn_branch_repos_get_base_revision_root(edit_txn);
   wc->base = apr_pcalloc(wc->pool, sizeof(*wc->base));
   wc->base->revision = base_revision;
   wc->base->branch_id = base_branch_id;
@@ -2623,7 +2624,7 @@ display_diff_of_commit(const commit_callback_baton_t *ccbb,
                        apr_pool_t *scratch_pool)
 {
   svn_branch_revision_root_t *previous_head_txn
-    = svn_branch_revision_root_get_base(ccbb->edit_txn);
+    = svn_branch_repos_get_base_revision_root(ccbb->edit_txn);
   svn_branch_state_t *base_branch
     = svn_branch_revision_root_get_branch_by_id(previous_head_txn,
                                                 ccbb->wc_base_branch_id,
