@@ -58,13 +58,6 @@ Candidate changes:
    Votes:
      +1: stefan2, brane
 
- * r1687304,1687389,1693135,1693138,1693159,1695600,1695606,1695681
-   Better configure detection of httpd version and auth fix.
-   Justification:
-     Build out-of-the box on more platforms.
-   Votes:
-     +1: philip, stefan2
-
  * r1697381, r1697384, r1697387
    Make 'svnfsfs load-index' work as advertised in the documentation
    Justification:
@@ -95,3 +88,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1687304,1687389,1693135,1693138,1693159,1695600,1695606,1695681
+   Better configure detection of httpd version and auth fix.
+   Justification:
+     Build out-of-the box on more platforms.
+   Votes:
+     +1: philip, stefan2, brane
