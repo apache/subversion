@@ -15,22 +15,19 @@ Status of 1.9.1:
 Candidate changes:
 ==================
 
- * r1694533
-   Fix alignment fault in ra_svn on 32 bit SPARC machines.
-   Justification:
-     RA_svn is basically unusuable on that platform.
-   Votes:
-     +1: stefan2
-     +1: rhuijben (Would prefer clarity over the tiny performance improvement)
-     -0: brane (the performance hack should be in apr_array_make,
-                not in Subversion.)
-
  * r1697381, r1697384, r1697387
    Make 'svnfsfs load-index' work as advertised in the documentation
    Justification:
      svnfsfs load-index would only ever be used in high-stress situations
      like desaster recovery.  So, while workarounds are possible, having
      people jump though a few extra hoops is a bad thing in that context.
+   Votes:
+     +1: stefan2
+
+ * r1697914
+   Fix alignment fault in ra_svn on 32 bit SPARC machines.
+   Justification:
+     RA_svn is basically unusuable on that platform.
    Votes:
      +1: stefan2
 
