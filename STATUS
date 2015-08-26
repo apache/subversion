@@ -28,7 +28,7 @@ Candidate changes:
      r1697967 - Provides a test case
      BH: Some tests around this would make this much easier to review.
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
      +1: rhuijben (Without r1697381, r1697967. Takes more time to review)
 
  * r1697914
@@ -36,7 +36,7 @@ Candidate changes:
    Justification:
      RA_svn is basically unusuable on that platform.
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
 Veto-blocked changes:
 =====================
