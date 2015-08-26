@@ -57,29 +57,17 @@ Item = svntest.wc.StateItem
 
 # How we currently test 'svnfsfs' --
 #
-#   'svnadmin create':   Create an empty repository, test that the
-#                        root node has a proper created-revision,
-#                        because there was once a bug where it
-#                        didn't.
+#   'svnfsfs load-index': Create a greek repo but set shard to 2 and pack
+#                         it so we can load into a packed shard with more
+#                         than one revision to test ordering issues etc.
+#                         r1 also contains a non-trival number of items such
+#                         that parser issues etc. have a chance to surface.
 #
-#                        Note also that "svnadmin create" is tested
-#                        implicitly every time we run a python test
-#                        script.  (An empty repository is always
-#                        created and then imported into;  if this
-#                        subcommand failed catastrophically, every
-#                        test would fail and we would know instantly.)
-#
-#   'svnadmin createtxn'
-#   'svnadmin rmtxn':    See below.
-#
-#   'svnadmin lstxns':   We don't care about the contents of transactions;
-#                        we only care that they exist or not.
-#                        Therefore, we can simply parse transaction headers.
-#
-#   'svnadmin dump':     A couple regression tests that ensure dump doesn't
-#                        error out, and one to check that the --quiet option
-#                        really does what it's meant to do. The actual
-#                        contents of the dump aren't verified at all.
+#                         The idea is dump the index of the pack, mess with
+#                         it to cover lots of UI guarantees but keep the
+#                         semantics of the relevant bits. Then feed it back
+#                         to load-index and verify that the result is still
+#                         a complete, consistent etc. repo.
 #
 ######################################################################
 # Helper routines
