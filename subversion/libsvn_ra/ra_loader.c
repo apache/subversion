@@ -52,6 +52,7 @@
 #include "ra_loader.h"
 #include "deprecated.h"
 
+#include "private/svn_branch_repos.h"
 #include "private/svn_auth_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_delta_private.h"
@@ -750,7 +751,7 @@ svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
                                              repos, ra_session, branch_info_dir,
                                              r,
                                              result_pool, scratch_pool));
-      APR_ARRAY_PUSH(repos->rev_roots, void *) = rev_root;
+      SVN_ERR(svn_branch_repos_add_revision(repos, rev_root));
     }
 
   *repos_p = repos;
@@ -826,7 +827,7 @@ commit_callback_wrapper(const svn_commit_info_t *commit_info,
       svn_branch_repos_t *repos = ccwb->branching_txn->repos;
 
       ccwb->branching_txn->rev = commit_info->revision;
-      APR_ARRAY_PUSH(repos->rev_roots, void *) = ccwb->branching_txn;
+      SVN_ERR(svn_branch_repos_add_revision(repos, ccwb->branching_txn));
       SVN_ERR(store_repos_info(ccwb->branching_txn, ccwb->session,
                                ccwb->branch_info_dir, pool));
     }

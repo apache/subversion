@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 
+#include "private/svn_branch_repos.h"
 #include "private/svn_delta_private.h"
 #include "private/svn_editor3e.h"
 #include "../libsvn_delta/debug_editor.h"

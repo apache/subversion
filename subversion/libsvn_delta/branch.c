@@ -54,35 +54,6 @@
   ((branch1)->outer_branch && \
    BRANCH_IS_SAME_BRANCH((branch1)->outer_branch, branch2, scratch_pool))
 
-svn_branch_repos_t *
-svn_branch_repos_create(apr_pool_t *result_pool)
-{
-  svn_branch_repos_t *repos = apr_pcalloc(result_pool, sizeof(*repos));
-
-  repos->rev_roots = svn_array_make(result_pool);
-  repos->pool = result_pool;
-  return repos;
-}
-
-struct svn_branch_revision_root_t *
-svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
-                              svn_revnum_t revnum)
-{
-  assert(revnum < repos->rev_roots->nelts);
-  return svn_array_get(repos->rev_roots, revnum);
-}
-
-struct svn_branch_state_t *
-svn_branch_repos_get_root_branch(const svn_branch_repos_t *repos,
-                                 svn_revnum_t revnum,
-                                 int top_branch_num)
-{
-  svn_branch_revision_root_t *rev_root
-    = svn_branch_repos_get_revision(repos, revnum);
-
-  return svn_branch_revision_root_get_root_branch(rev_root, top_branch_num);
-}
-
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
@@ -98,13 +69,6 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
   rev_root->root_branches = apr_array_make(result_pool, 0, sizeof(void *));
   rev_root->branches = svn_array_make(result_pool);
   return rev_root;
-}
-
-svn_branch_revision_root_t *
-svn_branch_revision_root_get_base(svn_branch_revision_root_t *rev_root)
-{
-  return svn_branch_repos_get_revision(rev_root->repos,
-                                       (int)rev_root->base_rev);
 }
 
 int
@@ -904,7 +868,7 @@ svn_branch_add_new_branch(svn_branch_revision_root_t *rev_root,
 
   new_branch = svn_branch_state_create(root_eid, rev_root,
                                        outer_branch, outer_eid,
-                                       rev_root->repos->pool);
+                                       rev_root->branches->pool);
 
   /* A branch must not already exist at this outer element */
   SVN_ERR_ASSERT_NO_RETURN(!outer_branch ||
@@ -1311,83 +1275,6 @@ svn_branch_find_nested_branch_element_by_relpath(
   *branch_p = root_branch;
   if (eid_p)
     *eid_p = svn_branch_get_eid_by_path(root_branch, relpath, scratch_pool);
-}
-
-svn_error_t *
-svn_branch_repos_get_branch_by_id(svn_branch_state_t **branch_p,
-                                  const svn_branch_repos_t *repos,
-                                  svn_revnum_t revnum,
-                                  const char *branch_id,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_branch_revision_root_t *rev_root;
-
-  if (revnum < 0 || revnum >= repos->rev_roots->nelts)
-    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                             _("No such revision %ld"), revnum);
-
-  rev_root = svn_branch_repos_get_revision(repos, revnum);
-  *branch_p = svn_branch_revision_root_get_branch_by_id(rev_root, branch_id,
-                                                        scratch_pool);
-  if (! *branch_p)
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("Branch %s not found in r%ld"),
-                             branch_id, revnum);
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
-                                   const svn_branch_repos_t *repos,
-                                   svn_revnum_t revnum,
-                                   const char *branch_id,
-                                   int eid,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
-{
-  svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
-
-  el_rev->rev = revnum;
-  SVN_ERR(svn_branch_repos_get_branch_by_id(&el_rev->branch,
-                                            repos, revnum, branch_id,
-                                            scratch_pool));
-  if (svn_branch_get_element(el_rev->branch, eid))
-    {
-      el_rev->eid = eid;
-    }
-  else
-    {
-      el_rev->eid = -1;
-    }
-  *el_rev_p = el_rev;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
-                                const svn_branch_repos_t *repos,
-                                svn_revnum_t revnum,
-                                const char *branch_id,
-                                const char *relpath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
-  svn_branch_state_t *branch;
-
-  SVN_ERR(svn_branch_repos_get_branch_by_id(&branch,
-                                            repos, revnum, branch_id,
-                                            scratch_pool));
-  el_rev->rev = revnum;
-  svn_branch_find_nested_branch_element_by_relpath(&el_rev->branch,
-                                                   &el_rev->eid,
-                                                   branch, relpath,
-                                                   scratch_pool);
-
-  /* Any relpath must at least be within the originally given branch */
-  SVN_ERR_ASSERT_NO_RETURN(el_rev->branch);
-  *el_rev_p = el_rev;
-  return SVN_NO_ERROR;
 }
 
 
