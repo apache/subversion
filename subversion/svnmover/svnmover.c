@@ -2192,7 +2192,10 @@ svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t **new_el_rev_p,
   const char *branch_id;
 
   if (old_el_rev->rev <= 0)
-    return NULL;
+    {
+      *new_el_rev_p = NULL;
+      return SVN_NO_ERROR;
+    }
 
   branch_id = svn_branch_get_id(old_el_rev->branch, result_pool);
   SVN_ERR(svn_branch_repos_find_el_rev_by_id(new_el_rev_p,
