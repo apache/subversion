@@ -72,7 +72,7 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
 }
 
 int
-svn_branch_allocate_new_eid(svn_branch_revision_root_t *rev_root)
+svn_branch_revision_root_new_eid(svn_branch_revision_root_t *rev_root)
 {
   int eid = rev_root->next_eid++;
 
@@ -688,7 +688,7 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
   /* Get a new EID for the root element, if not given. */
   if (to_eid == -1)
     {
-      to_eid = svn_branch_allocate_new_eid(to_branch->rev_root);
+      to_eid = svn_branch_revision_root_new_eid(to_branch->rev_root);
     }
 
   /* Create the new subtree root element */
@@ -864,7 +864,7 @@ svn_branch_add_new_branch(svn_branch_revision_root_t *rev_root,
   if (! outer_branch)
     outer_eid = rev_root->root_branches->nelts;
   if (root_eid == -1)
-    root_eid = svn_branch_allocate_new_eid(rev_root);
+    root_eid = svn_branch_revision_root_new_eid(rev_root);
 
   new_branch = svn_branch_state_create(root_eid, rev_root,
                                        outer_branch, outer_eid,

@@ -1143,7 +1143,7 @@ editor3_new_eid(void *baton,
                 apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  int eid = svn_branch_allocate_new_eid(eb->edited_rev_root);
+  int eid = svn_branch_revision_root_new_eid(eb->edited_rev_root);
 
   *eid_p = eid;
   return SVN_NO_ERROR;
