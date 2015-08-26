@@ -1190,47 +1190,16 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else if (c == '(')
     {
-      /* Allocate an APR array with room for (initially) 4 items.
-       * We do this manually because lists are the most frequent protocol
-       * element, often used to frame a single, optional value.  We save
-       * about 20% of total protocol handling time. */
-      char *buffer = apr_palloc(pool, sizeof(apr_array_header_t)
-                                      + 4 * sizeof(svn_ra_svn_item_t));
-      svn_ra_svn_item_t *data
-        = (svn_ra_svn_item_t *)(buffer + sizeof(apr_array_header_t));
-
-      item->kind = SVN_RA_SVN_LIST;
-      item->u.list = (apr_array_header_t *)buffer;
-      item->u.list->elts = (char *)data;
-      item->u.list->pool = pool;
-      item->u.list->elt_size = sizeof(*data);
-      item->u.list->nelts = 0;
-      item->u.list->nalloc = 4;
-
-      listitem = data;
-
       /* Read in the list items. */
+      item->kind = SVN_RA_SVN_LIST;
+      item->u.list = apr_array_make(pool, 4, sizeof(svn_ra_svn_item_t));
       while (1)
         {
           SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
           if (c == ')')
             break;
-
-          /* increase array capacity if necessary */
-          if (item->u.list->nelts == item->u.list->nalloc)
-            {
-              data = apr_palloc(pool, 2 * item->u.list->nelts * sizeof(*data));
-              memcpy(data, item->u.list->elts, item->u.list->nelts * sizeof(*data));
-              item->u.list->elts = (char *)data;
-              item->u.list->nalloc *= 2;
-              listitem = data + item->u.list->nelts;
-            }
-
-          /* read next protocol item */
+          listitem = apr_array_push(item->u.list);
           SVN_ERR(read_item(conn, pool, listitem, c, level));
-
-          listitem++;
-          item->u.list->nelts++;
         }
       SVN_ERR(readbuf_getchar(conn, pool, &c));
     }
