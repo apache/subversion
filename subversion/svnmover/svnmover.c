@@ -311,7 +311,7 @@ subtree_replay(svn_editor3_t *editor,
                  created' EIDs to new EIDs? See BRANCH-README. */
           while (eid >= edit_branch->rev_root->next_eid
                  || (e1 && e1->parent_eid >= edit_branch->rev_root->next_eid))
-            svn_branch_allocate_new_eid(edit_branch->rev_root);
+            svn_branch_revision_root_new_eid(edit_branch->rev_root);
 
           if (e0 && e1)
             {
@@ -2316,7 +2316,7 @@ do_branch(svn_branch_state_t **new_branch_p,
 
   /* assign new eid to root element (outer branch) */
   to_outer_eid
-    = svn_branch_allocate_new_eid(to_outer_branch->rev_root);
+    = svn_branch_revision_root_new_eid(to_outer_branch->rev_root);
   svn_branch_update_subbranch_root_element(to_outer_branch, to_outer_eid,
                                            to_outer_parent_eid, new_name);
 

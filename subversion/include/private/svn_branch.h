@@ -191,7 +191,7 @@ svn_branch_revision_root_get_branch_by_id(const svn_branch_revision_root_t *rev_
 /* Assign a new element id in REV_ROOT.
  */
 int
-svn_branch_allocate_new_eid(svn_branch_revision_root_t *rev_root);
+svn_branch_revision_root_new_eid(svn_branch_revision_root_t *rev_root);
 
 /* Often, branches have the same root element. For example,
  * branching /trunk to /branches/br1 results in:
