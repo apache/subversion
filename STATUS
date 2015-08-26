@@ -82,13 +82,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1693886
-   Fix an error leak in FSFS verification.
-   Justification:
-     Don't have memory leaks.
-   Votes:
-     +1: stefan2, philip, brane
-
  * r1696695
    Resolve circular library reference in libsvn_fs_x
    Justification:
