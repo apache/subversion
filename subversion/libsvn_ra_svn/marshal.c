@@ -1190,20 +1190,14 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else if (c == '(')
     {
-      /* On machines with 32 bit pointers, array headers are only 20 bytes
-       * which is not enough for our standard 64 bit alignment.
-       * So, determine a suitable block size for the APR array header that
-       * keeps proper alignment for following structs. */
-      const apr_size_t header_size
-        = APR_ALIGN_DEFAULT(sizeof(apr_array_header_t));
-
       /* Allocate an APR array with room for (initially) 4 items.
        * We do this manually because lists are the most frequent protocol
        * element, often used to frame a single, optional value.  We save
        * about 20% of total protocol handling time. */
-      char *buffer = apr_palloc(pool,
-                                header_size + 4 * sizeof(svn_ra_svn_item_t));
-      svn_ra_svn_item_t *data = (svn_ra_svn_item_t *)(buffer + header_size);
+      char *buffer = apr_palloc(pool, sizeof(apr_array_header_t)
+                                      + 4 * sizeof(svn_ra_svn_item_t));
+      svn_ra_svn_item_t *data
+        = (svn_ra_svn_item_t *)(buffer + sizeof(apr_array_header_t));
 
       item->kind = SVN_RA_SVN_LIST;
       item->u.list = (apr_array_header_t *)buffer;
