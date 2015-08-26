@@ -2583,6 +2583,7 @@ do_move(svn_editor3_t *editor,
 {
   const char *branch_id = svn_branch_get_id(el_rev->branch,
                                             scratch_pool);
+  const char *from_path = el_rev_id_to_path(el_rev, scratch_pool);
   /* New payload shall be the same as before */
   svn_branch_el_rev_content_t *existing_element
     = svn_branch_get_element(el_rev->branch, el_rev->eid);
@@ -2595,7 +2596,7 @@ do_move(svn_editor3_t *editor,
            branch_peid_name_to_path(to_parent_el_rev->branch,
                                     to_parent_el_rev->eid, to_name,
                                     scratch_pool),
-           el_rev_id_to_path(el_rev, scratch_pool));
+           from_path);
   return SVN_NO_ERROR;
 }
 
@@ -3174,15 +3175,15 @@ execute(svnmover_wc_t *wc,
               SVN_ERR(do_move(editor, arg[0]->el_rev,
                               arg[1]->parent_el_rev, arg[1]->path_name,
                               iterpool));
-              notify_v("V    %s (from %s)",
-                       action->relpath[1], action->relpath[0]);
             }
-
-          SVN_ERR(do_interactive_cross_branch_move(editor,
-                                                   arg[0]->el_rev,
-                                                   arg[1]->parent_el_rev,
-                                                   arg[1]->path_name,
-                                                   iterpool));
+          else
+            {
+              SVN_ERR(do_interactive_cross_branch_move(editor,
+                                                       arg[0]->el_rev,
+                                                       arg[1]->parent_el_rev,
+                                                       arg[1]->path_name,
+                                                       iterpool));
+            }
           break;
 
         case ACTION_CP:
