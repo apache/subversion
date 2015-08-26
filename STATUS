@@ -81,11 +81,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1696387, r1697664
-   Expose expat and zlib versions in svn --version --verbose
-   Justification:
-     Without a patch these numbers aren't visible in Windows distributions,
-     which usually link these dependencies statically.
-   Votes:
-     +1: brane, rhuijben, stefan2
