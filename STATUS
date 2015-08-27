@@ -20,10 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1698106
-   Improve help text for 'svn info --show-item'.
-   Justification:
-     Minor tweak for consistency and readability.
-   Votes:
-     +1: julianfoad, brane, danielsh
