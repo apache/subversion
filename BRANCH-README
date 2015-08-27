@@ -176,7 +176,7 @@ Work on this branch:
         that is the same across all branches in a family?
 
 
-  * A 'commit editor' interface supporting moves
+  * An 'editor' interface supporting moves
 
     STATUS
 
@@ -195,7 +195,7 @@ Work on this branch:
     svnlook test fails due to svnlook reporting a no-op change as a
     change.)
 
-    However, this version of the editory is not complete with respect to
+    However, this version of the editor is not complete with respect to
     branching: it only provides the operations that are needed *within* a
     branch. It could, I suppose, be extended to support operations on
     branches, including both the 'branching' operation itself, and also
@@ -220,20 +220,15 @@ Work on this branch:
     I think it's not a question of one way is right and one is wrong;
     rather, both are possible correct approaches.
 
+    This 'editor' can be used for 'commit', in which it edits a transaction
+    based on the 'head' revision, and for 'update', in which it edits a
+    transaction that represents the WC base (and then we merge this edit
+    with the WC base->working edit to update the WC working state).
 
-  * Adapt the editor as necessary to use as an 'update editor'.
-
-    The 'update editor' has some significantly different requirements,
-    at least the way it's implemented today with WC paths being
-    communicated rather than repository paths/nodes. Need to work out
-    how best to achieve this.
-    My preference is to lean towards using a 'tree editor' working on
-    repos nodes, and let the client side convert these to WC paths, but
-    we'll have to see if that's practical.
-
-    STATUS
-
-    Not started.
+    (The original 'update editor' had a peculiarity in that it used the
+    same API underneath but operating on WC paths rather than repository
+    paths/nodes. We should try to use exactly the same API for update,
+    commit, diff, merge, etc. as far as possible.)
 
 
 Terminology:
