@@ -23,10 +23,28 @@
 #include "svn_pools.h"
 
 #include "private/svn_fs_fs_private.h"
+#include "private/svn_sorts_private.h"
 
 #include "index.h"
 #include "util.h"
 #include "transaction.h"
+
+/* A svn_sort__array compatible comparator function, sorting the
+ * svn_fs_fs__p2l_entry_t** given in LHS, RHS by offset. */
+static int
+compare_p2l_entry_revision(const void *lhs,
+                           const void *rhs)
+{
+  const svn_fs_fs__p2l_entry_t *lhs_entry
+    =*(const svn_fs_fs__p2l_entry_t **)lhs;
+  const svn_fs_fs__p2l_entry_t *rhs_entry
+    =*(const svn_fs_fs__p2l_entry_t **)rhs;
+
+  if (lhs_entry->offset < rhs_entry->offset)
+    return -1;
+
+  return lhs_entry->offset == rhs_entry->offset ? 0 : 1;
+}
 
 svn_error_t *
 svn_fs_fs__load_index(svn_fs_t *fs,
@@ -39,6 +57,10 @@ svn_fs_fs__load_index(svn_fs_t *fs,
   /* Check the FS format number. */
   if (! svn_fs_fs__use_log_addressing(fs))
     return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
+
+  /* P2L index must be written in offset order.
+   * Sort ENTRIES accordingly. */
+  svn_sort__array(entries, compare_p2l_entry_revision);
 
   /* Treat an empty array as a no-op instead error. */
   if (entries->nelts != 0)
@@ -66,7 +88,8 @@ svn_fs_fs__load_index(svn_fs_t *fs,
 
       /* Combine rev data with new index data. */
       SVN_ERR(svn_fs_fs__add_index_data(fs, rev_file->file, l2p_proto_index,
-                                        p2l_proto_index, revision, iterpool));
+                                        p2l_proto_index,
+                                        rev_file->start_revision, iterpool));
     }
 
   svn_pool_destroy(iterpool);
