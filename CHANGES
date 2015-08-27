@@ -1,18 +1,23 @@
 Version 1.9.1
-(?? ??? 2015, from /branches/1.9.x)
+(02 Sep 2015, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.1
 
  User-visible changes:
   - Client-side bugfixes:
-    * Fix crash GPG-agent support code with non-canonical $HOME. (r1691928, issue #4584)
+    * Fix crash with GPG-agent with non-canonical $HOME (r1691928, issue #4584)
     * Fix checkout errors with svn+ssh:// on Windows (r1696222, r1696225)
     * svn: expose expat and zlib versions in svn --version --verbose (r1696387, r1697664)
+    * svn: improve help text for 'svn info --show-item' (r1698106)
 
   - Server-side bugfixes:
     * svnserve: fixed minor typo in help text (r1694023)
     * Enable caching with memcached on Windows (1674626, r1674785)
     * Fix an error leak in FSFS verification (r1693886)
     * Fix incomplete membuffer cache initialization (r1695022)
+    * svnfsfs: fix some bugs and inconsistencies in load-index (r1697381 et al.)
+
+  - Client-side and server-side bugfixes:
+    * Fix alignment fault in ra_svn on 32 bit SPARC machines (r1697914)
 
   - Bindings bugfixes:
     * Fix memory corruption in copy source SWIG bindings (r1694929)
