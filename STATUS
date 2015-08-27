@@ -43,11 +43,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1697845
-   Fix compiler warning about empty while statement body.
-   Justification:
-     Whilst we don't usually backport compiler warning fixes, this one
-     is caused by a bug in a macro definition, which this backport fixes.
-   Votes:
-     +1: brane, rhuijben, stefan2
