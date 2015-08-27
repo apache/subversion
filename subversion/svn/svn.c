@@ -435,7 +435,9 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                             "
                           "   'last-changed-revision'\n"
                           "                             "
-                          "                last change of TARGET at 'revision'\n"
+                          "                last change of TARGET at or before\n"
+                          "                             "
+                          "                'revision'\n"
                           "                             "
                           "   'last-changed-date'\n"
                           "                             "
@@ -446,27 +448,6 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                author of 'last-changed-revision'\n"
                           "                             "
                           "   'wc-root'    root of TARGET's working copy")},
-/*
-                       N_("print only the item identified by ARG: kind (node\n"
-                       "                             "
-                       "kind), url (repository URL), relative-url\n"
-                       "                             "
-                       "(repository-relative URL), repos-root-url (root\n"
-                       "                             "
-                       "URL of repository), repos-uuid (UUID of\n"
-                       "                             "
-                       "repository), revision (specified or implied\n"
-                       "                             "
-                       "revision), last-changed-revision (last commit at\n"
-                       "                             "
-                       "or before TARGET), last-changed-date (date of\n"
-                       "                             "
-                       "last-changed revision), last-changed-author\n"
-                       "                             "
-                       "(author of last-changed revision), wc-root (root\n"
-                       "                             "
-                       "of TARGET's working copy)")},
-*/
 
   /* Long-opt Aliases
    *
