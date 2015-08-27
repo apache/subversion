@@ -44,13 +44,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1687304,1687389,1693135,1693138,1693159,1695600,1695606,1695681
-   Better configure detection of httpd version and auth fix.
-   Justification:
-     Build out-of-the box on more platforms.
-   Votes:
-     +1: philip, stefan2, brane
-
  * r1695022
    Fix incomplete membuffer cache initialization.
    Justification:
