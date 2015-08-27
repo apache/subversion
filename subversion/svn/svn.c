@@ -738,19 +738,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  determines in which revision the target is first looked up.\n"
      "\n"
      "  With --show-item, print only the value of one item of information\n"
-     "  about TARGET. One of the following items can be selected:\n"
-     "     kind                  the kind of TARGET\n"
-     "     url                   the URL of TARGET in the repository\n"
-     "     relative-url          the repository-relative URL\n"
-     "     repos-root-url        the repository root URL\n"
-     "     repos-uuid            the repository UUID\n"
-     "     revision              the revision of TARGET (defaults to BASE\n"
-     "                           for working copy paths and HEAD for URLs)\n"
-     "     last-changed-revision the most recent revision in which TARGET\n"
-     "                           was changed\n"
-     "     last-changed-date     the date of the last-changed revision\n"
-     "     last-changed-author   the author of the last-changed revision\n"
-     "     wc-root               the root of TARGET's working copy\n"),
+     "  about TARGET.\n"),
     {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
      opt_changelist, opt_include_externals, opt_show_item, opt_no_newline}
   },
