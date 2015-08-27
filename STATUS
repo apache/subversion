@@ -44,19 +44,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1695022
-   Fix incomplete membuffer cache initialization.
-   Justification:
-     Most users won't be hit by this because the OS hands out nicely zeroed
-     memory pages which we won't recycle until the end of the process. So,
-     this problem primarily hits people running a setup that deliberately
-     poisons memory upon allocation (APR pool debugging, MSVC debug malloc).
-     However, those who use very small caches and initialize them late in
-     the application's lifetime, might get recycled / "dirty" memory blocks
-     as well ending up with segfaults etc.
-   Votes:
-     +1: stefan2, brane, rhuijben
-
  * r1694194
    Correct a parameter name in svn_repos_get_fs_build_parser5.
    Justification:
