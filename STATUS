@@ -27,10 +27,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1697914
-   Fix alignment fault in ra_svn on 32 bit SPARC machines.
-   Justification:
-     RA_svn is basically unusuable on that platform.
-   Votes:
-     +1: stefan2, brane, rhuijben
