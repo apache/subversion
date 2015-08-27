@@ -44,14 +44,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1697835
-   Fix compiler warning about const/non-const pointer conversion.
-   Justification:
-     Whilst we don't usually backport compiler warning fixes, this one
-     is fallout from the r1696222 group backport.
-   Votes:
-     +1: brane, rhuijben, stefan2
-
  * r1697845
    Fix compiler warning about empty while statement body.
    Justification:
