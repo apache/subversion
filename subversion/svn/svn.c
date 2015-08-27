@@ -415,7 +415,15 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                             "
                           "current revision (recommended when tagging)")},
   {"show-item", opt_show_item, 1,
-                       N_("print only the item identified by ARG")},
+                       N_("print only the item identified by ARG ('kind',\n"
+                       "                             "
+                       "'url', 'relative-url', 'repos-root-url',\n"
+                       "                             "
+                       "'repos-uuid', 'revision', 'last-changed-revision',\n"
+                       "                             "
+                       "'last-changed-date', 'last-changed-author',\n"
+                       "                             "
+                       "'wc-root')")},
 
   /* Long-opt Aliases
    *
@@ -742,7 +750,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "                           was changed\n"
      "     last-changed-date     the date of the last-changed revision\n"
      "     last-changed-author   the author of the last-changed revision\n"
-     "     wc-root               the root of TARGET's working copy"),
+     "     wc-root               the root of TARGET's working copy\n"),
     {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
      opt_changelist, opt_include_externals, opt_show_item, opt_no_newline}
   },
