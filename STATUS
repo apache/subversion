@@ -15,6 +15,12 @@ Status of 1.9.1:
 Candidate changes:
 ==================
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1697381, r1697384, r1697387, r1697967
    Make 'svnfsfs load-index' work as advertised in the documentation
    Justification:
@@ -28,18 +34,11 @@ Candidate changes:
      r1697967 - Provides a test case
      BH: Some tests around this would make this much easier to review.
    Votes:
-     +1: stefan2, brane
-     +1: rhuijben (Without r1697381, r1697967. Takes more time to review)
+     +1: stefan2, brane, rhuijben
 
  * r1697914
    Fix alignment fault in ra_svn on 32 bit SPARC machines.
    Justification:
      RA_svn is basically unusuable on that platform.
    Votes:
-     +1: stefan2, brane
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: stefan2, brane, rhuijben
