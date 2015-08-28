@@ -57,6 +57,12 @@ Item = svntest.wc.StateItem
 
 # How we currently test 'svnfsfs' --
 #
+#   'svnfsfs stats':      Run this on a greek repo, then verify that the
+#                         various sections are present. The section contents
+#                         is matched against section-specific patterns.
+#
+#   'svnfsfs dump-index': Tested implicitly by the load-index test
+#
 #   'svnfsfs load-index': Create a greek repo but set shard to 2 and pack
 #                         it so we can load into a packed shard with more
 #                         than one revision to test ordering issues etc.
@@ -92,6 +98,141 @@ def patch_format(repo_dir, shard_size):
 
 ######################################################################
 # Tests
+
+#----------------------------------------------------------------------
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def test_stats(sbox):
+  "stats output"
+
+  sbox.build()
+
+  exit_code, output, errput = \
+    svntest.actions.run_and_verify_svnfsfs(None, [], 'stats', sbox.repo_dir)
+
+  # split output into sections
+  sections = { }
+
+  last_line = ''
+  section_name = ''
+  section_contents = []
+  for line in output:
+    line = line.rstrip()
+    if line != '':
+
+      # If the first character is not a space, then LINE is a section header
+      if line[0] == ' ':
+        section_contents.append(line)
+      else:
+
+        # Store previous section
+        if section_name != '':
+          sections[section_name] = section_contents
+
+          # Is the output formatted nicely?
+          if last_line != '':
+            logger.warn("Error: no empty line before section '" + line + "'")
+            raise svntest.Failure
+
+        # start new section
+        section_name = line
+        section_contents = []
+
+    last_line = line
+
+  sections[section_name] = section_contents
+
+  # verify that these sections exist
+  sections_to_find = ['Reading revisions',
+                      'Global statistics:',
+                      'Noderev statistics:',
+                      'Representation statistics:',
+                      'Directory representation statistics:',
+                      'File representation statistics:',
+                      'Directory property representation statistics:',
+                      'File property representation statistics:',
+                      'Largest representations:',
+                      'Extensions by number of representations:',
+                      'Extensions by size of changed files:',
+                      'Extensions by size of representations:',
+                      'Histogram of expanded node sizes:',
+                      'Histogram of representation sizes:',
+                      'Histogram of file sizes:',
+                      'Histogram of file representation sizes:',
+                      'Histogram of file property sizes:',
+                      'Histogram of file property representation sizes:',
+                      'Histogram of directory sizes:',
+                      'Histogram of directory representation sizes:',
+                      'Histogram of directory property sizes:',
+                      'Histogram of directory property representation sizes:']
+  patterns_to_find = {
+    'Reading revisions' : ['\s+ 0[ 0-9]*'],
+    'Global .*'         : ['.*\d+ bytes in .*\d+ revisions',
+                           '.*\d+ bytes in .*\d+ changes',
+                           '.*\d+ bytes in .*\d+ node revision records',
+                           '.*\d+ bytes in .*\d+ representations',
+                           '.*\d+ bytes expanded representation size',
+                           '.*\d+ bytes with rep-sharing off' ],
+    'Noderev .*'        : ['.*\d+ bytes in .*\d+ nodes total',
+                           '.*\d+ bytes in .*\d+ directory noderevs',
+                           '.*\d+ bytes in .*\d+ file noderevs' ],
+    'Representation .*' : ['.*\d+ bytes in .*\d+ representations total',
+                           '.*\d+ bytes in .*\d+ directory representations',
+                           '.*\d+ bytes in .*\d+ file representations',
+                           '.*\d+ bytes in .*\d+ representations of added file nodes',
+                           '.*\d+ bytes in .*\d+ directory property representations',
+                           '.*\d+ bytes in .*\d+ file property representations',
+                           '.*\d+ bytes in header & footer overhead' ],
+    '.* representation statistics:' : 
+                          ['.*\d+ bytes in .*\d+ reps',
+                           '.*\d+ bytes in .*\d+ shared reps',
+                           '.*\d+ bytes expanded size',
+                           '.*\d+ bytes expanded shared size',
+                           '.*\d+ bytes with rep-sharing off',
+                           '.*\d+ shared references' ],
+    'Largest.*:'        : ['.*\d+ r\d+ */\S*'],
+    'Extensions by number .*:' :
+                          ['.*\d+ \( ?\d+%\) representations'],
+    'Extensions by size .*:' :
+                          ['.*\d+ \( ?\d+%\) bytes'],
+    'Histogram of .*:'  : ['.*\d+ \.\. < \d+.*\d+ \( ?\d+%\) bytes in *\d+ \( ?\d+%\) items']
+  }
+
+  # check that the output contains all sections
+  for section_name in sections_to_find:
+    if not sections.has_key(section_name):
+      logger.warn("Error: section '" + section_name + "' not found")
+      raise svntest.Failure
+
+  # check section contents
+  for section_name in sections.keys():
+    patterns = []
+
+    # find the suitable patterns for the current section
+    for pattern in patterns_to_find.keys():
+      if re.match(pattern, section_name):
+        patterns = patterns_to_find[pattern]
+        break;
+
+    if len(patterns) == 0:
+      logger.warn("Error: unexpected section '" + section_name + "' found'")
+      logger.warn(sections[section_name])
+      raise svntest.Failure
+
+    # each line in the section must match one of the patterns
+    for line in sections[section_name]:
+      found = False
+
+      for pattern in patterns:
+        if re.match(pattern, line):
+          found = True
+          break
+
+      if not found:
+        logger.warn("Error: unexpected line '" + line + "' in section '"
+                    + section_name + "'")
+        logger.warn(sections[section_name])
+        raise svntest.Failure
 
 #----------------------------------------------------------------------
 
@@ -167,6 +308,7 @@ def load_index_sharded(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
+              test_stats,
               load_index_sharded,
              ]
 
