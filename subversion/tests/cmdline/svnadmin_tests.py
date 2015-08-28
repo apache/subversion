@@ -1227,7 +1227,7 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
 #----------------------------------------------------------------------
 
-@Skip(svntest.main.tests_use_prepacakaged_repository)
+@Skip(svntest.main.tests_use_prepackaged_repository)
 def create_in_repo_subdir(sbox):
   "'svnadmin create /path/to/repo/subdir'"
 

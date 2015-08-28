@@ -1416,7 +1416,7 @@ def make_log_msg():
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
-def tests_use_prepacakaged_repository():
+def tests_use_prepackaged_repository():
   return options.fsfs_version is not None
 
 def tests_verify_dump_load_cross_check():
