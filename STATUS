@@ -15,6 +15,15 @@ Status of 1.9.2:
 Candidate changes:
 ==================
 
+ * r1698312
+   Correctly report empty representations in 'svnfsfs stats'.
+   Justification:
+     The current code displays the "0" bracket in histograms as
+     "-2147483648 .. < 1" instead of "0 .. < 1".  Technically correct
+     but annoying.  UI change only.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
