@@ -34,6 +34,17 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** Add the capabilities in @a list to @a conn's capabilities.
+ * @a list contains svn_ra_svn_item_t entries (which should be of type
+ * SVN_RA_SVN_WORD; a malformed data error will result if any are not).
+ *
+ * This is idempotent: if a given capability was already set for
+ * @a conn, it remains set.
+ */
+svn_error_t *
+svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
+                             const apr_array_header_t *list);
+
 
 /**
  * Set the shim callbacks to be used by @a conn to @a shim_callbacks.
