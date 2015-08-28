@@ -35,7 +35,21 @@ extern "C" {
 #endif /* __cplusplus */
 
 /** Memory representation of an on-the-wire data item. */
-typedef svn_ra_svn_item_t svn_ra_svn__item_t;
+typedef struct svn_ra_svn__item_t
+{
+  /** Variant indicator. */
+  svn_ra_svn_item_kind_t kind;
+
+  /** Variant data. */
+  union {
+    apr_uint64_t number;
+    svn_string_t *string;
+    const char *word;
+
+    /** Contains @c svn_ra_svn__item_t's. */
+    apr_array_header_t *list;
+  } u;
+} svn_ra_svn__item_t;
 
 /* Return a deep copy of the SOURCE array containing private API
  * svn_ra_svn__item_t SOURCE to public API *TARGET, allocating
