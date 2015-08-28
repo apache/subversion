@@ -121,10 +121,10 @@ def load_index_sharded(sbox):
   #
   # * uses the same encoding as the dump-index output
   # * is not in ascending item offset order
-  # * ignores lines with the full table header
-  # * ignores the checksum column and beyond
-  # * figures out the correct target revision even if the first item
-  #   does not match the first revision in the pack file
+  # * contains lines with the full table header
+  # * invalid or incorrect data in the checksum column and beyond
+  # * starts with an item which does not belong to the first revision
+  #   in the pack file
   #
   # So, let's mess with the ITEMS list to call in on these promises.
 
