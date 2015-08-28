@@ -1291,7 +1291,7 @@ static svn_error_t *commit_done(const svn_commit_info_t *commit_info,
 
 /* Add the LOCK_TOKENS (if any) to the filesystem access context,
  * checking path authorizations using the state in SB as we go.
- * LOCK_TOKENS is an array of svn_ra_svn_item_t structs.  Return a
+ * LOCK_TOKENS is an array of svn_ra_svn__item_t structs.  Return a
  * client error if LOCK_TOKENS is not a list of lists.  If a lock
  * violates the authz configuration, return SVN_ERR_RA_NOT_AUTHORIZED
  * to the client.  Use POOL for temporary allocations only.
@@ -1312,19 +1312,19 @@ static svn_error_t *add_lock_tokens(const apr_array_header_t *lock_tokens,
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
       const char *path, *token, *full_path;
-      svn_ra_svn_item_t *path_item, *token_item;
-      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(lock_tokens, i,
-                                               svn_ra_svn_item_t);
+      svn_ra_svn__item_t *path_item, *token_item;
+      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(lock_tokens, i,
+                                                svn_ra_svn__item_t);
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock tokens aren't a list of lists");
 
-      path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
+      path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn__item_t);
       if (path_item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock path isn't a string");
 
-      token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn_item_t);
+      token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn__item_t);
       if (token_item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock token isn't a string");
@@ -1361,7 +1361,7 @@ lock_cb(void *baton,
 }
 
 /* Unlock the paths with lock tokens in LOCK_TOKENS, ignoring any errors.
-   LOCK_TOKENS contains svn_ra_svn_item_t elements, assumed to be lists. */
+   LOCK_TOKENS contains svn_ra_svn__item_t elements, assumed to be lists. */
 static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
                                  server_baton_t *sb,
                                  apr_pool_t *pool)
@@ -1373,12 +1373,12 @@ static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
 
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
-      svn_ra_svn_item_t *item, *path_item, *token_item;
+      svn_ra_svn__item_t *item, *path_item, *token_item;
       const char *path, *token, *full_path;
 
-      item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn_item_t);
-      path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
-      token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn_item_t);
+      item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn__item_t);
+      path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn__item_t);
+      token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn__item_t);
 
       path = path_item->u.string->data;
       full_path = svn_fspath__join(sb->repository->fs_path->data,
@@ -1652,7 +1652,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_uint64_t wants_inherited_props;
   apr_uint64_t dirent_fields;
   apr_array_header_t *dirent_fields_list = NULL;
-  svn_ra_svn_item_t *elt;
+  svn_ra_svn__item_t *elt;
   int i;
   authz_baton_t ab;
 
@@ -1677,7 +1677,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       for (i = 0; i < dirent_fields_list->nelts; ++i)
         {
-          elt = &APR_ARRAY_IDX(dirent_fields_list, i, svn_ra_svn_item_t);
+          elt = &APR_ARRAY_IDX(dirent_fields_list, i, svn_ra_svn__item_t);
 
           if (elt->kind != SVN_RA_SVN_WORD)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -2071,7 +2071,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
      {
-        svn_ra_svn_item_t *item = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
+        svn_ra_svn__item_t *item = &APR_ARRAY_IDX(paths, i, svn_ra_svn__item_t);
         const char *full_path;
 
         if (item->kind != SVN_RA_SVN_STRING)
@@ -2210,7 +2210,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t send_changed_paths, strict_node, include_merged_revisions;
   apr_array_header_t *paths, *full_paths, *revprop_items, *revprops;
   char *revprop_word;
-  svn_ra_svn_item_t *elt;
+  svn_ra_svn__item_t *elt;
   int i;
   apr_uint64_t limit, include_merged_revs_param;
   log_baton_t lb;
@@ -2243,7 +2243,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 sizeof(char *));
       for (i = 0; i < revprop_items->nelts; i++)
         {
-          elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn_item_t);
+          elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn__item_t);
           if (elt->kind != SVN_RA_SVN_STRING)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Log revprop entry not a string"));
@@ -2265,7 +2265,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
     {
-      elt = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
+      elt = &APR_ARRAY_IDX(paths, i, svn_ra_svn__item_t);
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log path entry not a string"));
@@ -2387,7 +2387,7 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t revision;
   apr_array_header_t *location_revisions, *loc_revs_proto;
-  svn_ra_svn_item_t *elt;
+  svn_ra_svn__item_t *elt;
   int i;
   const char *relative_path;
   svn_revnum_t peg_revision;
@@ -2411,7 +2411,7 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                       sizeof(svn_revnum_t));
   for (i = 0; i < loc_revs_proto->nelts; i++)
     {
-      elt = &APR_ARRAY_IDX(loc_revs_proto, i, svn_ra_svn_item_t);
+      elt = &APR_ARRAY_IDX(loc_revs_proto, i, svn_ra_svn__item_t);
       if (elt->kind != SVN_RA_SVN_NUMBER)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Get-locations location revisions entry "
@@ -2802,8 +2802,8 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       const char *path, *full_path;
       svn_revnum_t current_rev;
-      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
-                                               svn_ra_svn_item_t);
+      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(path_revs, i,
+                                                svn_ra_svn__item_t);
       svn_fs_lock_target_t *target;
 
       svn_pool_clear(subpool);
@@ -2866,8 +2866,8 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       const char *path, *full_path;
       svn_revnum_t current_rev;
-      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
-                                               svn_ra_svn_item_t);
+      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(path_revs, i,
+                                                svn_ra_svn__item_t);
       struct lock_result_t *result;
 
       svn_pool_clear(subpool);
@@ -2979,8 +2979,8 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Parse the unlock requests from PATH_REVS into TARGETS. */
   for (i = 0; i < unlock_tokens->nelts; i++)
     {
-      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
-                                               svn_ra_svn_item_t);
+      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
+                                                svn_ra_svn__item_t);
       const char *path, *full_path, *token;
 
       svn_pool_clear(subpool);
@@ -3042,8 +3042,8 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   for (i = 0; i < unlock_tokens->nelts; ++i)
     {
       const char *path, *token, *full_path;
-      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
-                                               svn_ra_svn_item_t);
+      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
+                                                svn_ra_svn__item_t);
       struct lock_result_t *result;
 
       svn_pool_clear(subpool);
@@ -3851,20 +3851,20 @@ construct_server_baton(server_baton_t **baton,
      they get handed to the start-commit hook).  While we could add a
      new interface to re-retrieve them from conn and convert the
      result to a list, it's simpler to just convert caplist by hand
-     here, since we already have it and turning 'svn_ra_svn_item_t's
+     here, since we already have it and turning 'svn_ra_svn__item_t's
      into 'const char *'s is pretty easy.
 
      We only record capabilities we care about.  The client may report
      more (because it doesn't know what the server cares about). */
   {
     int i;
-    svn_ra_svn_item_t *item;
+    svn_ra_svn__item_t *item;
 
     b->repository->capabilities = apr_array_make(conn_pool, 1,
                                                  sizeof(const char *));
     for (i = 0; i < caplist->nelts; i++)
       {
-        item = &APR_ARRAY_IDX(caplist, i, svn_ra_svn_item_t);
+        item = &APR_ARRAY_IDX(caplist, i, svn_ra_svn__item_t);
         /* ra_svn_set_capabilities() already type-checked for us */
         if (strcmp(item->u.word, SVN_RA_SVN_CAP_MERGEINFO) == 0)
           {

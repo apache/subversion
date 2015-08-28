@@ -199,7 +199,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
 
   while (result == SASL_CONTINUE)
     {
-      svn_ra_svn_item_t *item;
+      svn_ra_svn__item_t *item;
 
       arg = svn_string_ncreate(out, outlen, pool);
       /* Encode what we send to the client. */
