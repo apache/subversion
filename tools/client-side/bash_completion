@@ -183,6 +183,7 @@ _svn()
 	optsParam="$optsParam|--native-eol|-l|--limit|-c|--change"
 	optsParam="$optsParam|--depth|--set-depth|--with-revprop"
 	optsParam="$optsParam|--cl|--changelist|--accept|--show-revs"
+	optsParam="$optsParam|--show-item"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -503,6 +504,10 @@ _svn()
 	    }
 
 	    [[ $previous = '--show-revs' ]] && values='merged eligible'
+
+	    [[ $previous = '--show-item' ]] && values="kind url relative-url \
+	      repos-root-url repos-uuid revision last-changed-revision \
+	      last-changed-date last-changed-author wc-root"
 
 	    if [[ $previous = '--username' ]] ; then
 	      values="$SVN_BASH_USERNAME"
