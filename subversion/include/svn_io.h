@@ -1157,6 +1157,31 @@ svn_stream_t *
 svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool);
 
+/** Return a generic read-only stream that forward a data from INNER
+ *  but uses buffering and add support for seeking for being more
+ *  efficient with parsers.
+ *
+ *  Set @a support_seek_to_start to TRUE only if you to be able to seek
+ *  to the start of stream without prior setting a mark.  Since the
+ *  stream needs to buffer all data since the oldest existing mark,
+ *  support for @a svn_stream_seek(stream,@c  NULL) results in unbounded
+ *  memory usage.  If @a support_seek_to_start is FALSE,
+ *  @a svn_stream_seek(stream, @c NULL) returns
+ *  @c SVN_ERR_STREAM_SEEK_NOT_SUPPORTED.
+ *
+ *  Allocate the stream in @a result_pool.
+ *
+ * @note To keep memory consumption low, make sure to frequently clear
+ * the pools that contain marks on the buffered stream.  Also, make sure
+ * that the total number of marks returns to zero at regular intervals.
+ *
+ * @since New in 1.10.
+ */
+svn_stream_t *
+svn_stream_wrap_buffered_read(svn_stream_t *inner,
+                              svn_boolean_t support_seek_to_start,
+                              apr_pool_t *result_pool);
+
 /** Return a generic stream which implements buffered reads and writes.
  *  The stream will preferentially store data in-memory, but may use
  *  disk storage as backup if the amount of data is large.
