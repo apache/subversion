@@ -140,7 +140,7 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char hostbuf[APRMAXHOSTLEN + 1];
   unsigned char cdigest[APR_MD5_DIGESTSIZE], sdigest[APR_MD5_DIGESTSIZE];
   const char *challenge, *sep, *password;
-  svn_ra_svn_item_t *item;
+  svn_ra_svn__item_t *item;
   svn_string_t *resp;
 
   *success = FALSE;
