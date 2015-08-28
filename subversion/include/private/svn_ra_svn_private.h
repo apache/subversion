@@ -34,8 +34,36 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** Memory representation of an on-the-wire data item. */
+typedef svn_ra_svn_item_t svn_ra_svn__item_t;
+
+/* Return a deep copy of the SOURCE array containing private API
+ * svn_ra_svn__item_t SOURCE to public API *TARGET, allocating
+ * sub-structures in RESULT_POOL. */
+apr_array_header_t *
+svn_ra_svn__to_public_array(const apr_array_header_t *source,
+                            apr_pool_t *result_pool);
+
+/* Deep copy contents from private API *SOURCE to public API *TARGET,
+ * allocating sub-structures in RESULT_POOL. */
+void
+svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
+                           const svn_ra_svn__item_t *source,
+                           apr_pool_t *result_pool);
+
+apr_array_header_t *
+svn_ra_svn__to_private_array(const apr_array_header_t *source,
+                             apr_pool_t *result_pool);
+
+/* Deep copy contents from public API *SOURCE to private API *TARGET,
+ * allocating sub-structures in RESULT_POOL. */
+void
+svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
+                            const svn_ra_svn_item_t *source,
+                            apr_pool_t *result_pool);
+
 /** Add the capabilities in @a list to @a conn's capabilities.
- * @a list contains svn_ra_svn_item_t entries (which should be of type
+ * @a list contains svn_ra_svn__item_t entries (which should be of type
  * SVN_RA_SVN_WORD; a malformed data error will result if any are not).
  *
  * This is idempotent: if a given capability was already set for
@@ -186,7 +214,7 @@ svn_ra_svn__write_tuple(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__read_item(svn_ra_svn_conn_t *conn,
                       apr_pool_t *pool,
-                      svn_ra_svn_item_t **item);
+                      svn_ra_svn__item_t **item);
 
 /** Scan data on @a conn until we find something which looks like the
  * beginning of an svn server greeting (an open paren followed by a
@@ -249,7 +277,7 @@ svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
                        apr_pool_t *pool,
                        const char *fmt, ...);
 
-/** Parse an array of @c svn_ra_svn_item_t structures as a list of
+/** Parse an array of @c svn_ra_svn__item_t structures as a list of
  * properties, storing the properties in a hash table.
  *
  * @since New in 1.5.
