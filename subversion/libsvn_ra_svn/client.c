@@ -726,7 +726,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              _("Server only supports versions up to %d"),
                              (int) maxver);
-  SVN_ERR(svn_ra_svn_set_capabilities(conn, server_caplist));
+  SVN_ERR(svn_ra_svn__set_capabilities(conn, server_caplist));
 
   /* All released versions of Subversion support edit-pipeline,
    * so we do not support servers that do not. */
@@ -759,7 +759,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, "c?c?l", &conn->uuid,
                                         &conn->repos_root, &repos_caplist));
   if (repos_caplist)
-    SVN_ERR(svn_ra_svn_set_capabilities(conn, repos_caplist));
+    SVN_ERR(svn_ra_svn__set_capabilities(conn, repos_caplist));
 
   if (conn->repos_root)
     {

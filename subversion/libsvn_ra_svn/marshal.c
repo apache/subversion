@@ -133,8 +133,16 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
   return conn;
 }
 
-svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
-                                         const apr_array_header_t *list)
+svn_error_t *
+svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
+                            const apr_array_header_t *list)
+{
+  return svn_error_trace(svn_ra_svn__set_capabilities(conn, list));
+}
+
+svn_error_t *
+svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
+                             const apr_array_header_t *list)
 {
   int i;
   svn_ra_svn_item_t *item;
