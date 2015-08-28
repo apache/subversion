@@ -856,7 +856,8 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
       /* Create a string containing the list of mechanisms, separated by spaces. */
       for (i = 0; i < mechlist->nelts; i++)
         {
-          svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(mechlist, i, svn_ra_svn_item_t);
+          svn_ra_svn__item_t *elt = &APR_ARRAY_IDX(mechlist, i,
+                                                   svn_ra_svn__item_t);
           mechstring = apr_pstrcat(pool,
                                    mechstring,
                                    i == 0 ? "" : " ",

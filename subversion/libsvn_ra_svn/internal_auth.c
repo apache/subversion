@@ -41,11 +41,11 @@ svn_boolean_t svn_ra_svn__find_mech(const apr_array_header_t *mechlist,
                                     const char *mech)
 {
   int i;
-  svn_ra_svn_item_t *elt;
+  svn_ra_svn__item_t *elt;
 
   for (i = 0; i < mechlist->nelts; i++)
     {
-      elt = &APR_ARRAY_IDX(mechlist, i, svn_ra_svn_item_t);
+      elt = &APR_ARRAY_IDX(mechlist, i, svn_ra_svn__item_t);
       if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word, mech) == 0)
         return TRUE;
     }
