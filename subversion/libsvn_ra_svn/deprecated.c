@@ -110,7 +110,12 @@ svn_ra_svn_read_item(svn_ra_svn_conn_t *conn,
                      apr_pool_t *pool,
                      svn_ra_svn_item_t **item)
 {
-  return svn_error_trace(svn_ra_svn__read_item(conn, pool, item));
+  svn_ra_svn__item_t *temp;
+  SVN_ERR(svn_ra_svn__read_item(conn, pool, &temp));
+  *item  = apr_pcalloc(pool, sizeof(**item));
+  svn_ra_svn__to_public_item(*item, temp, pool);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -127,6 +132,7 @@ svn_ra_svn_parse_tuple(const apr_array_header_t *list,
 {
   va_list va;
   svn_error_t *err;
+  list = svn_ra_svn__to_private_array(list, pool);
 
   va_start(va, fmt);
   err = svn_ra_svn__parse_tuple(list, pool, fmt, va);
@@ -155,6 +161,7 @@ svn_ra_svn_parse_proplist(const apr_array_header_t *list,
                           apr_pool_t *pool,
                           apr_hash_t **props)
 {
+  list = svn_ra_svn__to_private_array(list, pool);
   return svn_error_trace(svn_ra_svn__parse_proplist(list, pool, props));
 }
 
