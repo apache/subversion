@@ -343,7 +343,7 @@ print_stats(svn_fs_fs__stats_t *stats,
             apr_pool_t *pool)
 {
   /* print results */
-  printf("\nGlobal statistics:\n");
+  printf("\n\nGlobal statistics:\n");
   printf(_("%20s bytes in %12s revisions\n"
            "%20s bytes in %12s changes\n"
            "%20s bytes in %12s node revision records\n"
