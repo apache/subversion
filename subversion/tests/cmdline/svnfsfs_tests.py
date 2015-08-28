@@ -98,7 +98,6 @@ def patch_format(repo_dir, shard_size):
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 @SkipUnless(svntest.main.fs_has_pack)
 @SkipUnless(svntest.main.is_fs_log_addressing)
-@Skip(svntest.main.tests_use_prepackaged_repository)
 def load_index_sharded(sbox):
   "load-index in a packed repo"
 
