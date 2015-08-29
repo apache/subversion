@@ -3131,6 +3131,39 @@ def fsfs_pack_non_sharded(sbox):
       ['svnadmin: Warning - this repository is not sharded. Packing has no effect.\n'],
       [], "pack", sbox.repo_dir)
 
+@XFail()
+def load_revprops(sbox):
+  "svnadmin load-revprops"
+
+  sbox.build(create_wc=False, empty=True)
+
+  dump_path = os.path.join(os.path.dirname(sys.argv[0]),
+                                           'svnadmin_tests_data',
+                                           'skeleton_repos.dump')
+  dump_contents = open(dump_path, 'rb').readlines()
+  load_and_verify_dumpstream(sbox, None, [], None, False, dump_contents)
+
+  svntest.actions.run_and_verify_svnlook(['Initial setup...\n', '\n'],
+                                         [], 'log', '-r1', sbox.repo_dir)
+
+  # After loading the dump, amend one of the log message in the repository.
+  input_file = sbox.get_tempname()
+  svntest.main.file_write(input_file, 'Modified log message...\n')
+
+  svntest.actions.run_and_verify_svnadmin([], [], 'setlog', '--bypass-hooks',
+                                          '-r1', sbox.repo_dir, input_file)
+  svntest.actions.run_and_verify_svnlook(['Modified log message...\n', '\n'],
+                                         [], 'log', '-r1', sbox.repo_dir)
+
+  # Load the same dump, but with 'svnadmin load-revprops'.  Doing so should
+  # restore the log message to its original state.
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0,
+                                 True, dump_contents, 'load-revprops',
+                                 sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svnlook(['Initial setup...\n', '\n'],
+                                         [], 'log', '-r1', sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -3189,6 +3222,7 @@ test_list = [ None,
               load_no_svndate_r0,
               hotcopy_read_only,
               fsfs_pack_non_sharded,
+              load_revprops,
              ]
 
 if __name__ == '__main__':
