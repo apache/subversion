@@ -105,7 +105,7 @@ def patch_format(repo_dir, shard_size):
 def test_stats(sbox):
   "stats output"
 
-  sbox.build()
+  sbox.build(create_wc=False)
 
   exit_code, output, errput = \
     svntest.actions.run_and_verify_svnfsfs(None, [], 'stats', sbox.repo_dir)
@@ -243,7 +243,7 @@ def load_index_sharded(sbox):
   "load-index in a packed repo"
 
   # Configure two files per shard to trigger packing.
-  sbox.build()
+  sbox.build(create_wc=False)
   patch_format(sbox.repo_dir, shard_size=2)
 
   # With --fsfs-packing, everything is already packed and we
