@@ -601,8 +601,8 @@ def dump_quiet(sbox):
 
   sbox.build(create_wc = False)
 
-  exit_code, output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir,
-                                                        '--quiet')
+  exit_code, dump, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir,
+                                                      '--quiet')
   svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump --quiet' is unexpected.",
     'STDERR', [], errput)
@@ -3164,6 +3164,45 @@ def load_revprops(sbox):
   svntest.actions.run_and_verify_svnlook(['Initial setup...\n', '\n'],
                                          [], 'log', '-r1', sbox.repo_dir)
 
+def dump_revprops(sbox):
+  "svnadmin dump-revprops"
+
+  sbox.build(create_wc=False)
+
+  # Dump revprops only.
+  exit_code, dump_contents, errput = \
+    svntest.actions.run_and_verify_svnadmin(None, [], "dump-revprops", "-q",
+                                            sbox.repo_dir)
+
+  # We expect the dump to contain no path changes
+  for line in dump_contents:
+    if line.find("Node-path: ") > -1:
+      logger.warn("Error: path change found in revprops-only dump.")
+      raise svntest.Failure
+
+  # Remember the current log message for r1
+  exit_code, log_msg, errput = \
+    svntest.actions.run_and_verify_svnlook(None, [], 'log', '-r1',
+                                           sbox.repo_dir)
+
+  # Now, change the log message in the repository.
+  input_file = sbox.get_tempname()
+  svntest.main.file_write(input_file, 'Modified log message...\n')
+
+  svntest.actions.run_and_verify_svnadmin([], [], 'setlog', '--bypass-hooks',
+                                          '-r1', sbox.repo_dir, input_file)
+  svntest.actions.run_and_verify_svnlook(['Modified log message...\n', '\n'],
+                                         [], 'log', '-r1', sbox.repo_dir)
+
+  # Load the same dump with 'svnadmin load-revprops'.  Doing so should
+  # restore the log message to its original state.
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0,
+                                 True, dump_contents, 'load-revprops',
+                                 sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svnlook(log_msg, [], 'log', '-r1',
+                                         sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -3223,6 +3262,7 @@ test_list = [ None,
               hotcopy_read_only,
               fsfs_pack_non_sharded,
               load_revprops,
+              dump_revprops
              ]
 
 if __name__ == '__main__':
