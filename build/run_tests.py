@@ -157,7 +157,7 @@ class TestHarness:
 
     if self.opts.config_file is not None:
       cmdline.append('--config-file=' + self.opts.config_file)
-    elif self.memcached_server is not None:
+    elif self.opts.memcached_server is not None:
       cmdline.append('--memcached-server=' + self.opts.memcached_server)
 
     if self.opts.url is not None:
