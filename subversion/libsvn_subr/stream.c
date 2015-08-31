@@ -59,6 +59,7 @@ struct svn_stream_t {
   svn_close_fn_t close_fn;
   svn_stream_mark_fn_t mark_fn;
   svn_stream_seek_fn_t seek_fn;
+  svn_stream_remove_mark_fn_t remove_mark_fn;
   svn_stream_data_available_fn_t data_available_fn;
   svn_stream__is_buffered_fn_t is_buffered_fn;
   apr_file_t *file; /* Maybe NULL */
@@ -128,6 +129,13 @@ void
 svn_stream_set_seek(svn_stream_t *stream, svn_stream_seek_fn_t seek_fn)
 {
   stream->seek_fn = seek_fn;
+}
+
+void
+svn_stream_set_remove_mark(svn_stream_t *stream,
+                           svn_stream_remove_mark_fn_t remove_mark_fn)
+{
+  stream->remove_mark_fn = remove_mark_fn;
 }
 
 void
@@ -248,6 +256,22 @@ svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark)
     return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
 
   return svn_error_trace(stream->seek_fn(stream->baton, mark));
+}
+
+svn_error_t *
+svn_stream_remove_mark(svn_stream_t *stream, svn_stream_mark_t *mark)
+{
+  if (stream->remove_mark_fn == NULL)
+    {
+      if (stream->mark_fn == NULL)
+        return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL,
+			        NULL);
+
+       /* This stream simply does not care about existing marks. */
+       return SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(stream->remove_mark_fn(stream->baton, mark));
 }
 
 svn_error_t *
@@ -476,7 +500,8 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   /* Move the stream read pointer to the first position behind the EOL.
    */
   SVN_ERR(svn_stream_seek(stream, mark));
-  return svn_error_trace(svn_stream_skip(stream, total_parsed));
+  SVN_ERR(svn_stream_skip(stream, total_parsed));
+  return svn_error_trace(svn_stream_remove_mark(stream, mark));
 }
 
 /* Guts of svn_stream_readline().
@@ -779,6 +804,12 @@ seek_handler_disown(void *baton, const svn_stream_mark_t *mark)
 }
 
 static svn_error_t *
+remove_mark_handler_disown(void *baton, svn_stream_mark_t *mark)
+{
+  return svn_error_trace(svn_stream_remove_mark(baton, mark));
+}
+
+static svn_error_t *
 data_available_disown(void *baton, svn_boolean_t *data_available)
 {
   return svn_error_trace(svn_stream_data_available(baton, data_available));
@@ -800,6 +831,7 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
   svn_stream_set_write(s, write_handler_disown);
   svn_stream_set_mark(s, mark_handler_disown);
   svn_stream_set_seek(s, seek_handler_disown);
+  svn_stream_set_remove_mark(s, remove_mark_handler_disown);
   svn_stream_set_data_available(s, data_available_disown);
   svn_stream__set_is_buffered(s, is_buffered_handler_disown);
 
@@ -1752,6 +1784,9 @@ struct buffering_stream_wrapper_mark
 {
     /* Absolute position within the stream. */
     svn_filesize_t pos;
+
+    /* The pool that has the cleanup function registered for this mark. */
+    apr_pool_t *pool;
 };
 
 /* Implements svn_stream_t.read_fn for buffering read stream wrappers. */
@@ -1850,6 +1885,7 @@ mark_handler_buffering_wrapper(void *baton,
 
   stream_mark = apr_palloc(pool, sizeof(*stream_mark));
   stream_mark->pos = (svn_filesize_t)(btn->buffer_start + btn->buffer_pos);
+  stream_mark->pool = pool;
 
   /* Reference counting: Increment now and schedule automatic the decrement
    * for when the mark is being cleaned up. */
@@ -1896,6 +1932,25 @@ seek_handler_buffering_wrapper(void *baton,
       return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL,
                               _("Can't seek to begin of stream."));
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_t.remove_mark_fn for buffering read stream wrappers.
+ */
+static svn_error_t *
+remove_mark_handler_buffering_wrapper(void *baton,
+                                      svn_stream_mark_t *mark)
+{
+  struct buffering_stream_wrapper_mark *stream_mark
+    = (struct buffering_stream_wrapper_mark *)mark;
+
+  /* Bookkeeping. */
+  apr_pool_cleanup_run(stream_mark->pool, baton, decrement_mark_count);
+
+  /* Invalidate the mark object so we get an error when trying to use it. */
+  stream_mark->pos = -1;
+  stream_mark->pool = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -1969,6 +2024,7 @@ svn_stream_wrap_buffered_read(svn_stream_t *inner,
   svn_stream_set_read2(stream, read_handler_buffering_wrapper, NULL);
   svn_stream_set_mark(stream, mark_handler_buffering_wrapper);
   svn_stream_set_seek(stream, seek_handler_buffering_wrapper);
+  svn_stream_set_remove_mark(stream, remove_mark_handler_buffering_wrapper);
   svn_stream_set_data_available(stream,
                                 data_available_handler_buffering_wrapper);
   svn_stream__set_is_buffered(stream, is_buffered_handler_buffering_wrapper);
@@ -2213,6 +2269,19 @@ seek_handler_lazyopen(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_stream_remove_mark_fn_t */
+static svn_error_t *
+remove_mark_handler_lazyopen(void *baton,
+                             svn_stream_mark_t *mark)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  SVN_ERR(svn_stream_remove_mark(b->real_stream, mark));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 data_available_handler_lazyopen(void *baton,
                                 svn_boolean_t *data_available)
@@ -2260,6 +2329,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   svn_stream_set_close(stream, close_handler_lazyopen);
   svn_stream_set_mark(stream, mark_handler_lazyopen);
   svn_stream_set_seek(stream, seek_handler_lazyopen);
+  svn_stream_set_remove_mark(stream, remove_mark_handler_lazyopen);
   svn_stream_set_data_available(stream, data_available_handler_lazyopen);
   svn_stream__set_is_buffered(stream, is_buffered_lazyopen);
 
