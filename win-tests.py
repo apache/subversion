@@ -1006,16 +1006,16 @@ if not test_javahl and not test_swig:
   opts.config_file = config_file
   opts.fsfs_sharding = fsfs_sharding
   opts.fsfs_packing = fsfs_packing
-  opts.list_tests = list_tests,
+  opts.list_tests = list_tests
   opts.svn_bin = svn_bin
   opts.mode_filter = mode_filter
   opts.milestone_filter = milestone_filter
   opts.httpd_version = httpd_version
   opts.set_log_level = log_level
-  opts.ssl_cert = ssl_cert,
-  opts.exclusive_wc_locks = exclusive_wc_locks,
-  opts.memcached_server = memcached_server,
-  opts.skip_c_tests = skip_c_tests,
+  opts.ssl_cert = ssl_cert
+  opts.exclusive_wc_locks = exclusive_wc_locks
+  opts.memcached_server = memcached_server
+  opts.skip_c_tests = skip_c_tests
   opts.dump_load_cross_check = dump_load_cross_check
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file, fail_log_file, opts)
