@@ -910,6 +910,14 @@ typedef svn_error_t *(*svn_stream_mark_fn_t)(void *baton,
 typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
                                              const svn_stream_mark_t *mark);
 
+/** Handler function for removing a mark from a generic stream.
+ * @see svn_stream_t and svn_stream_remove_mark().
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(*svn_stream_remove_mark_fn_t)(void *baton,
+                                                    svn_stream_mark_t *mark);
+
 /** Poll handler for generic streams that support incomplete reads, @see
  * svn_stream_t and svn_stream_data_available().
  *
@@ -983,6 +991,14 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_stream_seek_fn_t seek_fn);
+
+/** Set @a stream's mark removal function to @a remove_mark_fn
+ *
+ * @since New in 1.10.
+ */
+void
+svn_stream_set_remove_mark(svn_stream_t *stream,
+                           svn_stream_remove_mark_fn_t remove_mark_fn);
 
 /** Set @a stream's data available function to @a data_available_fn
  *
@@ -1368,6 +1384,18 @@ svn_stream_mark(svn_stream_t *stream,
  */
 svn_error_t *
 svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
+
+/** Remove a @a mark from a generic @a stream.  Using this @a mark with
+ * svn_stream_seek() afterwards results in undefined behavior.
+ *
+ * This function returns the #SVN_ERR_STREAM_SEEK_NOT_SUPPORTED error
+ * if the stream doesn't implement seeking.
+ *
+ * @see svn_stream_mark()
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_stream_remove_mark(svn_stream_t *stream, svn_stream_mark_t *mark);
 
 /** When a stream supports polling for available data, obtain a boolean
  * indicating whether data is waiting to be read. If the stream doesn't
