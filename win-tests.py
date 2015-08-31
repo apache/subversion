@@ -993,21 +993,32 @@ if not test_javahl and not test_swig:
     httpd_version = gen_obj._libraries['httpd'].version
   else:
     httpd_version = None
+
+  opts, args = run_tests.create_parser().parse_args([])
+  opts.url = base_url
+  opts.fs_type = fs_type
+  opts.http_library = 'serf'
+  opts.server_minor_version = server_minor_version
+  opts.verbose = not quiet
+  opts.cleanup = cleanup
+  opts.enable_sasl = enable_sasl
+  opts.parallel = parallel
+  opts.config_file = config_file
+  opts.fsfs_sharding = fsfs_sharding
+  opts.fsfs_packing = fsfs_packing
+  opts.list_tests = list_tests,
+  opts.svn_bin = svn_bin
+  opts.mode_filter = mode_filter
+  opts.milestone_filter = milestone_filter
+  opts.httpd_version = httpd_version
+  opts.set_log_level = log_level
+  opts.ssl_cert = ssl_cert,
+  opts.exclusive_wc_locks = exclusive_wc_locks,
+  opts.memcached_server = memcached_server,
+  opts.skip_c_tests = skip_c_tests,
+  opts.dump_load_cross_check = dump_load_cross_check
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
-                             log_file,
-                             fail_log_file,
-                             base_url, fs_type, 'serf',
-                             server_minor_version, not quiet,
-                             cleanup, enable_sasl, parallel, config_file,
-                             fsfs_sharding, fsfs_packing,
-                             list_tests, svn_bin, mode_filter,
-                             milestone_filter,
-                             httpd_version=httpd_version,
-                             set_log_level=log_level, ssl_cert=ssl_cert,
-                             exclusive_wc_locks=exclusive_wc_locks,
-                             memcached_server=memcached_server,
-                             skip_c_tests=skip_c_tests,
-                             dump_load_cross_check=dump_load_cross_check)
+                             log_file, fail_log_file, opts)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)
