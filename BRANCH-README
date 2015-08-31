@@ -108,6 +108,16 @@ Work on this branch:
         * The 'replay' function must tell the driven editor which EIDs
           are previously known and which are to be considered as new.
 
+        * Possible ways to achieve this are:
+
+          - EIDs created within a txn are allocated from a txn-local id-space
+            (e.g. negative integers, if committed EIDs are positive integers)
+            and on commit converted to committed EIDs, and this conversion
+            communicated back to the client if the client wants to know it.
+
+          - Each EID includes the txn-id of the txn in which it was created,
+            and txn-id is unique.
+
         * The editor API must accept "new" EIDs in all EID contexts:
           including as a parent-eid, or as a subtree-root eid, not only
           as the primary EID of the element the method is operating on.
