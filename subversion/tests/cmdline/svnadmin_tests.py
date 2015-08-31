@@ -3131,7 +3131,6 @@ def fsfs_pack_non_sharded(sbox):
       ['svnadmin: Warning - this repository is not sharded. Packing has no effect.\n'],
       [], "pack", sbox.repo_dir)
 
-@XFail()
 def load_revprops(sbox):
   "svnadmin load-revprops"
 
