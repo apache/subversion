@@ -20,7 +20,7 @@
 set -e
 set -x
 
-scripts=$(cd $(dirname "$0") && pwd)
+scripts=$(cd $(dirname "$0") && pwd)/svnbot
 
 . ${scripts}/setenv.sh
 

@@ -36,7 +36,7 @@
 ## is the absolute path the parent of this file.
 
 # Modify this to suit your deployment
-environment=$(cd "${scripts}/.." && pwd)/environment.sh
+environment=$(cd "${scripts}/../.." && pwd)/environment.sh
 
 eval $(${environment})
 SVNBB_PARALLEL="${SVNBB_PARALLEL-2}"
