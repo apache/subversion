@@ -19,7 +19,6 @@
 ## variables:
 ##
 ##     PATH                     The search path
-##     SVNBB_OPENSSL            OpenSSL installation prefix
 ##     SVNBB_BDB                Berkeley DB installation prefix
 ##     SVNBB_SWIG               Swig installation prefix
 ##     SVNBB_SERF               Serf installation prefix
@@ -30,7 +29,6 @@
 ##     SVNBB_APR_20_DEV         Path of APR-2.0
 ##     SVNBB_JUNIT              The path of the junit.jar
 ##     SVNBB_PARALLEL           Optional: parallelization; defaults to 2
-##     LIBTOOL_CONFIG           Optional: libtool configuration path
 ##
 ## The invoking script will set local variable named ${scripts} that
 ## is the absolute path the parent of this file.
