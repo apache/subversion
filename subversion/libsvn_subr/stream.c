@@ -1732,26 +1732,6 @@ struct buffering_stream_wrapper_baton
 
   /* Current read position relative to BUFFER_START. */
   apr_size_t buffer_pos;
-
-  /* Absolute position within the stream that corresponds to the first
-   * byte in BUFFER. */
-  svn_filesize_t buffer_start;
-
-  /* If TRUE, BUFFER_START must always remain 0.
-   * To simplify the code, we initialize MARK_COUNT to 1 in that case, so
-   * it can never reach 0. */
-  svn_boolean_t support_seek_to_start;
-
-  /* Number of marks currently set on this stream.  We may only more the
-   * BUFFER_START when this is 0. */
-  apr_size_t mark_count;
-};
-
-/* svn_stream_mark_t for buffering read stream wrappers. */
-struct buffering_stream_wrapper_mark
-{
-    /* Absolute position within the stream. */
-    svn_filesize_t pos;
 };
 
 /* Implements svn_stream_t.read_fn for buffering read stream wrappers. */
@@ -1767,28 +1747,15 @@ read_handler_buffering_wrapper(void *baton,
    * So, we only need to replenish our buffers if we ran completely dry. */
   if (left_to_read == 0)
     {
-      /* For the same reason, reading no more than one chunk is fine. */
-      apr_size_t count = SVN__STREAM_CHUNK_SIZE;
+      apr_size_t count = btn->buffer->blocksize;
 
-      /* If there is no mark left, we can drop the current buffer contents
-       * making room for new data without reallocating the buffer. */
-      if (btn->mark_count == 0)
-        {
-          btn->buffer_start += btn->buffer->len;
-          btn->buffer_pos = 0;
-          btn->buffer->len = 0;
-        }
-
-      /* Read from the INNER stream, appending to whatever buffer contents
-       * there is currently. */
-      svn_stringbuf_ensure(btn->buffer, btn->buffer->len + count);
-      SVN_ERR(svn_stream_read2(btn->inner,
-                               btn->buffer->data + btn->buffer->len,
-                               &count));
-      btn->buffer->len += count;
+      /* Read from the INNER stream. */
+      SVN_ERR(svn_stream_read2(btn->inner, btn->buffer->data, &count));
+      btn->buffer->len = count;
+      btn->buffer_pos = 0;
 
       /* We may now have more data that we could return. */
-      left_to_read = btn->buffer->len - btn->buffer_pos;
+      left_to_read = btn->buffer->len;
     }
 
   /* Cap the read request to what we can deliver from the buffer. */
@@ -1798,104 +1765,6 @@ read_handler_buffering_wrapper(void *baton,
   /* Copy the data from the buffer and move the read pointer accordingly. */
   memcpy(buffer, btn->buffer->data + btn->buffer_pos, *len);
   btn->buffer_pos += *len;
-
-  return SVN_NO_ERROR;
-}
-
-/* Pool cleanup callback for stream marks being cleaned up.
- * This will not only do bookkeeping but release buffer space if possible. */
-static apr_status_t
-decrement_mark_count(void *baton)
-{
-  struct buffering_stream_wrapper_baton *btn = baton;
-
-  /* Bookkeeping. */
-  --btn->mark_count;
-
-  /* If there are no marks left, we may release / move the buffer.
-   *
-   * We will do so if we can move the buffer start by at least one chunk
-   * (prevent moving data around frequently) and the read pointer is past
-   * the middle of the buffer (again, reducing the amount of data copied).
-   *
-   * After some build-up phase, we will be fluctuating between the minimum
-   * needed buffer size and twice that (rounded up to chunk size).  The
-   * "needed buffer size" is the range covered from the first mark set to
-   * the max. read position when the last mark gets cleaned up.
-   */
-  if (   btn->mark_count == 0
-      && btn->buffer_pos > SVN__STREAM_CHUNK_SIZE
-      && btn->buffer_pos * 2 > btn->buffer->len)
-    {
-      /* There is no mark left, i.e. no way to access anything before the
-       * current read position.  So, make the buffer start at the current
-       * read position. */
-      svn_stringbuf_remove(btn->buffer, 0, btn->buffer_pos);
-
-      btn->buffer_start += btn->buffer_pos;
-      btn->buffer_pos = 0;
-    }
-
-  return APR_SUCCESS;
-}
-
-/* Implements svn_stream_t.mark_fn for buffering read stream wrappers. */
-static svn_error_t *
-mark_handler_buffering_wrapper(void *baton,
-                               svn_stream_mark_t **mark,
-                               apr_pool_t *pool)
-{
-  struct buffering_stream_wrapper_baton *btn = baton;
-  struct buffering_stream_wrapper_mark *stream_mark;
-
-  stream_mark = apr_palloc(pool, sizeof(*stream_mark));
-  stream_mark->pos = (svn_filesize_t)(btn->buffer_start + btn->buffer_pos);
-
-  /* Reference counting: Increment now and schedule automatic the decrement
-   * for when the mark is being cleaned up. */
-  ++btn->mark_count;
-  apr_pool_cleanup_register(pool, baton,
-                            decrement_mark_count, apr_pool_cleanup_null);
-
-  *mark = (svn_stream_mark_t *)stream_mark;
-  return SVN_NO_ERROR;
-}
-
-/* Implements svn_stream_t.seek_fn for buffering read stream wrappers. */
-static svn_error_t *
-seek_handler_buffering_wrapper(void *baton,
-                               const svn_stream_mark_t *mark)
-{
-  struct buffering_stream_wrapper_baton *btn = baton;
-
-  if (mark != NULL)
-    {
-      const struct buffering_stream_wrapper_mark *stream_mark
-        = (const struct buffering_stream_wrapper_mark *)mark;
-
-      /* Position to move to, relative to the start of the buffer.
-       * The casts here are safe due to svn_filesize_t being 64 bits. */
-      svn_filesize_t pos = stream_mark->pos - btn->buffer_start;
-
-      /* The mark must point to somewhere inside our buffered location or
-       * immediately at the upper end of the buffer. */
-      SVN_ERR_ASSERT(pos >= 0 && pos <= (svn_filesize_t)btn->buffer->len);
-      btn->buffer_pos = (apr_size_t)pos;
-    }
-  else if (btn->support_seek_to_start)
-    {
-      /* To support this feature, we locked the buffer at position 0.
-       * Make sure that this is still the case. */
-      SVN_ERR_ASSERT(btn->buffer_start == 0);
-
-      /* Next read starts at the begin of the stream again. */
-      btn->buffer_pos = 0;
-    }
-  else
-    {
-      return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL,
-                              _("Can't seek to begin of stream."));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -1929,23 +1798,8 @@ is_buffered_handler_buffering_wrapper(void *baton)
   return TRUE;
 }
 
-/* Pool cleanup callback checking that there are no more user-created
- * marks on that buffering_stream_wrapper_baton BATON.  If there were,
- * they might cause memory corruption in their cleanup code. */
-static apr_status_t
-assert_zero_mark_count(void *baton)
-{
-  struct buffering_stream_wrapper_baton *btn = baton;
-
-  apr_size_t expected_mark_count = btn->support_seek_to_start ? 1 : 0;
-  SVN_ERR_ASSERT_NO_RETURN(btn->mark_count == expected_mark_count);
-
-  return APR_SUCCESS;
-}
-
 svn_stream_t *
 svn_stream_wrap_buffered_read(svn_stream_t *inner,
-                              svn_boolean_t support_seek_to_start,
                               apr_pool_t *result_pool)
 {
   svn_stream_t *stream;
@@ -1955,27 +1809,16 @@ svn_stream_wrap_buffered_read(svn_stream_t *inner,
    * The buffer is empty and we are at position 0. */
   baton = apr_pcalloc(result_pool, sizeof(*baton));
   baton->inner = inner;
-  baton->buffer = svn_stringbuf_create_empty(result_pool);
+  baton->buffer = svn_stringbuf_create_ensure(SVN__STREAM_CHUNK_SIZE,
+                                              result_pool);
   baton->buffer_pos = 0;
-  baton->buffer_start = 0;
-  baton->support_seek_to_start = support_seek_to_start;
-
-  /* If seek(NULL) is supported, lock the buffer like a mark at position 0
-   * would. */
-  baton->mark_count = support_seek_to_start ? 1 : 0;
 
   /* Create the wrapper stream object and set up the vtable. */
   stream = svn_stream_create(baton, result_pool);
   svn_stream_set_read2(stream, read_handler_buffering_wrapper, NULL);
-  svn_stream_set_mark(stream, mark_handler_buffering_wrapper);
-  svn_stream_set_seek(stream, seek_handler_buffering_wrapper);
   svn_stream_set_data_available(stream,
                                 data_available_handler_buffering_wrapper);
   svn_stream__set_is_buffered(stream, is_buffered_handler_buffering_wrapper);
-
-  /* Assert that no marks get cleaned up after the stream. */
-  apr_pool_cleanup_register(result_pool, baton,
-                            assert_zero_mark_count, apr_pool_cleanup_null);
 
   return stream;
 }

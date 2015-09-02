@@ -1548,7 +1548,7 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Read the stream from STDIN.  Users can redirect a file. */
   SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
-  stdin_stream = svn_stream_wrap_buffered_read(stdin_stream, FALSE, pool);
+  stdin_stream = svn_stream_wrap_buffered_read(stdin_stream, pool);
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
