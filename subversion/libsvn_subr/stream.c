@@ -1710,6 +1710,114 @@ svn_stream_from_string(const svn_string_t *str,
   return stream;
 }
 
+/* Baton structure for buffering read stream wrappers.
+ *
+ * We read from INNER and append the data to BUFFER.  From BUFFER, we serve
+ * read requests. Old buffer contents gets discarded once it is no longer
+ * needed.
+ */
+struct buffering_stream_wrapper_baton
+{
+  /* Our data source. */
+  svn_stream_t *inner;
+
+  /* Contains the data pre-read from INNER. Some of this may already have
+   * been delivered. */
+  svn_stringbuf_t *buffer;
+
+  /* Current read position relative to the start of BUFFER->DATA. */
+  apr_size_t buffer_pos;
+};
+
+/* Implements svn_stream_t.read_fn for buffering read stream wrappers. */
+static svn_error_t *
+read_handler_buffering_wrapper(void *baton,
+                               char *buffer,
+                               apr_size_t *len)
+{
+  struct buffering_stream_wrapper_baton *btn = baton;
+  apr_size_t left_to_read = btn->buffer->len - btn->buffer_pos;
+
+  /* This is the "normal" and potential incomplete read function.
+   * So, we only need to replenish our buffers if we ran completely dry. */
+  if (left_to_read == 0)
+    {
+      apr_size_t count = btn->buffer->blocksize;
+
+      /* Read from the INNER stream. */
+      SVN_ERR(svn_stream_read2(btn->inner, btn->buffer->data, &count));
+      btn->buffer->len = count;
+      btn->buffer_pos = 0;
+
+      /* We may now have more data that we could return. */
+      left_to_read = btn->buffer->len;
+    }
+
+  /* Cap the read request to what we can deliver from the buffer. */
+  if (left_to_read < *len)
+    *len = left_to_read;
+
+  /* Copy the data from the buffer and move the read pointer accordingly. */
+  memcpy(buffer, btn->buffer->data + btn->buffer_pos, *len);
+  btn->buffer_pos += *len;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_t.data_available_fn for buffering read stream
+ * wrappers. */
+static svn_error_t *
+data_available_handler_buffering_wrapper(void *baton,
+                                         svn_boolean_t *data_available)
+{
+  /* If we still have some unread data, this becomes easy to answer. */
+  struct buffering_stream_wrapper_baton *btn = baton;
+  if (btn->buffer->len > btn->buffer_pos)
+    {
+      *data_available = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Otherwise, because we would always read from the inner streams' current
+   * position to fill the buffer, asking the inner stream when the buffer is
+   * exhausted gives the correct answer. */
+  return svn_error_trace(svn_stream_data_available(btn->inner,
+                                                   data_available));
+}
+
+/* Implements svn_stream_t.is_buffered_fn for buffering read stream wrappers.
+ */
+static svn_boolean_t
+is_buffered_handler_buffering_wrapper(void *baton)
+{
+  return TRUE;
+}
+
+svn_stream_t *
+svn_stream_wrap_buffered_read(svn_stream_t *inner,
+                              apr_pool_t *result_pool)
+{
+  svn_stream_t *stream;
+  struct buffering_stream_wrapper_baton *baton;
+
+  /* Create the wrapper stream state.
+   * The buffer is empty and we are at position 0. */
+  baton = apr_pcalloc(result_pool, sizeof(*baton));
+  baton->inner = inner;
+  baton->buffer = svn_stringbuf_create_ensure(SVN__STREAM_CHUNK_SIZE,
+                                              result_pool);
+  baton->buffer_pos = 0;
+
+  /* Create the wrapper stream object and set up the vtable. */
+  stream = svn_stream_create(baton, result_pool);
+  svn_stream_set_read2(stream, read_handler_buffering_wrapper, NULL);
+  svn_stream_set_data_available(stream,
+                                data_available_handler_buffering_wrapper);
+  svn_stream__set_is_buffered(stream, is_buffered_handler_buffering_wrapper);
+
+  return stream;
+}
+
 
 svn_error_t *
 svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)

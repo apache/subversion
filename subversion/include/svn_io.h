@@ -1157,6 +1157,18 @@ svn_stream_t *
 svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool);
 
+/** Return a generic read-only stream that forwards data from @a inner but
+ * uses buffering for efficiency.  Allocate the stream in @a result_pool.
+ *
+ * @note The returned stream has no support for writing nor mark and seek
+ * even if @a inner does support those functions.
+ *
+ * @since New in 1.10.
+ */
+svn_stream_t *
+svn_stream_wrap_buffered_read(svn_stream_t *inner,
+                              apr_pool_t *result_pool);
+
 /** Return a generic stream which implements buffered reads and writes.
  *  The stream will preferentially store data in-memory, but may use
  *  disk storage as backup if the amount of data is large.
