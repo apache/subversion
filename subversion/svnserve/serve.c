@@ -925,12 +925,12 @@ abort_report(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
-static const svn_ra_svn_cmd_entry_t report_commands[] = {
+static const svn_ra_svn__cmd_entry_t report_commands[] = {
   { "set-path",      set_path },
   { "delete-path",   delete_path },
   { "link-path",     link_path },
-  { "finish-report", finish_report, TRUE },
-  { "abort-report",  abort_report,  TRUE },
+  { "finish-report", finish_report, NULL, TRUE },
+  { "abort-report",  abort_report,  NULL, TRUE },
   { NULL }
 };
 
@@ -3458,7 +3458,7 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
-static const svn_ra_svn_cmd_entry_t main_commands[] = {
+static const svn_ra_svn__cmd_entry_t main_commands[] = {
   { "reparent",        reparent },
   { "get-latest-rev",  get_latest_rev },
   { "get-dated-rev",   get_dated_rev },
@@ -4072,7 +4072,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
 {
   svn_boolean_t terminate = FALSE;
   svn_error_t *err = NULL;
-  const svn_ra_svn_cmd_entry_t *command;
+  const svn_ra_svn__cmd_entry_t *command;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Prepare command parser. */

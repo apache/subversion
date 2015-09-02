@@ -57,6 +57,32 @@ typedef struct svn_ra_svn__item_t
   } u;
 } svn_ra_svn__item_t;
 
+/** Command handler, used by svn_ra_svn__handle_commands(). */
+typedef svn_error_t *(*svn_ra_svn__command_handler)(svn_ra_svn_conn_t *conn,
+                                                    apr_pool_t *pool,
+                                                    svn_ra_svn__list_t *params,
+                                                    void *baton);
+
+/** Command table, used by svn_ra_svn_handle_commands().
+ */
+typedef struct svn_ra_svn__cmd_entry_t
+{
+  /** Name of the command */
+  const char *cmdname;
+
+  /** Handler for the command */
+  svn_ra_svn__command_handler handler;
+
+  /** Only set when used through a deprecated API.
+   * HANDLER is NULL in that case. */
+  svn_ra_svn_command_handler deprecated_handler;
+
+  /** Termination flag.  If set, command-handling will cease after
+   * command is processed. */
+  svn_boolean_t terminate;
+} svn_ra_svn__cmd_entry_t;
+
+
 /* Return a deep copy of the SOURCE array containing private API
  * svn_ra_svn__item_t SOURCE to public API *TARGET, allocating
  * sub-structures in RESULT_POOL. */
@@ -359,7 +385,7 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
 svn_error_t *
 svn_ra_svn__handle_commands2(svn_ra_svn_conn_t *conn,
                              apr_pool_t *pool,
-                             const svn_ra_svn_cmd_entry_t *commands,
+                             const svn_ra_svn__cmd_entry_t *commands,
                              void *baton,
                              svn_boolean_t error_on_disconnect);
 

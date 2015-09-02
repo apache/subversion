@@ -1763,7 +1763,7 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
   const char *cmdname;
   svn_error_t *err, *write_err;
   svn_ra_svn__list_t *params;
-  const svn_ra_svn_cmd_entry_t *command;
+  const svn_ra_svn__cmd_entry_t *command;
 
   *terminate = FALSE;
   err = svn_ra_svn__read_tuple(conn, pool, "wl", &cmdname, &params);
@@ -1782,7 +1782,21 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
   command = svn_hash_gets(cmd_hash, cmdname);
   if (command)
     {
-      err = (*command->handler)(conn, pool, params, baton);
+      /* Call the standard command handler.
+       * If that is not set, then this is a lecagy API call and we invoke
+       * the legacy command handler. */
+      if (command->handler)
+        {
+          err = (*command->handler)(conn, pool, params, baton);
+        }
+      else
+        {
+          apr_array_header_t *deprecated_params
+            = svn_ra_svn__to_public_array(params, pool);
+          err = (*command->deprecated_handler)(conn, pool, deprecated_params,
+                                               baton);
+        }
+
       *terminate = command->terminate;
     }
   else
@@ -1807,13 +1821,13 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
 svn_error_t *
 svn_ra_svn__handle_commands2(svn_ra_svn_conn_t *conn,
                              apr_pool_t *pool,
-                             const svn_ra_svn_cmd_entry_t *commands,
+                             const svn_ra_svn__cmd_entry_t *commands,
                              void *baton,
                              svn_boolean_t error_on_disconnect)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(subpool);
-  const svn_ra_svn_cmd_entry_t *command;
+  const svn_ra_svn__cmd_entry_t *command;
   apr_hash_t *cmd_hash = apr_hash_make(subpool);
 
   for (command = commands; command->cmdname; command++)

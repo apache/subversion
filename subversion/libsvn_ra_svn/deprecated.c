@@ -188,8 +188,23 @@ svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
                             void *baton,
                             svn_boolean_t error_on_disconnect)
 {
+  apr_size_t i, count = 0;
+  svn_ra_svn__cmd_entry_t *internal;
+
+  while (commands[count].cmdname)
+    count++;
+
+  internal = apr_pcalloc(pool, count * sizeof(*internal));
+  for (i = 0; i < count; ++i)
+    {
+      internal[i].cmdname = commands[i].cmdname;
+      internal[i].handler = NULL;
+      internal[i].deprecated_handler = commands[i].handler;
+      internal[i].terminate = commands[i].terminate;
+    }
+
   return svn_error_trace(svn_ra_svn__handle_commands2(conn, pool,
-                                                      commands, baton,
+                                                      internal, baton,
                                                       error_on_disconnect));
 }
 
@@ -199,9 +214,9 @@ svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                            const svn_ra_svn_cmd_entry_t *commands,
                            void *baton)
 {
-  return svn_error_trace(svn_ra_svn__handle_commands2(conn, pool,
-                                                      commands, baton,
-                                                      FALSE));
+  return svn_error_trace(svn_ra_svn_handle_commands2(conn, pool,
+                                                     commands, baton,
+                                                     FALSE));
 }
 
 svn_error_t *
