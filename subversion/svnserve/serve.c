@@ -840,8 +840,8 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t start_empty;
 
   SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "crb?(?c)?w",
-                                 &path, &rev, &start_empty, &lock_token,
-                                 &depth_word));
+                                  &path, &rev, &start_empty, &lock_token,
+                                  &depth_word));
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   path = svn_relpath_canonicalize(path, pool);
