@@ -46,7 +46,7 @@ AC_DEFUN(SVN_CHECK_SWIG,
     esac
   ],
   [
-    SVN_FIND_SWIG(required)
+    SVN_FIND_SWIG(check)
   ])
 ])
 
@@ -56,9 +56,9 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   if test $where = no; then
     SWIG=none
-  elif test $where = required; then
+  elif test $where = required || test $where = check; then
     AC_PATH_PROG(SWIG, swig, none)
-    if test "$SWIG" = "none"; then
+    if test "$SWIG" = "none" && test $where = required; then
       AC_MSG_ERROR([SWIG required, but not found])
     fi
   else
