@@ -132,10 +132,10 @@ svn_ra_svn_parse_tuple(const apr_array_header_t *list,
 {
   va_list va;
   svn_error_t *err;
-  list = svn_ra_svn__to_private_array(list, pool);
+  svn_ra_svn__list_t *internal = svn_ra_svn__to_private_array(list, pool);
 
   va_start(va, fmt);
-  err = svn_ra_svn__parse_tuple(list, pool, fmt, va);
+  err = svn_ra_svn__parse_tuple(internal, pool, fmt, va);
   va_end(va);
 
   return svn_error_trace(err);
@@ -161,8 +161,9 @@ svn_ra_svn_parse_proplist(const apr_array_header_t *list,
                           apr_pool_t *pool,
                           apr_hash_t **props)
 {
-  list = svn_ra_svn__to_private_array(list, pool);
-  return svn_error_trace(svn_ra_svn__parse_proplist(list, pool, props));
+  svn_ra_svn__list_t *internal
+    = svn_ra_svn__to_private_array(list, pool);
+  return svn_error_trace(svn_ra_svn__parse_proplist(internal, pool, props));
 }
 
 svn_error_t *

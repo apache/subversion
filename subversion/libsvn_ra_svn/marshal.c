@@ -107,7 +107,7 @@ svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
 }
 
 apr_array_header_t *
-svn_ra_svn__to_public_array(const apr_array_header_t *source,
+svn_ra_svn__to_public_array(const svn_ra_svn__list_t *source,
                             apr_pool_t *result_pool)
 {
   apr_array_header_t *result = apr_array_make(result_pool, source->nelts,
@@ -150,11 +150,11 @@ svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
     }
 }
 
-apr_array_header_t *
+svn_ra_svn__list_t *
 svn_ra_svn__to_private_array(const apr_array_header_t *source,
                              apr_pool_t *result_pool)
 {
-  apr_array_header_t *result = apr_array_make(result_pool, source->nelts,
+  svn_ra_svn__list_t *result = apr_array_make(result_pool, source->nelts,
                                               sizeof(svn_ra_svn__item_t));
 
   int i;
@@ -227,13 +227,14 @@ svn_error_t *
 svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
                             const apr_array_header_t *list)
 {
-  list = svn_ra_svn__to_private_array(list, list->pool);
-  return svn_error_trace(svn_ra_svn__set_capabilities(conn, list));
+  svn_ra_svn__list_t *internal
+    = svn_ra_svn__to_private_array(list, list->pool);
+  return svn_error_trace(svn_ra_svn__set_capabilities(conn, internal));
 }
 
 svn_error_t *
 svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
-                             const apr_array_header_t *list)
+                             const svn_ra_svn__list_t *list)
 {
   int i;
   svn_ra_svn__item_t *item;
@@ -1453,8 +1454,11 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
 
 /* Parse a tuple of svn_ra_svn__item_t *'s.  Advance *FMT to the end of the
  * tuple specification and advance AP by the corresponding arguments. */
-static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *pool,
-                                 const char **fmt, va_list *ap)
+static svn_error_t *
+vparse_tuple(const svn_ra_svn__list_t *items,
+             apr_pool_t *pool,
+             const char **fmt,
+             va_list *ap)
 {
   int count, nesting_level;
   svn_ra_svn__item_t *elt;
@@ -1508,7 +1512,7 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
             break;
         }
       else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
-        *va_arg(*ap, apr_array_header_t **) = elt->u.list;
+        *va_arg(*ap, svn_ra_svn__list_t **) = elt->u.list;
       else if (**fmt == ')')
         return SVN_NO_ERROR;
       else
@@ -1534,7 +1538,7 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
               *va_arg(*ap, const char **) = NULL;
               break;
             case 'l':
-              *va_arg(*ap, apr_array_header_t **) = NULL;
+              *va_arg(*ap, svn_ra_svn__list_t **) = NULL;
               break;
             case 'B':
             case 'n':
@@ -1562,7 +1566,7 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
 }
 
 svn_error_t *
-svn_ra_svn__parse_tuple(const apr_array_header_t *list,
+svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
                         apr_pool_t *pool,
                         const char *fmt, ...)
 {
@@ -1608,7 +1612,7 @@ svn_ra_svn__read_command_only(svn_ra_svn_conn_t *conn,
 
 
 svn_error_t *
-svn_ra_svn__parse_proplist(const apr_array_header_t *list,
+svn_ra_svn__parse_proplist(const svn_ra_svn__list_t *list,
                            apr_pool_t *pool,
                            apr_hash_t **props)
 {
@@ -1650,8 +1654,9 @@ svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err)
   return this_link;
 }
 
-svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
-                                               apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
+                                  apr_pool_t *pool)
 {
   const char *message, *file;
   svn_error_t *err = NULL;
@@ -1709,7 +1714,7 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
 {
   va_list ap;
   const char *status;
-  apr_array_header_t *params;
+  svn_ra_svn__list_t *params;
   svn_error_t *err;
 
   SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "wl", &status, &params));
@@ -1758,7 +1763,7 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
 {
   const char *cmdname;
   svn_error_t *err, *write_err;
-  apr_array_header_t *params;
+  svn_ra_svn__list_t *params;
   const svn_ra_svn_cmd_entry_t *command;
 
   *terminate = FALSE;
@@ -2765,7 +2770,7 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
 /* In *RESULT, return the SVN-style string at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_string(const apr_array_header_t *items,
+svn_ra_svn__read_string(const svn_ra_svn__list_t *items,
                         int idx,
                         svn_string_t **result)
 {
@@ -2779,7 +2784,7 @@ svn_ra_svn__read_string(const apr_array_header_t *items,
 /* In *RESULT, return the C-style string at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_cstring(const apr_array_header_t *items,
+svn_ra_svn__read_cstring(const svn_ra_svn__list_t *items,
                          int idx,
                          const char **result)
 {
@@ -2793,7 +2798,7 @@ svn_ra_svn__read_cstring(const apr_array_header_t *items,
 /* In *RESULT, return the word at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_word(const apr_array_header_t *items,
+svn_ra_svn__read_word(const svn_ra_svn__list_t *items,
                       int idx,
                       const char **result)
 {
@@ -2807,7 +2812,7 @@ svn_ra_svn__read_word(const apr_array_header_t *items,
 /* In *RESULT, return the revision at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_revision(const apr_array_header_t *items,
+svn_ra_svn__read_revision(const svn_ra_svn__list_t *items,
                           int idx,
                           svn_revnum_t *result)
 {
@@ -2821,7 +2826,7 @@ svn_ra_svn__read_revision(const apr_array_header_t *items,
 /* In *RESULT, return the boolean at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_boolean(const apr_array_header_t *items,
+svn_ra_svn__read_boolean(const svn_ra_svn__list_t *items,
                          int idx,
                          apr_uint64_t *result)
 {
@@ -2840,9 +2845,9 @@ svn_ra_svn__read_boolean(const apr_array_header_t *items,
 /* In *RESULT, return the tuple at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_list(const apr_array_header_t *items,
+svn_ra_svn__read_list(const svn_ra_svn__list_t *items,
                       int idx,
-                      const apr_array_header_t **result)
+                      const svn_ra_svn__list_t **result)
 {
   svn_ra_svn__item_t *elt  = &APR_ARRAY_IDX(items, idx, svn_ra_svn__item_t);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_LIST);
@@ -2854,7 +2859,7 @@ svn_ra_svn__read_list(const apr_array_header_t *items,
 /* Verify the tuple ITEMS contains at least MIN and at most MAX elements.
  */
 static svn_error_t *
-svn_ra_svn__read_check_array_size(const apr_array_header_t *items,
+svn_ra_svn__read_check_array_size(const svn_ra_svn__list_t *items,
                                   int min,
                                   int max)
 {
@@ -2863,7 +2868,7 @@ svn_ra_svn__read_check_array_size(const apr_array_header_t *items,
 }
 
 svn_error_t *
-svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
+svn_ra_svn__read_data_log_changed_entry(const svn_ra_svn__list_t *items,
                                         svn_string_t **cpath,
                                         const char **action,
                                         const char **copy_path,
@@ -2872,7 +2877,7 @@ svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
                                         apr_uint64_t *text_mods,
                                         apr_uint64_t *prop_mods)
 {
-  const apr_array_header_t *sub_items;
+  const svn_ra_svn__list_t *sub_items;
 
   /* initialize optional values */
   *copy_path = NULL;
