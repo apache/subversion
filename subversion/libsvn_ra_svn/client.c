@@ -198,7 +198,7 @@ static svn_error_t *parse_prop_diffs(const svn_ra_svn__list_t *list,
   for (i = 0; i < list->nelts; i++)
     {
       svn_prop_t *prop;
-      svn_ra_svn__item_t *elt = &APR_ARRAY_IDX(list, i, svn_ra_svn__item_t);
+      svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(list, i);
 
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1220,8 +1220,7 @@ parse_iproplist(apr_array_header_t **inherited_props,
       apr_hash_index_t *hi;
       svn_prop_inherited_item_t *new_iprop =
         apr_palloc(result_pool, sizeof(*new_iprop));
-      svn_ra_svn__item_t *elt = &APR_ARRAY_IDX(iproplist, i,
-                                               svn_ra_svn__item_t);
+      svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(iproplist, i);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(
           SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1385,7 +1384,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       svn_dirent_t *dirent;
       apr_uint64_t size;
       svn_revnum_t crev;
-      svn_ra_svn__item_t *elt = &APR_ARRAY_IDX(dirlist, i, svn_ra_svn__item_t);
+      svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(dirlist, i);
 
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1478,7 +1477,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           svn_mergeinfo_t for_path;
           const char *to_parse;
 
-          elt = &((svn_ra_svn__item_t *) mergeinfo_tuple->elts)[i];
+          elt = &SVN_RA_SVN__LIST_ITEM(mergeinfo_tuple, i);
           if (elt->kind != SVN_RA_SVN_LIST)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Mergeinfo element is not a list"));
@@ -1743,8 +1742,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
               const char *copy_path, *action, *kind_str;
               apr_uint64_t text_mods, prop_mods;
               svn_revnum_t copy_rev;
-              svn_ra_svn__item_t *elt = &APR_ARRAY_IDX(cplist, i,
-                                                       svn_ra_svn__item_t);
+              svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(cplist, i);
 
               if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -2658,7 +2656,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
   for (i = 0; i < list->nelts; ++i)
     {
       svn_lock_t *lock;
-      svn_ra_svn__item_t *elt = &APR_ARRAY_IDX(list, i, svn_ra_svn__item_t);
+      svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(list, i);
 
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,

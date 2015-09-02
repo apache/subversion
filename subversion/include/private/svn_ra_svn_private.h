@@ -37,6 +37,11 @@ extern "C" {
 /* A list of svn_ra_svn__item_t objects. */
 typedef apr_array_header_t svn_ra_svn__list_t;
 
+/* List element access macro.  This is for transitional usage only.
+ * Once svn_ra_svn__list_t is finalized, this macro will become obsolete. */
+#define SVN_RA_SVN__LIST_ITEM(list, idx) \
+  APR_ARRAY_IDX(list, idx, svn_ra_svn__item_t)
+
 /** Memory representation of an on-the-wire data item. */
 typedef struct svn_ra_svn__item_t
 {
