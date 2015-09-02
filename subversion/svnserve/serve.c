@@ -3929,7 +3929,7 @@ construct_server_baton(server_baton_t **baton,
     return SVN_NO_ERROR;
 
   client_url = svn_uri_canonicalize(client_url, conn_pool);
-  SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+  SVN_ERR(svn_ra_svn__set_capabilities(conn, caplist));
 
   /* All released versions of Subversion support edit-pipeline,
    * so we do not accept connections from clients that do not. */
