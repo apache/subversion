@@ -32,75 +32,6 @@
 
 #include "../svn_test.h"
 
-struct stream_baton_t
-{
-  svn_filesize_t capacity_left;
-  char current;
-  apr_size_t max_read;
-};
-
-/* Implements svn_stream_t.read_fn. */
-static svn_error_t *
-read_handler(void *baton,
-             char *buffer,
-             apr_size_t *len)
-{
-  struct stream_baton_t *btn = baton;
-  int i;
-
-  /* Cap the read request to what we actually support. */
-  if (btn->max_read < *len)
-    *len = btn->max_read;
-  if (btn->capacity_left < *len)
-    *len = (apr_size_t)btn->capacity_left;
-
-  /* Produce output */
-  for (i = 0; i < *len; ++i)
-    {
-      buffer[i] = btn->current + 1;
-      btn->current = (btn->current + 1) & 0x3f;
-
-      btn->capacity_left--;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-data_available_handler(void *baton,
-                       svn_boolean_t *data_available)
-{
-  struct stream_baton_t *btn = baton;
-  *data_available = btn->capacity_left > 0;
-
-  return SVN_NO_ERROR;
-}
-
-/* Return a stream that produces CAPACITY characters in chunks of at most
- * MAX_READ chars.  The first char will be '\1' followed by '\2' etc. up
- * to '\x40' and then repeating the cycle until the end of the stream.
- * Allocate the result in RESULT_POOL. */
-static svn_stream_t *
-create_test_read_stream(svn_filesize_t capacity,
-                        apr_size_t max_read,
-                        apr_pool_t *result_pool)
-{
-  svn_stream_t *stream;
-  struct stream_baton_t *baton;
-
-  baton = apr_pcalloc(result_pool, sizeof(*baton));
-  baton->capacity_left = capacity;
-  baton->current = 0;
-  baton->max_read = max_read;
-
-  stream = svn_stream_create(baton, result_pool);
-  svn_stream_set_read2(stream, read_handler, NULL);
-  svn_stream_set_data_available(stream, data_available_handler);
-
-  return stream;
-}
-
-/*------------------------ Tests --------------------------- */
 
 static svn_error_t *
 test_stream_from_string(apr_pool_t *pool)
@@ -872,70 +803,6 @@ test_stream_compressed_read_full(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Utility function verifying that LINE contains LENGTH characters read
- * from a stream returned by create_test_read_stream().  C is the first
- * character expected in LINE. */
-static svn_error_t *
-expect_line_content(svn_stringbuf_t *line,
-                    char start,
-                    apr_size_t length)
-{
-  apr_size_t i;
-  char c = start - 1;
-
-  SVN_TEST_ASSERT(line->len == length);
-  for (i = 0; i < length; ++i)
-    {
-      SVN_TEST_ASSERT(line->data[i] == c + 1);
-      c = (c + 1) & 0x3f;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_stream_buffered_wrapper(apr_pool_t *pool)
-{
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_stringbuf_t *line;
-  svn_boolean_t eof = FALSE;
-  apr_size_t read = 0;
-
-  /* At least a few stream chunks (16k) worth of data. */
-  const apr_size_t stream_length = 100000;
-
-  /* Our source stream delivers data in very small chunks only.
-   * This requires multiple reads per line while readline will hold marks
-   * etc. */
-  svn_stream_t *stream = create_test_read_stream(stream_length, 19, pool);
-  stream = svn_stream_wrap_buffered_read(stream, pool);
-
-  /* We told the stream not to supports seeking to the start. */
-  SVN_TEST_ASSERT_ERROR(svn_stream_seek(stream, NULL),
-                        SVN_ERR_STREAM_SEEK_NOT_SUPPORTED);
-
-  /* Read all lines. Check EOF detection. */
-  while (!eof)
-    {
-      /* The local pool ensures that marks get cleaned up. */
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, iterpool));
-
-      /* Verify that we read the correct data and the full stream. */
-      if (read == 0)
-        SVN_ERR(expect_line_content(line, 1, '\n' - 1));
-      else if (eof)
-        SVN_ERR(expect_line_content(line, '\n' + 1, stream_length - read));
-      else
-        SVN_ERR(expect_line_content(line, '\n' + 1, 63));
-
-      /* Update bytes read. */
-      read += line->len + 1;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* The test table.  */
 
 static int max_threads = 1;
@@ -967,8 +834,6 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_stringbuf_from_stream"),
     SVN_TEST_PASS2(test_stream_compressed_read_full,
                    "test compression for streams without partial read"),
-    SVN_TEST_PASS2(test_stream_buffered_wrapper,
-                   "test buffering read stream wrapper"),
     SVN_TEST_NULL
   };
 
