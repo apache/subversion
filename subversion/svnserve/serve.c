@@ -1338,18 +1338,17 @@ add_lock_tokens(const svn_ra_svn__list_t *lock_tokens,
     {
       const char *path, *token, *full_path;
       svn_ra_svn__item_t *path_item, *token_item;
-      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(lock_tokens, i,
-                                                svn_ra_svn__item_t);
+      svn_ra_svn__item_t *item = &SVN_RA_SVN__LIST_ITEM(lock_tokens, i);
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock tokens aren't a list of lists");
 
-      path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn__item_t);
+      path_item = &SVN_RA_SVN__LIST_ITEM(item->u.list, 0);
       if (path_item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock path isn't a string");
 
-      token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn__item_t);
+      token_item = &SVN_RA_SVN__LIST_ITEM(item->u.list, 1);
       if (token_item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock token isn't a string");
@@ -1402,9 +1401,9 @@ unlock_paths(const svn_ra_svn__list_t *lock_tokens,
       svn_ra_svn__item_t *item, *path_item, *token_item;
       const char *path, *token, *full_path;
 
-      item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn__item_t);
-      path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn__item_t);
-      token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn__item_t);
+      item = &SVN_RA_SVN__LIST_ITEM(lock_tokens, i);
+      path_item = &SVN_RA_SVN__LIST_ITEM(item->u.list, 0);
+      token_item = &SVN_RA_SVN__LIST_ITEM(item->u.list, 1);
 
       path = path_item->u.string->data;
       full_path = svn_fspath__join(sb->repository->fs_path->data,
@@ -3954,7 +3953,7 @@ construct_server_baton(server_baton_t **baton,
                                                  sizeof(const char *));
     for (i = 0; i < caplist->nelts; i++)
       {
-        item = &APR_ARRAY_IDX(caplist, i, svn_ra_svn__item_t);
+        item = &SVN_RA_SVN__LIST_ITEM(caplist, i);
         /* ra_svn_set_capabilities() already type-checked for us */
         if (strcmp(item->u.word, SVN_RA_SVN_CAP_MERGEINFO) == 0)
           {
