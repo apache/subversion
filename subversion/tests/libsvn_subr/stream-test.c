@@ -908,7 +908,7 @@ test_stream_buffered_wrapper(apr_pool_t *pool)
    * This requires multiple reads per line while readline will hold marks
    * etc. */
   svn_stream_t *stream = create_test_read_stream(stream_length, 19, pool);
-  stream = svn_stream_wrap_buffered_read(stream, FALSE, pool);
+  stream = svn_stream_wrap_buffered_read(stream, pool);
 
   /* We told the stream not to supports seeking to the start. */
   SVN_TEST_ASSERT_ERROR(svn_stream_seek(stream, NULL),
@@ -932,11 +932,6 @@ test_stream_buffered_wrapper(apr_pool_t *pool)
       /* Update bytes read. */
       read += line->len + 1;
     }
-
-  /* Test a stream wrapper that supports seeking to the start. */
-  stream = create_test_read_stream(stream_length, 19, pool);
-  stream = svn_stream_wrap_buffered_read(stream, TRUE, pool);
-  SVN_ERR(svn_stream_seek(stream, NULL));
 
   return SVN_NO_ERROR;
 }

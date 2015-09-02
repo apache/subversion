@@ -187,7 +187,7 @@ subcommand__load_index(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_stream_t *input;
 
   SVN_ERR(svn_stream_for_stdin(&input, pool));
-  input = svn_stream_wrap_buffered_read(input, FALSE, pool);
+  input = svn_stream_wrap_buffered_read(input, pool);
   SVN_ERR(load_index(opt_state->repository_path, input, pool));
 
   return SVN_NO_ERROR;
