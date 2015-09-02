@@ -1431,18 +1431,6 @@ translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_stream_remove_mark_fn_t. */
-static svn_error_t *
-translated_stream_remove_mark(void *baton, svn_stream_mark_t *mark)
-{
-  struct translated_stream_baton *b = baton;
-  mark_translated_t *mt = (mark_translated_t *)mark;
-
-  SVN_ERR(svn_stream_remove_mark(b->stream, mt->mark));
-
-  return SVN_NO_ERROR;
-}
-
 /* Implements svn_stream__is_buffered_fn_t. */
 static svn_boolean_t
 translated_stream_is_buffered(void *baton)
@@ -1560,7 +1548,6 @@ stream_translated(svn_stream_t *stream,
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_mark(s, translated_stream_mark);
   svn_stream_set_seek(s, translated_stream_seek);
-  svn_stream_set_remove_mark(s, translated_stream_remove_mark);
   svn_stream__set_is_buffered(s, translated_stream_is_buffered);
 
   return s;
