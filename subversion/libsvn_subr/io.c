@@ -4075,6 +4075,7 @@ svn_io_file_rename(const char *from_path, const char *to_path,
     }
   WIN32_RETRY_LOOP(status, win32_file_rename(from_path_w, to_path_w, pool));
 #elif defined(__OS2__)
+  status = apr_file_rename(from_path_apr, to_path_apr, pool);
   /* If the target file is read only NTFS reports EACCESS and
      FAT/FAT32 reports EEXIST */
   if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
