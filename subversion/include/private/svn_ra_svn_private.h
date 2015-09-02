@@ -34,6 +34,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* A list of svn_ra_svn__item_t objects. */
+typedef apr_array_header_t svn_ra_svn__list_t;
+
 /** Memory representation of an on-the-wire data item. */
 typedef struct svn_ra_svn__item_t
 {
@@ -45,9 +48,7 @@ typedef struct svn_ra_svn__item_t
     apr_uint64_t number;
     svn_string_t *string;
     const char *word;
-
-    /** Contains @c svn_ra_svn__item_t's. */
-    apr_array_header_t *list;
+    svn_ra_svn__list_t *list;
   } u;
 } svn_ra_svn__item_t;
 
@@ -55,7 +56,7 @@ typedef struct svn_ra_svn__item_t
  * svn_ra_svn__item_t SOURCE to public API *TARGET, allocating
  * sub-structures in RESULT_POOL. */
 apr_array_header_t *
-svn_ra_svn__to_public_array(const apr_array_header_t *source,
+svn_ra_svn__to_public_array(const svn_ra_svn__list_t *source,
                             apr_pool_t *result_pool);
 
 /* Deep copy contents from private API *SOURCE to public API *TARGET,
@@ -65,7 +66,7 @@ svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
                            const svn_ra_svn__item_t *source,
                            apr_pool_t *result_pool);
 
-apr_array_header_t *
+svn_ra_svn__list_t *
 svn_ra_svn__to_private_array(const apr_array_header_t *source,
                              apr_pool_t *result_pool);
 
@@ -85,7 +86,7 @@ svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
  */
 svn_error_t *
 svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
-                             const apr_array_header_t *list);
+                             const svn_ra_svn__list_t *list);
 
 
 /**
@@ -279,7 +280,7 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * 'b' may not appear inside an optional tuple specification; use '3' instead.
  */
 svn_error_t *
-svn_ra_svn__parse_tuple(const apr_array_header_t *list,
+svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
                         apr_pool_t *pool,
                         const char *fmt, ...);
 
@@ -297,7 +298,7 @@ svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_ra_svn__parse_proplist(const apr_array_header_t *list,
+svn_ra_svn__parse_proplist(const svn_ra_svn__list_t *list,
                            apr_pool_t *pool,
                            apr_hash_t **props);
 
@@ -984,7 +985,7 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
  * @see svn_log_changed_path2_t for a description of the output parameters.
  */
 svn_error_t *
-svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
+svn_ra_svn__read_data_log_changed_entry(const svn_ra_svn__list_t *items,
                                         svn_string_t **cpath,
                                         const char **action,
                                         const char **copy_path,

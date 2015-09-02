@@ -187,7 +187,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
 
 /* Set *DIFFS to an array of svn_prop_t, allocated in POOL, based on the
    property diffs in LIST, received from the server. */
-static svn_error_t *parse_prop_diffs(const apr_array_header_t *list,
+static svn_error_t *parse_prop_diffs(const svn_ra_svn__list_t *list,
                                      apr_pool_t *pool,
                                      apr_array_header_t **diffs)
 {
@@ -212,7 +212,8 @@ static svn_error_t *parse_prop_diffs(const apr_array_header_t *list,
 
 /* Parse a lockdesc, provided in LIST as specified by the protocol into
    LOCK, allocated in POOL. */
-static svn_error_t *parse_lock(const apr_array_header_t *list, apr_pool_t *pool,
+static svn_error_t *parse_lock(const svn_ra_svn__list_t *list,
+                               apr_pool_t *pool,
                                svn_lock_t **lock)
 {
   const char *cdate, *edate;
@@ -240,7 +241,7 @@ static svn_error_t *handle_auth_request(svn_ra_svn__session_baton_t *sess,
                                         apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess->conn;
-  apr_array_header_t *mechlist;
+  svn_ra_svn__list_t *mechlist;
   const char *realm;
 
   SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, "lc", &mechlist, &realm));
@@ -624,7 +625,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
-  apr_array_header_t *mechlist, *server_caplist, *repos_caplist;
+  svn_ra_svn__list_t *mechlist, *server_caplist, *repos_caplist;
   const char *client_string = NULL;
   apr_pool_t *pool = result_pool;
 
@@ -1032,7 +1033,7 @@ static svn_error_t *ra_svn_rev_proplist(svn_ra_session_t *session, svn_revnum_t 
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  apr_array_header_t *proplist;
+  svn_ra_svn__list_t *proplist;
 
   SVN_ERR(svn_ra_svn__write_cmd_rev_proplist(conn, pool, rev));
   SVN_ERR(handle_auth_request(sess_baton, pool));
@@ -1184,7 +1185,7 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
    the result as an array of svn_prop_inherited_item_t *items. */
 static svn_error_t *
 parse_iproplist(apr_array_header_t **inherited_props,
-                const apr_array_header_t *iproplist,
+                const svn_ra_svn__list_t *iproplist,
                 svn_ra_session_t *session,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
@@ -1213,7 +1214,7 @@ parse_iproplist(apr_array_header_t **inherited_props,
 
   for (i = 0; i < iproplist->nelts; i++)
     {
-      apr_array_header_t *iprop_list;
+      svn_ra_svn__list_t *iprop_list;
       char *parent_rel_path;
       apr_hash_t *iprops;
       apr_hash_index_t *hi;
@@ -1260,7 +1261,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  apr_array_header_t *proplist;
+  svn_ra_svn__list_t *proplist;
   const char *expected_digest;
   svn_checksum_t *expected_checksum = NULL;
   svn_checksum_ctx_t *checksum_ctx;
@@ -1339,7 +1340,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  apr_array_header_t *proplist, *dirlist;
+  svn_ra_svn__list_t *proplist, *dirlist;
   int i;
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(c(?r)bb(!", "get-dir", path,
@@ -1451,7 +1452,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   int i;
-  apr_array_header_t *mergeinfo_tuple;
+  svn_ra_svn__list_t *mergeinfo_tuple;
   svn_ra_svn__item_t *elt;
   const char *path;
 
@@ -1684,7 +1685,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
       apr_uint64_t has_children_param, invalid_revnum_param;
       apr_uint64_t has_subtractive_merge_param;
       svn_string_t *author, *date, *message;
-      apr_array_header_t *cplist, *rplist;
+      svn_ra_svn__list_t *cplist, *rplist;
       svn_log_entry_t *log_entry;
       svn_boolean_t has_children;
       svn_boolean_t subtractive_merge = FALSE;
@@ -1897,7 +1898,7 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  apr_array_header_t *list = NULL;
+  svn_ra_svn__list_t *list = NULL;
   svn_dirent_t *the_dirent;
 
   SVN_ERR(svn_ra_svn__write_cmd_stat(conn, pool, path, rev));
@@ -2118,7 +2119,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
 
   while (1)
     {
-      apr_array_header_t *rev_proplist, *proplist;
+      svn_ra_svn__list_t *rev_proplist, *proplist;
       apr_uint64_t merged_rev_param;
       apr_array_header_t *props;
       svn_ra_svn__item_t *item;
@@ -2220,7 +2221,7 @@ static svn_error_t *ra_svn_lock_compat(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
-  apr_array_header_t *list;
+  svn_ra_svn__list_t *list;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -2389,7 +2390,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       svn_error_t *callback_err;
       const char *status;
       svn_lock_t *lock;
-      apr_array_header_t *list;
+      svn_ra_svn__list_t *list;
 
       apr_hash_this(hi, &key, NULL, NULL);
       path = key;
@@ -2516,7 +2517,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
       const void *key;
       svn_error_t *callback_err;
       const char *status;
-      apr_array_header_t *list;
+      svn_ra_svn__list_t *list;
 
       svn_pool_clear(iterpool);
 
@@ -2589,7 +2590,7 @@ static svn_error_t *ra_svn_get_lock(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
-  apr_array_header_t *list;
+  svn_ra_svn__list_t *list;
 
   SVN_ERR(svn_ra_svn__write_cmd_get_lock(conn, pool, path));
 
@@ -2634,7 +2635,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
-  apr_array_header_t *list;
+  svn_ra_svn__list_t *list;
   const char *full_url, *abs_path;
   int i;
 
@@ -2745,7 +2746,7 @@ ra_svn_replay_range(svn_ra_session_t *session,
       void *edit_baton;
       apr_hash_t *rev_props;
       const char *word;
-      apr_array_header_t *list;
+      svn_ra_svn__list_t *list;
 
       svn_pool_clear(iterpool);
 
@@ -2877,7 +2878,7 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  apr_array_header_t *iproplist;
+  svn_ra_svn__list_t *iproplist;
   svn_boolean_t iprop_capable;
 
   SVN_ERR(ra_svn_has_capability(session, &iprop_capable,
