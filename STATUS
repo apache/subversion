@@ -24,6 +24,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1700740, r1700951
+   Fix registration of kwallet to avoid double free on close
+   Justification:
+     Fixes segfault on kwallet close. User reported problem.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
