@@ -1861,11 +1861,15 @@ io_win_file_attrs_set(const char *fname,
 
 static svn_error_t *win_init_dynamic_imports(void *baton, apr_pool_t *pool)
 {
-    get_final_path_name_by_handle_proc = (GETFINALPATHNAMEBYHANDLE)
-      GetProcAddress(GetModuleHandleA("kernel32.dll"),
-                     "GetFinalPathNameByHandleW");
+  HMODULE kernel32 = GetModuleHandleA("kernel32.dll");
 
-    return SVN_NO_ERROR;
+  if (kernel32)
+    {
+      get_final_path_name_by_handle_proc = (GETFINALPATHNAMEBYHANDLE)
+        GetProcAddress(kernel32, "GetFinalPathNameByHandleW");
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * io_win_read_link(svn_string_t **dest,
