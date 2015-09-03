@@ -355,19 +355,16 @@ load_config(svn_ra_serf__session_t *session,
   session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
   if (timeout_str)
     {
-      char *endstr;
-      const long int timeout = strtol(timeout_str, &endstr, 10);
-
-      if (*endstr)
-        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                _("Invalid config: illegal character in "
-                                  "timeout value"));
-      if (timeout < 0)
-        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                _("Invalid config: negative timeout value"));
+      apr_int64_t timeout;
+      svn_error_t *err;
+      
+      err = svn_cstring_strtoi64(&timeout, timeout_str, 0, APR_INT64_MAX, 10);
+      if (err)
+        return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, err,
+                                _("invalid config: bad value for '%s' option"),
+                                SVN_CONFIG_OPTION_HTTP_TIMEOUT);
       session->timeout = apr_time_from_sec(timeout);
     }
-  SVN_ERR_ASSERT(session->timeout >= 0);
 
   /* Convert the proxy port value, if any. */
   if (port_str)
