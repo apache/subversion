@@ -71,19 +71,6 @@ Candidate changes:
                  bit controversial for me, so it's better to release it as
                  part of Subversion 1.9.0)
 
- * r1669955
-   Reduce FSFS memory allocation in Apache with unbounded MaxFreeMem.
-   Justification:
-     A user reported that their worker processes ran OOM with Apache 2.2
-     in default configuration when fulltext caching was enabled. Although
-     people should set MaxFreeMem to something other than 0, we should
-     play nice with out-of-the-box setups.
-     The patch itself is relatively low-risk (changes initial buffer size).
-   Branch:
-     ^/subversion/branches/1.8.x-memory-fragmentation
-   Votes:
-     +1: stefan2, brane
-
  * r1687812
    mod_dav_svn: Use LimitXMLRequestBody httpd directive to control maximum
    length of skel-encoded request bodies.
@@ -136,5 +123,18 @@ Approved changes:
      a stream API usage and an unused function.
    Branch:
      ^/subversion/branches/1.8.x-r1618472
+   Votes:
+     +1: stefan2, brane, rhuijben
+
+ * r1669955
+   Reduce FSFS memory allocation in Apache with unbounded MaxFreeMem.
+   Justification:
+     A user reported that their worker processes ran OOM with Apache 2.2
+     in default configuration when fulltext caching was enabled. Although
+     people should set MaxFreeMem to something other than 0, we should
+     play nice with out-of-the-box setups.
+     The patch itself is relatively low-risk (changes initial buffer size).
+   Branch:
+     ^/subversion/branches/1.8.x-memory-fragmentation
    Votes:
      +1: stefan2, brane, rhuijben
