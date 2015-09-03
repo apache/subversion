@@ -29,7 +29,7 @@ Candidate changes:
    Justification:
      Fixes segfault on kwallet close. User reported problem.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Veto-blocked changes:
 =====================
