@@ -442,12 +442,13 @@ load_config(svn_ra_serf__session_t *session,
 #undef DEFAULT_HTTP_TIMEOUT
 
 static void
-svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
+svn_ra_serf__progress(void *progress_baton, apr_off_t bytes_read,
+                      apr_off_t bytes_written)
 {
   const svn_ra_serf__session_t *serf_sess = progress_baton;
   if (serf_sess->progress_func)
     {
-      serf_sess->progress_func(read + written, -1,
+      serf_sess->progress_func(bytes_read + bytes_written, -1,
                                serf_sess->progress_baton,
                                serf_sess->pool);
     }
