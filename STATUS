@@ -107,15 +107,6 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
- * r1694929
-   Fix memory corruption in SWIG bindings' svn_client_copy_source_t
-   constructor.
-   Justification:
-     Constructor result is not correct as REVISION gets partially overwritten
-     by PEG_REVISION. May also result in segfaults.
-   Votes:
-     +1: stefan2, philip
-
  * r1687304,1687389,1693135,1693138,1693159,1695600,1695606,1695681
    Better configure detection of httpd version and auth fix.
    Justification:
@@ -138,3 +129,12 @@ Approved changes:
      Trunk has a better fix, but less suitable for backporting, in r1691952.
    Votes:
      +1: julianfoad, philip, brane
+
+ * r1694929
+   Fix memory corruption in SWIG bindings' svn_client_copy_source_t
+   constructor.
+   Justification:
+     Constructor result is not correct as REVISION gets partially overwritten
+     by PEG_REVISION. May also result in segfaults.
+   Votes:
+     +1: stefan2, philip, rhuijben
