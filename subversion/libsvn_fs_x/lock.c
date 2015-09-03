@@ -244,7 +244,7 @@ write_digest_file(apr_hash_t *children,
     }
 
   SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_io_file_rename(tmp_path, digest_path, scratch_pool));
+  SVN_ERR(svn_io_file_rename2(tmp_path, digest_path, FALSE, scratch_pool));
   SVN_ERR(svn_io_copy_perms(perms_reference, digest_path, scratch_pool));
   return SVN_NO_ERROR;
 }

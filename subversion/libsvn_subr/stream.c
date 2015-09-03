@@ -2410,7 +2410,7 @@ svn_stream__install_stream(svn_stream_t *install_stream,
     }
 #endif
 
-  err = svn_io_file_rename(ib->tmp_path, final_abspath, scratch_pool);
+  err = svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool);
 
   /* A missing directory is too common to not cover here. */
   if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -2428,7 +2428,7 @@ svn_stream__install_stream(svn_stream_t *install_stream,
         /* We could create a directory: retry install */
         svn_error_clear(err);
 
-      SVN_ERR(svn_io_file_rename(ib->tmp_path, final_abspath, scratch_pool));
+      SVN_ERR(svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool));
     }
   else
     SVN_ERR(err);

@@ -1104,8 +1104,8 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
     {
       svn_error_t *err;
 
-      err = svn_error_trace(svn_io_file_rename(src_abspath, dst_abspath,
-                                               scratch_pool));
+      err = svn_error_trace(svn_io_file_rename2(src_abspath, dst_abspath,
+                                                FALSE, scratch_pool));
 
       /* Let's try if we can keep wc.db consistent even when the move
          fails. Deleting the target is a wc.db only operation, while
