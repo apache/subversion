@@ -3874,7 +3874,7 @@ svn_io_write_atomic(const char *final_path,
     err = svn_io_copy_perms(copy_perms_path, tmp_path, scratch_pool);
 
   if (!err)
-    err = svn_io_file_rename2(tmp_path, final_path, FALSE, scratch_pool);
+    err = svn_io_file_rename2(tmp_path, final_path, TRUE, scratch_pool);
 
   if (err)
     {
@@ -3887,21 +3887,6 @@ svn_io_write_atomic(const char *final_path,
                                svn_dirent_local_style(final_path,
                                                       scratch_pool));
     }
-
-#ifdef SVN_ON_POSIX
-  {
-    /* On POSIX, the file name is stored in the file's directory entry.
-       Hence, we need to fsync() that directory as well.
-       On other operating systems, we'd only be asking for trouble
-       by trying to open and fsync a directory. */
-    apr_file_t *file;
-
-    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
-                             scratch_pool));
-    SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-    SVN_ERR(svn_io_file_close(file, scratch_pool));
-  }
-#endif
 
   return SVN_NO_ERROR;
 }
