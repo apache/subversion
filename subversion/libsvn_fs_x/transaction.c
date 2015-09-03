@@ -1223,7 +1223,8 @@ bump_txn_key(svn_fs_t *fs,
 
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
-  SVN_ERR(svn_io_file_rename(txn_next_path, txn_current_path, scratch_pool));
+  SVN_ERR(svn_io_file_rename2(txn_next_path, txn_current_path, FALSE,
+                              scratch_pool));
   SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, txn_current_path,
                                          scratch_pool));
 
@@ -1412,10 +1413,11 @@ set_txn_proplist(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* Replace the old file with the new one. */
-  SVN_ERR(svn_io_file_rename(temp_path,
-                             svn_fs_x__path_txn_props(fs, txn_id,
-                                                      scratch_pool),
-                             scratch_pool));
+  SVN_ERR(svn_io_file_rename2(temp_path,
+                              svn_fs_x__path_txn_props(fs, txn_id,
+                                                       scratch_pool),
+                              FALSE,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3413,9 +3415,10 @@ get_writable_final_rev(apr_file_t **file,
 
   /* Move the proto-rev file to its final location as revision data file.
      After that, we don't need to protect it anymore and can unlock it. */
-  SVN_ERR(svn_error_compose_create(svn_io_file_rename(proto_rev_filename,
-                                                      final_rev_filename,
-                                                      scratch_pool),
+  SVN_ERR(svn_error_compose_create(svn_io_file_rename2(proto_rev_filename,
+                                                       final_rev_filename,
+                                                       FALSE,
+                                                       scratch_pool),
                                    unlock_proto_rev(fs, txn_id, lockcookie,
                                                     scratch_pool)));
   SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, final_rev_filename,
@@ -3493,8 +3496,8 @@ bump_ids(void *baton,
 
   /* Make the revision visible to all processes and threads. */
   current_filename = svn_fs_x__path_current(b->fs, scratch_pool);
-  SVN_ERR(svn_io_file_rename(svn_fs_x__path_next(b->fs, scratch_pool),
-                             current_filename, scratch_pool));
+  SVN_ERR(svn_io_file_rename2(svn_fs_x__path_next(b->fs, scratch_pool),
+                              current_filename, FALSE, scratch_pool));
   SVN_ERR(svn_fs_x__batch_fsync_new_path(b->batch, current_filename,
                                          scratch_pool));
 

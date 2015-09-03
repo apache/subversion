@@ -643,7 +643,7 @@ svn_fs_fs__move_into_place(const char *old_filename,
 
   /* APR will *not* error out on Win32 if this requires a copy instead of
      of a move. */
-  SVN_ERR(svn_io_file_rename(old_filename, new_filename, pool));
+  SVN_ERR(svn_io_file_rename2(old_filename, new_filename, FALSE, pool));
 
   /* Flush the target of the copy to disk. */
   SVN_ERR(svn_io_file_open(&file, new_filename, APR_WRITE,
@@ -657,7 +657,7 @@ svn_fs_fs__move_into_place(const char *old_filename,
   SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, pool));
 
   /* Move the file into place. */
-  err = svn_io_file_rename(old_filename, new_filename, pool);
+  err = svn_io_file_rename2(old_filename, new_filename, FALSE, pool);
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
       /* Can't rename across devices; fall back to copying. */

@@ -569,7 +569,8 @@ maybe_transfer_one_pristine(svn_wc__db_wcroot_t *src_wcroot,
 
   /* Move the file to its target location.  (If it is already there, it is
    * an orphan file and it doesn't matter if we overwrite it.) */
-  err = svn_io_file_rename(tmp_abspath, pristine_abspath, scratch_pool);
+  err = svn_io_file_rename2(tmp_abspath, pristine_abspath, FALSE,
+                            scratch_pool);
 
   /* Maybe the directory doesn't exist yet? */
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -587,7 +588,8 @@ maybe_transfer_one_pristine(svn_wc__db_wcroot_t *src_wcroot,
         /* We could create a directory: retry install */
         svn_error_clear(err);
 
-      SVN_ERR(svn_io_file_rename(tmp_abspath, pristine_abspath, scratch_pool));
+      SVN_ERR(svn_io_file_rename2(tmp_abspath, pristine_abspath, FALSE,
+                                  scratch_pool));
     }
   else
     SVN_ERR(err);
@@ -709,7 +711,7 @@ remove_file(const char *file_abspath,
   SVN_ERR(svn_io_open_unique_file3(NULL, &temp_abspath, temp_dir_abspath,
                                    svn_io_file_del_none,
                                    scratch_pool, scratch_pool));
-  err = svn_io_file_rename(file_abspath, temp_abspath, scratch_pool);
+  err = svn_io_file_rename2(file_abspath, temp_abspath, FALSE, scratch_pool);
   if (err && ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
     svn_error_clear(err);
   else

@@ -2433,7 +2433,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                        pool));
 
           /* Move the temporary disk tree into place. */
-          SVN_ERR(svn_io_file_rename(tmp_abspath, dst_abspath, pool));
+          SVN_ERR(svn_io_file_rename2(tmp_abspath, dst_abspath, FALSE, pool));
         }
       else
         {

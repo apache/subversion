@@ -2356,9 +2356,26 @@ svn_io_stat(apr_finfo_t *finfo,
  * @a from_path to a new path @a to_path within the same filesystem.
  * In some cases, an existing node at @a to_path will be overwritten.
  *
- * A wrapper for apr_file_rename().  @a from_path and @a to_path are
- * utf8-encoded.
+ * @a from_path and @a to_path are utf8-encoded.  If @a flush_to_disk
+ * is non-zero, do not return until the node has actually been moved on
+ * the disk.
+ *
+ * @note The flush to disk operation can be very expensive on systems
+ * that implement flushing on all IO layers, like Windows. Please use
+ * @a flush_to_disk flag only for critical data.
+ *
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_io_file_rename2(const char *from_path, const char *to_path,
+                    svn_boolean_t flush_to_disk, apr_pool_t *pool);
+
+/** Similar to svn_io_file_rename2(), but with @a flush_to_disk set
+ * to @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_file_rename(const char *from_path,
                    const char *to_path,

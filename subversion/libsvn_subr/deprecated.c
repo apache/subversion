@@ -889,6 +889,14 @@ svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                                 scratch_pool));
 }
 
+svn_error_t *
+svn_io_file_rename(const char *from_path, const char *to_path,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_io_file_rename2(from_path, to_path,
+                                             FALSE, pool));
+}
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,

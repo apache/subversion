@@ -1649,7 +1649,7 @@ detranslate_special_file(const char *src, const char *dst,
                            cancel_func, cancel_baton, scratch_pool));
 
   /* Do the atomic rename from our temporary location. */
-  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, scratch_pool));
+  return svn_error_trace(svn_io_file_rename2(dst_tmp, dst, FALSE, scratch_pool));
 }
 
 /* Creates a special file DST from the "normal form" located in SOURCE.
@@ -1733,7 +1733,7 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
     }
 
   /* Do the atomic rename from our temporary location. */
-  return svn_error_trace(svn_io_file_rename(dst_tmp, dst, pool));
+  return svn_error_trace(svn_io_file_rename2(dst_tmp, dst, FALSE, pool));
 }
 
 
@@ -1824,7 +1824,7 @@ svn_subst_copy_and_translate4(const char *src,
     }
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  SVN_ERR(svn_io_file_rename(dst_tmp, dst, pool));
+  SVN_ERR(svn_io_file_rename2(dst_tmp, dst, FALSE, pool));
 
   /* Preserve the source file's permission bits. */
   SVN_ERR(svn_io_copy_perms(src, dst, pool));
