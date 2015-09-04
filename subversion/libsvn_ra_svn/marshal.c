@@ -100,7 +100,7 @@ svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
         target->u.word = source->u.word;
         break;
       case SVN_RA_SVN_LIST:
-        target->u.list = svn_ra_svn__to_public_array(source->u.list,
+        target->u.list = svn_ra_svn__to_public_array(&source->u.list,
                                                      result_pool);
         break;
     }
@@ -143,8 +143,8 @@ svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
         target->u.word = source->u.word;
         break;
       case SVN_RA_SVN_LIST:
-        target->u.list = svn_ra_svn__to_private_array(source->u.list,
-                                                      result_pool);
+        target->u.list = *svn_ra_svn__to_private_array(source->u.list,
+                                                       result_pool);
         break;
     }
 }
@@ -1300,8 +1300,6 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       /* Read in the list items. */
       item->kind = SVN_RA_SVN_LIST;
-      item->u.list = apr_pcalloc(pool, sizeof(*item->u.list));
-
       while (1)
         {
           SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
@@ -1327,14 +1325,19 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       /* Store the list in ITEM - if not empty (= default). */
       if (count)
         {
-          item->u.list->nelts = count;
+          item->u.list.nelts = count;
 
           /* If we haven't allocated from POOL, yet, do it now. */
           if (items == stack_items)
-            item->u.list->items = apr_pmemdup(pool, items,
-                                              count * sizeof(*items));
+            item->u.list.items = apr_pmemdup(pool, items,
+                                             count * sizeof(*items));
           else
-            item->u.list->items = items;
+            item->u.list.items = items;
+        }
+      else
+        {
+          item->u.list.items = NULL;
+          item->u.list.nelts = 0;
         }
 
       SVN_ERR(readbuf_getchar(conn, pool, &c));
@@ -1508,7 +1511,7 @@ vparse_tuple(const svn_ra_svn__list_t *items,
       if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
         {
           (*fmt)++;
-          SVN_ERR(vparse_tuple(elt->u.list, pool, fmt, ap));
+          SVN_ERR(vparse_tuple(&elt->u.list, pool, fmt, ap));
         }
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, const char **) = elt->u.string->data;
@@ -1548,7 +1551,7 @@ vparse_tuple(const svn_ra_svn__list_t *items,
             break;
         }
       else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
-        *va_arg(*ap, svn_ra_svn__list_t **) = elt->u.list;
+        *va_arg(*ap, svn_ra_svn__list_t **) = &elt->u.list;
       else if (**fmt == ')')
         return SVN_NO_ERROR;
       else
@@ -1629,7 +1632,7 @@ svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Malformed network data"));
   va_start(ap, fmt);
-  err = vparse_tuple(item->u.list, pool, &fmt, &ap);
+  err = vparse_tuple(&item->u.list, pool, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -1664,7 +1667,7 @@ svn_ra_svn__parse_proplist(const svn_ra_svn__list_t *list,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "ss",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "ss",
                                       &name, &value));
       apr_hash_set(*props, name->data, name->len, value);
     }
@@ -1713,7 +1716,7 @@ svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Malformed error list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, subpool, "nccn",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, subpool, "nccn",
                                       &apr_err, &message, &file, &line));
       /* The message field should have been optional, but we can't
          easily change that, so "" means a nonexistent message. */
@@ -2902,7 +2905,7 @@ svn_ra_svn__read_list(const svn_ra_svn__list_t *items,
   svn_ra_svn__item_t *elt  = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_LIST);
 
-  *result = elt->u.list;
+  *result = &elt->u.list;
   return SVN_NO_ERROR;
 }
 
