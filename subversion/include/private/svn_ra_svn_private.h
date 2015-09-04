@@ -47,8 +47,7 @@ typedef struct svn_ra_svn__list_t
   int nelts;
 } svn_ra_svn__list_t;
 
-/* List element access macro.  This is for transitional usage only.
- * Once svn_ra_svn__list_t is finalized, this macro will become obsolete. */
+/* List element access macro. */
 #define SVN_RA_SVN__LIST_ITEM(list, idx) (list)->items[idx]
 
 /** Memory representation of an on-the-wire data item. */
