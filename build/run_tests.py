@@ -45,6 +45,7 @@ separated list of test numbers; the default is to run all the tests in it.
 '''
 
 import os, sys
+import re
 import optparse, subprocess, imp, threading, traceback, exceptions
 from datetime import datetime
 
