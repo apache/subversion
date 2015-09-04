@@ -35,8 +35,10 @@
 #include "svn_delta.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 #include "svn_version.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_dep_compat.h"
 
 /* be able to look into svn_config_t */
 #include "../../libsvn_subr/config_impl.h"
@@ -47,13 +49,6 @@
 
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
-
-#ifndef MAX
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#endif
-#ifndef MIN
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#endif
 
 /* Compare strings, like strcmp but either or both may be NULL which
  * compares equal to NULL and not equal to any non-NULL string. */
