@@ -1300,15 +1300,15 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
       if (item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Non-string as part of file contents"));
-      if (item->u.string->len == 0)
+      if (item->u.string.len == 0)
         break;
 
       if (expected_checksum)
-        SVN_ERR(svn_checksum_update(checksum_ctx, item->u.string->data,
-                                    item->u.string->len));
+        SVN_ERR(svn_checksum_update(checksum_ctx, item->u.string.data,
+                                    item->u.string.len));
 
-      SVN_ERR(svn_stream_write(stream, item->u.string->data,
-                               &item->u.string->len));
+      SVN_ERR(svn_stream_write(stream, item->u.string.data,
+                               &item->u.string.len));
     }
   svn_pool_destroy(iterpool);
 
@@ -2155,7 +2155,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
       if (item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Text delta chunk not a string"));
-      has_txdelta = item->u.string->len > 0;
+      has_txdelta = item->u.string.len > 0;
 
       SVN_ERR(handler(handler_baton, p, rev, rev_props, merged_rev,
                       has_txdelta ? &d_handler : NULL, &d_baton,
@@ -2171,13 +2171,13 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
                                                rev_pool);
           else
             stream = NULL;
-          while (item->u.string->len > 0)
+          while (item->u.string.len > 0)
             {
               apr_size_t size;
 
-              size = item->u.string->len;
+              size = item->u.string.len;
               if (stream)
-                SVN_ERR(svn_stream_write(stream, item->u.string->data, &size));
+                SVN_ERR(svn_stream_write(stream, item->u.string.data, &size));
               svn_pool_clear(chunk_pool);
 
               SVN_ERR(svn_ra_svn__read_item(sess_baton->conn, chunk_pool,

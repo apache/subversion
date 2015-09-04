@@ -213,7 +213,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
       if (item->kind != SVN_RA_SVN_STRING)
         return SVN_NO_ERROR;
 
-      in = item->u.string;
+      in = &item->u.string;
       if (use_base64)
         in = svn_base64_decode_string(in, pool);
 
