@@ -1685,7 +1685,7 @@ get_dir(svn_ra_svn_conn_t *conn,
   svn_boolean_t want_props, want_contents;
   apr_uint64_t wants_inherited_props;
   apr_uint64_t dirent_fields;
-  apr_array_header_t *dirent_fields_list = NULL;
+  svn_ra_svn__list_t *dirent_fields_list = NULL;
   svn_ra_svn__item_t *elt;
   int i;
   authz_baton_t ab;
@@ -1711,7 +1711,7 @@ get_dir(svn_ra_svn_conn_t *conn,
 
       for (i = 0; i < dirent_fields_list->nelts; ++i)
         {
-          elt = &APR_ARRAY_IDX(dirent_fields_list, i, svn_ra_svn__item_t);
+          elt = &SVN_RA_SVN__LIST_ITEM(dirent_fields_list, i);
 
           if (elt->kind != SVN_RA_SVN_WORD)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -2099,7 +2099,8 @@ get_mergeinfo(svn_ra_svn_conn_t *conn,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  apr_array_header_t *paths, *canonical_paths;
+  svn_ra_svn__list_t *paths;
+  apr_array_header_t *canonical_paths;
   svn_mergeinfo_catalog_t mergeinfo;
   int i;
   apr_hash_index_t *hi;
@@ -2120,7 +2121,7 @@ get_mergeinfo(svn_ra_svn_conn_t *conn,
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
      {
-        svn_ra_svn__item_t *item = &APR_ARRAY_IDX(paths, i, svn_ra_svn__item_t);
+        svn_ra_svn__item_t *item = &SVN_RA_SVN__LIST_ITEM(paths, i);
         const char *full_path;
 
         if (item->kind != SVN_RA_SVN_STRING)
@@ -2260,7 +2261,8 @@ log_cmd(svn_ra_svn_conn_t *conn,
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
   svn_boolean_t send_changed_paths, strict_node, include_merged_revisions;
-  apr_array_header_t *paths, *full_paths, *revprop_items, *revprops;
+  apr_array_header_t *full_paths, *revprops;
+  svn_ra_svn__list_t *paths, *revprop_items;
   char *revprop_word;
   svn_ra_svn__item_t *elt;
   int i;
@@ -2295,7 +2297,7 @@ log_cmd(svn_ra_svn_conn_t *conn,
                                 sizeof(char *));
       for (i = 0; i < revprop_items->nelts; i++)
         {
-          elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn__item_t);
+          elt = &SVN_RA_SVN__LIST_ITEM(revprop_items, i);
           if (elt->kind != SVN_RA_SVN_STRING)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Log revprop entry not a string"));
@@ -2317,7 +2319,7 @@ log_cmd(svn_ra_svn_conn_t *conn,
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
     {
-      elt = &APR_ARRAY_IDX(paths, i, svn_ra_svn__item_t);
+      elt = &SVN_RA_SVN__LIST_ITEM(paths, i);
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log path entry not a string"));
@@ -2447,7 +2449,8 @@ get_locations(svn_ra_svn_conn_t *conn,
   svn_error_t *err, *write_err;
   server_baton_t *b = baton;
   svn_revnum_t revision;
-  apr_array_header_t *location_revisions, *loc_revs_proto;
+  apr_array_header_t *location_revisions;
+  svn_ra_svn__list_t *loc_revs_proto;
   svn_ra_svn__item_t *elt;
   int i;
   const char *relative_path;
@@ -2472,7 +2475,7 @@ get_locations(svn_ra_svn_conn_t *conn,
                                       sizeof(svn_revnum_t));
   for (i = 0; i < loc_revs_proto->nelts; i++)
     {
-      elt = &APR_ARRAY_IDX(loc_revs_proto, i, svn_ra_svn__item_t);
+      elt = &SVN_RA_SVN__LIST_ITEM(loc_revs_proto, i);
       if (elt->kind != SVN_RA_SVN_NUMBER)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Get-locations location revisions entry "
@@ -2846,7 +2849,7 @@ lock_many(svn_ra_svn_conn_t *conn,
           void *baton)
 {
   server_baton_t *b = baton;
-  apr_array_header_t *path_revs;
+  svn_ra_svn__list_t *path_revs;
   const char *comment;
   svn_boolean_t steal_lock;
   int i;
@@ -2873,8 +2876,7 @@ lock_many(svn_ra_svn_conn_t *conn,
     {
       const char *path, *full_path;
       svn_revnum_t current_rev;
-      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(path_revs, i,
-                                                svn_ra_svn__item_t);
+      svn_ra_svn__item_t *item = &SVN_RA_SVN__LIST_ITEM(path_revs, i);
       svn_fs_lock_target_t *target;
 
       svn_pool_clear(subpool);
@@ -2937,8 +2939,7 @@ lock_many(svn_ra_svn_conn_t *conn,
     {
       const char *path, *full_path;
       svn_revnum_t current_rev;
-      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(path_revs, i,
-                                                svn_ra_svn__item_t);
+      svn_ra_svn__item_t *item = &SVN_RA_SVN__LIST_ITEM(path_revs, i);
       struct lock_result_t *result;
 
       svn_pool_clear(subpool);
@@ -3036,7 +3037,7 @@ unlock_many(svn_ra_svn_conn_t *conn,
 {
   server_baton_t *b = baton;
   svn_boolean_t break_lock;
-  apr_array_header_t *unlock_tokens;
+  svn_ra_svn__list_t *unlock_tokens;
   int i;
   apr_pool_t *subpool;
   svn_error_t *err = SVN_NO_ERROR, *write_err = SVN_NO_ERROR;
@@ -3056,8 +3057,7 @@ unlock_many(svn_ra_svn_conn_t *conn,
   /* Parse the unlock requests from PATH_REVS into TARGETS. */
   for (i = 0; i < unlock_tokens->nelts; i++)
     {
-      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
-                                                svn_ra_svn__item_t);
+      svn_ra_svn__item_t *item = &SVN_RA_SVN__LIST_ITEM(unlock_tokens, i);
       const char *path, *full_path, *token;
 
       svn_pool_clear(subpool);
@@ -3119,8 +3119,7 @@ unlock_many(svn_ra_svn_conn_t *conn,
   for (i = 0; i < unlock_tokens->nelts; ++i)
     {
       const char *path, *token, *full_path;
-      svn_ra_svn__item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
-                                                svn_ra_svn__item_t);
+      svn_ra_svn__item_t *item = &SVN_RA_SVN__LIST_ITEM(unlock_tokens, i);
       struct lock_result_t *result;
 
       svn_pool_clear(subpool);
