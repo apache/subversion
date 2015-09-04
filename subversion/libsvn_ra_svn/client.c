@@ -204,8 +204,8 @@ static svn_error_t *parse_prop_diffs(const svn_ra_svn__list_t *list,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Prop diffs element not a list"));
       prop = apr_array_push(*diffs);
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "c(?s)", &prop->name,
-                                      &prop->value));
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "c(?s)",
+                                      &prop->name, &prop->value));
     }
   return SVN_NO_ERROR;
 }
@@ -1228,7 +1228,7 @@ parse_iproplist(apr_array_header_t **inherited_props,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, iterpool, "cl",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, iterpool, "cl",
                                       &parent_rel_path, &iprop_list));
       SVN_ERR(svn_ra_svn__parse_proplist(iprop_list, iterpool, &iprops));
       new_iprop->path_or_url = svn_path_url_add_component2(repos_root_url,
@@ -1389,7 +1389,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Dirlist element not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "cwnbr(?c)(?c)",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "cwnbr(?c)(?c)",
                                       &name, &kind, &size, &has_props,
                                       &crev, &cdate, &cauthor));
 
@@ -1481,7 +1481,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           if (elt->kind != SVN_RA_SVN_LIST)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Mergeinfo element is not a list"));
-          SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "cc",
+          SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "cc",
                                           &path, &to_parse));
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
           /* Correct for naughty servers that send "relative" paths
@@ -1700,7 +1700,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log entry not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, iterpool,
+      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, iterpool,
                                       "lr(?s)(?s)(?s)?BBnl?B",
                                       &cplist, &rev, &author, &date,
                                       &message, &has_children_param,
@@ -1747,7 +1747,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
               if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
-              SVN_ERR(svn_ra_svn__read_data_log_changed_entry(elt->u.list,
+              SVN_ERR(svn_ra_svn__read_data_log_changed_entry(&elt->u.list,
                                               &cpath, &action, &copy_path,
                                               &copy_rev, &kind_str,
                                               &text_mods, &prop_mods));
@@ -1978,7 +1978,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
                                 _("Location entry not a list"));
       else
         {
-          SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, pool, "rc",
+          SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, pool, "rc",
                                           &revision, &ret_path));
           ret_path = svn_fspath__canonicalize(ret_path, pool);
           apr_hash_set(*locations, apr_pmemdup(pool, &revision,
@@ -2037,7 +2037,7 @@ perform_get_location_segments(svn_error_t **outer_error,
         {
           svn_location_segment_t *segment = apr_pcalloc(iterpool,
                                                         sizeof(*segment));
-          SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, iterpool, "rr(?c)",
+          SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, iterpool, "rr(?c)",
                                           &range_start, &range_end, &ret_path));
           if (! (SVN_IS_VALID_REVNUM(range_start)
                  && SVN_IS_VALID_REVNUM(range_end)))
@@ -2139,7 +2139,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Revision entry not a list"));
 
-      SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, rev_pool,
+      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, rev_pool,
                                       "crll?B", &p, &rev, &rev_proplist,
                                       &proplist, &merged_rev_param));
       p = svn_fspath__canonicalize(p, rev_pool);
@@ -2407,7 +2407,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Lock response not a list"));
 
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, iterpool, "wl", &status,
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, iterpool, "wl", &status,
                                       &list));
 
       if (strcmp(status, "failure") == 0)
@@ -2535,7 +2535,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Unlock response not a list"));
 
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, iterpool, "wl", &status,
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, iterpool, "wl", &status,
                                       &list));
 
       if (strcmp(status, "failure") == 0)
@@ -2661,7 +2661,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Lock element not a list"));
-      SVN_ERR(parse_lock(elt->u.list, pool, &lock));
+      SVN_ERR(parse_lock(&elt->u.list, pool, &lock));
 
       /* Filter out unwanted paths.  Since Subversion only allows
          locks on files, we can treat depth=immediates the same as

@@ -49,7 +49,7 @@ typedef struct svn_ra_svn__list_t
 
 /* List element access macro.  This is for transitional usage only.
  * Once svn_ra_svn__list_t is finalized, this macro will become obsolete. */
-#define SVN_RA_SVN__LIST_ITEM(list, idx) list->items[idx]
+#define SVN_RA_SVN__LIST_ITEM(list, idx) (list)->items[idx]
 
 /** Memory representation of an on-the-wire data item. */
 typedef struct svn_ra_svn__item_t
@@ -62,7 +62,7 @@ typedef struct svn_ra_svn__item_t
     apr_uint64_t number;
     svn_string_t *string;
     const char *word;
-    svn_ra_svn__list_t *list;
+    svn_ra_svn__list_t list;
   } u;
 } svn_ra_svn__item_t;
 

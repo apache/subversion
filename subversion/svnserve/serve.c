@@ -1343,12 +1343,12 @@ add_lock_tokens(const svn_ra_svn__list_t *lock_tokens,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock tokens aren't a list of lists");
 
-      path_item = &SVN_RA_SVN__LIST_ITEM(item->u.list, 0);
+      path_item = &SVN_RA_SVN__LIST_ITEM(&item->u.list, 0);
       if (path_item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock path isn't a string");
 
-      token_item = &SVN_RA_SVN__LIST_ITEM(item->u.list, 1);
+      token_item = &SVN_RA_SVN__LIST_ITEM(&item->u.list, 1);
       if (token_item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock token isn't a string");
@@ -1402,8 +1402,8 @@ unlock_paths(const svn_ra_svn__list_t *lock_tokens,
       const char *path, *token, *full_path;
 
       item = &SVN_RA_SVN__LIST_ITEM(lock_tokens, i);
-      path_item = &SVN_RA_SVN__LIST_ITEM(item->u.list, 0);
-      token_item = &SVN_RA_SVN__LIST_ITEM(item->u.list, 1);
+      path_item = &SVN_RA_SVN__LIST_ITEM(&item->u.list, 0);
+      token_item = &SVN_RA_SVN__LIST_ITEM(&item->u.list, 1);
 
       path = path_item->u.string->data;
       full_path = svn_fspath__join(sb->repository->fs_path->data,
@@ -2885,7 +2885,7 @@ lock_many(svn_ra_svn_conn_t *conn,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock requests should be list of lists");
 
-      SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, subpool, "c(?r)", &path,
+      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, subpool, "c(?r)", &path,
                                       &current_rev));
 
       full_path = svn_fspath__join(b->repository->fs_path->data,
@@ -2944,8 +2944,8 @@ lock_many(svn_ra_svn_conn_t *conn,
 
       svn_pool_clear(subpool);
 
-      write_err = svn_ra_svn__parse_tuple(item->u.list, subpool, "c(?r)", &path,
-                                          &current_rev);
+      write_err = svn_ra_svn__parse_tuple(&item->u.list, subpool, "c(?r)",
+                                          &path, &current_rev);
       if (write_err)
         break;
 
@@ -3066,7 +3066,7 @@ unlock_many(svn_ra_svn_conn_t *conn,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Unlock request should be a list of lists");
 
-      SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, subpool, "c(?c)", &path,
+      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, subpool, "c(?c)", &path,
                                       &token));
       if (!token)
         token = "";
@@ -3124,8 +3124,8 @@ unlock_many(svn_ra_svn_conn_t *conn,
 
       svn_pool_clear(subpool);
 
-      write_err = svn_ra_svn__parse_tuple(item->u.list, subpool, "c(?c)", &path,
-                                          &token);
+      write_err = svn_ra_svn__parse_tuple(&item->u.list, subpool, "c(?c)",
+                                          &path, &token);
       if (write_err)
         break;
 
