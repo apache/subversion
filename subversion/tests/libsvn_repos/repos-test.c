@@ -37,6 +37,8 @@
 #include "svn_props.h"
 #include "svn_version.h"
 
+#include "svn_dep_compat.h"
+
 #include "../svn_test_fs.h"
 
 #include "dir-delta-editor.h"

@@ -73,6 +73,12 @@ void svn_hash__clear(struct apr_hash_t *ht);
  * apr_hash_clear() API.
  */
 #define apr_hash_clear(ht)           svn_hash__clear(ht)
+
+/**
+ * If we don't have a recent enough APR, emulate the behavior of the
+ * apr_array_clear() API.
+ */
+#define apr_array_clear(arr) do { arr->nelts = 0; } while(0)
 #endif
 
 #if !APR_VERSION_AT_LEAST(1,0,0)
