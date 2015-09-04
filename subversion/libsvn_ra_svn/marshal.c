@@ -153,13 +153,16 @@ svn_ra_svn__list_t *
 svn_ra_svn__to_private_array(const apr_array_header_t *source,
                              apr_pool_t *result_pool)
 {
-  svn_ra_svn__list_t *result = apr_array_make(result_pool, source->nelts,
-                                              sizeof(svn_ra_svn__item_t));
-
   int i;
+
+  svn_ra_svn__list_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  result->nelts = source->nelts;
+  result->items = apr_palloc(result_pool,
+                             source->nelts * sizeof(*result->items));
+
   for (i = 0; i < source->nelts; ++i)
     {
-      svn_ra_svn__item_t *sub_target = apr_array_push(result);
+      svn_ra_svn__item_t *sub_target = &result->items[i];
       svn_ra_svn_item_t *sub_source = &APR_ARRAY_IDX(source, i,
                                                      svn_ra_svn_item_t);
 
@@ -1289,17 +1292,51 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else if (c == '(')
     {
+      /* Allow for up to 4 items in this list without re-allocation. */
+      svn_ra_svn__item_t stack_items[4];
+      svn_ra_svn__item_t *items = stack_items;
+      int capacity = sizeof(stack_items) / sizeof(stack_items[0]);
+      int count = 0;
+
       /* Read in the list items. */
       item->kind = SVN_RA_SVN_LIST;
-      item->u.list = apr_array_make(pool, 4, sizeof(svn_ra_svn__item_t));
+      item->u.list = apr_pcalloc(pool, sizeof(*item->u.list));
+
       while (1)
         {
           SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
           if (c == ')')
             break;
-          listitem = apr_array_push(item->u.list);
+
+          /* Auto-expand the list. */
+          if (count == capacity)
+            {
+              svn_ra_svn__item_t *new_items
+                = apr_palloc(pool, 2 * capacity * sizeof(*new_items));
+              memcpy(new_items, items, capacity * sizeof(*new_items));
+              items = new_items;
+              capacity = 2 * capacity;
+            }
+
+          listitem = &items[count];
+          ++count;
+
           SVN_ERR(read_item(conn, pool, listitem, c, level));
         }
+
+      /* Store the list in ITEM - if not empty (= default). */
+      if (count)
+        {
+          item->u.list->nelts = count;
+
+          /* If we haven't allocated from POOL, yet, do it now. */
+          if (items == stack_items)
+            item->u.list->items = apr_pmemdup(pool, items,
+                                              count * sizeof(*items));
+          else
+            item->u.list->items = items;
+        }
+
       SVN_ERR(readbuf_getchar(conn, pool, &c));
     }
 

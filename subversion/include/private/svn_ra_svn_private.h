@@ -34,13 +34,22 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** Memory representation of an on-the-wire data item. */
+typedef struct svn_ra_svn__item_t svn_ra_svn__item_t;
+
 /* A list of svn_ra_svn__item_t objects. */
-typedef apr_array_header_t svn_ra_svn__list_t;
+typedef struct svn_ra_svn__list_t
+{
+  /* List contents (array).  May be NULL if NELTS is 0. */
+  struct svn_ra_svn__item_t *items;
+
+  /* Number of elements in ITEMS. */
+  int nelts;
+} svn_ra_svn__list_t;
 
 /* List element access macro.  This is for transitional usage only.
  * Once svn_ra_svn__list_t is finalized, this macro will become obsolete. */
-#define SVN_RA_SVN__LIST_ITEM(list, idx) \
-  APR_ARRAY_IDX(list, idx, svn_ra_svn__item_t)
+#define SVN_RA_SVN__LIST_ITEM(list, idx) list->items[idx]
 
 /** Memory representation of an on-the-wire data item. */
 typedef struct svn_ra_svn__item_t
