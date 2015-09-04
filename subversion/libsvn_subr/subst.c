@@ -1691,17 +1691,16 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
                                                    ".tmp", pool);
 
       /* If we had an error, check to see if it was because symlinks are
-         not supported on the platform.  If so, fall back
-         to using the internal representation. */
-      if (err)
+         not supported on the platform.  If so, fall back to using the
+         internal representation. */
+      if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
         {
-          if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-            {
-              svn_error_clear(err);
-              create_using_internal_representation = TRUE;
-            }
-          else
-            return err;
+          svn_error_clear(err);
+          create_using_internal_representation = TRUE;
+        }
+      else if (err)
+        {
+          return svn_error_trace(err);
         }
     }
   else
