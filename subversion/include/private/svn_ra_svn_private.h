@@ -52,7 +52,7 @@ typedef struct svn_ra_svn__list_t
 #define SVN_RA_SVN__LIST_ITEM(list, idx) (list)->items[idx]
 
 /** Memory representation of an on-the-wire data item. */
-typedef struct svn_ra_svn__item_t
+struct svn_ra_svn__item_t
 {
   /** Variant indicator. */
   svn_ra_svn_item_kind_t kind;
@@ -64,7 +64,7 @@ typedef struct svn_ra_svn__item_t
     const char *word;
     svn_ra_svn__list_t list;
   } u;
-} svn_ra_svn__item_t;
+};
 
 /** Command handler, used by svn_ra_svn__handle_commands(). */
 typedef svn_error_t *(*svn_ra_svn__command_handler)(svn_ra_svn_conn_t *conn,
