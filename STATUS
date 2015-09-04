@@ -93,15 +93,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1694929
-   Fix memory corruption in SWIG bindings' svn_client_copy_source_t
-   constructor.
-   Justification:
-     Constructor result is not correct as REVISION gets partially overwritten
-     by PEG_REVISION. May also result in segfaults.
-   Votes:
-     +1: stefan2, philip, rhuijben
-
  * r1618472, r1618841, r1632635, r1640832
    Fix a segfault with old style text delta.
    Justification:
