@@ -93,16 +93,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1691928
-   Fix issue #4584, "Non-canonical $HOME crashes GPG-agent support code".
-   Justification:
-     Regression introduced in 1.8.11. Simple cause; simple fix.
-   Notes:
-     Also nominated for 1.9.x.
-     Trunk has a better fix, but less suitable for backporting, in r1691952.
-   Votes:
-     +1: julianfoad, philip, brane
-
  * r1694929
    Fix memory corruption in SWIG bindings' svn_client_copy_source_t
    constructor.
