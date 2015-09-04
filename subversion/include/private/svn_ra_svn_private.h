@@ -60,7 +60,7 @@ typedef struct svn_ra_svn__item_t
   /** Variant data. */
   union {
     apr_uint64_t number;
-    svn_string_t *string;
+    svn_string_t string;
     const char *word;
     svn_ra_svn__list_t list;
   } u;

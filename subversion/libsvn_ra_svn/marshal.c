@@ -91,7 +91,7 @@ svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
   switch (source->kind)
     {
       case SVN_RA_SVN_STRING:
-        target->u.string = svn_string_dup(source->u.string, result_pool);
+        target->u.string = svn_string_dup(&source->u.string, result_pool);
         break;
       case SVN_RA_SVN_NUMBER:
         target->u.number = source->u.number;
@@ -134,7 +134,7 @@ svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
   switch (source->kind)
     {
       case SVN_RA_SVN_STRING:
-        target->u.string = svn_string_dup(source->u.string, result_pool);
+        target->u.string = *source->u.string;
         break;
       case SVN_RA_SVN_NUMBER:
         target->u.number = source->u.number;
@@ -1145,7 +1145,8 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (conn->read_ptr + len <= conn->read_end)
     {
       item->kind = SVN_RA_SVN_STRING;
-      item->u.string = svn_string_ncreate(conn->read_ptr, len, pool);
+      item->u.string.data = apr_pstrmemdup(pool, conn->read_ptr, len);
+      item->u.string.len = len;
       conn->read_ptr += len;
     }
   else
@@ -1186,7 +1187,8 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       /* Return the string properly wrapped into an RA_SVN item. */
       item->kind = SVN_RA_SVN_STRING;
-      item->u.string = svn_stringbuf__morph_into_string(stringbuf);
+      item->u.string.data = stringbuf->data;
+      item->u.string.len = stringbuf->len;
     }
 
   return SVN_NO_ERROR;
@@ -1514,9 +1516,9 @@ vparse_tuple(const svn_ra_svn__list_t *items,
           SVN_ERR(vparse_tuple(&elt->u.list, pool, fmt, ap));
         }
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
-        *va_arg(*ap, const char **) = elt->u.string->data;
+        *va_arg(*ap, const char **) = elt->u.string.data;
       else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
-        *va_arg(*ap, svn_string_t **) = elt->u.string;
+        *va_arg(*ap, svn_string_t **) = &elt->u.string;
       else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
         *va_arg(*ap, const char **) = elt->u.word;
       else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
@@ -2829,7 +2831,7 @@ svn_ra_svn__read_string(const svn_ra_svn__list_t *items,
 {
   svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_STRING);
-  *result = elt->u.string;
+  *result = &elt->u.string;
 
   return SVN_NO_ERROR;
 }
@@ -2843,7 +2845,7 @@ svn_ra_svn__read_cstring(const svn_ra_svn__list_t *items,
 {
   svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_STRING);
-  *result = elt->u.string->data;
+  *result = elt->u.string.data;
 
   return SVN_NO_ERROR;
 }

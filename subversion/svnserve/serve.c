@@ -1353,7 +1353,7 @@ add_lock_tokens(const svn_ra_svn__list_t *lock_tokens,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock token isn't a string");
 
-      path = path_item->u.string->data;
+      path = path_item->u.string.data;
       full_path = svn_fspath__join(sb->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, pool),
                                    pool);
@@ -1362,7 +1362,7 @@ add_lock_tokens(const svn_ra_svn__list_t *lock_tokens,
         return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL, NULL,
                                     sb);
 
-      token = token_item->u.string->data;
+      token = token_item->u.string.data;
       SVN_ERR(svn_fs_access_add_lock_token2(fs_access, path, token));
     }
 
@@ -1405,11 +1405,11 @@ unlock_paths(const svn_ra_svn__list_t *lock_tokens,
       path_item = &SVN_RA_SVN__LIST_ITEM(&item->u.list, 0);
       token_item = &SVN_RA_SVN__LIST_ITEM(&item->u.list, 1);
 
-      path = path_item->u.string->data;
+      path = path_item->u.string.data;
       full_path = svn_fspath__join(sb->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    subpool);
-      token = token_item->u.string->data;
+      token = token_item->u.string.data;
       svn_hash_sets(targets, full_path, token);
     }
 
@@ -2127,7 +2127,7 @@ get_mergeinfo(svn_ra_svn_conn_t *conn,
         if (item->kind != SVN_RA_SVN_STRING)
           return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                   _("Path is not a string"));
-        full_path = svn_relpath_canonicalize(item->u.string->data, pool);
+        full_path = svn_relpath_canonicalize(item->u.string.data, pool);
         full_path = svn_fspath__join(b->repository->fs_path->data, full_path, pool);
         APR_ARRAY_PUSH(canonical_paths, const char *) = full_path;
      }
@@ -2301,7 +2301,7 @@ log_cmd(svn_ra_svn_conn_t *conn,
           if (elt->kind != SVN_RA_SVN_STRING)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Log revprop entry not a string"));
-          APR_ARRAY_PUSH(revprops, const char *) = elt->u.string->data;
+          APR_ARRAY_PUSH(revprops, const char *) = elt->u.string.data;
         }
     }
   else
@@ -2323,7 +2323,7 @@ log_cmd(svn_ra_svn_conn_t *conn,
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log path entry not a string"));
-      full_path = svn_relpath_canonicalize(elt->u.string->data, pool),
+      full_path = svn_relpath_canonicalize(elt->u.string.data, pool),
       full_path = svn_fspath__join(b->repository->fs_path->data, full_path,
                                    pool);
       APR_ARRAY_PUSH(full_paths, const char *) = full_path;
