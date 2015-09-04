@@ -2494,10 +2494,10 @@ svn_stream__install_delete(svn_stream_t *install_stream,
                                         sizeof(disposition_info));
     }
 
-   SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
 
-   if (done)
-     return SVN_NO_ERROR; /* File is already gone */
+  if (done)
+    return SVN_NO_ERROR; /* File is already gone */
 #endif
 
   return svn_error_trace(svn_io_remove_file2(ib->tmp_path, FALSE,
