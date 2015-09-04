@@ -4159,8 +4159,7 @@ svn_io_stat(apr_finfo_t *finfo, const char *fname,
 static apr_status_t
 win32_file_rename(const WCHAR *from_path_w,
                   const WCHAR *to_path_w,
-                  svn_boolean_t flush_to_disk,
-                  apr_pool_t *pool)
+                  svn_boolean_t flush_to_disk)
 {
   /* APR calls MoveFileExW() with MOVEFILE_COPY_ALLOWED, while we rely
    * that rename is atomic operation. Call MoveFileEx directly on Windows
@@ -4199,7 +4198,7 @@ svn_io_file_rename2(const char *from_path, const char *to_path,
 #if defined(WIN32)
   SVN_ERR(svn_io__utf8_to_unicode_longpath(&from_path_w, from_path_apr, pool));
   SVN_ERR(svn_io__utf8_to_unicode_longpath(&to_path_w, to_path_apr, pool));
-  status = win32_file_rename(from_path_w, to_path_w, flush_to_disk, pool);
+  status = win32_file_rename(from_path_w, to_path_w, flush_to_disk);
 
   /* If the target file is read only NTFS reports EACCESS and
      FAT/FAT32 reports EEXIST */
@@ -4210,10 +4209,10 @@ svn_io_file_rename2(const char *from_path, const char *to_path,
          allow renaming when from_path is read only. */
       SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
 
-      status = win32_file_rename(from_path_w, to_path_w, flush_to_disk, pool);
+      status = win32_file_rename(from_path_w, to_path_w, flush_to_disk);
     }
   WIN32_RETRY_LOOP(status, win32_file_rename(from_path_w, to_path_w,
-                                             flush_to_disk, pool));
+                                             flush_to_disk));
 #elif defined(__OS2__)
   status = apr_file_rename(from_path_apr, to_path_apr, pool);
   /* If the target file is read only NTFS reports EACCESS and
