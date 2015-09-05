@@ -47,10 +47,10 @@ print_two_power(int i,
    */
   const char *si_prefixes = " kMGTPEZY";
 
-  int number = (1 << (i % 10));
-  int thousands = i / 10;
+  int number = (i >= 0) ? (1 << (i % 10)) : 0;
+  int thousands = (i >= 0) ? (i / 10) : 0;
 
-  char si_prefix = ((thousands >= 0) && (thousands < strlen(si_prefixes)))
+  char si_prefix = (thousands < strlen(si_prefixes))
                  ? si_prefixes[thousands]
                  : '?';
 
@@ -343,7 +343,7 @@ print_stats(svn_fs_fs__stats_t *stats,
             apr_pool_t *pool)
 {
   /* print results */
-  printf("\nGlobal statistics:\n");
+  printf("\n\nGlobal statistics:\n");
   printf(_("%20s bytes in %12s revisions\n"
            "%20s bytes in %12s changes\n"
            "%20s bytes in %12s node revision records\n"

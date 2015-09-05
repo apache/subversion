@@ -80,6 +80,98 @@ get_timeout(svn_ra_svn_conn_t *conn)
   return conn->block_handler ? 0 : -1;
 }
 
+/* --- Public / private API data conversion --- */
+
+void
+svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
+                           const svn_ra_svn__item_t *source,
+                           apr_pool_t *result_pool)
+{
+  target->kind = source->kind;
+  switch (source->kind)
+    {
+      case SVN_RA_SVN_STRING:
+        target->u.string = svn_string_dup(&source->u.string, result_pool);
+        break;
+      case SVN_RA_SVN_NUMBER:
+        target->u.number = source->u.number;
+        break;
+      case SVN_RA_SVN_WORD:
+        target->u.word = source->u.word;
+        break;
+      case SVN_RA_SVN_LIST:
+        target->u.list = svn_ra_svn__to_public_array(&source->u.list,
+                                                     result_pool);
+        break;
+    }
+}
+
+apr_array_header_t *
+svn_ra_svn__to_public_array(const svn_ra_svn__list_t *source,
+                            apr_pool_t *result_pool)
+{
+  apr_array_header_t *result = apr_array_make(result_pool, source->nelts,
+                                              sizeof(svn_ra_svn_item_t));
+
+  int i;
+  for (i = 0; i < source->nelts; ++i)
+    {
+      svn_ra_svn_item_t *sub_target = apr_array_push(result);
+      svn_ra_svn__item_t *sub_source = &SVN_RA_SVN__LIST_ITEM(source, i);
+
+      svn_ra_svn__to_public_item(sub_target, sub_source, result_pool);
+    }
+
+  return result;
+}
+
+void
+svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
+                            const svn_ra_svn_item_t *source,
+                            apr_pool_t *result_pool)
+{
+  target->kind = source->kind;
+  switch (source->kind)
+    {
+      case SVN_RA_SVN_STRING:
+        target->u.string = *source->u.string;
+        break;
+      case SVN_RA_SVN_NUMBER:
+        target->u.number = source->u.number;
+        break;
+      case SVN_RA_SVN_WORD:
+        target->u.word = source->u.word;
+        break;
+      case SVN_RA_SVN_LIST:
+        target->u.list = *svn_ra_svn__to_private_array(source->u.list,
+                                                       result_pool);
+        break;
+    }
+}
+
+svn_ra_svn__list_t *
+svn_ra_svn__to_private_array(const apr_array_header_t *source,
+                             apr_pool_t *result_pool)
+{
+  int i;
+
+  svn_ra_svn__list_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  result->nelts = source->nelts;
+  result->items = apr_palloc(result_pool,
+                             source->nelts * sizeof(*result->items));
+
+  for (i = 0; i < source->nelts; ++i)
+    {
+      svn_ra_svn__item_t *sub_target = &result->items[i];
+      svn_ra_svn_item_t *sub_source = &APR_ARRAY_IDX(source, i,
+                                                     svn_ra_svn_item_t);
+
+      svn_ra_svn__to_private_item(sub_target, sub_source, result_pool);
+    }
+
+  return result;
+}
+
 /* --- CONNECTION INITIALIZATION --- */
 
 svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
@@ -133,16 +225,26 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
   return conn;
 }
 
-svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
-                                         const apr_array_header_t *list)
+svn_error_t *
+svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
+                            const apr_array_header_t *list)
+{
+  svn_ra_svn__list_t *internal
+    = svn_ra_svn__to_private_array(list, list->pool);
+  return svn_error_trace(svn_ra_svn__set_capabilities(conn, internal));
+}
+
+svn_error_t *
+svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
+                             const svn_ra_svn__list_t *list)
 {
   int i;
-  svn_ra_svn_item_t *item;
+  svn_ra_svn__item_t *item;
   const char *word;
 
   for (i = 0; i < list->nelts; i++)
     {
-      item = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
+      item = &SVN_RA_SVN__LIST_ITEM(list, i);
       if (item->kind != SVN_RA_SVN_WORD)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Capability entry is not a word"));
@@ -1027,7 +1129,7 @@ svn_ra_svn__write_tuple(svn_ra_svn_conn_t *conn,
  * Afterwards, *ITEM is of type 'SVN_RA_SVN_STRING', and its string
  * data is allocated in POOL. */
 static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                svn_ra_svn_item_t *item, apr_uint64_t len64)
+                                svn_ra_svn__item_t *item, apr_uint64_t len64)
 {
   apr_size_t len = (apr_size_t)len64;
   apr_size_t readbuf_len;
@@ -1043,7 +1145,8 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (conn->read_ptr + len <= conn->read_end)
     {
       item->kind = SVN_RA_SVN_STRING;
-      item->u.string = svn_string_ncreate(conn->read_ptr, len, pool);
+      item->u.string.data = apr_pstrmemdup(pool, conn->read_ptr, len);
+      item->u.string.len = len;
       conn->read_ptr += len;
     }
   else
@@ -1084,7 +1187,8 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       /* Return the string properly wrapped into an RA_SVN item. */
       item->kind = SVN_RA_SVN_STRING;
-      item->u.string = svn_stringbuf__morph_into_string(stringbuf);
+      item->u.string.data = stringbuf->data;
+      item->u.string.len = stringbuf->len;
     }
 
   return SVN_NO_ERROR;
@@ -1095,12 +1199,12 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * to 0 for the first call and is used to enforce a recursion limit
  * on the parser. */
 static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                              svn_ra_svn_item_t *item, char first_char,
+                              svn_ra_svn__item_t *item, char first_char,
                               int level)
 {
   char c = first_char;
   apr_uint64_t val;
-  svn_ra_svn_item_t *listitem;
+  svn_ra_svn__item_t *listitem;
 
   if (++level >= ITEM_NESTING_LIMIT)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1190,54 +1294,54 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else if (c == '(')
     {
-      /* On machines with 32 bit pointers, array headers are only 20 bytes
-       * which is not enough for our standard 64 bit alignment.
-       * So, determine a suitable block size for the APR array header that
-       * keeps proper alignment for following structs. */
-      const apr_size_t header_size
-        = APR_ALIGN_DEFAULT(sizeof(apr_array_header_t));
-
-      /* Allocate an APR array with room for (initially) 4 items.
-       * We do this manually because lists are the most frequent protocol
-       * element, often used to frame a single, optional value.  We save
-       * about 20% of total protocol handling time. */
-      char *buffer = apr_palloc(pool,
-                                header_size + 4 * sizeof(svn_ra_svn_item_t));
-      svn_ra_svn_item_t *data = (svn_ra_svn_item_t *)(buffer + header_size);
-
-      item->kind = SVN_RA_SVN_LIST;
-      item->u.list = (apr_array_header_t *)buffer;
-      item->u.list->elts = (char *)data;
-      item->u.list->pool = pool;
-      item->u.list->elt_size = sizeof(*data);
-      item->u.list->nelts = 0;
-      item->u.list->nalloc = 4;
-
-      listitem = data;
+      /* Allow for up to 4 items in this list without re-allocation. */
+      svn_ra_svn__item_t stack_items[4];
+      svn_ra_svn__item_t *items = stack_items;
+      int capacity = sizeof(stack_items) / sizeof(stack_items[0]);
+      int count = 0;
 
       /* Read in the list items. */
+      item->kind = SVN_RA_SVN_LIST;
       while (1)
         {
           SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
           if (c == ')')
             break;
 
-          /* increase array capacity if necessary */
-          if (item->u.list->nelts == item->u.list->nalloc)
+          /* Auto-expand the list. */
+          if (count == capacity)
             {
-              data = apr_palloc(pool, 2 * item->u.list->nelts * sizeof(*data));
-              memcpy(data, item->u.list->elts, item->u.list->nelts * sizeof(*data));
-              item->u.list->elts = (char *)data;
-              item->u.list->nalloc *= 2;
-              listitem = data + item->u.list->nelts;
+              svn_ra_svn__item_t *new_items
+                = apr_palloc(pool, 2 * capacity * sizeof(*new_items));
+              memcpy(new_items, items, capacity * sizeof(*new_items));
+              items = new_items;
+              capacity = 2 * capacity;
             }
 
-          /* read next protocol item */
-          SVN_ERR(read_item(conn, pool, listitem, c, level));
+          listitem = &items[count];
+          ++count;
 
-          listitem++;
-          item->u.list->nelts++;
+          SVN_ERR(read_item(conn, pool, listitem, c, level));
         }
+
+      /* Store the list in ITEM - if not empty (= default). */
+      if (count)
+        {
+          item->u.list.nelts = count;
+
+          /* If we haven't allocated from POOL, yet, do it now. */
+          if (items == stack_items)
+            item->u.list.items = apr_pmemdup(pool, items,
+                                             count * sizeof(*items));
+          else
+            item->u.list.items = items;
+        }
+      else
+        {
+          item->u.list.items = NULL;
+          item->u.list.nelts = 0;
+        }
+
       SVN_ERR(readbuf_getchar(conn, pool, &c));
     }
 
@@ -1339,7 +1443,7 @@ read_command_only(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 svn_error_t *
 svn_ra_svn__read_item(svn_ra_svn_conn_t *conn,
                       apr_pool_t *pool,
-                      svn_ra_svn_item_t **item)
+                      svn_ra_svn__item_t **item)
 {
   char c;
 
@@ -1389,29 +1493,32 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
 
 /* --- READING AND PARSING TUPLES --- */
 
-/* Parse a tuple of svn_ra_svn_item_t *'s.  Advance *FMT to the end of the
+/* Parse a tuple of svn_ra_svn__item_t *'s.  Advance *FMT to the end of the
  * tuple specification and advance AP by the corresponding arguments. */
-static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *pool,
-                                 const char **fmt, va_list *ap)
+static svn_error_t *
+vparse_tuple(const svn_ra_svn__list_t *items,
+             apr_pool_t *pool,
+             const char **fmt,
+             va_list *ap)
 {
   int count, nesting_level;
-  svn_ra_svn_item_t *elt;
+  svn_ra_svn__item_t *elt;
 
   for (count = 0; **fmt && count < items->nelts; (*fmt)++, count++)
     {
       /* '?' just means the tuple may stop; skip past it. */
       if (**fmt == '?')
         (*fmt)++;
-      elt = &APR_ARRAY_IDX(items, count, svn_ra_svn_item_t);
+      elt = &SVN_RA_SVN__LIST_ITEM(items, count);
       if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
         {
           (*fmt)++;
-          SVN_ERR(vparse_tuple(elt->u.list, pool, fmt, ap));
+          SVN_ERR(vparse_tuple(&elt->u.list, pool, fmt, ap));
         }
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
-        *va_arg(*ap, const char **) = elt->u.string->data;
+        *va_arg(*ap, const char **) = elt->u.string.data;
       else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
-        *va_arg(*ap, svn_string_t **) = elt->u.string;
+        *va_arg(*ap, svn_string_t **) = &elt->u.string;
       else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
         *va_arg(*ap, const char **) = elt->u.word;
       else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
@@ -1446,7 +1553,7 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
             break;
         }
       else if (**fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
-        *va_arg(*ap, apr_array_header_t **) = elt->u.list;
+        *va_arg(*ap, svn_ra_svn__list_t **) = &elt->u.list;
       else if (**fmt == ')')
         return SVN_NO_ERROR;
       else
@@ -1472,7 +1579,7 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
               *va_arg(*ap, const char **) = NULL;
               break;
             case 'l':
-              *va_arg(*ap, apr_array_header_t **) = NULL;
+              *va_arg(*ap, svn_ra_svn__list_t **) = NULL;
               break;
             case 'B':
             case 'n':
@@ -1500,7 +1607,7 @@ static svn_error_t *vparse_tuple(const apr_array_header_t *items, apr_pool_t *po
 }
 
 svn_error_t *
-svn_ra_svn__parse_tuple(const apr_array_header_t *list,
+svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
                         apr_pool_t *pool,
                         const char *fmt, ...)
 {
@@ -1519,7 +1626,7 @@ svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
                        const char *fmt, ...)
 {
   va_list ap;
-  svn_ra_svn_item_t *item;
+  svn_ra_svn__item_t *item;
   svn_error_t *err;
 
   SVN_ERR(svn_ra_svn__read_item(conn, pool, &item));
@@ -1527,7 +1634,7 @@ svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Malformed network data"));
   va_start(ap, fmt);
-  err = vparse_tuple(item->u.list, pool, &fmt, &ap);
+  err = vparse_tuple(&item->u.list, pool, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -1546,23 +1653,23 @@ svn_ra_svn__read_command_only(svn_ra_svn_conn_t *conn,
 
 
 svn_error_t *
-svn_ra_svn__parse_proplist(const apr_array_header_t *list,
+svn_ra_svn__parse_proplist(const svn_ra_svn__list_t *list,
                            apr_pool_t *pool,
                            apr_hash_t **props)
 {
   svn_string_t *name;
   svn_string_t *value;
-  svn_ra_svn_item_t *elt;
+  svn_ra_svn__item_t *elt;
   int i;
 
   *props = svn_hash__make(pool);
   for (i = 0; i < list->nelts; i++)
     {
-      elt = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
+      elt = &SVN_RA_SVN__LIST_ITEM(list, i);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "ss",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "ss",
                                       &name, &value));
       apr_hash_set(*props, name->data, name->len, value);
     }
@@ -1588,12 +1695,13 @@ svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err)
   return this_link;
 }
 
-svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
-                                               apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
+                                  apr_pool_t *pool)
 {
   const char *message, *file;
   svn_error_t *err = NULL;
-  svn_ra_svn_item_t *elt;
+  svn_ra_svn__item_t *elt;
   int i;
   apr_uint64_t apr_err, line;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -1606,11 +1714,11 @@ svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
   for (i = params->nelts - 1; i >= 0; i--)
     {
       svn_pool_clear(subpool);
-      elt = &APR_ARRAY_IDX(params, i, svn_ra_svn_item_t);
+      elt = &SVN_RA_SVN__LIST_ITEM(params, i);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Malformed error list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, subpool, "nccn",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, subpool, "nccn",
                                       &apr_err, &message, &file, &line));
       /* The message field should have been optional, but we can't
          easily change that, so "" means a nonexistent message. */
@@ -1647,7 +1755,7 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
 {
   va_list ap;
   const char *status;
-  apr_array_header_t *params;
+  svn_ra_svn__list_t *params;
   svn_error_t *err;
 
   SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "wl", &status, &params));
@@ -1696,8 +1804,8 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
 {
   const char *cmdname;
   svn_error_t *err, *write_err;
-  apr_array_header_t *params;
-  const svn_ra_svn_cmd_entry_t *command;
+  svn_ra_svn__list_t *params;
+  const svn_ra_svn__cmd_entry_t *command;
 
   *terminate = FALSE;
   err = svn_ra_svn__read_tuple(conn, pool, "wl", &cmdname, &params);
@@ -1716,7 +1824,21 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
   command = svn_hash_gets(cmd_hash, cmdname);
   if (command)
     {
-      err = (*command->handler)(conn, pool, params, baton);
+      /* Call the standard command handler.
+       * If that is not set, then this is a lecagy API call and we invoke
+       * the legacy command handler. */
+      if (command->handler)
+        {
+          err = (*command->handler)(conn, pool, params, baton);
+        }
+      else
+        {
+          apr_array_header_t *deprecated_params
+            = svn_ra_svn__to_public_array(params, pool);
+          err = (*command->deprecated_handler)(conn, pool, deprecated_params,
+                                               baton);
+        }
+
       *terminate = command->terminate;
     }
   else
@@ -1741,13 +1863,13 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
 svn_error_t *
 svn_ra_svn__handle_commands2(svn_ra_svn_conn_t *conn,
                              apr_pool_t *pool,
-                             const svn_ra_svn_cmd_entry_t *commands,
+                             const svn_ra_svn__cmd_entry_t *commands,
                              void *baton,
                              svn_boolean_t error_on_disconnect)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(subpool);
-  const svn_ra_svn_cmd_entry_t *command;
+  const svn_ra_svn__cmd_entry_t *command;
   apr_hash_t *cmd_hash = apr_hash_make(subpool);
 
   for (command = commands; command->cmdname; command++)
@@ -2703,13 +2825,13 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
 /* In *RESULT, return the SVN-style string at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_string(const apr_array_header_t *items,
+svn_ra_svn__read_string(const svn_ra_svn__list_t *items,
                         int idx,
                         svn_string_t **result)
 {
-  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_STRING);
-  *result = elt->u.string;
+  *result = &elt->u.string;
 
   return SVN_NO_ERROR;
 }
@@ -2717,13 +2839,13 @@ svn_ra_svn__read_string(const apr_array_header_t *items,
 /* In *RESULT, return the C-style string at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_cstring(const apr_array_header_t *items,
+svn_ra_svn__read_cstring(const svn_ra_svn__list_t *items,
                          int idx,
                          const char **result)
 {
-  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_STRING);
-  *result = elt->u.string->data;
+  *result = elt->u.string.data;
 
   return SVN_NO_ERROR;
 }
@@ -2731,11 +2853,11 @@ svn_ra_svn__read_cstring(const apr_array_header_t *items,
 /* In *RESULT, return the word at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_word(const apr_array_header_t *items,
+svn_ra_svn__read_word(const svn_ra_svn__list_t *items,
                       int idx,
                       const char **result)
 {
-  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
   *result = elt->u.word;
 
@@ -2745,11 +2867,11 @@ svn_ra_svn__read_word(const apr_array_header_t *items,
 /* In *RESULT, return the revision at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_revision(const apr_array_header_t *items,
+svn_ra_svn__read_revision(const svn_ra_svn__list_t *items,
                           int idx,
                           svn_revnum_t *result)
 {
-  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_NUMBER);
   *result = (svn_revnum_t)elt->u.number;
 
@@ -2759,11 +2881,11 @@ svn_ra_svn__read_revision(const apr_array_header_t *items,
 /* In *RESULT, return the boolean at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_boolean(const apr_array_header_t *items,
+svn_ra_svn__read_boolean(const svn_ra_svn__list_t *items,
                          int idx,
                          apr_uint64_t *result)
 {
-  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
   if (elt->u.word[0] == 't' && strcmp(elt->u.word, "true") == 0)
     *result = TRUE;
@@ -2778,21 +2900,21 @@ svn_ra_svn__read_boolean(const apr_array_header_t *items,
 /* In *RESULT, return the tuple at index IDX in tuple ITEMS.
  */
 static svn_error_t *
-svn_ra_svn__read_list(const apr_array_header_t *items,
+svn_ra_svn__read_list(const svn_ra_svn__list_t *items,
                       int idx,
-                      const apr_array_header_t **result)
+                      const svn_ra_svn__list_t **result)
 {
-  svn_ra_svn_item_t *elt  = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  svn_ra_svn__item_t *elt  = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_LIST);
 
-  *result = elt->u.list;
+  *result = &elt->u.list;
   return SVN_NO_ERROR;
 }
 
 /* Verify the tuple ITEMS contains at least MIN and at most MAX elements.
  */
 static svn_error_t *
-svn_ra_svn__read_check_array_size(const apr_array_header_t *items,
+svn_ra_svn__read_check_array_size(const svn_ra_svn__list_t *items,
                                   int min,
                                   int max)
 {
@@ -2801,7 +2923,7 @@ svn_ra_svn__read_check_array_size(const apr_array_header_t *items,
 }
 
 svn_error_t *
-svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
+svn_ra_svn__read_data_log_changed_entry(const svn_ra_svn__list_t *items,
                                         svn_string_t **cpath,
                                         const char **action,
                                         const char **copy_path,
@@ -2810,7 +2932,7 @@ svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
                                         apr_uint64_t *text_mods,
                                         apr_uint64_t *prop_mods)
 {
-  const apr_array_header_t *sub_items;
+  const svn_ra_svn__list_t *sub_items;
 
   /* initialize optional values */
   *copy_path = NULL;
