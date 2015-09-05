@@ -99,14 +99,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * ^/subversion/branches/1.8.x-memory-fragmentation
-   Reduce FSFS memory allocation in Apache with unbounded MaxFreeMem.
-   Justification:
-     A user reported that their worker processes ran OOM with Apache 2.2
-     in default configuration when fulltext caching was enabled. Although
-     people should set MaxFreeMem to something other than 0, we should
-     play nice with out-of-the-box setups.
-     The patch itself is relatively low-risk (changes initial buffer size).
-   Votes:
-     +1: stefan2, brane, rhuijben
