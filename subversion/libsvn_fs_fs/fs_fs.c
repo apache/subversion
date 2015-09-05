@@ -4910,6 +4910,49 @@ build_rep_list(apr_array_header_t **list,
     }
 }
 
+/* Determine the optimal size of a string buf that shall receive a
+ * (full-) text of NEEDED bytes.
+ *
+ * The critical point is that those buffers may be very large and
+ * can cause memory fragmentation.  We apply simple heuristics to
+ * make fragmentation less likely.
+ */
+static apr_size_t
+optimimal_allocation_size(apr_size_t needed)
+{
+  /* For all allocations, assume some overhead that is shared between
+   * OS memory managemnt, APR memory management and svn_stringbuf_t. */
+  const apr_size_t overhead = 0x400;
+  apr_size_t optimal;
+
+  /* If an allocation size if safe for other ephemeral buffers, it should
+   * be safe for ours. */
+  if (needed <= SVN__STREAM_CHUNK_SIZE)
+    return needed;
+
+  /* Paranoia edge case:
+   * Skip our heuristics if they created arithmetical overflow.
+   * Beware to make this test work for NEEDED = APR_SIZE_MAX as well! */
+  if (needed >= APR_SIZE_MAX / 2 - overhead)
+    return needed;
+
+  /* As per definition SVN__STREAM_CHUNK_SIZE is a power of two.
+   * Since we know NEEDED to be larger than that, use it as the
+   * starting point.
+   *
+   * Heuristics: Allocate a power-of-two number of bytes that fit
+   *             NEEDED plus some OVERHEAD.  The APR allocator
+   *             will round it up to the next full page size.
+   */
+  optimal = SVN__STREAM_CHUNK_SIZE;
+  while (optimal - overhead < needed)
+    optimal *= 2;
+
+  /* This is above or equal to NEEDED. */
+  return optimal - overhead;
+}
+
+
 
 /* Create a rep_read_baton structure for node revision NODEREV in
    filesystem FS and store it in *RB_P.  If FULLTEXT_CACHE_KEY is not
@@ -4945,7 +4988,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
 
   if (SVN_IS_VALID_REVNUM(fulltext_cache_key.revision))
     b->current_fulltext = svn_stringbuf_create_ensure
-                            ((apr_size_t)b->len,
+                            (optimimal_allocation_size((apr_size_t)b->len),
                              b->filehandle_pool);
   else
     b->current_fulltext = NULL;
