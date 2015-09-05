@@ -946,7 +946,7 @@ svn_branch_get_default_r0_metadata(apr_pool_t *result_pool)
 {
   static const char *default_repos_info
     = "r0: eids 0 1 branches 1\n"
-      "B0 root-eid 0  # at /\n"
+      "B0 root-eid 0 num-eids 1  # at /\n"
       "e0: normal -1 .\n";
 
   return svn_string_create(default_repos_info, result_pool);
@@ -956,6 +956,7 @@ svn_branch_get_default_r0_metadata(apr_pool_t *result_pool)
 static svn_error_t *
 parse_branch_line(char *bid_p,
                   int *root_eid_p,
+                  int *num_eids_p,
                   svn_stream_t *stream,
                   apr_pool_t *scratch_pool)
 {
@@ -967,9 +968,9 @@ parse_branch_line(char *bid_p,
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
   SVN_ERR_ASSERT(!eof);
 
-  n = sscanf(line->data, "%s root-eid %d",
-             bid_p, root_eid_p);
-  SVN_ERR_ASSERT(n >= 2);  /* C std is unclear on whether '%n' counts */
+  n = sscanf(line->data, "%s root-eid %d num-eids %d",
+             bid_p, root_eid_p, num_eids_p);
+  SVN_ERR_ASSERT(n >= 3);  /* C std is unclear on whether '%n' counts */
 
   return SVN_NO_ERROR;
 }
@@ -1047,13 +1048,13 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
                        apr_pool_t *scratch_pool)
 {
   char bid[1000];
-  int root_eid;
+  int root_eid, num_eids;
   svn_branch_state_t *branch_state;
   svn_branch_state_t *outer_branch;
   int outer_eid;
-  int eid;
+  int i;
 
-  SVN_ERR(parse_branch_line(bid, &root_eid,
+  SVN_ERR(parse_branch_line(bid, &root_eid, &num_eids,
                             stream, scratch_pool));
 
   /* Find the outer branch and outer EID */
@@ -1076,13 +1077,13 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
 
   /* Read in the structure. Set the payload of each normal element to a
      (branch-relative) reference. */
-  for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
+  for (i = 0; i < num_eids; i++)
     {
-      int this_eid, this_parent_eid;
+      int eid, this_parent_eid;
       const char *this_name;
       svn_boolean_t is_subbranch;
 
-      SVN_ERR(parse_element_line(&this_eid,
+      SVN_ERR(parse_element_line(&eid,
                                  &is_subbranch, &this_parent_eid, &this_name,
                                  stream, scratch_pool));
 
@@ -1158,6 +1159,17 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
   return SVN_NO_ERROR;
 }
 
+/* ### Duplicated in svnmover.c. */
+static int
+sort_compare_items_by_eid(const svn_sort__item_t *a,
+                          const svn_sort__item_t *b)
+{
+  int eid_a = *(const int *)a->key;
+  int eid_b = *(const int *)b->key;
+
+  return eid_a - eid_b;
+}
+
 /* Write to STREAM a parseable representation of BRANCH.
  */
 svn_error_t *
@@ -1165,36 +1177,30 @@ svn_branch_state_serialize(svn_stream_t *stream,
                            svn_branch_state_t *branch,
                            apr_pool_t *scratch_pool)
 {
-  svn_branch_revision_root_t *rev_root = branch->rev_root;
   const char *branch_root_rrpath = svn_branch_get_root_rrpath(branch,
                                                               scratch_pool);
-  int eid;
+  SVN_ITER_T(svn_branch_el_rev_content_t) *hi;
 
   SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "%s root-eid %d  # at /%s\n",
+                            "%s root-eid %d num-eids %d  # at /%s\n",
                             svn_branch_get_id(branch, scratch_pool),
                             branch->root_eid,
+                            apr_hash_count(branch->e_map),
                             branch_root_rrpath));
 
   map_purge_orphans(branch->e_map, branch->root_eid, scratch_pool);
-  for (eid = rev_root->first_eid; eid < rev_root->next_eid; eid++)
+
+  for (SVN_HASH_ITER_SORTED(hi, branch->e_map, sort_compare_items_by_eid,
+                            scratch_pool))
     {
+      int eid = *(const int *)hi->key;
       svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);
       int parent_eid;
       const char *name;
 
-      if (element)
-        {
-          parent_eid = element->parent_eid;
-          name = element->name[0] ? element->name : ".";
-        }
-      else
-        {
-          /* ### TODO: instead, omit the line completely; but the
-                 parser currently can't handle that. */
-          parent_eid = -1;
-          name = "(null)";
-        }
+      SVN_ERR_ASSERT(element);
+      parent_eid = element->parent_eid;
+      name = element->name[0] ? element->name : ".";
       SVN_ERR(svn_stream_printf(stream, scratch_pool,
                                 "e%d: %s %d %s\n",
                                 eid,
