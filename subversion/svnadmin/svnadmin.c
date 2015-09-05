@@ -1548,6 +1548,7 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Read the stream from STDIN.  Users can redirect a file. */
   SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
+  stdin_stream = svn_stream_wrap_buffered_read(stdin_stream, pool);
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
@@ -2112,6 +2113,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_t *fs;
   int fs_format;
   const char *uuid;
+  svn_revnum_t head_rev;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -2124,6 +2126,9 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_fs_get_uuid(fs, &uuid, pool));
   SVN_ERR(svn_cmdline_printf(pool, _("UUID: %s\n"), uuid));
+
+  SVN_ERR(svn_fs_youngest_rev(&head_rev, fs, pool));
+  SVN_ERR(svn_cmdline_printf(pool, _("Revisions: %ld\n"), head_rev));
   {
     int repos_format, minor;
     svn_version_t *repos_version, *fs_version;

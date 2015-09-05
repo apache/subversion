@@ -1167,7 +1167,7 @@ set_txn_proplist(svn_fs_t *fs,
   SVN_ERR(svn_hash_write2(props, tmp_stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(tmp_stream));
 
-  SVN_ERR(svn_io_file_rename(tmp_path, final_path, pool));
+  SVN_ERR(svn_io_file_rename2(tmp_path, final_path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

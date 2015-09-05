@@ -880,3 +880,33 @@ svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+dummy_first_creds(void **credentials,
+                  void **iter_baton,
+                  void *provider_baton,
+                  apr_hash_t *parameters,
+                  const char *realmstring,
+                  apr_pool_t *pool)
+{
+  *credentials = NULL;
+  *iter_baton = NULL;
+  return SVN_NO_ERROR;
+}
+
+void
+svn_auth__get_dummmy_simple_provider(svn_auth_provider_object_t **provider,
+                                     apr_pool_t *pool)
+{
+  static const svn_auth_provider_t vtable = {
+    SVN_AUTH_CRED_SIMPLE,
+    dummy_first_creds,
+    NULL, NULL
+  };
+
+  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
+
+  po->vtable = &vtable;
+  *provider = po;
+}

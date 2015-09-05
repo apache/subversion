@@ -2010,7 +2010,7 @@ set_node_origins_for_file(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* Rename the temp file as the real destination */
-  return svn_io_file_rename(path_tmp, node_origins_path, pool);
+  return svn_io_file_rename2(path_tmp, node_origins_path, FALSE, pool);
 }
 
 

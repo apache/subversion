@@ -734,7 +734,7 @@ svn_fs_x__move_into_place(const char *old_filename,
   SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, scratch_pool));
 
   /* Move the file into place. */
-  err = svn_io_file_rename(old_filename, new_filename, scratch_pool);
+  err = svn_io_file_rename2(old_filename, new_filename, FALSE, scratch_pool);
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
       apr_file_t *file;

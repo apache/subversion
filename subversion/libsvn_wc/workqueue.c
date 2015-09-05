@@ -257,7 +257,8 @@ install_committed_file(svn_boolean_t *overwrote_working,
 
   if (! same)
     {
-      SVN_ERR(svn_io_file_rename(tmp_wfile, file_abspath, scratch_pool));
+      SVN_ERR(svn_io_file_rename2(tmp_wfile, file_abspath, FALSE,
+                                  scratch_pool));
       *overwrote_working = TRUE;
     }
 
@@ -1127,9 +1128,9 @@ run_prej_install(work_item_baton_t *wqb,
                                   scratch_pool, scratch_pool));
 
   /* ... and atomically move it into place.  */
-  SVN_ERR(svn_io_file_rename(tmp_prejfile_abspath,
-                             prejfile_abspath,
-                             scratch_pool));
+  SVN_ERR(svn_io_file_rename2(tmp_prejfile_abspath,
+                              prejfile_abspath, FALSE,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }

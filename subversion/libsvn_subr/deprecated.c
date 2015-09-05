@@ -889,6 +889,14 @@ svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                                 scratch_pool));
 }
 
+svn_error_t *
+svn_io_file_rename(const char *from_path, const char *to_path,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_io_file_rename2(from_path, to_path,
+                                             FALSE, pool));
+}
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
@@ -1497,14 +1505,16 @@ svn_auth_get_keychain_ssl_client_cert_pw_provider
 #endif /* DARWIN */
 
 #if !defined(WIN32)
-#ifdef SVN_HAVE_GPG_AGENT
 void
 svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool)
 {
+#ifdef SVN_HAVE_GPG_AGENT
   svn_auth__get_gpg_agent_simple_provider(provider, pool);
-}
+#else
+  svn_auth__get_dummmy_simple_provider(provider, pool);
 #endif /* SVN_HAVE_GPG_AGENT */
+}
 #endif /* !WIN32 */
 
 svn_error_t *

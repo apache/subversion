@@ -354,8 +354,7 @@ struct conflict_resolver_baton_t {
   svn_client_conflict_walk_func_t *conflict_walk_func;
   void *conflict_walk_func_baton;
   svn_client_ctx_t *ctx;
-  
-} conflict_walk_baton_t;
+};
 
 /* Implements svn_wc_conflict_resolver_func2_t for now because
  * libsvn_wc does not support our new conflict type yet. */

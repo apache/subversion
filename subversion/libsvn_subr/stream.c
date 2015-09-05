@@ -1710,6 +1710,114 @@ svn_stream_from_string(const svn_string_t *str,
   return stream;
 }
 
+/* Baton structure for buffering read stream wrappers.
+ *
+ * We read from INNER and append the data to BUFFER.  From BUFFER, we serve
+ * read requests. Old buffer contents gets discarded once it is no longer
+ * needed.
+ */
+struct buffering_stream_wrapper_baton
+{
+  /* Our data source. */
+  svn_stream_t *inner;
+
+  /* Contains the data pre-read from INNER. Some of this may already have
+   * been delivered. */
+  svn_stringbuf_t *buffer;
+
+  /* Current read position relative to the start of BUFFER->DATA. */
+  apr_size_t buffer_pos;
+};
+
+/* Implements svn_stream_t.read_fn for buffering read stream wrappers. */
+static svn_error_t *
+read_handler_buffering_wrapper(void *baton,
+                               char *buffer,
+                               apr_size_t *len)
+{
+  struct buffering_stream_wrapper_baton *btn = baton;
+  apr_size_t left_to_read = btn->buffer->len - btn->buffer_pos;
+
+  /* This is the "normal" and potential incomplete read function.
+   * So, we only need to replenish our buffers if we ran completely dry. */
+  if (left_to_read == 0)
+    {
+      apr_size_t count = btn->buffer->blocksize;
+
+      /* Read from the INNER stream. */
+      SVN_ERR(svn_stream_read2(btn->inner, btn->buffer->data, &count));
+      btn->buffer->len = count;
+      btn->buffer_pos = 0;
+
+      /* We may now have more data that we could return. */
+      left_to_read = btn->buffer->len;
+    }
+
+  /* Cap the read request to what we can deliver from the buffer. */
+  if (left_to_read < *len)
+    *len = left_to_read;
+
+  /* Copy the data from the buffer and move the read pointer accordingly. */
+  memcpy(buffer, btn->buffer->data + btn->buffer_pos, *len);
+  btn->buffer_pos += *len;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_stream_t.data_available_fn for buffering read stream
+ * wrappers. */
+static svn_error_t *
+data_available_handler_buffering_wrapper(void *baton,
+                                         svn_boolean_t *data_available)
+{
+  /* If we still have some unread data, this becomes easy to answer. */
+  struct buffering_stream_wrapper_baton *btn = baton;
+  if (btn->buffer->len > btn->buffer_pos)
+    {
+      *data_available = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Otherwise, because we would always read from the inner streams' current
+   * position to fill the buffer, asking the inner stream when the buffer is
+   * exhausted gives the correct answer. */
+  return svn_error_trace(svn_stream_data_available(btn->inner,
+                                                   data_available));
+}
+
+/* Implements svn_stream_t.is_buffered_fn for buffering read stream wrappers.
+ */
+static svn_boolean_t
+is_buffered_handler_buffering_wrapper(void *baton)
+{
+  return TRUE;
+}
+
+svn_stream_t *
+svn_stream_wrap_buffered_read(svn_stream_t *inner,
+                              apr_pool_t *result_pool)
+{
+  svn_stream_t *stream;
+  struct buffering_stream_wrapper_baton *baton;
+
+  /* Create the wrapper stream state.
+   * The buffer is empty and we are at position 0. */
+  baton = apr_pcalloc(result_pool, sizeof(*baton));
+  baton->inner = inner;
+  baton->buffer = svn_stringbuf_create_ensure(SVN__STREAM_CHUNK_SIZE,
+                                              result_pool);
+  baton->buffer_pos = 0;
+
+  /* Create the wrapper stream object and set up the vtable. */
+  stream = svn_stream_create(baton, result_pool);
+  svn_stream_set_read2(stream, read_handler_buffering_wrapper, NULL);
+  svn_stream_set_data_available(stream,
+                                data_available_handler_buffering_wrapper);
+  svn_stream__set_is_buffered(stream, is_buffered_handler_buffering_wrapper);
+
+  return stream;
+}
+
 
 svn_error_t *
 svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
@@ -2005,48 +2113,6 @@ struct install_baton_t
 
 #ifdef WIN32
 
-#if _WIN32_WINNT < 0x600 /* Does the SDK assume Windows Vista+? */
-typedef struct _FILE_RENAME_INFO {
-  BOOL   ReplaceIfExists;
-  HANDLE RootDirectory;
-  DWORD  FileNameLength;
-  WCHAR  FileName[1];
-} FILE_RENAME_INFO, *PFILE_RENAME_INFO;
-
-typedef struct _FILE_DISPOSITION_INFO {
-  BOOL DeleteFile;
-} FILE_DISPOSITION_INFO, *PFILE_DISPOSITION_INFO;
-
-#define FileRenameInfo 3
-#define FileDispositionInfo 4
-
-typedef BOOL (WINAPI *SetFileInformationByHandle_t)(HANDLE hFile,
-                                                    int FileInformationClass,
-                                                    LPVOID lpFileInformation,
-                                                    DWORD dwBufferSize);
-
-static volatile SetFileInformationByHandle_t SetFileInformationByHandle_p = 0;
-#define SetFileInformationByHandle (*SetFileInformationByHandle_p)
-
-static volatile svn_atomic_t SetFileInformationByHandle_a = 0;
-
-
-static svn_error_t *
-find_SetFileInformationByHandle(void *baton, apr_pool_t *scratch_pool)
-{
-  HMODULE kernel32 = GetModuleHandle("Kernel32.dll");
-
-  if (kernel32)
-    {
-      SetFileInformationByHandle_p =
-                    (SetFileInformationByHandle_t)
-                      GetProcAddress(kernel32, "SetFileInformationByHandle");
-    }
-
-  return SVN_NO_ERROR;
-}
-#endif /* WIN32 < Vista */
-
 /* Create and open a tempfile in DIRECTORY. Return its handle and path */
 static svn_error_t *
 create_tempfile(HANDLE *hFile,
@@ -2204,105 +2270,47 @@ svn_stream__install_stream(svn_stream_t *install_stream,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(final_abspath));
 #ifdef WIN32
-
-#if _WIN32_WINNT < 0x600
-  SVN_ERR(svn_atomic__init_once(&SetFileInformationByHandle_a,
-                                find_SetFileInformationByHandle,
-                                NULL, scratch_pool));
-
-  if (!SetFileInformationByHandle_p)
-    SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
-  else
-#endif /* WIN32 < Windows Vista */
+  err = svn_io__win_rename_open_file(ib->baton_apr.file,  ib->tmp_path,
+                                     final_abspath, scratch_pool);
+  if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
-      WCHAR *w_final_abspath;
-      size_t path_len;
-      size_t rename_size;
-      FILE_RENAME_INFO *rename_info;
-      HANDLE hFile;
+      svn_error_t *err2;
 
-      apr_os_file_get(&hFile, ib->baton_apr.file);
+      err2 = svn_io_make_dir_recursively(svn_dirent_dirname(final_abspath,
+                                                    scratch_pool),
+                                         scratch_pool);
 
-      SVN_ERR(svn_io__utf8_to_unicode_longpath(&w_final_abspath,
-                                               svn_dirent_local_style(
-                                                          final_abspath,
-                                                          scratch_pool),
-                                               scratch_pool));
-      path_len = wcslen(w_final_abspath);
-      rename_size = sizeof(*rename_info) + sizeof(WCHAR) * path_len;
-
-      /* The rename info struct doesn't need hacks for long paths,
-         so no ugly escaping calls here */
-      rename_info = apr_pcalloc(scratch_pool, rename_size);
-      rename_info->ReplaceIfExists = TRUE;
-      rename_info->FileNameLength = path_len;
-      memcpy(rename_info->FileName, w_final_abspath, path_len * sizeof(WCHAR));
-
-      if (!SetFileInformationByHandle(hFile, FileRenameInfo, rename_info,
-                                      rename_size))
-        {
-          svn_boolean_t retry = FALSE;
-          err = svn_error_wrap_apr(apr_get_os_error(), NULL);
-
-          /* ### rhuijben: I wouldn't be surprised if we later find out that we
-                           have to fall back to close+rename on some specific
-                           error values here, to support some non standard NAS
-                           and filesystem scenarios. */
-
-          if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
-            {
-              svn_error_t *err2;
-
-              err2 = svn_io_make_dir_recursively(svn_dirent_dirname(final_abspath,
-                                                            scratch_pool),
-                                                 scratch_pool);
-
-              if (err2)
-                return svn_error_trace(svn_error_compose_create(err, err2));
-              else
-                svn_error_clear(err);
-
-              retry = TRUE;
-              err = NULL;
-            }
-          else if (err && (APR_STATUS_IS_EACCES(err->apr_err)
-                           || APR_STATUS_IS_EEXIST(err->apr_err)))
-            {
-              svn_error_clear(err);
-              retry = TRUE;
-              err = NULL;
-
-              /* Set the destination file writable because Windows will not allow
-                 us to rename when final_abspath is read-only. */
-              SVN_ERR(svn_io_set_file_read_write(final_abspath, TRUE,
-                                                 scratch_pool));
-            }
-
-          if (retry)
-            {
-              if (!SetFileInformationByHandle(hFile, FileRenameInfo,
-                                              rename_info, rename_size))
-                {
-                  err = svn_error_wrap_apr(
-                                apr_get_os_error(),
-                                _("Can't move '%s' to '%s'"),
-                                svn_dirent_local_style(ib->tmp_path,
-                                                       scratch_pool),
-                                svn_dirent_local_style(final_abspath,
-                                                       scratch_pool));
-                }
-            }
-        }
+      if (err2)
+        return svn_error_trace(svn_error_compose_create(err, err2));
       else
-        err = NULL;
+        svn_error_clear(err);
 
+      err = svn_io__win_rename_open_file(ib->baton_apr.file, ib->tmp_path,
+                                         final_abspath, scratch_pool);
+    }
+
+  /* ### rhuijben: I wouldn't be surprised if we later find out that we
+                   have to fall back to close+rename on some specific
+                   error values here, to support some non standard NAS
+                   and filesystem scenarios. */
+  if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+    {
+      /* Rename open files is not supported on this platform: fallback to
+         svn_io_file_rename2(). */
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+
+      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+    }
+  else
+    {
       return svn_error_compose_create(err,
                                       svn_io_file_close(ib->baton_apr.file,
                                                         scratch_pool));
     }
 #endif
 
-  err = svn_io_file_rename(ib->tmp_path, final_abspath, scratch_pool);
+  err = svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool);
 
   /* A missing directory is too common to not cover here. */
   if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -2320,7 +2328,7 @@ svn_stream__install_stream(svn_stream_t *install_stream,
         /* We could create a directory: retry install */
         svn_error_clear(err);
 
-      SVN_ERR(svn_io_file_rename(ib->tmp_path, final_abspath, scratch_pool));
+      SVN_ERR(svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool));
     }
   else
     SVN_ERR(err);
@@ -2359,37 +2367,22 @@ svn_stream__install_delete(svn_stream_t *install_stream,
   struct install_baton_t *ib = install_stream->baton;
 
 #ifdef WIN32
-  BOOL done;
+  svn_error_t *err;
 
-#if _WIN32_WINNT < 0x600
-
-  SVN_ERR(svn_atomic__init_once(&SetFileInformationByHandle_a,
-                                find_SetFileInformationByHandle,
-                                NULL, scratch_pool));
-
-  if (!SetFileInformationByHandle_p)
-    done = FALSE;
-  else
-#endif /* WIN32 < Windows Vista */
+  /* Mark the file as delete on close to avoid having to reopen
+     the file as part of the delete handling. */
+  err = svn_io__win_delete_file_on_close(ib->baton_apr.file,  ib->tmp_path,
+                                         scratch_pool);
+  if (err == SVN_NO_ERROR)
     {
-      FILE_DISPOSITION_INFO disposition_info;
-      HANDLE hFile;
-
-      apr_os_file_get(&hFile, ib->baton_apr.file);
-
-      disposition_info.DeleteFile = TRUE;
-
-      /* Mark the file as delete on close to avoid having to reopen
-         the file as part of the delete handling. */
-      done = SetFileInformationByHandle(hFile, FileDispositionInfo,
-                                        &disposition_info,
-                                        sizeof(disposition_info));
+      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+      return SVN_NO_ERROR; /* File is already gone */
     }
 
-   SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
-
-   if (done)
-     return SVN_NO_ERROR; /* File is already gone */
+  /* Deleting file on close may be unsupported, so ignore errors and
+     fallback to svn_io_remove_file2(). */
+  svn_error_clear(err);
+  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
 #endif
 
   return svn_error_trace(svn_io_remove_file2(ib->tmp_path, FALSE,

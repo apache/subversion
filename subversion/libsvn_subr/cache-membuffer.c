@@ -339,7 +339,9 @@ prefix_pool_get_internal(apr_uint32_t *prefix_idx,
   value = apr_hash_get(prefix_pool->map, prefix, prefix_len);
   if (value != NULL)
     {
-      *prefix_idx = value - prefix_pool->values;
+      const apr_size_t index = value - prefix_pool->values;
+      SVN_ERR_ASSERT(index < prefix_pool->values_used);
+      *prefix_idx = (apr_uint32_t) index;
       return SVN_NO_ERROR;
     }
 
