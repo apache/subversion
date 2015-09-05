@@ -937,7 +937,6 @@ if not test_javahl and not test_swig:
   opts.httpd_version = httpd_version
   opts.set_log_level = log_level
   opts.ssl_cert = ssl_cert
-  opts.exclusive_wc_locks = exclusive_wc_locks
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file, fail_log_file, opts)
   old_cwd = os.getcwd()
