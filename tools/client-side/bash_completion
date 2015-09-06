@@ -84,6 +84,7 @@ function _svn_info()
   done
 }
 
+# broken since svn 1.7 | FIXME: change to svn status -v ?
 # _svn_lls (dir|file|all) files...
 # list svn-managed files from list
 # some 'svn status --all-files' would be welcome here?
@@ -104,6 +105,85 @@ function _svn_lls()
 	    [ -f "${dn}.svn/text-base/${fn}.svn-base" ] && echo "$f"
 	fi
     done
+}
+
+# try to complete TARGET
+# 1. [nothing]  lists available protocols
+# 2. svn+ssh:// lists servers from .ssh/known_hosts
+# 3. http[s]:// lists already used svn servers
+# 4. file://    lists files from dir
+# 5. ^/ or protocol except file:/ triggers svn ls
+# this code expects bash 4, $cur is split by : too
+#
+# $1            'all' | 'remote_only'
+# return        true if found something
+function _svn_complete_target() {
+	# echo -e "\n_svn_complete_target: [$cur] 1:[${COMP_WORDS[COMP_CWORD]}] 2:[${COMP_WORDS[COMP_CWORD-1]}] 3:[${COMP_WORDS[COMP_CWORD-2]}] | [${COMP_WORDS[@]}] [$COMP_WORDBREAKS]"
+	local prefix=${COMP_WORDS[COMP_CWORD-2]}
+	local colon=${COMP_WORDS[COMP_CWORD-1]}
+	# see about COMP_WORDBREAKS workaround in prop completion
+	if [[ $prefix == "file" && "$colon" == ":" ]]
+	then
+		# file completion for file:// urls
+		COMPREPLY=( $(compgen -d -S '/' -X '*/.*' -- $cur ) )
+		return
+	elif [[ ( $1 == "all" && $cur == ^/* ) || ( "$colon" == ":" && $cur == //*/* ) ]]
+	then	# we already hava a protocoll and host: autocomplete for svn ls ^/bla | svn ls remote_url | svn checkout remote_url
+		local p
+		if [ "$colon" == ":" ] ; then
+			p="$prefix$colon"
+		fi
+		if [[ $cur =~ ((.*/)([^/]*)) ]] # url = everything up to the last /
+		then
+			local url="${BASH_REMATCH[2]}"
+			local path="${BASH_REMATCH[3]}"
+			local remote_files="$(svn ls --non-interactive "$p$url" 2> /dev/null )"
+			COMPREPLY=( $(compgen -P "$url" -W "$remote_files" -- "$path" ) )
+			compopt -o nospace
+			return 0
+		fi
+	elif [[ "$colon" == ":" ]]
+	then
+		# get known servers
+		# svn+ssh://
+		if [[ $prefix == "svn+ssh" && $cur =~ (^//(.*)) ]] ; then
+			local server_start=${BASH_REMATCH[2]}
+			# debian & suse: /usr/share/bash-completion/bash_completion
+			local suffix=/
+			_known_hosts_real -p // "$server_start"
+		else
+			local urls= file=
+			for file in ~/.subversion/auth/svn.simple/* ; do
+				if [ -r $file ] ; then
+					local url=$(_svn_read_hashfile svn:realmstring < $file)
+					url=${url/*</}
+					url=${url/>*/}
+					urls="$urls $url"
+				fi
+			done
+
+			# only suggest/show possible suffixes
+			local suffix=$cur c= choices=
+			for c in $urls ; do
+				[[ $c == $prefix:* ]] && choices="$choices ${c#*:}"
+			done
+		
+			COMPREPLY=( $(compgen -W "$choices" -- $suffix ) )
+		fi
+		compopt -o nospace
+		return
+	else
+		# show schemas
+		if [ $1 == 'all' ] ; then
+			COMPREPLY=( $(compgen -W "^/ $urlSchemas" -- $cur) )
+		else
+			COMPREPLY=( $(compgen -W "$urlSchemas" -- $cur) )
+		fi
+		compopt -o nospace
+		return
+	fi
+	#echo "nothing found"
+	return 1
 }
 
 # This completion guides the command/option order along the one suggested
@@ -393,39 +473,10 @@ _svn()
 	if [[ $cmd == @(co|checkout|ls|list) && $stat = 'arg' && \
 			$SVN_BASH_COMPL_EXT == *urls* ]]
 	then
-		# see about COMP_WORDBREAKS workaround in prop completion
-		if [[ $cur == file:* ]]
-		then
-			# file completion for file:// urls
-			local where=${cur/file:/}
-			COMPREPLY=( $(compgen -d -S '/' -X '*/.*' -- $where ) )
-			return
-		elif [[ $cur == *:* ]]
-		then
-			# get known urls
-			local urls= file=
-			for file in ~/.subversion/auth/svn.simple/* ; do
-				if [ -r $file ] ; then
-					local url=$(_svn_read_hashfile svn:realmstring < $file)
-					url=${url/*</}
-					url=${url/>*/}
-					urls="$urls $url"
-				fi
-			done
-
-			# only suggest/show possible suffixes
-			local prefix=${cur%:*} suffix=${cur#*:} c= choices=
-			for c in $urls ; do
-				[[ $c == $prefix:* ]] && choices="$choices ${c#*:}"
-			done
-
-			COMPREPLY=( $(compgen -W "$choices" -- $suffix ) )
-			return
+		if [[ $cmd == @(ls|list) ]] ; then
+			_svn_complete_target 'all' && return
 		else
-			# show schemas
-			COMPREPLY=( $(compgen -W "$urlSchemas" -- $cur) )
-			compopt -o nospace
-			return
+			_svn_complete_target 'remote_only' && return
 		fi
 	fi
 
@@ -450,11 +501,15 @@ _svn()
 	      compopt -o nospace
 	      return 0
 	    fi
+	  # this part is broken with bash 4 URL contains https only
 	  elif [[ $URL == */branches/* && $here == */trunk* && \
 	        ! $hasReintegrateOpt && $cur = '' && $stat = 'arg' ]] ; then
 	    # force --reintegrate only if the current word is empty
 	    COMPREPLY=( $(compgen -W '--reintegrate' -- $cur ) )
 	    return 0
+	  # autocomplete for svn merge ^/bla
+	  else
+	    _svn_complete_target 'all' && return
 	  fi
 	fi
 
