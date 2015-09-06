@@ -65,6 +65,10 @@ struct log_receiver_baton
 
   /* whether the client can handle encoded binary property values */
   svn_boolean_t encode_binary_props;
+
+  /* Helper variables to force early bucket brigade flushes */
+  int result_count;
+  int next_forced_flush;
 };
 
 
@@ -275,6 +279,41 @@ log_receiver(void *baton,
   SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
                                 "</S:log-item>" DEBUG_CR));
 
+  /* In general APR will flush the brigade every 8000 bytes through the filter
+     stack, but log items may not be generated that fast, especially in
+     combination with authz and busy servers. We now explictly flush after
+     log-item 4, 16, 64 and 256 to produce a few results fast.
+
+     This introduces 4 full flushes of our brigade and the installed output
+     filters at growing intervals and then falls back to the standard
+     buffering of 8000 bytes + whatever buffers are added in output filters. */
+  lrb->result_count++;
+  if (lrb->result_count == lrb->next_forced_flush)
+    {
+      apr_status_t apr_err;
+
+      /* This flush is similar to that in dav_svn__final_flush_or_error().
+
+         Compared to using ap_filter_flush(), which we use in other place
+         this adds a flush frame before flushing the brigade, to make output
+         filters perform a flush as well */
+
+      /* No brigade empty check. We want output filters to flush anyway */
+      apr_err = ap_fflush(lrb->output, lrb->bb);
+      if (apr_err)
+        return svn_error_create(apr_err, NULL, NULL);
+
+      /* Check for an aborted connection, just like our brigade write
+         helper functions, since the brigade functions don't appear to
+         be return useful errors when the connection is dropped. */
+      if (lrb->output->c->aborted)
+        return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED,
+                                NULL, NULL);
+
+      if (lrb->result_count < 256)
+        lrb->next_forced_flush = lrb->next_forced_flush * 4;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -420,6 +459,9 @@ dav_svn__log_report(const dav_resource *resource,
   lrb.needs_header = TRUE;
   lrb.stack_depth = 0;
   /* lrb.requested_custom_revprops set above */
+
+  lrb.result_count = 0;
+  lrb.next_forced_flush = 4;
 
   /* Our svn_log_entry_receiver_t sends the <S:log-report> header in
      a lazy fashion.  Before writing the first log message, it assures
