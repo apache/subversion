@@ -411,7 +411,7 @@ svn_branch_replay(svn_editor3_t *editor,
  */
 static svn_error_t *
 replay(svn_editor3_t *editor,
-       svn_branch_state_t *edit_root_branch,
+       const char *edit_root_branch_id,
        svn_branch_state_t *left_branch,
        svn_branch_state_t *right_branch,
        apr_pool_t *scratch_pool)
@@ -422,10 +422,8 @@ replay(svn_editor3_t *editor,
   svn_branch_subtree_t *s_right
     = right_branch ? svn_branch_get_subtree(right_branch, right_branch->root_eid,
                                             scratch_pool) : NULL;
-  const char *edit_root_branch_id
-    = svn_branch_get_id(edit_root_branch, scratch_pool);
 
-  SVN_ERR_ASSERT(editor && edit_root_branch);
+  SVN_ERR_ASSERT(editor && edit_root_branch_id);
   SVN_ERR_ASSERT(left_branch || right_branch);
 
   SVN_ERR(svn_branch_replay(editor, edit_root_branch_id,
@@ -476,6 +474,7 @@ wc_commit(svn_revnum_t *new_rev_p,
   svn_editor3_t *commit_editor;
   commit_callback_baton_t ccbb;
   svn_boolean_t change_detected;
+  const char *edit_root_branch_id;
   svn_branch_state_t *edit_root_branch;
 
   /* Choose whether to store branching info in a local dir or in revprops.
@@ -504,6 +503,7 @@ wc_commit(svn_revnum_t *new_rev_p,
                                                scratch_pool));
   /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
 
+  edit_root_branch_id = wc->working->branch_id;
   edit_root_branch = svn_branch_revision_root_get_branch_by_id(
                        commit_txn, wc->working->branch_id, scratch_pool);
 
@@ -523,9 +523,10 @@ wc_commit(svn_revnum_t *new_rev_p,
                                         commit_txn,
                                         NULL, 0, /*outer_branch,outer_eid*/
                                         scratch_pool));
+      edit_root_branch_id = svn_branch_get_id(edit_root_branch, scratch_pool);
     }
   SVN_ERR(replay(commit_editor,
-                 edit_root_branch,
+                 edit_root_branch_id,
                  wc->base->branch,
                  wc->working->branch,
                  scratch_pool));
@@ -533,8 +534,7 @@ wc_commit(svn_revnum_t *new_rev_p,
     {
       ccbb.edit_txn = commit_txn;
       ccbb.wc_base_branch_id = wc->base->branch_id;
-      ccbb.wc_commit_branch_id = svn_branch_get_id(edit_root_branch,
-                                                   scratch_pool);
+      ccbb.wc_commit_branch_id = edit_root_branch_id;
       ccbb.editor = commit_editor;
 
       SVN_ERR(svn_editor3_complete(commit_editor));
@@ -2666,7 +2666,7 @@ do_revert(svnmover_wc_t *wc,
 {
   /* Replay the inverse of the current edit txn, into the current edit txn */
   SVN_ERR(replay(wc->editor,
-                 wc->working->branch,
+                 wc->working->branch_id,
                  wc->working->branch,
                  wc->base->branch,
                  scratch_pool));
