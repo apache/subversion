@@ -274,6 +274,14 @@ const char *
 svn_branch_get_id(svn_branch_state_t *branch,
                   apr_pool_t *result_pool);
 
+/*
+ */
+void
+svn_branch_id_split(const char **outer_bid,
+                    int *outer_eid,
+                    const char *bid,
+                    apr_pool_t *result_pool);
+
 /* Create a new branch at OUTER_BRANCH:OUTER_EID, with no elements
  * (not even a root element).
  *
