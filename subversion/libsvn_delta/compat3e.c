@@ -1151,6 +1151,39 @@ editor3_new_eid(void *baton,
 
 /* An #svn_editor3_t method. */
 static svn_error_t *
+editor3_open_branch(void *baton,
+                       const char **new_branch_id_p,
+                       const char *outer_branch_id,
+                       int outer_eid,
+                       int root_eid,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  ev3_from_delta_baton_t *eb = baton;
+  svn_branch_state_t *outer_branch
+    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
+                                                outer_branch_id, scratch_pool);
+  svn_branch_state_t *new_branch;
+
+  /* if the subbranch already exists, just return its bid */
+  *new_branch_id_p
+    = apr_psprintf(result_pool, "%s.%d", outer_branch_id, outer_eid);
+  new_branch
+    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
+                                                *new_branch_id_p,
+                                                scratch_pool);
+  if (new_branch)
+    return SVN_NO_ERROR;
+
+  new_branch = svn_branch_add_new_branch(eb->edited_rev_root,
+                                         outer_branch, outer_eid,
+                                         root_eid, scratch_pool);
+  *new_branch_id_p = svn_branch_get_id(new_branch, result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_editor3_t method. */
+static svn_error_t *
 editor3_alter(void *baton,
               const char *branch_id,
               svn_branch_eid_t eid,
@@ -1163,6 +1196,13 @@ editor3_alter(void *baton,
   svn_branch_state_t *branch
     = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
                                                 branch_id, scratch_pool);
+
+  /* ### Ensure the requested EIDs are allocated... This is not the
+         right way to do it. Instead the Editor should map 'to be
+         created' EIDs to new EIDs? See BRANCH-README. */
+  while (eid >= eb->edited_rev_root->next_eid
+         || (new_parent_eid >= eb->edited_rev_root->next_eid))
+    svn_branch_revision_root_new_eid(eb->edited_rev_root);
 
   if (new_payload)
     {
@@ -1930,6 +1970,7 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
     editor3_new_eid,
+    editor3_open_branch,
     editor3_alter,
     editor3_copy_one,
     editor3_copy_tree,
@@ -1972,6 +2013,7 @@ svn_editor3__ev3_from_delta_for_commit(
 {
   static const svn_editor3_cb_funcs_t editor_funcs = {
     editor3_new_eid,
+    editor3_open_branch,
     editor3_alter,
     editor3_copy_one,
     editor3_copy_tree,

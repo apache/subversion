@@ -272,7 +272,7 @@ wc_create(svnmover_wc_t **wc_p,
  */
 static svn_error_t *
 subtree_replay(svn_editor3_t *editor,
-               svn_branch_state_t *edit_branch,
+               const char *edit_branch_id,
                svn_branch_subtree_t *s_left,
                svn_branch_subtree_t *s_right,
                apr_pool_t *scratch_pool)
@@ -303,16 +303,6 @@ subtree_replay(svn_editor3_t *editor,
                      || svn_element_payload_invariants(e1->payload));
       if (e0 || e1)
         {
-          const char *edit_branch_id
-            = svn_branch_get_id(edit_branch, scratch_pool);
-
-          /* ### Ensure the requested EIDs are allocated... This is not the
-                 right way to do it. Instead the Editor should map 'to be
-                 created' EIDs to new EIDs? See BRANCH-README. */
-          while (eid >= edit_branch->rev_root->next_eid
-                 || (e1 && e1->parent_eid >= edit_branch->rev_root->next_eid))
-            svn_branch_revision_root_new_eid(edit_branch->rev_root);
-
           if (e0 && e1)
             {
               SVN_DBG(("replay: alter e%d", eid));
@@ -349,7 +339,7 @@ subtree_replay(svn_editor3_t *editor,
  */
 static svn_error_t *
 svn_branch_replay(svn_editor3_t *editor,
-                  svn_branch_state_t *edit_branch,
+                  const char *edit_branch_id,
                   svn_branch_subtree_t *s_left,
                   svn_branch_subtree_t *s_right,
                   apr_pool_t *scratch_pool)
@@ -360,7 +350,7 @@ svn_branch_replay(svn_editor3_t *editor,
   if (s_right)
     {
       /* Replay this branch */
-      SVN_ERR(subtree_replay(editor, edit_branch, s_left, s_right,
+      SVN_ERR(subtree_replay(editor, edit_branch_id, s_left, s_right,
                              scratch_pool));
     }
   else
@@ -391,44 +381,22 @@ svn_branch_replay(svn_editor3_t *editor,
             = s_left ? svn_int_hash_get(s_left->subbranches, this_eid) : NULL;
           svn_branch_subtree_t *this_s_right
             = s_right ? svn_int_hash_get(s_right->subbranches, this_eid) : NULL;
-          svn_branch_state_t *edit_subbranch;
+          const char *edit_subbranch_id = NULL;
 
-          /* If the subbranch is to be edited or deleted, first look up the
-             corresponding edit branch; or, if the subbranch is to be added,
-             create a new edit branch. */
-          if (this_s_left)
+          /* If the subbranch is to be edited or added, first look up the
+             corresponding edit subbranch, or, if not found, create one. */
+          if (this_s_right)
             {
-              edit_subbranch = svn_branch_get_subbranch_at_eid(
-                                 edit_branch, this_eid, scratch_pool);
-              /* There might not be such a subbranch, for example if we are
-                 replaying into a txn based on an older base revision. Then
-                 what?
-
-                 For now, we leave EDIT_BRANCH as NULL and so drop all the
-                 changes.
-
-                 ### It may be better to create an edit branch and then
-                 attempt to apply the changes into it.
-
-                 ### Ultimately, the editor API should not require us to
-                 'create' a branch here outside the editor. Instead we we
-                 should just pass the subbranch id through to the editor,
-                 along with the changes to the subbranch, and let the editor
-                 decide how to handle it.
-               */
-            }
-          else
-            {
-              edit_subbranch = svn_branch_add_new_branch(
-                                 edit_branch->rev_root,
-                                 edit_branch, this_eid,
-                                 this_s_right->root_eid, scratch_pool);
+              SVN_ERR(svn_editor3_open_branch(editor, &edit_subbranch_id,
+                                              edit_branch_id, this_eid,
+                                              this_s_right->root_eid,
+                                              scratch_pool));
             }
 
           /* recurse */
-          if (edit_subbranch)
+          if (edit_subbranch_id)
             {
-              SVN_ERR(svn_branch_replay(editor, edit_subbranch,
+              SVN_ERR(svn_branch_replay(editor, edit_subbranch_id,
                                         this_s_left, this_s_right, scratch_pool));
             }
         }
@@ -454,11 +422,13 @@ replay(svn_editor3_t *editor,
   svn_branch_subtree_t *s_right
     = right_branch ? svn_branch_get_subtree(right_branch, right_branch->root_eid,
                                             scratch_pool) : NULL;
+  const char *edit_root_branch_id
+    = svn_branch_get_id(edit_root_branch, scratch_pool);
 
   SVN_ERR_ASSERT(editor && edit_root_branch);
   SVN_ERR_ASSERT(left_branch || right_branch);
 
-  SVN_ERR(svn_branch_replay(editor, edit_root_branch,
+  SVN_ERR(svn_branch_replay(editor, edit_root_branch_id,
                             s_left, s_right, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -2242,7 +2212,7 @@ svn_branch_log(svn_editor3_t *editor,
  * The subbranch will consist of a single element given by PAYLOAD.
  */
 static svn_error_t *
-mk_branch(svn_branch_state_t **new_branch_p,
+mk_branch(const char **new_branch_id_p,
           svn_editor3_t *editor,
           svn_branch_state_t *outer_branch,
           int outer_parent_eid,
@@ -2251,25 +2221,29 @@ mk_branch(svn_branch_state_t **new_branch_p,
           apr_pool_t *scratch_pool)
 {
   const char *outer_branch_id = svn_branch_get_id(outer_branch, scratch_pool);
-  int new_outer_eid;
-  svn_branch_state_t *new_branch;
+  int new_outer_eid, new_inner_eid;
+  const char *new_branch_id;
 
   SVN_ERR(svn_editor3_new_eid(editor, &new_outer_eid));
   SVN_ERR(svn_editor3_alter(editor,
                             outer_branch_id, new_outer_eid,
                             outer_parent_eid, outer_name,
                             NULL /*new_payload*/));
-  new_branch = svn_branch_add_new_branch(
-                 outer_branch->rev_root,
-                 outer_branch, new_outer_eid, -1/*new_root_eid*/,
-                 scratch_pool);
-  svn_branch_update_element(new_branch, new_branch->root_eid,
-                            -1, "", payload);
-  notify_v("A    %s%s",
+
+  SVN_ERR(svn_editor3_new_eid(editor, &new_inner_eid));
+  SVN_ERR(svn_editor3_open_branch(editor, &new_branch_id,
+                                  outer_branch_id, new_outer_eid,
+                                  new_inner_eid, scratch_pool));
+  SVN_ERR(svn_editor3_alter(editor,
+                            new_branch_id, new_inner_eid,
+                            -1, "", payload));
+
+  notify_v("A    %s (branch %s)",
            svn_branch_get_path_by_eid(outer_branch, new_outer_eid,
                                       scratch_pool),
-           branch_str(new_branch, scratch_pool));
-  *new_branch_p = new_branch;
+           new_branch_id);
+  if (new_branch_id_p)
+    *new_branch_id_p = new_branch_id;
   return SVN_NO_ERROR;
 }
 
@@ -3135,9 +3109,8 @@ execute(svnmover_wc_t *wc,
             apr_hash_t *props = apr_hash_make(iterpool);
             svn_element_payload_t *payload
               = svn_element_payload_create_dir(props, iterpool);
-            svn_branch_state_t *new_branch;
 
-            SVN_ERR(mk_branch(&new_branch,
+            SVN_ERR(mk_branch(NULL,
                               editor, arg[0]->parent_el_rev->branch,
                               arg[0]->parent_el_rev->eid, arg[0]->path_name,
                               payload, iterpool));

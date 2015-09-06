@@ -582,6 +582,43 @@ svn_error_t *
 svn_editor3_new_eid(svn_editor3_t *editor,
                     svn_branch_eid_t *eid_p);
 
+/** Create a new branch or access an existing branch.
+ *
+ * When creating a branch, declare its root element id to be ROOT_EID. If
+ * ROOT_EID is -1, allocate a new EID for its root. Do not instantiate the
+ * root element, nor any other elements.
+ *
+ * We use a common 'open subbranch' method for both 'find' and 'add'
+ * cases, according to the principle that the editor dictates the new
+ * state without reference to the old state.
+ *
+ * This must be used before editing the resulting branch. In that sense
+ * this method conceptually returns a "branch editor" for the designated
+ * branch.
+ *
+ * ### Should we take a single branch-id parameter instead of taking
+ *     (outer-bid, outer-eid) and returning the new branch-id?
+ *
+ *     If we want to think of this as a "txn editor" method and we want
+ *     random access to any branch, that would be a good option.
+ *
+ *     If we want to think of this as a "branch editor" method then
+ *     outer-branch-id conceptually identifies "this branch" that we're
+ *     editing and could be represented instead by a different value of
+ *     the "editor" parameter; and the subbranch must be an immediate child.
+ *
+ * ### Only the 'add' case needs the subbranch root EID.
+ *     In the 'add' case will we want to take a 'branched from' param,
+ *     and can we have that in the combined method too?
+ */
+svn_error_t *
+svn_editor3_open_branch(svn_editor3_t *editor,
+                        const char **new_branch_id_p,
+                        const char *outer_branch_id,
+                        int outer_eid,
+                        int root_eid,
+                        apr_pool_t *result_pool);
+
 /** Specify the tree position and payload of the element of @a branch_id
  * identified by @a eid.
  *
@@ -817,6 +854,17 @@ typedef svn_error_t *(*svn_editor3_cb_new_eid_t)(
   svn_branch_eid_t *eid_p,
   apr_pool_t *scratch_pool);
 
+/** @see svn_editor3_open_branch(), #svn_editor3_t
+ */
+typedef svn_error_t *(*svn_editor3_cb_open_branch_t)(
+  void *baton,
+  const char **new_branch_id_p,
+  const char *outer_branch_id,
+  int outer_eid,
+  int root_eid,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
 /** @see svn_editor3_alter(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_alter_t)(
@@ -901,6 +949,7 @@ typedef svn_error_t *(*svn_editor3_cb_abort_t)(
 typedef struct svn_editor3_cb_funcs_t
 {
   svn_editor3_cb_new_eid_t cb_new_eid;
+  svn_editor3_cb_open_branch_t cb_open_branch;
   svn_editor3_cb_alter_t cb_alter;
   svn_editor3_cb_copy_one_t cb_copy_one;
   svn_editor3_cb_copy_tree_t cb_copy_tree;

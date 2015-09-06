@@ -1017,11 +1017,11 @@ parse_element_line(int *eid_p,
  * For a top-level branch, set *OUTER_BID to NULL and *OUTER_EID to the
  * top-level branch number.
  */
-static void
-branch_id_split(const char **outer_bid,
-                int *outer_eid,
-                const char *bid,
-                apr_pool_t *result_pool)
+void
+svn_branch_id_split(const char **outer_bid,
+                    int *outer_eid,
+                    const char *bid,
+                    apr_pool_t *result_pool)
 {
   char *last_dot = strrchr(bid, '.');
 
@@ -1061,7 +1061,7 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   {
     const char *outer_bid;
 
-    branch_id_split(&outer_bid, &outer_eid, bid, scratch_pool);
+    svn_branch_id_split(&outer_bid, &outer_eid, bid, scratch_pool);
     if (outer_bid)
       {
         outer_branch
