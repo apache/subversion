@@ -93,6 +93,19 @@ Candidate changes:
      +1: brane
      +1: rhuijben, stefan2 (without r1567080)
 
+ * r1701488
+   Fixed check-mime-type.pl so that it also works for svnlook versions from
+   1.7.8 (r1416637).
+   Justification:
+     Make this contributed script work again, after 1.7.8 broke it.
+     Brett Randall put effort into contributing this fix: see the dev@ email
+     thread "[patch][reboot-topic] fix check-mime-type.pl for changes to
+     'svnlook proplist' output" started by him on 2015-08-07, archived at
+     e.g. <http://svn.haxx.se/dev/archive-2015-08/0047.shtml> or
+     <http://mail-archives.apache.org/mod_mbox/subversion-dev/201508.mbox/%3CCALeEUB56NVCR0nCZ2rYki6oKQNcVPPLvWTeCoYyrMqitsov0ag@mail.gmail.com%3E>.
+   Votes:
+     +0: julianfoad (he says it works, but I haven't reviewed or tested)
+
 Veto-blocked changes:
 =====================
 
