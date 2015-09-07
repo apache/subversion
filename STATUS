@@ -24,15 +24,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1700215, r1700219, r1700220, r1701270
-   Fix argument passing in test suite.
-   Justification:
-     Makes svnfsfs_tests.py work in fsfs-v4 and fsfs-v6 modes.
-   Branch:
-     ^/subversion/branches/1.9.x-r1700215
-   Votes:
-     +1: brane, rhuijben
-
  * r1701488
    Fixed check-mime-type.pl so that it also works for svnlook versions from
    1.7.8 (r1416637).
@@ -51,3 +42,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1700215, r1700219, r1700220, r1701270
+   Fix argument passing in test suite.
+   Justification:
+     Makes svnfsfs_tests.py work in fsfs-v4 and fsfs-v6 modes.
+   Branch:
+     ^/subversion/branches/1.9.x-r1700215
+   Votes:
+     +1: brane, rhuijben, stefan2
