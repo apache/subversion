@@ -945,12 +945,12 @@ def lock_and_exebit1(sbox):
   gamma_path = sbox.ospath('A/D/gamma')
 
   expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
-  svntest.actions.run_and_verify_svn(None, expected_err,
-                                     'ps', 'svn:needs-lock', ' ', gamma_path)
+  svntest.actions.run_and_verify_svn2(None, expected_err, 0,
+                                      'ps', 'svn:needs-lock', ' ', gamma_path)
 
   expected_err = ".*svn: warning: W125005: To turn off the svn:executable property,.*"
-  svntest.actions.run_and_verify_svn(None, expected_err,
-                                     'ps', 'svn:executable', ' ', gamma_path)
+  svntest.actions.run_and_verify_svn2(None, expected_err, 0,
+                                      'ps', 'svn:executable', ' ', gamma_path)
 
   # commit
   svntest.actions.run_and_verify_svn(None, [], 'commit',
@@ -1022,11 +1022,11 @@ def lock_and_exebit2(sbox):
   gamma_path = sbox.ospath('A/D/gamma')
 
   expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
-  svntest.actions.run_and_verify_svn(None, expected_err,
-                                     'ps', 'svn:needs-lock', ' ', gamma_path)
+  svntest.actions.run_and_verify_svn2(None, expected_err, 0,
+                                      'ps', 'svn:needs-lock', ' ', gamma_path)
 
   expected_err = ".*svn: warning: W125005: To turn off the svn:executable property,.*"
-  svntest.actions.run_and_verify_svn(None, expected_err,
+  svntest.actions.run_and_verify_svn2(None, expected_err, 0,
                                      'ps', 'svn:executable', ' ', gamma_path)
 
   # commit
