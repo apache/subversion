@@ -2217,8 +2217,8 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
   /* Wrap as a standard APR file to allow sharing implementation.
 
      But do note that some file functions (such as retrieving the name)
-     don't work on this wrapper. */
-  /* ### Buffered, or not? */
+     don't work on this wrapper.
+     Use buffered mode to match svn_io_open_unique_file3() behavior. */
   status = apr_os_file_put(&file, &hInstall,
                            APR_WRITE | APR_BINARY | APR_BUFFERED,
                            result_pool);
