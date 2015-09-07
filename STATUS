@@ -44,10 +44,12 @@ Candidate changes:
    Justification:
      Regression from Subversion 1.8.x.
    Notes:
-     The r1701298 is the fix itself, r1701064 and r1701206 are just formatting
+     The r1701298 is the fix itself (re-introduce a retry loop to handle
+     cases where the target of the replacement is still open by another
+     application), r1701064 and r1701206 are just formatting
      fixes and cleanups.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1700215, r1700219, r1700220, r1701270
    Fix argument passing in test suite.
