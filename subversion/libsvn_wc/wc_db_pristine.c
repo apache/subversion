@@ -687,23 +687,6 @@ svn_wc__db_pristine_transfer(svn_wc__db_t *db,
 
 
 
-/* Remove the file at FILE_ABSPATH in such a way that we could re-create a
- * new file of the same name at any time thereafter.
- *
- * On Windows, the file will not disappear immediately from the directory if
- * it is still being read so the best thing to do is first rename it to a
- * unique name. */
-static svn_error_t *
-remove_file(const char *file_abspath,
-            svn_wc__db_wcroot_t *wcroot,
-            svn_boolean_t ignore_enoent,
-            apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_io_remove_file2(file_abspath, ignore_enoent, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* If the pristine text referenced by SHA1_CHECKSUM in WCROOT/SDB, whose path
  * within the pristine store is PRISTINE_ABSPATH, has a reference count of
  * zero, delete it (both the database row and the disk file).
@@ -739,8 +722,8 @@ pristine_remove_if_unreferenced_txn(svn_sqlite__db_t *sdb,
       svn_boolean_t ignore_enoent = TRUE;
 #endif
 
-      SVN_ERR(remove_file(pristine_abspath, wcroot, ignore_enoent,
-                          scratch_pool));
+      SVN_ERR(svn_io_remove_file2(pristine_abspath, ignore_enoent,
+                                  scratch_pool));
     }
 
   return SVN_NO_ERROR;
