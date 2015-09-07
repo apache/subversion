@@ -59,6 +59,16 @@ Candidate changes:
      +1: brane, stefan2
      -0: rhuijben (Log level on standard invocation of win-tests.py changes)
 
+ * r1701598
+   Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
+   Justification:
+     A single lock or unlock failure doesn't affect the whole operation
+     since 1.9, but this has the side effect of no longer producing an
+     error at all on failures. This patch makes 'svn' return an error when
+     at least one failure is reported by the locking code.
+   Votes:
+     +0.9: rhuijben (Minor behavior change. Needs more dev@ discussion)
+
 Veto-blocked changes:
 =====================
 
