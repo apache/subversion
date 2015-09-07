@@ -699,25 +699,6 @@ remove_file(const char *file_abspath,
             svn_boolean_t ignore_enoent,
             apr_pool_t *scratch_pool)
 {
-#ifdef WIN32
-  svn_error_t *err;
-  const char *temp_abspath;
-  const char *temp_dir_abspath
-    = pristine_get_tempdir(wcroot, scratch_pool, scratch_pool);
-
-  /* To rename the file to a unique name in the temp dir, first create a
-   * uniquely named file in the temp dir and then overwrite it. */
-  SVN_ERR(svn_io_open_unique_file3(NULL, &temp_abspath, temp_dir_abspath,
-                                   svn_io_file_del_none,
-                                   scratch_pool, scratch_pool));
-  err = svn_io_file_rename2(file_abspath, temp_abspath, FALSE, scratch_pool);
-  if (err && ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
-  file_abspath = temp_abspath;
-#endif
-
   SVN_ERR(svn_io_remove_file2(file_abspath, ignore_enoent, scratch_pool));
 
   return SVN_NO_ERROR;
