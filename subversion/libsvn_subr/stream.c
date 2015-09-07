@@ -1831,6 +1831,12 @@ svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
 
   *in = svn_stream_from_aprfile2(stdin_file, TRUE, pool);
 
+  /* STDIN may or may not support positioning requests, but generally
+     it does not, or the behavior is implementation-specific.  Hence,
+     we cannot safely advertise mark() and seek() support. */
+  svn_stream_set_mark(*in, NULL);
+  svn_stream_set_seek(*in, NULL);
+
   return SVN_NO_ERROR;
 }
 
@@ -1847,6 +1853,12 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
 
   *out = svn_stream_from_aprfile2(stdout_file, TRUE, pool);
 
+  /* STDOUT may or may not support positioning requests, but generally
+     it does not, or the behavior is implementation-specific.  Hence,
+     we cannot safely advertise mark() and seek() support. */
+  svn_stream_set_mark(*out, NULL);
+  svn_stream_set_seek(*out, NULL);
+
   return SVN_NO_ERROR;
 }
 
@@ -1862,6 +1874,12 @@ svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
     return svn_error_wrap_apr(apr_err, "Can't open stderr");
 
   *err = svn_stream_from_aprfile2(stderr_file, TRUE, pool);
+
+  /* STDERR may or may not support positioning requests, but generally
+     it does not, or the behavior is implementation-specific.  Hence,
+     we cannot safely advertise mark() and seek() support. */
+  svn_stream_set_mark(*err, NULL);
+  svn_stream_set_seek(*err, NULL);
 
   return SVN_NO_ERROR;
 }
