@@ -79,7 +79,7 @@ Candidate changes:
    Justification:
      Reduce surprises on using these apis.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, kotkov
 
  * r1701638
    Remove unneeded io operation on pristine install
