@@ -37,6 +37,18 @@ Candidate changes:
    Votes:
      +0: julianfoad (he says it works, but I haven't reviewed or tested)
 
+ * r1701064, r1701206, r1701298
+   Fix spurious 'Access Denied' errors during checkout or commit on Windows
+   reported on TortoiseSVN users mailing list:
+   http://tortoisesvn.tigris.org/ds/viewMessage.do?dsForumId=4061&dsMessageId=3134203
+   Justification:
+     Regression from Subversion 1.8.x.
+   Notes:
+     The r1701298 is the fix itself, r1701064 and r1701206 are just formatting
+     fixes and cleanups.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
