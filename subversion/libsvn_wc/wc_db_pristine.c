@@ -909,11 +909,28 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   {
     const char *pristine_abspath;
     svn_node_kind_t kind_on_disk;
+    svn_error_t *err;
 
     SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
                                sha1_checksum, scratch_pool, scratch_pool));
-    SVN_ERR(svn_io_check_path(pristine_abspath, &kind_on_disk, scratch_pool));
-    if (kind_on_disk != svn_node_file)
+    err = svn_io_check_path(pristine_abspath, &kind_on_disk, scratch_pool);
+#ifdef WIN32
+    if (err && err->apr_err == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED))
+      {
+        svn_error_clear(err);
+        /* Possible race condition: The filename is locked, but there is no
+           file or dir with this name. Let's fall back on checking the DB.
+
+           This case is triggered by the pristine store tests on deleting
+           a file that is still open via another handle, where this other
+           handle has a FILE_SHARE_DELETE share mode.
+         */
+      }
+    else
+#endif
+    if (err)
+      return svn_error_trace(err);
+    else if (kind_on_disk != svn_node_file)
       {
         *present = FALSE;
         return SVN_NO_ERROR;
