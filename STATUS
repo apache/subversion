@@ -61,7 +61,7 @@ Candidate changes:
      +1: brane, stefan2
      -0: rhuijben (Log level on standard invocation of win-tests.py changes)
 
- * r1701598, r1701603, r1701611
+ * r1701598, r1701603, r1701611, r1701646
    Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
    Justification:
      A single lock or unlock failure doesn't affect the whole operation
@@ -73,6 +73,13 @@ Candidate changes:
      test expectations.
    Votes:
      +0.9: rhuijben (Minor behavior change. Needs more dev@ discussion)
+
+ * r1701633
+   Disable mark and seek op stdin, stdout and stderr stream wrappers
+   Justification:
+     Reduce surprises on using these apis.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
