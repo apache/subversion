@@ -49,12 +49,6 @@ Candidate changes:
    Votes:
      +1: ivan
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
-
  * r1700215, r1700219, r1700220, r1701270
    Fix argument passing in test suite.
    Justification:
@@ -62,4 +56,11 @@ Approved changes:
    Branch:
      ^/subversion/branches/1.9.x-r1700215
    Votes:
-     +1: brane, rhuijben, stefan2
+     +1: brane, stefan2
+     -0: rhuijben (Log level on standard invocation of win-tests.py changes)
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
