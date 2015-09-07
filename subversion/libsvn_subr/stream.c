@@ -2181,6 +2181,8 @@ create_tempfile(HANDLE *hFile,
   return SVN_NO_ERROR;
 }
 
+#endif /* WIN32 */
+
 /* Implements svn_close_fn_t */
 static svn_error_t *
 install_close(void *baton)
@@ -2192,8 +2194,6 @@ install_close(void *baton)
 
   return SVN_NO_ERROR;
 }
-
-#endif /* WIN32 */
 
 svn_error_t *
 svn_stream__create_for_install(svn_stream_t **install_stream,
@@ -2249,12 +2249,8 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
 
   ib->tmp_path = tmp_path;
 
-#ifdef WIN32
   /* Don't close the file on stream close; flush instead */
   svn_stream_set_close(*install_stream, install_close);
-#else
-  /* ### Install pool cleanup handler for tempfile? */
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -2299,8 +2295,6 @@ svn_stream__install_stream(svn_stream_t *install_stream,
          svn_io_file_rename2(). */
       svn_error_clear(err);
       err = SVN_NO_ERROR;
-
-      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
     }
   else
     {
@@ -2309,6 +2303,9 @@ svn_stream__install_stream(svn_stream_t *install_stream,
                                                         scratch_pool));
     }
 #endif
+
+  /* Close temporary file. */
+  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
 
   err = svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool);
 
@@ -2343,19 +2340,12 @@ svn_stream__install_get_info(apr_finfo_t *finfo,
                              apr_pool_t *scratch_pool)
 {
   struct install_baton_t *ib = install_stream->baton;
-
-#ifdef WIN32
-  /* On WIN32 the file is still open, so we can obtain the information
-     from the handle without race conditions */
   apr_status_t status;
 
   status = apr_file_info_get(finfo, wanted, ib->baton_apr.file);
 
   if (status)
     return svn_error_wrap_apr(status, NULL);
-#else
-  SVN_ERR(svn_io_stat(finfo, ib->tmp_path, wanted, scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -2382,8 +2372,9 @@ svn_stream__install_delete(svn_stream_t *install_stream,
   /* Deleting file on close may be unsupported, so ignore errors and
      fallback to svn_io_remove_file2(). */
   svn_error_clear(err);
-  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
 #endif
+
+  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
 
   return svn_error_trace(svn_io_remove_file2(ib->tmp_path, FALSE,
                                              scratch_pool));
