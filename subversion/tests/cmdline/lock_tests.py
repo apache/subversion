@@ -1925,10 +1925,11 @@ def lock_hook_messages(sbox):
                                      [], svntest.verify.AnyOutput,
                                      'lock', mu_url)
   if len(actual_stderr) > 4:
-    actual_stderr = actual_stderr[-4:-2]
+    actual_stderr = actual_stderr[-4:-2] + actual_stderr[-1:]
   expected_err = [
     'svn: warning: W165001: ' + svntest.actions.hook_failure_message('pre-lock'),
     error_msg + "\n",
+    "svn: E200009: One or more locks could not be obtained\n",
   ]
   svntest.verify.compare_and_display_lines(None, 'STDERR',
                                            expected_err, actual_stderr)
@@ -1938,10 +1939,11 @@ def lock_hook_messages(sbox):
                                      [], svntest.verify.AnyOutput,
                                      'unlock', iota_url)
   if len(actual_stderr) > 4:
-    actual_stderr = actual_stderr[-4:-2]
+    actual_stderr = actual_stderr[-4:-2] + actual_stderr[-1:]
   expected_err = [
     'svn: warning: W165001: ' + svntest.actions.hook_failure_message('pre-unlock'),
     error_msg + "\n",
+    "svn: E200009: One or more locks could not be released\n",
   ]
   svntest.verify.compare_and_display_lines(None, 'STDERR',
                                            expected_err, actual_stderr)
