@@ -81,6 +81,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1701638
+   Remove unneeded io operation on pristine install
+   Justification:
+     Every IO operation counts in checkout performance. Doing something
+     that is never necessary just slows things down. (The rename handling
+     would handle read-only just fine... And matching SHA-1 is handled at
+     a higher level)
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
