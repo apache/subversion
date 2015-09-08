@@ -1055,10 +1055,12 @@ svn_stream_open_unique(svn_stream_t **stream,
 }
 
 
-svn_stream_t *
-svn_stream_from_aprfile2(apr_file_t *file,
-                         svn_boolean_t disown,
-                         apr_pool_t *pool)
+/* Helper function that creates a stream from an APR file. */
+static svn_stream_t *
+make_stream_from_apr_file(apr_file_t *file,
+                          svn_boolean_t disown,
+                          svn_boolean_t supports_seek,
+                          apr_pool_t *pool)
 {
   struct baton_apr *baton;
   svn_stream_t *stream;
@@ -1072,9 +1074,14 @@ svn_stream_from_aprfile2(apr_file_t *file,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read2(stream, read_handler_apr, read_full_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
-  svn_stream_set_skip(stream, skip_handler_apr);
-  svn_stream_set_mark(stream, mark_handler_apr);
-  svn_stream_set_seek(stream, seek_handler_apr);
+
+  if (supports_seek)
+    {
+      svn_stream_set_skip(stream, skip_handler_apr);
+      svn_stream_set_mark(stream, mark_handler_apr);
+      svn_stream_set_seek(stream, seek_handler_apr);
+    }
+
   svn_stream_set_data_available(stream, data_available_handler_apr);
   svn_stream__set_is_buffered(stream, is_buffered_handler_apr);
   stream->file = file;
@@ -1083,6 +1090,14 @@ svn_stream_from_aprfile2(apr_file_t *file,
     svn_stream_set_close(stream, close_handler_apr);
 
   return stream;
+}
+
+svn_stream_t *
+svn_stream_from_aprfile2(apr_file_t *file,
+                         svn_boolean_t disown,
+                         apr_pool_t *pool)
+{
+  return svn_error_trace(make_stream_from_apr_file(file, disown, TRUE, pool));
 }
 
 apr_file_t *
@@ -1829,13 +1844,11 @@ svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Can't open stdin");
 
-  *in = svn_stream_from_aprfile2(stdin_file, TRUE, pool);
-
   /* STDIN may or may not support positioning requests, but generally
      it does not, or the behavior is implementation-specific.  Hence,
-     we cannot safely advertise mark() and seek() support. */
-  svn_stream_set_mark(*in, NULL);
-  svn_stream_set_seek(*in, NULL);
+     we cannot safely advertise mark(), seek() and non-default skip()
+     support. */
+  *in = make_stream_from_apr_file(stdin_file, TRUE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1851,13 +1864,11 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Can't open stdout");
 
-  *out = svn_stream_from_aprfile2(stdout_file, TRUE, pool);
-
   /* STDOUT may or may not support positioning requests, but generally
      it does not, or the behavior is implementation-specific.  Hence,
-     we cannot safely advertise mark() and seek() support. */
-  svn_stream_set_mark(*out, NULL);
-  svn_stream_set_seek(*out, NULL);
+     we cannot safely advertise mark(), seek() and non-default skip()
+     support. */
+  *out = make_stream_from_apr_file(stdout_file, TRUE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1873,13 +1884,11 @@ svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Can't open stderr");
 
-  *err = svn_stream_from_aprfile2(stderr_file, TRUE, pool);
-
   /* STDERR may or may not support positioning requests, but generally
      it does not, or the behavior is implementation-specific.  Hence,
-     we cannot safely advertise mark() and seek() support. */
-  svn_stream_set_mark(*err, NULL);
-  svn_stream_set_seek(*err, NULL);
+     we cannot safely advertise mark(), seek() and non-default skip()
+     support. */
+  *err = make_stream_from_apr_file(stderr_file, TRUE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
