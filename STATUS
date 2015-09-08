@@ -83,6 +83,9 @@ Candidate changes:
      Reduce surprises on using these apis.
    Votes:
      +1: rhuijben, kotkov
+     -0: ivan (partial fix, native svn_stream_skip() also should be disabled
+               for std* streams:
+               http://svn.haxx.se/dev/archive-2015-09/0057.shtml)
 
  * r1701638
    Remove unneeded io operation on pristine install
