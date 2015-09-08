@@ -89,6 +89,33 @@ else
     AC_MSG_RESULT(no)
 fi
 
+# check for some busted versions of mod_dav
+# in particular 2.2.25, 2.4.5, and 2.4.6 had the following bugs which are
+# troublesome for Subversion:
+# PR 55304: https://issues.apache.org/bugzilla/show_bug.cgi?id=55304
+# PR 55306: https://issues.apache.org/bugzilla/show_bug.cgi?id=55306
+# PR 55397: https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
+if test -n "$APXS" && test "$APXS" != "no"; then
+  AC_MSG_CHECKING([mod_dav version])
+  HTTPD_MAJOR=`$SED -ne '/^#define AP_SERVER_MAJORVERSION_NUMBER/p' "$APXS_INCLUDE/ap_release.h" | $SED -e 's/^.*NUMBER *//'`
+  HTTPD_MINOR=`$SED -ne '/^#define AP_SERVER_MINORVERSION_NUMBER/p' "$APXS_INCLUDE/ap_release.h" | $SED -e 's/^.*NUMBER *//'`
+  HTTPD_PATCH=`$SED -ne '/^#define AP_SERVER_PATCHLEVEL_NUMBER/p' "$APXS_INCLUDE/ap_release.h" | $SED -e 's/^.*NUMBER *//'`
+  HTTPD_VERSION="${HTTPD_MAJOR}.${HTTPD_MINOR}.${HTTPD_PATCH}"
+  case "$HTTPD_VERSION" in
+    2.2.25 | 2.4.[[5-6]])
+      AC_MSG_RESULT([broken])
+      AC_MSG_ERROR([Apache httpd version $HTTPD_VERSION includes a broken mod_dav; use a newer version of httpd])
+      ;;
+    2.[[0-9]]*.[[0-9]]*)
+      AC_MSG_RESULT([acceptable])
+      ;;
+    *)
+      AC_MSG_RESULT([unrecognised])
+      AC_MSG_ERROR([Apache httpd version $HTTPD_VERSION not recognised])
+      ;;
+  esac
+fi
+
 if test -n "$APXS" && test "$APXS" != "no"; then
   AC_MSG_CHECKING([whether Apache version is compatible with APR version])
   apr_major_version="${apr_version%%.*}"
@@ -106,37 +133,15 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       AC_MSG_ERROR([unknown APR version])
       ;;
   esac
-  old_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-  AC_EGREP_CPP([apache_minor_version= *\"$apache_minor_version_wanted_regex\"],
-               [
-#include "$APXS_INCLUDE/ap_release.h"
-apache_minor_version=AP_SERVER_MINORVERSION],
-               [AC_MSG_RESULT([yes])],
-               [AC_MSG_RESULT([no])
-                AC_MSG_ERROR([Apache version incompatible with APR version])])
-  CPPFLAGS="$old_CPPFLAGS"
-fi
-
-# check for some busted versions of mod_dav
-# in particular 2.2.25, 2.4.5, and 2.4.6 had the following bugs which are
-# troublesome for Subversion:
-# PR 55304: https://issues.apache.org/bugzilla/show_bug.cgi?id=55304
-# PR 55306: https://issues.apache.org/bugzilla/show_bug.cgi?id=55306
-# PR 55397: https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
-if test -n "$APXS" && test "$APXS" != "no"; then
-  AC_MSG_CHECKING([mod_dav version])
-  old_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-  blacklisted_versions_regex=["\"2\" \"\.\" (\"2\" \"\.\" \"25\"|\"4\" \"\.\" \"[56]\")"]
-  AC_EGREP_CPP([apache_version= *$blacklisted_versions_regex],
-               [
-#include "$APXS_INCLUDE/ap_release.h"
-apache_version=AP_SERVER_BASEREVISION],
-               [AC_MSG_RESULT([broken])
-                AC_MSG_ERROR([Apache httpd version includes a broken mod_dav; use a newer version of httpd])],
-               [AC_MSG_RESULT([acceptable])])
-  CPPFLAGS="$old_CPPFLAGS"
+  case $HTTPD_MINOR in
+    $apache_minor_version_wanted_regex)
+      AC_MSG_RESULT([yes])
+      ;;
+    *)
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([Apache version $HTTPD_VERSION incompatible with APR version $apr_version])
+      ;;
+  esac
 fi
 
 AC_ARG_WITH(apache-libexecdir,
@@ -157,24 +162,42 @@ if test -n "$APXS" && test "$APXS" != "no"; then
         APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
     fi
 
+    MMN_MAJOR=`$SED -ne '/^#define MODULE_MAGIC_NUMBER_MAJOR/p' "$APXS_INCLUDE/ap_mmn.h" | $SED -e 's/^.*MAJOR *//'`
+    MMN_MINOR=`$SED -ne '/^#define MODULE_MAGIC_NUMBER_MINOR/p' "$APXS_INCLUDE/ap_mmn.h" | $SED -e 's/^.*MINOR *//' | $SED -e 's/ .*//'`
+    if test "$MMN_MAJOR" = "20120211" && test "$MMN_MINOR" -lt "47" ; then
+      # This is httpd 2.4 and it doesn't appear to have the required
+      # API but the installation may have been patched.
+      AC_ARG_ENABLE(broken-httpd-auth,
+        AS_HELP_STRING([--enable-broken-httpd-auth],
+                       [Force build against httpd 2.4 with broken auth]),
+        [broken_httpd_auth=$enableval],[broken_httpd_auth=no])
+      AC_MSG_CHECKING([for ap_some_authn_required])
+      old_CPPFLAGS="$CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $APACHE_INCLUDES $SVN_APR_INCLUDES"
+      AC_EGREP_CPP([int.*\sap_some_authn_required\s*\(],
+                   [#include "http_request.h"],
+                   [AC_MSG_RESULT([yes])
+                    working_auth=yes],
+                   [AC_MSG_RESULT([no])])
+      CPPFLAGS="$old_CPPFLAGS"
+      if test "$working_auth" = "yes" ; then
+        AC_DEFINE(SVN_USE_FORCE_AUTHN, 1,
+                  [Defined to build with patched httpd 2.4 and working auth])
+      elif test "$enable_broken_httpd_auth" = "yes"; then
+        AC_MSG_WARN([==============================================])
+        AC_MSG_WARN([Apache httpd $HTTPD_VERSION MMN $MMN_MAJOR.$MMN_MINOR])
+        AC_MSG_WARN([Subversion will be vulnerable to CVE-2015-3184])
+        AC_MSG_WARN([==============================================])
+        AC_DEFINE(SVN_ALLOW_BROKEN_HTTPD_AUTH, 1,
+                  [Defined to build against httpd 2.4 with broken auth])
+      else
+        AC_MSG_ERROR([Apache httpd $HTTPD_VERSION MMN $MMN_MAJOR.$MMN_MINOR has broken auth (CVE-2015-3184)])
+      fi
+    fi
+
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
     INSTALL_APACHE_MODS=true
-    HTTPD="`$APXS -q sbindir`/`$APXS -q PROGNAME`"
-    if ! test -e $HTTPD ; then
-      HTTPD="`$APXS -q bindir`/`$APXS -q PROGNAME`"
-    fi
-    HTTPD_VERSION=["`$HTTPD -v | $SED -e 's@^.*/\([0-9.]*\)\(.*$\)@\1@ ; 1q'`"]
-    AC_ARG_ENABLE(broken-httpd-auth,
-      AS_HELP_STRING([--enable-broken-httpd-auth],
-                     [Allow building against httpd 2.4 with broken auth]),
-      [broken_httpd_auth=$enableval],[broken_httpd_auth=no])
-    if test "$enable_broken_httpd_auth" = "yes"; then
-      AC_MSG_NOTICE([Building with broken httpd auth])
-      AC_DEFINE(SVN_ALLOW_BROKEN_HTTPD_AUTH, 1,
-                [Defined to allow building against httpd 2.4 with broken auth])
-    fi
-
     case $host in
       *-*-cygwin*)
         APACHE_LDFLAGS="-shrext .so"
