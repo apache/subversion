@@ -578,10 +578,8 @@ svn_io_open_uniquely_named(apr_file_t **file,
                 continue;
 
 #ifdef WIN32
-              apr_err_2 = APR_TO_OS_ERROR(apr_err);
-
-              if (apr_err_2 == ERROR_ACCESS_DENIED ||
-                  apr_err_2 == ERROR_SHARING_VIOLATION)
+              if (apr_err == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED) ||
+                  apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
                 {
                   /* The file is in use by another process or is hidden;
                      create a new name, but don't do this 99999 times in
@@ -4442,8 +4440,8 @@ svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
   {
     svn_boolean_t retry = TRUE;
 
-    if (APR_TO_OS_ERROR(status) == ERROR_DIR_NOT_EMPTY)
-      {
+    if (status == APR_FROM_OS_ERROR(ERROR_DIR_NOT_EMPTY))
+    {
         apr_status_t empty_status = dir_is_empty(dirname_apr, pool);
 
         if (APR_STATUS_IS_ENOTEMPTY(empty_status))
@@ -5150,10 +5148,8 @@ temp_file_create(apr_file_t **new_file,
               if (!apr_err_2 && finfo.filetype == APR_DIR)
                 continue;
 
-              apr_err_2 = APR_TO_OS_ERROR(apr_err);
-
-              if (apr_err_2 == ERROR_ACCESS_DENIED ||
-                  apr_err_2 == ERROR_SHARING_VIOLATION)
+              if (apr_err == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED) ||
+                  apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
                 {
                   /* The file is in use by another process or is hidden;
                      create a new name, but don't do this 99999 times in
