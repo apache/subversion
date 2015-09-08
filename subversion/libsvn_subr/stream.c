@@ -1097,7 +1097,7 @@ svn_stream_from_aprfile2(apr_file_t *file,
                          svn_boolean_t disown,
                          apr_pool_t *pool)
 {
-  return svn_error_trace(make_stream_from_apr_file(file, disown, TRUE, pool));
+  return make_stream_from_apr_file(file, disown, TRUE, pool);
 }
 
 apr_file_t *
