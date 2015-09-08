@@ -1885,8 +1885,48 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   return exit_code
 
 
+class AbbreviatedFormatter(logging.Formatter):
+  """A formatter with abbreviated loglevel indicators in the output.
+
+  Use %(levelshort)s in the format string to get a single character
+  representing the loglevel..
+  """
+
+  _level_short = {
+    logging.CRITICAL : 'C',
+    logging.ERROR : 'E',
+    logging.WARNING : 'W',
+    logging.INFO : 'I',
+    logging.DEBUG : 'D',
+    logging.NOTSET : '-',
+    }
+
+  def format(self, record):
+    record.levelshort = self._level_short[record.levelno]
+    return logging.Formatter.format(self, record)
+
 def _create_parser(usage=None):
   """Return a parser for our test suite."""
+
+  global logger
+
+  # Initialize the LOGGER global variable so the option parsing can set
+  # its loglevel, as appropriate.
+  logger = logging.getLogger()
+
+  # Did some chucklehead log something before we configured it? If they
+  # did, then a default handler/formatter would get installed. We want
+  # to be the one to install the first (and only) handler.
+  for handler in logger.handlers:
+    if not isinstance(handler.formatter, AbbreviatedFormatter):
+      raise Exception('Logging occurred before configuration. Some code'
+                      ' path needs to be fixed. Examine the log output'
+                      ' to find what/where logged something.')
+
+  # Set a sane default log level
+  if logger.getEffectiveLevel() == logging.NOTSET:
+    logger.setLevel(logging.WARN)
+
   def set_log_level(option, opt, value, parser, level=None):
     if level:
       # called from --verbose
@@ -2018,6 +2058,22 @@ def parse_options(arglist=sys.argv[1:], usage=None):
   parser = _create_parser(usage)
   (options, args) = parser.parse_args(arglist)
 
+  # If there are no logging handlers registered yet, then install our
+  # own with our custom formatter. (anything currently installed *is*
+  # our handler as tested above, in _create_parser)
+  if not logger.handlers:
+    # Now that we have some options, let's get the logger configured before
+    # doing anything more
+    if options.log_with_timestamps:
+      formatter = AbbreviatedFormatter('%(levelshort)s:'
+                                       ' [%(asctime)s] %(message)s',
+                                       datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
   # Normalize url to have no trailing slash
   if options.url:
     if options.url[-1:] == '/':
@@ -2115,27 +2171,6 @@ def get_issue_details(issue_numbers):
   return issue_dict
 
 
-class AbbreviatedFormatter(logging.Formatter):
-  """A formatter with abbreviated loglevel indicators in the output.
-
-  Use %(levelshort)s in the format string to get a single character
-  representing the loglevel..
-  """
-
-  _level_short = {
-    logging.CRITICAL : 'C',
-    logging.ERROR : 'E',
-    logging.WARNING : 'W',
-    logging.INFO : 'I',
-    logging.DEBUG : 'D',
-    logging.NOTSET : '-',
-    }
-
-  def format(self, record):
-    record.levelshort = self._level_short[record.levelno]
-    return logging.Formatter.format(self, record)
-
-
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
@@ -2146,7 +2181,6 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   exiting the process.  This function can be used when a caller doesn't
   want the process to die."""
 
-  global logger
   global pristine_url
   global pristine_greek_repos_url
   global svn_binary
@@ -2166,41 +2200,12 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   testnums = []
 
-  # Initialize the LOGGER global variable so the option parsing can set
-  # its loglevel, as appropriate.
-  logger = logging.getLogger()
-
-  # Did some chucklehead log something before we configured it? If they
-  # did, then a default handler/formatter would get installed. We want
-  # to be the one to install the first (and only) handler.
-  for handler in logger.handlers:
-    if not isinstance(handler.formatter, AbbreviatedFormatter):
-      raise Exception('Logging occurred before configuration. Some code'
-                      ' path needs to be fixed. Examine the log output'
-                      ' to find what/where logged something.')
-
   if not options:
     # Override which tests to run from the commandline
     (parser, args) = parse_options()
     test_selection = args
   else:
     parser = _create_parser()
-
-  # If there are no handlers registered yet, then install our own with
-  # our custom formatter. (anything currently installed *is* our handler
-  # as tested above)
-  if not logger.handlers:
-    # Now that we have some options, let's get the logger configured before
-    # doing anything more
-    if options.log_with_timestamps:
-      formatter = AbbreviatedFormatter('%(levelshort)s:'
-                                       ' [%(asctime)s] %(message)s',
-                                       datefmt='%Y-%m-%d %H:%M:%S')
-    else:
-      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:
