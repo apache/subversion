@@ -86,12 +86,8 @@ Candidate changes:
      The r1701633 patch disables mark and seek for these streams;
      r1701792 and r1701797 disable native svn_stream_skip() handler.
    Votes:
-     +1: kotkov
+     +1: kotkov, ivan
      +1: rhuijben (without r1701792 and r1701797)
-     -0: ivan (partial fix, native svn_stream_skip() also should be disabled
-               for std* streams:
-               http://svn.haxx.se/dev/archive-2015-09/0057.shtml,
-               without r1701792 and r1701797)
 
  * r1701638
    Remove unneeded io operation on pristine install
