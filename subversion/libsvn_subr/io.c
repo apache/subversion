@@ -2065,11 +2065,21 @@ svn_io__win_rename_open_file(apr_file_t *file,
                                                     rename_size);
    }
 
-  WIN32_RETRY_LOOP(status,
-                   win32_set_file_information_by_handle(hFile,
-                                                        FileRenameInfo,
-                                                        rename_info,
-                                                        rename_size));
+  /* Windows returns Vista+ client accessing network share stored on Windows
+     Server 2003 returns ERROR_ACCESS_DENIED. The same happens when Vista+
+     client access Windows Server 2008 with disabled SMBv2 protocol.
+
+     So return SVN_ERR_UNSUPPORTED_FEATURE in this case like we do when
+     SetFileInformationByHandle() is not available and let caller to
+     handle it.
+
+     See "Access denied error on checkout-commit after updating to 1.9.X"
+     discussion on dev@s.a.o:
+     http://svn.haxx.se/dev/archive-2015-09/0054.shtml */
+  if (status == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED))
+    {
+      status = SVN_ERR_UNSUPPORTED_FEATURE;
+    }
 
   if (status)
     {
