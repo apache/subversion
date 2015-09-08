@@ -73,10 +73,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1701237
-   Fix compilation with apr 1.2.x
-   Justification:
-     Compatibility was broken by r1692801.
-   Votes:
-     +1: rhuijben, brane, stefan2
