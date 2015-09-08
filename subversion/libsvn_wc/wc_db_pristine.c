@@ -333,13 +333,12 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
    * an orphan file and it doesn't matter if we overwrite it.) */
   {
     apr_finfo_t finfo;
-    SVN_ERR(svn_stream__install_get_info(&finfo, install_stream, APR_FINFO_SIZE,
-                                         scratch_pool));
+    SVN_ERR(svn_stream__install_get_info(&finfo, install_stream,
+                                         APR_FINFO_SIZE, scratch_pool));
     SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
-                                        TRUE, scratch_pool));
+                                       TRUE, scratch_pool));
 
-    SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                      STMT_INSERT_PRISTINE));
+    SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_PRISTINE));
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
