@@ -92,7 +92,7 @@ Candidate changes:
      would handle read-only just fine... And matching SHA-1 is handled at
      a higher level)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
 Veto-blocked changes:
 =====================
