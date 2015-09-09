@@ -2272,7 +2272,6 @@ svn_io_is_file_executable(svn_boolean_t *executable,
 
 
 /*** File locking. ***/
-#if !defined(WIN32) && !defined(__OS2__)
 /* Clear all outstanding locks on ARG, an open apr_file_t *. */
 static apr_status_t
 file_clear_locks(void *arg)
@@ -2287,7 +2286,6 @@ file_clear_locks(void *arg)
 
   return 0;
 }
-#endif
 
 svn_error_t *
 svn_io_lock_open_file(apr_file_t *lockfile_handle,
@@ -2345,13 +2343,14 @@ svn_io_lock_open_file(apr_file_t *lockfile_handle,
         }
     }
 
-/* On Windows and OS/2 file locks are automatically released when
-   the file handle closes */
-#if !defined(WIN32) && !defined(__OS2__)
+  /* On Windows, a process may not release file locks before closing the
+     handle, and in this case the outstanding locks are unlocked by the OS.
+     However, this is not recommended, because the actual unlocking may be
+     postponed depending on available system resources.  We explicitly unlock
+     the file as a part of the pool cleanup handler. */
   apr_pool_cleanup_register(pool, lockfile_handle,
                             file_clear_locks,
                             apr_pool_cleanup_null);
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -2375,11 +2374,7 @@ svn_io_unlock_open_file(apr_file_t *lockfile_handle,
     return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"),
                               try_utf8_from_internal_style(fname, pool));
 
-/* On Windows and OS/2 file locks are automatically released when
-   the file handle closes */
-#if !defined(WIN32) && !defined(__OS2__)
   apr_pool_cleanup_kill(pool, lockfile_handle, file_clear_locks);
-#endif
 
   return SVN_NO_ERROR;
 }
