@@ -92,14 +92,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1701633, r1701792, r1701797
-   Disable mark, seek and non-default skip for stdin, stdout and stderr
-   stream wrappers
-   Justification:
-     Reduce surprises on using these apis.
-   Notes:
-     The r1701633 patch disables mark and seek for these streams;
-     r1701792 and r1701797 disable native svn_stream_skip() handler.
-   Votes:
-     +1: kotkov, ivan, rhuijben
