@@ -123,6 +123,14 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1702288
+   Return error if get unexpected 'X-SVN-VR-Base' HTTP header value instead of
+   crashing.
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
