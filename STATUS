@@ -114,7 +114,7 @@ Candidate changes:
    Depends:
      Depends on the r1701838 group for testcase text conflict.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
 Veto-blocked changes:
 =====================
