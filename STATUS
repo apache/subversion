@@ -93,12 +93,28 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
-  * r1702198, r1702200
-    Resolve segfault while updating already conflicted tree
-    Justification:
-      Segfault
-    Votes:
-      +1: rhuijben, ivan
+ * r1702198, r1702200
+   Resolve segfault while updating already conflicted tree
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: rhuijben, ivan
+
+ * r1702237, r1702238, r1702239
+   Resolve using uninitialized conflict when non-recursive reverting move
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: rhuijben
+
+ * r1702247
+   Resolve segfault incoming delete of tree containing switched paths
+   Justification:
+     Segfault. User reported.
+   Depends:
+     Depends on the r1701838 group for testcase text conflict.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
