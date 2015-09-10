@@ -200,6 +200,9 @@ svn_stream_skip(svn_stream_t *stream, apr_size_t len)
     {
       svn_read_fn_t read_fn = stream->read_full_fn ? stream->read_full_fn
                                                    : stream->read_fn;
+      if (read_fn == NULL)
+        return svn_error_create(SVN_ERR_STREAM_NOT_SUPPORTED, NULL, NULL);
+
       return svn_error_trace(skip_default_handler(stream->baton, len,
                                                   read_fn));
     }
