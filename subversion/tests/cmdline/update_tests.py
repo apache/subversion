@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 #
 #  update_tests.py:  testing update cases.
 #
