@@ -96,6 +96,17 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1701838
+   Fix attempt to use uninitialized svn_wc__db_install_data_t pointer on
+   error in working copy update editor. Reproduction script:
+   $ svn co URL wc --depth=empty
+   $ rm -rf wc/.svn/tmp
+   $ svn up wc --set-depth=infinity
+   Justification:
+     Crash. Reported multipel times using TortoiseSVN crash reporter tool.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
