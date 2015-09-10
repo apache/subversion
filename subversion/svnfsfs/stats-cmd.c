@@ -20,6 +20,8 @@
  * ====================================================================
  */
 
+#include <assert.h>
+
 #include "svn_fs.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
@@ -235,6 +237,10 @@ print_extensions_by_changes(svn_fs_fs__stats_t *stats,
     {
       svn_fs_fs__extension_info_t *info
         = APR_ARRAY_IDX(data, i, svn_fs_fs__extension_info_t *);
+
+      /* If there are elements, then their count cannot be 0. */
+      assert(stats->file_histogram.total.count);
+
       sum += info->node_histogram.total.count;
       printf(_("%11s %20s (%2d%%) representations\n"),
              info->extension,
@@ -243,11 +249,28 @@ print_extensions_by_changes(svn_fs_fs__stats_t *stats,
                    stats->file_histogram.total.count));
     }
 
-  printf(_("%11s %20s (%2d%%) representations\n"),
-         "(others)",
-         svn__ui64toa_sep(stats->file_histogram.total.count - sum, ',', pool),
-         (int)((stats->file_histogram.total.count - sum) * 100 /
-               stats->file_histogram.total.count));
+  if (stats->file_histogram.total.count)
+    {
+      printf(_("%11s %20s (%2d%%) representations\n"),
+             "(others)",
+             svn__ui64toa_sep(stats->file_histogram.total.count - sum, ',',
+                              pool),
+             (int)((stats->file_histogram.total.count - sum) * 100 /
+                   stats->file_histogram.total.count));
+    }
+}
+
+/* Calculate a percentage, handling edge cases. */
+static int
+get_percentage(apr_uint64_t part,
+               apr_uint64_t total)
+{
+  /* This include total == 0. */
+  if (part >= total)
+    return 100;
+
+  /* Standard case. */
+  return (int)(part * 100.0 / total);
 }
 
 /* Print the (up to) 16 extensions in STATS with the largest total size of
@@ -269,15 +292,20 @@ print_extensions_by_nodes(svn_fs_fs__stats_t *stats,
       printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
              svn__ui64toa_sep(info->node_histogram.total.sum, ',', pool),
-             (int)(info->node_histogram.total.sum * 100 /
-                   stats->file_histogram.total.sum));
+             get_percentage(info->node_histogram.total.sum,
+                            stats->file_histogram.total.sum));
     }
 
-  printf(_("%11s %20s (%2d%%) bytes\n"),
-         "(others)",
-         svn__ui64toa_sep(stats->file_histogram.total.sum - sum, ',', pool),
-         (int)((stats->file_histogram.total.sum - sum) * 100 /
-               stats->file_histogram.total.sum));
+  if (stats->file_histogram.total.sum > sum)
+    {
+      /* Total sum can't be zero here. */
+      printf(_("%11s %20s (%2d%%) bytes\n"),
+             "(others)",
+             svn__ui64toa_sep(stats->file_histogram.total.sum - sum, ',',
+                              pool),
+             get_percentage(stats->file_histogram.total.sum - sum,
+                            stats->file_histogram.total.sum));
+    }
 }
 
 /* Print the (up to) 16 extensions in STATS with the largest total size of
@@ -299,16 +327,20 @@ print_extensions_by_reps(svn_fs_fs__stats_t *stats,
       printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
              svn__ui64toa_sep(info->rep_histogram.total.sum, ',', pool),
-             (int)(info->rep_histogram.total.sum * 100 /
-                   stats->rep_size_histogram.total.sum));
+             get_percentage(info->rep_histogram.total.sum,
+                            stats->rep_size_histogram.total.sum));
     }
 
-  printf(_("%11s %20s (%2d%%) bytes\n"),
-         "(others)",
-         svn__ui64toa_sep(stats->rep_size_histogram.total.sum - sum, ',',
-                          pool),
-         (int)((stats->rep_size_histogram.total.sum - sum) * 100 /
-               stats->rep_size_histogram.total.sum));
+  if (stats->rep_size_histogram.total.sum > sum)
+    {
+      /* Total sum can't be zero here. */
+      printf(_("%11s %20s (%2d%%) bytes\n"),
+             "(others)",
+             svn__ui64toa_sep(stats->rep_size_histogram.total.sum - sum, ',',
+                              pool),
+             get_percentage(stats->rep_size_histogram.total.sum - sum,
+                            stats->rep_size_histogram.total.sum));
+    }
 }
 
 /* Print per-extension histograms for the most frequent extensions in STATS.
