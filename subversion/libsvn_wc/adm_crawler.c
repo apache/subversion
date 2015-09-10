@@ -1016,6 +1016,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   svn_checksum_t *local_sha1_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
   svn_wc__db_install_data_t *install_data = NULL;
   svn_error_t *err;
+  svn_error_t *err2;
   svn_stream_t *base_stream;  /* delta source */
   svn_stream_t *local_stream;  /* delta target: LOCAL_ABSPATH transl. to NF */
 
@@ -1112,7 +1113,15 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                         scratch_pool, scratch_pool);
 
   /* Close the two streams to force writing the digest */
-  err = svn_error_compose_create(err, svn_stream_close(base_stream));
+  err2 = svn_stream_close(base_stream);
+  if (err2)
+    {
+      /* Set verify_checksum to NULL if svn_stream_close() returns error
+         because checksum will be uninitialized in this case. */
+      verify_checksum = NULL;
+      err = svn_error_compose_create(err, err2);
+    }
+
   err = svn_error_compose_create(err, svn_stream_close(local_stream));
 
   /* If we have an error, it may be caused by a corrupt text base,
