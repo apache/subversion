@@ -6756,6 +6756,23 @@ def update_add_conflicted_deep(sbox):
   # This final update used to segfault using 1.9.0 and 1.9.1
   sbox.simple_update('A/z/z', 3)
 
+def missing_tmp_update(sbox):
+  "missing tmp update caused segfault"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None, [], False,
+                                        wc_dir, '--set-depth', 'empty')
+
+  os.rmdir(sbox.ospath(svntest.main.get_admin_name() + '/tmp'))
+
+  svntest.actions.run_and_verify_svn(None, '.*Unable to create.*',
+                                     'up', wc_dir, '--set-depth', 'infinity')
+
+  svntest.actions.run_and_verify_svn(None, [], 'cleanup', wc_dir)
+
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None, [], False,
+                                        wc_dir, '--set-depth', 'infinity')
 
 #######################################################################
 # Run the tests
@@ -6845,6 +6862,7 @@ test_list = [ None,
               update_conflict_details,
               update_keywords_on_shortcut,
               update_add_conflicted_deep,
+              missing_tmp_update,
              ]
 
 if __name__ == '__main__':

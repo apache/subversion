@@ -381,9 +381,10 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
   *install_data = apr_pcalloc(result_pool, sizeof(**install_data));
   (*install_data)->wcroot = wcroot;
 
-  SVN_ERR(svn_stream__create_for_install(stream,
-                                         temp_dir_abspath,
-                                         result_pool, scratch_pool));
+  SVN_ERR_W(svn_stream__create_for_install(stream,
+                                           temp_dir_abspath,
+                                           result_pool, scratch_pool),
+            _("Unable to create pristine install stream"));
 
   (*install_data)->inner_stream = *stream;
 
