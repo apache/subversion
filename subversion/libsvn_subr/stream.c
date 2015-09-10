@@ -1063,10 +1063,13 @@ static svn_stream_t *
 make_stream_from_apr_file(apr_file_t *file,
                           svn_boolean_t disown,
                           svn_boolean_t supports_seek,
+                          svn_boolean_t supports_read,
+                          svn_boolean_t supports_write,
                           apr_pool_t *pool)
 {
   struct baton_apr *baton;
   svn_stream_t *stream;
+  apr_int32_t flags;
 
   if (file == NULL)
     return svn_stream_empty(pool);
@@ -1075,8 +1078,11 @@ make_stream_from_apr_file(apr_file_t *file,
   baton->file = file;
   baton->pool = pool;
   stream = svn_stream_create(baton, pool);
-  svn_stream_set_read2(stream, read_handler_apr, read_full_handler_apr);
-  svn_stream_set_write(stream, write_handler_apr);
+
+  if (supports_read)
+    svn_stream_set_read2(stream, read_handler_apr, read_full_handler_apr);
+  if (supports_write)
+    svn_stream_set_write(stream, write_handler_apr);
 
   if (supports_seek)
     {
@@ -1100,7 +1106,18 @@ svn_stream_from_aprfile2(apr_file_t *file,
                          svn_boolean_t disown,
                          apr_pool_t *pool)
 {
-  return make_stream_from_apr_file(file, disown, TRUE, pool);
+  /* Enable read and write only if the underlying file actually supports it.
+   *
+   * Special files like STDIN will have no flags set at all. In that case,
+   * we can't filter and must allow any operation - which may then fail at
+   * the APR level further down the stack.
+   */
+  apr_uint32_t flags = apr_file_flags_get(file);
+  svn_boolean_t supports_read = (flags == 0) || (flags & APR_READ);
+  svn_boolean_t supports_write = (flags == 0) || (flags & APR_WRITE);
+
+  return make_stream_from_apr_file(file, disown, TRUE, supports_read,
+                                   supports_write, pool);
 }
 
 apr_file_t *
@@ -1851,7 +1868,8 @@ svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
      it does not, or the behavior is implementation-specific.  Hence,
      we cannot safely advertise mark(), seek() and non-default skip()
      support. */
-  *in = make_stream_from_apr_file(stdin_file, TRUE, FALSE, pool);
+  *in = make_stream_from_apr_file(stdin_file, TRUE, FALSE, TRUE, FALSE,
+                                  pool);
 
   return SVN_NO_ERROR;
 }
@@ -1871,7 +1889,8 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
      it does not, or the behavior is implementation-specific.  Hence,
      we cannot safely advertise mark(), seek() and non-default skip()
      support. */
-  *out = make_stream_from_apr_file(stdout_file, TRUE, FALSE, pool);
+  *out = make_stream_from_apr_file(stdout_file, TRUE, FALSE, FALSE, TRUE,
+                                   pool);
 
   return SVN_NO_ERROR;
 }
@@ -1891,7 +1910,8 @@ svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
      it does not, or the behavior is implementation-specific.  Hence,
      we cannot safely advertise mark(), seek() and non-default skip()
      support. */
-  *err = make_stream_from_apr_file(stderr_file, TRUE, FALSE, pool);
+  *err = make_stream_from_apr_file(stderr_file, TRUE, FALSE, FALSE, TRUE,
+                                   pool);
 
   return SVN_NO_ERROR;
 }
