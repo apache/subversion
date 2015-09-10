@@ -104,9 +104,11 @@ Candidate changes:
    $ svn up wc --set-depth=infinity
    Justification:
      Crash. Reported multiple times using TortoiseSVN crash reporter tool.
+   Depends:
+     Depends on the r1702198, r1702200 backport due conflicts in
+     update_tests.py.
    Votes:
-     +1: ivan (without r1702203)
-     +1: rhuijben
+     +1: rhuijben, ivan
 
   * r1702198, r1702200
     Resolve segfault while updating already conflicted tree
