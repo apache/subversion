@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 #
 #  revert_tests.py:  testing 'svn revert'.
 #
