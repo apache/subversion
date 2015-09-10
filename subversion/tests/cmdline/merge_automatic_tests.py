@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 #
 #  merge_automatic_tests.py:  testing "automatic merge" scenarios
 #
