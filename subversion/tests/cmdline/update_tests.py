@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 #
 #  update_tests.py:  testing update cases.
 #
@@ -6731,6 +6731,32 @@ def update_keywords_on_shortcut(sbox):
               for line in text_after_up]):
     raise svntest.Failure("update did not update the LastChangedRevision keyword")
 
+def update_add_conflicted_deep(sbox):
+  "deep add conflicted"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+
+  svntest.actions.run_and_verify_svnmucc(
+                        None, [], '-U', repo_url, '-m', '',
+                        'mkdir', 'A/z',
+                        'mkdir', 'A/z/z',
+                        'mkdir', 'A/z/z/z')
+
+  svntest.actions.run_and_verify_svnmucc(
+                        None, [], '-U', repo_url, '-m', '',
+                        'rm', 'A/z',
+                        'mkdir', 'A/z',
+                        'mkdir', 'A/z/z',
+                        'mkdir', 'A/z/z/z')
+
+  sbox.simple_append('A/z', 'A/z')
+  sbox.simple_add('A/z')
+  sbox.simple_update('A', 2)
+  # This final update used to segfault using 1.9.0 and 1.9.1
+  sbox.simple_update('A/z/z', 3)
+
+
 #######################################################################
 # Run the tests
 
@@ -6818,6 +6844,7 @@ test_list = [ None,
               update_child_below_add,
               update_conflict_details,
               update_keywords_on_shortcut,
+              update_add_conflicted_deep,
              ]
 
 if __name__ == '__main__':
