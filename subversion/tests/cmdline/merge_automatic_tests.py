@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 #
 #  merge_automatic_tests.py:  testing "automatic merge" scenarios
 #
@@ -1327,6 +1327,26 @@ def reintegrate_subtree_not_updated(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
+@XFail()
+def merge_to_copy_and_add(sbox):
+  "merge peg to a copy and add"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'AA')
+  sbox.simple_append('A/mu', 'A/mu')
+  sbox.simple_commit('A')
+
+  # This is the scenario the code is supposed to support; a copy
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+
+  sbox.simple_mkdir('A3')
+  # And this case currently segfaults, because merge doesn't check
+  # if the path has a repository location
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A', sbox.ospath('A3'))
+
 ########################################################################
 # Run the tests
 
@@ -1356,6 +1376,7 @@ test_list = [ None,
               auto_merge_handles_replacements_in_merge_source,
               effective_sync_results_in_reintegrate,
               reintegrate_subtree_not_updated,
+              merge_to_copy_and_add,
              ]
 
 if __name__ == '__main__':
