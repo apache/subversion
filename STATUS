@@ -103,7 +103,7 @@ Candidate changes:
    $ rm -rf wc/.svn/tmp
    $ svn up wc --set-depth=infinity
    Justification:
-     Crash. Reported multipel times using TortoiseSVN crash reporter tool.
+     Crash. Reported multiple times using TortoiseSVN crash reporter tool.
    Votes:
      +1: ivan (without r1702203)
      +1: rhuijben
