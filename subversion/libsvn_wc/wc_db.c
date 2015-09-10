@@ -15137,7 +15137,7 @@ make_copy_txn(svn_wc__db_wcroot_t *wcroot,
       const char *name = svn_relpath_skip_ancestor(last_repos_relpath,
                                                    repos_relpath);
 
-      if (strcmp(name, svn_relpath_basename(local_relpath, NULL)) == 0)
+      if (name && strcmp(name, svn_relpath_basename(local_relpath, NULL)) == 0)
         op_depth = last_op_depth;
     }
 
