@@ -1630,7 +1630,7 @@ def revert_obstructing_wc(sbox):
   svntest.actions.run_and_verify_svn("Skipped '.*A' -- .*obstruct.*", [],
                                      'revert', '-R', wc_dir)
 
-def moved_dir_partial(sbox):
+def revert_moved_dir_partial(sbox):
   "partial revert moved_dir"
 
   sbox.build(read_only = True)
