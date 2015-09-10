@@ -6698,8 +6698,14 @@ svn_wc__db_op_mark_resolved_internal(svn_wc__db_wcroot_t *wcroot,
 
   conflict_data = svn_sqlite__column_blob(stmt, 2, &conflict_len,
                                           scratch_pool);
-  conflicts = svn_skel__parse(conflict_data, conflict_len, scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
+
+  if (!conflict_data)
+    return SVN_NO_ERROR;
+
+  conflicts = svn_skel__parse(conflict_data, conflict_len, scratch_pool);
+  
 
   SVN_ERR(svn_wc__conflict_skel_resolve(&resolved_all, conflicts,
                                         db, wcroot->abspath,
@@ -6730,8 +6736,6 @@ svn_wc__db_op_mark_resolved_internal(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
-
-  SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }

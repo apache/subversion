@@ -1644,7 +1644,12 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* ### caller maintains ACTUAL, and how the resolution occurred. we're just
+/* Clear all or some of the conflicts stored on LOCAL_ABSPATH, if any.
+
+   Any work items that are necessary as part of resolving this node
+   can be passed in WORK_ITEMS.
+
+### caller maintains ACTUAL, and how the resolution occurred. we're just
    ### recording state.
    ###
    ### I'm not sure that these three values are the best way to do this,
