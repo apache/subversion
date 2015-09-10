@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 #
 #  revert_tests.py:  testing 'svn revert'.
 #
@@ -1630,7 +1630,13 @@ def revert_obstructing_wc(sbox):
   svntest.actions.run_and_verify_svn("Skipped '.*A' -- .*obstruct.*", [],
                                      'revert', '-R', wc_dir)
 
+def moved_dir_partial(sbox):
+  "partial revert moved_dir"
 
+  sbox.build(read_only = True)
+
+  sbox.simple_move('A', 'A_')
+  svntest.actions.run_and_verify_svn(None, [], 'revert', sbox.ospath('A'))
 
 
 ########################################################################
@@ -1673,6 +1679,7 @@ test_list = [ None,
               revert_with_unversioned_targets,
               revert_nonexistent,
               revert_obstructing_wc,
+              revert_moved_dir_partial,
              ]
 
 if __name__ == '__main__':

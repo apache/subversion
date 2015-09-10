@@ -6799,6 +6799,75 @@ clear_moved_to(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
+/* Helper function for op_revert_txn. Raises move tree conflicts on
+   descendants to ensure database stability on a non recursive revert
+   of an ancestor that contains a possible move related tree conflict.
+ */
+static svn_error_t *
+revert_maybe_raise_moved_away(svn_wc__db_wcroot_t * wcroot,
+                              svn_wc__db_t *db,
+                              const char *local_relpath,
+                              int op_depth_below,
+                              apr_pool_t *scratch_pool)
+{
+  svn_skel_t *conflict;
+  svn_wc_operation_t operation;
+  svn_boolean_t tree_conflicted;
+  const apr_array_header_t *locations;
+  svn_wc_conflict_reason_t reason;
+  svn_wc_conflict_action_t action;
+
+  SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, NULL, wcroot,
+                                            local_relpath,
+                                            scratch_pool, scratch_pool));
+
+  if (!conflict)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__conflict_read_info(&operation, &locations, NULL, NULL,
+                                     &tree_conflicted,
+                                     db, wcroot->abspath,
+                                     conflict,
+                                     scratch_pool, scratch_pool));
+
+  if (!tree_conflicted
+      || (operation != svn_wc_operation_update
+          && operation != svn_wc_operation_switch))
+    {
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
+                                              NULL,
+                                              db, wcroot->abspath,
+                                              conflict,
+                                              scratch_pool,
+                                              scratch_pool));
+
+  if (reason == svn_wc_conflict_reason_deleted
+      || reason == svn_wc_conflict_reason_replaced)
+    {
+      SVN_ERR(svn_wc__db_op_raise_moved_away_internal(
+        wcroot, local_relpath, op_depth_below, db,
+        operation, action,
+        (locations && locations->nelts > 0)
+        ? APR_ARRAY_IDX(locations, 0,
+                        const svn_wc_conflict_version_t *)
+        : NULL,
+        (locations && locations->nelts > 1)
+        ? APR_ARRAY_IDX(locations, 1,
+                        const svn_wc_conflict_version_t *)
+        : NULL,
+        scratch_pool));
+
+      /* Transform the move information into revert information */
+      SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                          STMT_MOVE_NOTIFY_TO_REVERT));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton for op_revert_txn and op_revert_recursive_txn */
 struct revert_baton_t
 {
@@ -6823,9 +6892,7 @@ op_revert_txn(void *baton,
   svn_boolean_t moved_here;
   int affected_rows;
   const char *moved_to;
-  int op_depth_increased = 0;
   int op_depth_below;
-  svn_skel_t *conflict;
 
   /* ### Similar structure to op_revert_recursive_txn, should they be
          combined? */
@@ -6887,16 +6954,11 @@ op_revert_txn(void *baton,
                                                 local_relpath, op_depth,
                                                 moved_to, NULL, scratch_pool));
     }
-  else
-    {
-      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, NULL, wcroot,
-                                                local_relpath,
-                                                scratch_pool, scratch_pool));
-    }
-
 
   if (op_depth > 0 && op_depth == relpath_depth(local_relpath))
     {
+      int op_depth_increased;
+
       /* Can't do non-recursive revert if children exist */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_GE_OP_DEPTH_CHILDREN));
@@ -6935,54 +6997,12 @@ op_revert_txn(void *baton,
       /* If this node was moved-here, clear moved-to at the move source. */
       if (moved_here)
         SVN_ERR(clear_moved_to(wcroot, local_relpath, scratch_pool));
-    }
 
-  if (op_depth_increased && conflict)
-    {
-      svn_wc_operation_t operation;
-      svn_boolean_t tree_conflicted;
-      const apr_array_header_t *locations;
-
-      SVN_ERR(svn_wc__conflict_read_info(&operation, &locations, NULL, NULL,
-                                          &tree_conflicted,
-                                          db, wcroot->abspath,
-                                          conflict,
-                                          scratch_pool, scratch_pool));
-      if (tree_conflicted
-          && (operation == svn_wc_operation_update
-              || operation == svn_wc_operation_switch))
-        {
-          svn_wc_conflict_reason_t reason;
-          svn_wc_conflict_action_t action;
-
-          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
-                                                      NULL,
-                                                      db, wcroot->abspath,
-                                                      conflict,
-                                                      scratch_pool,
-                                                      scratch_pool));
-
-          if (reason == svn_wc_conflict_reason_deleted
-              || reason == svn_wc_conflict_reason_replaced)
-            {
-              SVN_ERR(svn_wc__db_op_raise_moved_away_internal(
-                          wcroot, local_relpath, op_depth_below, db,
-                          operation, action,
-                          (locations && locations->nelts > 0)
-                            ? APR_ARRAY_IDX(locations, 0,
-                                            const svn_wc_conflict_version_t *)
-                            : NULL,
-                          (locations && locations->nelts > 1)
-                            ? APR_ARRAY_IDX(locations, 1,
-                                            const svn_wc_conflict_version_t *)
-                            : NULL,
-                          scratch_pool));
-
-              /* Transform the move information into revert information */
-              SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
-                                                  STMT_MOVE_NOTIFY_TO_REVERT));
-            }
-        }
+      /* If the node was moved itself, we don't have interesting moved
+         children (and the move itself was already broken) */
+      if (op_depth_increased && !moved_to)
+        SVN_ERR(revert_maybe_raise_moved_away(wcroot, db, local_relpath,
+                                              op_depth_below, scratch_pool));
     }
 
   if (rvb->clear_changelists)
