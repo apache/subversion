@@ -12584,7 +12584,6 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
                                       s_t->target->loc.url,
                                       s_t->target->abspath,
                                       ctx, result_pool, scratch_pool));
-  /* ### check for null URL (i.e. added path) here, like in reintegrate? */
   SVN_ERR(svn_client__ra_session_from_path2(
             &s_t->source_ra_session, &s_t->source,
             source_path_or_url, NULL, source_revision, source_revision,
