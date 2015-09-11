@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 #
 #  upgrade_tests.py:  test the working copy upgrade process
 #
