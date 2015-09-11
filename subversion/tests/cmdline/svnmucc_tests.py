@@ -583,7 +583,7 @@ def svnmucc_propset_and_put(sbox):
 
   # Put same file twice (existing)
   xtest_svnmucc(sbox.repo_url,
-                [svnmucc: E200009: Can't update file at 't1'],
+                ["svnmucc: E200009: Can't update file at 't1'"],
                 '-m', '',
                 'put', sbox.ospath('file'), 't1',
                 'put', sbox.ospath('file'), 't1')
