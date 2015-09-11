@@ -136,20 +136,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1701064, r1701206, r1701298, r1701736
-   Fix Access Denied errors on checkout/update with working copies stored on
-   SMBv1 network shares [1], [2]. This also should fix potential spurious
-   'access denied' errors with local working copies and background
-   indexers/antiviruses.
-   [1] http://svn.haxx.se/dev/archive-2015-09/0054.shtml
-   [2] http://tortoisesvn.tigris.org/ds/viewMessage.do?dsForumId=4061&dsMessageId=3134203
-   Justification:
-     Regression from Subversion 1.8.x.
-   Notes:
-     The r1701298, r1701736 patches are the fix (re-introduce a retry loop to
-     handle cases where the target of the replacement is still open by another
-     application and handle access denied for SMBv1), r1701064 and r1701206
-     are just formatting fixes and cleanups.
-   Votes:
-     +1: rhuijben, ivan, kotkov
