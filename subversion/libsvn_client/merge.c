@@ -11636,9 +11636,6 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
   SVN_ERR(open_target_wc(&target, target_abspath,
                          FALSE, FALSE, FALSE,
                          ctx, scratch_pool, scratch_pool));
-  SVN_ERR(svn_client_open_ra_session2(target_ra_session_p,
-                                      target->loc.url, target->abspath,
-                                      ctx, result_pool, scratch_pool));
   if (! target->loc.url)
     return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                              _("Can't reintegrate into '%s' because it is "
@@ -11646,6 +11643,10 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
                                "the merge source"),
                              svn_dirent_local_style(target->abspath,
                                                     scratch_pool));
+
+  SVN_ERR(svn_client_open_ra_session2(target_ra_session_p,
+                                      target->loc.url, target->abspath,
+                                      ctx, result_pool, scratch_pool));
 
   SVN_ERR(svn_client__ra_session_from_path2(
             source_ra_session_p, &source_loc,

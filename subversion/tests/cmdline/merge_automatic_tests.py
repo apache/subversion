@@ -1346,6 +1346,11 @@ def merge_to_copy_and_add(sbox):
   expected_err = ".*svn: E195012: Can't perform .*A3'.*added.*"
   svntest.actions.run_and_verify_svn(None, expected_err,
                                      'merge', '^/A', sbox.ospath('A3'))
+  # Try the same merge with --reintegrate, for completeness' sake.
+  expected_err = ".*svn: E195012: Can't reintegrate into .*A3'.*added.*"
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'merge', '--reintegrate', '^/A',
+                                     sbox.ospath('A3'))
 
 ########################################################################
 # Run the tests
