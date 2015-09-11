@@ -1294,8 +1294,18 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else if (c == '(')
     {
-      /* Allow for up to 4 items in this list without re-allocation. */
-      svn_ra_svn__item_t stack_items[4];
+      /* The largest struct that the protocol currently defines has 10
+       * elements (log-entry) and add some headroom for future extensions.
+       * At a maximum nesting level of 64 this use <= 18kB of stack.
+       *
+       * All system-defined data structures will fit into this and will be
+       * copied into ITEM after a single apr_palloc with no over-provision.
+       * Unbounded lists with more than 12 but less than 25 entries will
+       * also see only a single allocation from POOL.  However, there will
+       * be some over-provision.  Longer lists will see log N resizes and
+       * O(N) total cost.
+       */
+      svn_ra_svn__item_t stack_items[12];
       svn_ra_svn__item_t *items = stack_items;
       int capacity = sizeof(stack_items) / sizeof(stack_items[0]);
       int count = 0;
