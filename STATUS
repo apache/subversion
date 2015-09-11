@@ -152,7 +152,7 @@ Candidate changes:
      r1702472 - fixes a few error message texts
      r1702549, r1702553 - adds regression tests
    Votes:
-     +1: rhuijben
+     +1: rhuijben, kotkov
 
 Veto-blocked changes:
 =====================
