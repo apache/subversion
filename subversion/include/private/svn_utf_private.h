@@ -206,7 +206,10 @@ svn_utf__glob(svn_boolean_t *match,
 
 /* Return the version of the wrapped utf8proc library. */
 const char *
-svn_utf__utf8proc_version(void);
+svn_utf__utf8proc_compiled_version(void);
+
+const char *
+svn_utf__utf8proc_runtime_version(void);
 
 /* Convert an UTF-16 (or UCS-2) string to UTF-8, returning the pointer
  * in RESULT. If BIG_ENDIAN is set, then UTF16STR is big-endian;
