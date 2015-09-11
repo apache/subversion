@@ -128,7 +128,7 @@ Candidate changes:
      r1702218 fixes the problem.
      r1702474 and r1702478 adds a testcase.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
