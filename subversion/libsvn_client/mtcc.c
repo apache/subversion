@@ -981,7 +981,7 @@ svn_client__mtcc_check_path(svn_node_kind_t *kind,
                                        "on '%s' as it is not a directory"),
                                      relpath);
         }
-      else if (op && *kind == svn_node_dir)
+      else if (op && *kind == svn_node_file)
         {
           if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
             op->performed_stat = TRUE;

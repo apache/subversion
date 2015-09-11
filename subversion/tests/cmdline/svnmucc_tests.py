@@ -106,7 +106,9 @@ def basic_svnmucc(sbox):
 
   sbox.build()
   empty_file = sbox.ospath('empty')
+  file = sbox.ospath('file')
   svntest.main.file_append(empty_file, '')
+  svntest.main.file_append(file, 'file')
 
   # revision 2
   test_svnmucc(sbox.repo_url,
@@ -300,6 +302,14 @@ def basic_svnmucc(sbox):
                '-m', 'log msg',
                'propsetf', 'testprop', empty_file, 'foo/z.c',
                'propsetf', 'testprop', empty_file, 'foo/foo')
+
+  # revision 21
+  test_svnmucc(sbox.repo_url,
+               ['M /foo/z.c',
+                ], #---------
+               '-m', 'log msg',
+               'propset', 'testprop', 'false', 'foo/z.c',
+               'put', file, 'foo/z.c')
 
   # Expected missing revision error
   xtest_svnmucc(sbox.repo_url,
