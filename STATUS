@@ -132,7 +132,7 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
- * r1702299, 31702300, r1702397
+ * r1702299, r1702300, r1702397
    Handle automatic merge to local add as error instead of segfault.
    Justification:
      Segfault. User reported.
