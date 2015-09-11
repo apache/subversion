@@ -1327,7 +1327,6 @@ def reintegrate_subtree_not_updated(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-@XFail()
 def merge_to_copy_and_add(sbox):
   "merge peg to a copy and add"
 
@@ -1344,7 +1343,8 @@ def merge_to_copy_and_add(sbox):
   sbox.simple_mkdir('A3')
   # And this case currently segfaults, because merge doesn't check
   # if the path has a repository location
-  svntest.actions.run_and_verify_svn(None, [],
+  expected_err = ".*svn: E195012: Can't perform .*A3'.*added.*"
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'merge', '^/A', sbox.ospath('A3'))
 
 ########################################################################

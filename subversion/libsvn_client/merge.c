@@ -12571,6 +12571,14 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
                          allow_switched_subtrees,
                          ctx, result_pool, scratch_pool));
 
+  if (!s_t->target->loc.url)
+    return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                             _("Can't perform automatic merge into '%s' "
+                               "because it is locally added and therefore "
+                               "not related to the merge source"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
+
   /* Open RA sessions to the source and target trees. */
   SVN_ERR(svn_client_open_ra_session2(&s_t->target_ra_session,
                                       s_t->target->loc.url,
