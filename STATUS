@@ -130,6 +130,13 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
+ * r1702533
+   Expose utf8proc version information via 'svn --version --verbose'
+   Justification:
+     There is no way to retrieve this from the binaries.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
