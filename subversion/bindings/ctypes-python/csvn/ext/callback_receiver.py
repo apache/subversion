@@ -138,6 +138,7 @@ class _CallbackResultIterator(object):
         finally:
             self.receiver.lock.release()
 
+        # ### TODO: simplify, removing support for Python 2.4
         # Return the first result. Only Python 2.5 supports 'yield'
         # inside a try-finally block, so we jump through some hoops here
         # to avoid that case.

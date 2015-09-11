@@ -587,7 +587,10 @@ def authz_log_and_tracing_test(sbox):
   ## cat
 
   # now see if we can look at the older version of rho
-  svntest.actions.run_and_verify_svn(None, expected_err,
+
+  expected_err2 = ".*svn: E195012: Unable to find repository location.*"
+
+  svntest.actions.run_and_verify_svn(None, expected_err2,
                                      'cat', '-r', '2', D_url+'/rho')
 
   if sbox.repo_url.startswith('http'):
@@ -604,10 +607,11 @@ def authz_log_and_tracing_test(sbox):
   svntest.actions.run_and_verify_svn(None, expected_err,
                                      'diff', '-r', 'HEAD', G_url+'/rho')
 
-  svntest.actions.run_and_verify_svn(None, expected_err,
+  # diff treats the unreadable path as indicating an add so no error
+  svntest.actions.run_and_verify_svn(None, [],
                                      'diff', '-r', '2', D_url+'/rho')
 
-  svntest.actions.run_and_verify_svn(None, expected_err,
+  svntest.actions.run_and_verify_svn(None, [],
                                      'diff', '-r', '2:4', D_url+'/rho')
 
 # test whether read access is correctly granted and denied
@@ -724,10 +728,8 @@ def authz_locking(sbox):
 
   if sbox.repo_url.startswith('http'):
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
-    expected_status = 1
   else:
     expected_err = ".*svn: warning: W170001: Authorization failed.*"
-    expected_status = 0
 
   root_url = sbox.repo_url
   wc_dir = sbox.wc_dir
@@ -737,16 +739,16 @@ def authz_locking(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # lock a file url, target is readonly: should fail
-  svntest.actions.run_and_verify_svn2(None, expected_err, expected_status,
-                                      'lock',
-                                      '-m', 'lock msg',
-                                      iota_url)
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'lock',
+                                     '-m', 'lock msg',
+                                     iota_url)
 
   # lock a file path, target is readonly: should fail
-  svntest.actions.run_and_verify_svn2(None, expected_err, expected_status,
-                                      'lock',
-                                      '-m', 'lock msg',
-                                      iota_path)
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'lock',
+                                     '-m', 'lock msg',
+                                     iota_path)
 
   # Test for issue 2700: we have write access in folder /A, but not in root.
   # Get a lock on /A/mu and try to commit it.
@@ -779,16 +781,16 @@ def authz_locking(sbox):
   svntest.actions.run_and_verify_info([{'Lock Token' : None}],
                                       sbox.ospath('A/mu'))
 
-  ### Crazy serf SVN_ERR_FS_LOCK_OWNER_MISMATCH warning! Issue 3801?
   if sbox.repo_url.startswith('http'):
     expected_err = ".*svn: warning: W160039: Unlock.*[Ff]orbidden.*"
-    expected_status = 0
+  else:
+    expected_err = ".*svn: warning: W170001: Authorization failed.*"
 
-  svntest.actions.run_and_verify_svn2(None, expected_err, expected_status,
-                                      'lock',
-                                      '-m', 'lock msg',
-                                      mu_path,
-                                      iota_path)
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'lock',
+                                     '-m', 'lock msg',
+                                     mu_path,
+                                     iota_path)
 
   # One path locked, one still unlocked
   svntest.actions.run_and_verify_info([{'Lock Token' : None}],

@@ -1907,8 +1907,7 @@ store_search(svn_mergeinfo_t processed,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       svn_rangelist_t *ranges = apr_array_make(processed_pool, 1,
                                                sizeof(svn_merge_range_t*));
-      svn_merge_range_t *range = apr_palloc(processed_pool,
-                                            sizeof(svn_merge_range_t));
+      svn_merge_range_t *range = apr_palloc(processed_pool, sizeof(*range));
 
       range->start = start;
       range->end = end;
@@ -2176,7 +2175,7 @@ do_logs(svn_fs_t *fs,
           if (rev_mergeinfo)
             {
               struct added_deleted_mergeinfo *add_and_del_mergeinfo =
-                apr_hash_get(rev_mergeinfo, &current, sizeof(svn_revnum_t));
+                apr_hash_get(rev_mergeinfo, &current, sizeof(current));
               added_mergeinfo = add_and_del_mergeinfo->added_mergeinfo;
               deleted_mergeinfo = add_and_del_mergeinfo->deleted_mergeinfo;
               has_children = (apr_hash_count(added_mergeinfo) > 0

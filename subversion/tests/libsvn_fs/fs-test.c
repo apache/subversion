@@ -5345,20 +5345,20 @@ test_fs_info_format(const svn_test_opts_t *opts,
   int fs_format;
   svn_version_t *supports_version;
   svn_version_t v1_5_0 = {1, 5, 0, ""};
-  svn_version_t v1_9_0 = {1, 9, 0, ""};
+  svn_version_t v1_10_0 = {1, 10, 0, ""};
   svn_test_opts_t opts2;
   svn_boolean_t is_fsx = strcmp(opts->fs_type, "fsx") == 0;
 
   opts2 = *opts;
-  opts2.server_minor_version = is_fsx ? 9 : 5;
+  opts2.server_minor_version = is_fsx ? 10 : 5;
 
   SVN_ERR(svn_test__create_fs(&fs, "test-fs-format-info", &opts2, pool));
   SVN_ERR(svn_fs_info_format(&fs_format, &supports_version, fs, pool, pool));
 
   if (is_fsx)
     {
-      SVN_TEST_ASSERT(fs_format == 1);
-      SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_9_0));
+      SVN_TEST_ASSERT(fs_format == 2);
+      SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_10_0));
     }
   else
     {

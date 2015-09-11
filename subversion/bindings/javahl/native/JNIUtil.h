@@ -136,6 +136,13 @@ class JNIUtil
   static svn_error_t* checkJavaException(apr_status_t errorcode);
 
   /**
+   * Create a Java exception corresponding to err, and run
+   * svn_error_clear() on err.
+   */
+  static jthrowable createClientException(svn_error_t *err,
+                                          jthrowable jcause = NULL);
+
+  /**
    * Throw a Java exception corresponding to err, and run
    * svn_error_clear() on err.
    */
@@ -178,7 +185,8 @@ class JNIUtil
   friend bool initialize_jni_util(JNIEnv *env);
   static bool JNIGlobalInit(JNIEnv *env);
 
-  static void wrappedHandleSVNError(svn_error_t *err, jthrowable jcause);
+  static jthrowable wrappedCreateClientException(svn_error_t *err,
+                                                 jthrowable jcause);
   static void putErrorsInTrace(svn_error_t *err,
                                std::vector<jobject> &stackTrace);
 

@@ -819,22 +819,9 @@ write_file(void *baton, const char *buf, apr_size_t len,
   return SVN_NO_ERROR;
 }
 
-/* Handling symbolic links:
- *
- * In Subversion, symlinks can be represented on disk in two distinct ways.
- * On systems which support symlinks, a symlink is created on disk.
- * On systems which do not support symlink, a file is created on disk
- * which contains the "normal form" of the symlink, which looks like:
- *   link TARGET
- * where TARGET is the file the symlink points to.
- *
- * When reading symlinks (i.e. the link itself, not the file the symlink
- * is pointing to) through the svn_subst_create_specialfile() function
- * into a buffer, the buffer always contains the "normal form" of the symlink.
- * Due to this representation symlinks always contain a single line of text.
- *
- * The functions below are needed to deal with the case where a patch
- * wants to change the TARGET that a symlink points to.
+/* Symlinks appear in patches in their repository normal form, abstracted by
+ * the svn_subst_* module.  The functions below enable patches to change the
+ * targets of symlinks.
  */
 
 /* Baton for the (readline|tell|seek|write)_symlink functions. */
@@ -870,10 +857,12 @@ readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
     }
   else
     {
-      svn_string_t *dest;
+      svn_stream_t *stream;
+      const apr_size_t len_hint = 64; /* arbitrary */
 
-      SVN_ERR(svn_io_read_link(&dest, sb->local_abspath, scratch_pool));
-      *line = svn_stringbuf_createf(result_pool, "link %s", dest->data);
+      SVN_ERR(svn_subst_read_specialfile(&stream, sb->local_abspath,
+                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_stringbuf_from_stream(line, stream, len_hint, result_pool));
       sb->at_eof = TRUE;
     }
 
@@ -910,22 +899,17 @@ write_symlink(void *baton, const char *buf, apr_size_t len,
               apr_pool_t *scratch_pool)
 {
   const char *target_abspath = baton;
-  const char *new_name;
-  const char *sym_link = apr_pstrndup(scratch_pool, buf, len);
-
-  if (strncmp(sym_link, "link ", 5) != 0)
-    return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL,
-                            _("Invalid link representation"));
-
-  sym_link += 5; /* Skip "link " */
 
   /* We assume the entire symlink is written at once, as the patch
      format is line based */
 
-  SVN_ERR(svn_io_create_unique_link(&new_name, target_abspath, sym_link,
-                                    ".tmp", scratch_pool));
-
-  SVN_ERR(svn_io_file_rename(new_name, target_abspath, scratch_pool));
+  {
+    svn_stream_t *stream;
+    SVN_ERR(svn_subst_create_specialfile(&stream, target_abspath,
+                                         scratch_pool, scratch_pool));
+    SVN_ERR(svn_stream_write(stream, buf, &len));
+    SVN_ERR(svn_stream_close(stream));
+  }
 
   return SVN_NO_ERROR;
 }

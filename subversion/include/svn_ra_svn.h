@@ -141,16 +141,21 @@ typedef struct svn_ra_svn_cmd_entry_t
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 
+/** Data types defined by the svn:// protocol. */
+typedef enum
+{
+  SVN_RA_SVN_NUMBER,
+  SVN_RA_SVN_STRING,
+  SVN_RA_SVN_WORD,
+  SVN_RA_SVN_LIST
+} svn_ra_svn_item_kind_t;
+
 /** Memory representation of an on-the-wire data item. */
 typedef struct svn_ra_svn_item_t
 {
   /** Variant indicator. */
-  enum {
-    SVN_RA_SVN_NUMBER,
-    SVN_RA_SVN_STRING,
-    SVN_RA_SVN_WORD,
-    SVN_RA_SVN_LIST
-  } kind;
+  svn_ra_svn_item_kind_t kind;
+
   /** Variant data. */
   union {
     apr_uint64_t number;

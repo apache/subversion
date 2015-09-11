@@ -53,98 +53,6 @@
            (SVN_INT64_BUFFER_SIZE + 3 + APR_MD5_DIGESTSIZE * 2)
 
 
-svn_error_t *
-svn_fs_x__upgrade_pack_revprops(svn_fs_t *fs,
-                                svn_fs_upgrade_notify_t notify_func,
-                                void *notify_baton,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *scratch_pool)
-{
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-  const char *revprops_shard_path;
-  const char *revprops_pack_file_dir;
-  apr_int64_t shard;
-  apr_int64_t first_unpacked_shard
-    =  ffd->min_unpacked_rev / ffd->max_files_per_dir;
-
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
-                                              scratch_pool);
-  int compression_level = ffd->compress_packed_revprops
-                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
-                           : SVN_DELTA_COMPRESSION_LEVEL_NONE;
-
-  /* first, pack all revprops shards to match the packed revision shards */
-  for (shard = 0; shard < first_unpacked_shard; ++shard)
-    {
-      svn_pool_clear(iterpool);
-
-      revprops_pack_file_dir = svn_dirent_join(revsprops_dir,
-                   apr_psprintf(iterpool,
-                                "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
-                                shard),
-                   iterpool);
-      revprops_shard_path = svn_dirent_join(revsprops_dir,
-                       apr_psprintf(iterpool, "%" APR_INT64_T_FMT, shard),
-                       iterpool);
-
-      SVN_ERR(svn_fs_x__pack_revprops_shard(revprops_pack_file_dir,
-                                      revprops_shard_path,
-                                      shard, ffd->max_files_per_dir,
-                                      (int)(0.9 * ffd->revprop_pack_size),
-                                      compression_level,
-                                      cancel_func, cancel_baton, iterpool));
-      if (notify_func)
-        SVN_ERR(notify_func(notify_baton, shard,
-                            svn_fs_upgrade_pack_revprops, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_x__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
-                                        svn_fs_upgrade_notify_t notify_func,
-                                        void *notify_baton,
-                                        svn_cancel_func_t cancel_func,
-                                        void *cancel_baton,
-                                        apr_pool_t *scratch_pool)
-{
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-  const char *revprops_shard_path;
-  apr_int64_t shard;
-  apr_int64_t first_unpacked_shard
-    =  ffd->min_unpacked_rev / ffd->max_files_per_dir;
-
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
-                                              scratch_pool);
-
-  /* delete the non-packed revprops shards afterwards */
-  for (shard = 0; shard < first_unpacked_shard; ++shard)
-    {
-      svn_pool_clear(iterpool);
-
-      revprops_shard_path = svn_dirent_join(revsprops_dir,
-                       apr_psprintf(iterpool, "%" APR_INT64_T_FMT, shard),
-                       iterpool);
-      SVN_ERR(svn_fs_x__delete_revprops_shard(revprops_shard_path,
-                                              shard, ffd->max_files_per_dir,
-                                              cancel_func, cancel_baton,
-                                              iterpool));
-      if (notify_func)
-        SVN_ERR(notify_func(notify_baton, shard,
-                            svn_fs_upgrade_cleanup_revprops, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Revprop caching management.
  *
  * Mechanism:
@@ -321,8 +229,14 @@ read_revprop_generation_file(apr_int64_t *current,
                               iterpool));
 
       len = sizeof(buf);
-      SVN_ERR(svn_io_read_length_line(ffd->revprop_generation_file, buf, &len,
-                                      iterpool));
+      SVN_ERR(svn_io_file_read(ffd->revprop_generation_file, buf, &len,
+                               iterpool));
+      /* Properly terminate the string we just read.  Valid contents ends
+         with a '\n'.  Empty the buffer in all other cases. */
+      if (len > 0 && buf[len-1] == '\n')
+        buf[--len] = '\0';
+      else
+        buf[0] = '\0';
 
       /* Some data has been read.  It will most likely be complete and
        * consistent.  Extract and verify anyway. */
@@ -783,8 +697,8 @@ get_revprop_packname(svn_fs_t *fs,
   min_filename_len = get_min_filename_len(revprops);
 
   /* Read the content of the manifest file */
-  revprops->folder
-    = svn_fs_x__path_revprops_pack_shard(fs, revprops->revision, result_pool);
+  revprops->folder = svn_fs_x__path_pack_shard(fs, revprops->revision,
+                                               result_pool);
   manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST,
                                        result_pool);
 
@@ -1683,8 +1597,7 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
   svn_stringbuf_t *content = NULL;
 
   /* try to read the manifest file */
-  const char *folder = svn_fs_x__path_revprops_pack_shard(fs, revision,
-                                                          scratch_pool);
+  const char *folder = svn_fs_x__path_pack_shard(fs, revision, scratch_pool);
   const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST,
                                               scratch_pool);
 
@@ -1745,18 +1658,35 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
 
 /****** Packing FSX shards *********/
 
-svn_error_t *
-svn_fs_x__copy_revprops(const char *pack_file_dir,
-                        const char *pack_filename,
-                        const char *shard_path,
-                        svn_revnum_t start_rev,
-                        svn_revnum_t end_rev,
-                        apr_array_header_t *sizes,
-                        apr_size_t total_size,
-                        int compression_level,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *scratch_pool)
+/* Copy revprop files for revisions [START_REV, END_REV) from SHARD_PATH
+ * in filesystem FS to the pack file at PACK_FILE_NAME in PACK_FILE_DIR.
+ *
+ * The file sizes have already been determined and written to SIZES.
+ * Please note that this function will be executed while the filesystem
+ * has been locked and that revprops files will therefore not be modified
+ * while the pack is in progress.
+ *
+ * COMPRESSION_LEVEL defines how well the resulting pack file shall be
+ * compressed or whether is shall be compressed at all.  TOTAL_SIZE is
+ * a hint on which initial buffer size we should use to hold the pack file
+ * content.
+ *
+ * CANCEL_FUNC and CANCEL_BATON are used as usual. Temporary allocations
+ * are done in SCRATCH_POOL.
+ */
+static svn_error_t *
+copy_revprops(svn_fs_t *fs,
+              const char *pack_file_dir,
+              const char *pack_filename,
+              const char *shard_path,
+              svn_revnum_t start_rev,
+              svn_revnum_t end_rev,
+              apr_array_header_t *sizes,
+              apr_size_t total_size,
+              int compression_level,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool)
 {
   svn_stream_t *pack_stream;
   apr_file_t *pack_file;
@@ -1790,8 +1720,7 @@ svn_fs_x__copy_revprops(const char *pack_file_dir,
       svn_pool_clear(iterpool);
 
       /* Construct the file name. */
-      path = svn_dirent_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
-                             iterpool);
+      path = svn_fs_x__path_revprops(fs, rev, iterpool);
 
       /* Copy all the bits from the non-packed revprop file to the end of
        * the pack file. */
@@ -1818,7 +1747,8 @@ svn_fs_x__copy_revprops(const char *pack_file_dir,
 }
 
 svn_error_t *
-svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
+svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
+                              const char *pack_file_dir,
                               const char *shard_path,
                               apr_int64_t shard,
                               int max_files_per_dir,
@@ -1839,12 +1769,7 @@ svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST,
                                        scratch_pool);
 
-  /* Remove any existing pack file for this shard, since it is incomplete. */
-  SVN_ERR(svn_io_remove_dir2(pack_file_dir, TRUE, cancel_func, cancel_baton,
-                             scratch_pool));
-
-  /* Create the new directory and manifest file stream. */
-  SVN_ERR(svn_io_dir_make(pack_file_dir, APR_OS_DEFAULT, scratch_pool));
+  /* Create the manifest file stream. */
   SVN_ERR(svn_stream_open_writable(&manifest_stream, manifest_file_path,
                                    scratch_pool, scratch_pool));
 
@@ -1852,10 +1777,19 @@ svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
   start_rev = (svn_revnum_t) (shard * max_files_per_dir);
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
   if (start_rev == 0)
-    ++start_rev;
-    /* Special special case: if max_files_per_dir is 1, then at this point
-       start_rev == 1 and end_rev == 0 (!).  Fortunately, everything just
-       works. */
+    {
+      /* Never pack revprops for r0, just copy it. */
+      SVN_ERR(svn_io_copy_file(svn_fs_x__path_revprops(fs, 0, iterpool),
+                               svn_dirent_join(pack_file_dir, "p0",
+                                               scratch_pool),
+                               TRUE,
+                               iterpool));
+
+      ++start_rev;
+      /* Special special case: if max_files_per_dir is 1, then at this point
+         start_rev == 1 and end_rev == 0 (!).  Fortunately, everything just
+         works. */
+    }
 
   /* initialize the revprop size info */
   sizes = apr_array_make(scratch_pool, max_files_per_dir, sizeof(apr_off_t));
@@ -1871,8 +1805,7 @@ svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
       svn_pool_clear(iterpool);
 
       /* Get the size of the file. */
-      path = svn_dirent_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
-                             iterpool);
+      path = svn_fs_x__path_revprops(fs, rev, iterpool);
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
       /* if we already have started a pack file and this revprop cannot be
@@ -1880,11 +1813,11 @@ svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
       if (sizes->nelts != 0 &&
           total_size + SVN_INT64_BUFFER_SIZE + finfo.size > max_pack_size)
         {
-          SVN_ERR(svn_fs_x__copy_revprops(pack_file_dir, pack_filename,
-                                          shard_path, start_rev, rev-1,
-                                          sizes, (apr_size_t)total_size,
-                                          compression_level, cancel_func,
-                                          cancel_baton, iterpool));
+          SVN_ERR(copy_revprops(fs, pack_file_dir, pack_filename,
+                                shard_path, start_rev, rev-1,
+                                sizes, (apr_size_t)total_size,
+                                compression_level, cancel_func,
+                                cancel_baton, iterpool));
 
           /* next pack file starts empty again */
           apr_array_clear(sizes);
@@ -1907,10 +1840,10 @@ svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
 
   /* write the last pack file */
   if (sizes->nelts != 0)
-    SVN_ERR(svn_fs_x__copy_revprops(pack_file_dir, pack_filename, shard_path,
-                                    start_rev, rev-1, sizes,
-                                    (apr_size_t)total_size, compression_level,
-                                    cancel_func, cancel_baton, iterpool));
+    SVN_ERR(copy_revprops(fs, pack_file_dir, pack_filename, shard_path,
+                          start_rev, rev-1, sizes,
+                          (apr_size_t)total_size, compression_level,
+                          cancel_func, cancel_baton, iterpool));
 
   /* flush the manifest file and update permissions */
   SVN_ERR(svn_stream_close(manifest_stream));
@@ -1920,41 +1853,3 @@ svn_fs_x__pack_revprops_shard(const char *pack_file_dir,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_fs_x__delete_revprops_shard(const char *shard_path,
-                                apr_int64_t shard,
-                                int max_files_per_dir,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *scratch_pool)
-{
-  if (shard == 0)
-    {
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      int i;
-
-      /* delete all files except the one for revision 0 */
-      for (i = 1; i < max_files_per_dir; ++i)
-        {
-          const char *path;
-          svn_pool_clear(iterpool);
-
-          path = svn_dirent_join(shard_path,
-                                 apr_psprintf(iterpool, "%d", i),
-                                 iterpool);
-          if (cancel_func)
-            SVN_ERR(cancel_func(cancel_baton));
-
-          SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
-    }
-  else
-    SVN_ERR(svn_io_remove_dir2(shard_path, TRUE,
-                               cancel_func, cancel_baton, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-

@@ -35,6 +35,7 @@
 #include "InputStream.h"
 #include "MessageReceiver.h"
 #include "ReposNotifyCallback.h"
+#include "ReposVerifyCallback.h"
 #include "ReposFreezeAction.h"
 #include "StringArray.h"
 #include "File.h"
@@ -45,8 +46,9 @@ class SVNRepos : public SVNBase
   void rmlocks(File &path, StringArray &locks);
   jobject lslocks(File &path, svn_depth_t depth);
   void verify(File &path, Revision &revisionStart, Revision &revisionEnd,
-              bool keepGoing, bool checkNormalization, bool metadataOnly,
-              ReposNotifyCallback *notifyCallback);
+              bool checkNormalization, bool metadataOnly,
+              ReposNotifyCallback *notifyCallback,
+              ReposVerifyCallback *verifyCallback);
   void setRevProp(File &path, Revision &revision,
                   const char *propName, const char *propValue,
                   bool usePreRevPropChangeHook,

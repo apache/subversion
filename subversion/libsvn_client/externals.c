@@ -120,7 +120,7 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 
           /* And if it is no longer a working copy, we should just rename
              it */
-          err = svn_io_file_rename(local_abspath, new_path, scratch_pool);
+          err = svn_io_file_rename2(local_abspath, new_path, FALSE, scratch_pool);
         }
 
       /* ### TODO: We should notify the user about the rename */

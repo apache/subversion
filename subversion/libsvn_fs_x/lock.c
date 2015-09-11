@@ -113,7 +113,8 @@ hash_fetch(apr_hash_t *hash,
 
 /* SVN_ERR_FS_CORRUPT: the lockfile for PATH in FS is corrupt.  */
 static svn_error_t *
-err_corrupt_lockfile(const char *fs_path, const char *path)
+err_corrupt_lockfile(const char *fs_path,
+                     const char *path)
 {
   return
     svn_error_createf(
@@ -243,7 +244,7 @@ write_digest_file(apr_hash_t *children,
     }
 
   SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_io_file_rename(tmp_path, digest_path, scratch_pool));
+  SVN_ERR(svn_io_file_rename2(tmp_path, digest_path, FALSE, scratch_pool));
   SVN_ERR(svn_io_copy_perms(perms_reference, digest_path, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -854,7 +855,8 @@ typedef struct lock_info_t {
    type, and assumes that the write lock is held.
  */
 static svn_error_t *
-lock_body(void *baton, apr_pool_t *pool)
+lock_body(void *baton,
+          apr_pool_t *pool)
 {
   lock_baton_t *lb = baton;
   svn_fs_root_t *root;
@@ -1005,7 +1007,8 @@ typedef struct unlock_info_t {
    type, and assumes that the write lock is held.
  */
 static svn_error_t *
-unlock_body(void *baton, apr_pool_t *pool)
+unlock_body(void *baton,
+            apr_pool_t *pool)
 {
   unlock_baton_t *ub = baton;
   svn_fs_root_t *root;

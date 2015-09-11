@@ -31,6 +31,21 @@
 
 #include "svn_private_config.h"
 
+const char *
+svn_zlib__compiled_version(void)
+{
+  static const char zlib_version_str[] = ZLIB_VERSION;
+
+  return zlib_version_str;
+}
+
+const char *
+svn_zlib__runtime_version(void)
+{
+  return zlibVersion();
+}
+
+
 /* The zlib compressBound function was not exported until 1.2.0. */
 #if ZLIB_VERNUM >= 0x1200
 #define svnCompressBound(LEN) compressBound(LEN)

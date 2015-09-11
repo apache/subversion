@@ -85,15 +85,15 @@ extern "C" {
  * @return an #svn_error_t if the initialization fails.
  * @since New in 1.10
  */
-typedef svn_error_t *(svn_atomic__err_init_func_t)(void *baton,
-                                                   apr_pool_t *pool);
+typedef svn_error_t *(*svn_atomic__err_init_func_t)(void *baton,
+                                                    apr_pool_t *pool);
 
 /**
  * Callback for svn_atomic__init_no_error().
  * @return a string containing an error message if the initialization fails.
  * @since New in 1.10
  */
-typedef const char *(svn_atomic__str_init_func_t)(void *baton);
+typedef const char *(*svn_atomic__str_init_func_t)(void *baton);
 
 /**
  * Call an initialization function in a thread-safe manner.

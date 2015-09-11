@@ -119,17 +119,48 @@ foreach my $path ( @files_added )
 
 		# Parse the complete list of property values of the file $path to extract
 		# the mime-type and eol-style
-		foreach my $prop (&read_from_process($svnlook, 'proplist', $repos, '-t',
-		                  $txn, '--verbose', '--', $path))
+
+		my @output = &read_from_process($svnlook, 'proplist', $repos, '-t',
+					$txn, '--verbose', '--', $path);
+		my $output_line = 0;
+
+		foreach my $prop (@output)
 			{
-				if ($prop =~ /^\s*svn:mime-type : (\S+)/)
+				if ($prop =~ /^\s*svn:mime-type( : (\S+))?/)
 					{
-						$mime_type = $1;
+						$mime_type = $2;
+						# 1.7.8 (r1416637) onwards changed the format of svnloop proplist --verbose
+						# from propname : propvalue format, to values in an indent list on following lines
+						if (not $mime_type)
+							{
+								if ($output_line + 1 >= scalar(@output))
+									{
+										die "$0: Unexpected EOF reading proplist.\n";
+									}
+								my $next_line_pval_indented = $output[$output_line + 1];
+								if ($next_line_pval_indented =~ /^\s{4}(.*)/)
+									{
+										$mime_type = $1;
+									}
+							}
 					}
-				elsif ($prop =~ /^\s*svn:eol-style : (\S+)/)
+				elsif ($prop =~ /^\s*svn:eol-style( : (\S+))?/)
 					{
-						$eol_style = $1;
+						$eol_style = $2;
+						if (not $eol_style)
+							{
+								if ($output_line + 1 >= scalar(@output))
+									{
+										die "$0: Unexpected EOF reading proplist.\n";
+									}
+								my $next_line_pval_indented = $output[$output_line + 1];
+								if ($next_line_pval_indented =~ /^\s{4}(.*)/)
+									{
+										$eol_style = $1;
+									}
+							}
 					}
+				$output_line++;
 			}
 
 		# Detect error conditions and add them to @errors

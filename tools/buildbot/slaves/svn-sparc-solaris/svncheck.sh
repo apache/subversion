@@ -28,7 +28,7 @@ cd ../obj
 LD_PRELOAD_64=/export/home/wandisco/buildbot/install/lib/preloadable_libiconv.so
 export LD_PRELOAD_64
 
-if [ $SVN_VER_MINOR -eq 9 ]; then
+if [ $SVN_VER_MINOR -ge 9 ]; then
   echo "============ make svnserveautocheck"
   make svnserveautocheck CLEANUP=1 PARALLEL=30 THREADED=1 || exit $?
 else

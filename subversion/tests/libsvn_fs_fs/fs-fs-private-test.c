@@ -361,9 +361,10 @@ receive_index(const svn_fs_fs__p2l_entry_t *entry,
   return SVN_NO_ERROR;
 }
 
+#define REPO_NAME "test-repo-load-index-test"
+
 static svn_error_t *
-load_index_test(const svn_test_opts_t *opts, apr_pool_t *pool,
-                const char *repo_name, svn_boolean_t keep_going)
+load_index(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_revnum_t rev;
@@ -381,50 +382,38 @@ load_index_test(const svn_test_opts_t *opts, apr_pool_t *pool,
                             "pre-1.9 SVN doesn't have FSFS indexes");
 
   /* Create a filesystem */
-  SVN_ERR(create_greek_repo(&repos, &rev, opts, repo_name, pool, pool));
+  SVN_ERR(create_greek_repo(&repos, &rev, opts, REPO_NAME, pool, pool));
 
   /* Read the original index contents for REV in ENTRIES. */
   SVN_ERR(svn_fs_fs__dump_index(svn_repos_fs(repos), rev, receive_index,
                                 entries, NULL, NULL, pool));
 
-  /* Replace it with an empty index.
-   * Note that the API requires at least one entry. Give it a dummy. */
+  /* Replace it with an index that declares the whole revision contents as
+   * "unused". */
+  entry = *APR_ARRAY_IDX(entries, entries->nelts-1, svn_fs_fs__p2l_entry_t *);
+  entry.size += entry.offset;
   entry.offset = 0;
-  entry.size = 0;
   entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
   entry.item.number = SVN_FS_FS__ITEM_INDEX_UNUSED;
   entry.item.revision = SVN_INVALID_REVNUM;
   APR_ARRAY_PUSH(alt_entries, svn_fs_fs__p2l_entry_t *) = &entry;
 
   SVN_ERR(svn_fs_fs__load_index(svn_repos_fs(repos), rev, alt_entries, pool));
-  SVN_TEST_ASSERT_ERROR(svn_repos_verify_fs3(repos, rev, rev,
-                                             keep_going, FALSE, FALSE,
-                                             NULL, NULL, NULL, NULL, pool),
-                        (keep_going
-                         ? SVN_ERR_REPOS_VERIFY_FAILED
-                         : SVN_ERR_FS_INDEX_CORRUPTION));
+  SVN_TEST_ASSERT_ERROR(svn_repos_verify_fs3(repos, rev, rev, FALSE, FALSE,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             NULL, pool),
+                        SVN_ERR_FS_INDEX_CORRUPTION);
 
   /* Restore the original index. */
   SVN_ERR(svn_fs_fs__load_index(svn_repos_fs(repos), rev, entries, pool));
-  SVN_ERR(svn_repos_verify_fs3(repos, rev, rev, keep_going, FALSE, FALSE,
+  SVN_ERR(svn_repos_verify_fs3(repos, rev, rev, FALSE, FALSE, NULL, NULL,
                                NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-load_index(const svn_test_opts_t *opts,
-           apr_pool_t *pool)
-{
-  return load_index_test(opts, pool, "test-repo-load-index-test", FALSE);
-}
+#undef REPO_NAME
 
-static svn_error_t *
-load_index_keep_going(const svn_test_opts_t *opts,
-                      apr_pool_t *pool)
-{
-  return load_index_test(opts, pool, "test-repo-load-index-full-test", TRUE);
-}
 
 
 /* The test table.  */
@@ -440,8 +429,6 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "dump the P2L index"),
     SVN_TEST_OPTS_PASS(load_index,
                        "load the P2L index"),
-    SVN_TEST_OPTS_PASS(load_index_keep_going,
-                       "load the P2L index (full verification)"),
     SVN_TEST_NULL
   };
 
