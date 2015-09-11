@@ -69,6 +69,13 @@ Candidate changes:
    Votes:
      +0: julianfoad (he says it works, but I haven't reviewed or tested)
 
+ * r1702299, r1702300, r1702397
+   Handle automatic merge to local add as error instead of segfault.
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
