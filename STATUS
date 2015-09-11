@@ -15,14 +15,15 @@ Status of 1.9.2:
 Candidate changes:
 ==================
 
- * r1698312
+ * r1698312, r1702310
    Correctly report empty representations in 'svnfsfs stats'.
    Justification:
      The current code displays the "0" bracket in histograms as
      "-2147483648 .. < 1" instead of "0 .. < 1".  Technically correct
      but annoying.  UI change only.
    Votes:
-     +1: stefan2
+     +1: stefan2 (without r1702310)
+     +1: rhuijben
 
  * r1701488
    Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
@@ -36,7 +37,7 @@ Candidate changes:
      e.g. <http://svn.haxx.se/dev/archive-2015-08/0047.shtml> or
      <http://mail-archives.apache.org/mod_mbox/subversion-dev/201508.mbox/%3CCALeEUB56NVCR0nCZ2rYki6oKQNcVPPLvWTeCoYyrMqitsov0ag@mail.gmail.com%3E>.
    Votes:
-     +0: julianfoad (he says it works, but I haven't reviewed or tested)
+     +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
 
  * r1700215, r1700219, r1700220, r1701270
    Fix argument passing in test suite.
@@ -77,7 +78,7 @@ Candidate changes:
      Access to uninitialized pointer is some unknown conditions. Reported
      multiple times using TortoiseSVN crash reporter tool.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1701838, r1702203
    Fix attempt to use uninitialized svn_wc__db_install_data_t pointer on
@@ -121,7 +122,7 @@ Candidate changes:
    Justification:
      Segfault. User reported.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1702288
    Return error if get unexpected 'X-SVN-VR-Base' HTTP header value instead of
@@ -129,7 +130,14 @@ Candidate changes:
    Justification:
      Segfault. User reported.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
+
+ * r1702299, 31702300, r1702397
+   Handle automatic merge to local add as error instead of segfault.
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
