@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 #
 #  upgrade_tests.py:  test the working copy upgrade process
 #
@@ -1480,6 +1480,90 @@ def auto_analyze(sbox):
   if val != [(1,)]:
     raise svntest.Failure("analyze failed")
 
+def upgrade_1_0_with_externals(sbox):
+  "test upgrading 1.0.0 working copy with externals"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_1_0_with_externals.tar.bz2')
+
+  url = sbox.repo_url
+
+  # This is non-canonical by the rules of svn_uri_canonicalize, it gets
+  # written into the entries file and upgrade has to canonicalize.
+  non_canonical_url = url[:-1] + '%%%02x' % ord(url[-1])
+  xml_entries_relocate(sbox.wc_dir, 'file:///1.0.0/repos', non_canonical_url)
+
+  externals_propval  = 'exdir_G ' + sbox.repo_url + '/A/D/G' + '\n'
+  adm_name = svntest.main.get_admin_name()
+  dir_props_file = os.path.join(sbox.wc_dir, adm_name, 'dir-props')
+  svntest.main.file_write(dir_props_file,
+                          ('K 13\n'
+                          'svn:externals\n'
+                          'V %d\n' % len(externals_propval))
+                          + externals_propval + '\nEND\n', 'wb')
+
+  # Attempt to use the working copy, this should give an error
+  expected_stderr = wc_is_too_old_regex
+  svntest.actions.run_and_verify_svn(None, expected_stderr,
+                                     'info', sbox.wc_dir)
+
+
+  # Now upgrade the working copy
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'upgrade', sbox.wc_dir)
+  # And the separate working copy below COPIED or check_format() fails
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'upgrade',
+                                     os.path.join(sbox.wc_dir, 'COPIED', 'G'))
+
+  # Actually check the format number of the upgraded working copy
+  check_format(sbox, get_current_format())
+
+  # Now check the contents of the working copy
+  # #### This working copy is not just a basic tree,
+  #      fix with the right data once we get here
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      '' : Item(status=' M', wc_rev=7),
+      'B'                 : Item(status='  ', wc_rev='7'),
+      'B/mu'              : Item(status='  ', wc_rev='7'),
+      'B/D'               : Item(status='  ', wc_rev='7'),
+      'B/D/H'             : Item(status='  ', wc_rev='7'),
+      'B/D/H/psi'         : Item(status='  ', wc_rev='7'),
+      'B/D/H/omega'       : Item(status='  ', wc_rev='7'),
+      'B/D/H/zeta'        : Item(status='MM', wc_rev='7'),
+      'B/D/H/chi'         : Item(status='  ', wc_rev='7'),
+      'B/D/gamma'         : Item(status='  ', wc_rev='9'),
+      'B/D/G'             : Item(status='  ', wc_rev='7'),
+      'B/D/G/tau'         : Item(status='  ', wc_rev='7'),
+      'B/D/G/rho'         : Item(status='  ', wc_rev='7'),
+      'B/D/G/pi'          : Item(status='  ', wc_rev='7'),
+      'B/B'               : Item(status='  ', wc_rev='7'),
+      'B/B/lambda'        : Item(status='  ', wc_rev='7'),
+      'MKDIR'             : Item(status='A ', wc_rev='0'),
+      'MKDIR/MKDIR'       : Item(status='A ', wc_rev='0'),
+      'A'                 : Item(status='  ', wc_rev='7'),
+      'A/B'               : Item(status='  ', wc_rev='7'),
+      'A/B/lambda'        : Item(status='  ', wc_rev='7'),
+      'A/D'               : Item(status='  ', wc_rev='7'),
+      'A/D/G'             : Item(status='  ', wc_rev='7'),
+      'A/D/G/rho'         : Item(status='  ', wc_rev='7'),
+      'A/D/G/pi'          : Item(status='  ', wc_rev='7'),
+      'A/D/G/tau'         : Item(status='  ', wc_rev='7'),
+      'A/D/H'             : Item(status='  ', wc_rev='7'),
+      'A/D/H/psi'         : Item(status='  ', wc_rev='7'),
+      'A/D/H/omega'       : Item(status='  ', wc_rev='7'),
+      'A/D/H/zeta'        : Item(status='  ', wc_rev='7'),
+      'A/D/H/chi'         : Item(status='  ', wc_rev='7'),
+      'A/D/gamma'         : Item(status='  ', wc_rev='7'),
+      'A/mu'              : Item(status='  ', wc_rev='7'),
+      'iota'              : Item(status='  ', wc_rev='7'),
+      'COPIED'            : Item(status='  ', wc_rev='10'),
+      'DELETED'           : Item(status='D ', wc_rev='10'),
+      'exdir_G'           : Item(status='X '),
+     })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1537,6 +1621,7 @@ test_list = [ None,
               changelist_upgrade_1_6,
               upgrade_1_7_dir_external,
               auto_analyze,
+              upgrade_1_0_with_externals,
              ]
 
 
