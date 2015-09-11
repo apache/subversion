@@ -108,15 +108,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1702231
-   Fix potential access to uninitialized memory during 'svn commit'.
-   I don't know exact reproduction script, but it's obvious bug and
-   crash reported via TortoiseSVN crash dump service multiple times.
-   Justification:
-     Segfault. User reported.
-   Votes:
-     +1: ivan, rhuijben
-
  * r1702288
    Return error if get unexpected 'X-SVN-VR-Base' HTTP header value instead of
    crashing.
@@ -148,3 +139,12 @@ Approved changes:
      Segfault. User reported.
    Votes:
      +1: rhuijben, ivan, kotkov
+
+ * r1702231
+   Fix potential access to uninitialized memory during 'svn commit'.
+   I don't know exact reproduction script, but it's obvious bug and
+   crash reported via TortoiseSVN crash dump service multiple times.
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: ivan, rhuijben, kotkov
