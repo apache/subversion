@@ -137,6 +137,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1702467, r1702472, r1702549
+   Unbreak propset followed by put on the same svnmucc target
+   Justification:
+     Assuming that the target exists, this should just work without
+     an error... It produced an error.
+   Notes:
+     r1702467 - fixes the real bug.
+     r1702549 - adds a regression test
+     r1702472 - fixes a few error message texts
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
