@@ -108,14 +108,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1702288
-   Return error if get unexpected 'X-SVN-VR-Base' HTTP header value instead of
-   crashing.
-   Justification:
-     Segfault. User reported.
-   Votes:
-     +1: ivan, rhuijben
-
  * r1702299, r1702300, r1702397, r1702407
    Handle automatic merge to local add as error instead of segfault.
    Justification:
@@ -144,6 +136,14 @@ Approved changes:
    Fix potential access to uninitialized memory during 'svn commit'.
    I don't know exact reproduction script, but it's obvious bug and
    crash reported via TortoiseSVN crash dump service multiple times.
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: ivan, rhuijben, kotkov
+
+ * r1702288
+   Return error if get unexpected 'X-SVN-VR-Base' HTTP header value instead of
+   crashing.
    Justification:
      Segfault. User reported.
    Votes:
