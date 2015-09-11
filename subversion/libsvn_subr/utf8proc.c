@@ -37,7 +37,19 @@
 #undef strlen
 
 
-const char *svn_utf__utf8proc_version(void)
+
+const char *
+svn_utf__utf8proc_compiled_version(void)
+{
+  static const char utf8proc_version[] =
+                                  APR_STRINGIFY(UTF8PROC_VERSION_MAJOR) "."
+                                  APR_STRINGIFY(UTF8PROC_VERSION_MINOR) "."
+                                  APR_STRINGIFY(UTF8PROC_VERSION_PATCH);
+  return utf8proc_version;
+}
+
+const char *
+svn_utf__utf8proc_runtime_version(void)
 {
   /* Unused static function warning removal hack. */
   SVN_UNUSED(utf8proc_NFD);
