@@ -94,13 +94,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1702198, r1702200
-   Resolve segfault while updating already conflicted tree
-   Justification:
-     Segfault. User reported.
-   Votes:
-     +1: rhuijben, ivan
-
  * r1702237, r1702238, r1702239
    Resolve using uninitialized conflict when non-recursive reverting move
    Justification:
@@ -148,3 +141,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1702198, r1702200
+   Resolve segfault while updating already conflicted tree
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: rhuijben, ivan, kotkov
