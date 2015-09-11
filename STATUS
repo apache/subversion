@@ -132,10 +132,14 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
- * r1702299, r1702300, r1702397
+ * r1702299, r1702300, r1702397, r1702407
    Handle automatic merge to local add as error instead of segfault.
    Justification:
      Segfault. User reported.
+   Notes:
+     r1702299 adds a testcase.
+     r1702397 fixes the problem and updates the test.
+     The other revisions are minor cleanup.
    Votes:
      +1: rhuijben
 
