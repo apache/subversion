@@ -976,9 +976,9 @@ svn_client__mtcc_check_path(svn_node_kind_t *kind,
           if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
             op->performed_stat = TRUE;
           else if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
-            return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                                     _("Can't perform directory operation "
-                                       "on '%s' as it is not a directory"),
+            return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                                     _("Can't perform file operation "
+                                       "on '%s' as it is not a file"),
                                      relpath);
         }
       else if (op && *kind == svn_node_file)
@@ -986,9 +986,9 @@ svn_client__mtcc_check_path(svn_node_kind_t *kind,
           if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
             op->performed_stat = TRUE;
           else if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
-            return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-                                     _("Can't perform file operation "
-                                       "on '%s' as it is not a file"),
+            return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                                     _("Can't perform directory operation "
+                                       "on '%s' as it is not a directory"),
                                      relpath);
         }
       else if (op && (op->kind == OP_OPEN_DIR || op->kind == OP_OPEN_FILE))
