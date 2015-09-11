@@ -225,7 +225,7 @@ open_file(const char *name, int handle)
       *key = handle;
 
       handle_info = apr_pcalloc(pool, sizeof(*handle_info));
-      apr_hash_set(handles, key, sizeof(handle), handle_info);
+      apr_hash_set(handles, key, sizeof(*key), handle_info);
     }
 
   /* link handle to file */

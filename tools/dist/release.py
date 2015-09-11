@@ -34,9 +34,6 @@
 # It'd be kind of nice to use the Subversion python bindings in this script,
 # but people.apache.org doesn't currently have them installed
 
-# Futures (Python 2.5 compatibility)
-from __future__ import with_statement
-
 # Stuff we need
 import os
 import re
@@ -86,12 +83,12 @@ except AttributeError:
 tool_versions = {
   'trunk' : {
             'autoconf' : '2.69',
-            'libtool'  : '2.4.3',
+            'libtool'  : '2.4.6',
             'swig'     : '2.0.12',
   },
   '1.9' : {
             'autoconf' : '2.69',
-            'libtool'  : '2.4.3',
+            'libtool'  : '2.4.6',
             'swig'     : '2.0.12'
   },
   '1.8' : {
@@ -355,6 +352,13 @@ class LibtoolDep(RollDep):
         # We unconditionally return False here, to avoid using a borked
         # system libtool (I'm looking at you, Debian).
         return False
+
+    def build(self):
+        RollDep.build(self)
+        # autogen.sh looks for glibtoolize before libtoolize
+        bin_dir = os.path.join(get_prefix(self._base_dir), "bin")
+        os.symlink("libtoolize", os.path.join(bin_dir, "glibtoolize"))
+        os.symlink("libtool", os.path.join(bin_dir, "glibtool"))
 
 
 class SwigDep(RollDep):
@@ -799,7 +803,7 @@ def get_siginfo(args, quiet=False):
     try:
         import gnupg
     except ImportError:
-        import _gnupg as gnupg
+        import security._gnupg as gnupg
     gpg = gnupg.GPG()
 
     target = get_target(args)

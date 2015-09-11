@@ -22,8 +22,8 @@
  */
 
 
-#ifndef LIBSVN_FS_FS_H
-#define LIBSVN_FS_FS_H
+#ifndef LIBSVN_FS_LOADER_H
+#define LIBSVN_FS_LOADER_H
 
 #include "svn_types.h"
 #include "svn_fs.h"
@@ -184,15 +184,9 @@ typedef svn_error_t *(*fs_init_func_t)(const svn_version_t *loader_version,
    to the create and open functions and these init functions (as well
    as the open and create functions) are globally serialized so that
    they have exclusive access to the common_pool. */
-svn_error_t *svn_fs_base__init(const svn_version_t *loader_version,
-                               fs_library_vtable_t **vtable,
-                               apr_pool_t* common_pool);
-svn_error_t *svn_fs_fs__init(const svn_version_t *loader_version,
-                             fs_library_vtable_t **vtable,
-                             apr_pool_t* common_pool);
-svn_error_t *svn_fs_x__init(const svn_version_t *loader_version,
-                            fs_library_vtable_t **vtable,
-                            apr_pool_t* common_pool);
+#include "../libsvn_fs_base/fs_init.h"
+#include "../libsvn_fs_fs/fs_init.h"
+#include "../libsvn_fs_x/fs_init.h"
 
 
 
@@ -569,4 +563,4 @@ struct svn_fs_lock_target_t
 }
 #endif /* __cplusplus */
 
-#endif
+#endif /* LIBSVN_FS_LOADER_H */

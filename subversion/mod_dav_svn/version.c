@@ -88,7 +88,7 @@ set_auto_revprops(dav_resource *resource)
 
   if (! (resource->type == DAV_RESOURCE_TYPE_WORKING
          && resource->info->auto_checked_out))
-    return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+    return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0, 0,
                               "Set_auto_revprops called on invalid resource.");
 
   if ((serr = dav_svn__attach_auto_revprops(resource->info->root.txn,
@@ -396,14 +396,14 @@ vsn_control(dav_resource *resource, const char *target)
   /* All mod_dav_svn resources are versioned objects;  so it doesn't
      make sense to call vsn_control on a resource that exists . */
   if (resource->exists)
-    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                               "vsn_control called on already-versioned "
                               "resource.");
 
   /* Only allow a NULL target, which means an create an 'empty' VCR. */
   if (target != NULL)
     return dav_svn__new_error_svn(resource->pool, HTTP_NOT_IMPLEMENTED,
-                                  SVN_ERR_UNSUPPORTED_FEATURE,
+                                  SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                   "vsn_control called with non-null target");
 
   /* This is kind of silly.  The docstring for this callback says it's
@@ -451,13 +451,13 @@ dav_svn__checkout(dav_resource *resource,
 
       if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         return dav_svn__new_error_svn(resource->pool, HTTP_METHOD_NOT_ALLOWED,
-                                      SVN_ERR_UNSUPPORTED_FEATURE,
+                                      SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                       "auto-checkout attempted on non-regular "
                                       "version-controlled resource");
 
       if (resource->baselined)
         return dav_svn__new_error_svn(resource->pool, HTTP_METHOD_NOT_ALLOWED,
-                                      SVN_ERR_UNSUPPORTED_FEATURE,
+                                      SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                       "auto-checkout attempted on baseline "
                                       "collection, which is not supported");
 
@@ -503,7 +503,7 @@ dav_svn__checkout(dav_resource *resource,
                                              shared_activity);
           if (! shared_txn_name)
             return dav_svn__new_error(resource->pool,
-                                      HTTP_INTERNAL_SERVER_ERROR, 0,
+                                      HTTP_INTERNAL_SERVER_ERROR, 0, 0,
                                       "Cannot look up a txn_name by activity");
         }
 
@@ -542,21 +542,21 @@ dav_svn__checkout(dav_resource *resource,
   if (resource->type != DAV_RESOURCE_TYPE_VERSION)
     {
       return dav_svn__new_error_svn(resource->pool, HTTP_METHOD_NOT_ALLOWED,
-                                    SVN_ERR_UNSUPPORTED_FEATURE,
+                                    SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                     "CHECKOUT can only be performed on a "
                                     "version resource");
     }
   if (create_activity)
     {
       return dav_svn__new_error_svn(resource->pool, HTTP_NOT_IMPLEMENTED,
-                                    SVN_ERR_UNSUPPORTED_FEATURE,
+                                    SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                     "CHECKOUT cannot create an activity at "
                                     "this time. Use MKACTIVITY first");
     }
   if (is_unreserved)
     {
       return dav_svn__new_error_svn(resource->pool, HTTP_NOT_IMPLEMENTED,
-                                    SVN_ERR_UNSUPPORTED_FEATURE,
+                                    SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                     "Unreserved checkouts are not yet "
                                     "available. A version history may not be "
                                     "checked out more than once, into a "
@@ -565,7 +565,7 @@ dav_svn__checkout(dav_resource *resource,
   if (activities == NULL)
     {
       return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT,
-                                    SVN_ERR_INCOMPLETE_DATA,
+                                    SVN_ERR_INCOMPLETE_DATA, 0,
                                     "An activity must be provided for "
                                     "checkout");
     }
@@ -573,7 +573,7 @@ dav_svn__checkout(dav_resource *resource,
   if (activities->nelts != 1)
     {
       return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT,
-                                    SVN_ERR_INCORRECT_PARAMS,
+                                    SVN_ERR_INCORRECT_PARAMS, 0,
                                     "Only one activity may be specified within "
                                     "the CHECKOUT");
     }
@@ -592,7 +592,7 @@ dav_svn__checkout(dav_resource *resource,
   if (parse.activity_id == NULL)
     {
       return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT,
-                                    SVN_ERR_INCORRECT_PARAMS,
+                                    SVN_ERR_INCORRECT_PARAMS, 0,
                                     "The provided href is not an activity URI");
     }
 
@@ -600,7 +600,7 @@ dav_svn__checkout(dav_resource *resource,
                                    parse.activity_id)) == NULL)
     {
       return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT,
-                                    SVN_ERR_APMOD_ACTIVITY_NOT_FOUND,
+                                    SVN_ERR_APMOD_ACTIVITY_NOT_FOUND, 0,
                                     "The specified activity does not exist");
     }
 
@@ -630,7 +630,7 @@ dav_svn__checkout(dav_resource *resource,
       if (resource->info->root.rev != youngest)
         {
           return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT,
-                                        SVN_ERR_APMOD_BAD_BASELINE,
+                                        SVN_ERR_APMOD_BAD_BASELINE, 0,
                                         "The specified baseline is not the "
                                         "latest baseline, so it may not be "
                                         "checked out");
@@ -728,7 +728,7 @@ dav_svn__checkout(dav_resource *resource,
               /* The item being modified is older than the one in the
                  transaction.  The client is out of date.  */
               return dav_svn__new_error_svn
-                (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
+                (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT, 0,
                  "resource out of date; try updating");
             }
           else if (resource->info->root.rev > txn_created_rev)
@@ -745,7 +745,7 @@ dav_svn__checkout(dav_resource *resource,
                                                resource->pool)))
                 {
                   err = dav_svn__new_error_svn
-                    (resource->pool, HTTP_CONFLICT, serr->apr_err,
+                    (resource->pool, HTTP_CONFLICT, serr->apr_err, 0,
                      "Unable to fetch the node revision id of the version "
                      "resource within the revision");
                   svn_error_clear(serr);
@@ -754,7 +754,7 @@ dav_svn__checkout(dav_resource *resource,
               if (node_relation != svn_fs_node_unchanged)
                 {
                   return dav_svn__new_error_svn
-                    (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
+                    (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT, 0,
                      "version resource newer than txn (restart the commit)");
                 }
             }
@@ -773,7 +773,7 @@ uncheckout(dav_resource *resource)
 {
   if (resource->type != DAV_RESOURCE_TYPE_WORKING)
     return dav_svn__new_error_svn(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
-                                  SVN_ERR_UNSUPPORTED_FEATURE,
+                                  SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                   "UNCHECKOUT called on non-working resource");
 
   /* Try to abort the txn if it exists;  but don't try too hard.  :-)  */
@@ -914,7 +914,7 @@ dav_svn__checkin(dav_resource *resource,
 
   if (resource->type != DAV_RESOURCE_TYPE_WORKING)
     return dav_svn__new_error_svn(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
-                                  SVN_ERR_UNSUPPORTED_FEATURE,
+                                  SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                   "CHECKIN called on non-working resource");
 
   /* If the global autoversioning activity still exists, that means
@@ -940,19 +940,22 @@ dav_svn__checkin(dav_resource *resource,
       shared_txn_name = dav_svn__get_txn(resource->info->repos,
                                          shared_activity);
       if (! shared_txn_name)
-        return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                  0, 0,
                                   "Cannot look up a txn_name by activity");
 
       /* Sanity checks */
       if (resource->info->root.txn_name
           && (strcmp(shared_txn_name, resource->info->root.txn_name) != 0))
-        return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                  0, 0,
                                   "Internal txn_name doesn't match "
                                   "autoversioning transaction.");
 
       if (! resource->info->root.txn)
         /* should already be open by checkout */
-        return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                  0, 0,
                                   "Autoversioning txn isn't open "
                                   "when it should be.");
 
@@ -1018,7 +1021,7 @@ dav_svn__checkin(dav_resource *resource,
             {
               return dav_svn__new_error(resource->pool,
                                         HTTP_INTERNAL_SERVER_ERROR,
-                                        0,
+                                        0, 0,
                                         "Commit failed but there was no error "
                                         "provided.");
             }
@@ -1151,7 +1154,7 @@ deliver_report(request_rec *r,
 
   /* ### what is a good error for an unknown report? */
   return dav_svn__new_error_svn(resource->pool, HTTP_NOT_IMPLEMENTED,
-                                SVN_ERR_UNSUPPORTED_FEATURE,
+                                SVN_ERR_UNSUPPORTED_FEATURE, 0,
                                 "The requested report is unknown");
 }
 
@@ -1180,7 +1183,7 @@ make_activity(dav_resource *resource)
      case an older mod_dav doesn't do the check for us. */
   if (! can_be_activity(resource))
     return dav_svn__new_error_svn(resource->pool, HTTP_FORBIDDEN,
-                                  SVN_ERR_APMOD_MALFORMED_URI,
+                                  SVN_ERR_APMOD_MALFORMED_URI, 0,
                                   "Activities cannot be created at that "
                                   "location; query the "
                                   "DAV:activity-collection-set property");
@@ -1428,7 +1431,7 @@ merge(dav_resource *target,
              && source->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)))
     {
       return dav_svn__new_error_svn(pool, HTTP_METHOD_NOT_ALLOWED,
-                                    SVN_ERR_INCORRECT_PARAMS,
+                                    SVN_ERR_INCORRECT_PARAMS, 0,
                                     "MERGE can only be performed using an "
                                     "activity or transaction resource as the "
                                     "source");
@@ -1436,7 +1439,7 @@ merge(dav_resource *target,
   if (! source->exists)
     {
       return dav_svn__new_error_svn(pool, HTTP_METHOD_NOT_ALLOWED,
-                                    SVN_ERR_INCORRECT_PARAMS,
+                                    SVN_ERR_INCORRECT_PARAMS, 0,
                                     "MERGE activity or transaction resource "
                                     "does not exist");
     }
@@ -1533,7 +1536,7 @@ merge(dav_resource *target,
         {
           return dav_svn__new_error(pool,
                                     HTTP_INTERNAL_SERVER_ERROR,
-                                    0,
+                                    0, 0,
                                     "Commit failed but there was no error "
                                     "provided.");
         }

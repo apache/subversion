@@ -816,8 +816,15 @@ verify_f7_metadata_consistency(svn_fs_t *fs,
       /* concurrent packing is one of the reasons why verification may fail.
          Make sure, we operate on up-to-date information. */
       if (err)
-        SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev,
-                                                 fs, pool));
+        {
+          svn_error_t *err2
+            = svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev,
+                                               fs, pool);
+
+          /* Be careful to not leak ERR. */
+          if (err2)
+            return svn_error_trace(svn_error_compose_create(err, err2));
+        }
 
       /* retry the whole shard if it got packed in the meantime */
       if (err && count != pack_size(fs, revision))

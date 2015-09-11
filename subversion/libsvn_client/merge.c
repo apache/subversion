@@ -2794,12 +2794,6 @@ merge_dir_opened(void **new_dir_baton,
 
               db->tree_conflict_reason = added ? svn_wc_conflict_reason_added
                                                : svn_wc_conflict_reason_obstructed;
-
-              if ((merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
-                  && !(pdb && pdb->shadowed))
-                {
-                  store_path(merge_b->skipped_abspaths, local_abspath);
-                }
             }
         }
 
@@ -11717,6 +11711,7 @@ merge_reintegrate_locked(conflict_report_t **conflict_report,
 
   if (! source)
     {
+      *conflict_report = NULL;
       return SVN_NO_ERROR;
     }
 
@@ -12598,12 +12593,19 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
                          allow_switched_subtrees,
                          ctx, result_pool, scratch_pool));
 
+  if (!s_t->target->loc.url)
+    return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                             _("Can't perform automatic merge into '%s' "
+                               "because it is locally added and therefore "
+                               "not related to the merge source"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
+
   /* Open RA sessions to the source and target trees. */
   SVN_ERR(svn_client_open_ra_session2(&s_t->target_ra_session,
                                       s_t->target->loc.url,
                                       s_t->target->abspath,
                                       ctx, result_pool, scratch_pool));
-  /* ### check for null URL (i.e. added path) here, like in reintegrate? */
   SVN_ERR(svn_client__ra_session_from_path2(
             &s_t->source_ra_session, &s_t->source,
             source_path_or_url, NULL, source_revision, source_revision,

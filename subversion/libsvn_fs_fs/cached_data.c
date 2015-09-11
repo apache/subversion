@@ -57,7 +57,7 @@ block_read(void **result,
            apr_pool_t *scratch_pool);
 
 
-/* Defined this to enable access logging via dgb__log_access
+/* Define this to enable access logging via dbg_log_access
 #define SVN_FS_FS__LOG_ACCESS
  */
 
@@ -91,7 +91,7 @@ dbg_log_access(svn_fs_t *fs,
   svn_fs_fs__revision_file_t *rev_file;
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision,
-                                           scratch_pool));
+                                           scratch_pool, scratch_pool));
 
   /* determine rev / pack file offset */
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, revision, NULL,
@@ -158,7 +158,8 @@ dbg_log_access(svn_fs_t *fs,
     {
       /* reverse index lookup: get item description in ENTRY */
       SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, revision,
-                                          offset, scratch_pool));
+                                          offset, scratch_pool,
+                                          scratch_pool));
       if (entry)
         {
           /* more details */
@@ -182,6 +183,10 @@ dbg_log_access(svn_fs_t *fs,
              pack, (apr_uint64_t)(offset), type, revision, item_index,
              description);
     }
+
+  /* We don't know when SCRATCH_POOL will be cleared, so close the rev file
+     explicitly. */
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
 #endif
 
@@ -2862,7 +2867,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                        svn_revnum_t rev,
                        apr_pool_t *result_pool)
 {
-  apr_off_t changes_offset = SVN_FS_FS__ITEM_INDEX_CHANGES;
+  apr_off_t item_index = SVN_FS_FS__ITEM_INDEX_CHANGES;
   svn_fs_fs__revision_file_t *revision_file;
   svn_boolean_t found;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2897,17 +2902,26 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
         }
       else
         {
+          apr_off_t changes_offset;
+
           /* Addressing is very different for old formats
            * (needs to read the revision trailer). */
           if (svn_fs_fs__use_log_addressing(fs))
-            SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs,
-                                           revision_file, rev, NULL,
-                                           SVN_FS_FS__ITEM_INDEX_CHANGES,
-                                           scratch_pool));
+            {
+              SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs,
+                                             revision_file, rev, NULL,
+                                             SVN_FS_FS__ITEM_INDEX_CHANGES,
+                                             scratch_pool));
+            }
           else
-            SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
-                                            revision_file, fs, rev,
-                                            scratch_pool));
+            {
+              SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
+                                              revision_file, fs, rev,
+                                              scratch_pool));
+
+              /* This variable will be used for debug logging only. */
+              item_index = changes_offset;
+            }
 
           /* Actual reading and parsing are the same, though. */
           SVN_ERR(aligned_seek(fs, revision_file->file, NULL, changes_offset,
@@ -2935,7 +2949,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
       SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
     }
 
-  SVN_ERR(dbg_log_access(fs, rev, changes_offset, *changes,
+  SVN_ERR(dbg_log_access(fs, rev, item_index, *changes,
                          SVN_FS_FS__ITEM_TYPE_CHANGES, scratch_pool));
 
   svn_pool_destroy(scratch_pool);

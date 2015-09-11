@@ -2962,7 +2962,13 @@ typedef enum svn_fs_pack_notify_action_t
 
   /** packing of the shard revprops has completed
       @since New in 1.7. */
-  svn_fs_pack_notify_end_revprop
+  svn_fs_pack_notify_end_revprop,
+
+  /** pack has been a no-op for this repository.  The next / future packable
+      shard will be given.  If the shard is -1, then the repository does not
+      support packing at all.
+      @since New in 1.10. */
+  svn_fs_pack_notify_noop
 
 } svn_fs_pack_notify_action_t;
 

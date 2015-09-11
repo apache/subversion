@@ -784,6 +784,44 @@ test_install_stream_to_longpath(apr_pool_t *pool)
 }
 
 static svn_error_t *
+test_install_stream_over_readonly_file(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *final_abspath;
+  svn_stream_t *stream;
+  svn_stringbuf_t *actual_content;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_install_stream_over_readonly_file",
+                                  pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  final_abspath = svn_dirent_join(tmp_dir, "stream1", pool);
+
+  /* Create empty read-only file. */
+  SVN_ERR(svn_io_file_create_empty(final_abspath, pool));
+  SVN_ERR(svn_io_set_file_read_only(final_abspath, FALSE, pool));
+
+  SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, pool, pool));
+  SVN_ERR(svn_stream_puts(stream, "stream1 content"));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stream__install_stream(stream,
+                                     final_abspath,
+                                     TRUE,
+                                     pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content,
+                                   final_abspath,
+                                   pool));
+
+  SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_file_size_get(apr_pool_t *pool)
 {
   const char *tmp_dir, *path;
@@ -823,6 +861,64 @@ test_file_size_get(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_file_rename2(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *foo_path;
+  const char *bar_path;
+  svn_stringbuf_t *actual_content;
+  svn_node_kind_t actual_kind;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_file_rename2", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  foo_path = svn_dirent_join(tmp_dir, "foo", pool);
+  bar_path = svn_dirent_join(tmp_dir, "bar", pool);
+
+  /* Test 1: Simple file rename. */
+  SVN_ERR(svn_io_file_create(foo_path, "file content", pool));
+
+  SVN_ERR(svn_io_file_rename2(foo_path, bar_path, FALSE, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, bar_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "file content");
+
+  SVN_ERR(svn_io_check_path(foo_path, &actual_kind, pool));
+  SVN_TEST_ASSERT(actual_kind == svn_node_none);
+  SVN_ERR(svn_io_remove_file2(bar_path, FALSE, pool));
+
+  /* Test 2: Rename file with flush_to_disk flag. */
+  SVN_ERR(svn_io_file_create(foo_path, "file content", pool));
+
+  SVN_ERR(svn_io_file_rename2(foo_path, bar_path, TRUE, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, bar_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "file content");
+  SVN_ERR(svn_io_check_path(foo_path, &actual_kind, pool));
+  SVN_TEST_ASSERT(actual_kind == svn_node_none);
+
+  SVN_ERR(svn_io_remove_file2(bar_path, FALSE, pool));
+
+  /* Test 3: Rename file over existing read-only file. */
+  SVN_ERR(svn_io_file_create(foo_path, "file content", pool));
+  SVN_ERR(svn_io_file_create(bar_path, "bar content", pool));
+  SVN_ERR(svn_io_set_file_read_only(bar_path, FALSE, pool));
+
+  SVN_ERR(svn_io_file_rename2(foo_path, bar_path, FALSE, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, bar_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "file content");
+  SVN_ERR(svn_io_check_path(foo_path, &actual_kind, pool));
+  SVN_TEST_ASSERT(actual_kind == svn_node_none);
+  SVN_ERR(svn_io_remove_file2(bar_path, FALSE, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 3;
@@ -846,8 +942,12 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test ignore-enoent"),
     SVN_TEST_PASS2(test_install_stream_to_longpath,
                    "test svn_stream__install_stream to long path"),
+    SVN_TEST_PASS2(test_install_stream_over_readonly_file,
+                   "test svn_stream__install_stream over RO file"),
     SVN_TEST_PASS2(test_file_size_get,
                    "test svn_io_file_size_get"),
+    SVN_TEST_PASS2(test_file_rename2,
+                   "test svn_io_file_rename2"),
     SVN_TEST_NULL
   };
 

@@ -691,8 +691,7 @@ x509_get_ext(apr_array_header_t *dnsnames,
           else
             {
               /* We found a dNSName entry */
-              x509_buf *dnsname = apr_palloc(dnsnames->pool,
-                                             sizeof(x509_buf));
+              x509_buf *dnsname = apr_palloc(dnsnames->pool, sizeof(*dnsname));
               dnsname->tag = ASN1_IA5_STRING; /* implicit based on dNSName */
               dnsname->len = len;
               dnsname->p = *p;

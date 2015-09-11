@@ -69,6 +69,15 @@
 #endif
 }
 
+%typemap(in,warning="901:FIXME: Missing old_value_p typemap") const svn_string_t *const *old_value_p {
+#if defined(SWIGRUBY) && SWIG_VERSION <= 0x010329
+  /* Ruby fails to define $symname. */
+  SWIG_exception(SWIG_ValueError, "Function is not implemented yet");
+#else
+  SWIG_exception(SWIG_ValueError, "$symname is not implemented yet");
+#endif
+}
+
 #ifdef SWIGPYTHON
 %typemap(argout) SWIGTYPE **OUTPARAM {
   %append_output(svn_swig_py_new_pointer_obj(*$1, $*1_descriptor,
@@ -1152,6 +1161,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 #ifdef SWIGPYTHON
+/* ### Verify if this should use '[]' like perl and ruby */
 %typemap(in) const unsigned char *digest {
     if ($input == Py_None) {
         $1 = NULL;
@@ -1163,7 +1173,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in) const unsigned char *digest
+%typemap(in) const unsigned char digest[]
 {
   if (NIL_P($input)) {
     $1 = NULL;

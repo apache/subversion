@@ -259,7 +259,7 @@ print_git_diff_header_added(svn_stream_t *os, const char *header_encoding,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "new file mode 10644" APR_EOL_STR));
+                                      "new file mode 100644" APR_EOL_STR));
   return SVN_NO_ERROR;
 }
 
@@ -275,7 +275,7 @@ print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "deleted file mode 10644"
+                                      "deleted file mode 100644"
                                       APR_EOL_STR));
   return SVN_NO_ERROR;
 }
