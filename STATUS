@@ -141,7 +141,7 @@ Candidate changes:
      r1702397 fixes the problem and updates the test.
      The other revisions are minor cleanup.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
 Veto-blocked changes:
 =====================
