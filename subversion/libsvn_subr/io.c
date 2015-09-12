@@ -5112,7 +5112,7 @@ temp_file_create(apr_file_t **new_file,
 
       /* Generate a number that should be unique for this application and
          usually for the entire computer to reduce the number of cycles
-         through this loop. (A bit of calculation is much cheaper then
+         through this loop. (A bit of calculation is much cheaper than
          disk io) */
       unique_nr = baseNr + 3 * i;
 
