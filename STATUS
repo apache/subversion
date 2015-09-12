@@ -118,7 +118,7 @@ Candidate changes:
      r1702565 fixes a quite similar segfault with --reintegrate merge.
      The other revisions are minor cleanup.
    Votes:
-     +1: kotkov
+     +1: kotkov, julianfoad
      +1: rhuijben (without r1702565)
      +1: ivan (without r1702565)
 
