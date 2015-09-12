@@ -578,10 +578,8 @@ svn_io_open_uniquely_named(apr_file_t **file,
                 continue;
 
 #ifdef WIN32
-              apr_err_2 = APR_TO_OS_ERROR(apr_err);
-
-              if (apr_err_2 == ERROR_ACCESS_DENIED ||
-                  apr_err_2 == ERROR_SHARING_VIOLATION)
+              if (apr_err == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED) ||
+                  apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
                 {
                   /* The file is in use by another process or is hidden;
                      create a new name, but don't do this 99999 times in
@@ -2065,11 +2063,21 @@ svn_io__win_rename_open_file(apr_file_t *file,
                                                     rename_size);
    }
 
-  WIN32_RETRY_LOOP(status,
-                   win32_set_file_information_by_handle(hFile,
-                                                        FileRenameInfo,
-                                                        rename_info,
-                                                        rename_size));
+  /* Windows returns Vista+ client accessing network share stored on Windows
+     Server 2003 returns ERROR_ACCESS_DENIED. The same happens when Vista+
+     client access Windows Server 2008 with disabled SMBv2 protocol.
+
+     So return SVN_ERR_UNSUPPORTED_FEATURE in this case like we do when
+     SetFileInformationByHandle() is not available and let caller to
+     handle it.
+
+     See "Access denied error on checkout-commit after updating to 1.9.X"
+     discussion on dev@s.a.o:
+     http://svn.haxx.se/dev/archive-2015-09/0054.shtml */
+  if (status == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED))
+    {
+      status = SVN_ERR_UNSUPPORTED_FEATURE;
+    }
 
   if (status)
     {
@@ -2264,7 +2272,6 @@ svn_io_is_file_executable(svn_boolean_t *executable,
 
 
 /*** File locking. ***/
-#if !defined(WIN32) && !defined(__OS2__)
 /* Clear all outstanding locks on ARG, an open apr_file_t *. */
 static apr_status_t
 file_clear_locks(void *arg)
@@ -2279,7 +2286,6 @@ file_clear_locks(void *arg)
 
   return 0;
 }
-#endif
 
 svn_error_t *
 svn_io_lock_open_file(apr_file_t *lockfile_handle,
@@ -2337,13 +2343,14 @@ svn_io_lock_open_file(apr_file_t *lockfile_handle,
         }
     }
 
-/* On Windows and OS/2 file locks are automatically released when
-   the file handle closes */
-#if !defined(WIN32) && !defined(__OS2__)
+  /* On Windows, a process may not release file locks before closing the
+     handle, and in this case the outstanding locks are unlocked by the OS.
+     However, this is not recommended, because the actual unlocking may be
+     postponed depending on available system resources.  We explicitly unlock
+     the file as a part of the pool cleanup handler. */
   apr_pool_cleanup_register(pool, lockfile_handle,
                             file_clear_locks,
                             apr_pool_cleanup_null);
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -2367,11 +2374,7 @@ svn_io_unlock_open_file(apr_file_t *lockfile_handle,
     return svn_error_wrap_apr(apr_err, _("Can't unlock file '%s'"),
                               try_utf8_from_internal_style(fname, pool));
 
-/* On Windows and OS/2 file locks are automatically released when
-   the file handle closes */
-#if !defined(WIN32) && !defined(__OS2__)
   apr_pool_cleanup_kill(pool, lockfile_handle, file_clear_locks);
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -4432,8 +4435,8 @@ svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
   {
     svn_boolean_t retry = TRUE;
 
-    if (APR_TO_OS_ERROR(status) == ERROR_DIR_NOT_EMPTY)
-      {
+    if (status == APR_FROM_OS_ERROR(ERROR_DIR_NOT_EMPTY))
+    {
         apr_status_t empty_status = dir_is_empty(dirname_apr, pool);
 
         if (APR_STATUS_IS_ENOTEMPTY(empty_status))
@@ -5109,7 +5112,7 @@ temp_file_create(apr_file_t **new_file,
 
       /* Generate a number that should be unique for this application and
          usually for the entire computer to reduce the number of cycles
-         through this loop. (A bit of calculation is much cheaper then
+         through this loop. (A bit of calculation is much cheaper than
          disk io) */
       unique_nr = baseNr + 3 * i;
 
@@ -5140,10 +5143,8 @@ temp_file_create(apr_file_t **new_file,
               if (!apr_err_2 && finfo.filetype == APR_DIR)
                 continue;
 
-              apr_err_2 = APR_TO_OS_ERROR(apr_err);
-
-              if (apr_err_2 == ERROR_ACCESS_DENIED ||
-                  apr_err_2 == ERROR_SHARING_VIOLATION)
+              if (apr_err == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED) ||
+                  apr_err == APR_FROM_OS_ERROR(ERROR_SHARING_VIOLATION))
                 {
                   /* The file is in use by another process or is hidden;
                      create a new name, but don't do this 99999 times in

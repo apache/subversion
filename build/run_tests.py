@@ -270,11 +270,7 @@ class TestHarness:
       svntest.main = sys.modules['svntest.main']
       svntest.testcase = sys.modules['svntest.testcase']
 
-      if svntest.main.logger is None:
-        import logging
-        svntest.main.logger = logging.getLogger()
       svntest.main.parse_options(cmdline, optparse.SUPPRESS_USAGE)
-
       svntest.testcase.TextColors.disable()
     finally:
       os.chdir(old_cwd)

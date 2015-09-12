@@ -200,6 +200,9 @@ svn_stream_skip(svn_stream_t *stream, apr_size_t len)
     {
       svn_read_fn_t read_fn = stream->read_full_fn ? stream->read_full_fn
                                                    : stream->read_fn;
+      if (read_fn == NULL)
+        return svn_error_create(SVN_ERR_STREAM_NOT_SUPPORTED, NULL, NULL);
+
       return svn_error_trace(skip_default_handler(stream->baton, len,
                                                   read_fn));
     }
@@ -1055,10 +1058,12 @@ svn_stream_open_unique(svn_stream_t **stream,
 }
 
 
-svn_stream_t *
-svn_stream_from_aprfile2(apr_file_t *file,
-                         svn_boolean_t disown,
-                         apr_pool_t *pool)
+/* Helper function that creates a stream from an APR file. */
+static svn_stream_t *
+make_stream_from_apr_file(apr_file_t *file,
+                          svn_boolean_t disown,
+                          svn_boolean_t supports_seek,
+                          apr_pool_t *pool)
 {
   struct baton_apr *baton;
   svn_stream_t *stream;
@@ -1072,9 +1077,14 @@ svn_stream_from_aprfile2(apr_file_t *file,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read2(stream, read_handler_apr, read_full_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
-  svn_stream_set_skip(stream, skip_handler_apr);
-  svn_stream_set_mark(stream, mark_handler_apr);
-  svn_stream_set_seek(stream, seek_handler_apr);
+
+  if (supports_seek)
+    {
+      svn_stream_set_skip(stream, skip_handler_apr);
+      svn_stream_set_mark(stream, mark_handler_apr);
+      svn_stream_set_seek(stream, seek_handler_apr);
+    }
+
   svn_stream_set_data_available(stream, data_available_handler_apr);
   svn_stream__set_is_buffered(stream, is_buffered_handler_apr);
   stream->file = file;
@@ -1083,6 +1093,14 @@ svn_stream_from_aprfile2(apr_file_t *file,
     svn_stream_set_close(stream, close_handler_apr);
 
   return stream;
+}
+
+svn_stream_t *
+svn_stream_from_aprfile2(apr_file_t *file,
+                         svn_boolean_t disown,
+                         apr_pool_t *pool)
+{
+  return make_stream_from_apr_file(file, disown, TRUE, pool);
 }
 
 apr_file_t *
@@ -1829,7 +1847,11 @@ svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Can't open stdin");
 
-  *in = svn_stream_from_aprfile2(stdin_file, TRUE, pool);
+  /* STDIN may or may not support positioning requests, but generally
+     it does not, or the behavior is implementation-specific.  Hence,
+     we cannot safely advertise mark(), seek() and non-default skip()
+     support. */
+  *in = make_stream_from_apr_file(stdin_file, TRUE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1845,7 +1867,11 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Can't open stdout");
 
-  *out = svn_stream_from_aprfile2(stdout_file, TRUE, pool);
+  /* STDOUT may or may not support positioning requests, but generally
+     it does not, or the behavior is implementation-specific.  Hence,
+     we cannot safely advertise mark(), seek() and non-default skip()
+     support. */
+  *out = make_stream_from_apr_file(stdout_file, TRUE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1861,7 +1887,11 @@ svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Can't open stderr");
 
-  *err = svn_stream_from_aprfile2(stderr_file, TRUE, pool);
+  /* STDERR may or may not support positioning requests, but generally
+     it does not, or the behavior is implementation-specific.  Hence,
+     we cannot safely advertise mark(), seek() and non-default skip()
+     support. */
+  *err = make_stream_from_apr_file(stderr_file, TRUE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -2181,6 +2211,8 @@ create_tempfile(HANDLE *hFile,
   return SVN_NO_ERROR;
 }
 
+#endif /* WIN32 */
+
 /* Implements svn_close_fn_t */
 static svn_error_t *
 install_close(void *baton)
@@ -2192,8 +2224,6 @@ install_close(void *baton)
 
   return SVN_NO_ERROR;
 }
-
-#endif /* WIN32 */
 
 svn_error_t *
 svn_stream__create_for_install(svn_stream_t **install_stream,
@@ -2217,8 +2247,8 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
   /* Wrap as a standard APR file to allow sharing implementation.
 
      But do note that some file functions (such as retrieving the name)
-     don't work on this wrapper. */
-  /* ### Buffered, or not? */
+     don't work on this wrapper.
+     Use buffered mode to match svn_io_open_unique_file3() behavior. */
   status = apr_os_file_put(&file, &hInstall,
                            APR_WRITE | APR_BINARY | APR_BUFFERED,
                            result_pool);
@@ -2249,12 +2279,8 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
 
   ib->tmp_path = tmp_path;
 
-#ifdef WIN32
   /* Don't close the file on stream close; flush instead */
   svn_stream_set_close(*install_stream, install_close);
-#else
-  /* ### Install pool cleanup handler for tempfile? */
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -2299,8 +2325,6 @@ svn_stream__install_stream(svn_stream_t *install_stream,
          svn_io_file_rename2(). */
       svn_error_clear(err);
       err = SVN_NO_ERROR;
-
-      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
     }
   else
     {
@@ -2309,6 +2333,9 @@ svn_stream__install_stream(svn_stream_t *install_stream,
                                                         scratch_pool));
     }
 #endif
+
+  /* Close temporary file. */
+  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
 
   err = svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool);
 
@@ -2343,19 +2370,12 @@ svn_stream__install_get_info(apr_finfo_t *finfo,
                              apr_pool_t *scratch_pool)
 {
   struct install_baton_t *ib = install_stream->baton;
-
-#ifdef WIN32
-  /* On WIN32 the file is still open, so we can obtain the information
-     from the handle without race conditions */
   apr_status_t status;
 
   status = apr_file_info_get(finfo, wanted, ib->baton_apr.file);
 
   if (status)
     return svn_error_wrap_apr(status, NULL);
-#else
-  SVN_ERR(svn_io_stat(finfo, ib->tmp_path, wanted, scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -2382,8 +2402,9 @@ svn_stream__install_delete(svn_stream_t *install_stream,
   /* Deleting file on close may be unsupported, so ignore errors and
      fallback to svn_io_remove_file2(). */
   svn_error_clear(err);
-  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
 #endif
+
+  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
 
   return svn_error_trace(svn_io_remove_file2(ib->tmp_path, FALSE,
                                              scratch_pool));

@@ -2839,7 +2839,7 @@ validate_root_noderev(svn_fs_t *fs,
 
      Normally (rev == root_noderev->predecessor_count), but here we
      use a more roundabout check that should only trigger on new instances
-     of the corruption, rather then trigger on each and every new commit
+     of the corruption, rather than trigger on each and every new commit
      to a repository that has triggered the bug somewhere in its root
      noderev's history.
    */
