@@ -1328,6 +1328,31 @@ def reintegrate_subtree_not_updated(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
+def merge_to_copy_and_add(sbox):
+  "merge peg to a copy and add"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'AA')
+  sbox.simple_append('A/mu', 'A/mu')
+  sbox.simple_commit('A')
+
+  # This is the scenario the code is supposed to support; a copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+
+  sbox.simple_mkdir('A3')
+  # And this case used to segfault, because merge didn't check
+  # if the path has a repository location
+  expected_err = ".*svn: E195012: Can't perform .*A3'.*added.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'merge', '^/A', sbox.ospath('A3'))
+  # Try the same merge with --reintegrate, for completeness' sake.
+  expected_err = ".*svn: E195012: Can't reintegrate into .*A3'.*added.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'merge', '--reintegrate', '^/A',
+                                     sbox.ospath('A3'))
+
 ########################################################################
 # Run the tests
 
@@ -1357,6 +1382,7 @@ test_list = [ None,
               auto_merge_handles_replacements_in_merge_source,
               effective_sync_results_in_reintegrate,
               reintegrate_subtree_not_updated,
+              merge_to_copy_and_add,
              ]
 
 if __name__ == '__main__':
