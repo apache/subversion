@@ -1129,7 +1129,15 @@ handle_fetch(serf_request_t *request,
           /* Validate the delta base claimed by the server matches
              what we asked for! */
           val = serf_bucket_headers_get(hdrs, SVN_DAV_DELTA_BASE_HEADER);
-          if (val && (strcmp(val, fetch_ctx->delta_base) != 0))
+          if (val && fetch_ctx->delta_base == NULL)
+            {
+              /* We recieved response with delta base header while we didn't
+                 requested it -- report it as error. */
+              return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                       _("GET request returned unexpected "
+                                         "delta base: %s"), val);
+            }
+          else if (val && (strcmp(val, fetch_ctx->delta_base) != 0))
             {
               return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                        _("GET request returned unexpected "

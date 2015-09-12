@@ -302,6 +302,15 @@ def load_index_sharded(sbox):
   svntest.actions.run_and_verify_svnadmin(expected_output, [],
                                           "verify", sbox.repo_dir)
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def test_stats_on_empty_repo(sbox):
+  "stats on empty repo shall not crash"
+
+  sbox.build(create_wc=False, empty=True)
+
+  exit_code, output, errput = \
+    svntest.actions.run_and_verify_svnfsfs(None, [], 'stats', sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -310,6 +319,7 @@ def load_index_sharded(sbox):
 test_list = [ None,
               test_stats,
               load_index_sharded,
+              test_stats_on_empty_repo,
              ]
 
 if __name__ == '__main__':
