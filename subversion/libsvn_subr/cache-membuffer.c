@@ -1963,7 +1963,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                  : data_size / 8;
 
   /* to keep the entries small, we use 32 bit indexes only
-   * -> we need to ensure that no more then 4G entries exist.
+   * -> we need to ensure that no more than 4G entries exist.
    *
    * Note, that this limit could only be exceeded in a very
    * theoretical setup with about 1EB of cache.
