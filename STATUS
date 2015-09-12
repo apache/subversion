@@ -108,20 +108,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1702299, r1702300, r1702397, r1702407, r1702565
-   Handle merging to local add as error instead of segfault.
-   Justification:
-     Segfault. User reported.
-   Notes:
-     r1702299 adds a testcase.
-     r1702397 fixes the problem with automatic merge and updates the test.
-     r1702565 fixes a quite similar segfault with --reintegrate merge.
-     The other revisions are minor cleanup.
-   Votes:
-     +1: kotkov, julianfoad
-     +1: rhuijben (without r1702565)
-     +1: ivan (without r1702565)
-
  * r1702218, r1702474, r1702478
    Fix segfault in 'svn upgrade' of pre-Subversion 1.3 working copies with
    externals.
@@ -159,3 +145,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1702299, r1702300, r1702397, r1702407, r1702565
+   Handle merging to local add as error instead of segfault.
+   Justification:
+     Segfault. User reported.
+   Notes:
+     r1702299 adds a testcase.
+     r1702397 fixes the problem with automatic merge and updates the test.
+     r1702565 fixes a quite similar segfault with --reintegrate merge.
+     The other revisions are minor cleanup.
+   Votes:
+     +1: kotkov, julianfoad, rhuijben
+     +1: ivan (without r1702565)
