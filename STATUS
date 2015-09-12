@@ -78,14 +78,16 @@ Candidate changes:
      r1702397 fixes the problem with automatic merge and updates the test.
      r1702565 fixes a quite similar segfault with --reintegrate merge.
      The other revisions are minor cleanup.
+   Branch:
+     ^/subversion/branches/1.8.x-r1702299
    Votes:
-     +1 (without r1702565): rhuijben
+     +1: rhuijben
      -1: julianfoad (the new test fails both without and with the fix, because
                      the 1.8 version of run_and_verify_svn needs an extra arg;
                      so we need a backport branch;
                      with an initial extra 'None' arg in all three calls, +1;
                      also the 'currently segfaults' comment in the test should
-                     be updated)
+                     be updated) (pre-branch)
 
 Veto-blocked changes:
 =====================
