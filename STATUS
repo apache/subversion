@@ -160,13 +160,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1702198, r1702200
-   Resolve segfault while updating already conflicted tree
-   Justification:
-     Segfault. User reported.
-   Votes:
-     +1: rhuijben, ivan, kotkov
-
  * r1702231
    Fix potential access to uninitialized memory during 'svn commit'.
    I don't know exact reproduction script, but it's obvious bug and

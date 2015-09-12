@@ -1863,12 +1863,13 @@ add_directory(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
-  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
-                                  NULL, eb, pb, db->pool, scratch_pool));
   *child_baton = db;
 
   if (db->skip_this)
     return SVN_NO_ERROR;
+
+  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
+                                  NULL, eb, pb, db->pool, scratch_pool));
 
   SVN_ERR(mark_directory_edited(db, pool));
 
@@ -3066,13 +3067,13 @@ add_file(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
-  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
-                                  NULL, eb, pb, fb->pool, pool));
   *file_baton = fb;
 
   if (fb->skip_this)
     return SVN_NO_ERROR;
 
+  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
+                                  NULL, eb, pb, fb->pool, pool));
   SVN_ERR(mark_file_edited(fb, pool));
 
   /* The file_pool can stick around for a *long* time, so we want to
