@@ -124,7 +124,7 @@ Candidate changes:
    Justification:
      There is no way to retrieve this from the binaries.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1678755, r1679240, r1702467, r1702472, r1702549, r1702553
    Unbreak propset followed by put on the same svnmucc target
