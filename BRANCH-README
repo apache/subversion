@@ -1,0 +1,9 @@
+The purpose of this branch is to see if we can replace the 'send delta to
+file before commit' mechanism with a streaming approach.  Streaming would
+allow us to avoid writing (possibly huge) temporary files containing svndiff
+during operations like svn commit and import happening over http:// protocol.
+A quick set of experiments shows that there might be a noticeable overhead
+associated with writing these files, apart from the fact that creating them
+requires a certain amount of disk space.
+
+The branch should be maintained with catch-up merges from trunk.
