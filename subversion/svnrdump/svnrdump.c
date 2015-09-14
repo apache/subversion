@@ -546,7 +546,6 @@ replay_revisions(svn_ra_session_t *session,
 #endif
     }
 
-  SVN_ERR(svn_stream_close(stdout_stream));
   return SVN_NO_ERROR;
 }
 
@@ -571,8 +570,6 @@ load_revisions(svn_ra_session_t *session,
   SVN_ERR(svn_rdump__load_dumpstream(stdin_stream, session, aux_session,
                                      quiet, skip_revprops,
                                      check_cancel, NULL, pool));
-
-  SVN_ERR(svn_stream_close(stdin_stream));
 
   return SVN_NO_ERROR;
 }
