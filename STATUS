@@ -22,8 +22,7 @@ Candidate changes:
      "-2147483648 .. < 1" instead of "0 .. < 1".  Technically correct
      but annoying.  UI change only.
    Votes:
-     +1: stefan2 (without r1702310)
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1701488
    Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
