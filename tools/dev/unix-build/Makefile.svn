@@ -597,6 +597,8 @@ httpd-reset:
 
 httpd-clean:
 	-(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make clean)
+	-rm ${HTTPD_OBJDIR}/chil-engine.diff
+	-rm ${HTTPD_OBJDIR}/ssl3.diff
 
 # fetch distfile for httpd
 $(DISTDIR)/$(HTTPD_DIST):
@@ -620,14 +622,31 @@ $(HTTPD_OBJDIR)/chil-engine.diff:
 	echo >>$@.tmp '             ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,'
 	mv -f $@.tmp $@
 
+$(HTTPD_OBJDIR)/ssl3.diff:
+	mkdir -p $(dir $@)
+	echo >$@.tmp '--- support/ab.c.orig	Mon Sep 14 15:33:46 2015'
+	echo >>$@.tmp '+++ support/ab.c	Mon Sep 14 15:34:15 2015'
+	echo >>$@.tmp '@@ -2232,8 +2232,10 @@'
+	echo >>$@.tmp '                 } else if (strncasecmp(optarg, "SSL2", 4) == 0) {'
+	echo >>$@.tmp '                     meth = SSLv2_client_method();'
+	echo >>$@.tmp ' #endif'
+	echo >>$@.tmp '+#ifndef OPENSSL_NO_SSL3'
+	echo >>$@.tmp '                 } else if (strncasecmp(optarg, "SSL3", 4) == 0) {'
+	echo >>$@.tmp '                     meth = SSLv3_client_method();'
+	echo >>$@.tmp '+#endif'
+	echo >>$@.tmp ' #ifdef HAVE_TLSV1_X'
+	echo >>$@.tmp '                 } else if (strncasecmp(optarg, "TLS1.1", 6) == 0) {'
+	echo >>$@.tmp '                     meth = TLSv1_1_client_method();'
+	mv -f $@.tmp $@
 
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
-	$(HTTPD_OBJDIR)/chil-engine.diff
+	$(HTTPD_OBJDIR)/chil-engine.diff $(HTTPD_OBJDIR)/ssl3.diff
 	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(HTTPD_DIST)
 	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
+	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl3.diff
 	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h \
 		$(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig
 	sed '/^#define HAVE_SSL_RAND_EGD/d' \
