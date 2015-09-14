@@ -70,7 +70,7 @@ Candidate changes:
      +0: stefan2 (the new private API function needs a docstring,
                   +1 otherwise)
 
- * r1702974
+ * r1702974, r1702991
    Improve error reporting on certain specific database corruptions.
    Justification:
      BH: Although I really don't like adding code for these insane corner
@@ -80,7 +80,8 @@ Candidate changes:
      I'm surprised that we didn't get a single report from any of our other
      clients though.
    Votes:
-     +1: rhuijben
+     +1: rhuijben (without r1702991)
+     +1: ivan
 
 Veto-blocked changes:
 =====================
