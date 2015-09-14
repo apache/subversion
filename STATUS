@@ -85,6 +85,8 @@ Candidate changes:
      There is no way to retrieve this from the binaries.
    Votes:
      +1: rhuijben, ivan
+     +0: stefan2 (the new private API function needs a docstring,
+                  +1 otherwise)
 
 Veto-blocked changes:
 =====================
