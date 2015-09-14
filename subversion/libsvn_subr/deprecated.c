@@ -1066,6 +1066,12 @@ svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool)
 }
 
 svn_error_t *
+svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
+{
+  return svn_error_trace(svn_stream_for_stdin2(in, FALSE, pool));
+}
+
+svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream1,
                          svn_stream_t *stream2,

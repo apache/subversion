@@ -193,7 +193,7 @@ execute(const apr_array_header_t *actions,
               SVN_ERR(svn_stream_open_readonly(&src, action->path[1],
                                                pool, iterpool));
             else
-              SVN_ERR(svn_stream_for_stdin(&src, pool));
+              SVN_ERR(svn_stream_for_stdin2(&src, TRUE, pool));
 
 
             if (kind == svn_node_file)

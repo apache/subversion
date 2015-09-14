@@ -1102,11 +1102,29 @@ svn_stream_from_aprfile(apr_file_t *file,
                         apr_pool_t *pool);
 
 /** Set @a *in to a generic stream connected to stdin, allocated in
- * @a pool.  The stream and its underlying APR handle will be closed
- * when @a pool is cleared or destroyed.
+ * @a pool.  If @a buffered is set, APR buffering will be enabled.
+ * The stream and its underlying APR handle will be closed when @a pool
+ * is cleared or destroyed.
+ *
+ * @note APR buffering will try to fill the whole internal buffer before
+ *       serving read requests.  This may be inappropriate for interactive
+ *       applications where stdin will not deliver any more data unless
+ *       the application processed the data already received.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_stream_for_stdin2(svn_stream_t **in,
+                      svn_boolean_t buffered,
+                      apr_pool_t *pool);
+
+/** Similar to svn_stream_for_stdin2(), but with buffering being disabled.
  *
  * @since New in 1.7.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_for_stdin(svn_stream_t **in,
                      apr_pool_t *pool);

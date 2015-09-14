@@ -1838,12 +1838,15 @@ svn_stream_wrap_buffered_read(svn_stream_t *inner,
 
 
 svn_error_t *
-svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
+svn_stream_for_stdin2(svn_stream_t **in,
+                      svn_boolean_t buffered,
+                      apr_pool_t *pool)
 {
   apr_file_t *stdin_file;
   apr_status_t apr_err;
 
-  apr_err = apr_file_open_stdin(&stdin_file, pool);
+  apr_uint32_t flags = buffered ? APR_BUFFERED : 0;
+  apr_err = apr_file_open_flags_stdin(&stdin_file, flags, pool);
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Can't open stdin");
 
