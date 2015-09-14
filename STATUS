@@ -117,17 +117,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1701838, r1702203
-   Fix attempt to use uninitialized svn_wc__db_install_data_t pointer on
-   error in working copy update editor. Reproduction script:
-   $ svn co URL wc --depth=empty
-   $ rm -rf wc/.svn/tmp
-   $ svn up wc --set-depth=infinity
-   Justification:
-     Crash. Reported multiple times using TortoiseSVN crash reporter tool.
-   Depends:
-     Depends on the r1702198, r1702200 backport due conflicts in
-     update_tests.py.
-   Votes:
-     +1: rhuijben, ivan, kotkov
