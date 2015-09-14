@@ -274,6 +274,28 @@ test_serialization(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_checksum_parse_all_zero(apr_pool_t *pool)
+{
+  svn_checksum_kind_t kind;
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      svn_checksum_t *checksum;
+      const char *hex;
+
+      checksum = svn_checksum_create(kind, pool);
+
+      hex = svn_checksum_to_cstring_display(checksum, pool);
+      SVN_ERR(svn_checksum_parse_hex(&checksum, kind, hex, pool));
+
+      /* All zeroes checksum is NULL by definition. See
+         svn_checksum_parse_hex().*/
+      SVN_TEST_ASSERT(checksum == NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 
 static int max_threads = 1;
@@ -293,6 +315,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "zero checksum cross-type matching"),
     SVN_TEST_PASS2(test_serialization,
                    "checksum (de-)serialization"),
+    SVN_TEST_PASS2(test_checksum_parse_all_zero,
+                   "checksum parse all zero"),
     SVN_TEST_NULL
   };
 
