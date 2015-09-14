@@ -1668,7 +1668,7 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
   for path in paths:
     modified_path = path.childNodes[0].data
 
-    if (expected_prefix is not None
+    if (expected_prefix
         and modified_path.find(expected_prefix) == 0):
       modified_path = modified_path.replace(expected_prefix, '')[1:].strip()
 
