@@ -64,7 +64,7 @@ svn_token__from_word_err(int *value,
   if (*value == SVN_TOKEN_UNKNOWN)
     return svn_error_createf(SVN_ERR_BAD_TOKEN, NULL,
                              _("Token '%s' is unrecognized"),
-                             word ? word : "(null)");
+                             word);
 
   return SVN_NO_ERROR;
 }
