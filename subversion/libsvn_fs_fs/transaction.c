@@ -1485,6 +1485,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     = svn_fs_fs__path_txn_node_children(fs, parent_noderev->id, pool);
   apr_file_t *file;
   svn_stream_t *out;
+  svn_filesize_t filesize;
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -1515,8 +1516,6 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
   else
     {
-      const svn_io_dirent2_t *dirent;
-
       /* The directory rep is already mutable, so just open it for append. */
       SVN_ERR(svn_io_file_open(&file, filename, APR_WRITE | APR_APPEND,
                                APR_OS_DEFAULT, subpool));
@@ -1531,11 +1530,11 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
           const char *key
             = svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
           svn_boolean_t found;
-          svn_filesize_t filesize;
+          svn_filesize_t cached_filesize;
 
           /* Get the file size that corresponds to the cached contents
            * (if any). */
-          SVN_ERR(svn_cache__get_partial((void **)&filesize, &found,
+          SVN_ERR(svn_cache__get_partial((void **)&cached_filesize, &found,
                                          ffd->txn_dir_cache, key,
                                          svn_fs_fs__extract_dir_filesize,
                                          NULL, subpool));
@@ -1544,10 +1543,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
            * If not, we need to drop the cache entry. */
           if (found)
             {
-              SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
-                                          subpool, subpool));
+              SVN_ERR(svn_io_file_size_get(&filesize, file, subpool));
 
-              if (filesize != dirent->filesize)
+              if (cached_filesize != filesize)
                 SVN_ERR(svn_cache__set(ffd->txn_dir_cache, key, NULL,
                                        subpool));
             }
@@ -1571,6 +1569,12 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
 
   /* Flush APR buffers. */
+  SVN_ERR(svn_io_file_flush(file, subpool));
+
+  /* Obtain final file size to update txn_dir_cache. */
+  SVN_ERR(svn_io_file_size_get(&filesize, file, subpool));
+
+  /* Close file. */
   SVN_ERR(svn_io_file_close(file, subpool));
   svn_pool_clear(subpool);
 
@@ -1582,13 +1586,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
       replace_baton_t baton;
 
-      const svn_io_dirent2_t *dirent;
-      SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
-                                  subpool, subpool));
-
       baton.name = name;
       baton.new_entry = NULL;
-      baton.txn_filesize = dirent->filesize;
+      baton.txn_filesize = filesize;
 
       if (id)
         {
