@@ -61,13 +61,6 @@ Candidate changes:
    Votes:
      +0.9: rhuijben (Minor behavior change. Needs more dev@ discussion)
 
- * r1702237, r1702238, r1702239
-   Resolve using uninitialized conflict when non-recursive reverting move
-   Justification:
-     Segfault. User reported.
-   Votes:
-     +1: rhuijben, ivan
-
  * r1702533
    Expose utf8proc version information via 'svn --version --verbose'
    Justification:
@@ -118,4 +111,11 @@ Approved changes:
      r1702474 and r1702478 adds a testcase.
    Votes:
      +1: ivan, rhuijben, stefan2
+
+ * r1702237, r1702238, r1702239
+   Resolve using uninitialized conflict when non-recursive reverting move
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: rhuijben, ivan, stefan2
 
