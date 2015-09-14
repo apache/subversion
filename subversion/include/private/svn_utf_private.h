@@ -204,10 +204,11 @@ svn_utf__glob(svn_boolean_t *match,
               svn_membuf_t *string_buf,
               svn_membuf_t *temp_buf);
 
-/* Return the version of the wrapped utf8proc library. */
+/* Return the compiled version of the wrapped utf8proc library. */
 const char *
 svn_utf__utf8proc_compiled_version(void);
 
+/* Return the runtime version of the wrapped utf8proc library. */
 const char *
 svn_utf__utf8proc_runtime_version(void);
 
