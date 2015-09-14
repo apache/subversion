@@ -565,7 +565,7 @@ load_revisions(svn_ra_session_t *session,
 {
   svn_stream_t *stdin_stream;
 
-  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, FALSE, pool));
+  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
 
   SVN_ERR(svn_rdump__load_dumpstream(stdin_stream, session, aux_session,
                                      quiet, skip_revprops,

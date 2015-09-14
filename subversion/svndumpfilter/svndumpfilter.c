@@ -1031,7 +1031,7 @@ parse_baton_initialize(struct parse_baton_t **pb,
   struct parse_baton_t *baton = apr_palloc(pool, sizeof(*baton));
 
   /* Read the stream from STDIN.  Users can redirect a file. */
-  SVN_ERR(svn_stream_for_stdin2(&baton->in_stream, FALSE, pool));
+  SVN_ERR(svn_stream_for_stdin2(&baton->in_stream, TRUE, pool));
 
   /* Have the parser dump results to STDOUT. Users can redirect a file. */
   SVN_ERR(svn_stream_for_stdout(&baton->out_stream, pool));
