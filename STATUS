@@ -118,20 +118,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1678755, r1679240, r1702467, r1702472, r1702549, r1702553
-   Unbreak propset followed by put on the same svnmucc target
-   Justification:
-     Assuming that the target exists, this should just work without
-     an error... It produced an error.
-   Notes:
-     r1678755, r1679240 - Adds some regression tests that would cause
-                          conflicts
-     r1702467 - fixes the real bug.
-     r1702472 - fixes a few error message texts
-     r1702549, r1702553 - adds regression tests
-   Votes:
-     +1: rhuijben, kotkov, ivan
-
  * r1701838, r1702203
    Fix attempt to use uninitialized svn_wc__db_install_data_t pointer on
    error in working copy update editor. Reproduction script:
