@@ -462,9 +462,7 @@ svn_client_conflict_walk(const char *local_abspath,
                                                                  scratch_pool));
   svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
 
-  
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 void
