@@ -50,15 +50,14 @@ Candidate changes:
      r1701598 is the actual fix. The other patches simplify and fix
      test expectations.
    Votes:
-     +0.9: rhuijben (Minor behavior change. Needs more dev@ discussion)
+     +1: rhuijben
 
  * r1702533, r1702891
    Expose utf8proc version information via 'svn --version --verbose'
    Justification:
      There is no way to retrieve this from the binaries.
    Votes:
-     +1: rhuijben (without r1702891)
-     +1: ivan
+     +1: ivan, rhuijben
      +0: stefan2 (the new private API function needs a docstring,
                   +1 otherwise, without r1702891)
 
@@ -72,8 +71,7 @@ Candidate changes:
      I'm surprised that we didn't get a single report from any of our other
      clients though.
    Votes:
-     +1: rhuijben (without r1702991)
-     +1: ivan
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
