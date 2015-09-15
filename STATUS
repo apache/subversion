@@ -88,10 +88,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1702237, r1702238, r1702239
-   Resolve using uninitialized conflict when non-recursive reverting move
-   Justification:
-     Segfault. User reported.
-   Votes:
-     +1: rhuijben, ivan, stefan2
