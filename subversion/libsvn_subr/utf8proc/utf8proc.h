@@ -96,6 +96,14 @@
 #include <stdint.h>
 #else
 #include <apr.h>
+#ifdef _MSC_VER
+typedef apr_int8_t int8_t;
+typedef apr_uint8_t uint8_t;
+typedef apr_int16_t int16_t;
+typedef apr_uint16_t uint16_t;
+typedef apr_int32_t int32_t;
+typedef apr_uint32_t uint32_t;
+#endif
 #endif
 
 #ifdef HAVE_STDBOOL_H
