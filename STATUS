@@ -15,15 +15,6 @@ Status of 1.9.2:
 Candidate changes:
 ==================
 
- * r1698312, r1702310
-   Correctly report empty representations in 'svnfsfs stats'.
-   Justification:
-     The current code displays the "0" bracket in histograms as
-     "-2147483648 .. < 1" instead of "0 .. < 1".  Technically correct
-     but annoying.  UI change only.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1701488
    Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
      output", http://subversion.tigris.org/issues/show_bug.cgi?id=4592
@@ -88,3 +79,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1698312, r1702310
+   Correctly report empty representations in 'svnfsfs stats'.
+   Justification:
+     The current code displays the "0" bracket in histograms as
+     "-2147483648 .. < 1" instead of "0 .. < 1".  Technically correct
+     but annoying.  UI change only.
+   Votes:
+     +1: rhuijben, stefan2, ivan
