@@ -89,16 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1701638
-   Remove unneeded io operation on pristine install
-   Justification:
-     Every IO operation counts in checkout performance. Doing something
-     that is never necessary just slows things down. (The rename handling
-     would handle read-only just fine... And matching SHA-1 is handled at
-     a higher level)
-   Votes:
-     +1: rhuijben, ivan, stefan2
-
  * r1701997
    Fix crash due access to uninitialized pointer.
    Justification:
@@ -131,4 +121,3 @@ Approved changes:
      Segfault. User reported.
    Votes:
      +1: rhuijben, ivan, stefan2
-
