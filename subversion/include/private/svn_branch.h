@@ -292,8 +292,7 @@ svn_branch_id_split(const char **outer_bid,
  * to be nested under OUTER_BRANCH:OUTER_EID, but do not require that
  * a subbranch root element exists there, nor create one.
  *
- * Set the root element to ROOT_EID, or, if ROOT_EID is -1, allocate a new
- * EID for the root element.
+ * Set the root element to ROOT_EID.
  */
 svn_branch_state_t *
 svn_branch_add_new_branch(svn_branch_revision_root_t *rev_root,

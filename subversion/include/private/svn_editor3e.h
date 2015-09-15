@@ -584,9 +584,8 @@ svn_editor3_new_eid(svn_editor3_t *editor,
 
 /** Create a new branch or access an existing branch.
  *
- * When creating a branch, declare its root element id to be ROOT_EID. If
- * ROOT_EID is -1, allocate a new EID for its root. Do not instantiate the
- * root element, nor any other elements.
+ * When creating a branch, declare its root element id to be ROOT_EID. Do
+ * not instantiate the root element, nor any other elements.
  *
  * We use a common 'open subbranch' method for both 'find' and 'add'
  * cases, according to the principle that the editor dictates the new
