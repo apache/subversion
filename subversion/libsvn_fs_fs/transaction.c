@@ -1715,7 +1715,7 @@ allocate_item_index(apr_uint64_t *item_index,
       char buffer[SVN_INT64_BUFFER_SIZE] = { 0 };
       svn_boolean_t eof = FALSE;
       apr_size_t to_write;
-      apr_size_t read;
+      apr_size_t bytes_read;
       apr_off_t offset = 0;
 
       /* read number, increment it and write it back to disk */
@@ -1724,8 +1724,8 @@ allocate_item_index(apr_uint64_t *item_index,
                          APR_READ | APR_WRITE | APR_CREATE | APR_BUFFERED,
                          APR_OS_DEFAULT, pool));
       SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
-                                     &read, &eof, pool));
-      if (read)
+                                     &bytes_read, &eof, pool));
+      if (bytes_read)
         SVN_ERR(svn_cstring_atoui64(item_index, buffer));
       else
         *item_index = SVN_FS_FS__ITEM_INDEX_FIRST_USER;
