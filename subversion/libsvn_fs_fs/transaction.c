@@ -968,10 +968,10 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
-  SVN_ERR(svn_io_write_atomic(txn_current_filename, new_id_str,
-                              line_length + 1,
-                              txn_current_filename /* copy_perms path */,
-                              pool));
+  SVN_ERR(svn_io_write_atomic2(txn_current_filename, new_id_str,
+                               line_length + 1,
+                               txn_current_filename /* copy_perms path */,
+                               TRUE, pool));
 
   return SVN_NO_ERROR;
 }

@@ -61,8 +61,8 @@ write_format(const char *path,
                           "layout sharded %d\n",
                           format, max_files_per_dir);
 
-  SVN_ERR(svn_io_write_atomic(path, contents, strlen(contents),
-                              NULL /* copy perms */, pool));
+  SVN_ERR(svn_io_write_atomic2(path, contents, strlen(contents),
+                               NULL /* copy perms */, TRUE, pool));
 
   /* And set the perms to make it read only */
   return svn_io_set_file_read_only(path, FALSE, pool);
