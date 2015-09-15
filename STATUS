@@ -89,14 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1701997
-   Fix crash due access to uninitialized pointer.
-   Justification:
-     Access to uninitialized pointer is some unknown conditions. Reported
-     multiple times using TortoiseSVN crash reporter tool.
-   Votes:
-     +1: ivan, rhuijben, stefan2
-
  * r1702247
    Resolve segfault incoming delete of tree containing switched paths
    Justification:
