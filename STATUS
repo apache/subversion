@@ -52,14 +52,15 @@ Candidate changes:
    Votes:
      +0.9: rhuijben (Minor behavior change. Needs more dev@ discussion)
 
- * r1702533
+ * r1702533, r1702891
    Expose utf8proc version information via 'svn --version --verbose'
    Justification:
      There is no way to retrieve this from the binaries.
    Votes:
-     +1: rhuijben, ivan
+     +1: rhuijben (without r1702891)
+     +1: ivan
      +0: stefan2 (the new private API function needs a docstring,
-                  +1 otherwise)
+                  +1 otherwise, without r1702891)
 
  * r1702974, r1702991
    Improve error reporting on certain specific database corruptions.
