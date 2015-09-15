@@ -3379,22 +3379,22 @@ test_config_pool(const svn_test_opts_t *opts,
                                                "config-pool-test1.cfg",
                                                pool),
                                cfg_buffer1->data, cfg_buffer1->len, NULL,
-                               TRUE, pool));
+                               FALSE, pool));
   SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
                                                "config-pool-test2.cfg",
                                                pool),
                                cfg_buffer1->data, cfg_buffer1->len, NULL,
-                               TRUE, pool));
+                               FALSE, pool));
   SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
                                                "config-pool-test3.cfg",
                                                pool),
                                cfg_buffer2->data, cfg_buffer2->len, NULL,
-                               TRUE, pool));
+                               FALSE, pool));
   SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
                                                "config-pool-test4.cfg",
                                                pool),
                                cfg_buffer2->data, cfg_buffer2->len, NULL,
-                               TRUE, pool));
+                               FALSE, pool));
 
   /* requesting a config over and over again should return the same
      (even though it is not being referenced) */
