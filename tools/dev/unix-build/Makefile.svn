@@ -79,7 +79,7 @@ SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
 SQLITE_VER	= 3080500
 LIBMAGIC_VER	= 5.19
-RUBY_VER	= 1.8.7-p358
+RUBY_VER	= 1.8.7-p374
 BZ2_VER	= 1.0.6
 PYTHON_VER	= 2.7.8
 JUNIT_VER	= 4.10
@@ -107,7 +107,7 @@ SHA256_${NEON_DIST} = 2962cfcb5d30f3272e3d2fa0e473434419770a3801afe3d46e5d165078
 SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
 SHA256_${SQLITE_DIST} = 98c33abe4106e508e73fda648b2657ac9e969fe24695f543dcde68cc71f3091b
 SHA256_${LIBMAGIC_DIST} = 9484b3bbda1acc7b13a4f71031a85ce10c77bd0ffec7226741a219ef587e3a7c
-SHA256_${RUBY_DIST} = 9e0856d58830e08f1e38233947d859898ae09d4780cb1a502108e41308de33cb
+SHA256_${RUBY_DIST} = 876eeeaaeeab10cbf4767833547d66d86d6717ef48fd3d89e27db8926a65276c
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
 SHA256_${PYTHON_DIST} = 74d70b914da4487aa1d97222b29e9554d042f825f26cb2b93abd20fdda56b557
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
@@ -156,7 +156,7 @@ SERF_OLD_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_OLD_VER)
 SQLITE_URL	= https://www.sqlite.org/2014/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
-RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
+RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 JUNIT_URL	= https://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
@@ -1072,6 +1072,11 @@ $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
 	$(call do_check_sha256,$(RUBY_DIST))
 	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
+	grep -v 'OSSL_SSL_METHOD_ENTRY(SSLv3' \
+		$(RUBY_SRCDIR)/ext/openssl/ossl_ssl.c > \
+		$(RUBY_SRCDIR)/ext/openssl/ossl_ssl.c.nossl3
+	mv $(RUBY_SRCDIR)/ext/openssl/ossl_ssl.c.nossl3 \
+		$(RUBY_SRCDIR)/ext/openssl/ossl_ssl.c
 	touch $@
 
 ifeq ($(THREADING),yes)
