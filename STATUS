@@ -52,15 +52,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1702533, r1702891
-   Expose utf8proc version information via 'svn --version --verbose'
-   Justification:
-     There is no way to retrieve this from the binaries.
-   Votes:
-     +1: ivan, rhuijben
-     +0: stefan2 (the new private API function needs a docstring,
-                  +1 otherwise, without r1702891)
-
 Veto-blocked changes:
 =====================
 
@@ -87,3 +78,10 @@ Approved changes:
      clients though.
    Votes:
      +1: ivan, rhuijben, kotkov
+
+ * r1702533, r1702891
+   Expose utf8proc version information via 'svn --version --verbose'
+   Justification:
+     There is no way to retrieve this from the binaries.
+   Votes:
+     +1: ivan, rhuijben, stefan2
