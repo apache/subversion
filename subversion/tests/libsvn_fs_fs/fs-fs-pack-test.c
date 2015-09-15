@@ -1344,7 +1344,7 @@ plain_0_length(const svn_test_opts_t *opts,
     }
 
   SVN_ERR(svn_io_write_atomic2(rev_path, rev_contents->data,
-                               rev_contents->len, NULL, TRUE,
+                               rev_contents->len, NULL, FALSE,
                                pool));
 
   if (svn_fs_fs__use_log_addressing(fs))
