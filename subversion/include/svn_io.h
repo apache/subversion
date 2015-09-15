@@ -2306,13 +2306,29 @@ svn_io_file_write_full(apr_file_t *file,
  * If @a copy_perms_path is not NULL, copy the permissions applied on @a
  * @a copy_perms_path on the temporary file before renaming.
  *
- * @note This function uses advanced file control operations to flush buffers
- * to disk that aren't always accessible and can be very expensive. Avoid
- * using this function in cases where the file should just work on any
- * network filesystem.
+ * If @a flush_to_disk is non-zero, do not return until the node has
+ * actually been written on the disk.
  *
- * @since New in 1.9.
+ * @note The flush to disk operation can be very expensive on systems
+ * that implement flushing on all IO layers, like Windows. Please use
+ * @a flush_to_disk flag only for critical data.
+ *
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_io_write_atomic2(const char *final_path,
+                     const void *buf,
+                     apr_size_t nbytes,
+                     const char *copy_perms_path,
+                     svn_boolean_t flush_to_disk,
+                     apr_pool_t *scratch_pool);
+
+/** Similar to svn_io_write_atomic2(), but with @a flush_to_disk set
+* to @c TRUE.
+*
+* @deprecated Provided for backward compatibility with the 1.9 API
+*/
+SVN_DEPRECATED
 svn_error_t *
 svn_io_write_atomic(const char *final_path,
                     const void *buf,

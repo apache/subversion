@@ -1343,8 +1343,9 @@ plain_0_length(const svn_test_opts_t *opts,
       memcpy(rev_contents->data + offset, noderev_str->data, noderev_str->len);
     }
 
-  SVN_ERR(svn_io_write_atomic(rev_path, rev_contents->data,
-                              rev_contents->len, NULL, pool));
+  SVN_ERR(svn_io_write_atomic2(rev_path, rev_contents->data,
+                               rev_contents->len, NULL, TRUE,
+                               pool));
 
   if (svn_fs_fs__use_log_addressing(fs))
     {
