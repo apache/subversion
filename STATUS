@@ -58,18 +58,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1702974, r1702991
-   Improve error reporting on certain specific database corruptions.
-   Justification:
-     BH: Although I really don't like adding code for these insane corner
-     cases that should not be triggerable without memory or disk corruptions
-     the number of exception reports from TortoiseSVN (Thousands!) requests
-     some action to help investigating.
-     I'm surprised that we didn't get a single report from any of our other
-     clients though.
-   Votes:
-     +1: ivan, rhuijben, kotkov
-
  * r1702533, r1702891
    Expose utf8proc version information via 'svn --version --verbose'
    Justification:
