@@ -2147,6 +2147,8 @@ do_put_file(svn_editor3_t *editor,
                                 branch_id, file_el_rev->eid,
                                 parent_eid, name,
                                 payload));
+      notify_v("M    %s",
+               el_rev_id_to_path(file_el_rev, scratch_pool));
     }
   else
     {
@@ -2160,9 +2162,9 @@ do_put_file(svn_editor3_t *editor,
                                 parent_eid, name,
                                 payload));
       file_el_rev->eid = new_eid;
+      notify_v("A    %s",
+               el_rev_id_to_path(file_el_rev, scratch_pool));
     }
-  notify_v("A    %s",
-           el_rev_id_to_path(file_el_rev, scratch_pool));
   return SVN_NO_ERROR;
 }
 
