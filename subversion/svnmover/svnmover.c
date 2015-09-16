@@ -569,6 +569,7 @@ typedef enum action_code_t {
   ACTION_MV,
   ACTION_MKDIR,
   ACTION_PUT_FILE,
+  ACTION_CAT,
   ACTION_CP,
   ACTION_RM,
   ACTION_CP_RM,
@@ -636,6 +637,8 @@ static const action_defn_t action_defn[] =
   {ACTION_PUT_FILE,         "put", 2, "LOCAL_FILE PATH",
     "add or modify file PATH with text copied from" NL
     "LOCAL_FILE (use \"-\" to read from standard input)"},
+  {ACTION_CAT,              "cat", 1, "PATH",
+    "display text (for a file) and props (if any) of PATH"},
   {ACTION_COMMIT,           "commit", 0, "",
     "commit the changes"},
   {ACTION_UPDATE,           "update", 1, ".@REV",
@@ -2094,7 +2097,7 @@ do_put_file(svn_editor3_t *editor,
             const char *file_name,
             apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props = apr_hash_make(scratch_pool);
+  apr_hash_t *props;
   svn_stringbuf_t *text;
   int parent_eid;
   const char *name;
@@ -2164,6 +2167,38 @@ do_put_file(svn_editor3_t *editor,
       file_el_rev->eid = new_eid;
       notify_v("A    %s",
                el_rev_id_to_path(file_el_rev, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_error_t *
+do_cat(svn_editor3_t *editor,
+       svn_branch_el_rev_id_t *file_el_rev,
+       apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+  svn_stringbuf_t *text;
+  apr_hash_index_t *hi;
+
+  /* get existing props */
+  svn_branch_el_rev_content_t *existing_element
+    = svn_branch_get_element(file_el_rev->branch, file_el_rev->eid);
+
+  SVN_ERR(svn_editor3_payload_resolve(editor, existing_element));
+  props = existing_element->payload->props;
+  text = existing_element->payload->text;
+
+  for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const char *pname = apr_hash_this_key(hi);
+      svn_string_t *pval = apr_hash_this_val(hi);
+
+      notify("property '%s': '%s'", pname, pval->data);
+    }
+  if (text)
+    {
+      notify("%s", text->data);
     }
   return SVN_NO_ERROR;
 }
@@ -3274,6 +3309,13 @@ execute(svnmover_wc_t *wc,
                               arg[1]->parent_el_rev,
                               arg[1]->path_name,
                               iterpool));
+          break;
+
+        case ACTION_CAT:
+          VERIFY_EID_EXISTS("rm", 0);
+          SVN_ERR(do_cat(editor,
+                         arg[0]->el_rev,
+                         iterpool));
           break;
 
         case ACTION_COMMIT:
