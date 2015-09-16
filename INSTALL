@@ -961,14 +961,6 @@ II.   INSTALLATION
 
       This step is only required for building the server dso modules.
 
-      The Subversion gen-make.py script must be run before building Apache or
-      Apache and Subversion will be running incompatible versions of apr.
-
-      C:>cd src-%DIR%
-      C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.58
-         --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7f
-         --with-zlib=..\zlib --with-libintl=..\svn-win32-libintl
-      C:>cd ..
       C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
       C:>msdev httpd-2.0.58\apache.dsw /MAKE "BuildBin - Win32 Release"
 
