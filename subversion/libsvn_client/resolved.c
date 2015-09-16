@@ -319,8 +319,7 @@ conflict_get_internal(svn_client_conflict_t **conflict,
             (*conflict)->prop_conflicts = apr_hash_make(result_pool);
           svn_hash_sets((*conflict)->prop_conflicts, desc->property_name, desc);
         }
-      else
-        add_legacy_desc_to_conflict(desc, *conflict, result_pool);
+      add_legacy_desc_to_conflict(desc, *conflict, result_pool);
     }
 
   return SVN_NO_ERROR;
