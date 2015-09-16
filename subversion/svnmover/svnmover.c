@@ -1738,9 +1738,14 @@ subtree_diff(svn_array_t **diff_changes,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Find the relative order of diff items A and B, according to the
+ * "major path" of each. The major path means its right-hand relpath, if
+ * it exists on the right-hand side of the diff, else its left-hand relpath.
+ *
+ * Return negative/zero/positive when A sorts before/equal-to/after B.
+ */
 static int
-diff_ordering(const void *a, const void *b)
+diff_ordering_major_paths(const void *a, const void *b)
 {
   const diff_item_t *item_a = *(void *const *)a, *item_b = *(void *const *)b;
   int deleted_a = (item_a->e0 && ! item_a->e1);
@@ -1756,7 +1761,11 @@ diff_ordering(const void *a, const void *b)
   return svn_path_compare_paths(major_path_a, major_path_b);
 }
 
-/*  */
+/* Find the relative order of diff items A and B, according to the
+ * EID of each.
+ *
+ * Return negative/zero/positive when A sorts before/equal-to/after B.
+ */
 static int
 diff_ordering_eids(const void *a, const void *b)
 {
@@ -1800,7 +1809,7 @@ show_subtree_diff(svn_editor3_t *editor,
 
   for (SVN_ARRAY_ITER_SORTED(ai, diff_changes,
                              (the_ui_mode == UI_MODE_EIDS)
-                               ? diff_ordering_eids : diff_ordering,
+                               ? diff_ordering_eids : diff_ordering_major_paths,
                              scratch_pool))
     {
       diff_item_t *item = ai->val;
