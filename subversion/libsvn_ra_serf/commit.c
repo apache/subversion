@@ -176,6 +176,9 @@ typedef struct file_context_t {
   /* Temporary file containing the svndiff. */
   apr_file_t *svndiff;
 
+  /* Did we send the svndiff in apply_textdelta_stream()? */
+  svn_boolean_t svndiff_sent;
+
   /* Our base checksum as reported by the WC. */
   const char *base_checksum;
 
@@ -1903,12 +1906,9 @@ apply_textdelta(void *file_baton,
   file_context_t *ctx = file_baton;
 
   /* Store the stream in a temporary file; we'll give it to serf when we
-   * close this file.
-   *
-   * TODO: There should be a way we can stream the request body instead of
-   * writing to a temporary file (ugh). A special svn stream serf bucket
-   * that returns EAGAIN until we receive the done call?  But, when
-   * would we run through the serf context?  Grr.
+   * close this file.  Note that this commit editor can stream the request
+   * body instead of writing to a temporary file, but only when the editor
+   * drive uses apply_textdelta_stream().
    */
 
   ctx->stream = svn_stream_lazyopen_create(delayed_commit_stream_open,
@@ -1919,6 +1919,88 @@ apply_textdelta(void *file_baton,
 
   if (base_checksum)
     ctx->base_checksum = apr_pstrdup(ctx->pool, base_checksum);
+
+  return SVN_NO_ERROR;
+}
+
+typedef struct open_txdelta_baton_t
+{
+  svn_txdelta_stream_open_func_t open_func;
+  void *open_baton;
+} open_txdelta_baton_t;
+
+/* Implements svn_ra_serf__request_body_delegate_t */
+static svn_error_t *
+create_body_from_txdelta_stream(serf_bucket_t **body_bkt,
+                                void *baton,
+                                serf_bucket_alloc_t *alloc,
+                                apr_pool_t *pool /* request pool */,
+                                apr_pool_t *scratch_pool)
+{
+  open_txdelta_baton_t *b = baton;
+  svn_txdelta_stream_t *txdelta_stream;
+  svn_stream_t *stream;
+
+  SVN_ERR(b->open_func(&txdelta_stream, b->open_baton, pool));
+
+  stream = svn_txdelta_to_svndiff_stream(txdelta_stream, 0,
+                                         SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                                         pool);
+  *body_bkt = svn_ra_serf__create_stream_bucket(stream, alloc);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+apply_textdelta_stream(const svn_delta_editor_t *editor,
+                       void *file_baton,
+                       const char *base_checksum,
+                       const char *result_checksum,
+                       svn_txdelta_stream_open_func_t open_func,
+                       void *open_baton,
+                       apr_pool_t *scratch_pool)
+{
+  file_context_t *ctx = file_baton;
+  open_txdelta_baton_t open_txdelta_baton;
+  svn_ra_serf__handler_t *handler;
+  int expected_result;
+
+  /* Remember that we've already send the svndiff.  A case when we need
+   * to perform a zero-byte file PUT (during add_file, close_file editor
+   * sequences) is handled in close_file().
+   */
+  ctx->svndiff_sent = TRUE;
+  ctx->base_checksum = base_checksum;
+  ctx->result_checksum = result_checksum;
+
+  handler = svn_ra_serf__create_handler(ctx->commit_ctx->session,
+                                        scratch_pool);
+
+  handler->method = "PUT";
+  handler->path = ctx->url;
+
+  handler->response_handler = svn_ra_serf__expect_empty_body;
+  handler->response_baton = handler;
+
+  open_txdelta_baton.open_func = open_func;
+  open_txdelta_baton.open_baton = open_baton;
+
+  handler->body_delegate = create_body_from_txdelta_stream;
+  handler->body_delegate_baton = &open_txdelta_baton;
+  handler->body_type = SVN_SVNDIFF_MIME_TYPE;
+
+  handler->header_delegate = setup_put_headers;
+  handler->header_delegate_baton = ctx;
+
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+
+  if (ctx->added && !ctx->copy_path)
+    expected_result = 201; /* Created */
+  else
+    expected_result = 204; /* Updated */
+
+  if (handler->sline.code != expected_result)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   return SVN_NO_ERROR;
 }
@@ -1958,8 +2040,8 @@ close_file(void *file_baton,
   if ((!ctx->svndiff) && ctx->added && (!ctx->copy_path))
     put_empty_file = TRUE;
 
-  /* If we had a stream of changes, push them to the server... */
-  if (ctx->svndiff || put_empty_file)
+  /* If we have a stream of changes, push them to the server... */
+  if ((ctx->svndiff || put_empty_file) && !ctx->svndiff_sent)
     {
       svn_ra_serf__handler_t *handler;
       int expected_result;
@@ -2191,6 +2273,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   editor->add_file = add_file;
   editor->open_file = open_file;
   editor->apply_textdelta = apply_textdelta;
+  editor->apply_textdelta_stream = apply_textdelta_stream;
   editor->change_file_prop = change_file_prop;
   editor->close_file = close_file;
   editor->close_edit = close_edit;
