@@ -3526,7 +3526,7 @@ static const char *const special_commands[] =
 {
   "help",
   "--verbose",
-  "--ui=paths", "--ui=eids",
+  "--ui=paths", "--ui=eids", "--ui=serial",
 };
 
 /* Parse the action arguments into action structures. */
