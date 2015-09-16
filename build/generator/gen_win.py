@@ -547,9 +547,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             and target.external_project):
       return None
 
-    if target.external_project[:5] == 'serf/' and 'serf' in self._libraries:
-      path = self.serf_path + target.external_project[4:]
-    elif target.external_project.find('/') != -1:
+    if target.external_project.find('/') != -1:
       path = target.external_project
     else:
       path = os.path.join(self.projfilesdir, target.external_project)
