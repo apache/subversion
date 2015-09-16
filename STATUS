@@ -58,15 +58,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1698312, r1702310
-   Correctly report empty representations in 'svnfsfs stats'.
-   Justification:
-     The current code displays the "0" bracket in histograms as
-     "-2147483648 .. < 1" instead of "0 .. < 1".  Technically correct
-     but annoying.  UI change only.
-   Votes:
-     +1: rhuijben, stefan2, ivan
-
  * r1702974, r1702991
    Improve error reporting on certain specific database corruptions.
    Justification:
