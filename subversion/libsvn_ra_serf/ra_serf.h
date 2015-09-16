@@ -1545,6 +1545,10 @@ svn_ra_serf__create_bucket_with_eagain(const char *data,
                                        apr_size_t len,
                                        serf_bucket_alloc_t *allocator);
 
+/* Create a bucket that wraps a generic readable STREAM. */
+serf_bucket_t *
+svn_ra_serf__create_stream_bucket(svn_stream_t *stream,
+                                  serf_bucket_alloc_t *allocator);
 
 
 #if defined(SVN_DEBUG)
