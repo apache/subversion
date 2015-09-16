@@ -282,7 +282,4 @@ class Generator(gen_win.WinGeneratorBase):
       'guids' : guidvals,
       }
 
-    if self.vs_version == '2002' or self.vs_version == '2003':
-      self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_vc7_sln.ezt', data)
-    else:
-      self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_sln.ezt', data)
+    self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_sln.ezt', data)
