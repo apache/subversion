@@ -477,6 +477,13 @@ wc_commit(svn_revnum_t *new_rev_p,
   const char *edit_root_branch_id;
   svn_branch_state_t *edit_root_branch;
 
+  /* If no log msg provided, use the list of commands */
+  if (! svn_hash_gets(revprops, SVN_PROP_REVISION_LOG) && wc->list_of_commands)
+    {
+      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
+                    svn_string_create(wc->list_of_commands, scratch_pool));
+    }
+
   /* Choose whether to store branching info in a local dir or in revprops.
      (For now, just to exercise the options, we choose local files for
      RA-local and revprops for a remote repo.) */
@@ -550,6 +557,8 @@ wc_commit(svn_revnum_t *new_rev_p,
       if (new_rev_p)
         *new_rev_p = SVN_INVALID_REVNUM;
     }
+
+  wc->list_of_commands = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -654,6 +663,10 @@ static const action_defn_t action_defn[] =
 };
 
 typedef struct action_t {
+  /* The original command words (const char *) by which the action was
+     specified */
+  apr_array_header_t *action_args;
+
   action_code_t action;
 
   /* argument revisions */
@@ -3377,6 +3390,14 @@ execute(svnmover_wc_t *wc,
         default:
           SVN_ERR_MALFUNCTION();
         }
+
+      if (action->action != ACTION_COMMIT)
+        {
+          wc->list_of_commands
+            = apr_psprintf(pool, "%s%s\n",
+                           wc->list_of_commands ? wc->list_of_commands : "",
+                           svn_cstring_join(action->action_args, " ", pool));
+        }
     }
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
@@ -3641,12 +3662,16 @@ parse_actions(apr_array_header_t **actions,
                                  "'%s' is not an action; try 'help'.",
                                  action_string);
 
+      action->action_args = apr_array_make(pool, 0, sizeof(const char *));
+      APR_ARRAY_PUSH(action->action_args, const char *) = action_string;
+
       if (action->action == ACTION_CP)
         {
           /* next argument is the copy source revision */
           if (++i == action_args->nelts)
             return svn_error_trace(insufficient(j, pool));
           cp_from_rev = APR_ARRAY_IDX(action_args, i, const char *);
+          APR_ARRAY_PUSH(action->action_args, const char *) = cp_from_rev;
         }
 
       /* Parse the required number of URLs. */
@@ -3657,6 +3682,7 @@ parse_actions(apr_array_header_t **actions,
           if (++i == action_args->nelts)
             return svn_error_trace(insufficient(j, pool));
           path = APR_ARRAY_IDX(action_args, i, const char *);
+          APR_ARRAY_PUSH(action->action_args, const char *) = path;
 
           if (cp_from_rev && k == 0)
             {
@@ -3821,7 +3847,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"ui", ui_opt, 1, ""},
     {NULL, 0, 0, NULL}
   };
-  const char *message = "";
+  const char *message = NULL;
   svn_stringbuf_t *filedata = NULL;
   const char *username = NULL, *password = NULL;
   const char *anchor_url = NULL, *extra_args_file = NULL;
@@ -4050,8 +4076,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     return svn_error_create(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                             _("Standard properties can't be set "
                               "explicitly as revision properties"));
-  svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
-                svn_string_create(log_msg, pool));
+  if (log_msg)
+    {
+      svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
+                    svn_string_create(log_msg, pool));
+    }
 
   /* Help command: if given before any actions, then display full help
      (and ANCHOR_URL need not have been provided). */

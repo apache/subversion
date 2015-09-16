@@ -58,6 +58,10 @@ typedef struct svnmover_wc_t
   /* Base and working versions. */
   svnmover_wc_version_t *base, *working;
 
+  /* Textual list of commands the commands that were executed, suitable
+     for putting in a log message */
+  const char *list_of_commands;
+
   svn_client_ctx_t *ctx;
 
 } svnmover_wc_t;
