@@ -623,8 +623,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "random delta test"),
     SVN_TEST_PASS2(random_combine_test,
                    "random combine delta test"),
-    SVN_TEST_XFAIL2(random_txdelta_to_stream_test,
-                    "random txdelta to svndiff stream test"),
+    SVN_TEST_PASS2(random_txdelta_to_stream_test,
+                   "random txdelta to svndiff stream test"),
 #ifdef SVN_RANGE_INDEX_TEST_H
     SVN_TEST_PASS2(random_range_index_test,
                    "random range index test"),
