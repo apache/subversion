@@ -73,27 +73,26 @@ typedef struct import_ctx_t
   apr_hash_t *autoprops;
 } import_ctx_t;
 
+typedef struct open_txdelta_baton_t
+{
+  const char *local_abspath;
+  apr_hash_t *properties;
+} open_txdelta_baton_t;
 
-/* Apply LOCAL_ABSPATH's contents (as a delta against the empty string) to
-   FILE_BATON in EDITOR.  Use POOL for any temporary allocation.
-   PROPERTIES is the set of node properties set on this file.
-
-   Fill DIGEST with the md5 checksum of the sent file; DIGEST must be
-   at least APR_MD5_DIGESTSIZE bytes long. */
+/* Open delta stream *TXDELTA_STREAM_P for the BATON->local_abspath
+   file contents (as a delta against the empty string).  Use POOL for
+   all allocations.  BATON->properties is the set of node properties
+   set on this file. */
 
 /* ### how does this compare against svn_wc_transmit_text_deltas2() ??? */
 
 static svn_error_t *
-send_file_contents(const char *local_abspath,
-                   void *file_baton,
-                   const svn_delta_editor_t *editor,
-                   apr_hash_t *properties,
-                   unsigned char *digest,
-                   apr_pool_t *pool)
+open_txdelta(svn_txdelta_stream_t **txdelta_stream_p,
+             void *baton,
+             apr_pool_t *pool)
 {
+  open_txdelta_baton_t *b = baton;
   svn_stream_t *contents;
-  svn_txdelta_window_handler_t handler;
-  void *handler_baton;
   const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
   svn_boolean_t special = FALSE;
   svn_subst_eol_style_t eol_style;
@@ -101,19 +100,15 @@ send_file_contents(const char *local_abspath,
   apr_hash_t *keywords;
 
   /* If there are properties, look for EOL-style and keywords ones. */
-  if (properties)
+  if (b->properties)
     {
-      eol_style_val = apr_hash_get(properties, SVN_PROP_EOL_STYLE,
+      eol_style_val = apr_hash_get(b->properties, SVN_PROP_EOL_STYLE,
                                    sizeof(SVN_PROP_EOL_STYLE) - 1);
-      keywords_val = apr_hash_get(properties, SVN_PROP_KEYWORDS,
+      keywords_val = apr_hash_get(b->properties, SVN_PROP_KEYWORDS,
                                   sizeof(SVN_PROP_KEYWORDS) - 1);
-      if (svn_hash_gets(properties, SVN_PROP_SPECIAL))
+      if (svn_hash_gets(b->properties, SVN_PROP_SPECIAL))
         special = TRUE;
     }
-
-  /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool,
-                                  &handler, &handler_baton));
 
   if (eol_style_val)
     svn_subst_eol_style_from_value(&eol_style, &eol, eol_style_val->data);
@@ -132,13 +127,14 @@ send_file_contents(const char *local_abspath,
 
   if (special)
     {
-      SVN_ERR(svn_subst_read_specialfile(&contents, local_abspath,
+      SVN_ERR(svn_subst_read_specialfile(&contents, b->local_abspath,
                                          pool, pool));
     }
   else
     {
       /* Open the working copy file. */
-      SVN_ERR(svn_stream_open_readonly(&contents, local_abspath, pool, pool));
+      SVN_ERR(svn_stream_open_readonly(&contents, b->local_abspath,
+                                       pool, pool));
 
       /* If we have EOL styles or keywords, then detranslate the file. */
       if (svn_subst_translation_required(eol_style, eol, keywords,
@@ -149,7 +145,7 @@ send_file_contents(const char *local_abspath,
                                     _("%s property on '%s' contains "
                                       "unrecognized EOL-style '%s'"),
                                     SVN_PROP_EOL_STYLE,
-                                    svn_dirent_local_style(local_abspath,
+                                    svn_dirent_local_style(b->local_abspath,
                                                            pool),
                                     eol_style_val->data);
 
@@ -168,10 +164,11 @@ send_file_contents(const char *local_abspath,
         }
     }
 
-  /* Send the file's contents to the delta-window handler. */
-  return svn_error_trace(svn_txdelta_send_stream(contents, handler,
-                                                 handler_baton, digest,
-                                                 pool));
+  /* Get the delta stream (delta against the empty string). */
+  svn_txdelta2(txdelta_stream_p, svn_stream_empty(pool),
+               contents, FALSE, pool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -198,10 +195,9 @@ import_file(const svn_delta_editor_t *editor,
 {
   void *file_baton;
   const char *mimetype = NULL;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
-  const char *text_checksum;
   apr_hash_t* properties;
   apr_hash_index_t *hi;
+  open_txdelta_baton_t open_txdelta_baton;
 
   SVN_ERR(svn_path_check_valid(local_abspath, pool));
 
@@ -262,14 +258,15 @@ import_file(const svn_delta_editor_t *editor,
     }
 
   /* Now, transmit the file contents. */
-  SVN_ERR(send_file_contents(local_abspath, file_baton, editor,
-                             properties, digest, pool));
+  open_txdelta_baton.local_abspath = local_abspath;
+  open_txdelta_baton.properties = properties;
+  /* ### TODO: Pass the result checksum. */
+  SVN_ERR(editor->apply_textdelta_stream(editor, file_baton, NULL, NULL,
+                                         open_txdelta, &open_txdelta_baton,
+                                         pool));
 
   /* Finally, close the file. */
-  text_checksum =
-    svn_checksum_to_cstring(svn_checksum__from_digest_md5(digest, pool), pool);
-
-  return svn_error_trace(editor->close_file(file_baton, text_checksum, pool));
+  return svn_error_trace(editor->close_file(file_baton, NULL, pool));
 }
 
 
