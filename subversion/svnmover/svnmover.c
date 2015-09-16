@@ -2093,8 +2093,12 @@ do_put_file(svn_editor3_t *editor,
 
   if (file_el_rev->eid >= 0)
     {
-      /* ### get existing props */
-      props = apr_hash_make(scratch_pool);
+      /* get existing props */
+      svn_branch_el_rev_content_t *existing_element
+        = svn_branch_get_element(file_el_rev->branch, file_el_rev->eid);
+
+      SVN_ERR(svn_editor3_payload_resolve(editor, existing_element));
+      props = existing_element->payload->props;
     }
   else
     {
