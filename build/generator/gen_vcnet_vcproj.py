@@ -55,18 +55,6 @@ class Generator(gen_win.WinGeneratorBase):
 
       target.proj_name = target.name
 
-  def get_external_project(self, target, proj_ext):
-    "Link project files: prefer vcproj's, but if don't exist, try dsp's."
-    vcproj = gen_win.WinGeneratorBase.get_external_project(self, target,
-                                                           proj_ext)
-    if vcproj and not os.path.exists(vcproj):
-      dspproj = gen_win.WinGeneratorBase.get_external_project(self, target,
-                                                              'dsp')
-      if os.path.exists(dspproj):
-        return dspproj
-
-    return vcproj
-
   def write_project(self, target, fname, depends):
     "Write a Project (.vcproj/.vcxproj)"
 
