@@ -954,3 +954,11 @@ svn_txdelta__read_raw_window_len(apr_size_t *window_len,
   return SVN_NO_ERROR;
 }
 
+svn_stream_t *
+svn_txdelta_to_svndiff_stream(svn_txdelta_stream_t *txstream,
+                              int svndiff_version,
+                              int compression_level,
+                              apr_pool_t *pool)
+{
+  return NULL;
+}
