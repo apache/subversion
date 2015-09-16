@@ -9653,7 +9653,10 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
   if (! *ra_session || (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL))
     {
       svn_error_clear(err);
-      /* RA_CACHE TODO: release RA session */
+      /* RA_CACHE TODO: release RA session
+         The patch to rework RA session handling in merge is going to
+         be committed in trunk after merging:
+         http://svn.haxx.se/dev/archive-2015-02/0054.shtml */
       err = svn_client_open_ra_session2(ra_session, url, wri_abspath,
                                         ctx, pool, pool);
     }
