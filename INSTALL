@@ -713,7 +713,7 @@ II.   INSTALLATION
 
   E.1 Prerequisites
 
-      * Visual Studio (Visual Studio.NET 2005-2015, Visual C++ Express
+      * Visual Studio (Visual Studio 2005-2015, Visual C++ Express
         2005-2010, Visual Studio Express 2012-2013 and Visual Studio Community
         2013-2015).
       * Python 2.7 or higher, downloaded from http://www.python.org/ which is
@@ -721,22 +721,20 @@ II.   INSTALLATION
         Note that Python 3.x is not supported (yet).
       * Perl 5.8 or higher from http://www.activestate.com/
       * Awk (from http://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe) is
-        needed to compile Apache or APR.  Note that this is the actual awk
-        program, not an installer - just rename it to awk.exe and it is
-        ready to use.
+        needed to compile Apache or APR without using CMake.  Note that this
+        is the actual awk program, not an installer - just rename it to
+        awk.exe and it is ready to use.
       * Apache apr, apr-util, and optionally apr-iconv libraries, version
-        1.3 or later. Included in both the Subversion dependencies ZIP file
-        and the Apache 2 source zip.  If you are building from a Subversion
+        1.3 or later (1.2 for apr-iconv). If you are building from a Subversion
         checkout and have not downloaded Apache 2, then get these 3 libraries
         from http://www.apache.org/dist/apr/.
       * SQLite 3.7.12 or higher from http://www.sqlite.org/download.html
-      * ZLib 1.2 or higher is required and is included in the Subversion
-        dependencies zip file or can be obtained from http://www.zlib.net/
-      * Either a Subversion client binary from http://subversion.apache.org/ to
-        do the initial checkout of the Subversion source or the zip file
-        source distribution. See the section "Bootstrapping from a Zip or
-        Installer File under Windows" above for more.
-      * A means of unpacking the files, e.g., WinZIP or similar.
+        (3.8.0 or higher recommended)
+      * ZLib 1.2 or higher is required and can be obtained from
+        http://www.zlib.net/
+      * Either a Subversion client binary from
+        http://subversion.apache.org/packages.html to do the initial checkout
+        of the Subversion source or the zip file source distribution.
 
       Additional Options
 
@@ -744,13 +742,12 @@ II.   INSTALLATION
         http://httpd.apache.org/download.cgi, these instructions assume
         version 2.0.58.  This is only needed for building the Subversion
         server Apache modules.  ### FIXME Apache 2.2 or greater required.
-      * [Optional] Berkeley DB for backend support of the server
-        components -- versions 4.3.27 and 4.4.20 are available from
-        http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=688
-        as db-4.3.27-win32.zip and db-4.4.20-win32.zip.
+      * [Optional] Berkeley DB for backend support of the server components
+        are available from
+        http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/downloads/index-082944.html
+        (Version 4.4.20 or in specific cases some higher version recommended)
         For more information see Section I.C.7.
-      * [Optional] Openssl 0.9.7f or higher can be obtained from
-        http://www.openssl.org/source/openssl-0.9.7f.tar.gz
+      * [Optional] Openssl can be obtained from http://www.openssl.org/source/
       * [Optional] A modified version of GNU libintl, called
         svn-win32-libintl.zip, can be used for displaying localized
         messages. Available at:
@@ -760,9 +757,6 @@ II.   INSTALLATION
         binaries from http://gnuwin32.sourceforge.net/. You'll need the
         binaries (gettext-0.14.1-bin.zip) and dependencies
         (gettext-0.14.1-dep.zip).
-      * [Optional] An assembler, e.g., MASM32 from http://www.masm32.com/
-        or nasm which is available from
-        http://www.nasm.us/pub/nasm/releasebuilds/?C=M;O=D
 
   E.2 Notes
 
@@ -788,10 +782,14 @@ II.   INSTALLATION
         installer to register environment variables or run VCVARS32.BAT
         before building anything.  If you are using a newer Visual Studio,
         use the 'Visual Studio 20xx Command Prompt' on the Start menu.
-      * Install Python and add it to your path
+      * Install Python and add it to your path      
       * Install Perl (it should add itself to the path)
+        ### Subversion doesn't need perl. Only some dependencies need it
+            (openssl and some apr scripts)
       * Copy AWK (awk95.exe) to awk.exe (e.g. SVN\awk\awk.exe) and add
         the directory containing it (e.g. SVN\awk) to the path.
+        ### Subversion doesn't need awk. Only some dependencies need it
+            (some apr scripts)
       * [Optional] If you checked out Subversion from the repository and want
         to build Subversion with http/https access support then install the
         Apache Serf sources into SVN\src-trunk\serf.
@@ -810,6 +808,7 @@ II.   INSTALLATION
         SVN\src-trunk\db4-win32\include, and all the import libraries to
         SVN\src-trunk\db4-win32\lib. Again, the DLLs should be somewhere in
         your path.
+        ### Just use --with-serf instead of the hardcoded path
 
       * [Optional] If you want to build the server modules, extract Apache
         source into SVN\httpd-2.x.x.
@@ -822,21 +821,22 @@ II.   INSTALLATION
           - Extract the apr, apr-util and apr-iconv directories from the
             srclib folder in the Apache httpd source into SVN\apr,
             SVN\apr-util, and SVN\apr-iconv respectively.
+        ### Just use --with-apr, etc. instead of the hardcoded paths
       * Extract the ZLib sources into SVN\zlib if you are not using the zlib
         included in the dependencies zip file.
+        ### Just use --with-zlib instead of the hardcoded path
       * [Optional] If you want secure connection (https) client support extract
         openssl into SVN\openssl-x.x.x
+        ### And pass the path to both serf and gen-make.py
       * [Optional] If you want localized message support, extract
         svn-win32-libintl.zip into SVN\svn-win32-libintl and extract
         gettext-x.x.x-bin.zip and gettext-x.x.x-dep.zip into
         SVN\gettext-x.x.x-bin.
-        Add SVN\gettext-x.x.x-bin\bin to your path.
-      * [Optional] Extract MASM32 (only the ML.EXE and ML.ERR files) into
-        SVN\asm (or extract nasm into SVN\asm) and put it in your path.
-      * Download the SQLite amalgemation from
+        Add SVN\gettext-x.x.x-bin\bin to your path.        
+      * Download the SQLite amalgamation from
         http://www.sqlite.org/download.html
-        and extract it into SVN\sqlite-amalgemation.
-        See I.C.12 for alternatives to using the amalgemation package.
+        and extract it into SVN\sqlite-amalgamation.
+        See I.C.12 for alternatives to using the amalgamation package.
 
   E.4 Building the Binaries
 
@@ -959,16 +959,10 @@ II.   INSTALLATION
       file, Apache 2 has not been built so gen-make.py must be run:
 
       C:>python gen-make.py --vsnet-version=20xx --with-berkeley-db=db4-win32
-          --with-openssl=..\openssl-0.9.7f --with-zlib=..\zlib
+          --with-openssl=..\openssl --with-zlib=..\zlib
           --with-libintl=..\svn-win32-libintl
 
       Then build subversion:
-
-      C:>devenv subversion_vcnet.sln /build "Release" /project "__ALL_TESTS__"
-      C:>cd ..
-
-      Or, with Visual C++.NET 2008+, C++ Express 2008+, Studio Express 2012+ or
-      Studio Community 2013+:
 
       C:>msbuild subversion_vcnet.sln /t:__ALL_TESTS__ /p:Configuration=Release
       C:>cd ..
