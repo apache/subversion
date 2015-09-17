@@ -222,12 +222,13 @@ I.    INTRODUCTION
         |                                                              |
         | For a long time, Subversion's main distribution contained    |
         | APR and APR-UTIL (both 0.9.x), plus a few other things that  |
-        | we couldn't count on the installation system having.  But    |
-        | nowadays, Subversion's requirements are no longer exotic,    |
-        | and so our main distribution contains just the Subversion    |
-        | source code itself -- people compiling Subversion are        |
-        | expected to either have the APR libraries already installed  |
-        | on their system, or to be capable of fetching them easily.   |
+        | we couldn't count on the installation system having          |
+        | available.  But nowadays, Subversion's requirements are no   |
+        | longer exotic, and so our main distribution contains just    |
+        | the Subversion source code itself -- people compiling        |
+        | Subversion are expected to either have the APR libraries     |
+        | already installed on their system, or to be capable of       |
+        | fetching them easily.                                        |
         |                                                              |
         | Note that it's *perfectly* safe to use APR 1.X from the      |
         | beginning.  In fact, we recommend it.  If you're building    |
