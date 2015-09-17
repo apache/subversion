@@ -22,7 +22,7 @@ Contents:
        E. Building the Latest Source under Windows
 
    III. BUILDING A SUBVERSION SERVER
-       A. Setting Up Apache
+       A. Setting Up Apache Httpd
        B. Making and Installing the Subversion Server
        C. Configuring Apache for Subversion
        D. Running and Testing
@@ -674,27 +674,21 @@ II.   INSTALLATION
 
 
   D.  Installing from a Zip or Installer File under Windows
-      --------------------------------------------------------
+      -----------------------------------------------------
 
       Of all the ways of getting a Subversion client, this is the
-      easiest.  Download a Zip (*.zip) or self-extracting installer
-      (*-setup.exe) file from:
+      easiest.  Download a Zip or self-extracting installer via:
 
-      http://subversion.apache.org/packages#windows
+      http://subversion.apache.org/packages.html#windows
 
-      For a Zip file, run your unzipping utility (WinZIP, ZipGenius,
-      UltimateZIP, FreeZIP, whatever) and extract the DLLs and EXEs to
-      a directory of your choice. Included in the download is the SVN
-      client, the SVNADMIN administration tool, and the SVNLOOK
-      reporting tool.
+      For a Zip file extract the DLLs and EXEs to a directory of your
+      choice. Included in the download are among other tools the SVN
+      client, the SVNADMIN administration tool and the SVNLOOK reporting
+      tool.
 
-      Note that if you need support for non-English locales you'll have
-      to set the APR_ICONV_PATH environment variable to the path of the
-      iconv directory in the folder that contains the Subversion install.
-
-      You may also want to add the bin directory in the Subversion folder
-      to your PATH environment variable so as to not have to use the full
-      path when running Subversion commands.
+      You may want to add the bin directory in the Subversion folder to your
+      PATH environment variable so as to not have to use the full path when
+      running Subversion commands.
 
       To test the installation, open a DOS box (run either "cmd" or
       "command" from the Start menu's "Run..." menu option), change to
@@ -713,13 +707,13 @@ II.   INSTALLATION
 
   E.1 Prerequisites
 
-      * Visual Studio (Visual Studio 2005-2015, Visual C++ Express
-        2005-2010, Visual Studio Express 2012-2013 and Visual Studio Community
-        2013-2015).
+      * Microsoft Visual Studio. Any recent (2005+) version containing the
+        Visual C++ component will work (E.g. Professional, Express, Community
+        Edition). Make sure you enable C++ support during setup.
       * Python 2.7 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
         Note that Python 3.x is not supported (yet).
-      * Perl 5.8 or higher from http://www.activestate.com/
+      * Perl 5.8 or higher from http://www.perl.org/get.html
       * Awk (from http://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe) is
         needed to compile Apache or APR without using CMake.  Note that this
         is the actual awk program, not an installer - just rename it to
@@ -738,7 +732,7 @@ II.   INSTALLATION
 
       Additional Options
 
-      * [Optional] Apache 2 source, downloaded from
+      * [Optional] Apache Httpd 2 source, downloaded from
         http://httpd.apache.org/download.cgi, these instructions assume
         version 2.0.58.  This is only needed for building the Subversion
         server Apache modules.  ### FIXME Apache 2.2 or greater required.
@@ -1055,10 +1049,10 @@ III.  BUILDING A SUBVERSION SERVER
       svnserve instead, jump right to section E for a quick explanation.
 
 
-  A.  Setting Up Apache
-      -----------------
+  A.  Setting Up Apache Httpd
+      -----------------------
 
-      1.  Obtaining and Installing Apache 2
+      1.  Obtaining and Installing Apache Httpd 2
 
       Subversion tries to compile against the latest released version
       of Apache httpd 2.2+.  The easiest thing for you to do is download
@@ -1150,8 +1144,8 @@ III.  BUILDING A SUBVERSION SERVER
       Section II.E explains how to build the server on Windows.
 
 
-  C.  Configuring Apache for Subversion
-      ---------------------------------
+  C.  Configuring Apache Httpd for Subversion
+      ---------------------------------------
 
       The following section is an abbreviated version of the
       information in the Subversion Book
