@@ -1110,7 +1110,7 @@ III.  BUILDING A SUBVERSION SERVER
       1.  Obtaining and Installing Apache 2
 
       Subversion tries to compile against the latest released version
-      of Apache httpd 2.X.  The easiest thing for you to do is download
+      of Apache httpd 2.2+.  The easiest thing for you to do is download
       a source tarball of the latest release and unpack that.
 
 
@@ -1123,8 +1123,8 @@ III.  BUILDING A SUBVERSION SERVER
         | section I.C.1, which explains that APR 0.9.x and 1.X are     |
         | binary-incompatible.                                         |
         |                                                              |
-        |    Apache HTTPD 2.0 uses APR 0.9.x.                          |
         |    Apache HTTPD 2.2 uses APR 1.2.x.                          |
+        |    Apache HTTPD 2.4 requires APR 1.5.x.                      |
         |                                                              |
         | We recommend using the latest Apache.  However, whatever     |
         | version you choose, you *must* ensure that Subversion        |
@@ -1133,10 +1133,10 @@ III.  BUILDING A SUBVERSION SERVER
         |______________________________________________________________|
 
 
-      If you have questions about the Apache httpd 2.0 build, please consult
+      If you have questions about the Apache httpd 2.2 build, please consult
       the httpd install documentation:
 
-          http://httpd.apache.org/docs-2.0/install.html
+          http://httpd.apache.org/docs-2.2/install.html
 
       At the top of the httpd tree:
 
@@ -1182,7 +1182,7 @@ III.  BUILDING A SUBVERSION SERVER
       ---------------------------------------------------------
 
       Go back into your subversion working copy and run ./autogen.sh if
-      you need to.  Then, assuming Apache httpd 2.0 is installed in the
+      you need to.  Then, assuming Apache httpd 2.2 is installed in the
       standard location, run:
 
           $ ./configure
@@ -1192,7 +1192,7 @@ III.  BUILDING A SUBVERSION SERVER
       look for other libsvn_*.so libraries on your system.
 
       If you see a warning message that the build of mod_dav_svn is
-      being skipped, this may be because you have Apache httpd 2.X
+      being skipped, this may be because you have Apache httpd 2.x
       installed in a non-standard location.  You can use the
       "--with-apxs=" option to locate the apxs script:
 
@@ -1234,7 +1234,7 @@ III.  BUILDING A SUBVERSION SERVER
       /usr/local/apache2/conf/httpd.conf to reflect your setup.
       At a minimum you should look at the User, Group and ServerName
       directives.  Full details on setting up apache can be found at:
-      http://httpd.apache.org/docs-2.0/
+      http://httpd.apache.org/docs-2.2/
 
       First, your httpd.conf needs to load the mod_dav_svn module.
       If you pass --enable-mod-activation to Subversion's configure,
@@ -1288,6 +1288,7 @@ III.  BUILDING A SUBVERSION SERVER
                  Require group svn_readers
              </Limit>
 
+      ### FIXME Tutorials section refers to old 2.0 docs
       These are only a few simple examples.  For a complete tutorial
       on Apache access control, please consider taking a look at the
       tutorials found under "Security" on the following page:
@@ -1314,7 +1315,7 @@ III.  BUILDING A SUBVERSION SERVER
 
       NOTE: If you are unfamiliar with an Apache directive, or not exactly
       sure about what it does, don't hesitate to look it up in the
-      documentation: http://httpd.apache.org/docs-2.0/mod/directives.html.
+      documentation: http://httpd.apache.org/docs-2.2/mod/directives.html.
 
       NOTE: Make sure that the user 'nobody' (or whatever UID the
       httpd process runs as) has permission to read and write the
