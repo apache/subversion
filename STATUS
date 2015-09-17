@@ -61,15 +61,23 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1703675
-   Fix formatting of upgrade notification messages.
+ * r1703688, 1703689
+   Fix merging deletes of svn:eol-style CRLF or CR files
    Justification:
-     Multiple notifications on one line are hard to read.
+     Resolves unnecessary tree conflicts.
+     Any more reasons needed? :-)
    Votes:
-     +1: philip, stefan2
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1703675
+   Fix formatting of upgrade notification messages.
+   Justification:
+     Multiple notifications on one line are hard to read.
+   Votes:
+     +1: philip, stefan2, rhuijben
