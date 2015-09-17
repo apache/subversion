@@ -88,6 +88,7 @@ typedef enum svn_min__longopt_t {
   opt_remove_obsoletes,
   opt_remove_redundant,
   opt_combine_ranges,
+  opt_remove_redundant_misaligned
 } svn_cl__longopt_t;
 
 
@@ -177,6 +178,10 @@ const apr_getopt_option_t svn_min__options[] =
                        N_("Remove mergeinfo on sub-nodes if it is\n"
                        "                             "
                        "redundant with the parent mergeinfo.")},
+  {"remove-redundant-misaligned", opt_remove_redundant_misaligned, 0,
+                       N_("Remove mergeinfo of a misaligned branch if it\n"
+                       "                             "
+                       "is already covered by a correctly aligned one.\n")},
   {"combine-ranges",   opt_combine_ranges, 0,
                        N_("Try to combine adjacent revision ranges\n"
                        "                             "
@@ -238,14 +243,16 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
      "  branches.\n"
     ),
     {opt_targets, opt_depth, 'v',
-     opt_remove_obsoletes, opt_remove_redundant, opt_combine_ranges} },
+     opt_remove_obsoletes, opt_remove_redundant,
+     opt_remove_redundant_misaligned, opt_combine_ranges} },
 
   { "normalize", svn_min__normalize, { 0 }, N_
     ("Normalize / reduce the mergeinfo throughout the working copy sub-tree.\n"
      "usage: normalize [WCPATH...]\n"
      "\n"
-     "  If neither --remove-obsoletes, --remove-redundant nor --combine-ranges\n"
-     "  option is given, --remove-redundant will be used implicitly.\n"
+     "  If neither --remove-obsoletes, --remove-redundant, --combine-ranges\n"
+     "  nor --remove-redundant-misaligned option is given, --remove-redundant\n"
+     "  will be used implicitly.\n"
      "\n"
      "  In non-verbose mode, only general progress as well as a summary before\n"
      "  and after the normalization process will be shown.  Note that sub-node\n"
@@ -278,6 +285,9 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
      "                             mergeinfo because they did not change it.\n"
      "    remove deleted branch  - The branch no longer exists in the repository.\n"
      "                             We will remove its mergeinfo line.\n"
+     "    elide misaligned branch- All revisions merged from that misaligned\n"
+     "                             branch have also been merged from the likely\n"
+     "                             correctly aligned branch.\n"
      "    CANNOT elide branch    - Mergeinfo differs from parent's significantly\n"
      "                             and can't be elided because ...\n"
      "      revisions not movable to parent\n"
@@ -300,6 +310,12 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
      "    MISSING in parent      - The branch for the parent node exists in the\n"
      "                             repository but is not in its mergeinfo.\n"
      "                             The sub-tree mergeinfo will not be elided.\n"
+     "    CANNOT elide MISALIGNED branch\n"
+     "                             The misaligned branch cannot be elide because\n"
+     "                             the revisions listed ...\n"
+     "      revisions not merged from likely correctly aligned branch\n"
+     "                             ... here have not also been merged from the\n"
+     "                             likely correctly aligned branch.\n"
      "    MISALIGNED branch      - There is no such branch for the parent node.\n"
      "                             The sub-tree mergeinfo cannot be elided.\n"
      "    REVERSE RANGE(S) found - The mergeinfo contains illegal reverse ranges.\n"
@@ -310,7 +326,8 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
      "  branches will be removed.  In verbose mode, a list of branches that\n"
      "  could not be removed will be shown per node.\n"),
     {opt_targets, opt_depth, opt_dry_run, 'q', 'v',
-     opt_remove_obsoletes, opt_remove_redundant, opt_combine_ranges} },
+     opt_remove_obsoletes, opt_remove_redundant,
+     opt_remove_redundant_misaligned, opt_combine_ranges} },
 
   { "remove-branches", svn_min__remove_branches, { 0 }, N_
     ("Read a list of branch names from the given file and remove all\n"
@@ -564,6 +581,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_combine_ranges:
         opt_state.combine_ranges = TRUE;
+        break;
+      case opt_remove_redundant_misaligned:
+        opt_state.remove_redundant_misaligned = TRUE;
         break;
 
       default:

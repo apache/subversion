@@ -752,6 +752,161 @@ remove_overlapping_history(svn_rangelist_t **removed,
   return SVN_NO_ERROR;
 }
 
+/* Show the results of an attempt at "misaligned branch elision".
+ * SOURCE_BRANCH was to be elided because TARGET_BRANCH would cover it all.
+ * There were MISSING revisions exclusively in SOURCE_BRANCH.  OPT_STATE
+ * filters the output and SCRATCH_POOL is used for temporary allocations.
+ */
+static svn_error_t *
+show_misaligned_branch_elision(const char *source_branch,
+                               const char *target_branch,
+                               svn_rangelist_t *missing,
+                               svn_min__opt_state_t *opt_state,
+                               apr_pool_t *scratch_pool)
+{
+  if (opt_state->verbose || opt_state->run_analysis)
+    {
+      if (missing->nelts)
+        {
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
+                        _("    CANNOT elide MISALIGNED branch %s\n"
+                          "        to likely correctly aligned branch %s\n"),
+                                     source_branch, target_branch));
+          SVN_ERR(print_ranges(missing,
+                        _("revisions not merged from likely correctly"
+                          " aligned branch: "),
+                               scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
+                        _("    elide misaligned branch %s\n"
+                          "        to likely correctly aligned branch %s\n"),
+                                     source_branch, target_branch));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Search MERGEINFO for branches that are sub-branches of one another.
+ * If exactly one of them shares the base with the FS_PATH to which the m/i
+ * is attached, than this is likely the properly aligned branch while the
+ * others are misaligned.
+ *
+ * Using LOG, determine those misaligned branches whose operative merged
+ * revisions are already covered by the merged revisions of the likely
+ * correctly aligned branch.  In that case, remove those misaligned branch
+ * entries from MERGEINFO.
+ *
+ * OPT_STATE filters the output and SCRATCH_POOL is used for temporaries.
+ */
+static svn_error_t *
+remove_redundant_misaligned_branches(svn_min__log_t *log,
+                                     const char *fs_path,
+                                     svn_mergeinfo_t mergeinfo,
+                                     svn_min__opt_state_t *opt_state,
+                                     apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i, k;
+  const char *base_name = svn_dirent_basename(fs_path, scratch_pool);
+  apr_array_header_t *sorted_mi;
+
+  sorted_mi = svn_sort__hash(mergeinfo,
+                             svn_sort_compare_items_lexically,
+                             scratch_pool);
+
+  for (i = 0; i < sorted_mi->nelts - 1; i = k)
+    {
+      const char *item_path, *sub_item_path;
+      int maybe_aligned_index = -1;
+      int maybe_aligned_found = 0;
+      int sub_branch_count = 0;
+
+      svn_pool_clear(iterpool);
+
+      /* Find the range of branches that are sub-branches of the one at I. */
+      item_path = APR_ARRAY_IDX(sorted_mi, i, svn_sort__item_t).key;
+      if (!strcmp(base_name, svn_dirent_basename(item_path, iterpool)))
+        {
+          maybe_aligned_index = i;
+          maybe_aligned_found = 1;
+        }
+
+      for (k = i + 1; k < sorted_mi->nelts; ++k)
+        {
+          sub_item_path = APR_ARRAY_IDX(sorted_mi, k, svn_sort__item_t).key;
+          if (!svn_dirent_is_ancestor(item_path, sub_item_path))
+            break;
+
+          if (!strcmp(base_name,
+                      svn_dirent_basename(sub_item_path, iterpool)))
+            {
+              maybe_aligned_index = k;
+              maybe_aligned_found++;
+            }
+        }
+
+      /* Found any?  If so, did we identify exactly one of them as likely
+       * being properly aligned? */
+      sub_branch_count = k - i - 1;
+      if ((maybe_aligned_found != 1) || (sub_branch_count == 0))
+        continue;
+
+      /* Try to elide all misaligned branches individually. */
+      for (k = i; k < i + sub_branch_count + 1; ++k)
+        {
+          svn_sort__item_t *source_item, *target_item;
+          svn_rangelist_t *missing, *dummy;
+
+          /* Is this one of the misaligned branches? */
+          if (k == maybe_aligned_index)
+            continue;
+
+          source_item = &APR_ARRAY_IDX(sorted_mi, k, svn_sort__item_t);
+          target_item = &APR_ARRAY_IDX(sorted_mi, maybe_aligned_index,
+                                       svn_sort__item_t);
+
+          /* Elide into sub-branch or parent branch (can't be equal here).
+           * Because we only know these are within the I tree, source and
+           * target may be siblings.  Check that they actually have an
+           * ancestor relationship.
+           */
+          if (k < maybe_aligned_index)
+            {
+              if (!svn_dirent_is_ancestor(source_item->key, target_item->key))
+                continue;
+            }
+          else
+            {
+              if (!svn_dirent_is_ancestor(target_item->key, source_item->key))
+                continue;
+            }
+
+          /* Determine which revisions are MISSING in target. */
+          SVN_ERR(svn_rangelist_diff(&missing, &dummy,
+                                     source_item->value, target_item->value,
+                                     TRUE, iterpool));
+          missing = svn_min__operative(log, source_item->key, missing,
+                                       iterpool);
+
+          /* Show the result and elide the branch if we can. */
+          SVN_ERR(show_misaligned_branch_elision(source_item->key,
+                                                 target_item->key,
+                                                 missing,
+                                                 opt_state,
+                                                 iterpool));
+          if (!missing->nelts)
+            svn_hash_sets(mergeinfo, source_item->key, NULL);
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Try to elide as many lines from SUBTREE_MERGEINFO for node at FS_PATH as
  * possible using LOG and LOOKUP.  OPT_STATE determines if we may remove
  * deleted branches.  Elision happens by comparing the node's mergeinfo
@@ -1274,7 +1429,15 @@ normalize(apr_array_header_t *wc_mergeinfo,
       SVN_ERR(show_elision_header(parent_path, relpath, opt_state,
                                   scratch_pool));
 
-      /* Modify the mergeinfo here. */
+      /* Get rid of some of the easier cases of misaligned branches.
+       * Directly modify the orignal mergeinfo. */
+      if (opt_state->remove_redundant_misaligned)
+        SVN_ERR(remove_redundant_misaligned_branches(log, fs_path,
+                                                     subtree_mergeinfo,
+                                                     opt_state, iterpool));
+
+      /* Modify this copy of the mergeinfo.
+       * If we can elide it all, drop the original. */
       subtree_mergeinfo_copy = svn_mergeinfo_dup(subtree_mergeinfo,
                                                  iterpool);
 
