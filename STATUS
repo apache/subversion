@@ -56,9 +56,10 @@ Candidate changes:
    Allow simple resolving of binary file text conflicts
    Justification:
      Simple usability improvement. Use reported. Regression.
+   Branch:
+     ^/subversion/branches/1.9.x-r1703581
    Votes:
-     +1: rhuijben
-     -1: philip (needs backport)
+     +1: rhuijben, philip
 
 Veto-blocked changes:
 =====================
