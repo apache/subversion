@@ -419,13 +419,13 @@ run_postupgrade(work_item_baton_t *wqb,
      ### The order may matter for some sufficiently old clients.. but
      ### this code only runs during upgrade after the files had been
      ### removed earlier during the upgrade. */
-  SVN_ERR(svn_io_write_atomic(format_path, SVN_WC__NON_ENTRIES_STRING,
-                              sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
-                              NULL, scratch_pool));
+  SVN_ERR(svn_io_write_atomic2(format_path, SVN_WC__NON_ENTRIES_STRING,
+                               sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
+                               NULL, TRUE, scratch_pool));
 
-  SVN_ERR(svn_io_write_atomic(entries_path, SVN_WC__NON_ENTRIES_STRING,
-                              sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
-                              NULL, scratch_pool));
+  SVN_ERR(svn_io_write_atomic2(entries_path, SVN_WC__NON_ENTRIES_STRING,
+                               sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
+                               NULL, TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }

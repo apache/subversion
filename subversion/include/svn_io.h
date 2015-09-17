@@ -1102,11 +1102,29 @@ svn_stream_from_aprfile(apr_file_t *file,
                         apr_pool_t *pool);
 
 /** Set @a *in to a generic stream connected to stdin, allocated in
- * @a pool.  The stream and its underlying APR handle will be closed
- * when @a pool is cleared or destroyed.
+ * @a pool.  If @a buffered is set, APR buffering will be enabled.
+ * The stream and its underlying APR handle will be closed when @a pool
+ * is cleared or destroyed.
+ *
+ * @note APR buffering will try to fill the whole internal buffer before
+ *       serving read requests.  This may be inappropriate for interactive
+ *       applications where stdin will not deliver any more data unless
+ *       the application processed the data already received.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_stream_for_stdin2(svn_stream_t **in,
+                      svn_boolean_t buffered,
+                      apr_pool_t *pool);
+
+/** Similar to svn_stream_for_stdin2(), but with buffering being disabled.
  *
  * @since New in 1.7.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_for_stdin(svn_stream_t **in,
                      apr_pool_t *pool);
@@ -1156,18 +1174,6 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
 svn_stream_t *
 svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool);
-
-/** Return a generic read-only stream that forwards data from @a inner but
- * uses buffering for efficiency.  Allocate the stream in @a result_pool.
- *
- * @note The returned stream has no support for writing nor mark and seek
- * even if @a inner does support those functions.
- *
- * @since New in 1.10.
- */
-svn_stream_t *
-svn_stream_wrap_buffered_read(svn_stream_t *inner,
-                              apr_pool_t *result_pool);
 
 /** Return a generic stream which implements buffered reads and writes.
  *  The stream will preferentially store data in-memory, but may use
@@ -2300,13 +2306,29 @@ svn_io_file_write_full(apr_file_t *file,
  * If @a copy_perms_path is not NULL, copy the permissions applied on @a
  * @a copy_perms_path on the temporary file before renaming.
  *
- * @note This function uses advanced file control operations to flush buffers
- * to disk that aren't always accessible and can be very expensive. Avoid
- * using this function in cases where the file should just work on any
- * network filesystem.
+ * If @a flush_to_disk is non-zero, do not return until the node has
+ * actually been written on the disk.
  *
- * @since New in 1.9.
+ * @note The flush to disk operation can be very expensive on systems
+ * that implement flushing on all IO layers, like Windows. Please use
+ * @a flush_to_disk flag only for critical data.
+ *
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_io_write_atomic2(const char *final_path,
+                     const void *buf,
+                     apr_size_t nbytes,
+                     const char *copy_perms_path,
+                     svn_boolean_t flush_to_disk,
+                     apr_pool_t *scratch_pool);
+
+/** Similar to svn_io_write_atomic2(), but with @a flush_to_disk set
+* to @c TRUE.
+*
+* @deprecated Provided for backward compatibility with the 1.9 API
+*/
+SVN_DEPRECATED
 svn_error_t *
 svn_io_write_atomic(const char *final_path,
                     const void *buf,

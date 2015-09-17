@@ -824,8 +824,8 @@ remove_lines(svn_min__log_t *log,
           continue;
         }
 
-      /* We don't know how to handle reverse ranges (there should be none).
-         So, we must check for them - just to be sure. */
+      /* We don't know how to handle non-recursive ranges (they are legal,
+       * though).  So, we must check for them - just to be sure. */
       non_recursive_ranges = find_non_recursive_ranges(subtree_ranges,
                                                        iterpool);
       if (non_recursive_ranges->nelts)

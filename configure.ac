@@ -1506,7 +1506,7 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 
 # ==== Miscellaneous bits ====================================================
 
-AC_CHECK_HEADERS([stdbool.h inttypes.h])
+AC_CHECK_HEADERS([stdbool.h stdint.h])
 
 # Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
 ### I think we get this flag from APR, so the fix probably belongs there

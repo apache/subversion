@@ -1503,7 +1503,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
   /* Read the stream from STDIN.  Users can redirect a file. */
-  SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
+  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
@@ -1547,8 +1547,7 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
   /* Read the stream from STDIN.  Users can redirect a file. */
-  SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
-  stdin_stream = svn_stream_wrap_buffered_read(stdin_stream, pool);
+  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)

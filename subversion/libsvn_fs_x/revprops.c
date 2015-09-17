@@ -305,8 +305,8 @@ svn_fs_x__reset_revprop_generation_file(svn_fs_t *fs,
    * the current format.  This ensures consistent on-disk state for new
    * format repositories. */
   SVN_ERR(checkedsummed_number(&buffer, 0, scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_write_atomic(path, buffer->data, buffer->len, NULL,
-                              scratch_pool));
+  SVN_ERR(svn_io_write_atomic2(path, buffer->data, buffer->len, NULL,
+                               TRUE, scratch_pool));
 
   /* ffd->revprop_generation_file will be re-opened on demand. */
 

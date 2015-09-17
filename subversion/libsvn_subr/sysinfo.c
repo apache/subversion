@@ -46,6 +46,7 @@
 
 #include "private/svn_sqlite.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_utf_private.h"
 
 #include "sysinfo.h"
 #include "svn_private_config.h"
@@ -126,7 +127,7 @@ const apr_array_header_t *
 svn_sysinfo__linked_libs(apr_pool_t *pool)
 {
   svn_version_ext_linked_lib_t *lib;
-  apr_array_header_t *array = apr_array_make(pool, 5, sizeof(*lib));
+  apr_array_header_t *array = apr_array_make(pool, 6, sizeof(*lib));
 
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "APR";
@@ -155,6 +156,11 @@ svn_sysinfo__linked_libs(apr_pool_t *pool)
 #else
   lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
 #endif
+
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "Utf8proc";
+  lib->compiled_version = apr_pstrdup(pool, svn_utf__utf8proc_compiled_version());
+  lib->runtime_version = apr_pstrdup(pool, svn_utf__utf8proc_runtime_version());
 
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "ZLib";

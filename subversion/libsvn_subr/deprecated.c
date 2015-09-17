@@ -897,6 +897,18 @@ svn_io_file_rename(const char *from_path, const char *to_path,
                                              FALSE, pool));
 }
 
+svn_error_t *
+svn_io_write_atomic(const char *final_path,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    const char *copy_perms_path,
+                    apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_io_write_atomic2(final_path, buf, nbytes,
+                                              copy_perms_path, TRUE,
+                                              scratch_pool));
+}
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
@@ -1063,6 +1075,12 @@ svn_stream_t *
 svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool)
 {
   return svn_stream_from_aprfile2(file, TRUE, pool);
+}
+
+svn_error_t *
+svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
+{
+  return svn_error_trace(svn_stream_for_stdin2(in, FALSE, pool));
 }
 
 svn_error_t *

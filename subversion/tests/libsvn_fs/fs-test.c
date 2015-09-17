@@ -4969,7 +4969,7 @@ unordered_txn_dirprops(const svn_test_opts_t *opts,
   /* Commit the first one first. */
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
 
-  /* Some backends are clever then others. */
+  /* Some backends are cleverer than others. */
   if (is_bdb)
     {
       /* Then commit the second -- but expect an conflict because the
@@ -5591,7 +5591,7 @@ dir_prop_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_abort_txn(c_txn, pool));
 
   /* Changes in a sub-tree should not conflict with prop changes to some
-     parent directory but some backends are clever then others. */
+     parent directory but some backends are cleverer than others. */
   if (is_bdb)
     {
       SVN_ERR(test_commit_txn(&head_rev, top_txn, "/A", pool));

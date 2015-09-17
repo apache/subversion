@@ -393,15 +393,15 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# e.g.: \"" SVN_RA_CAPABILITY_MERGEINFO ":some-other-capability\" "         \
   "(the order is undefined)."                                                NL
 "#"                                                                          NL
+"# The list is self-reported by the client.  Therefore, you should not"      NL
+"# make security assumptions based on the capabilities list, nor should"     NL
+"# you assume that clients reliably report every capability they have."      NL
+"#"                                                                          NL
 "# Note: The TXN-NAME parameter is new in Subversion 1.8.  Prior to version" NL
 "# 1.8, the start-commit hook was invoked before the commit txn was even"    NL
 "# created, so the ability to inspect the commit txn and its metadata from"  NL
 "# within the start-commit hook was not possible."                           NL
 "# "                                                                         NL
-"# The list is self-reported by the client.  Therefore, you should not"      NL
-"# make security assumptions based on the capabilities list, nor should"     NL
-"# you assume that clients reliably report every capability they have."      NL
-"#"                                                                          NL
 "# If the hook program exits with success, the commit continues; but"        NL
 "# if it exits with failure (non-zero), the commit is stopped before"        NL
 "# a Subversion txn is created, and STDERR is returned to the client."       NL;

@@ -3994,11 +3994,12 @@ svn_io_write_unique(const char **tmp_path,
 }
 
 svn_error_t *
-svn_io_write_atomic(const char *final_path,
-                    const void *buf,
-                    apr_size_t nbytes,
-                    const char *copy_perms_path,
-                    apr_pool_t *scratch_pool)
+svn_io_write_atomic2(const char *final_path,
+                     const void *buf,
+                     apr_size_t nbytes,
+                     const char *copy_perms_path,
+                     svn_boolean_t flush_to_disk,
+                     apr_pool_t *scratch_pool)
 {
   apr_file_t *tmp_file;
   const char *tmp_path;
@@ -4011,7 +4012,7 @@ svn_io_write_atomic(const char *final_path,
 
   err = svn_io_file_write_full(tmp_file, buf, nbytes, NULL, scratch_pool);
 
-  if (!err)
+  if (!err && flush_to_disk)
     err = svn_io_file_flush_to_disk(tmp_file, scratch_pool);
 
   err = svn_error_compose_create(err,
@@ -4021,7 +4022,8 @@ svn_io_write_atomic(const char *final_path,
     err = svn_io_copy_perms(copy_perms_path, tmp_path, scratch_pool);
 
   if (!err)
-    err = svn_io_file_rename2(tmp_path, final_path, TRUE, scratch_pool);
+    err = svn_io_file_rename2(tmp_path, final_path, flush_to_disk,
+                              scratch_pool);
 
   if (err)
     {
@@ -5112,7 +5114,7 @@ temp_file_create(apr_file_t **new_file,
 
       /* Generate a number that should be unique for this application and
          usually for the entire computer to reduce the number of cycles
-         through this loop. (A bit of calculation is much cheaper then
+         through this loop. (A bit of calculation is much cheaper than
          disk io) */
       unique_nr = baseNr + 3 * i;
 
