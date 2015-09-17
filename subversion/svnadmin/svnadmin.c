@@ -1109,8 +1109,7 @@ repos_notify_handler(void *baton,
                                             "%" APR_INT64_T_FMT,
                                             notify->shard);
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                              _("Packing revision properties"
-                                " in shard %s..."),
+                              _("Packed revision properties in shard %s\n"),
                               shardstr));
         return;
       }
@@ -1121,8 +1120,8 @@ repos_notify_handler(void *baton,
                                             "%" APR_INT64_T_FMT,
                                             notify->shard);
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                              _("Removing non-packed revision properties"
-                                " in shard %s..."),
+                              _("Removed non-packed revision properties"
+                                " in shard %s\n"),
                               shardstr));
         return;
       }
