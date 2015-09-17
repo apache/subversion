@@ -1706,14 +1706,14 @@ typedef struct diff_item_t
 
 /* Return differences between branch subtrees S_LEFT and S_RIGHT.
  *
- * Set *DIFF_CHANGES to an array of (diff_item_t).
+ * Set *DIFF_CHANGES to a hash of (eid -> diff_item_t).
  *
  * ### This requires 'subtrees' only in order to produce the 'relpath'
  *     fields in the output. Other than that, it would work with arbitrary
  *     sets of elements.
  */
 static svn_error_t *
-subtree_diff(svn_array_t **diff_changes,
+subtree_diff(apr_hash_t **diff_changes,
              svn_editor3_t *editor,
              svn_branch_subtree_t *s_left,
              svn_branch_subtree_t *s_right,
@@ -1723,7 +1723,7 @@ subtree_diff(svn_array_t **diff_changes,
   apr_hash_t *diff_left_right;
   apr_hash_index_t *hi;
 
-  *diff_changes = svn_array_make(result_pool);
+  *diff_changes = apr_hash_make(result_pool);
 
   SVN_ERR(svn_branch_subtree_differences(&diff_left_right,
                                          editor, s_left, s_right,
@@ -1750,7 +1750,7 @@ subtree_diff(svn_array_t **diff_changes,
           item->reparented = (e0 && e1 && e0->parent_eid != e1->parent_eid);
           item->renamed = (e0 && e1 && strcmp(e0->name, e1->name) != 0);
 
-          SVN_ARRAY_PUSH(*diff_changes) = item;
+          svn_int_hash_set(*diff_changes, eid, item);
         }
     }
 
@@ -1764,9 +1764,10 @@ subtree_diff(svn_array_t **diff_changes,
  * Return negative/zero/positive when A sorts before/equal-to/after B.
  */
 static int
-diff_ordering_major_paths(const void *a, const void *b)
+diff_ordering_major_paths(const struct svn_sort__item_t *a,
+                          const struct svn_sort__item_t *b)
 {
-  const diff_item_t *item_a = *(void *const *)a, *item_b = *(void *const *)b;
+  const diff_item_t *item_a = a->value, *item_b = b->value;
   int deleted_a = (item_a->e0 && ! item_a->e1);
   int deleted_b = (item_b->e0 && ! item_b->e1);
   const char *major_path_a = (item_a->e1 ? item_a->relpath1 : item_a->relpath0);
@@ -1778,19 +1779,6 @@ diff_ordering_major_paths(const void *a, const void *b)
 
   /* Sort by path */
   return svn_path_compare_paths(major_path_a, major_path_b);
-}
-
-/* Find the relative order of diff items A and B, according to the
- * EID of each.
- *
- * Return negative/zero/positive when A sorts before/equal-to/after B.
- */
-static int
-diff_ordering_eids(const void *a, const void *b)
-{
-  const diff_item_t *item_a = *(void *const *)a, *item_b = *(void *const *)b;
-
-  return (item_a->eid < item_b->eid) ? -1 : (item_a->eid > item_b->eid) ? 1 : 0;
 }
 
 /* Display differences between subtrees LEFT and RIGHT, which are subtrees
@@ -1814,7 +1802,7 @@ show_subtree_diff(svn_editor3_t *editor,
                   const char *header,
                   apr_pool_t *scratch_pool)
 {
-  svn_array_t *diff_changes;
+  apr_hash_t *diff_changes;
   SVN_ITER_T(diff_item_t) *ai;
 
   SVN_ERR_ASSERT(left && left->root_eid >= 0
@@ -1823,13 +1811,14 @@ show_subtree_diff(svn_editor3_t *editor,
   SVN_ERR(subtree_diff(&diff_changes, editor, left, right,
                        scratch_pool, scratch_pool));
 
-  if (header && diff_changes->nelts)
+  if (header && apr_hash_count(diff_changes))
     notify("%s%s", prefix, header);
 
-  for (SVN_ARRAY_ITER_SORTED(ai, diff_changes,
-                             (the_ui_mode == UI_MODE_EIDS)
-                               ? diff_ordering_eids : diff_ordering_major_paths,
-                             scratch_pool))
+  for (SVN_HASH_ITER_SORTED(ai, diff_changes,
+                            (the_ui_mode == UI_MODE_EIDS)
+                              ? sort_compare_items_by_eid
+                              : diff_ordering_major_paths,
+                            scratch_pool))
     {
       diff_item_t *item = ai->val;
       svn_branch_el_rev_content_t *e0 = item->e0, *e1 = item->e1;
