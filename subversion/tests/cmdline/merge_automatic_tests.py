@@ -1352,6 +1352,53 @@ def merge_to_copy_and_add(sbox):
                                      'merge', '--reintegrate', '^/A',
                                      sbox.ospath('A3'))
 
+@XFail()
+def merge_delete_crlf_file(sbox):
+  "merge the deletion of a strict CRLF file"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'AA')
+
+  # Let commit fix the eols
+  sbox.simple_add_text('with\rCRLF\rhere!', 'A/crlf')
+  sbox.simple_add_text('with\rnative\r\eol', 'A/native')
+  sbox.simple_add_text('with\rCR\r\eol', 'A/cr')
+  sbox.simple_add_text('with\rLF\r\eol', 'A/lf')
+
+  # And apply the magic property
+  sbox.simple_propset('svn:eol-style', 'CRLF',   'A/crlf')
+  sbox.simple_propset('svn:eol-style', 'native', 'A/native')
+  sbox.simple_propset('svn:eol-style', 'CR',     'A/cr')
+  sbox.simple_propset('svn:eol-style', 'LF',     'A/lf')
+
+  sbox.simple_commit('A') # r2
+
+  # Merge the addition of the file
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+  sbox.simple_commit('AA') # r3
+
+  sbox.simple_rm('A/D', 'A/mu', 'A/crlf', 'A/native', 'A/cr', 'A/lf')
+  sbox.simple_commit('A') # r4
+
+  sbox.simple_update('') # Make single revision r4
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '--- Merging r3 through r4 into \'%s\':\n' % sbox.ospath('AA'),
+    'D    %s\n' % sbox.ospath('AA/cr'),
+    'D    %s\n' % sbox.ospath('AA/crlf'),
+    'D    %s\n' % sbox.ospath('AA/lf'),
+    'D    %s\n' % sbox.ospath('AA/native'),
+    'D    %s\n' % sbox.ospath('AA/mu'),
+    'D    %s\n' % sbox.ospath('AA/D'),
+    '--- Recording mergeinfo for merge of r3 through r4 into \'%s\':\n'
+                % sbox.ospath('AA'),
+    ' U   %s\n' % sbox.ospath('AA')
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+
 ########################################################################
 # Run the tests
 
@@ -1382,6 +1429,7 @@ test_list = [ None,
               effective_sync_results_in_reintegrate,
               reintegrate_subtree_not_updated,
               merge_to_copy_and_add,
+              merge_delete_crlf_file
              ]
 
 if __name__ == '__main__':
