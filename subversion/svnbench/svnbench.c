@@ -371,6 +371,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   svn_boolean_t descend = TRUE;
   svn_boolean_t use_notifier = TRUE;
+  apr_time_t start_time, time_taken;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -939,7 +940,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   ctx->conflict_baton2 = NULL;
 
   /* And now we finally run the subcommand. */
+  start_time = apr_time_now();
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
+  time_taken = apr_time_now() - start_time;
+
   if (err)
     {
       /* For argument-related problems, suggest using the 'help'
@@ -967,6 +971,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
 
       return err;
+    }
+  else if ((subcommand->cmd_func != svn_cl__help) && !opt_state.quiet)
+    {
+      /* This formatting lines up nicely with the output of our sub-commands
+       * and gives musec resolution while not overflowing for 30 years. */
+      SVN_ERR(svn_cmdline_printf(pool,
+                                _("%15.6f seconds taken\n"),
+                                time_taken / 1.0e6));
     }
 
   return SVN_NO_ERROR;

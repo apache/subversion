@@ -402,6 +402,14 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+
+svn_error_t *
+svn_cl__resolve_conflict(svn_boolean_t *resolved,
+                         svn_client_conflict_t *conflict,
+                         svn_client_ctx_t *ctx,
+                         svn_wc_conflict_choice_t conflict_choice,
+                         apr_pool_t *scratch_pool);
+
 
 /*** Command-line output functions -- printing to the user. ***/
 

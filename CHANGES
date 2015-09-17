@@ -1,3 +1,31 @@
+Version 1.9.2
+(30 Sep 2015, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.2
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * svn: fix crash when saving credentials in kwallet (r1700740, r1700951)
+    * checkout/update: fix "access denied" error on Windows (r1701064 et al)
+    * update: fix crash when updating a conflicted tree (r1702198, r1702200)
+    * commit: fix possible crash (r1702231)
+    * ra_serf: do not crash on unexpected 'X-SVN-VR-Base' headers (r1702288)
+    * merge: fix crash when merging to a local add (r1702299 et al)
+    * svnmucc: fix error during propset+put for existing file (r1702467 et al)
+    * update: fix crash without .svn/tmp folder (r1701838, r1702203)
+    * checkout: remove unnecessary I/O operation (r1701638)
+    * merge: fix possible crash (r1701997)
+    * update: fix crash with some of the incoming deletes (r1702247)
+    * upgrade: fix crash for pre-1.3 wc with externals (r1702218 et al)
+    * revert: fix crash when reverting the root of a move (r1702237 et al)
+    * svn: do not crash upon specific database corruptions (r1702974, r1702991)
+
+  - Server-side bugfixes:
+    * fix reporting for empty representations in svnfsfs stats (r1698312 et al)
+
+ Developer-visible changes:
+  - API changes:
+    * disable unsupported operations for standard streams (r1701633 et al)
+
 Version 1.9.1
 (02 Sep 2015, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.1

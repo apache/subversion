@@ -549,8 +549,9 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
 
   final_path = svn_fs_x__path_min_unpacked_rev(fs, scratch_pool);
 
-  SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
-                              final_path /* copy_perms */, scratch_pool));
+  SVN_ERR(svn_io_write_atomic2(final_path, buf, len + 1,
+                               final_path /* copy_perms */, TRUE,
+                               scratch_pool));
 
   return SVN_NO_ERROR;
 }
