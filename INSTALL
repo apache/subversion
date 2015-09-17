@@ -755,15 +755,9 @@ II.   INSTALLATION
 
   E.1 Prerequisites
 
-      * Visual Studio 6 and service pack. It can be built with later versions
-        of Visual Studio (Visual Studio.NET 2005-2015, Visual C++ Express
+      * Visual Studio (Visual Studio.NET 2005-2015, Visual C++ Express
         2005-2010, Visual Studio Express 2012-2013 and Visual Studio Community
-        2013-2015) but these instructions assume VS6.
-      * A recent Windows SDK. (Not needed with Visual Studio 2005 and later)
-        If you are using Visual Studio 6, you need the latest SDK which
-        is compatible with VC6, which is the one from February 2003.
-        You can get it from MSDN:
-        https://social.msdn.microsoft.com/Forums/windowsdesktop/en-US/e1147034-9b0b-4494-a5bc-6dfebb6b7eb1/download-and-install-microsoft-platform-sdk-febuary-2003-last-version-with-vc6-support?forum=windowssdk
+        2013-2015).
       * Python 2.7 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
         Note that Python 3.x is not supported (yet).
@@ -792,14 +786,6 @@ II.   INSTALLATION
         http://httpd.apache.org/download.cgi, these instructions assume
         version 2.0.58.  This is only needed for building the Subversion
         server Apache modules.  ### FIXME Apache 2.2 or greater required.
-      * [Optional] Apache 2 msi install file, also from
-        http://httpd.apache.org/download.cgi (required for running the
-        tests).  Only needed for testing the server dso modules and if
-        you are using Visual Studio 6.
-        Note that if you are not using Visual Studio 6 (and you want to
-        run and test the server modules) then you must rebuild Apache
-        from source -- do not use the stock MSI since mixing C runtime
-        libraries is not supported.
       * [Optional] Berkeley DB for backend support of the server
         components -- versions 4.3.27 and 4.4.20 are available from
         http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=688
@@ -844,32 +830,10 @@ II.   INSTALLATION
         installer to register environment variables or run VCVARS32.BAT
         before building anything.  If you are using a newer Visual Studio,
         use the 'Visual Studio 20xx Command Prompt' on the Start menu.
-      * Install and register a recent Windows Core SDK if you are using
-        Visual Studio 6. This is a quote from the Microsoft February 2003
-        SDK documentation:
-
-       "To register the SDK bin, include, and library directories with
-        Microsoft Visual Studio® version 6.0 and Visual Studio .NET,
-        click Start, point to All Programs, point to Microsoft Platform
-        SDK February 2003, point to Visual Studio Registration, and then
-        click Register PSDK Directories with Visual Studio. This
-        registration process places the SDK bin, include, and library
-        directories at the beginning of the search paths, which ensures
-        that the latest headers and libraries are used when building
-        applications in the IDE. Note that for Visual Studio 6.0
-        integration to succeed, Visual Studio 6.0 must run at least once
-        before you select Register PSDK Directories with Visual
-        Studio. Also note that when this option is run, the IDEs should
-        not be running."
-
       * Install Python and add it to your path
       * Install Perl (it should add itself to the path)
       * Copy AWK (awk95.exe) to awk.exe (e.g. SVN\awk\awk.exe) and add
         the directory containing it (e.g. SVN\awk) to the path.
-      * [Optional] Install Apache 2 using the msi file if you are going to test
-        the server dso modules and are using Visual Studio 6.  You must build
-        and install it from source if you are not using Visual Studio 6 and
-        want to build and/or test the server modules.
       * [Optional] If you checked out Subversion from the repository and want
         to build Subversion with http/https access support then install the
         Apache Serf sources into SVN\src-trunk\serf.
@@ -961,6 +925,8 @@ II.   INSTALLATION
 
       This step is only required for building the server dso modules.
 
+      ### FIXME Apache 2.2 or greater required. Old build instructions for VC6.
+
       C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
       C:>msdev httpd-2.0.58\apache.dsw /MAKE "BuildBin - Win32 Release"
 
@@ -1010,28 +976,16 @@ II.   INSTALLATION
         the APR libraries; the options are --with-apr, --with-apr-util and
         --with-apr-iconv.
       * If you would like a debug build substitute Debug for Release in
-        the msdev/msbuild commands.
+        the msbuild commands.
       * There have been rumors that Subversion on Win32 can be built
         using the latest cygwin, you probably don't want the zip file source
         distribution though. ymmv.
-      * The /USEENV switch to msdev makes it take notice of the INCLUDE and
-        LIB environment variables, it also makes it ignore its own lib and
-        include settings so you need to have the Windows SDK lib and include
-        directories in the LIB and INCLUDE environment variables.  Do *not*
-        use this switch when starting up the msdev Visual environment.  If you
-        wish to build in the Visual environment the SDK lib and include
-        directories must be in the Tools/Options/Directories settings (if you
-        followed the 'Register the SDK with Visual Studio 6' instructions
-        above this has been done for you).
-      * If you are using Visual Studio later than VC6 change -t dsw into
-        -t vcproj and add the --vsnet-version=20xx option on the gen-make.py
-        command.
-        In this case you will also have to distribute the C runtime dll with
-        the binaries.  Also, since Apache/APR do not provide .vcproj files,
-        you will need to convert the Apache/APR .dsp files to .vcproj files
-        with Visual Studio before building -- just open the Apache .dsw file
-        and answer 'Yes To All' when the conversion dialog pops up, or you
-        can open the individual .dsp files and convert them one at a time.
+      * You will also have to distribute the C runtime dll with the binaries.
+        Also, since Apache/APR do not provide .vcproj files, you will need to
+        convert the Apache/APR .dsp files to .vcproj files with Visual Studio
+        before building -- just open the Apache .dsw file and answer 'Yes To
+        All' when the conversion dialog pops up, or you can open the individual
+        .dsp files and convert them one at a time.
         The Apache/APR projects required by Subversion are:
         apr-util\libaprutil.dsp, apr\libapr.dsp,
         apr-iconv\libapriconv.dsp, apr-util\xml\expat\lib\xml.dsp,
@@ -1047,16 +1001,11 @@ II.   INSTALLATION
       gen-make.py will already have been run. If the source is from the zip
       file, Apache 2 has not been built so gen-make.py must be run:
 
-      C:>python gen-make.py -t dsp --with-berkeley-db=db4-win32
-          --with-openssl=..\openssl-0.9.7f --with-zlib=..\zlib
-          --with-libintl=..\svn-win32-libintl
+      C:>python gen-make.py -t vcproj --vsnet-version=20xx
+          --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7f
+          --with-zlib=..\zlib --with-libintl=..\svn-win32-libintl
 
       Then build subversion:
-
-      C:>msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
-      C:>cd ..
-
-      Or, with Visual C++.NET 2005 or C++ Express 2005:
 
       C:>devenv subversion_vcnet.sln /build "Release" /project "__ALL_TESTS__"
       C:>cd ..
