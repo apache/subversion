@@ -1001,9 +1001,9 @@ II.   INSTALLATION
       gen-make.py will already have been run. If the source is from the zip
       file, Apache 2 has not been built so gen-make.py must be run:
 
-      C:>python gen-make.py -t vcproj --vsnet-version=20xx
-          --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7f
-          --with-zlib=..\zlib --with-libintl=..\svn-win32-libintl
+      C:>python gen-make.py --vsnet-version=20xx --with-berkeley-db=db4-win32
+          --with-openssl=..\openssl-0.9.7f --with-zlib=..\zlib
+          --with-libintl=..\svn-win32-libintl
 
       Then build subversion:
 
