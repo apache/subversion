@@ -990,7 +990,6 @@ II.   INSTALLATION
         The Apache/APR projects required by Subversion are:
         apr-util\libaprutil.dsp, apr\libapr.dsp,
         apr-iconv\libapriconv.dsp, apr-util\xml\expat\lib\xml.dsp,
-        apr-util\uri\gen_uri_delims.dsp (for APR 0.9.x),
         apr-iconv\ccs\libapriconv_ccs_modules.dsp, and
         apr-iconv\ces\libapriconv_ces_modules.dsp.
       * If the server dso modules are being built and tested Apache must not
