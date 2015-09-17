@@ -797,7 +797,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
         }
       else
         {
-          if (knows_something)
+          if (knows_something || is_binary)
             *next_option++ = "r";
 
           /* The 'mine-full' option selects the ".mine" file so only offer
@@ -1014,7 +1014,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
              the file if they've edited it, or at least looked at
              the diff. */
           if (opt->choice == svn_wc_conflict_choose_merged
-              && ! knows_something)
+              && ! knows_something && diff_allowed)
             {
               SVN_ERR(svn_cmdline_fprintf(
                         stderr, iterpool,
