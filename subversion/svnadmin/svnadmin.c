@@ -479,8 +479,12 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"lstxns", subcommand_lstxns, {0}, N_
    ("usage: svnadmin lstxns REPOS_PATH\n\n"
-    "Print the names of all uncommitted transactions.\n"),
-   {0} },
+    "Print the names of uncommitted transactions. With -rN skip the output\n"
+    "of those that have a base revision more recent than rN.  Transactions\n"
+    "with base revisions much older than HEAD are likely to have been\n"
+    "abandonded and are candidates to be removed.\n"),
+   {'r'},
+   { {'r', "transaction base revision ARG"} } },
 
   {"pack", subcommand_pack, {0}, N_
    ("usage: svnadmin pack REPOS_PATH\n\n"
@@ -1575,21 +1579,46 @@ subcommand_lstxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   apr_array_header_t *txns;
+  apr_pool_t *iterpool;
+  svn_revnum_t youngest, limit;
   int i;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
+  if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Revision range is not allowed"));
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_list_transactions(&txns, fs, pool));
 
-  /* Loop, printing revisions. */
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+  SVN_ERR(get_revnum(&limit, &opt_state->start_revision, youngest, repos,
+                     pool));
+  
+  iterpool = svn_pool_create(pool);
   for (i = 0; i < txns->nelts; i++)
     {
-      SVN_ERR(svn_cmdline_printf(pool, "%s\n",
-                                 APR_ARRAY_IDX(txns, i, const char *)));
+      const char *name = APR_ARRAY_IDX(txns, i, const char *);
+      svn_boolean_t show = TRUE;
+
+      svn_pool_clear(iterpool);
+      if (limit != SVN_INVALID_REVNUM)
+        {
+          svn_fs_txn_t *txn;
+          svn_revnum_t base;
+
+          SVN_ERR(svn_fs_open_txn(&txn, fs, name, iterpool));
+          base = svn_fs_txn_base_revision(txn);
+
+          if (base > limit)
+            show = FALSE;
+        }
+      if (show)
+        SVN_ERR(svn_cmdline_printf(pool, "%s\n", name));
     }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
