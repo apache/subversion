@@ -1352,7 +1352,6 @@ def merge_to_copy_and_add(sbox):
                                      'merge', '--reintegrate', '^/A',
                                      sbox.ospath('A3'))
 
-@XFail()
 def merge_delete_crlf_file(sbox):
   "merge the deletion of a strict CRLF file"
 
@@ -1374,7 +1373,7 @@ def merge_delete_crlf_file(sbox):
 
   sbox.simple_commit('A') # r2
 
-  # Merge the addition of the file
+  # Merge the addition of the files
   svntest.actions.run_and_verify_svn(None, [],
                                      'merge', '^/A', sbox.ospath('AA'))
   sbox.simple_commit('AA') # r3
@@ -1384,6 +1383,7 @@ def merge_delete_crlf_file(sbox):
 
   sbox.simple_update('') # Make single revision r4
 
+  # And now merge the deletes
   expected_output = svntest.verify.UnorderedOutput([
     '--- Merging r3 through r4 into \'%s\':\n' % sbox.ospath('AA'),
     'D    %s\n' % sbox.ospath('AA/cr'),
