@@ -442,18 +442,18 @@ static const resolver_option_t text_conflict_options[] =
                                   svn_client_conflict_option_undefined },
   { "mc", N_("my side of conflict"), N_("accept my version for all conflicts "
                                         "(same)  [mine-conflict]"),
-                                  svn_client_conflict_option_working_text_for_conflicted_hunks_only },
+                                  svn_client_conflict_option_working_text_where_conflicted },
   { "tc", N_("their side of conflict"), N_("accept their version for all "
                                            "conflicts (same)"
                                            "  [theirs-conflict]"),
-                                  svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only },
+                                  svn_client_conflict_option_incoming_text_where_conflicted },
   { "",   "",                     "", svn_client_conflict_option_unspecified },
   { "mf", N_("my version"),       N_("accept my version of entire file (even "
                                      "non-conflicts)  [mine-full]"),
                                   svn_client_conflict_option_working_text },
   { "tf", N_("their version"),    N_("accept their version of entire file "
                                      "(same)  [theirs-full]"),
-                                  svn_client_conflict_option_incoming_new_text },
+                                  svn_client_conflict_option_incoming_text },
   { "",   "",                     "", svn_client_conflict_option_unspecified },
   { "m",  N_("merge"),            N_("use merge tool to resolve conflict"),
                                   svn_client_conflict_option_undefined },
@@ -484,7 +484,7 @@ static const resolver_option_t binary_conflict_options[] =
                                   svn_client_conflict_option_merged_text },
   { "tf", N_("their version"),    N_("accept the incoming version of file "
                                      " [theirs-full]"),
-                                  svn_client_conflict_option_incoming_new_text },
+                                  svn_client_conflict_option_incoming_text },
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later "
                                      " [postpone]"),
                                   svn_client_conflict_option_postpone },
@@ -503,7 +503,7 @@ static const resolver_option_t prop_conflict_options[] =
                                   svn_client_conflict_option_working_text },
   { "tf", N_("their version"),    N_("accept their version of entire property "
                                      "(same)  [theirs-full]"),
-                                  svn_client_conflict_option_incoming_new_text },
+                                  svn_client_conflict_option_incoming_text },
   { "dc", N_("display conflict"), N_("show conflicts in this property"),
                                   svn_client_conflict_option_undefined },
   { "e",  N_("edit property"),    N_("change merged property value in an editor"
@@ -540,7 +540,7 @@ static const resolver_option_t tree_conflict_options_update_moved_away[] =
   { "mc", N_("apply update to move destination (recommended)"),
                                   N_("apply incoming update to move destination"
                                      "  [mine-conflict]"),
-                                  svn_client_conflict_option_working_text_for_conflicted_hunks_only },
+                                  svn_client_conflict_option_working_text_where_conflicted },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
                                   svn_client_conflict_option_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
@@ -555,7 +555,7 @@ static const resolver_option_t tree_conflict_options_update_edit_deleted_dir[] =
   { "mc", N_("prepare for updating moved-away children, if any (recommended)"),
                                   N_("allow updating moved-away children "
                                      "with 'svn resolve' [mine-conflict]"),
-                                  svn_client_conflict_option_working_text_for_conflicted_hunks_only },
+                                  svn_client_conflict_option_working_text_where_conflicted },
   { "p",  N_("postpone"),         N_("resolve the conflict later  [postpone]"),
                                   svn_client_conflict_option_postpone },
   { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
@@ -998,8 +998,8 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
         }
       else if (opt->choice != svn_client_conflict_option_undefined)
         {
-          if ((opt->choice == svn_client_conflict_option_working_text_for_conflicted_hunks_only
-               || opt->choice == svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only)
+          if ((opt->choice == svn_client_conflict_option_working_text_where_conflicted
+               || opt->choice == svn_client_conflict_option_incoming_text_where_conflicted)
               && is_binary)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
@@ -1296,16 +1296,16 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
       *option_id = svn_client_conflict_option_merged_text;
       return SVN_NO_ERROR;
     case svn_cl__accept_mine_conflict:
-      *option_id = svn_client_conflict_option_working_text_for_conflicted_hunks_only;
+      *option_id = svn_client_conflict_option_working_text_where_conflicted;
       return SVN_NO_ERROR;
     case svn_cl__accept_theirs_conflict:
-      *option_id = svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only;
+      *option_id = svn_client_conflict_option_incoming_text_where_conflicted;
       return SVN_NO_ERROR;
     case svn_cl__accept_mine_full:
       *option_id = svn_client_conflict_option_working_text;
       return SVN_NO_ERROR;
     case svn_cl__accept_theirs_full:
-      *option_id = svn_client_conflict_option_incoming_new_text;
+      *option_id = svn_client_conflict_option_incoming_text;
       return SVN_NO_ERROR;
     case svn_cl__accept_edit:
       if (merged_abspath)
@@ -1442,16 +1442,16 @@ conflict_option_id_to_wc_conflict_choice(
       case svn_client_conflict_option_base_text:
         return svn_wc_conflict_choose_base;
 
-      case svn_client_conflict_option_incoming_new_text:
+      case svn_client_conflict_option_incoming_text:
         return svn_wc_conflict_choose_theirs_full;
 
       case svn_client_conflict_option_working_text:
         return svn_wc_conflict_choose_mine_full;
 
-      case svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only:
+      case svn_client_conflict_option_incoming_text_where_conflicted:
         return svn_wc_conflict_choose_theirs_conflict;
 
-      case svn_client_conflict_option_working_text_for_conflicted_hunks_only:
+      case svn_client_conflict_option_working_text_where_conflicted:
         return svn_wc_conflict_choose_mine_conflict;
 
       case svn_client_conflict_option_merged_text:

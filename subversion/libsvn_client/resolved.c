@@ -223,16 +223,16 @@ conflict_option_id_to_wc_conflict_choice(
       case svn_client_conflict_option_base_text:
         return svn_wc_conflict_choose_base;
 
-      case svn_client_conflict_option_incoming_new_text:
+      case svn_client_conflict_option_incoming_text:
         return svn_wc_conflict_choose_theirs_full;
 
       case svn_client_conflict_option_working_text:
         return svn_wc_conflict_choose_mine_full;
 
-      case svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only:
+      case svn_client_conflict_option_incoming_text_where_conflicted:
         return svn_wc_conflict_choose_theirs_conflict;
 
-      case svn_client_conflict_option_working_text_for_conflicted_hunks_only:
+      case svn_client_conflict_option_working_text_where_conflicted:
         return svn_wc_conflict_choose_mine_conflict;
 
       case svn_client_conflict_option_merged_text:
@@ -605,7 +605,7 @@ static const svn_client_conflict_option_t text_conflict_options[] =
   },
 
   {
-    svn_client_conflict_option_incoming_new_text,
+    svn_client_conflict_option_incoming_text,
     N_("accept incoming version of entire file"),
     NULL,
     resolve_text_conflict
@@ -619,14 +619,14 @@ static const svn_client_conflict_option_t text_conflict_options[] =
   },
 
   {
-    svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
+    svn_client_conflict_option_incoming_text_where_conflicted,
     N_("accept incoming version of all text conflicts in file"),
     NULL,
     resolve_text_conflict
   },
 
   {
-    svn_client_conflict_option_working_text_for_conflicted_hunks_only,
+    svn_client_conflict_option_working_text_where_conflicted,
     N_("accept working copy version of all text conflicts in file"),
     NULL,
     resolve_text_conflict
@@ -645,7 +645,7 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
   },
 
   {
-    svn_client_conflict_option_incoming_new_text,
+    svn_client_conflict_option_incoming_text,
     N_("accept incoming version of binary file"),
     NULL,
     resolve_text_conflict
@@ -671,7 +671,7 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
   },
 
   {
-    svn_client_conflict_option_incoming_new_text,
+    svn_client_conflict_option_incoming_text,
     N_("accept incoming version of entire property value"),
     NULL,
     resolve_prop_conflict
