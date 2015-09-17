@@ -52,6 +52,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1703581
+   Allow simple resolving of binary file text conflicts
+   Justification:
+     Simple usability improvement. Use reported. Regression.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
