@@ -58,6 +58,7 @@ Candidate changes:
      Simple usability improvement. Use reported. Regression.
    Votes:
      +1: rhuijben
+     -1: philip (needs backport)
 
 Veto-blocked changes:
 =====================
