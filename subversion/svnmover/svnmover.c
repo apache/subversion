@@ -480,6 +480,9 @@ wc_commit(svn_revnum_t *new_rev_p,
   /* If no log msg provided, use the list of commands */
   if (! svn_hash_gets(revprops, SVN_PROP_REVISION_LOG) && wc->list_of_commands)
     {
+      /* Avoid modifying the passed-in revprops hash */
+      revprops = apr_hash_copy(scratch_pool, revprops);
+
       svn_hash_sets(revprops, SVN_PROP_REVISION_LOG,
                     svn_string_create(wc->list_of_commands, scratch_pool));
     }
@@ -2709,12 +2712,11 @@ do_commit(svn_revnum_t *new_rev_p,
   /* Commit */
   SVN_ERR(wc_commit(&new_rev, wc, revprops, scratch_pool));
 
-  /* Check out a new WC if a commit was performed */
-  if (SVN_IS_VALID_REVNUM(new_rev))
-    {
-      SVN_ERR(wc_checkout(wc, new_rev, wc->working->branch_id,
-                          scratch_pool));
-    }
+  /* Check out a new WC.
+     (Instead, we could perhaps just get a new WC editor.) */
+  SVN_ERR(wc_checkout(wc, SVN_IS_VALID_REVNUM(new_rev) ? new_rev
+                                                       : wc->base->revision,
+                      wc->working->branch_id, scratch_pool));
 
   if (new_rev_p)
     *new_rev_p = new_rev;
@@ -3336,11 +3338,8 @@ execute(svnmover_wc_t *wc,
             svn_revnum_t new_rev;
 
             SVN_ERR(do_commit(&new_rev, wc, revprops, iterpool));
-            if (SVN_IS_VALID_REVNUM(new_rev))
-              {
-                editor = wc->editor;
-              }
-            else
+            editor = wc->editor;
+            if (! SVN_IS_VALID_REVNUM(new_rev))
               {
                 notify_v("There are no changes to commit.");
               }
