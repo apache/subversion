@@ -61,6 +61,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
+ * r1703675
+   Fix formatting of upgrade notification messages.
+   Justification:
+     Multiple notifications on one line are hard to read.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
