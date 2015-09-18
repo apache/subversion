@@ -1119,7 +1119,7 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
         {
           SVN_ERR(edit_prop_conflict(&merged_propval,
                                      base_propval, my_propval, their_propval,
-                                     b->pb, b->editor_cmd, b->config,
+                                     b->editor_cmd, b->config, b->pb,
                                      result_pool, scratch_pool));
           resolved_allowed = (merged_propval != NULL);
         }
