@@ -76,8 +76,7 @@
 #define MAX_INACTIVE_SESSIONS    13
 
 /* Inactive session expiry time. */
-/* RA_CACHE TODO: pick a better value */
-#define INACTIVE_SESSION_TIMEOUT apr_time_from_sec(5*60)
+#define INACTIVE_SESSION_TIMEOUT apr_time_from_sec(1*60)
 
 
 /* Cache entry */
