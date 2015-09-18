@@ -571,12 +571,36 @@ def reported_br_diff(path1, path2=None):
   return [r'--- diff branch B[0-9.]+ at /%s : B[0-9.]+ at /%s' % (
            re.escape(path1), re.escape(path2))]
 
-def reported_del(path):
+def reported_del(one_path=None, paths=[], branches=[]):
   """Return expected lines for deletion of an element.
 
      PATH is the relpath of the element within its branch.
   """
-  return ['D   ' + re.escape(path)]
+  lines = []
+  if one_path is not None:
+    paths = [one_path] + paths
+  all_paths = paths + branches
+
+  for path in paths:
+    if os.path.dirname(path) in all_paths:
+      code = 'd'
+    else:
+      code = 'D'
+
+    lines.append(code + '   ' + re.escape(path))
+
+  for path in branches:
+    if os.path.dirname(path) in all_paths:
+      code = 'd'
+    else:
+      code = 'D'
+
+    branch_text = r' \(branch B[0-9.]+\)'
+    lines.append(code + '   ' + re.escape(path) + branch_text)
+
+    lines.append(reported_branch_del_line(path))
+
+  return lines
 
 def reported_br_del(path1, path2=None):
   """Return expected lines for deletion of a (sub)branch.
@@ -586,16 +610,6 @@ def reported_br_del(path1, path2=None):
   subbranch_rpath, subbranch_fullpath = reported_br_params(path1, path2)
   return [reported_element_del_line(subbranch_rpath, r' \(branch B[0-9.]+\)'),
           reported_branch_del_line(subbranch_fullpath)]
-
-def reported_br_nested_del(path1, path2=None):
-  """Return expected lines for deletion of a subbranch that is nested inside
-     an outer branch that is also deleted: there is no accompanying 'deleted
-     element' line.
-
-     Params are (SUBBRANCH_RPATH) or (OUTER_BRANCH_FULLPATH, SUBBRANCH_RPATH).
-  """
-  subbranch_rpath, subbranch_fullpath = reported_br_params(path1, path2)
-  return [reported_branch_del_line(subbranch_fullpath)]
 
 def reported_add(path):
   """Return expected lines for addition of an element.
@@ -772,11 +786,11 @@ def move_to_related_branch(sbox):
   test_svnmover2(sbox, '',
                  reported_br_diff('branches/br1') +
                  reported_del('README') +
-                 reported_del('lib') +
-                 reported_del('lib/foo') +
-                 reported_del('lib/foo/file') +
-                 reported_del('lib/foo/x') +
-                 reported_del('lib/foo/y'),
+                 reported_del(paths=['lib',
+                              'lib/foo',
+                              'lib/foo/file',
+                              'lib/foo/x',
+                              'lib/foo/y']),
                 'rm branches/br1/README',
                 'rm branches/br1/lib')
 
@@ -785,11 +799,11 @@ def move_to_related_branch(sbox):
                  reported_br_diff('branches/br1') +
                  reported_br_diff('trunk') +
                  reported_del('README') +
-                 reported_del('lib') +
-                 reported_del('lib/foo') +
-                 reported_del('lib/foo/file') +
-                 reported_del('lib/foo/x') +
-                 reported_del('lib/foo/y') +
+                 reported_del(paths=['lib',
+                              'lib/foo',
+                              'lib/foo/file',
+                              'lib/foo/x',
+                              'lib/foo/y']) +
                  reported_add('README') +
                  reported_add('subdir') +
                  reported_add('subdir/lib2') +
@@ -832,11 +846,11 @@ def move_to_related_branch_element_already_exists(sbox):
                  reported_br_diff('branches/br1') +
                  reported_move('lib', 'lib2') +
                  reported_br_diff('trunk') +
-                 reported_del('lib') +
-                 reported_del('lib/foo') +
-                 reported_del('lib/foo/file') +
-                 reported_del('lib/foo/x') +
-                 reported_del('lib/foo/y'),
+                 reported_del(paths=['lib',
+                              'lib/foo',
+                              'lib/foo/file',
+                              'lib/foo/x',
+                              'lib/foo/y']),
                 # dir: child elements already exist (at different relpaths)
                 'mv branches/br1/lib/foo/x branches/br1/x2',
                 'branch-into-and-delete trunk/lib branches/br1/lib2')
@@ -854,11 +868,11 @@ def move_to_unrelated_branch(sbox):
                  reported_br_diff('trunk') +
                  reported_del('README') +
                  reported_add('README') +
-                 reported_del('lib') +
-                 reported_del('lib/foo') +
-                 reported_del('lib/foo/file') +
-                 reported_del('lib/foo/x') +
-                 reported_del('lib/foo/y') +
+                 reported_del(paths=['lib',
+                              'lib/foo',
+                              'lib/foo/file',
+                              'lib/foo/x',
+                              'lib/foo/y']) +
                  reported_add('y2') +
                  reported_add('subdir/lib2') +
                  reported_add('subdir/lib2/foo') +
@@ -898,8 +912,8 @@ def move_branch_within_same_parent_branch(sbox):
   # move trunk and also modify it
   test_svnmover2(sbox, '',
                    reported_br_diff('') +
-                   reported_del('D') +
-                   reported_del('D/E') +
+                   reported_del(paths=['D',
+                                'D/E']) +
                    reported_br_move('D/E/trunk2', 'trunk') +
                    reported_br_diff('D/E/trunk2', 'trunk') +
                    reported_add('new'),
@@ -1006,9 +1020,9 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
   # Delete the remaining root dir of the old trunk and branches
   test_svnmover2(sbox, '',
                  reported_br_diff('') +
-                 reported_del('branches') +
-                 reported_br_del('branches/br1') +
-                 reported_br_del('trunk'),
+                 reported_del('branches', branches=[
+                              'branches/br1',
+                              'trunk']),
                 'rm trunk',
                 'rm branches',
                 )
@@ -1088,7 +1102,7 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
   for proj in ['proj1', 'proj2']:
     test_svnmover2(sbox, '',
                    reported_br_diff('') +
-                   reported_br_del(proj + '/trunk') +
+                   reported_del(branches=[proj + '/trunk']) +
                    reported_br_diff('trunk') +
                    reported_add(proj) +
                    reported_add(proj + '/README') +
@@ -1102,7 +1116,7 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
                    )
     test_svnmover2(sbox, '',
                    reported_br_diff('') +
-                   reported_br_del(proj + '/branches/br1') +
+                   reported_del(branches=[proj + '/branches/br1']) +
                    reported_br_diff('branches/br1') +
                    reported_add(proj) +
                    reported_add(proj + '/README') +
@@ -1443,8 +1457,8 @@ def move_to_related_branch_2(sbox):
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('X') +
-                 reported_del('A/B') +
-                 reported_del('A/B/bx') +
+                 reported_del(paths=['A/B',
+                              'A/B/bx']) +
                  reported_br_diff('Y') +
                  reported_move('A/B', 'B') +
                  reported_add('B/bx'),
