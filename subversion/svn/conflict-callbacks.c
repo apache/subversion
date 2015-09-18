@@ -1542,19 +1542,26 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
 
 svn_error_t *
 svn_cl__resolve_conflict(svn_boolean_t *resolved,
+                         svn_cl__accept_t *accept_which,
+                         svn_boolean_t *quit,
+                         svn_boolean_t *external_failed,
+                         svn_boolean_t *printed_summary,
                          svn_client_conflict_t *conflict,
+                         const char *editor_cmd,
+                         apr_hash_t *config,
+                         const char *path_prefix,
+                         svn_cmdline_prompt_baton_t *pb,
+                         svn_cl__conflict_stats_t *conflict_stats,
                          svn_client_conflict_option_id_t option_id,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
-  svn_cl__interactive_conflict_baton_t *b = ctx->conflict_baton2;
-
   if (option_id == svn_client_conflict_option_unspecified)
     SVN_ERR(conflict_func_interactive(&option_id, NULL, NULL,
-                                      &b->accept_which, &b->quit,
-                                      &b->external_failed, &b->printed_summary,
-                                      conflict, b->editor_cmd, b->config,
-                                      b->path_prefix, b->pb, b->conflict_stats,
+                                      accept_which, quit,
+                                      external_failed, printed_summary,
+                                      conflict, editor_cmd, config,
+                                      path_prefix, pb, conflict_stats,
                                       scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(option_id != svn_client_conflict_option_unspecified);
@@ -1564,7 +1571,7 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
     {
       const char *local_relpath
         = svn_cl__local_style_skip_ancestor(
-            b->path_prefix, svn_client_conflict_get_local_abspath(conflict),
+            path_prefix, svn_client_conflict_get_local_abspath(conflict),
             scratch_pool);
       svn_wc_conflict_kind_t conflict_kind;
       const char *local_abspath;
@@ -1598,7 +1605,7 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
 
       SVN_ERR(err);
     
-      svn_cl__conflict_stats_resolved(b->conflict_stats, local_relpath,
+      svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
                                       svn_client_conflict_get_kind(conflict));
       *resolved = TRUE;
     }

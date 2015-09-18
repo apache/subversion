@@ -48,6 +48,15 @@ struct conflict_status_walker_baton
   void *notify_baton;
   svn_boolean_t resolved_one;
   apr_hash_t *resolve_later;
+  svn_cl__accept_t *accept_which;
+  svn_boolean_t *quit;
+  svn_boolean_t *external_failed;
+  svn_boolean_t *printed_summary;
+  const char *editor_cmd;
+  apr_hash_t *config;
+  const char *path_prefix;
+  svn_cmdline_prompt_baton_t *pb;
+  svn_cl__conflict_stats_t *conflict_stats;
 };
 
 /* Implements svn_wc_notify_func2_t to collect new conflicts caused by
@@ -99,8 +108,14 @@ conflict_status_walker(void *baton,
 
   SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, cswb->ctx,
                                   iterpool, iterpool));
-  SVN_ERR(svn_cl__resolve_conflict(&resolved, conflict, cswb->option_id,
-                                   cswb->ctx, scratch_pool));
+  SVN_ERR(svn_cl__resolve_conflict(&resolved, cswb->accept_which,
+                                   cswb->quit, cswb->external_failed,
+                                   cswb->printed_summary,
+                                   conflict, cswb->editor_cmd,
+                                   cswb->config, cswb->path_prefix,
+                                   cswb->pb, cswb->conflict_stats,
+                                   cswb->option_id, cswb->ctx,
+                                   scratch_pool));
   if (resolved)
     cswb->resolved_one = TRUE;
 
@@ -114,6 +129,15 @@ walk_conflicts(svn_client_ctx_t *ctx,
                const char *local_abspath,
                svn_depth_t depth,
                svn_client_conflict_option_id_t option_id,
+               svn_cl__accept_t *accept_which,
+               svn_boolean_t *quit,
+               svn_boolean_t *external_failed,
+               svn_boolean_t *printed_summary,
+               const char *editor_cmd,
+               apr_hash_t *config,
+               const char *path_prefix,
+               svn_cmdline_prompt_baton_t *pb,
+               svn_cl__conflict_stats_t *conflict_stats,
                apr_pool_t *scratch_pool)
 {
   struct conflict_status_walker_baton cswb;
@@ -130,6 +154,17 @@ walk_conflicts(svn_client_ctx_t *ctx,
   cswb.resolve_later = (depth != svn_depth_empty)
                           ? apr_hash_make(scratch_pool)
                           : NULL;
+
+  cswb.accept_which = accept_which;
+  cswb.quit = quit;
+  cswb.external_failed = external_failed;
+  cswb.printed_summary = printed_summary;
+  cswb.editor_cmd = editor_cmd;
+  cswb.config = config;
+  cswb.path_prefix = path_prefix;
+  cswb.pb = pb;
+  cswb.conflict_stats = conflict_stats;
+
 
   /* ### call notify.c code */
   if (ctx->notify_func2)
@@ -264,15 +299,27 @@ svn_cl__resolve(apr_getopt_t *os,
                 apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_cl__conflict_stats_t *conflict_stats =
+    ((svn_cl__cmd_baton_t *) baton)->conflict_stats;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   svn_client_conflict_option_id_t option_id;
   svn_error_t *err;
   apr_array_header_t *targets;
+  const char *path_prefix;
   int i;
   apr_pool_t *iterpool;
   svn_boolean_t had_error = FALSE;
+  svn_boolean_t quit = FALSE;
+  svn_boolean_t external_failed = FALSE;
+  svn_boolean_t printed_summary = FALSE;
+  svn_cmdline_prompt_baton_t *pb = apr_palloc(scratch_pool, sizeof(*pb));
+
+  pb->cancel_func = ctx->cancel_func;
+  pb->cancel_baton = ctx->cancel_baton;
 
   option_id = svn_client_conflict_option_unspecified;
+
+  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", scratch_pool));
 
   switch (opt_state->accept_which)
     {
@@ -343,13 +390,23 @@ svn_cl__resolve(apr_getopt_t *os,
 
           SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, ctx,
                                           iterpool, iterpool));
-          err = svn_cl__resolve_conflict(&resolved, conflict, option_id, ctx,
-                                         iterpool);
+          SVN_ERR(svn_cl__resolve_conflict(&resolved,
+                                           &opt_state->accept_which,
+                                           &quit, &external_failed,
+                                           &printed_summary,
+                                           conflict, opt_state->editor_cmd,
+                                           ctx->config, path_prefix,
+                                           pb, conflict_stats,
+                                           option_id, ctx,
+                                           iterpool));
         }
       else
         {
           err = walk_conflicts(ctx, local_abspath, opt_state->depth,
-                               option_id, iterpool);
+                               option_id, &opt_state->accept_which,
+                               &quit, &external_failed, &printed_summary,
+                               opt_state->editor_cmd, ctx->config,
+                               path_prefix, pb, conflict_stats, iterpool);
         }
 
       if (err)
