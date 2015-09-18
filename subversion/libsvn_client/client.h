@@ -28,7 +28,6 @@
 
 
 #include <apr_pools.h>
-#include <apr_ring.h>
 
 #include "svn_types.h"
 #include "svn_opt.h"
