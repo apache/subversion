@@ -546,7 +546,6 @@ replay_revisions(svn_ra_session_t *session,
 #endif
     }
 
-  SVN_ERR(svn_stream_close(stdout_stream));
   return SVN_NO_ERROR;
 }
 
@@ -564,17 +563,13 @@ load_revisions(svn_ra_session_t *session,
                apr_hash_t *skip_revprops,
                apr_pool_t *pool)
 {
-  apr_file_t *stdin_file;
   svn_stream_t *stdin_stream;
 
-  apr_file_open_stdin(&stdin_file, pool);
-  stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
+  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
 
   SVN_ERR(svn_rdump__load_dumpstream(stdin_stream, session, aux_session,
                                      quiet, skip_revprops,
                                      check_cancel, NULL, pool));
-
-  SVN_ERR(svn_stream_close(stdin_stream));
 
   return SVN_NO_ERROR;
 }

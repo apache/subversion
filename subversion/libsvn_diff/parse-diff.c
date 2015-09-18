@@ -1030,7 +1030,7 @@ enum parse_state
 {
    state_start,           /* initial */
    state_git_diff_seen,   /* diff --git */
-   state_git_tree_seen,   /* a tree operation, rather then content change */
+   state_git_tree_seen,   /* a tree operation, rather than content change */
    state_git_minus_seen,  /* --- /dev/null; or --- a/ */
    state_git_plus_seen,   /* +++ /dev/null; or +++ a/ */
    state_old_mode_seen,   /* old mode 100644 */

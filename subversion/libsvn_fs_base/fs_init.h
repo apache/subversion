@@ -1,5 +1,6 @@
 /*
- * normalize-cmd.c -- Elide mergeinfo from sub-nodes
+ * libsvn_fs_base/fs_init.h:  Exported function of libsvn_fs_base
+ *
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,33 +22,12 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
+#ifndef LIBSVN_FS_LOADER_H
+#error Please include libsvn_fs/fs_loader.h instead of this file
+#else
 
+svn_error_t *svn_fs_base__init(const svn_version_t *loader_version,
+                               fs_library_vtable_t **vtable,
+                               apr_pool_t* common_pool);
 
-
-/*** Includes. ***/
-
-#include "mergeinfo-normalizer.h"
-
-
-/*** Code. ***/
-
-/* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
-svn_min__normalize(apr_getopt_t *os,
-                   void *baton,
-                   apr_pool_t *pool)
-{
-  svn_min__cmd_baton_t *cmd_baton = baton;
-
-  /* If no option is given, default to "remove redundant sub-node m/i". */
-  if (   !cmd_baton->opt_state->remove_redundants
-      && !cmd_baton->opt_state->remove_obsoletes
-      && !cmd_baton->opt_state->combine_ranges
-      && !cmd_baton->opt_state->remove_redundant_misaligned)
-    cmd_baton->opt_state->remove_redundants = TRUE;
-
-  SVN_ERR(svn_min__run_normalize(baton, pool));
-
-  return SVN_NO_ERROR;
-}
+#endif

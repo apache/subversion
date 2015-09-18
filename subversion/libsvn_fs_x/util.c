@@ -549,8 +549,9 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
 
   final_path = svn_fs_x__path_min_unpacked_rev(fs, scratch_pool);
 
-  SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
-                              final_path /* copy_perms */, scratch_pool));
+  SVN_ERR(svn_io_write_atomic2(final_path, buf, len + 1,
+                               final_path /* copy_perms */, TRUE,
+                               scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -734,7 +735,7 @@ svn_fs_x__move_into_place(const char *old_filename,
   SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, scratch_pool));
 
   /* Move the file into place. */
-  err = svn_io_file_rename(old_filename, new_filename, scratch_pool);
+  err = svn_io_file_rename2(old_filename, new_filename, FALSE, scratch_pool);
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
       apr_file_t *file;

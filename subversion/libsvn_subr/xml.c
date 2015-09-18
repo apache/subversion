@@ -34,6 +34,7 @@
 #include "svn_ctype.h"
 
 #include "private/svn_utf_private.h"
+#include "private/svn_subr_private.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include <xmlparse.h>

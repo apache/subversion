@@ -1800,7 +1800,7 @@ write_entry(struct write_baton **entry_node,
      normal         replace+copied        base       base+work
      add+copied     replace+copied        work       work+work
 
-     although obviously the node is a directory rather then a file.
+     although obviously the node is a directory rather than a file.
      There are then more conversion states where the parent is
      replaced.
 

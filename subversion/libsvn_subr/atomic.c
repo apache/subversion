@@ -24,6 +24,7 @@
 #include <apr_time.h>
 #include "private/svn_atomic.h"
 
+
 /* Magic values for atomic initialization */
 #define SVN_ATOMIC_UNINITIALIZED 0
 #define SVN_ATOMIC_START_INIT    1
@@ -31,19 +32,20 @@
 #define SVN_ATOMIC_INITIALIZED   3
 
 
+/* Baton used by init_funct_t and init_once(). */
+typedef struct init_baton_t init_baton_t;
+
+/* Initialization function wrapper. Hides API details from init_once().
+   The implementation must return FALSE on failure. */
+typedef svn_boolean_t (*init_func_t)(init_baton_t *init_baton);
+
 /*
- * This is the actual atomic initialization driver.  The caller must
- * provide either ERR_INIT_FUNC and ERR_P, or STR_INIT_FUNC and
- * ERRSTR_P, but never both.
+ * This is the actual atomic initialization driver.
+ * Returns FALSE on failure.
  */
-static void
-init_once(svn_atomic__err_init_func_t err_init_func,
-          svn_error_t **err_p,
-          svn_atomic__str_init_func_t str_init_func,
-          const char **errstr_p,
-          volatile svn_atomic_t *global_status,
-          void *baton,
-          apr_pool_t* pool)
+static svn_boolean_t
+init_once(volatile svn_atomic_t *global_status,
+          init_func_t init_func, init_baton_t *init_baton)
 {
   /* !! Don't use localizable strings in this function, because these
      !! might cause deadlocks. This function can be used to initialize
@@ -53,44 +55,25 @@ init_once(svn_atomic__err_init_func_t err_init_func,
      doesn't have statically-initialized mutexes, we implement a poor
      man's spinlock using svn_atomic_cas. */
 
-  svn_error_t *err = SVN_NO_ERROR;
-  const char *errstr = NULL;
   svn_atomic_t status = svn_atomic_cas(global_status,
                                        SVN_ATOMIC_START_INIT,
                                        SVN_ATOMIC_UNINITIALIZED);
-
-#ifdef SVN_DEBUG
-  /* Check that the parameters are valid. */
-  assert(!err_init_func != !str_init_func);
-  assert(!err_init_func == !err_p);
-  assert(!str_init_func == !errstr_p);
-#endif /* SVN_DEBUG */
 
   for (;;)
     {
       switch (status)
         {
         case SVN_ATOMIC_UNINITIALIZED:
-          if (err_init_func)
-            err = err_init_func(baton, pool);
-          else
-            errstr = str_init_func(baton);
-          if (err || errstr)
-            {
-              status = svn_atomic_cas(global_status,
-                                      SVN_ATOMIC_INIT_FAILED,
-                                      SVN_ATOMIC_START_INIT);
-            }
-          else
-            {
-              status = svn_atomic_cas(global_status,
-                                      SVN_ATOMIC_INITIALIZED,
-                                      SVN_ATOMIC_START_INIT);
-            }
+          {
+            const svn_boolean_t result = init_func(init_baton);
+            const svn_atomic_t init_state = (result
+                                             ? SVN_ATOMIC_INITIALIZED
+                                             : SVN_ATOMIC_INIT_FAILED);
 
-          /* Take another spin through the switch to report either
-             failure or success. */
-          continue;
+            svn_atomic_cas(global_status, init_state,
+                           SVN_ATOMIC_START_INIT);
+            return result;
+          }
 
         case SVN_ATOMIC_START_INIT:
           /* Wait for the init function to complete. */
@@ -101,19 +84,10 @@ init_once(svn_atomic__err_init_func_t err_init_func,
           continue;
 
         case SVN_ATOMIC_INIT_FAILED:
-          if (err_init_func)
-            *err_p = svn_error_create(SVN_ERR_ATOMIC_INIT_FAILURE, err,
-                                      "Couldn't perform atomic initialization");
-          else
-            *errstr_p = errstr;
-          return;
+          return FALSE;
 
         case SVN_ATOMIC_INITIALIZED:
-          if (err_init_func)
-            *err_p = SVN_NO_ERROR;
-          else
-            *errstr_p = NULL;
-          return;
+          return TRUE;
 
         default:
           /* Something went seriously wrong with the atomic operations. */
@@ -123,15 +97,61 @@ init_once(svn_atomic__err_init_func_t err_init_func,
 }
 
 
+/* This baton structure is used by the two flavours of init-once APIs
+   to hide their differences from the init_once() driver. Each private
+   API uses only selected parts of the baton.
+
+   No part of this structure changes unless a wrapped init function is
+   actually invoked by init_once().
+*/
+struct init_baton_t
+{
+  /* Used only by svn_atomic__init_once()/err_init_func_wrapper() */
+  svn_atomic__err_init_func_t err_init_func;
+  svn_error_t *err;
+  apr_pool_t *pool;
+
+  /* Used only by svn_atomic__init_no_error()/str_init_func_wrapper() */
+  svn_atomic__str_init_func_t str_init_func;
+  const char *errstr;
+
+  /* Used by both pairs of functions */
+  void *baton;
+};
+
+/* Wrapper for the svn_atomic__init_once init function. */
+static svn_boolean_t err_init_func_wrapper(init_baton_t *init_baton)
+{
+  init_baton->err = init_baton->err_init_func(init_baton->baton,
+                                              init_baton->pool);
+  return (init_baton->err == SVN_NO_ERROR);
+}
+
 svn_error_t *
 svn_atomic__init_once(volatile svn_atomic_t *global_status,
                       svn_atomic__err_init_func_t err_init_func,
                       void *baton,
                       apr_pool_t* pool)
 {
-  svn_error_t *err;
-  init_once(err_init_func, &err, NULL, NULL, global_status, baton, pool);
-  return err;
+  init_baton_t init_baton;
+  init_baton.err_init_func = err_init_func;
+  init_baton.err = NULL;
+  init_baton.pool = pool;
+  init_baton.baton = baton;
+
+  if (init_once(global_status, err_init_func_wrapper, &init_baton))
+    return SVN_NO_ERROR;
+
+  return svn_error_create(SVN_ERR_ATOMIC_INIT_FAILURE, init_baton.err,
+                          "Couldn't perform atomic initialization");
+}
+
+
+/* Wrapper for the svn_atomic__init_no_error init function. */
+static svn_boolean_t str_init_func_wrapper(init_baton_t *init_baton)
+{
+  init_baton->errstr = init_baton->str_init_func(init_baton->baton);
+  return (init_baton->errstr == NULL);
 }
 
 const char *
@@ -139,7 +159,18 @@ svn_atomic__init_once_no_error(volatile svn_atomic_t *global_status,
                                svn_atomic__str_init_func_t str_init_func,
                                void *baton)
 {
-  const char *errstr;
-  init_once(NULL, NULL, str_init_func, &errstr, global_status, baton, NULL);
-  return errstr;
+  init_baton_t init_baton;
+  init_baton.str_init_func = str_init_func;
+  init_baton.errstr = NULL;
+  init_baton.baton = baton;
+
+  if (init_once(global_status, str_init_func_wrapper, &init_baton))
+    return NULL;
+
+  /* Our init function wrapper may not have been called; make sure
+     that we return generic error message in that case. */
+  if (!init_baton.errstr)
+    return "Couldn't perform atomic initialization";
+  else
+    return init_baton.errstr;
 }
