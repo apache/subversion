@@ -1508,25 +1508,21 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
 
 svn_error_t *
 svn_cl__resolve_conflict(svn_boolean_t *resolved,
-                          svn_client_conflict_t *conflict,
-                          svn_client_ctx_t *ctx,
-                          svn_wc_conflict_choice_t conflict_choice,
-                          apr_pool_t *scratch_pool)
+                         svn_client_conflict_t *conflict,
+                         svn_client_conflict_option_id_t option_id,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
 {
   svn_cl__interactive_conflict_baton_t *b = ctx->conflict_baton2;
 
-  if (conflict_choice == svn_wc_conflict_choose_unspecified)
-    {
-      svn_client_conflict_option_id_t option_id;
+  if (option_id == svn_client_conflict_option_unspecified)
+    SVN_ERR(conflict_func_interactive(&option_id, NULL, NULL, conflict, b,
+                                      scratch_pool, scratch_pool));
 
-      SVN_ERR(conflict_func_interactive(&option_id, NULL, NULL, conflict, b,
-                                        scratch_pool, scratch_pool));
-
-      conflict_choice = conflict_option_id_to_wc_conflict_choice(option_id);
-    }
+  SVN_ERR_ASSERT(option_id != svn_client_conflict_option_unspecified);
 
   /* If we are resolving a conflict, adjust the summary of conflicts. */
-  if (conflict_choice != svn_wc_conflict_choose_postpone)
+  if (option_id != svn_client_conflict_option_postpone)
     {
       const char *local_relpath
         = svn_cl__local_style_skip_ancestor(
@@ -1552,7 +1548,7 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
               conflict_kind == svn_wc_conflict_kind_text,
               conflict_kind == svn_wc_conflict_kind_property ? "" : NULL,
               conflict_kind == svn_wc_conflict_kind_tree,
-              conflict_choice,
+              conflict_option_id_to_wc_conflict_choice(option_id),
               ctx->cancel_func, ctx->cancel_baton,
               ctx->notify_func2, ctx->notify_baton2,
               scratch_pool);
