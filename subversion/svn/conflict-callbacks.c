@@ -1164,8 +1164,11 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
+                     svn_cl__accept_t *accept_which,
+                     svn_boolean_t *quit,
                      const svn_client_conflict_t *conflict,
-                     svn_cl__interactive_conflict_baton_t *b,
+                     const char *path_prefix,
+                     svn_cmdline_prompt_baton_t *pb,
                      apr_pool_t *scratch_pool)
 {
   const char *readable_desc;
@@ -1182,7 +1185,7 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
   SVN_ERR(svn_cmdline_fprintf(
                stderr, scratch_pool,
                _("Tree conflict on '%s'\n   > %s\n"),
-               svn_cl__local_style_skip_ancestor(b->path_prefix,
+               svn_cl__local_style_skip_ancestor(path_prefix,
                  svn_client_conflict_get_local_abspath(conflict), scratch_pool),
                readable_desc));
 
@@ -1247,15 +1250,15 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
             }
         }
 
-      SVN_ERR(prompt_user(&opt, tc_opts, NULL, b->pb, iterpool));
+      SVN_ERR(prompt_user(&opt, tc_opts, NULL, pb, iterpool));
       if (! opt)
         continue;
 
       if (strcmp(opt->code, "q") == 0)
         {
           *option_id = opt->choice;
-          b->accept_which = svn_cl__accept_postpone;
-          b->quit = TRUE;
+          *accept_which = svn_cl__accept_postpone;
+          *quit = TRUE;
           break;
         }
       else if (opt->choice != svn_client_conflict_option_undefined)
@@ -1430,7 +1433,9 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
                                  b->editor_cmd, b->config, conflict,
                                  result_pool, scratch_pool));
   else if (svn_client_conflict_get_kind(conflict) == svn_wc_conflict_kind_tree)
-    SVN_ERR(handle_tree_conflict(option_id, conflict, b, scratch_pool));
+    SVN_ERR(handle_tree_conflict(option_id, &b->accept_which, &b->quit,
+                                 conflict, b->path_prefix, b->pb,
+                                 scratch_pool));
 
   else /* other types of conflicts -- do nothing about them. */
     {
