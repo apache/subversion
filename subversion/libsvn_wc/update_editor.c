@@ -1863,12 +1863,13 @@ add_directory(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
-  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
-                                  NULL, eb, pb, db->pool, scratch_pool));
   *child_baton = db;
 
   if (db->skip_this)
     return SVN_NO_ERROR;
+
+  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
+                                  NULL, eb, pb, db->pool, scratch_pool));
 
   SVN_ERR(mark_directory_edited(db, pool));
 
@@ -3066,13 +3067,13 @@ add_file(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
-  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
-                                  NULL, eb, pb, fb->pool, pool));
   *file_baton = fb;
 
   if (fb->skip_this)
     return SVN_NO_ERROR;
 
+  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
+                                  NULL, eb, pb, fb->pool, pool));
   SVN_ERR(mark_file_edited(fb, pool));
 
   /* The file_pool can stick around for a *long* time, so we want to
@@ -3551,14 +3552,22 @@ lazy_open_target(svn_stream_t **stream,
                  apr_pool_t *scratch_pool)
 {
   struct handler_baton *hb = baton;
+  svn_wc__db_install_data_t *install_data;
 
+  /* By convention return value is undefined on error, but we rely
+     on HB->INSTALL_DATA value in window_handler() and abort
+     INSTALL_STREAM if is not NULL on error.
+     So we store INSTALL_DATA to local variable first, to leave
+     HB->INSTALL_DATA unchanged on error. */
   SVN_ERR(svn_wc__db_pristine_prepare_install(stream,
-                                              &hb->install_data,
+                                              &install_data,
                                               &hb->new_text_base_sha1_checksum,
                                               NULL,
                                               hb->fb->edit_baton->db,
                                               hb->fb->dir_baton->local_abspath,
                                               result_pool, scratch_pool));
+
+  hb->install_data = install_data;
 
   return SVN_NO_ERROR;
 }

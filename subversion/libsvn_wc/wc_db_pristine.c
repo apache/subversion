@@ -335,7 +335,6 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
     apr_finfo_t finfo;
     SVN_ERR(svn_stream__install_get_info(&finfo, install_stream, APR_FINFO_SIZE,
                                          scratch_pool));
-    SVN_ERR(svn_io_set_file_read_write(pristine_abspath, TRUE, scratch_pool));
     SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
                                         TRUE, scratch_pool));
 
@@ -383,9 +382,10 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
   *install_data = apr_pcalloc(result_pool, sizeof(**install_data));
   (*install_data)->wcroot = wcroot;
 
-  SVN_ERR(svn_stream__create_for_install(stream,
-                                         temp_dir_abspath,
-                                         result_pool, scratch_pool));
+  SVN_ERR_W(svn_stream__create_for_install(stream,
+                                           temp_dir_abspath,
+                                           result_pool, scratch_pool),
+            _("Unable to create pristine install stream"));
 
   (*install_data)->inner_stream = *stream;
 

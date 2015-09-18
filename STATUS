@@ -15,24 +15,62 @@ Status of 1.9.2:
 Candidate changes:
 ==================
 
- * r1698312
-   Correctly report empty representations in 'svnfsfs stats'.
+ * r1701488
+   Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
+     output", http://subversion.tigris.org/issues/show_bug.cgi?id=4592
    Justification:
-     The current code displays the "0" bracket in histograms as
-     "-2147483648 .. < 1" instead of "0 .. < 1".  Technically correct
-     but annoying.  UI change only.
+     Make this contributed script work again, after 1.7.8 broke it.
+   Notes:
+     Brett Randall put effort into contributing this fix: see the dev@ email
+     thread "[patch][reboot-topic] fix check-mime-type.pl for changes to
+     'svnlook proplist' output" started by him on 2015-08-07, archived at
+     e.g. <http://svn.haxx.se/dev/archive-2015-08/0047.shtml> or
+     <http://mail-archives.apache.org/mod_mbox/subversion-dev/201508.mbox/%3CCALeEUB56NVCR0nCZ2rYki6oKQNcVPPLvWTeCoYyrMqitsov0ag@mail.gmail.com%3E>.
    Votes:
-     +1: stefan2
+     +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
+
+ * r1700215, r1700219, r1700220, r1701270
+   Fix argument passing in test suite.
+   Justification:
+     Makes svnfsfs_tests.py work in fsfs-v4 and fsfs-v6 modes.
+   Branch:
+     ^/subversion/branches/1.9.x-r1700215
+   Votes:
+     +1: brane, stefan2
+     -0: rhuijben (Log level on standard invocation of win-tests.py changes)
+
+ * r1701598, r1701603, r1701611, r1701646
+   Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
+   Justification:
+     A single lock or unlock failure doesn't affect the whole operation
+     since 1.9, but this has the side effect of no longer producing an
+     error at all on failures. This patch makes 'svn' return an error when
+     at least one failure is reported by the locking code.
+   Notes:
+     r1701598 is the actual fix. The other patches simplify and fix
+     test expectations.
+   Votes:
+     +1: rhuijben
+
+ * r1703581
+   Allow simple resolving of binary file text conflicts
+   Justification:
+     Simple usability improvement. Use reported. Regression.
+   Branch:
+     ^/subversion/branches/1.9.x-r1703581
+   Votes:
+     +1: rhuijben, philip
+
+ * r1703688, 1703689
+   Fix merging deletes of svn:eol-style CRLF or CR files
+   Justification:
+     Resolves unnecessary tree conflicts.
+     Any more reasons needed? :-)
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
-
- * r1700740, r1700951
-   Fix registration of kwallet to avoid double free on close
-   Justification:
-     Fixes segfault on kwallet close. User reported problem.
-   Votes:
-     +1: rhuijben, stsp, brane

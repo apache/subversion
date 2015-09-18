@@ -6697,6 +6697,90 @@ def update_conflict_details(sbox):
   svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B'),
                                       '--depth', 'infinity')
 
+def update_add_conflicted_deep(sbox):
+  "deep add conflicted"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+
+  svntest.actions.run_and_verify_svnmucc(
+                        None, [], '-U', repo_url, '-m', '',
+                        'mkdir', 'A/z',
+                        'mkdir', 'A/z/z',
+                        'mkdir', 'A/z/z/z')
+
+  svntest.actions.run_and_verify_svnmucc(
+                        None, [], '-U', repo_url, '-m', '',
+                        'rm', 'A/z',
+                        'mkdir', 'A/z',
+                        'mkdir', 'A/z/z',
+                        'mkdir', 'A/z/z/z')
+
+  sbox.simple_append('A/z', 'A/z')
+  sbox.simple_add('A/z')
+  sbox.simple_update('A', 2)
+  # This final update used to segfault using 1.9.0 and 1.9.1
+  sbox.simple_update('A/z/z', 3)
+
+def missing_tmp_update(sbox):
+  "missing tmp update caused segfault"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None, [], False,
+                                        wc_dir, '--set-depth', 'empty')
+
+  os.rmdir(sbox.ospath(svntest.main.get_admin_name() + '/tmp'))
+
+  svntest.actions.run_and_verify_svn(None, '.*Unable to create.*',
+                                     'up', wc_dir, '--set-depth', 'infinity')
+
+  svntest.actions.run_and_verify_svn(None, [], 'cleanup', wc_dir)
+
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None, [], False,
+                                        wc_dir, '--set-depth', 'infinity')
+
+def update_delete_switched(sbox):
+  "update delete switched"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A/B/E'),
+                                        sbox.repo_url + '/A/D/G',
+                                        None, None, None, [], False,
+                                        '--ignore-ancestry')
+
+  # Introduce some change somewhere...
+  sbox.simple_propset('A', 'A', 'A')
+
+  expected_status = svntest.wc.State(wc_dir, {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+      'A/B'               : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/E'             : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B/E/rho'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/E/pi'          : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/E/tau'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/F'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D'               : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/tau'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/gamma'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/mu'              : Item(status='  ', copied='+', wc_rev='-'),
+      'A/C'               : Item(status='  ', copied='+', wc_rev='-'),
+      'iota'              : Item(status='  ', wc_rev='1'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, None, None, expected_status,
+                                        [], False, sbox.ospath('A'), '-r', 0)
+
 #######################################################################
 # Run the tests
 
@@ -6783,6 +6867,9 @@ test_list = [ None,
               bump_below_tree_conflict,
               update_child_below_add,
               update_conflict_details,
+              update_add_conflicted_deep,
+              missing_tmp_update,
+              update_delete_switched,
              ]
 
 if __name__ == '__main__':

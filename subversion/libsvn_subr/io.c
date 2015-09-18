@@ -142,6 +142,23 @@
 #endif
 
 #ifdef WIN32
+
+#if _WIN32_WINNT < 0x600 /* Does the SDK assume Windows Vista+? */
+typedef struct _FILE_RENAME_INFO {
+  BOOL   ReplaceIfExists;
+  HANDLE RootDirectory;
+  DWORD  FileNameLength;
+  WCHAR  FileName[1];
+} FILE_RENAME_INFO, *PFILE_RENAME_INFO;
+
+typedef struct _FILE_DISPOSITION_INFO {
+  BOOL DeleteFile;
+} FILE_DISPOSITION_INFO, *PFILE_DISPOSITION_INFO;
+
+#define FileRenameInfo 3
+#define FileDispositionInfo 4
+#endif /* WIN32 < Vista */
+
 /* One-time initialization of the late bound Windows API functions. */
 static volatile svn_atomic_t win_dynamic_imports_state = 0;
 
@@ -152,7 +169,13 @@ typedef DWORD (WINAPI *GETFINALPATHNAMEBYHANDLE)(
                DWORD cchFilePath,
                DWORD dwFlags);
 
+typedef BOOL (WINAPI *SetFileInformationByHandle_t)(HANDLE hFile,
+                                                    int FileInformationClass,
+                                                    LPVOID lpFileInformation,
+                                                    DWORD dwBufferSize);
+
 static GETFINALPATHNAMEBYHANDLE get_final_path_name_by_handle_proc = NULL;
+static SetFileInformationByHandle_t set_file_information_by_handle_proc = NULL;
 
 /* Forward declaration. */
 static svn_error_t * io_win_read_link(svn_string_t **dest,
@@ -1861,11 +1884,18 @@ io_win_file_attrs_set(const char *fname,
 
 static svn_error_t *win_init_dynamic_imports(void *baton, apr_pool_t *pool)
 {
-    get_final_path_name_by_handle_proc = (GETFINALPATHNAMEBYHANDLE)
-      GetProcAddress(GetModuleHandleA("kernel32.dll"),
-                     "GetFinalPathNameByHandleW");
+  HMODULE kernel32 = GetModuleHandleA("kernel32.dll");
 
-    return SVN_NO_ERROR;
+  if (kernel32)
+    {
+      get_final_path_name_by_handle_proc = (GETFINALPATHNAMEBYHANDLE)
+        GetProcAddress(kernel32, "GetFinalPathNameByHandleW");
+
+      set_file_information_by_handle_proc = (SetFileInformationByHandle_t)
+        GetProcAddress(kernel32, "SetFileInformationByHandle");
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * io_win_read_link(svn_string_t **dest,
@@ -1935,6 +1965,130 @@ static svn_error_t * io_win_read_link(svn_string_t **dest,
                                 _("Symbolic links are not supported on this "
                                 "platform"));
       }
+}
+
+/* Wrapper around Windows API function SetFileInformationByHandle() that
+ * returns APR status instead of boolean flag. */
+static apr_status_t
+win32_set_file_information_by_handle(HANDLE hFile,
+                                     int FileInformationClass,
+                                     LPVOID lpFileInformation,
+                                     DWORD dwBufferSize)
+{
+  svn_error_clear(svn_atomic__init_once(&win_dynamic_imports_state,
+                                        win_init_dynamic_imports,
+                                        NULL, NULL));
+
+  if (!set_file_information_by_handle_proc)
+    {
+      return SVN_ERR_UNSUPPORTED_FEATURE;
+    }
+
+  if (!set_file_information_by_handle_proc(hFile, FileInformationClass,
+                                           lpFileInformation,
+                                           dwBufferSize))
+    {
+      return apr_get_os_error();
+    }
+
+  return APR_SUCCESS;
+}
+
+svn_error_t *
+svn_io__win_delete_file_on_close(apr_file_t *file,
+                                 const char *path,
+                                 apr_pool_t *pool)
+{
+  FILE_DISPOSITION_INFO disposition_info;
+  HANDLE hFile;
+  apr_status_t status;
+
+  apr_os_file_get(&hFile, file);
+
+  disposition_info.DeleteFile = TRUE;
+
+  status = win32_set_file_information_by_handle(hFile, FileDispositionInfo,
+                                                &disposition_info,
+                                                sizeof(disposition_info));
+
+  if (status)
+    {
+      return svn_error_wrap_apr(status, _("Can't remove file '%s'"),
+                                svn_dirent_local_style(path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io__win_rename_open_file(apr_file_t *file,
+                             const char *from_path,
+                             const char *to_path,
+                             apr_pool_t *pool)
+{
+  WCHAR *w_final_abspath;
+  size_t path_len;
+  size_t rename_size;
+  FILE_RENAME_INFO *rename_info;
+  HANDLE hFile;
+  apr_status_t status;
+
+  apr_os_file_get(&hFile, file);
+
+  SVN_ERR(svn_io__utf8_to_unicode_longpath(
+            &w_final_abspath, svn_dirent_local_style(to_path,pool),
+            pool));
+
+  path_len = wcslen(w_final_abspath);
+  rename_size = sizeof(*rename_info) + sizeof(WCHAR) * path_len;
+
+  /* The rename info struct doesn't need hacks for long paths,
+     so no ugly escaping calls here */
+  rename_info = apr_pcalloc(pool, rename_size);
+  rename_info->ReplaceIfExists = TRUE;
+  rename_info->FileNameLength = path_len;
+  memcpy(rename_info->FileName, w_final_abspath, path_len * sizeof(WCHAR));
+
+  status = win32_set_file_information_by_handle(hFile, FileRenameInfo,
+                                                rename_info,
+                                                rename_size);
+
+  if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
+    {
+      /* Set the destination file writable because Windows will not allow
+         us to rename when final_abspath is read-only. */
+      SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
+
+      status = win32_set_file_information_by_handle(hFile,
+                                                    FileRenameInfo,
+                                                    rename_info,
+                                                    rename_size);
+   }
+
+  /* Windows returns Vista+ client accessing network share stored on Windows
+     Server 2003 returns ERROR_ACCESS_DENIED. The same happens when Vista+
+     client access Windows Server 2008 with disabled SMBv2 protocol.
+
+     So return SVN_ERR_UNSUPPORTED_FEATURE in this case like we do when
+     SetFileInformationByHandle() is not available and let caller to
+     handle it.
+
+     See "Access denied error on checkout-commit after updating to 1.9.X"
+     discussion on dev@s.a.o:
+     http://svn.haxx.se/dev/archive-2015-09/0054.shtml */
+  if (status == APR_FROM_OS_ERROR(ERROR_ACCESS_DENIED))
+    {
+      status = SVN_ERR_UNSUPPORTED_FEATURE;
+    }
+
+  if (status)
+    {
+      return svn_error_wrap_apr(status, _("Can't move '%s' to '%s'"),
+                                svn_dirent_local_style(from_path, pool),
+                                svn_dirent_local_style(to_path, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 #endif /* WIN32 */
