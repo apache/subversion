@@ -251,10 +251,13 @@ typedef struct svn_cl__opt_state_t
   const char *show_item;           /* print only the given item */
 } svn_cl__opt_state_t;
 
+/* Conflict stats for operations such as update and merge. */
+typedef struct svn_cl__conflict_stats_t svn_cl__conflict_stats_t;
 
 typedef struct svn_cl__cmd_baton_t
 {
   svn_cl__opt_state_t *opt_state;
+  svn_cl__conflict_stats_t *conflict_stats;
   svn_client_ctx_t *ctx;
 } svn_cl__cmd_baton_t;
 
@@ -346,9 +349,6 @@ svn_cl__check_cancel(void *baton);
 typedef struct svn_cl__interactive_conflict_baton_t
   svn_cl__interactive_conflict_baton_t;
 
-/* Conflict stats for operations such as update and merge. */
-typedef struct svn_cl__conflict_stats_t svn_cl__conflict_stats_t;
-
 /* Return a new, initialized, conflict stats structure, allocated in
  * POOL. */
 svn_cl__conflict_stats_t *
@@ -405,7 +405,16 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
 
 svn_error_t *
 svn_cl__resolve_conflict(svn_boolean_t *resolved,
+                         svn_cl__accept_t *accept_which,
+                         svn_boolean_t *quit,
+                         svn_boolean_t *external_failed,
+                         svn_boolean_t *printed_summary,
                          svn_client_conflict_t *conflict,
+                         const char *editor_cmd,
+                         apr_hash_t *config,
+                         const char *path_prefix,
+                         svn_cmdline_prompt_baton_t *pb,
+                         svn_cl__conflict_stats_t *conflict_stats,
                          svn_client_conflict_option_id_t option_id,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
