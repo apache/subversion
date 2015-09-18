@@ -40,7 +40,7 @@ Candidate changes:
      r1701598 is the actual fix. The other patches simplify and fix
      test expectations.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1703581
    Allow simple resolving of binary file text conflicts
