@@ -5620,6 +5620,66 @@ def patch_obstructing_symlink_traversal(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+@XFail()
+def patch_binary_file(sbox):
+  "patch a binary file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make the file binary by putting some non ascii chars inside or propset
+  # will return a warning
+  sbox.simple_append('iota', '\0\202\203\204\205\206\207nsomething\nelse\xFF')
+  sbox.simple_propset('svn:mime-type', 'application/binary', 'iota')
+
+  expected_output = [
+    'Index: svn-test-work/working_copies/patch_tests-57/iota\n',
+    '===================================================================\n',
+    'diff --git a/iota b/iota\n',
+    'GIT binary patch\n',
+    'literal 25\n',
+    'ec$^E#$ShU>qLPeMg|y6^R0Z|S{E|d<JuU!m{s;*G\n',
+    '\n',
+    'literal 48\n',
+    'zc$^E#$ShU>qLPeMg|y6^R0Z|S{E|d<JuZf(=9bpB_PpZ!+|-hc%)E52)STkf{{Wp*\n',
+    'B5)uFa\n',
+    '\n',
+    'Index: svn-test-work/working_copies/patch_tests-57/iota\n',
+    '===================================================================\n',
+    'diff --git a/iota b/iota\n',
+    '--- a/iota	(revision 1)\n',
+    '+++ b/iota	(working copy)\n',
+    '\n',
+    'Property changes on: iota\n',
+    '___________________________________________________________________\n',
+    'Added: svn:mime-type\n',
+    '## -0,0 +1 ##\n',
+    '+application/binary\n',
+    '\ No newline at end of property\n',
+  ]
+
+  _, diff_output, _ = svntest.actions.run_and_verify_svn(expected_output, [],
+                                                         'diff', '--git',
+                                                         wc_dir)
+
+  sbox.simple_revert('iota')
+
+  tmp = sbox.get_tempname()
+  svntest.main.file_write(tmp, ''.join(diff_output))
+
+  expected_output = wc.State(wc_dir, {
+    'iota'              : Item(status='UU'),
+  })
+  expected_disk = None
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='MM')
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, tmp,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+
 ########################################################################
 #Run the tests
 
@@ -5681,6 +5741,7 @@ test_list = [ None,
               patch_closest,
               patch_symlink_traversal,
               patch_obstructing_symlink_traversal,
+              patch_binary_file,
             ]
 
 if __name__ == '__main__':
