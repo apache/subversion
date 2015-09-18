@@ -390,15 +390,15 @@ svn_cl__resolve(apr_getopt_t *os,
 
           SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, ctx,
                                           iterpool, iterpool));
-          SVN_ERR(svn_cl__resolve_conflict(&resolved,
-                                           &opt_state->accept_which,
-                                           &quit, &external_failed,
-                                           &printed_summary,
-                                           conflict, opt_state->editor_cmd,
-                                           ctx->config, path_prefix,
-                                           pb, conflict_stats,
-                                           option_id, ctx,
-                                           iterpool));
+          err = svn_cl__resolve_conflict(&resolved,
+                                         &opt_state->accept_which,
+                                         &quit, &external_failed,
+                                         &printed_summary,
+                                         conflict, opt_state->editor_cmd,
+                                         ctx->config, path_prefix,
+                                         pb, conflict_stats,
+                                         option_id, ctx,
+                                         iterpool);
         }
       else
         {
