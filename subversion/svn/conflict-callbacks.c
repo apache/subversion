@@ -1527,7 +1527,7 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
   (*result)->merged_value = merged_propval;
 
   /* If we are resolving a conflict, adjust the summary of conflicts. */
-  if ((*result)->choice != svn_client_conflict_option_postpone)
+  if (option_id != svn_client_conflict_option_postpone)
     {
       const char *local_path
         = svn_cl__local_style_skip_ancestor(
