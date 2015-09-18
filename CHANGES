@@ -24,6 +24,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.2
     * fix reporting for empty representations in svnfsfs stats (r1698312 et al)
 
  Developer-visible changes:
+  - General:
+    * fix svnfsfs_tests.py in fsfs-v4 and fsfs-v6 modes (r1700215 et al)
+
   - API changes:
     * disable unsupported operations for standard streams (r1701633 et al)
 
