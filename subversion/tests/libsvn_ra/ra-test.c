@@ -1524,7 +1524,7 @@ tunnel_run_checkout(const svn_test_opts_t *opts,
   svn_ra_callbacks2_t *cbtable;
   svn_ra_session_t *session;
   const char tunnel_repos_name[] = "test-run_checkout";
-  svn_ra_reporter3_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *report_baton;
 
   b->magic = TUNNEL_MAGIC;

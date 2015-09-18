@@ -158,7 +158,7 @@ int main (int argc, const char *argv[])
     }
   else if (argc == 1)
     {
-      err = svn_stream_for_stdin(&in, pool);
+      err = svn_stream_for_stdin2(&in, TRUE, pool);
     }
   else
     err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, _("Too many arguments"));

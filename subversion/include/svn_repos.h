@@ -3443,6 +3443,9 @@ typedef struct svn_repos_parse_fns3_t
  *     could stop reading entirely after the youngest required rev.
  *
  * @since New in 1.8.
+
+ * @since Starting in 1.10, @a parse_fns may contain #NULL pointers for
+ * those callbacks that the caller is not interested in.
  */
 svn_error_t *
 svn_repos_parse_dumpstream3(svn_stream_t *stream,

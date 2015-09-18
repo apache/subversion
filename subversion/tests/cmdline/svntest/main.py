@@ -1416,7 +1416,7 @@ def make_log_msg():
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
-def tests_use_prepacakaged_repository():
+def tests_use_prepackaged_repository():
   return options.fsfs_version is not None
 
 def tests_verify_dump_load_cross_check():
@@ -1885,14 +1885,48 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   return exit_code
 
 
-def create_default_options():
-  """Set the global options to the defaults, as provided by the argument
-     parser."""
-  _parse_options([])
+class AbbreviatedFormatter(logging.Formatter):
+  """A formatter with abbreviated loglevel indicators in the output.
 
+  Use %(levelshort)s in the format string to get a single character
+  representing the loglevel..
+  """
 
-def _create_parser():
+  _level_short = {
+    logging.CRITICAL : 'C',
+    logging.ERROR : 'E',
+    logging.WARNING : 'W',
+    logging.INFO : 'I',
+    logging.DEBUG : 'D',
+    logging.NOTSET : '-',
+    }
+
+  def format(self, record):
+    record.levelshort = self._level_short[record.levelno]
+    return logging.Formatter.format(self, record)
+
+def _create_parser(usage=None):
   """Return a parser for our test suite."""
+
+  global logger
+
+  # Initialize the LOGGER global variable so the option parsing can set
+  # its loglevel, as appropriate.
+  logger = logging.getLogger()
+
+  # Did some chucklehead log something before we configured it? If they
+  # did, then a default handler/formatter would get installed. We want
+  # to be the one to install the first (and only) handler.
+  for handler in logger.handlers:
+    if not isinstance(handler.formatter, AbbreviatedFormatter):
+      raise Exception('Logging occurred before configuration. Some code'
+                      ' path needs to be fixed. Examine the log output'
+                      ' to find what/where logged something.')
+
+  # Set a sane default log level
+  if logger.getEffectiveLevel() == logging.NOTSET:
+    logger.setLevel(logging.WARN)
+
   def set_log_level(option, opt, value, parser, level=None):
     if level:
       # called from --verbose
@@ -1901,9 +1935,18 @@ def _create_parser():
       # called from --set-log-level
       logger.setLevel(getattr(logging, value, None) or int(value))
 
-  # set up the parser
+  # Set up the parser.
+  # If you add new options, consider adding them in
+  #
+  #     .../build/run_tests.py:main()
+  #
+  # and handling them in
+  #
+  #     .../build/run_tests.py:TestHarness._init_py_tests()
+  #
   _default_http_library = 'serf'
-  usage = 'usage: %prog [options] [<test> ...]'
+  if usage is None:
+    usage = 'usage: %prog [options] [<test> ...]'
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
@@ -1918,6 +1961,9 @@ def _create_parser():
   parser.add_option('-p', '--parallel', action='store_const',
                     const=default_num_threads, dest='parallel',
                     help='Run the tests in parallel')
+  parser.add_option('--parallel-instances', action='store',
+                    type='int', dest='parallel',
+                    help='Run the given number of tests in parallel')
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +
                          'child process')
@@ -2003,30 +2049,45 @@ def _create_parser():
   return parser
 
 
-def _parse_options(arglist=sys.argv[1:]):
+def parse_options(arglist=sys.argv[1:], usage=None):
   """Parse the arguments in arg_list, and set the global options object with
      the results"""
 
   global options
 
-  parser = _create_parser()
+  parser = _create_parser(usage)
   (options, args) = parser.parse_args(arglist)
 
-  # some sanity checking
-  if options.fsfs_packing and not options.fsfs_sharding:
-    parser.error("--fsfs-packing requires --fsfs-sharding")
+  # If there are no logging handlers registered yet, then install our
+  # own with our custom formatter. (anything currently installed *is*
+  # our handler as tested above, in _create_parser)
+  if not logger.handlers:
+    # Now that we have some options, let's get the logger configured before
+    # doing anything more
+    if options.log_with_timestamps:
+      formatter = AbbreviatedFormatter('%(levelshort)s:'
+                                       ' [%(asctime)s] %(message)s',
+                                       datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
-  # If you change the below condition then change
-  # ../../../../build/run_tests.py too.
-  if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
-    parser.error("test harness only supports server minor versions 3-%d"
-                 % SVN_VER_MINOR)
-
+  # Normalize url to have no trailing slash
   if options.url:
-    if options.url[-1:] == '/': # Normalize url to have no trailing slash
+    if options.url[-1:] == '/':
       options.test_area_url = options.url[:-1]
     else:
       options.test_area_url = options.url
+
+  # Some sanity checking
+  if options.fsfs_packing and not options.fsfs_sharding:
+    parser.error("--fsfs-packing requires --fsfs-sharding")
+
+  if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
+    parser.error("test harness only supports server minor versions 3-%d"
+                 % SVN_VER_MINOR)
 
   # Make sure the server-minor-version matches the fsfs-version parameter.
   if options.fsfs_version:
@@ -2110,27 +2171,6 @@ def get_issue_details(issue_numbers):
   return issue_dict
 
 
-class AbbreviatedFormatter(logging.Formatter):
-  """A formatter with abbreviated loglevel indicators in the output.
-
-  Use %(levelshort)s in the format string to get a single character
-  representing the loglevel..
-  """
-
-  _level_short = {
-    logging.CRITICAL : 'C',
-    logging.ERROR : 'E',
-    logging.WARNING : 'W',
-    logging.INFO : 'I',
-    logging.DEBUG : 'D',
-    logging.NOTSET : '-',
-    }
-
-  def format(self, record):
-    record.levelshort = self._level_short[record.levelno]
-    return logging.Formatter.format(self, record)
-
-
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
@@ -2141,7 +2181,6 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   exiting the process.  This function can be used when a caller doesn't
   want the process to die."""
 
-  global logger
   global pristine_url
   global pristine_greek_repos_url
   global svn_binary
@@ -2161,41 +2200,12 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   testnums = []
 
-  # Initialize the LOGGER global variable so the option parsing can set
-  # its loglevel, as appropriate.
-  logger = logging.getLogger()
-
-  # Did some chucklehead log something before we configured it? If they
-  # did, then a default handler/formatter would get installed. We want
-  # to be the one to install the first (and only) handler.
-  for handler in logger.handlers:
-    if not isinstance(handler.formatter, AbbreviatedFormatter):
-      raise Exception('Logging occurred before configuration. Some code'
-                      ' path needs to be fixed. Examine the log output'
-                      ' to find what/where logged something.')
-
   if not options:
     # Override which tests to run from the commandline
-    (parser, args) = _parse_options()
+    (parser, args) = parse_options()
     test_selection = args
   else:
     parser = _create_parser()
-
-  # If there are no handlers registered yet, then install our own with
-  # our custom formatter. (anything currently installed *is* our handler
-  # as tested above)
-  if not logger.handlers:
-    # Now that we have some options, let's get the logger configured before
-    # doing anything more
-    if options.log_with_timestamps:
-      formatter = AbbreviatedFormatter('%(levelshort)s:'
-                                       ' [%(asctime)s] %(message)s',
-                                       datefmt='%Y-%m-%d %H:%M:%S')
-    else:
-      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:
@@ -2326,25 +2336,29 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     # We are simply listing the tests so always exit with success.
     return 0
 
-  # don't run tests in parallel when the tests don't support it or there
-  # are only a few tests to run.
+  # don't run tests in parallel when the tests don't support it or
+  # there are only a few tests to run.
+  options_parallel = options.parallel
   if serial_only or len(testnums) < 2:
     options.parallel = 0
 
-  if not options.is_child_process:
-    # Build out the default configuration directory
-    create_config_dir(default_config_dir,
-                      ssl_cert=options.ssl_cert,
-                      ssl_url=options.test_area_url,
-                      http_proxy=options.http_proxy,
-                      exclusive_wc_locks=options.exclusive_wc_locks)
+  try:
+    if not options.is_child_process:
+      # Build out the default configuration directory
+      create_config_dir(default_config_dir,
+                        ssl_cert=options.ssl_cert,
+                        ssl_url=options.test_area_url,
+                        http_proxy=options.http_proxy,
+                        exclusive_wc_locks=options.exclusive_wc_locks)
 
-    # Setup the pristine repository
-    svntest.actions.setup_pristine_greek_repository()
+      # Setup the pristine repository
+      svntest.actions.setup_pristine_greek_repository()
 
-  # Run the tests.
-  exit_code = _internal_run_tests(test_list, testnums, options.parallel,
-                                  options.srcdir, progress_func)
+    # Run the tests.
+    exit_code = _internal_run_tests(test_list, testnums, options.parallel,
+                                    options.srcdir, progress_func)
+  finally:
+    options.parallel = options_parallel
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.

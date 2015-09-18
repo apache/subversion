@@ -44,7 +44,7 @@
 
 /* Note:  this binary search assumes that the datestamp properties on
    each revision are in chronological order.  That is if revision A >
-   revision B, then A's datestamp is younger then B's datestamp.
+   revision B, then A's datestamp is younger than B's datestamp.
 
    If someone comes along and sets a bogus datestamp, this routine
    might not work right.

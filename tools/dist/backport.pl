@@ -245,7 +245,7 @@ sub nominate_usage {
   print <<EOF;
 nominate.pl: a tool for adding entries to STATUS.
 
-Usage: $0 "foo r42 bar r43 qux 45." "\$Some_justification"
+Usage: $0 "r42, r43, r45" "\$Some_justification"
 
 Will add:
  * r42, r43, r45
@@ -255,6 +255,15 @@ Will add:
    Votes:
      +1: $availid
 to STATUS.  Backport branches are detected automatically.
+
+The revisions argument may contain arbitrary text (besides the revision
+numbers); it will be ignored.  For example,
+    $0 "Committed revision 42." "\$Some_justification"
+will nominate r42.
+
+The justification can be an arbitrarily-long string; if it is wider than the
+available width, this script will wrap it for you (and allow you to review
+the result before committing).
 
 The STATUS file in the current directory is used (unless argv[0] is "n", in
 which case the STATUS file in the directory of argv[0] is used; the intent

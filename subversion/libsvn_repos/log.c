@@ -1907,8 +1907,7 @@ store_search(svn_mergeinfo_t processed,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       svn_rangelist_t *ranges = apr_array_make(processed_pool, 1,
                                                sizeof(svn_merge_range_t*));
-      svn_merge_range_t *range = apr_palloc(processed_pool,
-                                            sizeof(svn_merge_range_t));
+      svn_merge_range_t *range = apr_palloc(processed_pool, sizeof(*range));
 
       range->start = start;
       range->end = end;

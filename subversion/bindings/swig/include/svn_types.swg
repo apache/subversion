@@ -69,6 +69,15 @@
 #endif
 }
 
+%typemap(in,warning="901:FIXME: Missing old_value_p typemap") const svn_string_t *const *old_value_p {
+#if defined(SWIGRUBY) && SWIG_VERSION <= 0x010329
+  /* Ruby fails to define $symname. */
+  SWIG_exception(SWIG_ValueError, "Function is not implemented yet");
+#else
+  SWIG_exception(SWIG_ValueError, "$symname is not implemented yet");
+#endif
+}
+
 #ifdef SWIGPYTHON
 %typemap(argout) SWIGTYPE **OUTPARAM {
   %append_output(svn_swig_py_new_pointer_obj(*$1, $*1_descriptor,

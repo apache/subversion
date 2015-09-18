@@ -388,10 +388,11 @@ load_index(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__dump_index(svn_repos_fs(repos), rev, receive_index,
                                 entries, NULL, NULL, pool));
 
-  /* Replace it with an empty index.
-   * Note that the API requires at least one entry. Give it a dummy. */
+  /* Replace it with an index that declares the whole revision contents as
+   * "unused". */
+  entry = *APR_ARRAY_IDX(entries, entries->nelts-1, svn_fs_fs__p2l_entry_t *);
+  entry.size += entry.offset;
   entry.offset = 0;
-  entry.size = 0;
   entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
   entry.item.number = SVN_FS_FS__ITEM_INDEX_UNUSED;
   entry.item.revision = SVN_INVALID_REVNUM;

@@ -10134,7 +10134,7 @@ msgstr ""
 #: ../svn/propedit-cmd.c:158
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
-msgstr "Impostazione di un nuovo volore per la proprietà '%s' nella revisione %ld\n"
+msgstr "Impostazione di un nuovo valore per la proprietà '%s' nella revisione %ld\n"
 
 #: ../svn/propedit-cmd.c:164
 #, c-format

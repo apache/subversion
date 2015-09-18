@@ -2349,17 +2349,47 @@ files_same_p(svn_boolean_t *same,
     {
       svn_stream_t *mine_stream;
       svn_stream_t *older_stream;
-      svn_opt_revision_t working_rev = { svn_opt_revision_working, { 0 } };
+      svn_string_t *special = svn_hash_gets(working_props, SVN_PROP_SPECIAL);
+      svn_string_t *eol_style = svn_hash_gets(working_props, SVN_PROP_EOL_STYLE);
+      svn_string_t *keywords = svn_hash_gets(working_props, SVN_PROP_KEYWORDS);
 
       /* Compare the file content, translating 'mine' to 'normal' form. */
-      if (svn_prop_get_value(working_props, SVN_PROP_SPECIAL) != NULL)
+      if (special != NULL)
         SVN_ERR(svn_subst_read_specialfile(&mine_stream, mine_abspath,
                                            scratch_pool, scratch_pool));
       else
-        SVN_ERR(svn_client__get_normalized_stream(&mine_stream, wc_ctx,
-                                                  mine_abspath, &working_rev,
-                                                  FALSE, TRUE, NULL, NULL,
-                                                  scratch_pool, scratch_pool));
+        SVN_ERR(svn_stream_open_readonly(&mine_stream, mine_abspath,
+                                         scratch_pool, scratch_pool));
+
+      if (!special && (eol_style || keywords))
+        {
+          apr_hash_t *kw = NULL;
+          const char *eol = NULL;
+          svn_subst_eol_style_t style;
+
+          /* We used to use svn_client__get_normalized_stream() here, but
+             that doesn't work in 100% of the cases because it doesn't
+             convert EOLs to the repository form; just to '\n'.
+           */
+
+          if (eol_style)
+            {
+              svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
+
+              if (style == svn_subst_eol_style_native)
+                eol = SVN_SUBST_NATIVE_EOL_STR;
+              else if (style != svn_subst_eol_style_fixed
+                       && style != svn_subst_eol_style_none)
+                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+            }
+
+          if (keywords)
+            SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data, "", "",
+                                              "", 0, "", scratch_pool));
+
+          mine_stream = svn_subst_stream_translated(
+            mine_stream, eol, FALSE, kw, FALSE, scratch_pool);
+        }
 
       SVN_ERR(svn_stream_open_readonly(&older_stream, older_abspath,
                                        scratch_pool, scratch_pool));
@@ -11636,9 +11666,6 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
   SVN_ERR(open_target_wc(&target, target_abspath,
                          FALSE, FALSE, FALSE,
                          ctx, scratch_pool, scratch_pool));
-  SVN_ERR(svn_client_open_ra_session2(target_ra_session_p,
-                                      target->loc.url, target->abspath,
-                                      ctx, result_pool, scratch_pool));
   if (! target->loc.url)
     return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                              _("Can't reintegrate into '%s' because it is "
@@ -11646,6 +11673,10 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
                                "the merge source"),
                              svn_dirent_local_style(target->abspath,
                                                     scratch_pool));
+
+  SVN_ERR(svn_client_open_ra_session2(target_ra_session_p,
+                                      target->loc.url, target->abspath,
+                                      ctx, result_pool, scratch_pool));
 
   SVN_ERR(svn_client__ra_session_from_path2(
             source_ra_session_p, &source_loc,
@@ -11700,6 +11731,7 @@ merge_reintegrate_locked(conflict_report_t **conflict_report,
 
   if (! source)
     {
+      *conflict_report = NULL;
       return SVN_NO_ERROR;
     }
 
@@ -12570,12 +12602,19 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
                          allow_switched_subtrees,
                          ctx, result_pool, scratch_pool));
 
+  if (!s_t->target->loc.url)
+    return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                             _("Can't perform automatic merge into '%s' "
+                               "because it is locally added and therefore "
+                               "not related to the merge source"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
+
   /* Open RA sessions to the source and target trees. */
   SVN_ERR(svn_client_open_ra_session2(&s_t->target_ra_session,
                                       s_t->target->loc.url,
                                       s_t->target->abspath,
                                       ctx, result_pool, scratch_pool));
-  /* ### check for null URL (i.e. added path) here, like in reintegrate? */
   SVN_ERR(svn_client__ra_session_from_path2(
             &s_t->source_ra_session, &s_t->source,
             source_path_or_url, NULL, source_revision, source_revision,
