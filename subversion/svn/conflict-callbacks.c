@@ -712,8 +712,13 @@ prompt_user(const resolver_option_t **opt,
 static svn_error_t *
 handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                      svn_boolean_t *save_merged,
+                     svn_cl__accept_t *accept_which,
+                     svn_boolean_t *quit,
                      const svn_client_conflict_t *conflict,
-                     svn_cl__interactive_conflict_baton_t *b,
+                     const char *path_prefix,
+                     svn_cmdline_prompt_baton_t *pb,
+                     const char *editor_cmd,
+                     apr_hash_t *config,
                      apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -740,7 +745,7 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                                 conflict, scratch_pool,
                                                 scratch_pool));
 
-  local_relpath = svn_cl__local_style_skip_ancestor(b->path_prefix,
+  local_relpath = svn_cl__local_style_skip_ancestor(path_prefix,
                                                     local_abspath,
                                                     scratch_pool);
 
@@ -814,15 +819,15 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
       *next_option++ = "s";
       *next_option++ = NULL;
 
-      SVN_ERR(prompt_user(&opt, conflict_options, options, b->pb, iterpool));
+      SVN_ERR(prompt_user(&opt, conflict_options, options, pb, iterpool));
       if (! opt)
         continue;
 
       if (strcmp(opt->code, "q") == 0)
         {
           *option_id = opt->choice;
-          b->accept_which = svn_cl__accept_postpone;
-          b->quit = TRUE;
+          *accept_which = svn_cl__accept_postpone;
+          *quit = TRUE;
           break;
         }
       else if (strcmp(opt->code, "s") == 0)
@@ -849,8 +854,8 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
               continue;
             }
           SVN_ERR(show_conflicts(conflict,
-                                 b->pb->cancel_func,
-                                 b->pb->cancel_baton,
+                                 pb->cancel_func,
+                                 pb->cancel_baton,
                                  iterpool));
           knows_something = TRUE;
         }
@@ -865,15 +870,15 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
               continue;
             }
 
-          SVN_ERR(show_diff(conflict, merged_abspath, b->path_prefix,
-                            b->pb->cancel_func, b->pb->cancel_baton,
+          SVN_ERR(show_diff(conflict, merged_abspath, path_prefix,
+                            pb->cancel_func, pb->cancel_baton,
                             iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(opt->code, "e") == 0 || strcmp(opt->code, ":-E") == 0)
         {
-          SVN_ERR(open_editor(&performed_edit, merged_abspath, b->editor_cmd,
-                              b->config, iterpool));
+          SVN_ERR(open_editor(&performed_edit, merged_abspath, editor_cmd,
+                              config, iterpool));
           if (performed_edit)
             knows_something = TRUE;
         }
@@ -895,7 +900,7 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                               their_abspath,
                                               my_abspath,
                                               merged_abspath,
-                                              local_abspath, b->config,
+                                              local_abspath, config,
                                               NULL, iterpool);
           if (err)
             {
@@ -911,11 +916,11 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                              my_abspath,
                                              merged_abspath,
                                              local_abspath,
-                                             b->path_prefix,
-                                             b->editor_cmd,
-                                             b->config,
-                                             b->pb->cancel_func,
-                                             b->pb->cancel_baton,
+                                             path_prefix,
+                                             editor_cmd,
+                                             config,
+                                             pb->cancel_func,
+                                             pb->cancel_baton,
                                              iterpool));
                   knows_something = !remains_in_conflict;
                 }
@@ -960,7 +965,7 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                                   my_abspath,
                                                   merged_abspath,
                                                   local_abspath,
-                                                  b->config, NULL, iterpool);
+                                                  config, NULL, iterpool);
               if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
                           err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
                 {
@@ -991,11 +996,11 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                      my_abspath,
                                      merged_abspath,
                                      local_abspath,
-                                     b->path_prefix,
-                                     b->editor_cmd,
-                                     b->config,
-                                     b->pb->cancel_func,
-                                     b->pb->cancel_baton,
+                                     path_prefix,
+                                     editor_cmd,
+                                     config,
+                                     pb->cancel_func,
+                                     pb->cancel_baton,
                                      iterpool));
 
           if (!remains_in_conflict)
@@ -1410,8 +1415,9 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
            svn_wc_conflict_action_edit)
        && (svn_client_conflict_get_local_change(conflict) ==
            svn_wc_conflict_reason_edited)))
-    SVN_ERR(handle_text_conflict(option_id, save_merged, conflict, b,
-                                 scratch_pool));
+    SVN_ERR(handle_text_conflict(option_id, save_merged, &b->accept_which,
+                                 &b->quit, conflict, b->path_prefix, b->pb,
+                                 b->editor_cmd, b->config, scratch_pool));
   else if (svn_client_conflict_get_kind(conflict) ==
            svn_wc_conflict_kind_property)
     SVN_ERR(handle_prop_conflict(option_id, merged_propval, conflict, b,
