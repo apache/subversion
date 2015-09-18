@@ -377,7 +377,9 @@ edit_prop_conflict(const svn_string_t **merged_propval,
                    const svn_string_t *base_propval,
                    const svn_string_t *my_propval,
                    const svn_string_t *their_propval,
-                   svn_cl__interactive_conflict_baton_t *b,
+                   const char *editor_cmd,
+                   apr_hash_t *config,
+                   svn_cmdline_prompt_baton_t *pb,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
@@ -393,13 +395,13 @@ edit_prop_conflict(const svn_string_t **merged_propval,
                                          scratch_pool);
   SVN_ERR(merge_prop_conflict(merged_prop, base_propval, my_propval,
                               their_propval, NULL,
-                              b->pb->cancel_func,
-                              b->pb->cancel_baton,
+                              pb->cancel_func,
+                              pb->cancel_baton,
                               scratch_pool));
   SVN_ERR(svn_stream_close(merged_prop));
   SVN_ERR(svn_io_file_flush(file, scratch_pool));
-  SVN_ERR(open_editor(&performed_edit, file_path, b->editor_cmd,
-                      b->config, scratch_pool));
+  SVN_ERR(open_editor(&performed_edit, file_path, editor_cmd,
+                      config, scratch_pool));
   if (performed_edit && merged_propval)
     {
       svn_stringbuf_t *buf;
@@ -1117,7 +1119,8 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
         {
           SVN_ERR(edit_prop_conflict(&merged_propval,
                                      base_propval, my_propval, their_propval,
-                                     b, result_pool, scratch_pool));
+                                     b->pb, b->editor_cmd, b->config,
+                                     result_pool, scratch_pool));
           resolved_allowed = (merged_propval != NULL);
         }
       else if (strcmp(opt->code, "r") == 0)
