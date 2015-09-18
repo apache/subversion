@@ -30,6 +30,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.2
   - API changes:
     * disable unsupported operations for standard streams (r1701633 et al)
 
+
 Version 1.9.1
 (02 Sep 2015, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.1
