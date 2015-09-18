@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <apr_pools.h>
 #include <apr_time.h>
+#include <apr_ring.h>
 
 #include "svn_dirent_uri.h"
 #include "private/svn_ra_private.h"
