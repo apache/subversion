@@ -29,17 +29,6 @@ Candidate changes:
    Votes:
      +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
 
- * r1700215, r1700219, r1700220, r1701270, r1703740
-   Fix argument passing in test suite.
-   Justification:
-     Makes svnfsfs_tests.py work in fsfs-v4 and fsfs-v6 modes.
-   Branch:
-     ^/subversion/branches/1.9.x-r1700215
-   Votes:
-     +1: brane, stefan2
-     -0: rhuijben (Without r1703740)
-                  (Log level on standard invocation of win-tests.py changes)
-
  * r1701598, r1701603, r1701611, r1701646
    Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
    Justification:
@@ -75,3 +64,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1700215, r1700219, r1700220, r1701270, r1703740
+   Fix argument passing in test suite.
+   Justification:
+     Makes svnfsfs_tests.py work in fsfs-v4 and fsfs-v6 modes.
+   Branch:
+     ^/subversion/branches/1.9.x-r1700215
+   Votes:
+     +1: brane, stefan2, rhuijben
