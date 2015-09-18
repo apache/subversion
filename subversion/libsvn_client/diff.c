@@ -496,12 +496,12 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     }
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, scratch_pool,
-                                      _("%sProperty changes on: %s%s"),
+                                      APR_EOL_STR
+                                      "Property changes on: %s"
                                       APR_EOL_STR,
                                       use_git_diff_format
                                             ? repos_relpath1
-                                            : index_path,
-                                      APR_EOL_STR));
+                                            : index_path));
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, scratch_pool,
                                       SVN_DIFF__UNDER_STRING APR_EOL_STR));
@@ -707,6 +707,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
                "Index: %s" APR_EOL_STR
                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
                index_path));
+
+      *wrote_header = TRUE;
 
       /* ### Print git diff headers. */
 
