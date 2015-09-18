@@ -28,6 +28,7 @@ Candidate changes:
      <http://mail-archives.apache.org/mod_mbox/subversion-dev/201508.mbox/%3CCALeEUB56NVCR0nCZ2rYki6oKQNcVPPLvWTeCoYyrMqitsov0ag@mail.gmail.com%3E>.
    Votes:
      +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
+     +0: danielsh (not tested; would be nice to have a $ anchor in the pattern)
 
  * r1701598, r1701603, r1701611, r1701646
    Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
