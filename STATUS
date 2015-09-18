@@ -74,10 +74,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1703675
-   Fix formatting of upgrade notification messages.
-   Justification:
-     Multiple notifications on one line are hard to read.
-   Votes:
-     +1: philip, stefan2, rhuijben
