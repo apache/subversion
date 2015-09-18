@@ -213,7 +213,5 @@ svn_diff_output_binary(svn_stream_t *output_stream,
                         scratch_pool));
   svn_pool_destroy(subpool);
 
-  SVN_ERR(svn_stream_puts(output_stream, APR_EOL_STR));
-
   return SVN_NO_ERROR;
 }

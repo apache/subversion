@@ -82,6 +82,24 @@ struct svn_diff_hunk_t {
   svn_linenum_t trailing_context;
 };
 
+struct svn_diff_binary_patch_t {
+  /* The patch this hunk belongs to. */
+  svn_patch_t *patch;
+
+  /* APR file handle to the patch file this hunk came from. */
+  apr_file_t *apr_file;
+
+  /* Offsets inside APR_FILE representing the location of the patch */
+  apr_off_t src_start;
+  apr_off_t src_end;
+  svn_filesize_t src_filesize; /* Expanded/final size */
+
+  /* Offsets inside APR_FILE representing the location of the patch */
+  apr_off_t dst_start;
+  apr_off_t dst_end;
+  svn_filesize_t dst_filesize; /* Expanded/final size */
+};
+
 void
 svn_diff_hunk_reset_diff_text(svn_diff_hunk_t *hunk)
 {
@@ -917,16 +935,17 @@ compare_hunks(const void *a, const void *b)
 /* Possible states of the diff header parser. */
 enum parse_state
 {
-   state_start,           /* initial */
-   state_git_diff_seen,   /* diff --git */
-   state_git_tree_seen,   /* a tree operation, rather than content change */
-   state_git_minus_seen,  /* --- /dev/null; or --- a/ */
-   state_git_plus_seen,   /* +++ /dev/null; or +++ a/ */
-   state_move_from_seen,  /* rename from foo.c */
-   state_copy_from_seen,  /* copy from foo.c */
-   state_minus_seen,      /* --- foo.c */
-   state_unidiff_found,   /* valid start of a regular unidiff header */
-   state_git_header_found /* valid start of a --git diff header */
+   state_start,             /* initial */
+   state_git_diff_seen,     /* diff --git */
+   state_git_tree_seen,     /* a tree operation, rather than content change */
+   state_git_minus_seen,    /* --- /dev/null; or --- a/ */
+   state_git_plus_seen,     /* +++ /dev/null; or +++ a/ */
+   state_move_from_seen,    /* rename from foo.c */
+   state_copy_from_seen,    /* copy from foo.c */
+   state_minus_seen,        /* --- foo.c */
+   state_unidiff_found,     /* valid start of a regular unidiff header */
+   state_git_header_found,  /* valid start of a --git diff header */
+   state_binary_patch_found /* valid start of binary patch */
 };
 
 /* Data type describing a valid state transition of the parser. */
@@ -1234,6 +1253,18 @@ git_deleted_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
+/* Parse the 'GIT binary patch' header */
+static svn_error_t *
+binary_patch_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
+             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  patch->operation = svn_diff_op_modified;
+
+  *new_state = state_binary_patch_found;
+  return SVN_NO_ERROR;
+}
+
+
 /* Add a HUNK associated with the property PROP_NAME to PATCH. */
 static svn_error_t *
 add_property_hunk(svn_patch_t *patch, const char *prop_name,
@@ -1346,29 +1377,134 @@ parse_hunks(svn_patch_t *patch, apr_file_t *apr_file,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
+                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_off_t pos, last_line;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof = FALSE;
+  svn_diff_binary_patch_t *bpatch = apr_pcalloc(result_pool, sizeof(*bpatch));
+  svn_boolean_t in_blob = FALSE;
+  svn_boolean_t in_dst = FALSE;
+
+  patch->operation = svn_diff_op_modified;
+  patch->prop_patches = apr_hash_make(result_pool);
+
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
+
+  while (!eof)
+    {
+      last_line = pos;
+      SVN_ERR(svn_io_file_readline(apr_file, &line, NULL, &eof, APR_SIZE_MAX,
+                               iterpool, iterpool));
+
+      /* Update line offset for next iteration. */
+      pos = 0;
+      SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
+
+      if (in_blob)
+        {
+          char c = line->data[0];
+
+          /* 66 = len byte + (52/4*5) chars */
+          if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') 
+              && line->len <= 66
+              && !strchr(line->data, ':')
+              && !strchr(line->data, ' '))
+            {
+              /* One more blop line */
+              if (in_dst)
+                bpatch->dst_end = pos;
+              else
+                bpatch->src_end = pos;
+            }
+          else if (svn_stringbuf_first_non_whitespace(line) < line->len
+                   && !(in_dst && bpatch->dst_start < last_line))
+            {
+              break; /* Bad patch */
+            }
+          else if (in_dst)
+            {
+              patch->binary_patch = bpatch; /* SUCCESS! */
+              break; 
+            }
+          else
+            {
+              in_blob = FALSE;
+              in_dst = TRUE;
+            }
+        }
+      else if (starts_with(line->data, "literal "))
+        {
+          apr_uint64_t expanded_size;
+          svn_error_t *err = svn_cstring_strtoui64(&expanded_size,
+                                                   &line->data[8],
+                                                   0, APR_UINT64_MAX, 10);
+
+          if (err)
+            {
+              svn_error_clear(err);
+              break;
+            }
+
+          if (in_dst)
+            {
+              bpatch->dst_start = pos;
+              bpatch->dst_filesize = expanded_size;
+            }
+          else
+            {
+              bpatch->src_start = pos;
+              bpatch->src_filesize = expanded_size;
+            }
+          in_blob = TRUE;
+        }
+      else
+        break; /* We don't support GIT deltas (yet) */
+    }
+  svn_pool_destroy(iterpool);
+
+  if (!eof)
+    /* Rewind to the start of the line just read, so subsequent calls
+     * don't end up skipping the line. It may contain a patch or hunk header.*/
+    SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &last_line, scratch_pool));
+  else if (in_dst
+           && ((bpatch->dst_end > bpatch_dst_start) || !bpatch->dst_filesize))
+    {
+      patch->binary_patch = bpatch; /* SUCCESS */
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* State machine for the diff header parser.
  * Expected Input   Required state          Function to call */
 static struct transition transitions[] =
 {
-  {"--- ",          state_start,            diff_minus},
-  {"+++ ",          state_minus_seen,       diff_plus},
+  {"--- ",              state_start,            diff_minus},
+  {"+++ ",              state_minus_seen,       diff_plus},
 
-  {"diff --git",    state_start,            git_start},
-  {"--- a/",        state_git_diff_seen,    git_minus},
-  {"--- a/",        state_git_tree_seen,    git_minus},
-  {"--- /dev/null", state_git_tree_seen,    git_minus},
-  {"+++ b/",        state_git_minus_seen,   git_plus},
-  {"+++ /dev/null", state_git_minus_seen,   git_plus},
+  {"diff --git",        state_start,            git_start},
+  {"--- a/",            state_git_diff_seen,    git_minus},
+  {"--- a/",            state_git_tree_seen,    git_minus},
+  {"--- /dev/null",     state_git_tree_seen,    git_minus},
+  {"+++ b/",            state_git_minus_seen,   git_plus},
+  {"+++ /dev/null",     state_git_minus_seen,   git_plus},
 
-  {"rename from ",  state_git_diff_seen,    git_move_from},
-  {"rename to ",    state_move_from_seen,   git_move_to},
+  {"rename from ",      state_git_diff_seen,    git_move_from},
+  {"rename to ",        state_move_from_seen,   git_move_to},
 
-  {"copy from ",    state_git_diff_seen,    git_copy_from},
-  {"copy to ",      state_copy_from_seen,   git_copy_to},
+  {"copy from ",        state_git_diff_seen,    git_copy_from},
+  {"copy to ",          state_copy_from_seen,   git_copy_to},
 
-  {"new file ",     state_git_diff_seen,    git_new_file},
+  {"new file ",         state_git_diff_seen,    git_new_file},
 
-  {"deleted file ", state_git_diff_seen,    git_deleted_file},
+  {"deleted file ",     state_git_diff_seen,    git_deleted_file},
+
+  {"GIT binary patch",  state_git_diff_seen,    binary_patch_start},
 };
 
 svn_error_t *
@@ -1433,7 +1569,9 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
             }
         }
 
-      if (state == state_unidiff_found || state == state_git_header_found)
+      if (state == state_unidiff_found
+          || state == state_git_header_found
+          || state == state_binary_patch_found)
         {
           /* We have a valid diff header, yay! */
           break;
@@ -1487,8 +1625,17 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
       patch = NULL;
     }
   else
-    SVN_ERR(parse_hunks(patch, patch_file->apr_file, ignore_whitespace,
-                        result_pool, iterpool));
+    {
+      if (state == state_binary_patch_found)
+        {
+          SVN_ERR(parse_binary_patch(patch, patch_file->apr_file,
+                                     result_pool, iterpool));
+          /* And fall through in property parsing */
+        }
+
+      SVN_ERR(parse_hunks(patch, patch_file->apr_file, ignore_whitespace,
+                          result_pool, iterpool));
+    }
 
   svn_pool_destroy(iterpool);
 
@@ -1496,7 +1643,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
   SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR,
                            &patch_file->next_patch_offset, scratch_pool));
 
-  if (patch)
+  if (patch && patch->hunks)
     {
       /* Usually, hunks appear in the patch sorted by their original line
        * offset. But just in case they weren't parsed in this order for
