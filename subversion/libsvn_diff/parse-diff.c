@@ -1472,7 +1472,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
      * don't end up skipping the line. It may contain a patch or hunk header.*/
     SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &last_line, scratch_pool));
   else if (in_dst
-           && ((bpatch->dst_end > bpatch_dst_start) || !bpatch->dst_filesize))
+           && ((bpatch->dst_end > bpatch->dst_start) || !bpatch->dst_filesize))
     {
       patch->binary_patch = bpatch; /* SUCCESS */
     }
