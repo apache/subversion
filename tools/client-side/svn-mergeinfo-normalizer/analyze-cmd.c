@@ -40,14 +40,16 @@ svn_min__analyze(apr_getopt_t *os,
 {
   svn_min__cmd_baton_t *cmd_baton = baton;
 
-  /* If no option is given, default to "remove redundant sub-node m/i". */
+  /* If no option is given, default to "remove all you can". */
   if (   !cmd_baton->opt_state->remove_redundants
       && !cmd_baton->opt_state->remove_obsoletes
-      && !cmd_baton->opt_state->combine_ranges)
+      && !cmd_baton->opt_state->combine_ranges
+      && !cmd_baton->opt_state->remove_redundant_misaligned)
     {
       cmd_baton->opt_state->remove_redundants = TRUE;
       cmd_baton->opt_state->remove_obsoletes = TRUE;
       cmd_baton->opt_state->combine_ranges = TRUE;
+      cmd_baton->opt_state->remove_redundant_misaligned = TRUE;
     }
 
   cmd_baton->opt_state->run_analysis = TRUE;

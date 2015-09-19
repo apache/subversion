@@ -31,6 +31,7 @@ import os, sys, subprocess
 import filecmp
 import shutil
 import traceback
+import logging
 try:
   # Python >=3.0
   import configparser
@@ -59,7 +60,6 @@ def _usage_exit():
   print("  -u URL, --url=URL      : run ra_dav or ra_svn tests against URL;")
   print("                           will start svnserve for ra_svn tests")
   print("  -v, --verbose          : talk more")
-  print("  -q, --quiet            : talk less")
   print("  -f, --fs-type=type     : filesystem type to use (fsfs is default)")
   print("  -c, --cleanup          : cleanup after running a test")
   print("  -t, --test=TEST        : Run the TEST test (all is default); use")
@@ -108,6 +108,8 @@ def _usage_exit():
   print("  --config-file          : Configuration file for tests")
   print("  --fsfs-sharding        : Specify shard size (for fsfs)")
   print("  --fsfs-packing         : Run 'svnadmin pack' automatically")
+  print("  -q, --quiet            : Deprecated; this is the default.")
+  print("                           Use --set-log-level instead.")
 
   sys.exit(0)
 
@@ -141,7 +143,7 @@ if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
 # Interpret the options and set parameters
-base_url, fs_type, verbose, quiet, cleanup = None, None, None, None, None
+base_url, fs_type, verbose, cleanup = None, None, None, None
 repo_loc = 'local repository.'
 objdir = 'Debug'
 log = 'tests.log'
@@ -187,8 +189,7 @@ for opt, val in opts:
     fs_type = val
   elif opt in ('-v', '--verbose'):
     verbose = 1
-  elif opt in ('-q', '--quiet'):
-    quiet = 1
+    log_level = logging.DEBUG
   elif opt in ('-c', '--cleanup'):
     cleanup = 1
   elif opt in ('-t', '--test'):
@@ -250,7 +251,7 @@ for opt, val in opts:
   elif opt == '--log-to-stdout':
     log_to_stdout = 1
   elif opt == '--log-level':
-    log_level = val
+    log_level = getattr(logging, val, None) or int(val)
   elif opt == '--ssl-cert':
     ssl_cert = val
   elif opt == '--exclusive-wc-locks':
@@ -999,7 +1000,6 @@ if not test_javahl and not test_swig:
   opts.fs_type = fs_type
   opts.http_library = 'serf'
   opts.server_minor_version = server_minor_version
-  opts.verbose = not quiet
   opts.cleanup = cleanup
   opts.enable_sasl = enable_sasl
   opts.parallel = parallel

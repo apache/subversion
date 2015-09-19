@@ -1152,6 +1152,9 @@ _svnadmin ()
 		         --use-pre-commit-hook --use-post-commit-hook \
 		         --bypass-prop-validation -M --memory-cache-size"
 		;;
+	lstxns)
+        	cmdOpts="-r --revision"
+		;;
 	lock|unlock)
 		cmdOpts="--bypass-hooks"
 		;;
