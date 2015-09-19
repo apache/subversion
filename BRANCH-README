@@ -17,13 +17,16 @@ DONE:
 - Expire and close idle sessions after a given timeout.
 - Limit the number of idle open sessions in the cache.
 - Add explicit session reuse in the MTCC implementation.
+- Find and resolve all 'RA_CACHE TODO' comments.
+  The only one RA_CACHE TODO comment remaining, that is
+  going to be resolved on trunk by patched posted on dev@ list:
+  http://svn.haxx.se/dev/archive-2015-02/0054.shtml
 
 TODO:
 - Add new RA method (svn_ra__ping?) to verify that a session
   about to be reused is valid.
 - Run performance comparisons between trunk and branch to prove that
   the RA session cache does in fact speed things up.
-- Find and resolve all 'RA_CACHE TODO' comments.
 
 PROBLEM
 =======
