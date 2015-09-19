@@ -467,20 +467,20 @@ expunge_cache_entries(svn_client__ra_cache_t *ra_cache, apr_time_t now)
 {
   cache_entry_t *cache_entry;
 
+  /* Remove expired inactive cache entries. */
+  cache_entry = APR_RING_LAST(&ra_cache->freelist);
+  while (ra_cache->inactive_count > 0
+      && now > cache_entry->released + INACTIVE_SESSION_TIMEOUT)
+  {
+      remove_inactive_entry(ra_cache, cache_entry, TRUE);
+      cache_entry = APR_RING_LAST(&ra_cache->freelist);
+  }
+
   /* Limit the size of the inactive list. */
   while (ra_cache->inactive_count > MAX_INACTIVE_SESSIONS)
     {
       cache_entry = APR_RING_LAST(&ra_cache->freelist);
       remove_inactive_entry(ra_cache, cache_entry, FALSE);
-    }
-
-  /* Remove expired inactive cache entries. */
-  cache_entry = APR_RING_LAST(&ra_cache->freelist);
-  while (ra_cache->inactive_count > 0
-         && now > cache_entry->released + INACTIVE_SESSION_TIMEOUT)
-    {
-      remove_inactive_entry(ra_cache, cache_entry, TRUE);
-      cache_entry = APR_RING_LAST(&ra_cache->freelist);
     }
 }
 
