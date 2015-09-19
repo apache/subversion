@@ -40,6 +40,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+
 /**
  * Open a new ra session @a *new_session to the same repository as an existing
  * ra session @a old_session, copying the callbacks, auth baton, etc. from the
