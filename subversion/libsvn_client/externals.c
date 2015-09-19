@@ -724,6 +724,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
   svn_client__pathrev_t *new_loc;
   const char *new_url;
   svn_node_kind_t ext_kind;
+  svn_boolean_t new_ra_session = FALSE;
 
   SVN_ERR_ASSERT(repos_root_url && parent_dir_url);
   SVN_ERR_ASSERT(new_item != NULL);
@@ -769,11 +770,14 @@ handle_external_item_change(svn_client_ctx_t *ctx,
     }
 
   if (!ra_session)
-    SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &new_loc,
-                                              new_url, NULL,
-                                              &(new_item->peg_revision),
-                                              &(new_item->revision), ctx,
-                                              scratch_pool));
+    {
+      SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &new_loc,
+                                                new_url, NULL,
+                                                &(new_item->peg_revision),
+                                                &(new_item->revision), ctx,
+                                                scratch_pool));
+      new_ra_session = TRUE;
+    }
 
   SVN_ERR(svn_ra_check_path(ra_session, "", new_loc->rev, &ext_kind,
                             scratch_pool));
@@ -871,12 +875,15 @@ handle_external_item_change(svn_client_ctx_t *ctx,
             new_url = svn_path_url_add_component2(local_repos_root_url,
                                                   ext_repos_relpath,
                                                   scratch_pool);
+            if (new_ra_session)
+              SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
             SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &new_loc,
                                                       new_url,
                                                       NULL,
                                                       &(new_item->peg_revision),
                                                       &(new_item->revision),
                                                       ctx, scratch_pool));
+            new_ra_session = TRUE;
           }
 
         SVN_ERR(switch_file_external(local_abspath,
@@ -895,6 +902,8 @@ handle_external_item_change(svn_client_ctx_t *ctx,
         break;
     }
 
+  if (new_ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 

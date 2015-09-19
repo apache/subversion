@@ -1006,6 +1006,7 @@ svn_client_import5(const char *path,
                     editor->abort_edit(edit_baton, scratch_pool));
     }
 
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 

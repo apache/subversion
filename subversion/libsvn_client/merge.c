@@ -9683,6 +9683,10 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
   if (! *ra_session || (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL))
     {
       svn_error_clear(err);
+      /* RA_CACHE TODO: release RA session
+         The patch to rework RA session handling in merge is going to
+         be committed in trunk after merging:
+         http://svn.haxx.se/dev/archive-2015-02/0054.shtml */
       err = svn_client_open_ra_session2(ra_session, url, wri_abspath,
                                         ctx, pool, pool);
     }
@@ -9793,7 +9797,7 @@ do_merge(apr_hash_t **modified_subtrees,
   const char *preserved_exts_str;
   int i;
   svn_boolean_t checked_mergeinfo_capability = FALSE;
-  svn_ra_session_t *ra_session1 = NULL, *ra_session2 = NULL;
+  svn_ra_session_t *ra_session1 = NULL;
   const char *old_src_session_url = NULL;
   apr_pool_t *iterpool;
   const svn_diff_tree_processor_t *processor;
@@ -9925,6 +9929,7 @@ do_merge(apr_hash_t **modified_subtrees,
       merge_source_t *source =
         APR_ARRAY_IDX(merge_sources, i, merge_source_t *);
       single_range_conflict_report_t *conflicted_range_report;
+      svn_ra_session_t *ra_session2;
 
       svn_pool_clear(iterpool);
 
@@ -9937,8 +9942,10 @@ do_merge(apr_hash_t **modified_subtrees,
       /* Establish RA sessions to our URLs, reuse where possible. */
       SVN_ERR(ensure_ra_session_url(&ra_session1, source->loc1->url,
                                     target->abspath, ctx, scratch_pool));
-      SVN_ERR(ensure_ra_session_url(&ra_session2, source->loc2->url,
-                                    target->abspath, ctx, scratch_pool));
+
+      SVN_ERR(svn_client_open_ra_session2(&ra_session2, source->loc2->url,
+                                          target->abspath, ctx, iterpool,
+                                          iterpool));
 
       /* Populate the portions of the merge context baton that need to
          be reset for each merge source iteration. */
@@ -10013,6 +10020,8 @@ do_merge(apr_hash_t **modified_subtrees,
             break;
         }
       while (source);
+
+      SVN_ERR(svn_client__ra_session_release(ctx, ra_session2));
 
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
       if (! dry_run)
@@ -10594,6 +10603,11 @@ merge_locked(conflict_report_t **conflict_report,
                  ctx, result_pool, scratch_pool);
 
   /* Close our temporary RA sessions. */
+  if (!err)
+    {
+      SVN_ERR(svn_client__ra_session_release(ctx, ra_session2));
+      SVN_ERR(svn_client__ra_session_release(ctx, ra_session1));
+    }
   svn_pool_destroy(sesspool);
 
   if (use_sleep)
@@ -11758,6 +11772,12 @@ merge_reintegrate_locked(conflict_report_t **conflict_report,
                                                ctx,
                                                result_pool, scratch_pool);
 
+  if (!err)
+    {
+      SVN_ERR(svn_client__ra_session_release(ctx, source_ra_session));
+      SVN_ERR(svn_client__ra_session_release(ctx, target_ra_session));
+    }
+
   if (use_sleep)
     svn_io_sleep_for_timestamps(target_abspath, scratch_pool);
 
@@ -11865,6 +11885,8 @@ merge_peg_locked(conflict_report_t **conflict_report,
                  ctx, result_pool, scratch_pool);
 
   /* We're done with our RA session. */
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   svn_pool_destroy(sesspool);
 
   if (use_sleep)
@@ -12547,6 +12569,9 @@ find_automatic_merge_no_wc(automatic_merge_t **merge_p,
   SVN_ERR(find_automatic_merge(&merge->base, &merge->is_reintegrate_like, s_t,
                                ctx, result_pool, scratch_pool));
 
+  SVN_ERR(svn_client__ra_session_release(ctx, s_t->target_ra_session));
+  SVN_ERR(svn_client__ra_session_release(ctx, s_t->source_ra_session));
+
   merge->right = s_t->source;
   merge->target = &s_t->target->loc;
   merge->yca = s_t->yca;
@@ -12627,6 +12652,10 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
 
   SVN_ERR(find_automatic_merge(&merge->base, &merge->is_reintegrate_like, s_t,
                                ctx, result_pool, scratch_pool));
+
+  SVN_ERR(svn_client__ra_session_release(ctx, s_t->source_ra_session));
+  SVN_ERR(svn_client__ra_session_release(ctx, s_t->target_ra_session));
+
   merge->yca = s_t->yca;
   merge->right = s_t->source;
   merge->target = &s_t->target->loc;
@@ -12635,8 +12664,6 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
   merge->allow_switched_subtrees = allow_switched_subtrees;
 
   *merge_p = merge;
-
-  /* TODO: Close the source and target sessions here? */
 
   return SVN_NO_ERROR;
 }
@@ -12697,9 +12724,8 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
   if (reintegrate_like)
     {
       merge_source_t source;
-      svn_ra_session_t *base_ra_session = NULL;
-      svn_ra_session_t *right_ra_session = NULL;
-      svn_ra_session_t *target_ra_session = NULL;
+      svn_ra_session_t *base_ra_session;
+      svn_ra_session_t *right_ra_session;
 
       if (record_only)
         return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -12719,28 +12745,37 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
                                   "and the force_delete option "
                                   "cannot be used with this kind of merge"));
 
-      SVN_ERR(ensure_ra_session_url(&base_ra_session, merge->base->url,
-                                    target->abspath, ctx, scratch_pool));
-      SVN_ERR(ensure_ra_session_url(&right_ra_session, merge->right->url,
-                                    target->abspath, ctx, scratch_pool));
-      SVN_ERR(ensure_ra_session_url(&target_ra_session, target->loc.url,
-                                    target->abspath, ctx, scratch_pool));
+      SVN_ERR(svn_client_open_ra_session2(&right_ra_session, merge->right->url,
+                                          target->abspath, ctx, scratch_pool,
+                                          scratch_pool));
 
       /* Check for and reject any abnormalities -- such as revisions that
        * have not yet been merged in the opposite direction -- that a
        * 'reintegrate' merge would have rejected. */
       {
         merge_source_t *source2;
+        svn_ra_session_t *target_ra_session;
+
+        SVN_ERR(svn_client_open_ra_session2(&target_ra_session,
+                                            target->loc.url, target->abspath,
+                                            ctx, scratch_pool, scratch_pool));
 
         SVN_ERR(find_reintegrate_merge(&source2, NULL,
                                        right_ra_session, merge->right,
                                        target_ra_session, target,
                                        ctx, scratch_pool, scratch_pool));
+
+        SVN_ERR(svn_client__ra_session_release(ctx, target_ra_session));
       }
 
       source.loc1 = merge->base;
       source.loc2 = merge->right;
       source.ancestral = ! merge->is_reintegrate_like;
+
+      SVN_ERR(svn_client_open_ra_session2(&base_ra_session,
+                                          merge->base->url,
+                                          target->abspath, ctx, scratch_pool,
+                                          scratch_pool));
 
       err = merge_cousins_and_supplement_mergeinfo(conflict_report,
                                                    &use_sleep,
@@ -12756,6 +12791,11 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
                                                    merge_options,
                                                    ctx,
                                                    result_pool, scratch_pool);
+      if (!err)
+        {
+          SVN_ERR(svn_client__ra_session_release(ctx, base_ra_session));
+          SVN_ERR(svn_client__ra_session_release(ctx, right_ra_session));
+        }
     }
   else /* ! merge->is_reintegrate_like */
     {
@@ -12769,12 +12809,13 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
          find the base for each sutree, and then here use the oldest base
          among all subtrees. */
       apr_array_header_t *merge_sources;
-      svn_ra_session_t *ra_session = NULL;
+      svn_ra_session_t *ra_session;
 
       /* Normalize our merge sources, do_merge() requires this.  See the
          'MERGEINFO MERGE SOURCE NORMALIZATION' global comment. */
-      SVN_ERR(ensure_ra_session_url(&ra_session, merge->right->url,
-                                    target->abspath, ctx, scratch_pool));
+      SVN_ERR(svn_client_open_ra_session2(&ra_session, merge->right->url,
+                                          target->abspath, ctx, scratch_pool,
+                                          scratch_pool));
       SVN_ERR(normalize_merge_sources_internal(
         &merge_sources, merge->right,
         svn_rangelist__initialize(merge->yca->rev, merge->right->rev, TRUE,
@@ -12788,6 +12829,8 @@ do_automatic_merge_locked(conflict_report_t **conflict_report,
                      force_delete, dry_run,
                      record_only, NULL, FALSE, FALSE, depth, merge_options,
                      ctx, result_pool, scratch_pool);
+      if (!err)
+        SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
     }
 
   if (use_sleep)
