@@ -386,9 +386,6 @@ determine_lock_targets(apr_array_header_t **lock_targets,
 /* Baton for check_url_kind */
 struct check_url_kind_baton
 {
-  apr_pool_t *pool;
-  svn_ra_session_t *session;
-  const char *repos_root_url;
   svn_client_ctx_t *ctx;
 };
 
@@ -401,21 +398,19 @@ check_url_kind(void *baton,
                apr_pool_t *scratch_pool)
 {
   struct check_url_kind_baton *cukb = baton;
+  svn_ra_session_t *ra_session;
 
-  /* If we don't have a session or can't use the session, get one */
-  if (!cukb->session || !svn_uri__is_ancestor(cukb->repos_root_url, url))
-    {
-      SVN_ERR(svn_client_open_ra_session2(&cukb->session, url, NULL, cukb->ctx,
-                                          cukb->pool, scratch_pool));
-      SVN_ERR(svn_ra_get_repos_root2(cukb->session, &cukb->repos_root_url,
-                                     cukb->pool));
-    }
-  else
-    SVN_ERR(svn_ra_reparent(cukb->session, url, scratch_pool));
+  /* Open RA session: RA session cache framework will reuse existing
+     session if possible. */
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL, cukb->ctx,
+                                      scratch_pool, scratch_pool));
 
-  return svn_error_trace(
-                svn_ra_check_path(cukb->session, "", revision,
-                                  kind, scratch_pool));
+  SVN_ERR(svn_ra_check_path(ra_session, "", revision, kind, scratch_pool));
+
+  /* Release RA session to cache. */
+  SVN_ERR(svn_client__ra_session_release(cukb->ctx, ra_session));
+
+  return SVN_NO_ERROR;
 }
 
 /* Recurse into every target in REL_TARGETS, finding committable externals
@@ -518,7 +513,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   struct capture_baton_t cb;
-  svn_ra_session_t *ra_session;
+  svn_ra_session_t *ra_session = NULL;
   const char *log_msg;
   const char *base_abspath;
   const char *base_url;
@@ -619,9 +614,6 @@ svn_client_commit6(const apr_array_header_t *targets,
     struct check_url_kind_baton cukb;
 
     /* Prepare for when we have a copy containing not-present nodes. */
-    cukb.pool = iterpool;
-    cukb.session = NULL; /* ### Can we somehow reuse session? */
-    cukb.repos_root_url = NULL;
     cukb.ctx = ctx;
 
     cmt_err = svn_error_trace(
@@ -988,6 +980,10 @@ svn_client_commit6(const apr_array_header_t *targets,
 
   svn_pool_destroy(iterpool);
 
-  return svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err,
-                                          pool));
+  SVN_ERR(reconcile_errors(cmt_err, unlock_err, bump_err, pool));
+
+  if (ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+
+  return SVN_NO_ERROR;
 }

@@ -972,5 +972,6 @@ svn_client_blame5(const char *target,
     }
   svn_pool_destroy(iterpool);
 
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }

@@ -1198,7 +1198,9 @@ mkdir_urls(const apr_array_header_t *urls,
     }
 
   /* Close the edit. */
-  return svn_error_trace(editor->close_edit(edit_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+  return SVN_NO_ERROR;
 }
 
 

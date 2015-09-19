@@ -1423,6 +1423,8 @@ svn_client__mtcc_commit(apr_hash_t *revprop_table,
     err = svn_error_compose_create(err,
                                    editor->abort_edit(edit_baton, scratch_pool));
 
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(mtcc->ctx, mtcc->ra_session));
   svn_pool_destroy(mtcc->pool);
 
   return svn_error_trace(err);

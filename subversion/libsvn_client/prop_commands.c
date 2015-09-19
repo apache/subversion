@@ -250,7 +250,9 @@ propset_on_url(const char *propname,
       ctx->notify_func2(ctx->notify_baton2, notify, pool);
     }
   /* Close the edit. */
-  return editor->close_edit(edit_baton, pool);
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+  return SVN_NO_ERROR;
 }
 
 /* Check that PROPNAME is a valid name for a versioned property.  Return an
@@ -510,6 +512,8 @@ svn_client_revprop_set2(const char *propname,
       SVN_ERR(check_and_set_revprop(set_rev, ra_session, propname,
                                     original_propval, propval, pool));
     }
+
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
 
   if (ctx->notify_func2)
     {
@@ -855,7 +859,6 @@ svn_client_propget5(apr_hash_t **props,
   if ((inherited_props && !local_iprops)
       || !local_explicit_props)
     {
-      svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       svn_opt_revision_t new_operative_rev;
       svn_opt_revision_t new_peg_rev;
@@ -933,6 +936,7 @@ svn_client_propget5(apr_hash_t **props,
       /* Do we still have anything to ask the repository about? */
       if (!local_explicit_props || !local_iprops)
         {
+          svn_ra_session_t *ra_session;
           svn_client__pathrev_t *loc;
 
           /* Get an RA plugin for this filesystem object. */
@@ -955,6 +959,7 @@ svn_client_propget5(apr_hash_t **props,
                                  kind, loc->rev, ra_session,
                                  depth, result_pool, scratch_pool));
           revnum = loc->rev;
+          SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
         }
     }
 
@@ -990,6 +995,8 @@ svn_client_revprop_get(const char *propname,
   err = svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool);
 
   /* Close RA session */
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   svn_pool_destroy(subpool);
   return svn_error_trace(err);
 }
@@ -1358,6 +1365,8 @@ get_remote_props(const char *path_or_url,
                           depth, receiver, receiver_baton,
                           ctx->cancel_func, ctx->cancel_baton,
                           scratch_pool));
+
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 
@@ -1568,6 +1577,10 @@ svn_client_revprop_list(apr_hash_t **props,
   err = svn_ra_rev_proplist(ra_session, *set_rev, &proplist, pool);
 
   *props = proplist;
-  svn_pool_destroy(subpool); /* Close RA session */
+
+  /* Close RA session */
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+  svn_pool_destroy(subpool);
   return svn_error_trace(err);
 }

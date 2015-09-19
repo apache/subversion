@@ -183,6 +183,10 @@ svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
    Use authentication baton cached in CTX to authenticate against the
    repository.
 
+   The caller may return *RA_SESSION_P to RA session cache by explicit
+   svn_client__ra_session_release() call. Otherwise RA session will be
+   closed on pool cleanup and will not be reused.
+
    Use POOL for all allocations. */
 svn_error_t *
 svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
@@ -193,6 +197,18 @@ svn_client__ra_session_from_path2(svn_ra_session_t **ra_session_p,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
+
+/* Release repository access SESSION back to CTX's session cache.
+
+   The caller *MUST* ensure that SESSION is in a valid state:
+     - it has a valid connection to the server;
+     - if using a stateful protocol (i.e., ra_svn), a new series
+       of commands can be safely begun;
+     - any previous errors did not make the session unusable.
+*/
+svn_error_t *
+svn_client__ra_session_release(svn_client_ctx_t *ctx,
+                               svn_ra_session_t *session);
 
 /* Given PATH_OR_URL, which contains either a working copy path or an
    absolute URL, a peg revision PEG_REVISION, and a desired revision

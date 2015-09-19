@@ -46,6 +46,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* RA session cache */
+typedef struct svn_client__ra_cache_t svn_client__ra_cache_t;
+
 /* Private client context.
  *
  * This is what is actually allocated by svn_client_create_context2(),
@@ -62,6 +65,9 @@ typedef struct svn_client__private_ctx_t
 
   /* Total number of bytes transferred over network across all RA sessions. */
   apr_off_t total_progress;
+
+  /* The RA session cache. */
+  svn_client__ra_cache_t *ra_cache;
 
   /* The public context. */
   svn_client_ctx_t public_ctx;

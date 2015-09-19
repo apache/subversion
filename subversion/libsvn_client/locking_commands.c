@@ -571,6 +571,8 @@ release_locks:
         }
     }
 
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return svn_error_trace(err);
 }
 
@@ -644,6 +646,8 @@ release_locks:
         }
     }
 
+  if (!err)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return svn_error_trace(err);
 }
 

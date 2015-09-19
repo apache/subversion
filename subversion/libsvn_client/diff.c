@@ -1847,8 +1847,9 @@ diff_repos_repos(const char **root_relpath,
                              FALSE, NULL,
                              scratch_pool));
 
-  return svn_error_trace(
-                  reporter->finish_report(reporter_baton, scratch_pool));
+  SVN_ERR(reporter->finish_report(reporter_baton, scratch_pool));
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+  return SVN_NO_ERROR;
 }
 
 /* Perform a diff between a repository path and a working-copy path.
@@ -2134,6 +2135,7 @@ diff_repos_wc(const char **root_relpath,
                                       scratch_pool));
     }
 
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 
