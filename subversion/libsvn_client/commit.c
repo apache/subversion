@@ -980,13 +980,10 @@ svn_client_commit6(const apr_array_header_t *targets,
 
   svn_pool_destroy(iterpool);
 
-  {
-    svn_error_t *const final_err =
-      svn_error_trace(reconcile_errors(cmt_err, unlock_err, bump_err, pool));
+  SVN_ERR(reconcile_errors(cmt_err, unlock_err, bump_err, pool));
 
-    if (!final_err && ra_session)
-      SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
+  if (ra_session)
+    SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
 
-    return final_err;
-  }
+  return SVN_NO_ERROR;
 }
