@@ -776,7 +776,7 @@ II.   INSTALLATION
         installer to register environment variables or run VCVARS32.BAT
         before building anything.  If you are using a newer Visual Studio,
         use the 'Visual Studio 20xx Command Prompt' on the Start menu.
-      * Install Python and add it to your path      
+      * Install Python and add it to your path
       * Install Perl (it should add itself to the path)
         ### Subversion doesn't need perl. Only some dependencies need it
             (openssl and some apr scripts)
