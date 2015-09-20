@@ -928,7 +928,7 @@ II.   INSTALLATION
         the APR libraries; the options are --with-apr, --with-apr-util and
         --with-apr-iconv.
       * If you would like a debug build substitute Debug for Release in
-        the devenv/msbuild commands.
+        the msbuild command.
       * There have been rumors that Subversion on Win32 can be built
         using the latest cygwin, you probably don't want the zip file source
         distribution though. ymmv.
