@@ -820,7 +820,7 @@ II.   INSTALLATION
         included in the dependencies zip file.
         ### Just use --with-zlib instead of the hardcoded path
       * [Optional] If you want secure connection (https) client support extract
-        openssl into SVN\openssl-x.x.x
+        openssl into SVN\openssl
         ### And pass the path to both serf and gen-make.py
       * [Optional] If you want localized message support, extract
         svn-win32-libintl.zip into SVN\svn-win32-libintl and extract
@@ -860,7 +860,7 @@ II.   INSTALLATION
 
       OpenSSL
 
-      C:>cd openssl-0.9.7f
+      C:>cd openssl
       C:>perl Configure VC-WIN32
   [*] C:>call ms\do_masm
       C:>nmake -f ms\ntdll.mak
