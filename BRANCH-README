@@ -8,6 +8,8 @@ requires a certain amount of disk space.
 
 The branch should be maintained with catch-up merges from trunk.
 
+The branch should NOT be merged back to trunk.
+
 STATUS
 ======
 
