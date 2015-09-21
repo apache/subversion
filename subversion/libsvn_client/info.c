@@ -457,7 +457,6 @@ svn_client_info4(const char *abspath_or_url,
                             depth, ctx, locks, pool));
     }
 
-  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 

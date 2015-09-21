@@ -34,8 +34,8 @@
 #include "svn_error.h"
 
 #include "private/svn_wc_private.h"
+
 #include "client.h"
-#include "ra_cache.h"
 
 
 /*** Code. ***/
@@ -122,7 +122,6 @@ svn_client_create_context2(svn_client_ctx_t **ctx,
 
   SVN_ERR(svn_wc_context_create(&public_ctx->wc_ctx, cfg_config,
                                 pool, pool));
-  svn_client__ra_cache_init(private_ctx, cfg_hash, pool);
   *ctx = public_ctx;
 
   return SVN_NO_ERROR;

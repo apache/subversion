@@ -571,6 +571,5 @@ svn_client__copy_foreign(const char *url,
                                  scratch_pool));
     }
 
-  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
