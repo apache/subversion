@@ -1825,14 +1825,12 @@ show_subtree_diff(svn_editor3_t *editor,
       char status_mod = (e0 && e1) ? 'M' : e0 ? 'D' : 'A';
 
       /* For a deleted element whose parent was also deleted, mark it is
-         less important, somehow. (Or we could omit it entirely.) */
+         less interesting, somehow. (Or we could omit it entirely.) */
       if (status_mod == 'D')
         {
           diff_item_t *parent_item
             = svn_int_hash_get(diff_changes, e0->parent_eid);
 
-          /* If the (left-hand) parent has been deleted (thus it must have
-             changed, given that we currently flattem the trees before diffing them)... */
           if (parent_item && ! parent_item->e1)
             status_mod = 'd';
         }
