@@ -7,3 +7,21 @@ associated with writing these files, apart from the fact that creating them
 requires a certain amount of disk space.
 
 The branch should be maintained with catch-up merges from trunk.
+
+STATUS
+======
+
+Quick implementation showed that there is no visible overhead associated with
+the temporary files.  In my environment, the streaming approach behaves almost
+exactly the same, but implementing it adds a *lot of complexity*.  Perhaps
+doing so could spare us a few seconds when committing large files — e.g.,
+.iso — but overall, the complexity is not worth the benefit.
+
+A couple of observations that happened while developing this branch resulted
+in the r1704317 change [1] (Use compressed svndiff1 format for deltas when
+committing changes over http:// and https://) committed to trunk.
+
+There are no plans on continuing this branch.  It's left in its current state,
+in case it could get useful in the future.
+
+[1] https://svn.apache.org/r1704317
