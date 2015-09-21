@@ -288,7 +288,6 @@ svn_client_get_repos_root(const char **repos_root,
   if (repos_uuid)
     SVN_ERR(svn_ra_get_uuid2(ra_session, repos_uuid, result_pool));
 
-  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 

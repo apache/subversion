@@ -333,6 +333,5 @@ svn_client_cat3(apr_hash_t **returned_props,
     /* Close the interjected stream */
     SVN_ERR(svn_stream_close(output));
 
-  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }

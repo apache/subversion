@@ -411,15 +411,6 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
                                   revprop_table, commit_callback,
                                   commit_baton, ctx, iterpool));
     }
-
-  /* Release all RA sessions. */
-  for (hi = apr_hash_first(pool, deletables); hi; hi = apr_hash_next(hi))
-    {
-      struct repos_deletables_t *repos_deletables = apr_hash_this_val(hi);
-      SVN_ERR(svn_client__ra_session_release(ctx,
-                                             repos_deletables->ra_session));
-    }
-
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

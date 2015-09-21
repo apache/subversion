@@ -317,7 +317,6 @@ list_internal(const char *path_or_url,
                              ctx, pool));
     }
 
-  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }
 

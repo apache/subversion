@@ -185,11 +185,13 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
   svn_ra_session_t *ras;
   apr_hash_t *locks;
   const char *repos_root;
+  apr_pool_t *subpool = svn_pool_create(pool);
   svn_error_t *err = SVN_NO_ERROR;
 
-  /* Open an RA session to our common ancestor and grab the locks under it. */
+  /* Open an RA session to our common ancestor and grab the locks under it.
+   */
   SVN_ERR(svn_client_open_ra_session2(&ras, rb->ancestor, NULL,
-                                      rb->ctx, pool, pool));
+                                      rb->ctx, subpool, subpool));
 
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
@@ -206,7 +208,7 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
   SVN_ERR(svn_ra_get_repos_root2(ras, &repos_root, rb->pool));
 
   /* Close the RA session. */
-  SVN_ERR(svn_client__ra_session_release(rb->ctx, ras));
+  svn_pool_destroy(subpool);
 
   SVN_ERR(svn_wc_status_set_repos_locks(rb->set_locks_baton, locks,
                                         repos_root, rb->pool));
@@ -568,8 +570,6 @@ svn_client_status6(svn_revnum_t *result_rev,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           NULL, NULL, pool));
         }
-
-      SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
 
       if (ctx->notify_func2)
         {
