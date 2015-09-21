@@ -251,7 +251,7 @@ static svn_error_t *
 packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
 {
   unsigned char buffer[MAX_NUMBER_PREFETCH];
-  apr_size_t read = 0;
+  apr_size_t bytes_read = 0;
   apr_size_t i;
   value_position_pair_t *target;
   apr_off_t block_start = 0;
@@ -273,33 +273,34 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
    * boundaries.  This shall prevent jumping back and forth between two
    * blocks because the extra data was not actually request _now_.
    */
-  read = sizeof(buffer);
+  bytes_read = sizeof(buffer);
   block_left = stream->block_size - (stream->next_offset - block_start);
-  if (block_left >= 10 && block_left < read)
-    read = (apr_size_t)block_left;
+  if (block_left >= 10 && block_left < bytes_read)
+    bytes_read = (apr_size_t)block_left;
 
   /* Don't read beyond the end of the file section that belongs to this
    * index / stream. */
-  read = (apr_size_t)MIN(read, stream->stream_end - stream->next_offset);
+  bytes_read = (apr_size_t)MIN(bytes_read,
+                               stream->stream_end - stream->next_offset);
 
-  err = apr_file_read(stream->file, buffer, &read);
+  err = apr_file_read(stream->file, buffer, &bytes_read);
   if (err && !APR_STATUS_IS_EOF(err))
     return stream_error_create(stream, err,
       _("Can't read index file '%s' at offset 0x%s"));
 
   /* if the last number is incomplete, trim it from the buffer */
-  while (read > 0 && buffer[read-1] >= 0x80)
-    --read;
+  while (bytes_read > 0 && buffer[bytes_read-1] >= 0x80)
+    --bytes_read;
 
   /* we call read() only if get() requires more data.  So, there must be
    * at least *one* further number. */
-  if SVN__PREDICT_FALSE(read == 0)
+  if SVN__PREDICT_FALSE(bytes_read == 0)
     return stream_error_create(stream, err,
       _("Unexpected end of index file %s at offset 0x%s"));
 
   /* parse file buffer and expand into stream buffer */
   target = stream->buffer;
-  for (i = 0; i < read;)
+  for (i = 0; i < bytes_read;)
     {
       if (buffer[i] < 0x80)
         {
@@ -558,13 +559,13 @@ read_uint64_from_proto_index(apr_file_t *proto_index,
                              apr_pool_t *scratch_pool)
 {
   apr_byte_t buffer[sizeof(*value_p)];
-  apr_size_t read;
+  apr_size_t bytes_read;
 
   /* Read the full 8 bytes or our 64 bit value, unless we hit EOF.
    * Assert that we never read partial values. */
   SVN_ERR(svn_io_file_read_full2(proto_index, buffer, sizeof(buffer),
-                                 &read, eof, scratch_pool));
-  SVN_ERR_ASSERT((eof && *eof) || read == sizeof(buffer));
+                                 &bytes_read, eof, scratch_pool));
+  SVN_ERR_ASSERT((eof && *eof) || bytes_read == sizeof(buffer));
 
   /* If we did not hit EOF, reconstruct the uint64 value and return it. */
   if (!eof || !*eof)

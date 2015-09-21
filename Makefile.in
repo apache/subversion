@@ -519,7 +519,6 @@ check-all-javahl: check-apache-javahl check-tigris-javahl check-deprecated-authn
 #  will perform only basic tests (likewise for other tests).
 check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	@if test "$(PYTHON)" != "none"; then                                 \
-	  flags="--verbose";                                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \
 	    flags="--cleanup $$flags";                                       \
 	  fi;                                                                \

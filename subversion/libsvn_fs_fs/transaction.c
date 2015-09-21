@@ -968,10 +968,10 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
-  SVN_ERR(svn_io_write_atomic(txn_current_filename, new_id_str,
-                              line_length + 1,
-                              txn_current_filename /* copy_perms path */,
-                              pool));
+  SVN_ERR(svn_io_write_atomic2(txn_current_filename, new_id_str,
+                               line_length + 1,
+                               txn_current_filename /* copy_perms path */,
+                               TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1485,6 +1485,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     = svn_fs_fs__path_txn_node_children(fs, parent_noderev->id, pool);
   apr_file_t *file;
   svn_stream_t *out;
+  svn_filesize_t filesize;
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -1515,8 +1516,6 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
   else
     {
-      const svn_io_dirent2_t *dirent;
-
       /* The directory rep is already mutable, so just open it for append. */
       SVN_ERR(svn_io_file_open(&file, filename, APR_WRITE | APR_APPEND,
                                APR_OS_DEFAULT, subpool));
@@ -1531,11 +1530,11 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
           const char *key
             = svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
           svn_boolean_t found;
-          svn_filesize_t filesize;
+          svn_filesize_t cached_filesize;
 
           /* Get the file size that corresponds to the cached contents
            * (if any). */
-          SVN_ERR(svn_cache__get_partial((void **)&filesize, &found,
+          SVN_ERR(svn_cache__get_partial((void **)&cached_filesize, &found,
                                          ffd->txn_dir_cache, key,
                                          svn_fs_fs__extract_dir_filesize,
                                          NULL, subpool));
@@ -1544,10 +1543,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
            * If not, we need to drop the cache entry. */
           if (found)
             {
-              SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
-                                          subpool, subpool));
+              SVN_ERR(svn_io_file_size_get(&filesize, file, subpool));
 
-              if (filesize != dirent->filesize)
+              if (cached_filesize != filesize)
                 SVN_ERR(svn_cache__set(ffd->txn_dir_cache, key, NULL,
                                        subpool));
             }
@@ -1571,6 +1569,12 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
     }
 
   /* Flush APR buffers. */
+  SVN_ERR(svn_io_file_flush(file, subpool));
+
+  /* Obtain final file size to update txn_dir_cache. */
+  SVN_ERR(svn_io_file_size_get(&filesize, file, subpool));
+
+  /* Close file. */
   SVN_ERR(svn_io_file_close(file, subpool));
   svn_pool_clear(subpool);
 
@@ -1582,13 +1586,9 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
           svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
       replace_baton_t baton;
 
-      const svn_io_dirent2_t *dirent;
-      SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
-                                  subpool, subpool));
-
       baton.name = name;
       baton.new_entry = NULL;
-      baton.txn_filesize = dirent->filesize;
+      baton.txn_filesize = filesize;
 
       if (id)
         {
@@ -1715,7 +1715,7 @@ allocate_item_index(apr_uint64_t *item_index,
       char buffer[SVN_INT64_BUFFER_SIZE] = { 0 };
       svn_boolean_t eof = FALSE;
       apr_size_t to_write;
-      apr_size_t read;
+      apr_size_t bytes_read;
       apr_off_t offset = 0;
 
       /* read number, increment it and write it back to disk */
@@ -1724,8 +1724,8 @@ allocate_item_index(apr_uint64_t *item_index,
                          APR_READ | APR_WRITE | APR_CREATE | APR_BUFFERED,
                          APR_OS_DEFAULT, pool));
       SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
-                                     &read, &eof, pool));
-      if (read)
+                                     &bytes_read, &eof, pool));
+      if (bytes_read)
         SVN_ERR(svn_cstring_atoui64(item_index, buffer));
       else
         *item_index = SVN_FS_FS__ITEM_INDEX_FIRST_USER;

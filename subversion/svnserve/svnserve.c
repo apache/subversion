@@ -1030,7 +1030,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
                                 redirect_stdout);
 
-      SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
+      /* We are an interactive server, i.e. can't use APR buffering on
+       * stdin. */
+      SVN_ERR(svn_stream_for_stdin2(&stdin_stream, FALSE, pool));
       SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
       /* Use a subpool for the connection to ensure that if SASL is used

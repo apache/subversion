@@ -8764,6 +8764,45 @@ svn_wc__db_op_delete_many(svn_wc__db_t *db,
                                            scratch_pool));
 }
 
+/* Helper function for read_info() to provide better diagnostics than just
+   asserting.
+
+   ### BH: Yes this code is ugly, and that is why I only introduce it in
+   ### read_info(). But we really need something to determine the root cause
+   ### of this problem to diagnose why TortoiseSVN users were seeing all those
+   ### assertions.
+
+   Adds an error to the *err chain if invalid values are encountered. In that
+   case the value is set to the first value in the map, assuming that caller
+   will just return the combined error.
+ */
+static int
+column_token_err(svn_error_t **err,
+                 svn_sqlite__stmt_t *stmt,
+                 int column,
+                 const svn_token_map_t *map)
+{
+  svn_error_t *err2;
+  const char *word = svn_sqlite__column_text(stmt, column, NULL);
+  int value;
+
+  /* svn_token__from_word_err() handles NULL for us */
+  err2 = svn_token__from_word_err(&value, map, word);
+
+  if (err2)
+    {
+      *err = svn_error_compose_create(
+                *err,
+                svn_error_createf(
+                    SVN_ERR_WC_CORRUPT, err2,
+                    _("Encountered invalid node state in column %d of "
+                      "info query to working copy database"),
+                    column));
+      value = map[0].val;
+    }
+
+  return value;
+}
 
 /* Like svn_wc__db_read_info(), but taking WCROOT+LOCAL_RELPATH instead of
    DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
@@ -8831,11 +8870,11 @@ read_info(svn_wc__db_status_t *status,
       svn_node_kind_t node_kind;
 
       op_depth = svn_sqlite__column_int(stmt_info, 0);
-      node_kind = svn_sqlite__column_token(stmt_info, 4, kind_map);
+      node_kind = column_token_err(&err, stmt_info, 4, kind_map);
 
       if (status)
         {
-          *status = svn_sqlite__column_token(stmt_info, 3, presence_map);
+          *status = column_token_err(&err, stmt_info, 3, presence_map);
 
           if (op_depth != 0) /* WORKING */
             err = svn_error_compose_create(err,
@@ -8887,14 +8926,11 @@ read_info(svn_wc__db_status_t *status,
       if (depth)
         {
           if (node_kind != svn_node_dir)
-            {
-              *depth = svn_depth_unknown;
-            }
+            *depth = svn_depth_unknown;
+          else if (svn_sqlite__column_is_null(stmt_info, 11))
+            *depth = svn_depth_unknown;
           else
-            {
-              *depth = svn_sqlite__column_token_null(stmt_info, 11, depth_map,
-                                                     svn_depth_unknown);
-            }
+            *depth = column_token_err(&err, stmt_info, 11, depth_map);
         }
       if (checksum)
         {

@@ -91,34 +91,34 @@
 
 #include <stdlib.h>
 #include <sys/types.h>
+
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#else
+#include <apr.h>
 #ifdef _MSC_VER
-# if _MSC_VER >= 1600
-#   include <stdint.h>
-# else
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef short int16_t;
-typedef unsigned short uint16_t;
-typedef int int32_t;
-# endif
-# if _MSC_VER >= 1800
-#   include <stdbool.h>
-# else
-typedef unsigned char bool;
-enum {false, true};
-# endif
+typedef apr_int8_t int8_t;
+typedef apr_uint8_t uint8_t;
+typedef apr_int16_t int16_t;
+typedef apr_uint16_t uint16_t;
+typedef apr_int32_t int32_t;
+typedef apr_uint32_t uint32_t;
+#endif
+#endif
+
+#ifdef HAVE_STDBOOL_H
+#include <stdbool.h>
+#elif !defined(__cplusplus)
+typedef uint8_t bool;
+enum { false, true };
+#endif
+
+#ifdef _MSC_VER
 # ifdef _WIN64
 #   define ssize_t __int64
 # else
 #   define ssize_t int
 # endif
-#elif defined(HAVE_STDBOOL_H) && defined(HAVE_INTTYPES_H)
-#include <stdbool.h>
-#include <inttypes.h>
-#else
-#include <apr.h>
-typedef uint8_t bool;
-enum {false, true};
 #endif
 #include <limits.h>
 

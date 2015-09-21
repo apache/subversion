@@ -46,6 +46,7 @@ separated list of test numbers; the default is to run all the tests in it.
 
 import os, sys
 import re
+import logging
 import optparse, subprocess, imp, threading, traceback, exceptions
 from datetime import datetime
 
@@ -181,7 +182,8 @@ class TestHarness:
     # ### Support --repos-template
     if self.opts.list_tests is not None:
       cmdline.append('--list')
-    if self.opts.verbose is not None:
+    if (self.opts.set_log_level is not None
+        and self.opts.set_log_level <= logging.DEBUG):
       cmdline.append('--verbose')
     if self.opts.cleanup is not None:
       cmdline.append('--cleanup')
@@ -204,8 +206,6 @@ class TestHarness:
     cmdline = ['--srcdir=%s' % self.srcdir]
     if self.opts.list_tests is not None:
       cmdline.append('--list')
-    if self.opts.verbose is not None:
-      cmdline.append('--verbose')
     if self.opts.cleanup is not None:
       cmdline.append('--cleanup')
     if self.opts.parallel is not None:
@@ -693,11 +693,17 @@ class TestHarness:
 
 
 def create_parser():
+  def set_log_level(option, opt, value, parser, level=None):
+    if level is None:
+      level = value
+    parser.values.set_log_level = getattr(logging, level, None) or int(level)
+
   parser = optparse.OptionParser(usage=__doc__);
 
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
-  parser.add_option('-v', '--verbose', action='store_true',
+  parser.add_option('-v', '--verbose', action='callback',
+                    callback=set_log_level, callback_args=(logging.DEBUG, ),
                     help='Print binary command-lines')
   parser.add_option('-c', '--cleanup', action='store_true',
                     help='Clean up after successful tests')
@@ -735,7 +741,8 @@ def create_parser():
   parser.add_option('--mode-filter', action='store', dest='mode_filter',
                     default='ALL',
                     help='Limit tests to those with type specified (e.g. XFAIL)')
-  parser.add_option('--set-log-level', action='store',
+  parser.add_option('--set-log-level', action='callback', type='str',
+                    callback=set_log_level,
                     help="Set log level (numerically or symbolically). " +
                          "Symbolic levels are: CRITICAL, ERROR, WARNING, " +
                          "INFO, DEBUG")
@@ -753,6 +760,8 @@ def create_parser():
                     help='Use sqlite exclusive locking for working copies')
   parser.add_option('--memcached-server', action='store',
                     help='Use memcached server at specified URL (FSFS only)')
+
+  parser.set_defaults(set_log_level=None)
   return parser
 
 def main():
