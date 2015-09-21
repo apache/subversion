@@ -27,6 +27,8 @@ TODO:
   about to be reused is valid.
 - Run performance comparisons between trunk and branch to prove that
   the RA session cache does in fact speed things up.
+- Fix JavaHL test failures
+  http://svn.haxx.se/dev/archive-2015-09/0237.shtml
 
 PROBLEM
 =======
