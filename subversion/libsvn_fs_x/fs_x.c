@@ -198,8 +198,9 @@ svn_fs_x__write_format(svn_fs_t *fs,
     }
   else
     {
-      SVN_ERR(svn_io_write_atomic(path, sb->data, sb->len,
-                                  NULL /* copy_perms_path */, scratch_pool));
+      SVN_ERR(svn_io_write_atomic2(path, sb->data, sb->len,
+                                   NULL /* copy_perms_path */,
+                                   TRUE, scratch_pool));
     }
 
   /* And set the perms to make it read only */
@@ -1070,10 +1071,10 @@ svn_fs_x__set_uuid(svn_fs_t *fs,
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(svn_io_write_atomic(uuid_path, contents->data, contents->len,
-                              /* perms */
-                              svn_fs_x__path_current(fs, scratch_pool),
-                              scratch_pool));
+  SVN_ERR(svn_io_write_atomic2(uuid_path, contents->data, contents->len,
+                               /* perms */
+                               svn_fs_x__path_current(fs, scratch_pool),
+                               TRUE, scratch_pool));
 
   fs->uuid = apr_pstrdup(fs->pool, uuid);
   ffd->instance_id = apr_pstrdup(fs->pool, instance_id);

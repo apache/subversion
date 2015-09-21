@@ -67,6 +67,7 @@ typedef struct svn_min__opt_state_t
   svn_boolean_t remove_obsoletes;
   svn_boolean_t combine_ranges;
   svn_boolean_t remove_redundants;
+  svn_boolean_t remove_redundant_misaligned;
   svn_boolean_t run_analysis;
 
   /* trust server SSL certs that would otherwise be rejected as "untrusted" */

@@ -4386,10 +4386,10 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_undefined = -1, /* for private use only */
   svn_client_conflict_option_postpone = 0,
   svn_client_conflict_option_base_text,
-  svn_client_conflict_option_incoming_new_text,
+  svn_client_conflict_option_incoming_text,
   svn_client_conflict_option_working_text,
-  svn_client_conflict_option_incoming_new_text_for_conflicted_hunks_only,
-  svn_client_conflict_option_working_text_for_conflicted_hunks_only,
+  svn_client_conflict_option_incoming_text_where_conflicted,
+  svn_client_conflict_option_working_text_where_conflicted,
   svn_client_conflict_option_merged_text,
   svn_client_conflict_option_unspecified
   /* Values derived from svn_wc_conflict_choice_t end here. */
@@ -4449,37 +4449,6 @@ svn_client_conflict_from_wc_description2_t(
   const svn_wc_conflict_description2_t *desc,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
-
-/**
- * Callback for svn_client_conflict_walk_conflicts();
- * 
- * @since New in 1.10.
- */
-typedef svn_error_t *(svn_client_conflict_walk_func_t)(
-  void *baton,
-  svn_client_conflict_t *conflict,
-  apr_pool_t *scratch_pool);
-
-/**
- * Walk all conflicts within the specified @a depth of @a local_abspath.
- * Pass each conflict found during the walk to the @conflict_walk_func
- * callback, along with @a conflict_walk_func_baton.
- * Use cancellation and notification support provided by client context @a ctx.
- * 
- * This callback may choose to resolve the conflict. If the act of resolving
- * a conflict creates new conflicts within the walked working copy (as might
- * be the case for some tree conflicts), the callback will be invoked for each
- * such new conflict as well.
- * 
- * @since New in 1.10.
- */
-svn_error_t *
-svn_client_conflict_walk(const char *local_abspath,
-                         svn_depth_t depth,
-                         svn_client_conflict_walk_func_t conflict_walk_func,
-                         void *conflict_walk_func_baton,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *scratch_pool);
 
 /**
 * Indicate the types of conflicts present on the working copy node

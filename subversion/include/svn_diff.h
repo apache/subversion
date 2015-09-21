@@ -1212,6 +1212,13 @@ typedef struct svn_prop_patch_t {
 } svn_prop_patch_t;
 
 /**
+ * A binary patch representation. This basically describes replacing one
+ * exact binary representation with another one.
+ *
+ * @since new in 1.10. */
+typedef struct svn_diff_binary_patch_t svn_diff_binary_patch_t;
+
+/**
  * Data type to manage parsing of patches.
  * API users should not allocate structures of this type directly.
  *
@@ -1249,6 +1256,12 @@ typedef struct svn_patch_t {
    * @since New in 1.9. */
   svn_mergeinfo_t mergeinfo;
   svn_mergeinfo_t reverse_mergeinfo;
+
+  /**
+   * Declares that there is a binary conflict and contains the information
+   * to apply it as parsed from the file.
+   * @since New in 1.10. */
+  svn_diff_binary_patch_t *binary_patch;
 } svn_patch_t;
 
 /** An opaque type representing an open patch file.
