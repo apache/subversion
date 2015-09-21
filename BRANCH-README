@@ -12,6 +12,7 @@ Steps:
 - [DONE] parser: Review handling of modes other than 0644/0755
                  Consider checking "mode & 0111"
 - [TODO] check rename/copy with mode change; ensure test coverage
+- [TODO] ensure binary diff & mode changes interact properly
 - [TODO] Teach 'svn diff --git' to emit mode information (executability)
   - In addition to the standard propchange form used for all user properties,
     for compatibility with released 'svn patch' versions
