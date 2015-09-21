@@ -1215,8 +1215,34 @@ typedef struct svn_prop_patch_t {
  * A binary patch representation. This basically describes replacing one
  * exact binary representation with another one.
  *
- * @since new in 1.10. */
+ * @since New in 1.10. */
 typedef struct svn_diff_binary_patch_t svn_diff_binary_patch_t;
+
+/**
+ * Creates a stream allocated in @a result_pool from which the original
+ * (pre-patch-application) version of the binary patched file can be read.
+ *
+ * @note Like many svn_diff_get functions over patches, this is implemented
+ * as reading from the backing patch file. Therefore it is recommended to
+ * read the whole stream before using other functions on the same patch file.
+ *
+ * @since New in 1.10 */
+svn_stream_t *
+svn_diff_get_binary_diff_original_stream(const svn_diff_binary_patch_t *bpatch,
+                                         apr_pool_t *result_pool);
+
+/**
+ * Creates a stream allocated in @a result_pool from which the resulting
+ * (post-patch-application) version of the binary patched file can be read.
+ *
+ * @note Like many svn_diff_get functions over patches, this is implemented
+ * as reading from the backing patch file. Therefore it is recommended to
+ * read the whole stream before using other functions on the same patch file.
+ *
+ * @since New in 1.10 */
+svn_stream_t *
+svn_diff_get_binary_diff_result_stream(const svn_diff_binary_patch_t *bpatch,
+                                       apr_pool_t *result_pool);
 
 /**
  * Data type to manage parsing of patches.

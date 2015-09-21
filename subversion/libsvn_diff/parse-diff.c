@@ -42,6 +42,10 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_sorts_private.h"
 
+#include "diff.h"
+
+#include "svn_private_config.h"
+
 /* Helper macro for readability */
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
@@ -158,6 +162,217 @@ svn_linenum_t
 svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk)
 {
   return hunk->trailing_context;
+}
+
+/* Baton for the base85 stream implementation */
+struct base85_baton_t
+{
+  apr_file_t *file;
+  apr_pool_t *iterpool;
+  char buffer[52];        /* Bytes on current line */
+  apr_off_t next_pos;     /* Start position of next line */
+  apr_off_t end_pos;      /* Position after last line */
+  apr_size_t buf_size;    /* Bytes available (52 unless at eof) */
+  apr_size_t buf_pos;     /* Bytes in linebuffer */
+  svn_boolean_t done;     /* At eof? */
+};
+
+/* Implements svn_read_fn_t for the base85 read stream */
+static svn_error_t *
+read_handler_base85(void *baton, char *buffer, apr_size_t *len)
+{
+  struct base85_baton_t *b85b = baton;
+  apr_pool_t *iterpool = b85b->iterpool;
+  apr_size_t remaining = *len;
+  char *dest = buffer;
+
+  svn_pool_clear(iterpool);
+
+  if (b85b->done)
+    {
+      *len = 0;
+      return SVN_NO_ERROR;
+    }
+
+  while (remaining && (b85b->buf_size > b85b->buf_pos
+                       || b85b->next_pos < b85b->end_pos))
+    {
+      svn_stringbuf_t *line;
+      svn_boolean_t at_eof;
+
+      apr_size_t available = b85b->buf_size - b85b->buf_pos;
+      if (available)
+        {
+          apr_size_t n = (remaining < available) ? remaining : available;
+
+          memcpy(dest, b85b->buffer + b85b->buf_pos, n);
+          dest += n;
+          remaining -= n;
+          b85b->buf_pos += n;
+
+          if (!remaining)
+            return SVN_NO_ERROR; /* *len = OK */
+        }
+
+      if (b85b->next_pos >= b85b->end_pos)
+        break; /* At EOF */
+      SVN_ERR(svn_io_file_seek(b85b->file, APR_SET, &b85b->next_pos,
+                               iterpool));
+      SVN_ERR(svn_io_file_readline(b85b->file, &line, NULL, &at_eof,
+                                   APR_SIZE_MAX, iterpool, iterpool));
+      if (at_eof)
+        b85b->next_pos = b85b->end_pos;
+      else
+        {
+          b85b->next_pos = 0;
+          SVN_ERR(svn_io_file_seek(b85b->file, APR_CUR, &b85b->next_pos,
+                                   iterpool));
+        }
+
+      if (line->len && line->data[0] >= 'A' && line->data[0] <= 'Z')
+        b85b->buf_size = line->data[0] - 'A' + 1;
+      else if (line->len && line->data[0] >= 'a' && line->data[0] <= 'z')
+        b85b->buf_size = line->data[0] - 'a' + 26 + 1;
+      else
+        return svn_error_create(SVN_ERR_DIFF_UNEXPECTED_DATA, NULL,
+                                _("Unexpected data in base85 section"));
+
+      if (b85b->buf_size < 52)
+        b85b->next_pos = b85b->end_pos; /* Handle as EOF */
+
+      SVN_ERR(svn_diff__base85_decode_line(b85b->buffer, b85b->buf_size,
+                                           line->data + 1, line->len - 1,
+                                           iterpool));
+      b85b->buf_pos = 0;
+    }
+
+  *len -= remaining;
+  b85b->done = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_close_fn_t for the base85 read stream */
+static svn_error_t *
+close_handler_base85(void *baton)
+{
+  struct base85_baton_t *b85b = baton;
+
+  svn_pool_destroy(b85b->iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Gets a stream that reads decoded base85 data from a segment of a file.
+   The current implementation might assume that both start_pos and end_pos
+   are located at line boundaries. */
+static svn_stream_t *
+get_base85_data_stream(apr_file_t *file,
+                       apr_off_t start_pos,
+                       apr_off_t end_pos,
+                       apr_pool_t *result_pool)
+{
+  struct base85_baton_t *b85b = apr_pcalloc(result_pool, sizeof(*b85b));
+  svn_stream_t *base85s = svn_stream_create(b85b, result_pool);
+
+  b85b->file = file;
+  b85b->iterpool = svn_pool_create(result_pool);
+  b85b->next_pos = start_pos;
+  b85b->end_pos = end_pos;
+
+  svn_stream_set_read2(base85s, NULL /* only full read support */,
+                       read_handler_base85);
+  svn_stream_set_close(base85s, close_handler_base85);
+  return base85s;
+}
+
+/* Baton for the length verification stream functions */
+struct length_verify_baton_t
+{
+  svn_stream_t *inner;
+  svn_filesize_t remaining;
+};
+
+/* Implements svn_read_fn_t for the length verification stream */
+static svn_error_t *
+read_handler_length_verify(void *baton, char *buffer, apr_size_t *len)
+{
+  struct length_verify_baton_t *lvb = baton;
+  apr_size_t requested_len = *len;
+
+  SVN_ERR(svn_stream_read_full(lvb->inner, buffer, len));
+
+  if (*len > lvb->remaining)
+    return svn_error_create(SVN_ERR_DIFF_UNEXPECTED_DATA, NULL,
+                            _("Base85 data expands to longer than declared "
+                              "filesize"));
+  else if (requested_len > *len && *len != lvb->remaining)
+    return svn_error_create(SVN_ERR_DIFF_UNEXPECTED_DATA, NULL,
+                            _("Base85 data expands to smaller than declared "
+                              "filesize"));
+
+  lvb->remaining -= *len;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_close_fn_t for the length verification stream */
+static svn_error_t *
+close_handler_length_verify(void *baton)
+{
+  struct length_verify_baton_t *lvb = baton;
+
+  return svn_error_trace(svn_stream_close(lvb->inner));
+}
+
+/* Gets a stream that verifies on reads that the inner stream is exactly
+   of the specified length */
+static svn_stream_t *
+get_verify_length_stream(svn_stream_t *inner,
+                         svn_filesize_t expected_size,
+                         apr_pool_t *result_pool)
+{
+  struct length_verify_baton_t *lvb = apr_palloc(result_pool, sizeof(*lvb));
+  svn_stream_t *len_stream = svn_stream_create(lvb, result_pool);
+
+  lvb->inner = inner;
+  lvb->remaining = expected_size;
+
+  svn_stream_set_read2(len_stream, NULL /* only full read support */,
+                       read_handler_length_verify);
+  svn_stream_set_close(len_stream, close_handler_length_verify);
+
+  return len_stream;
+}
+
+svn_stream_t *
+svn_diff_get_binary_diff_original_stream(const svn_diff_binary_patch_t *bpatch,
+                                         apr_pool_t *result_pool)
+{
+  svn_stream_t *s = get_base85_data_stream(bpatch->apr_file, bpatch->src_start,
+                                           bpatch->src_end, result_pool);
+
+  s = svn_stream_compressed(s, result_pool);
+
+  /* ### If we (ever) want to support the DELTA format, then we should hook the
+         undelta handling here */
+
+  return get_verify_length_stream(s, bpatch->src_filesize, result_pool);
+}
+
+svn_stream_t *
+svn_diff_get_binary_diff_result_stream(const svn_diff_binary_patch_t *bpatch,
+                                       apr_pool_t *result_pool)
+{
+  svn_stream_t *s = get_base85_data_stream(bpatch->apr_file, bpatch->dst_start,
+                                           bpatch->dst_end, result_pool);
+
+  s = svn_stream_compressed(s, result_pool);
+
+  /* ### If we (ever) want to support the DELTA format, then we should hook the
+  undelta handling here */
+
+  return get_verify_length_stream(s, bpatch->dst_filesize, result_pool);
 }
 
 /* Try to parse a positive number from a decimal number encoded
@@ -1387,7 +1602,9 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
   svn_boolean_t eof = FALSE;
   svn_diff_binary_patch_t *bpatch = apr_pcalloc(result_pool, sizeof(*bpatch));
   svn_boolean_t in_blob = FALSE;
-  svn_boolean_t in_dst = FALSE;
+  svn_boolean_t in_src = FALSE;
+
+  bpatch->apr_file = apr_file;
 
   patch->operation = svn_diff_op_modified;
   patch->prop_patches = apr_hash_make(result_pool);
@@ -1416,17 +1633,17 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
               && !strchr(line->data, ' '))
             {
               /* One more blop line */
-              if (in_dst)
-                bpatch->dst_end = pos;
-              else
+              if (in_src)
                 bpatch->src_end = pos;
+              else
+                bpatch->dst_end = pos;
             }
           else if (svn_stringbuf_first_non_whitespace(line) < line->len
-                   && !(in_dst && bpatch->dst_start < last_line))
+                   && !(in_src && bpatch->src_start < last_line))
             {
               break; /* Bad patch */
             }
-          else if (in_dst)
+          else if (in_src)
             {
               patch->binary_patch = bpatch; /* SUCCESS! */
               break; 
@@ -1434,7 +1651,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
           else
             {
               in_blob = FALSE;
-              in_dst = TRUE;
+              in_src = TRUE;
             }
         }
       else if (starts_with(line->data, "literal "))
@@ -1450,15 +1667,15 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
               break;
             }
 
-          if (in_dst)
-            {
-              bpatch->dst_start = pos;
-              bpatch->dst_filesize = expanded_size;
-            }
-          else
+          if (in_src)
             {
               bpatch->src_start = pos;
               bpatch->src_filesize = expanded_size;
+            }
+          else
+            {
+              bpatch->dst_start = pos;
+              bpatch->dst_filesize = expanded_size;
             }
           in_blob = TRUE;
         }
@@ -1471,8 +1688,8 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
     /* Rewind to the start of the line just read, so subsequent calls
      * don't end up skipping the line. It may contain a patch or hunk header.*/
     SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &last_line, scratch_pool));
-  else if (in_dst
-           && ((bpatch->dst_end > bpatch->dst_start) || !bpatch->dst_filesize))
+  else if (in_src
+           && ((bpatch->src_end > bpatch->src_start) || !bpatch->src_filesize))
     {
       patch->binary_patch = bpatch; /* SUCCESS */
     }
