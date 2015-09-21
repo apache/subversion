@@ -1,0 +1,53 @@
+This is a development branch, intended to implement RA context abstraction
+layer in libsvn_client.
+
+The branch should be maintained with catch-up merges from trunk.
+
+The branch is going to be merged to trunk with detailed log message describing
+all changes made in the branch.
+
+STATUS
+======
+
+DONE:
+- Initial implementation.
+- Separate active and inactive session lists.
+- Introduce explicit session reuse and closing.
+- Add explicit session reuse throughout libsvn_client.
+- Expire and close idle sessions after a given timeout.
+- Limit the number of idle open sessions in the cache.
+- Add explicit session reuse in the MTCC implementation.
+- Find and resolve all 'RA_CACHE TODO' comments.
+  The only one RA_CACHE TODO comment remaining, that is
+  going to be resolved on trunk by patched posted on dev@ list:
+  http://svn.haxx.se/dev/archive-2015-02/0054.shtml
+
+TODO:
+- Add new RA method (svn_ra__ping?) to verify that a session
+  about to be reused is valid.
+- Run performance comparisons between trunk and branch to prove that
+  the RA session cache does in fact speed things up.
+
+PROBLEM
+=======
+
+Currently Subversion client layer creates new RA session for every
+svn_client_* call. Even more: some operations like svn_client_merge() used
+to creates 10-15 RA sessions around the release of 1.8 (the worst cases
+were fixed on trunk short after branching). Each session creation takes
+significant amount of time: TCP connection, SSL handshake, authentication
+and initial handshake. It easily could take several seconds over WAN.
+
+PROPOSED SOLUTION
+=================
+
+The idea is introduce RA context abstraction layer for managing set of RA
+sessions for different repositories and reuse them if possible. In the first
+version it going to be implemented in libsvn_client as private layer, but
+we can make it part of ra-loader in future.
+
+LINKS
+=====
+
+[1] http://subversion.tigris.org/issues/show_bug.cgi?id=3763
+[2] http://svn.haxx.se/dev/archive-2013-06/0164.shtml
