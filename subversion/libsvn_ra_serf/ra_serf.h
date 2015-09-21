@@ -114,7 +114,7 @@ struct svn_ra_serf__session_t {
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
-  /* Should we ask for compressed responses? */
+  /* Should we use compression for network transmissions? */
   svn_boolean_t using_compression;
 
   /* The user agent string */
@@ -255,6 +255,9 @@ struct svn_ra_serf__session_t {
   /* Indicates whether the server supports issuing replay REPORTs
      against rev resources (children of `rev_stub', elsestruct). */
   svn_boolean_t supports_rev_rsrc_replay;
+
+  /* Indicates whether the server can understand svndiff version 1. */
+  svn_boolean_t supports_svndiff1;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)

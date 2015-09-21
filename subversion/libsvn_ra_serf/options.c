@@ -243,6 +243,20 @@ capabilities_headers_iterator_callback(void *baton,
           apr_hash_set(session->supported_posts, "create-txn", 10, (void *)1);
         }
 
+      /* Use compressed svndiff1 format for servers that speak HTTPv2.
+
+         Apache HTTPd + mod_dav_svn servers support svndiff1, beginning
+         from Subversion 1.4, but they do not advertise this capability.
+         Compressing data can have a noticeable impact if the connection
+         is slow, and we want to use it even for existing servers, so we
+         send svndiff1 data to every HTTPv2 server (Subversion 1.7 and
+         greater).
+
+         The reasoning behind enabling it with HTTPv2 is that if the user
+         is stuck with the old Subversion's HTTPv1 protocol, she probably
+         doesn't really care about performance. */
+      session->supports_svndiff1 = TRUE;
+
       if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
         {
           session->repos_root = session->session_url;

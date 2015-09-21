@@ -1901,6 +1901,8 @@ apply_textdelta(void *file_baton,
                 void **handler_baton)
 {
   file_context_t *ctx = file_baton;
+  int svndiff_version;
+  int compression_level;
 
   /* Store the stream in a temporary file; we'll give it to serf when we
    * close this file.
@@ -1914,8 +1916,31 @@ apply_textdelta(void *file_baton,
   ctx->stream = svn_stream_lazyopen_create(delayed_commit_stream_open,
                                            ctx, FALSE, ctx->pool);
 
-  svn_txdelta_to_svndiff3(handler, handler_baton, ctx->stream, 0,
-                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
+  if (ctx->commit_ctx->session->supports_svndiff1 &&
+      ctx->commit_ctx->session->using_compression)
+    {
+      /* Use compressed svndiff1 format, if possible. */
+      svndiff_version = 1;
+      compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+    }
+  else
+    {
+      /* Difference between svndiff formats 0 and 1 that format 1 allows
+       * compression.  Uncompressed svndiff0 should also be slightly more
+       * effective if the compression is not required at all.
+       *
+       * If the server cannot handle svndiff1, or compression is disabled
+       * with the 'http-compression = no' client configuration option, fall
+       * back to uncompressed svndiff0 format.  As a bonus, users can force
+       * the usage of the uncompressed format by setting the corresponding
+       * client configuration option, if they want to.
+       */
+      svndiff_version = 0;
+      compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+    }
+
+  svn_txdelta_to_svndiff3(handler, handler_baton, ctx->stream,
+                          svndiff_version, compression_level, pool);
 
   if (base_checksum)
     ctx->base_checksum = apr_pstrdup(ctx->pool, base_checksum);
