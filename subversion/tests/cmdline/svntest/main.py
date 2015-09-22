@@ -1585,13 +1585,12 @@ class TestSpawningThread(threading.Thread):
     args = []
     args.append(str(index))
     args.append('-c')
+    args.append('--set-log-level=%s' % logger.getEffectiveLevel())
     # add some startup arguments from this process
     if options.fs_type:
       args.append('--fs-type=' + options.fs_type)
     if options.test_area_url:
       args.append('--url=' + options.test_area_url)
-    if logger.getEffectiveLevel() <= logging.DEBUG:
-      args.append('-v')
     if options.cleanup:
       args.append('--cleanup')
     if options.enable_sasl:

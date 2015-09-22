@@ -496,12 +496,12 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     }
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, scratch_pool,
-                                      _("%sProperty changes on: %s%s"),
+                                      APR_EOL_STR
+                                      "Property changes on: %s"
                                       APR_EOL_STR,
                                       use_git_diff_format
                                             ? repos_relpath1
-                                            : index_path,
-                                      APR_EOL_STR));
+                                            : index_path));
 
   SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, scratch_pool,
                                       SVN_DIFF__UNDER_STRING APR_EOL_STR));
@@ -707,6 +707,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
                "Index: %s" APR_EOL_STR
                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
                index_path));
+
+      *wrote_header = TRUE;
 
       /* ### Print git diff headers. */
 
@@ -986,6 +988,23 @@ diff_file_added(const char *relpath,
   apr_hash_t *left_props;
   apr_array_header_t *prop_changes;
 
+  if (dwi->no_diff_added)
+    {
+      const char *index_path = relpath;
+
+      if (dwi->ddi.anchor)
+        index_path = svn_dirent_join(dwi->ddi.anchor, relpath,
+                                     scratch_pool);
+
+      SVN_ERR(svn_stream_printf_from_utf8(dwi->outstream,
+                dwi->header_encoding, scratch_pool,
+                "Index: %s (added)" APR_EOL_STR
+                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                index_path));
+      wrote_header = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* During repos->wc diff of a copy revision numbers obtained
    * from the working copy are always SVN_INVALID_REVNUM. */
   if (copyfrom_source && !dwi->show_copies_as_adds)
@@ -1009,22 +1028,7 @@ diff_file_added(const char *relpath,
 
   SVN_ERR(svn_prop_diffs(&prop_changes, right_props, left_props, scratch_pool));
 
-  if (dwi->no_diff_added)
-    {
-      const char *index_path = relpath;
-
-      if (dwi->ddi.anchor)
-        index_path = svn_dirent_join(dwi->ddi.anchor, relpath,
-                                     scratch_pool);
-
-      SVN_ERR(svn_stream_printf_from_utf8(dwi->outstream,
-                dwi->header_encoding, scratch_pool,
-                "Index: %s (added)" APR_EOL_STR
-                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-                index_path));
-      wrote_header = TRUE;
-    }
-  else if (copyfrom_source && right_file)
+  if (copyfrom_source && right_file)
     SVN_ERR(diff_content_changed(&wrote_header, relpath,
                                  left_file, right_file,
                                  copyfrom_source->revision,

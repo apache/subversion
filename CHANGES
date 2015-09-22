@@ -18,13 +18,18 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.2
     * upgrade: fix crash for pre-1.3 wc with externals (r1702218 et al)
     * revert: fix crash when reverting the root of a move (r1702237 et al)
     * svn: do not crash upon specific database corruptions (r1702974, r1702991)
+    * svn: show utf8proc version in svn --version --verbose (r1702533, r1702891)
 
   - Server-side bugfixes:
     * fix reporting for empty representations in svnfsfs stats (r1698312 et al)
 
  Developer-visible changes:
+  - General:
+    * fix svnfsfs_tests.py in fsfs-v4 and fsfs-v6 modes (r1700215 et al)
+
   - API changes:
     * disable unsupported operations for standard streams (r1701633 et al)
+
 
 Version 1.9.1
 (02 Sep 2015, from /branches/1.9.x)

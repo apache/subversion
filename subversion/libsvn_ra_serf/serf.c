@@ -755,6 +755,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
 
   /* svn_boolean_t supports_inline_props */
   /* supports_rev_rsrc_replay */
+  /* supports_svndiff1 */
 
   new_sess->context = serf_context_create(result_pool);
 

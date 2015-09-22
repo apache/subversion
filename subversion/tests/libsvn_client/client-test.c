@@ -740,13 +740,13 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
 
   wc_path = svn_test_data_path("test-foreign-repos-copy", pool);
 
-  wc_path = svn_dirent_join(wc_path, "foreign-wc", pool);
-
   /* Remove old test data from the previous run */
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
   svn_test_add_dir_cleanup(wc_path);
+
+  wc_path = svn_dirent_join(wc_path, "foreign-wc", pool);
 
   rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_unspecified;
@@ -953,7 +953,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Check out a sparse root @r1 of the repository */
   wc_path = svn_test_data_path("test-remote-only-status-wc", pool);
-  /*svn_test_add_dir_cleanup(wc_path);*/
+  svn_test_add_dir_cleanup(wc_path);
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
 
   rev.kind = svn_opt_revision_number;
