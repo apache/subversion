@@ -1152,18 +1152,16 @@ editor3_new_eid(void *baton,
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_open_branch(void *baton,
-                       const char **new_branch_id_p,
-                       const char *outer_branch_id,
-                       int outer_eid,
-                       int root_eid,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
+                    const char **new_branch_id_p,
+                    const char *outer_branch_id,
+                    int outer_eid,
+                    int root_eid,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *outer_branch
-    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
-                                                outer_branch_id, scratch_pool);
   svn_branch_state_t *new_branch;
+  svn_branch_state_t *outer_branch = NULL;
 
   /* if the subbranch already exists, just return its bid */
   *new_branch_id_p
@@ -1175,6 +1173,9 @@ editor3_open_branch(void *baton,
   if (new_branch)
     return SVN_NO_ERROR;
 
+  if (outer_branch_id)
+    outer_branch = svn_branch_revision_root_get_branch_by_id(
+                     eb->edited_rev_root, outer_branch_id, scratch_pool);
   new_branch = svn_branch_add_new_branch(eb->edited_rev_root,
                                          outer_branch, outer_eid,
                                          root_eid, scratch_pool);
