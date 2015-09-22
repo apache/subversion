@@ -543,7 +543,7 @@ readline_prop(void *baton, svn_stringbuf_t **line, const char **eol_str,
               svn_boolean_t *eof, apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  prop_read_baton_t *b = (prop_read_baton_t *)baton;
+  prop_read_baton_t *b = baton;
   svn_stringbuf_t *str = NULL;
   const char *c;
   svn_boolean_t found_eof;
@@ -608,7 +608,8 @@ readline_prop(void *baton, svn_stringbuf_t **line, const char **eol_str,
 static svn_error_t *
 tell_prop(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
 {
-  prop_read_baton_t *b = (prop_read_baton_t *)baton;
+  prop_read_baton_t *b = baton;
+
   *offset = b->offset;
   return SVN_NO_ERROR;
 }
@@ -618,7 +619,8 @@ tell_prop(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
 static svn_error_t *
 seek_prop(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
 {
-  prop_read_baton_t *b = (prop_read_baton_t *)baton;
+  prop_read_baton_t *b = baton;
+
   b->offset = offset;
   return SVN_NO_ERROR;
 }
@@ -629,7 +631,8 @@ static svn_error_t *
 write_prop(void *baton, const char *buf, apr_size_t len,
            apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *patched_value = (svn_stringbuf_t *)baton;
+  svn_stringbuf_t *patched_value = baton;
+
   svn_stringbuf_appendbytes(patched_value, buf, len);
   return SVN_NO_ERROR;
 }
@@ -719,7 +722,7 @@ readline_file(void *baton, svn_stringbuf_t **line, const char **eol_str,
               svn_boolean_t *eof, apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  apr_file_t *file = (apr_file_t *)baton;
+  apr_file_t *file = baton;
   svn_stringbuf_t *str = NULL;
   apr_size_t numbytes;
   char c;
@@ -794,7 +797,8 @@ readline_file(void *baton, svn_stringbuf_t **line, const char **eol_str,
 static svn_error_t *
 tell_file(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
 {
-  apr_file_t *file = (apr_file_t *)baton;
+  apr_file_t *file = baton;
+
   *offset = 0;
   SVN_ERR(svn_io_file_seek(file, APR_CUR, offset, scratch_pool));
   return SVN_NO_ERROR;
@@ -805,7 +809,8 @@ tell_file(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
 static svn_error_t *
 seek_file(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
 {
-  apr_file_t *file = (apr_file_t *)baton;
+  apr_file_t *file = baton;
+
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -816,7 +821,8 @@ static svn_error_t *
 write_file(void *baton, const char *buf, apr_size_t len,
            apr_pool_t *scratch_pool)
 {
-  apr_file_t *file = (apr_file_t *)baton;
+  apr_file_t *file = baton;
+
   SVN_ERR(svn_io_file_write_full(file, buf, len, &len, scratch_pool));
   return SVN_NO_ERROR;
 }
