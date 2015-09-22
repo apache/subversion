@@ -2368,32 +2368,49 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     }
   else if (patch->binary_patch)
     {
-#ifdef SVN_DEBUG
-      svn_stream_t *tmp;
+      svn_stream_t *orig_stream;
+      svn_boolean_t same;
 
-      /* ### Dummy code that just reads the two streams in the patch file */
-      tmp = svn_diff_get_binary_diff_result_stream(patch->binary_patch,
-                                                   iterpool);
+      if (target->file)
+        orig_stream = svn_stream_from_aprfile2(target->file, TRUE, iterpool);
+      else
+        orig_stream = svn_stream_empty(iterpool);
 
-      SVN_ERR(svn_stream_copy3(tmp, svn_stream_empty(iterpool),
-                               NULL, NULL,
-                               iterpool));
+      SVN_ERR(svn_stream_contents_same2(
+                &same, orig_stream,
+                svn_diff_get_binary_diff_original_stream(patch->binary_patch,
+                                                         iterpool),
+                iterpool));
+      svn_pool_clear(iterpool);
 
-      tmp = svn_diff_get_binary_diff_original_stream(patch->binary_patch,
-                                                     iterpool);
+      if (same)
+        {
+          /* The file in the working copy is identical to the one expected by
+             the patch... So we can write the result stream; no fuzz,
+             just a 100% match */
 
-      SVN_ERR(svn_stream_copy3(tmp, svn_stream_empty(iterpool),
-                               NULL, NULL,
-                               iterpool));
+          SVN_ERR(svn_stream_copy3(
+                svn_diff_get_binary_diff_result_stream(patch->binary_patch,
+                                                       iterpool),
+                svn_stream_from_aprfile2(target->patched_file, TRUE,
+                                         iterpool),
+                cancel_func, cancel_baton,
+                iterpool));
 
-      /* ### TODO:
-          - write the patched version and set has_text_changes = TRUE;
-          - or: write+notify rejection
-          - or: set skip (which also skips property changes)
+          has_text_changes = TRUE;
+          target->has_text_changes = TRUE;
+        }
+      else
+        {
+          /* ### TODO: Implement a proper reject of a binary patch
 
-         Doing nothing just ignores the patchset (<= 1.9.x behaviour)
-       */
-#endif
+             This should at least setup things for a proper notification,
+             and perhaps install a normal text conflict. Unlike normal unified
+             diff based patches we have all the versions we would need for
+             that in a much easier format than can be obtained from the patch
+             file. */
+          target->skipped = TRUE;
+        }
     }
   else if (target->move_target_abspath)
     {

@@ -5620,7 +5620,6 @@ def patch_obstructing_symlink_traversal(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
-@XFail()
 def patch_binary_file(sbox):
   "patch a binary file"
 
@@ -5664,14 +5663,29 @@ def patch_binary_file(sbox):
   expected_output = wc.State(wc_dir, {
     'iota'              : Item(status='UU'),
   })
-  expected_disk = None
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota',
+                      props={'svn:mime-type':'application/binary'},
+                      contents =
+                      'This is the file \'iota\'.\n'
+                      '\0\202\203\204\205\206\207nsomething\nelse\xFF')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status='MM')
   expected_skip = wc.State('', { })
 
   svntest.actions.run_and_verify_patch(wc_dir, tmp,
                                        expected_output, expected_disk,
-                                       expected_status, expected_skip)
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Ok, now try applying it backwards
+  expected_output.tweak('iota', status='GU')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_patch(wc_dir, tmp,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
 
 
 ########################################################################
