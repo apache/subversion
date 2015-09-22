@@ -1594,6 +1594,7 @@ parse_hunks(svn_patch_t *patch, apr_file_t *apr_file,
 
 static svn_error_t *
 parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
+                   svn_boolean_t reverse,
                    apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1692,6 +1693,22 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
            && ((bpatch->src_end > bpatch->src_start) || !bpatch->src_filesize))
     {
       patch->binary_patch = bpatch; /* SUCCESS */
+    }
+
+  /* Reverse patch if requested */
+  if (reverse && patch->binary_patch)
+    {
+      apr_off_t tmp_start = bpatch->src_start;
+      apr_off_t tmp_end = bpatch->src_end;
+      svn_filesize_t tmp_filesize = bpatch->src_filesize;
+
+      bpatch->src_start = bpatch->dst_start;
+      bpatch->src_end = bpatch->dst_end;
+      bpatch->src_filesize = bpatch->dst_filesize;
+
+      bpatch->dst_start = tmp_start;
+      bpatch->dst_end = tmp_end;
+      bpatch->dst_filesize = tmp_filesize;
     }
 
   return SVN_NO_ERROR;
@@ -1845,7 +1862,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
     {
       if (state == state_binary_patch_found)
         {
-          SVN_ERR(parse_binary_patch(patch, patch_file->apr_file,
+          SVN_ERR(parse_binary_patch(patch, patch_file->apr_file, reverse,
                                      result_pool, iterpool));
           /* And fall through in property parsing */
         }
