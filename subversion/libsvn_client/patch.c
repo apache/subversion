@@ -379,7 +379,7 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
 static svn_error_t *
 resolve_target_path(patch_target_t *target,
                     const char *path_from_patchfile,
-                    const char *wcroot_abspath,
+                    const char *root_abspath,
                     int strip_count,
                     svn_boolean_t has_text_changes,
                     svn_wc_context_t *wc_ctx,
@@ -412,7 +412,7 @@ resolve_target_path(patch_target_t *target,
 
   if (svn_dirent_is_absolute(stripped_path))
     {
-      target->local_relpath = svn_dirent_is_child(wcroot_abspath,
+      target->local_relpath = svn_dirent_is_child(root_abspath,
                                                   stripped_path,
                                                   result_pool);
 
@@ -432,9 +432,9 @@ resolve_target_path(patch_target_t *target,
     }
 
   /* Make sure the path is secure to use. We want the target to be inside
-   * of the working copy and not be fooled by symlinks it might contain. */
+   * the locked tree and not be fooled by symlinks it might contain. */
   SVN_ERR(svn_dirent_is_under_root(&under_root,
-                                   &target->local_abspath, wcroot_abspath,
+                                   &target->local_abspath, root_abspath,
                                    target->local_relpath, result_pool));
 
   if (! under_root)
@@ -485,19 +485,23 @@ resolve_target_path(patch_target_t *target,
   if (target->locally_deleted)
     {
       const char *moved_to_abspath;
+      const char *op_root_abspath;
 
-      SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+      SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, &op_root_abspath,
                                           wc_ctx, target->local_abspath,
                                           result_pool, scratch_pool));
-      /* ### BUG: moved_to_abspath contains the target where the op-root was
-         ### moved to... not the target itself! */
       if (moved_to_abspath)
         {
           target->local_abspath = moved_to_abspath;
-          target->local_relpath = svn_dirent_skip_ancestor(wcroot_abspath,
-                                                          moved_to_abspath);
-          SVN_ERR_ASSERT(target->local_relpath &&
-                         target->local_relpath[0] != '\0');
+          target->local_relpath = svn_dirent_skip_ancestor(root_abspath,
+                                                           moved_to_abspath);
+
+          if (!target->local_relpath || target->local_relpath[0] == '\0')
+            {
+              /* The target path is outside of the patch area. Skip it. */
+              target->skipped = TRUE;
+              return SVN_NO_ERROR;
+            }
 
           /* As far as we are concerned this target is not locally deleted. */
           target->locally_deleted = FALSE;
@@ -980,7 +984,7 @@ choose_target_filename(const svn_patch_t *patch)
 static svn_error_t *
 init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
-                  const char *wcroot_abspath,
+                  const char *root_abspath,
                   svn_wc_context_t *wc_ctx, int strip_count,
                   svn_boolean_t remove_tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
@@ -1026,7 +1030,7 @@ init_patch_target(patch_target_t **patch_target,
   target->prop_targets = apr_hash_make(result_pool);
 
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
-                              wcroot_abspath, strip_count, has_text_changes,
+                              root_abspath, strip_count, has_text_changes,
                               wc_ctx, result_pool, scratch_pool));
   *patch_target = target;
   if (! target->skipped)
@@ -1104,7 +1108,7 @@ init_patch_target(patch_target_t **patch_target,
 
           if (svn_dirent_is_absolute(move_target_path))
             {
-              move_target_relpath = svn_dirent_is_child(wcroot_abspath,
+              move_target_relpath = svn_dirent_is_child(root_abspath,
                                                         move_target_path,
                                                         scratch_pool);
               if (! move_target_relpath)
@@ -1122,7 +1126,7 @@ init_patch_target(patch_target_t **patch_target,
           /* Make sure the move target path is secure to use. */
           SVN_ERR(svn_dirent_is_under_root(&under_root,
                                            &target->move_target_abspath,
-                                           wcroot_abspath,
+                                           root_abspath,
                                            move_target_relpath, result_pool));
           if (! under_root)
             {
@@ -3196,7 +3200,7 @@ static svn_error_t *
 apply_patches(/* The path to the patch file. */
               const char *patch_abspath,
               /* The abspath to the working copy the patch should be applied to. */
-              const char *abs_wc_path,
+              const char *root_abspath,
               /* Indicates whether we're doing a dry run. */
               svn_boolean_t dry_run,
               /* Number of leading components to strip from patch target paths. */
@@ -3240,7 +3244,7 @@ apply_patches(/* The path to the patch file. */
         {
           patch_target_t *target;
 
-          SVN_ERR(apply_one_patch(&target, patch, abs_wc_path,
+          SVN_ERR(apply_one_patch(&target, patch, root_abspath,
                                   ctx->wc_ctx, strip_count,
                                   ignore_whitespace, remove_tempfiles,
                                   patch_func, patch_baton,
@@ -3264,7 +3268,7 @@ apply_patches(/* The path to the patch file. */
                       || target->added
                       || target->move_target_abspath
                       || target->deleted)
-                    SVN_ERR(install_patched_target(target, abs_wc_path,
+                    SVN_ERR(install_patched_target(target, root_abspath,
                                                    ctx, dry_run, iterpool));
 
                   if (target->has_prop_changes && (!target->deleted))
@@ -3278,7 +3282,7 @@ apply_patches(/* The path to the patch file. */
               if (target->deleted && !target->skipped)
                 {
                   SVN_ERR(check_ancestor_delete(target_info->local_abspath,
-                                                targets_info, abs_wc_path,
+                                                targets_info, root_abspath,
                                                 dry_run, ctx,
                                                 scratch_pool, iterpool));
                 }
